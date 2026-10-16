@@ -4,12 +4,15 @@
 ## Contents
 
 - Slices are the authoring unit
+- Declare in story order
 - Slice dependencies
 - State-transition table (per entity)
 - Generic edits
 - Rule coverage
 - Slice audit
 - The next slice
+- Handoff line per element
+- Rule coverage
 
 ## Slices are the authoring unit
 
@@ -25,6 +28,70 @@ step at the end: design each behaviour as its slice, then audit the set.
 
 Screenplay allows several commands or read models in one slice; prefer splitting unless the
 behaviour is genuinely one (and say why in `documentation`).
+
+## Declare in story order
+
+Deciding which slices exist is separate from deciding the order you write them. Write them left
+to right as the story happens, one slice at a time: the `StateChange` slice that records a fact,
+then the `StateView` slice (read model, projection, query, screen) that the fact feeds, then the
+next `StateChange`. Never write all commands, then all views, or any other batch by kind. The
+board draws authored declaration and import order, so a batch by kind shows a row of commands
+with the views bunched at the end, cut off from the facts they come from, and no slice reads as
+one self-contained step of the story. A list grouped by slice type is for counting and review
+(`cratis-screenplay-delivery-planning`), never the declaration order.
+
+The compiler checks the result against the presentation timeline. `PLAY0516` (information)
+marks a projection, reducer rule or named reaction trigger that uses an event from a slice drawn
+to its right, or a `reads` of a view whose builder is drawn later. `PLAY0517` marks a mutually
+dependent sibling group that no order can fix. Neither fails `--warnaserror`, so read them after
+each batch:
+
+- Move the producer first. MCP and C# workspaces offer a typed repair that moves a sibling or
+  pins an import. It changes no executable bytes or identities.
+- A view that legitimately reflects a later fact (a waiting list that drops a request once it
+  is assigned) may stay where its screen beat is. Say why in the slice `documentation`.
+- Feedback reads (a command reading a summary built from facts its own side produces) are
+  excluded by the compiler and need nothing.
+
+A folder model needs an ordering root (a sole root, an importing `application.play`, or a unique
+importing root). Without one the check is skipped, which does not mean clean
+(`cratis-screenplay-toolchain`). The `remove with BerthAssigned` line below is the kept case:
+the waiting list legitimately drops a request when the later slice assigns it.
+
+```screenplay expect PLAY0516
+domain Harbour.Moorings
+
+concept BerthRequestId : Uuid
+concept BoatName : String
+concept BerthNumber : String
+
+module Moorings
+  feature SeasonalBerths
+    slice StateChange RequestBerth
+      command RequestBerth
+        berthRequestId BerthRequestId identifier
+        boatName       BoatName
+        produces event BerthRequested
+          boatName BoatName = boatName
+    slice StateView WaitingList
+      readmodel WaitingRequest
+        berthRequestId BerthRequestId
+        boatName       BoatName
+      projection WaitingList => WaitingRequest
+        from BerthRequested
+          berthRequestId = $eventSourceId
+        remove with BerthAssigned
+      query WaitingRequests => WaitingRequest[]
+      screen WaitingListPage
+        data WaitingRequest via query WaitingRequests
+        action AssignBerth
+    slice StateChange AssignBerth
+      command AssignBerth
+        berthRequestId BerthRequestId identifier
+        berthNumber    BerthNumber
+        produces event BerthAssigned
+          berthNumber BerthNumber = berthNumber
+```
 
 ## Slice dependencies
 
@@ -65,12 +132,14 @@ For `worked-example.md`:
 
 ### Declare container dependencies
 
-At Screenplay 4.125.0, modules and features may declare `depends on <Name>`, one
+Modules and features may declare `depends on <Name>`, one
 target per line. Use a bare sibling name or a qualified module/feature address.
 Bare names resolve inside out: siblings, ancestor siblings, then root modules;
 qualified names match an unambiguous trailing address. Ambiguity is `PLAY0198`.
 Self, ancestor, descendant and unresolved targets warn with `PLAY0554`; repeats
 keep the first resolved target and warn with `PLAY0555`.
+
+Requires Screenplay 4.76.0 or later (`screenplay --version`) for `depends on` container dependencies (PLAY0554).
 
 Declarations accumulate on the same owner in ordinal file-path order, independent
 of board import order. Layout expansion writes them only in the owner's file.
@@ -101,7 +170,7 @@ module Timesheets
   feature Approval
 ```
 
-Source: Screenplay `v4.125.0:Documentation/screenplay/slices.md` and `folders.md`.
+Source: Screenplay `Documentation/screenplay/slices.md` and `folders.md`.
 
 ## State-transition table (per entity)
 
@@ -185,6 +254,10 @@ fully designed, read the slices in story order and choose, preferring in order:
    or reverses (`CorrectLockerVolume`), never `Update<Entity>`;
 4. a notification or follow-up the business expects.
 
+If the new slice adds a screen in a model that already composes its UI (templates, layout), give
+it the template its sibling screens use (`cratis-screenplay-ui-composition`). A new screen always
+has `data` or an `action`, never a placeholder.
+
 Apply this heuristic only when the brief authorizes selecting another capability; when the
 requested scope is complete or no supported candidate remains, close the turn without inventing
 work (scope ownership: `cratis-screenplay-modeling-lifecycle`). Prefer what continues the
@@ -199,3 +272,18 @@ at a time. In a modeling session, act: write
 the slice, note the assumption that chose it, and ask for correction afterwards. A wrong guess
 costs one edit; an empty turn costs a round-trip. Record why the slice was chosen in the
 handoff.
+
+## Handoff line per element
+
+    `references/verdicts.md`). Hand off with the model root and source revision, the slices
+    touched, and **one line per element** (command with origin classified [USER] or [AUTO]
+    and refusals, screen with `data`, read model with consumers, slice with events consumed),
+    not only problems; a new slice adds why it was chosen. Decided refusals go to
+    `cratis-screenplay-scenario-coverage`, never to open questions.
+
+## Rule coverage
+
+- Rule coverage: for each value carrying a rule, list every path that sets it
+  (`references/slicing.md`). A constraint on a claim covers every event setting that claim;
+  value invariants live in the concept so they travel; command-level conditions are reviewed
+  per path, not copied blindly.

@@ -24,7 +24,7 @@ observable changes from the diff, specs, linked issues/PRs, and authoritative
 product source at that revision. A PR description is published verbatim as
 release notes in a Cratis repository; follow its current template and the
 pull-request contract, and confirm that behavior before drafting. Do not turn
-an unreleased draft into a claim about shipped behavior.
+a draft into a claim about shipped behavior.
 
 For each change, ask: who uses this path, what happened before, what happens
 now, is action required, and how would they notice? Check changed defaults,

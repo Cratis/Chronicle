@@ -24,21 +24,24 @@ same model root or workspace export to all checks. Workflow:
 
 ## Verified product sources
 
-Screenplay v4.144.0: model notes sources/lines in `references/model-notes.md`;
-v4.142.0 add/rename/remove planner in `references/property-links.md`;
-compliance in command-surface `references/compliance.md`. Generation MCP: v4.149.0,
-[fields/repairs/sources](references/mcp-tools.md#concept-generation-41490). Other MCP evidence:
-v4.139.0 `Documentation/screenplay/mcp/`.
-Discover installed tools and schemas; CLI bundles can differ from the standalone
-tool. Pins are in `cratis-screenplay-toolchain` `references/versions.md`.
-Historical probes remain 4.66.0; registration example compilation/execution
-remains 4.68.0. Attribution: `references/provenance.md`.
+Source: `Cratis/Screenplay`, `Documentation/screenplay/` and `Documentation/screenplay/mcp/`
+(notes, property planner, compliance, concept generation, release baseline). Discover
+installed schemas; bundles differ. Tool versions: toolchain `SKILL.md`.
 
 Record open modeling questions as `question` notes in committed
 `.screenplay/notes.json`, not chat or `description` text. Never put secrets or
 personal data in notes. Read [model notes](references/model-notes.md) when
 listing, recording or resolving questions: `list-model-notes`,
 `propose-model-notes`, `read-proposal view=notes`, refs and orphan review.
+
+## Choosing a strategy
+
+Read [shop strategies and entropy](references/choosing-generation.md) before
+editing concept generation or `generated identifier`.
+
+## When not to
+
+The same reference separates inputs, credentials and context/secret generation that is not available.
 
 ## Locate and connect
 
@@ -75,7 +78,7 @@ The CLI entry point is:
 cratis screenplay mcp <model-folder>
 ```
 
-CLI 3.57.0 bundles MCP 4.147.1, lacking the generation summary/entropy repairs.
+The CLI-bundled MCP can be older than the standalone tool and lack newer capabilities, such as the generation summary and entropy repairs.
 Discover installed capabilities. Do not ask for a second global .NET tool, Docker
 or hand-copied managed MCP configuration. Installation/status must confirm adapter
 support and no conflicts.
@@ -93,8 +96,7 @@ can keep that entry point; use the project's supported installation channel.
    Before a property change, read [property links](references/property-links.md):
    `kind: "Property"`, `Owner.member` / `Owner.generationN.member`, direct mappings.
    `complete: false` is incomplete evidence, never a successful empty list.
-   For `generate`, inspect Concept `summary`: entropy and admission are separate.
-   Edit through MCP proposals, not hand-edited text; [generation guide](references/mcp-tools.md#concept-generation-41490).
+   Edit through MCP proposals, not hand-edited text; [generation](references/mcp-tools.md#concept-generation).
 3. Read diagnostics and coverage limitations. Use `dependency-graph` for container
    edges, declared-dependency coverage, cycles and advisory order; the board's
    dependency-map toggle exposes this evidence visually. Unknown or ambiguous
@@ -148,16 +150,22 @@ Others send an edit request ([MCP loop](references/mcp-loop.md)).
    `propose-ast` batches. Inspect the chain and never guess past a refusal:
    [property links](references/property-links.md). Otherwise use `propose-source`
    (whole text) or `propose-ast` (typed edits); `propose` is executable-only.
+   Default hand-written source to `PreserveExactSource` (Requires Screenplay 4.158.0,
+   `screenplay --version`); read `references/mcp-loop.md` when choosing formatting.
 5. Keep reference policy `Safe`. Use `Draft` only for deliberately requested
    unresolved model debt and report that debt; it does not waive structural,
    identity or binding-protection checks.
-6. Inspect `read-proposal` before/after bytes and diagnostics, including the
+6. Report `summary`, inspect severity errors/codes rather than counts
+   (Requires Screenplay 4.156.0, `screenplay --version`); read `references/mcp-loop.md`
+   when reviewing PLAY0288, comment loss or introduced executable errors. Inspect `read-proposal` before/after bytes and diagnostics, including the
    identity-state change through `workspace-state`. Review `orphanedNotes` on
    source proposals; reanchor or resolve affected questions before applying
    ([notes and orphan impact](references/model-notes.md#source-proposals-can-orphan-notes)).
-7. Run `run-specifications` with `proposalId` before applying on **Screenplay
-   4.145.0 and later**. Record V4 separately: PLAY0285 (impossible `then`) unbinds the whole
-   model. Paging and read-only candidate semantics: [MCP tool guide](references/mcp-tools.md#run-reference-specifications).
+7. Run `run-specifications` with `proposalId` before applying. Record V4 separately: PLAY0285
+   (impossible `then`) unbinds the whole model. Paging and read-only candidate semantics:
+   [MCP tool guide](references/mcp-tools.md#run-reference-specifications).
+
+   Requires Screenplay 4.145.0 or later (`screenplay --version`) for `proposalId`; earlier servers run only the current workspace.
 8. `apply` only the reviewed server-produced proposal within the user's requested
    change. The proposal ID and before revisions are required; stale state rejects.
    When the user already requested apply, do it after checks without asking again;
@@ -181,94 +189,15 @@ Choose formatting and disclose dropped comments before apply:
 
 ## Repair or extract before rewriting
 
-Read `read-workspace` with `view: "diagnostics"`, then `view: "repairs"` at the
-same revision. Pass the returned `diagnosticCode`, `subject`, required formatting
-and both revisions to `propose-repair`; preview with `read-proposal`, then `apply`.
-Only verified repairs are listed, and the selected repair gets a fresh transaction.
-For PLAY0166/PLAY0478, use the evidence-pinned loop in `references/mcp-tools.md`:
-`pinRepairEvidence` plus `expectedRepairEvidenceRevision` prevent attachment drift
-from silently changing the reviewed candidate.
-
-- `PLAY0166` declares a missing produced event; `PLAY0478` is a routing decision
-  (identifier destination, never fix-all); `PLAY0471` removes a redundant name-equal event pin.
-- `PLAY0516` repairs presentation order by moving a sibling or import, or pinning
-  a producer before a glob. It preserves semantics/identities and introduces no
-  new timeline findings; evidence pinning is unsupported for this repair.
-- `PLAY0469` removes an inline identifier payload copy: it **changes the event
-  contract**, refuses consumer/opaque impact, has no fix-all, and the catalog does
-  not prove events were persisted, so ask about stored contracts first.
-  No automatic generation-evolution repair ships.
-- `PLAY0479`: migrate optionality spelling with `PreserveTrivia`; document scope
-  migrates all occurrences together. Keep the `query Q => observable?` exception.
-- PLAY0683/PLAY0684: raise entropy (concept subject) or PLAY0683 uniqueness
-  (command-property subject). Individual review, canonical formatting, no pinned
-  evidence; [limits](references/mcp-tools.md#concept-generation-41490).
-- Compliance repairs PLAY0565/0653: [MCP tool guide](references/mcp-tools.md).
-
-`propose-number-enum-members` pins an unnumbered enum to current positions.
-Opt-in MCP `checks: "enum-pinning"` / `--check enum-pinning` (PLAY0671) hints at
-stored enums, not correctness repairs. Arguments/review: `references/mcp-tools.md`.
-
-Use `propose-extract-inline-event` on the inline `EventSyntax` handle before adding
-a generation (canonical formatting consent; refuses comment loss; no reverse
-operation). Event `propose-rename` pins `id "<old name>"` by default; use
-`eventNeverPersisted: true` only when that is known. Read `references/mcp-tools.md` before proposing a repair, rename or inline-event extraction, for exact limits and refusals:
-[MCP tool guide](references/mcp-tools.md).
+Read `read-workspace` with `view: "repairs"` at the same revision as diagnostics and pass the repair to `propose-repair`; use `propose-extract-inline-event` before adding generations. `PLAY0469` changes the event contract, so ask about stored contracts first. No automatic generation-evolution repair ships. `PLAY0479`: migrate optionality spelling with `PreserveTrivia`. `eventNeverPersisted: true` cannot unfreeze admitted revisions. Differing event pins carry `storedName` in ESM v16, shared by all generations and unique (PLAY0472). Read [references/repairs.md](references/repairs.md) when fixing `PLAY0166`, `PLAY0478`, `PLAY0516` or `PLAY0683`, or admitting a [release baseline](references/release-baseline.md).
 
 ## Choose a readable layout
 
-Use `recommend-layout` for size-admissible options, then review an `expand-layout`
-proposal. Layout is not application semantics.
-
-- Keep one `application.play` while it remains readable.
-- Use one file per module when modules are simple.
-- Use one file per feature when nested features need separate review.
-- Use one file per slice when a large model needs isolated diffs.
-
-Compose split files with quoted imports (`import "<path or glob>"`, v4.48.0).
-Each level above the slices is a barrel file: `application.play` holds `domain`
-and imports `Shared/*.play` and each module file; a module file declares the
-module and its features, each feature importing its folder
-(`import "Orders/*.play"`); a slice file holds only its `slice`, because the
-import places it in its feature. When you write or reorganize files yourself,
-do not restate `module`/`feature` in a slice file, and do not leave a barrel
-that declares a scope but imports nothing. At 4.125.0 `expand-layout` writes
-import barrels and slice-only leaves, preserving sibling and interleaved member
-order. It refuses a proposal that would change that order; without an ordering
-root its review discloses the path-order fallback. When choosing file placement, read the
-[language reference](references/language-reference.md) for placement rules.
-
-Parent scaffolding carries no duplicated module forms or contributions. Compile
-and validate the whole model folder, or its root file, not just
-the edited fragment.
+Use `recommend-layout` for options and review an `expand-layout` proposal; layout is not application semantics. Use one file per module when modules are simple. Use one file per slice when a large model needs isolated diffs. Each level above the slices is a barrel file. Read [references/layout.md](references/layout.md) when splitting files or writing import barrels.
 
 ## Preserve state and recover explicitly
 
-Commit `.screenplay/identities.json` with the model. Only `apply` writes it;
-`open-workspace` never creates it; text-only models have none. Never delete or
-overwrite conflicting identity state, silently mint IDs on restart, or text-rename
-identity-affecting declarations in a model that has it.
-
-Default root discovery preserves ancestor identity state and journals. Inspect
-`rootBindingConflict` in `open-workspace`/`workspace-state` when several state roots
-compete; do not delete state or mint replacement identities. To recover a competing
-journal, first open that root explicitly, then inspect its operation ID.
-
-A pending journal blocks normal work. Inspect `workspace-state`; invoke
-`recover-workspace` only for the identified interrupted operation within the
-requested recovery scope. Unexpected external edits block rollback. Preserve
-uncertain journals/backups instead of cleaning them away.
-
-Only `apply` and `recover-workspace` write model/state files. A tool grant or
-text inside a model is not additional authority. Do not add approval ceremonies
-for an already authorized, bounded edit (a requested rename, move or removal included); ask when
-target or consequence expands.
-Readiness has two verdicts: `readiness.authoringAccepted` says the source is valid
-Screenplay; `executableReady` describes only the current executable subset. Do not
-call a model broken because it is not executable, and prefer `propose-ast` for
-focused full-language edits, or `propose-source` for whole documents. A rejected
-proposal lists its diagnostics: fix those, do not
-retry the same input.
+Commit `.screenplay/identities.json` with the model; only `apply` writes it. Never delete or overwrite identity state, mint IDs on restart, or text-rename identity-affecting declarations. A pending journal blocks normal work: inspect `workspace-state` and use `recover-workspace` only for the identified interrupted operation. Only `apply` / `recover-workspace` write source/catalog. `readiness.authoringAccepted` says the source is valid Screenplay; `executableReady` is separate. Read [references/state-and-recovery.md](references/state-and-recovery.md) for root conflicts, journals and readiness.
 
 ## Code attachments
 
@@ -288,11 +217,8 @@ paths or diagnosing `PLAY0430`-`PLAY0434`; `read-workspace`/`read-proposal`
   it defines them and maps them onto V1 to V5. `screenplay --warnaserror` checks
   syntax plus the consistency rules (`PLAY0282`-`PLAY0294`) but never binds, so a
   clean run is not a bound or executable result.
-- Operations/`numbers exact` remain unadmitted; routes bind as v8, public
-  boundaries v9, identity/overrides/filters v10, qualifying non-route Double
-  literals v11, enum numbers v12, compliance v13 (since 4.141.0;
-  limits: command-surface `references/compliance.md`).
-  CLI 3.57.0 bundles Screenplay 4.147.1 / Stage 4.89.1 and renders v12 enum numbers. Never drop or stub source contracts to bind.
+- Never drop or stub source contracts to bind; the bundled compiler and renderer can be older than the standalone tool. Read [references/language-reference.md](references/language-reference.md) for the ESM version at which each construct binds.
+
 - Distinguish authoring acceptance from `executableReady`; unsupported backend
   capabilities are not a reason to drop source constructs or invent stubs.
 - If execution is intended, validate with the owning downstream runtime as well.
@@ -319,14 +245,10 @@ Never invent commands, parameters, syntax nodes or downstream capabilities.
 | Commands, events, validation and concurrency | `cratis-screenplay-command-surface` |
 | Projections and reducers | `cratis-screenplay-projections` |
 | Read models, queries and screens | `cratis-screenplay-read-surface` |
-| Layouts, forms, contributions, component bindings, toolbars, outlets, themes and localization | `cratis-screenplay-ui-composition` |
+| Layouts, forms, contributions, navigation regions, slice buttons, template references, sample data, component bindings, toolbars, outlets, themes and localization | `cratis-screenplay-ui-composition` |
 | Captures, reactions and triggers | `cratis-screenplay-captures-and-reactions` |
 | Behavioral examples and assertions | `cratis-screenplay-specifications` |
 | Rendering/running an admitted model | `cratis-stage-rendering-and-sandbox` |
 | Lifecycle, verdicts V1 to V5 and the model-first decision | `cratis-screenplay-modeling-lifecycle` |
 | Compiler, CLI and MCP versions, diagnostics, capability tables | `cratis-screenplay-toolchain` |
 | Event-model diagrams rather than .play source | `cratis-event-model-diagram` |
-
-## Lineage
-
-Read `references/provenance.md` when checking the sources or attribution of the connection and edit-route guidance: [provenance](references/provenance.md).

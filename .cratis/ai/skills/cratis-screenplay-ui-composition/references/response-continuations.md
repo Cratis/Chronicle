@@ -10,7 +10,7 @@
 
 ## Success scope
 
-Screenplay **4.148.0** resolves returned names outside the ESM. A scalar
+Screenplay resolves returned names outside the ESM (Requires Screenplay 4.148.0 or later). A scalar
 `returns invoiceId` exposes `invoiceId`; a `returns` block exposes its field
 names. The form's block `on submit` and one-line
 `on submit navigate to <Screen> by <name>` have the form command's response
@@ -39,22 +39,22 @@ Returned values still cannot supply another command's generated input
 Monaco/VS Code complete returned names after `from` and form `by`; hover shows
 the field type. Editor resolution is not runtime execution.
 
-Sources: Cratis/Screenplay `v4.148.0:Documentation/screenplay/interactions.md:162-170`,
-`Source/DotNET/Screenplay/Parsing/SpecificationResponseValidator.cs:174-258`,
-`Source/DotNET/Screenplay/for_ScreenplayCompiler/when_validating_response_continuations.cs:12-47`.
+Sources: Cratis/Screenplay `Documentation/screenplay/interactions.md`,
+`Source/DotNET/Screenplay/Parsing/SpecificationResponseValidator.cs`,
+`Source/DotNET/Screenplay/for_ScreenplayCompiler/when_validating_response_continuations.cs`.
 
 ## Renderer boundary
 
-CLI **3.57.0** bundles Screenplay **4.147.1**, not 4.148.0. Stage **4.89.1**
+A CLI-bundled compiler can predate this resolution. Stage
 returns scalar/named responses through generated TypeScript proxies and passes
 accepted responses to Scene's `CommandOutcome.response`, but form response
-binding/navigation remains blocked on Scene #53. Do not infer runtime
+binding/navigation remains blocked in Scene. Do not infer runtime
 continuation support from successful source validation, an unchanged ESM, a
-response proxy, or an existing `on success`. Stage #206 remains a renderer
-follow-up, not a capability this compiler release supplies.
+response proxy, or an existing `on success`. Runtime binding remains a renderer
+follow-up, not a capability the compiler supplies.
 
-Sources: Cratis/cli `v3.57.0:Directory.Packages.props:8-10`; Cratis/Stage
-`v4.89.1:Documentation/reference/generated-values-rendering.md:85-95,115-121`.
+Sources: Cratis/cli `Directory.Packages.props`; Cratis/Stage
+`Documentation/reference/generated-values-rendering.md`.
 
 ## Compiled example
 

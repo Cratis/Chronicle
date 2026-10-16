@@ -38,6 +38,7 @@ using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -126,6 +127,14 @@ public class EventStoreStorage(
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
+    public async Task<bool> IsInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .CountDocumentsAsync(new BsonDocument("_id", 1)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkInitialized() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true });
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var instance))
@@ -147,5 +156,12 @@ public class EventStoreStorage(
             loggerFactory);
 
         return _namespaces.GetOrAdd(@namespace, created);
+    }
+
+    /// <inheritdoc/>
+    public async Task DropNamespace(EventStoreNamespaceName @namespace)
+    {
+        await eventStoreDatabase.GetNamespaceDatabase(@namespace).Drop();
+        _namespaces.TryRemove(@namespace, out _);
     }
 }

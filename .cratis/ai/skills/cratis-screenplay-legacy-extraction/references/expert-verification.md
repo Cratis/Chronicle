@@ -17,11 +17,42 @@ asked for each become a row or a question.
 
 ## Preparing the session
 - One page per workflow: the candidate slices as a short story in business words (no
-  Screenplay syntax, no table names unless the experts use them), with evidence ids.
+  Screenplay syntax, no table names unless the experts use them), with evidence ids. Use the
+  retelling and impact views below.
 - At most about 12 questions per session, ordered by risk. Each question names the slice, the
   evidence row and what changes depending on the answer.
 - Mark which items are proposals (`decided by: proposed`) so experts know what to challenge.
 - Redact production values; ask before showing captures or code to anyone outside the team.
+
+## Retelling and impact views
+Both are generated from the candidate and the evidence table for the session and never edited
+afterwards; a correction goes into the model, then the view is regenerated. They are reading aids,
+not a second source of truth.
+
+**Story retelling** (per feature). Numbered sentences of the form "<who> <does what> <to which work
+object> (for whom)", 3 to 15 per feature. Actors are personas or named systems; work objects are
+business nouns the experts use, never declaration or table names. A step the evidence does not
+show is written as an explicit gap sentence ("Gap: who approves the refund?"), not smoothed over.
+Experts correct wording, order and missing steps directly on the retelling. The form follows Domain
+Storytelling (Stefan Hofer and Henning Schwentner).
+
+| Slice kind | Sentence |
+|---|---|
+| StateChange | persona, verb of the command, work object, (to whom it goes): "Attendant takes in Coat for Guest" |
+| StateView | system, shows, work object, to the persona of the screen: "Cloakroom shows Coat on hook to Attendant" |
+| Automation | system, verb, work object, to the recipient: "Cloakroom sends Reminder to Guest" |
+| Translate | outside system, reports, work object, to our system |
+
+Each actor keeps one name throughout, and systems and groups are named as such. An activity is one
+present-tense verb. Each sentence carries its slice address in the session sheet (not read aloud),
+so a correction lands on the right declaration. Scope is one feature, or every feature when there
+are at most six; otherwise ask which.
+
+**Impact view** (per feature, for target decisions). One line per slice marked keep, change, new or
+remove, with the one-line change and the evidence row. It makes the keep / change / remove decision
+visible per feature and names who relies on anything removed. Build it with the impact procedure
+in `cratis-screenplay-model-review` `references/walkthrough.md`, using keep, change, new and
+remove as the status.
 
 ## Questions per slice
 - Is this event something you would say happened, in these words? Is it one fact or several?

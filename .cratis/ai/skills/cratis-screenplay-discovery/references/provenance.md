@@ -29,17 +29,30 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 | Source file | Used in | How |
 |---|---|---|
 | `.claude/skills/timeline/SKILL.md`: fixed opening question, build first then summarize, one question per turn, stop conditions | `SKILL.md` "Interview phase", `references/storming-loop.md`, `references/interview-questions.md` | translated to Screenplay; opening question kept close to the original |
-| `.claude/skills/eventmodeling-interview-protocol/SKILL.md`: when to ask, skip what is known, assume visibly when told not to ask | `SKILL.md` "Interview phase" | restored from #493: wording now adapted closely; trail file replaced by STATE.md |
+| `.claude/skills/eventmodeling-interview-protocol/SKILL.md`: when to ask, skip what is known, assume visibly when told not to ask | `SKILL.md` "Interview phase" | Adapted closely; trail file replaced by STATE.md |
 | same: findings recorded per step | `SKILL.md` "Interview phase", `references/interview-questions.md` "Interview flow" | translated: Decisions and Assumptions lists in STATE.md |
-| `.claude/skills/eventmodeling-storyboarding-events/SKILL.md`: step 6, processor todo list walked as a storyline | `references/plotting-and-handoff.md` "Storyline" | restored from #493 (item 5, storyline): translated to a view walkthrough seed for lifecycle specifications |
+| `.claude/skills/eventmodeling-storyboarding-events/SKILL.md`: step 6, processor todo list walked as a storyline | `references/plotting-and-handoff.md` "Storyline" | Translated to a view walkthrough seed for lifecycle specifications |
 | `.claude/skills/eventmodeling-brainstorming-events/SKILL.md`: divergent journey vs decision point (Nebulit addition) | `SKILL.md` step 5 | idea; our own wording kept (outcome branch vs separate story) |
-| same: essential fields only, no padding, payload-free simple transitions (lines 159-160) | `SKILL.md` step 6, `references/storming-loop.md` | now adapted closely; identity, concepts and `pii` rules kept |
+| same: essential fields only, no padding, payload-free simple transitions (lines 159-160) | `SKILL.md` step 6, `references/storming-loop.md` | Adapted closely; identity, concepts and `pii` rules kept |
 | same: handover from an outside party is a single moment, not a relocation | `SKILL.md` Modeling defaults | idea; our own wording kept |
 | `.claude/skills/eventmodeling-storyboarding-events/SKILL.md`: "whose turn is it in the story?" (consistent actor perspective) | `references/plotting-and-handoff.md` "Whose turn is it in the story?" | adapted closely; lanes, columns and screen placement not adopted |
 | `.claude/skills/eventmodeling-brainstorming-events/SKILL.md`: Domain Analysis document (roles, entities, processes, candidate events, rules, questions), "Questions for Domain Expert", "Best Practices for Requirements Analysis", quality checklist | `references/domain-analysis-template.md` | Adapted closely as an optional work record in `.ai-work/screenplay/`; roles use Does/Reads/Cannot, chapters, cells, swimlane rules and `meta.fields` dropped, "all error conditions have events" replaced by the refusal-versus-fact question |
 | `.claude/skills/eventmodeling-core-rules/SKILL.md`: Offline-First Thinking | `references/divergent-sweep.md` lens "Without software" | Promoted to a named lens; our own wording |
 
 Not adopted: board, chapter, column and `place-element` mechanics; the board API and `connect` skill.
+
+### Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
+
+| Source skill | Used in | How |
+|---|---|---|
+| `summarize` | `references/domain-analysis-template.md` *Intake rigor for documents* (now pointing to `references/document-intake.md`); `SKILL.md` *Evidence and privacy* | adapted closely: stated, implied or assumed marks, figures kept exactly with a locator, a contradiction as one question naming both passages, a stated perspective, a coverage pass against the model, changes marked on an amended document |
+| `summarize` | `references/document-intake.md` | copied and translated: the fact kinds, reading rules for long, image and multi-file sources, the fact-to-model mapping, the faithfulness rule on generic knowledge, feature sizing, the per-feature blueprint summary (a generated report, never a second source); chapter and board mechanics dropped |
+| `timeline` | `references/facilitation.md` | idea, own wording: a hotspot is a note beside the event, never an event |
+| `brainstorming-events` (`eventmodeling-brainstorming-events`) | `references/plotting-and-handoff.md` "One feature, one story"; `references/human-workshop.md` "Run sheet: design session" | copied and translated: a chapter is a journey and not an operation, the too-fine signals, merge when in doubt; the storyboarding, inputs, outputs and boundaries steps with the shown-versus-entered correction |
+| `core-rules` (`eventmodeling-core-rules`) | `references/event-naming.md` "Concrete over generic"; `SKILL.md` modeling defaults | copied and translated: one real flow with real values, also on a generic platform |
 
 ## Original to this corpus
 

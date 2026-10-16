@@ -12,16 +12,16 @@ What to notice:
   (`CoatStatus`), not a second event.
 - The unique index on the ticket number became a `unique ... on CoatTakenIn` constraint with
   `released by CoatHandedBack`. Releasing it on hand-back is an assumption pending expert
-  approval (Q3), and the description says so.
+  approval (Q3); the slice `documentation` says so, and an anchored `question` note carries it.
 - The state-dependent rule (a coat can only be handed back while on a hook) is written as
   `reads CoatStatus` + `require`, marked **NOT enforced in the model today** in the slice
-  description, with its target named. No error specification is written for it.
+  description with its target named (the reasoning is in `documentation`). No error specification is written for it.
 - Every role gate found in code has `authorize` through the module policy and a `then denied`
   specification.
 - The nightly hook reset (E4) is unexplained, so it is not modeled; it stays an open question
   (Q5) in the loss report.
 
-```screenplay test=unbound
+````screenplay test=unbound
 // An intentional candidate re-sliced from as-is evidence. DESIGN MODE.
 // Evidence ids refer to rows like those in evidence-table-template.md: the legacy
 // POST /api/checkins inserted Checkins and updated Hooks (E1); here that becomes one
@@ -41,7 +41,17 @@ module Cloakroom
   authorize IsAttendant
   feature Intake
     slice StateChange TakeInCoat
-      description "An attendant hangs a guest's coat and issues a ticket. Evidence: E1 (POST /api/checkins; the Hooks update is a consequence, see CoatStatus), E6 (unique index on Checkins.TicketNumber, message read in CheckinService.cs:52-60). Legacy answered duplicates with HTTP 409 before the 403 role check; Q3 (open): may ticket numbers be reused after a hand-back? Releasing the constraint on CoatHandedBack, i.e. allowing reuse, is a proposed candidate assumption pending expert approval, not established legacy behaviour"
+      description "An attendant hangs a guest's coat and issues a ticket. Evidence: E1, E6"
+      documentation
+        ```markdown
+        - The legacy `POST /api/checkins` inserted `Checkins` and updated `Hooks`; the hook update is
+          a consequence, modeled by `CoatStatus` (E1).
+        - The unique index on `Checkins.TicketNumber` produced the message below (E6).
+        - Legacy answered a duplicate with HTTP 409 before the 403 role check.
+        - Q3 (open): may ticket numbers be reused after a hand-back? Releasing the constraint on
+          `CoatHandedBack`, which allows reuse, is a proposed candidate assumption pending expert
+          approval, not established legacy behavior.
+        ```
       command TakeInCoat
         coatId       CoatId identifier
         ticketNumber TicketNumber
@@ -91,7 +101,16 @@ module Cloakroom
 
   feature Collection
     slice StateChange HandBackCoat
-      description "The guest returns the ticket and gets the coat. Evidence: E7 (POST /api/checkins/{id}/handback updated Checkins and Hooks), E2 (CheckinService.cs:88, 409 'That coat is not on a hook'). The rule E2 depends on stored state: it is stated as reads + require and is NOT enforced in the model today (PLAY0271 at binding in design mode); target enforcement is a protected decision or a Chronicle concurrency scope on the coat's stream. No error specification is written for it because the model cannot execute it. Q2: are damaged or unclaimed coats a separate fact?"
+      description "The guest returns the ticket and gets the coat. Evidence: E7, E2. NOT enforced in the model today: the coat must be on a hook; target: protected decision or a Chronicle concurrency scope on the coat's stream"
+      documentation
+        ```markdown
+        - Legacy: `POST /api/checkins/{id}/handback` updated `Checkins` and `Hooks` (E7).
+        - The legacy check answered HTTP 409 "That coat is not on a hook" (E2).
+        - The rule depends on stored state, so it is stated as `reads` plus `require` and reports
+          `PLAY0271` at binding in design mode. No error specification is written for it because
+          the model cannot execute it.
+        - Q2: are damaged or unclaimed coats a separate fact?
+        ```
       command HandBackCoat
         coatId CoatId identifier
         reads CoatStatus by coatId
@@ -119,7 +138,12 @@ module Cloakroom
         then denied
 
     slice StateView CoatStatus
-      description "Replaces the legacy Hooks.occupied column (E1, E7), which only ever followed intake and hand-back. The nightly hook reset (E4) is unexplained and not modeled; see question Q5"
+      description "Replaces the legacy Hooks.occupied column (E1, E7)"
+      documentation
+        ```markdown
+        The column only ever followed intake and hand-back. The nightly hook reset (E4) is
+        unexplained and not modeled; see question Q5.
+        ```
       readmodel CoatStatus
         coatId       CoatId
         ticketNumber TicketNumber
@@ -157,4 +181,4 @@ module Cloakroom
           arguments
             coatId = "3f2a1b0c-9d8e-4f7a-b6c5-d4e3f2a1b001"
         then denied
-```
+````

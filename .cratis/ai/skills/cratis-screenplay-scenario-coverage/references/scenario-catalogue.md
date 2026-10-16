@@ -17,6 +17,8 @@
 - 11. Evolution compatibility
 - 12. Views
 - Example data
+- Redelivery selectors
+- Scenario types at a glance
 
 For each type: the question to put to the domain, when it applies, when "n/a" is a legitimate
 answer, the Screenplay shape, and traps. Excerpts point to the complete compiled example
@@ -57,6 +59,13 @@ name them as unfinished.
 
 ## 2. Rule rejection (one per rule)
 - Ask: "Which values would you refuse, and what would you tell the person?"
+- Test: could a domain expert recognize the rule from its message and argue about it? If not,
+  it is not a scenario. Not scenarios in Screenplay: a type mismatch the binder rejects, a
+  missing required property, malformed JSON, a collision of `generated` identifiers, an
+  infrastructure fault (matrix cell `n/a: technical`).
+- Deliberate exceptions: a concept rule is domain vocabulary that renders into a validator at
+  every use, so it gets its one acceptance, rejection and boundary set; this is not per-field
+  schema testing. Every rule stated in the brief or a persona `Cannot` line maps to a matrix cell.
 - Applies: every command `validate`/`require` rule that is a business rule, and every
   `concept` rule.
 - Concept rules travel with every use: cover each once with representative acceptance,
@@ -82,7 +91,7 @@ name them as unfinished.
   `result`, then `then denied`; or `when query` + `then denied`). See `RefusingASkipper`.
   An empty `given caller` block is the anonymous caller.
 - Use `given caller as <Persona>` for one authenticated witness synthesized from
-  that persona's policies (4.127.0). Inspect the leftmost buildable `or` choice;
+  that persona's policies. Inspect the leftmost buildable `or` choice;
   it does not represent every possible caller. Use explicit roles/claims for
   anonymous or ownership fixtures, missing conjuncts, or refused synthesis.
   One denial per persona that can reach the screen but may not act. Derive
@@ -91,10 +100,10 @@ name them as unfinished.
   spec, not `then denied`); denial only when the whole gate is false.
 - Ownership policies (`claim ... matches subject|<property>`): the denial gives the right role
   and a claim with another value (`claim "ownerId" = "<other id>"`); the success spec gives the
-  matching value. Both are needed. Ownership checks on text, Uuid, Date and DateTime subjects render at Stage 4.73.1;
+  matching value. Both are needed. Ownership checks on text, Uuid, Date and DateTime subjects render;
   other subjects are STAGE-ESM-015: note it.
 - Traps: `then error` for a denial; a denial spec whose inputs also break a rule (it still
-  denies, but reads ambiguously); trusting a `cratis run` sandbox answer (the default engine's enforcement is unverified here;
+  denies, but reads ambiguously); trusting a `cratis run` sandbox answer (the default engine enforces no authorization;
   the opt-in semantic engine enforces both but reads forgeable caller headers, so it is no security boundary); counting another command's denial.
 
 ## 4. State violation
@@ -115,9 +124,12 @@ name them as unfinished.
   protected decision.
 
 ## 5. Duplicate action and retry
-- Ask: "What if the same request arrives twice - a double click, a timeout and retry, a
-  replayed message?"
-- Decide which promise the business needs:
+- Ask first as a business question: "What if someone does this again to something already in
+  that state?" (confirm a confirmed reservation, resolve a resolved todo). Then take the
+  delivery view: a double click, a timeout and retry, a replayed message; retry semantics are
+  owned by `cratis-screenplay-streams-and-consistency`.
+- Decide which promise the business needs (once-only facts are business promises, such as
+  "a reservation is confirmed once", and stay specified):
   - **once-only fact**: the second attempt must not create a second fact (`unique event`);
   - **idempotent handling**: the second attempt must *succeed* without a new fact - not
     expressible as a constraint outcome; record it as a target requirement;
@@ -152,13 +164,13 @@ name them as unfinished.
   all conditions are false the unconditional productions still occur. See
   `RecordingACleanDeparture` (only `BoatDeparted`) and `RecordingADepartureWithDamage` (both).
 - Zero new facts: a command whose productions are all conditional may be accepted with no
-  facts. `then no events` parses but binding refuses it with PLAY0268 (#433): state the zero-fact outcome through a
-  read-model or query assertion, and an action with no outcome at all does not bind. A command spec with no `then` events but with a
-  view or query assertion is still executable as a zero-fact check: the runner compares the
-  command's facts with the (empty) expected list by exact count, so any fact produced fails it
-  (Screenplay v4.66.0). Write it that way, name it for the zero-fact outcome, and keep the view
-  assertion for the visible state. Record the obligation as unasserted only where the runner is
-  not available.
+  facts. Use `then no events` (ESM v17) to assert the action and its cascade added
+  nothing; after `when append` it asserts nothing followed the input. Keep a
+  view/query assertion too when visible state matters. Omission is not an explicit
+  no-event assertion, and an action with no outcome does not bind. Do not combine
+  it with events, event-order expectations, an error or denial (PLAY0545).
+
+Requires Screenplay 4.157.0 or later (`screenplay --version`); older compilers refuse no-event assertions with PLAY0268.
 
 ## 8. Ordering and timing
 - Ask: "Can these facts arrive late, early or out of order? What happens at the boundary of a
@@ -167,7 +179,7 @@ name them as unfinished.
   capture, a reaction) the view or translation must cope with any order.
 - Shape: view family whose givens are in a different order; translation specs where the
   external record arrives before our own fact; `given clock`/`when clock` for deadlines
-  (binds on Screenplay 4.61 or later, so not on a cratis before 3.28.2 bundle: `cratis-screenplay-toolchain` `references/versions.md`; see
+  (binds on Screenplay 4.61 or later, so not on a cratis before 3.28.2 bundle: `cratis-screenplay-toolchain` `SKILL.md`; see
   `cratis-screenplay-automations-and-translations`).
 - n/a: a single event source, with no external or cross-source input.
 
@@ -177,6 +189,17 @@ name them as unfinished.
 - Shape: the reported outcome is a **fact** (a refusal received is an event), specified in the
   Translate or Automation slice; a missing answer is a time-based scenario. A rejection
   (`then error`) is only for requests we refuse ourselves.
+- **Shown:** a failure fact that someone must act on reaches a view the person reads (a status
+  literal and the reason, mapped from the failure event). Pin it with a view specification:
+  `given <OpeningFact>`, `given <FailureFact>`, then `then query` with the failed status and
+  the reason. A failure only an automation sees is covered by the review question in
+  `cratis-screenplay-automations-and-translations`. A failure a person must act on that no
+  screen shows is a gap.
+- **Recoverable:** after the failure fact, the retry the business allows is accepted:
+  `given <FailureFact>`, `when <RetryCommand>`, `then <AttemptFact>`. It catches a once-only
+  constraint (`unique event`) that locks legitimate recovery out, and is the opposite case to
+  section 5 (duplicate action). `RetryingPaymentAfterADecline` in `invoicing-dues-example.md` is the
+  complete form. When the business forbids a retry, the case is a state violation with its message.
 - n/a: no external system in the path.
 
 ## 10. Compensation
@@ -184,6 +207,12 @@ name them as unfinished.
 - Shape: the reversal command's own specs, plus a spec proving the effect of the reversal:
   a released claim (`ReservingABerthNightFreedByACancellation`) or a removed row
   (`BerthBoardLifecycle3Cancelled`). Corrections are new facts, never edits of old ones.
+- When undoing one fact obliges follow-up work (a refund after a paid booking is cancelled), the
+  follow-up is an Automation slice. Specify it there: `given <PriorFact>`, `when append
+  <CancellationFact>`, `then <RefundRequested>` (or the pending-work row), and the case where no
+  compensation is owed (cancelled before payment: no refund fact). Recipes:
+  `cratis-screenplay-automations-and-translations` `references/cases-to-specify.md`;
+  `RequestingARefundAfterAReversal` in `invoicing-dues-design.md` is the complete form.
 - Often reveals a missing event: if nothing can undo a fact the business can reverse, ask.
 
 ## 11. Evolution compatibility
@@ -222,9 +251,53 @@ rules, gates, mappings or contracts to make an example pass.
   condition. Denial: valid business input, vary only the caller. Validation: satisfy every other
   rule.
 - Unknown domain values stay questions, not plausible inventions.
+- Show the deciding values in the spec body: the values the rule reads (the command card's
+  `Reads:` line in slice-design `references/command-inventory.md`), the identities tying the
+  steps together (the same `for` and identifier throughout) and the asserted outcome. Choose them
+  at the edge that matters (one day past the limit, the amount exactly at the cap), never vague.
+  Screenplay requires every required property on givens, commands and expected events, so
+  put the non-deciding values in a typed `example` fixture at feature scope and write only
+  the deciding values as step overrides; reuse an example only where its meaning agrees across
+  features. If a rule needs a value no declaration carries, add the property (an input, event
+  field or view field) instead of explaining it in `description`.
+- Comparison differs by `then` form. An event `then` states every required property and the
+  whole set of new facts must match (assert nothing extra, in order unless `events in any
+  order`). `then readmodel` and `then query` match as a subset of the stated properties unless
+  `exactly` is written, and a query's row count is always exact. Use `exactly` only when an
+  unexpected extra property must fail.
+- A spec `description` names the behavior witnessed or an outside condition or regulation.
+  It never carries a fact that belongs in a `given`, a value or an outcome.
 - Handoff after fixture work reports: the spec names added or changed; each meaningful fixture
   change and why (a demonstrated contradiction, never a rule changed to fit); which existing
   intentional examples were preserved; where a reused value came from (the event, command input
   or mapping it is traced to) and where values could not be traced; and unresolved
   inconsistencies between specs. Check the resulting source, not just that a write succeeded; a
   clean compile does not show the expected outcomes are right.
+
+## Redelivery selectors
+
+For recovery intent, `when redelivered <Event> to <Reaction>` must select one
+definitely matching effective given and no undecided candidate. Name `stream`
+(with a complete id) or `no stream` when givens differ only by route; omitting it
+is a wildcard, not an unrouted selector. Redelivery reference-executes as ESM v17:
+it fires only the named reaction, never re-appends the input, then settles new
+facts. Use it for retry/idempotent reaction/recovery cases, not command resubmission,
+clock repetition, replay exclusion or proof of external exactly-once effects.
+Details: `cratis-screenplay-specifications` `references/examples-and-routes.md`.
+
+## Scenario types at a glance
+
+| Type | Question | Usual Screenplay shape |
+|---|---|---|
+| Happy path | What facts does a valid request establish? | `when Cmd` -> every firing production, payload exact |
+| Rule rejection | Which input is refused, with what message? | one spec per rule; `then error "<exact message>"` (prefer `$strings.<key>`); always pinned (a bare `then error` is valid language but not accepted here) |
+| Denial | Who must not do this? | `given caller` without the policy -> `then denied`; one per gated command and query, only where the whole Boolean gate is false; ownership claims need other-owner denial |
+| State violation | Which prior facts make this wrong? | givens + constraint (`unique event` exclusivity) -> `then error`; else `recorded` |
+| Duplicate / retry | Done again to something in that state, or sent twice (lost acknowledgement)? | `when <Command>`, same identifier, earlier fact as `given` -> constraint message, or the accepted repeat |
+| Competing claim | Two people claim the same thing at once? | `when <Command>`, other source's fact as `given` (different `for`) -> constraint "another event source..." |
+| Alternative path | Which branches exist, including "nothing happens"? | true and false witnesses per `produces when`; unconditional productions always fire |
+| Ordering | Facts late or out of order? | view family with reordered givens; translation specs; else `recorded` |
+| External failure | The other system refuses, times out or answers twice? | outcome as a recorded fact (capture/translation), never a fake rejection |
+| Compensation | How is this undone, what does undoing free? | reversal command + spec showing the released claim or removed row |
+| Evolution | Do old facts still mean the same after a contract change? | spec on the new generation; compatibility reasoning in `documentation` |
+| View | What does each screen show after each fact? | `given` events (`for`) -> `then query`; `when append` -> update/removal |

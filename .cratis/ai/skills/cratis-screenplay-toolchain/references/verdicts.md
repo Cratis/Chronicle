@@ -4,18 +4,24 @@
 ## Contents
 
 - V1: authorable
+- Release-baseline gate (independent of V1–V5)
 - V2: executable diagnostics
 - V3: binding-ready
 - V4: reference specifications run
 - V5: rendered and target-verified
+- Exit codes at a glance
+- Model notes gate
+- Revisions and descriptions
 - Report format
 - Example gate (for skill and documentation authors)
 
 The five verdicts are independent results, not a ladder: each proves only its own layer,
 and each is either a result or "not run" with the reason. The verdict names are frozen
 (`cratis-screenplay-modeling-lifecycle` owns when each is required; this file owns how to
-obtain it). Tool and version facts: `versions.md`. No script ships with this skill: V2 and
-V3 are read from the MCP server or from a render, V1 and V5 from the CLIs.
+obtain it). No script ships with this skill: V2 and V3 are read from the MCP server or from a
+render, V1 and V5 from the CLIs. Read installed versions with `screenplay --version` and
+`cratis --version`; an older executable earlier on `PATH` shadows a newer install, so check
+`which -a cratis` too.
 
 | Verdict | Meaning |
 | --- | --- |
@@ -29,12 +35,11 @@ V3 are read from the MCP server or from a render, V1 and V5 from the CLIs.
 
 | Tool | Command | Pass | Fail |
 | --- | --- | --- | --- |
-| Standalone (preferred; pin: `versions.md`) | `screenplay <model-root> --warnaserror --no-color` | exit 0 and a nonzero compiled file count | exit 1 defects; exit 2 could not run/invalid arguments or input |
+| Standalone (preferred) | `screenplay <model-root> --warnaserror --no-color` | exit 0 and a nonzero compiled file count | exit 1 defects; exit 2 could not run/invalid arguments or input |
 | cratis (fallback) | `cratis screenplay validate <model-folder> --warnings-as-errors -o json-compact` | exit 0 | exit 5; exit 1 means missing path or no files |
 
 - Validate the complete application root, not an independently selected fragment.
-  Standalone file mode follows imports; folder mode includes all files. The CLI
-  file-import limitation below was a 3.28.2 probe, not a current tool claim.
+  Standalone file mode follows imports; folder mode includes all files.
 - Require a nonzero file count; empty input is not a model-validation pass.
 - Optional `--scope <Module.Feature.Slice>` compiles the whole application but
   reports descendants and direct dependent declarations, not transitive impact.
@@ -47,21 +52,36 @@ V3 are read from the MCP server or from a render, V1 and V5 from the CLIs.
 - Warnings are failures here. PLAY0029 (a construct dropped silently) and the unresolved-name
   warnings are the defects this verdict exists to catch.
 - Syntax and consistency checks (PLAY0282 to PLAY0294) run; binding does not.
-- Report: `V1 pass (screenplay 4.139.0, 3 files)`, `V1 fail: PLAY0029 a.play:12 ...`.
+- Report: `V1 pass (screenplay <version>, 3 files)`, `V1 fail: PLAY0029 in a.play, line 12`.
+
+## Release-baseline gate (independent of V1–V5)
+
+Run `screenplay baseline check <model-root>` before accepting edits to released event
+contracts: exit 0 matching, 1 changed or missing revision, 2 cannot check or unreadable. An
+absent baseline is not proof of release admission. In the release job,
+`screenplay baseline admit <model-root> --release <label>` records revisions; commit the
+sidecar. Neither command changes canonical ESM or substitutes for migration or target tests.
+Without a baseline an explicit event mode is still required: unadmitted revisions default to
+in-place edits, admitted revisions accept only an explicit `newGeneration`. Never hand-edit the
+sidecar except for a reviewed correction.
+Preconditions and MCP review: model-authoring
+[release baseline](../../cratis-screenplay-model-authoring/references/release-baseline.md).
+
+Requires Screenplay 4.153.0 or later (`screenplay --version`) for `baseline`; with an older tool, report the gate as not run.
 
 ## V2: executable diagnostics
 
 Needs an MCP connection (V2 and V3 belong to the session that owns MCP; a subagent without
 MCP reports `V2 not run: no MCP in this agent` unless the brief supplies fresh output). Without
 MCP, a binding check exists: `cratis screenplay validate --executable <root>` binds with the
-**bundled** compiler (CLI 3.57.0 bundles Screenplay 4.147.1, not standalone 4.149.0), never
-renders or writes files, and exits 5 with "The model does not bind into an executable semantic
-model" when it does not. Report it as `V3 (bundled 4.137.0 via cratis validate --executable)`; it
-gives binding errors, not the V2 `executable-diagnostics` view, so V2 stays MCP-only.
+**bundled** compiler, never renders or writes files, and exits 5 with "The model does not bind
+into an executable semantic model" when it does not. Report it as
+`V3 (bundled compiler via cratis validate --executable)`; it gives binding errors, not the V2
+`executable-diagnostics` view, so V2 stays MCP-only.
 
 1. Start the server with a fixed root: `screenplay mcp <model-folder>` or `cratis screenplay
-   mcp` in a project with `.cratis/ai.json` (see `versions.md`, roots bug). Send
-   `initialize`, then `notifications/initialized`.
+   mcp` in a project with `.cratis/ai.json`. Send `initialize`, then
+   `notifications/initialized`.
 2. `open-workspace`. The result carries `readiness` (`authoringAccepted`, `executableReady`)
    and `executableDiagnosticsCount`.
 3. Read the diagnostics: `read-workspace` with `view: "executable-diagnostics"` and the
@@ -72,6 +92,10 @@ gives binding errors, not the V2 `executable-diagnostics` view, so V2 stays MCP-
    enum compliance ...`); it is the evidence for a "V3 blocked" report. The view also lists
    information-severity diagnostics (PLAY0269 deferred UI, PLAY0270 authoring metadata such as
    descriptions, personas and screens) on models that bind; they do not block.
+
+Requires Cratis CLI 3.46.1 or later (`cratis --version`) to start `cratis screenplay mcp --project-root <project>` without creating a model folder; older CLIs create the resolved root at startup.
+
+Requires Screenplay 4.63.2 or later (`screenplay --version`) to initialize an MCP server without a fixed root; with an older tool, always pass the root as an argument.
 
 `authoringAccepted: true` only says the source compiled (or the root is empty). It says
 nothing about print or parse fidelity or identity continuity.
@@ -85,27 +109,24 @@ do not block. The ESM then binds (and `read-workspace view=executable-model` rep
 comparison needs it). Binding is what makes a model renderable at all. V3 means "binds",
 never "specifications pass".
 
-- Report the ESM version the model needs: `V3 ready (screenplay 4.139.0, ESM v6)`,
+- Report the ESM version the model needs: `V3 ready (screenplay <version>, ESM v6)`,
   `V3 blocked: PLAY0268 (enum compliance) - design scope kept`.
-  Bare `pii`/`personal` and `secret` bind as v13 on standalone 4.142.0; reasons
-  remain report-only PLAY0270. Enum/identity compliance and personal or explicitly
+  Bare `pii`/`personal` and `secret` bind as concept compliance; reasons remain
+  report-only PLAY0270. Enum/identity compliance and personal or explicitly
   subject-scoped secret event values with an explicit `subject` mark still refuse
-  PLAY0268 at binding only. CLI 3.57.0 bundles Screenplay 4.147.1 / Stage 4.89.1 and renders v13
-  concept protection (not protected identities/enums or explicit subject lineage).
-  V3 does not prove rendering.
+  PLAY0268 at binding only. V3 does not prove rendering.
 - A blocked V3 is not repaired by deleting protection or domain rules. Never remove `pii`,
   `secret`, authorization, list queries, automations or rules to reach V3; record the
   slice and the code in the gap list.
-- A model is executable only on the compiler that bound it. V3 does not carry
-  to render admission: the pinned CLI (`versions.md`) passes through ESM v10 to Stage construct
-  checks; newer models receive CLI-RENDER-004. Public publication and reaction
-  identity/filters/production overrides still receive typed Stage refusals.
-  The old 3.28.x/Stage 4.24.x probes remain historical in the subset references.
+- A model is executable only on the compiler that bound it. V3 does not carry to render
+  admission: the bundled renderer admits only ESM versions it knows and answers newer models
+  with CLI-RENDER-004. Public publication and reaction identity, filters and production
+  overrides still receive typed Stage refusals (`renderable-subset.md`).
 
 ## V4: reference specifications run
 
 Run `screenplay test <root> [--filter <exact-address>] [--format text|json]` on
-the standalone pin, or MCP `run-specifications`. The compile command alone still does not
+the standalone tool, or MCP `run-specifications`. The compile command alone does not
 execute scenarios. Reference execution is in-memory: no external services or
 opaque code run. Record route, expected versus discovered/selected counts,
 passed, failed and unsupported outcomes. Exit 0 means all selected passed; 1
@@ -115,26 +136,26 @@ is not proof of coverage. `test` rejects `--no-color` (exit 2).
 
 MCP selectors are `specification` (exact address/id) and `scope` (prefix);
 both supplied mean intersection. `offset`/`limit` page results; continuation
-requires `expectedSourceRevision`. On **Screenplay 4.145.0 and later**, pass
-`proposalId` between proposal review and `apply` to run the retained candidate
-read-only. Without that argument it runs the workspace. A candidate
-V4 belongs only to its returned source revision, not to the disk model.
+requires `expectedSourceRevision`. Pass `proposalId` between proposal review and `apply`
+to run the retained candidate read-only; without that argument the call runs the workspace.
+A candidate V4 belongs only to its returned source revision, not to the disk model.
 Unknown/applied/discarded/reopened proposals give `UnknownProposal`.
 A statically impossible `then` reports PLAY0285: the whole model is unbound,
-exit 3, and no specifications run. Details and source evidence:
+exit 3, and no specifications run. Details:
 [reference execution](../../cratis-screenplay-model-authoring/references/mcp-tools.md#run-reference-specifications).
+
+Requires Screenplay 4.145.0 or later (`screenplay --version`) for `proposalId` on `run-specifications`; with an older tool, apply the proposal before running specifications.
 
 The reference runner returns unsupported for a specification that reads a reducer-built read
 model and for any construct whose evaluation needs an opaque body.
 
 **Rendered Debug tests are never V4.** A rendered application is a different engine: Stage
-4.24 admits pure reducer bodies and generates reducer replay and assertions in its Debug
+admits pure reducer bodies and generates reducer replay and assertions in its Debug
 tests, so the two engines can differ (a pure reducer body is a concrete case). Report those
 outcomes only under V5.tests, labelled target-test evidence. The `cratis/stage-specrunner` job
-(Docker, opt-in; behaviour on ESM v4 to v6 unverified) runs Stage's own semantic executor
-(`SemanticSpecificationExecutor`, Stage `v4.24.0` `Source/SpecRunner/Program.cs`), not the
-reference route: report its outcomes on a separate line, "Stage semantic engine (target-engine
-evidence)", never as V4 and not as V5.tests.
+(Docker, opt-in) runs Stage's own semantic executor, not the reference route: report its
+outcomes on a separate line, "Stage semantic engine (target-engine evidence)", never as V4
+and not as V5.tests.
 Without a reference route: `V4 not run: no route`.
 
 ## V5: rendered and target-verified
@@ -156,6 +177,67 @@ Never claim a whole-application V5 from a rendered subset. Render workflow, owne
 and gap-fill: `cratis-screenplay-render-and-gap-fill` and `cratis-stage-rendering-and-sandbox`.
 What Stage admits: `renderable-subset.md`.
 
+## Exit codes at a glance
+
+| Layer | Route | Result |
+| --- | --- | --- |
+| Source validation | `screenplay <root> --warnaserror --no-color` | 0 clean; 1 reported defects; 2 could not run or invalid arguments or input. `--scope` limits the reported set, not compilation |
+| Completeness | add `--check <name>[,<name>]` (repeatable) or `--check all` | Opt-in warnings; whole-source errors skip checks, not pass them |
+| CLI source validation | `cratis screenplay validate <root> --warnings-as-errors -o json-compact` | Read the producer exit and the JSON errors, warnings and file count |
+| Binding | MCP workspace readiness and `executable-diagnostics` | V2 reads diagnostics; V3 requires binding with no blocking diagnostics |
+| Reference specifications | `screenplay test <root> [--filter <address>] [--format text\|json]`, or MCP `run-specifications` (`specification`, `scope`, `offset`, `limit`, `expectedSourceRevision`, `proposalId`) | 0 all selected passed; 1 failed; 2 invalid arguments, input, selection or IO; 3 unsupported or unbound. Counts of zero do not prove coverage |
+| Release baseline | `screenplay baseline admit <root> --release <label>`; `screenplay baseline check <root>` | 0 success; 1 changed or missing revision; 2 unavailable, unreadable or invalid input or write failure |
+| Rendering | `cratis render` | Separate admission, publication, target build and target tests (V5) |
+
+Source validation does not bind or run attached code. Reference execution is in-memory and
+does not run opaque attachments or external services. CLI-derived specification IDs need not
+match persisted MCP identities after renames; use MCP for identity-stable selection. A folder
+compiles as one application: a standalone file includes its imports, not unimported siblings,
+so keep the application root as the input for scoped checks and never treat a clean fragment
+or scoped result as whole-application success.
+
+MCP server launch: `screenplay mcp <model-root>` or `cratis screenplay mcp <model-root>`.
+Discover `tools/list`, views and schemas rather than counting tools. Connection, worktree
+switching and root-state conflicts: `cratis-screenplay-model-authoring`. The standalone tool
+and the compiler bundled in the CLI can differ in release, so name the tool with every
+verdict and never transfer a verdict between them without rerunning the same inputs.
+
+## Model notes gate
+
+```shell
+screenplay <model-folder> --open-questions report --no-color
+screenplay <model-folder> --scope Library.Loans.CheckIn --open-questions fail --no-color
+```
+
+`report` emits info `model-note.open-question` findings without failing for questions.
+`fail` exits **1** when the selected set has an open question; unreadable notes exit **2**
+when the flag is given. Compilation still runs with its own verdict; question findings are
+MCP/CLI only, **no PLAY code**. With no flag the sidecar is ignored, and `--warnaserror` does
+not gate questions. Tasks and ordinary notes do not fail this gate.
+
+Scope includes descendants and ancestor notes (application notes too). An unscoped report
+includes orphaned open questions. Absent identity state reports all open questions unscoped as
+orphaned with `identity-state-absent`, rather than hiding them behind a scope. Notes never
+change ESM or V1–V5 verdicts. Read model-authoring
+[model notes](../../cratis-screenplay-model-authoring/references/model-notes.md) when
+recording, resolving, paging or reviewing orphan impact.
+
+Requires Screenplay 4.144.0 or later (`screenplay --version`) for `--open-questions`; `cratis screenplay validate` has no such option, so use the standalone tool for this gate.
+
+## Revisions and descriptions
+
+`modelRevision` exists only when binding succeeds; it is canonical semantic
+identity, not source identity. Source positions and report-only metadata can
+change source/workspace revisions without changing it. Persisted catalogs
+preserve assigned identities; do not reconstruct them from names.
+
+A render manifest's `semanticRevision` is a different provenance value, made
+with the render name and bundled compiler. Do not compare it directly to MCP
+`modelRevision`. Compare successive renders with the same identity and inputs, or use
+`cratis render ... --check`. Descriptions and event documentation render as XML
+doc comments, so editing them changes managed-file hashes (a `--check` exit 6) but not the
+executable model revision.
+
 ## Report format
 
 One line per verdict, tool and version first, evidence second:
@@ -174,16 +256,12 @@ source change makes earlier verdicts stale.
 
 ## Example gate (for skill and documentation authors)
 
-Historical corpus fences were checked with standalone 4.68.0 and CLI 3.28.2.
-Do not promote those results to current pins without rerunning. Check each changed
-complete fence with the pinned standalone tool (`versions.md`) `--warnaserror`; run `screenplay test` for
-specification examples, and verify expected-diagnostic examples against their
-claimed codes. Where bundle compatibility matters, also check the pinned CLI (`versions.md`).
-The `// Needs the standalone screenplay compiler (ESM v6)` first-line marker belonged to cratis
-before 3.28.2, which could not validate those fences; no fence carries it now, and a
-checker that still skips marked fences under `cratis` skips nothing. Examples meant to execute are also opened through MCP and
-must be `executableReady`. No example uses `numbers exact`.
+Check each changed complete fence with the standalone tool and `--warnaserror`; run
+`screenplay test` for specification examples, and verify expected-diagnostic examples against
+their claimed codes. Where bundle compatibility matters, also check the CLI. Examples meant to
+execute are also opened through MCP and must be `executableReady`. No example uses
+`numbers exact`.
 
 Edit strategy for `.play` changes (typed identity-preserving operations preferred, bounded text
-edits for address-preserving changes) is in
-`SKILL.md`; the MCP edit procedure is in `cratis-screenplay-model-authoring`.
+edits for address-preserving changes) is in `SKILL.md`; the MCP edit procedure is in
+`cratis-screenplay-model-authoring`.

@@ -82,7 +82,7 @@ the format in `worked-example.md`.
 | A4 | Every command input ends in an event field or is used by a rule | `produces`, `validate`, `require` | Q (an unused input is often a missed fact) |
 | A5 | Every event has a consumer (view, reaction, constraint, external contract) or a stated terminal reason | MCP `dependencies direction=incoming` | Q |
 | A6 | Every declared view is read by a screen, a reaction or an external caller | screens `data ... via query`, reaction `reads` | Q |
-| A7 | Data called "missing" was searched for elsewhere in the model first | `search-declarations` | procedure |
+| A7 | Data called "missing" was searched for elsewhere in the model first (declaration names via search, properties via declaration details) | `search-declarations`, `declaration-details` | procedure |
 | A8 | Step contracts hold: what each step needs (precondition) is what the previous step's fact provides; each step's postcondition names the fact and its fields | slice order, event fields | D |
 
 ## Phase 4. Ownership and identity (6 checks, B1-B6)
@@ -140,7 +140,7 @@ execution or prove a business deadlock. An ordering root is required; without
 one the folder check is skipped. A real F6 defect needs a named domain
 consequence, not just the diagram's cycle. Suggested graph order and safe
 PLAY0516 moves preserve executable bytes/identities. Source: Screenplay
-`v4.125.0:Documentation/screenplay/imports.md`, `diagnostics.md`.
+`Documentation/screenplay/imports.md`, `diagnostics.md`.
 
 | Id | Check | Evidence | Tier |
 |---|---|---|---|
@@ -175,13 +175,13 @@ Nebulit (`provenance.md`).
 | G5 | Row scoping (whose data) is part of the view, not a filter the caller supplies | queries | D |
 | G6 | Every persona Cannot line resolves to an executable gate (`authorize` policy, or ownership `claim "x" matches subject\|<command property>`) and a `then denied` spec whose caller is synthesized with `given caller as <Persona>` or explicitly carries the effective-gate roles/claims; otherwise recorded as a gap. Persona text is intent only | personas, policies, specs | D |
 | G7 | Every command and query under an inherited module/feature `authorize` has its own `then denied` spec; authorization shared by a feature is declared at feature/module level so new paths inherit it | policies, specs | D |
-| G8 | Ownership/claim targets are a supported scalar (text, Uuid, Date or DateTime render; a numeric or Boolean target is always denied; other shapes and a command without exactly one identifier are STAGE-ESM-015 at Stage 4.73.1): noted | policies | C (renderable mode) |
+| G8 | Ownership/claim targets are a supported scalar (text, Uuid, Date or DateTime render; a numeric or Boolean target is always denied; other shapes and a command without exactly one identifier are STAGE-ESM-015): noted | policies | C (renderable mode) |
 
 ## Phase 10. Views, queries and screens (4 checks, H1-H4)
 | Id | Check | Evidence | Tier |
 |---|---|---|---|
 | H1 | Query shape follows the business view (list where people scan; lookup where they open one) | queries, screens | D |
-| H2 | Executable scope: a keyed `=> RM optional` query with `by` named like a read-model property, or a collection (`=> RM[]`, observable too) with caller-supplied `by` and/or equality filters (ESM v14 since 4.143.0). `from`, single-result filters, opaque `scoped to`/`performer` and composite `by` remain PLAY0268. The projection routes by the same identity (a `from` key or an event property, or `$eventSourceId`; `$eventSourceId` is not mandated). Filtered models: CLI 3.57.0 / Stage 4.89.1 admit through v15, including supported v14 equality filters. Renderable scope only: Stage-specific identity/filter limits (Stage 4.89.1 renders a keyed optional snapshot lookup and observable collection queries; any other query is `STAGE-ESM-010`) | queries, projections | C (executable); C (render admission, renderable only) |
+| H2 | Executable scope: a keyed `=> RM optional` query with `by` named like a read-model property, or a collection (`=> RM[]`, observable too) with caller-supplied `by` and/or equality filters. `from`, single-result filters, opaque `scoped to`/`performer` and composite `by` remain PLAY0268. The projection routes by the same identity (a `from` key or an event property, or `$eventSourceId`; `$eventSourceId` is not mandated). Filtered models: supported v14 equality filters render within the CLI bundle's ESM ceiling. Renderable scope only: Stage-specific identity/filter limits; keyed optional snapshot lookups and snapshot/observable collections render (Requires Stage 4.90.0 for snapshot lists; older renderers report `STAGE-ESM-010`). Check query concept-validation parity separately; primitive-argument targets answer absence instead of Validation | queries, projections | C (executable); C (render admission, renderable only) |
 | H3 | One builder per read model; projection `key` only on `from` | projections | C |
 | H4 | Screens show one actor's point of view; a form submits one command | screens, forms | D |
 
@@ -193,7 +193,7 @@ artifact is `N/A: <reason>`.
 
 | Id | Check (the rejected pattern) | Signal to look for | Severity |
 |---|---|---|---|
-| R1 | Code-first change that silently outranks accepted model intent | behaviour added in code with no `.play` counterpart; the model edited to match existing code; the model left stale after a code change; optional structural evidence: `cratis screenplay conform <model-root> --project <path>` (CLI 3.42.0+, exit 0/1/2, exact structural addresses only, never a behavioral or V4 verdict; MSBuild runs, so a trusted clone) | major (critical when the code contradicts a protection) |
+| R1 | Code-first change that silently outranks accepted model intent | behaviour added in code with no `.play` counterpart (for hand-written code changed since it was last checked, use `cratis-screenplay-render-and-gap-fill/references/drift-and-fallback-record.md`, section "Hand-written code changed since it was last verified"); the model edited to match existing code; the model left stale after a code change; optional structural evidence: `cratis screenplay conform <model-root> --project <path>` (CLI 3.42.0+, exit 0/1/2, exact structural addresses only, never a behavioral or V4 verdict; MSBuild runs, so a trusted clone) | major (critical when the code contradicts a protection) |
 | R2 | A diagram, board or document in place of executable semantics | a rule only in a board note, a description or a wiki page; no property, validation, constraint or spec behind it (E8) | major |
 | R3 | Claims of universal low-code, lossless recovery or target parity | words like "fully generated", "lossless", "any target" in a report or description | minor; major when it hides a gap |
 | R4 | Framework machinery in the domain vocabulary (saga, aggregate, passive objects, HTTP or broker detail) or syntax wanted because a framework API is common | declarations named after saga, handler classes, topics, endpoints; a request to add language syntax to mirror a framework API | minor; major when it shapes the model |

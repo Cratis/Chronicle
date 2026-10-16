@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-model-review/references/model-inventory-report.md -->
 # Model inventory report
 
+## Contents
+
+- Gather (read-only)
+- Report
+- Information journey (optional)
+- Structural gaps to look for
+- Delivery status (optional)
+- Not carried over
+- Optional read-only passes
+
 Use this for a read-only "what is in this model and where are the gaps" report on an
 existing, extracted or inherited `.play` model, before or without a full checklist run. It is
 the inventory the audit pass in `SKILL.md` produces, in a fixed shape a maintainer can read
@@ -12,6 +22,9 @@ the Screenplay MCP views.
 1. Scope. A named module narrows the report to that module; otherwise report the whole
    model, one block per module. If the named module does not exist, say so and list the modules
    that do.
+   Cost tiers: counts only need `describe-application` (view `summary`); gaps and shapes need
+   declaration details and `dependency-graph`; do not read specifications when coverage was not
+   asked.
 2. Structure: `describe-application` (view `summary`) gives modules, features and slices by kind.
 3. Elements: counts of `event`, `command`, `readmodel`, `screen`, `reaction` and `trigger`
    per module from `search-declarations`; fall back to the source files when a view is
@@ -23,6 +36,8 @@ the Screenplay MCP views.
    `find-modeling-smells` for the candidate shapes.
 
 ## Report
+Asked conversationally, give the summary and the most important gap and offer the full lists on request.
+
 ```
 ## Model inventory: <model root or module>
 Inspected: <date>, Screenplay <tool version>, source identity <revision>
@@ -41,7 +56,8 @@ Inspected: <date>, Screenplay <tool version>, source identity <revision>
 | capture | |
 
 ### Specification coverage
-- n of total slices have at least one assertion (pct)
+- n of total slices have at least one assertion (pct); split by slice kind (StateChange,
+  StateView, Automation, Translate) when it helps
 - Without: <names, at most 10, then "and N more">
 
 ### Structural gaps (per slice)
@@ -58,6 +74,34 @@ anti-patterns.md>, or "none"
 <2 to 4 sentences: maturity, the most important gap or risk, one concrete suggestion>
 ```
 
+## Information journey (optional)
+
+One piece of information per journey ("name and email" are two; do the first, offer the second).
+An ambiguous subject: ask once, listing the candidate properties. Find the carriers by inspecting
+the properties of the scoped declarations (`declaration-details`, `read-ast` or the model source):
+`search-declarations` matches declaration names and addresses only, never properties, so an empty
+name search does not mean there are no carriers. Then trace with `find-references` (`address`,
+`kind: "Property"`) on each carrier's qualified property address, following the roles `mapping-source`,
+`mapping-target`, `automap`, `screen-binding`, `assertion`, `key` and `condition` until nothing new
+appears (model-authoring `references/property-links.md`). An incomplete result or `opaque` and
+`unclassified` links are named as such, never guessed past. A property that only sounds related
+(`emailVerified`) is different information.
+
+| Role | The declaration ... |
+|---|---|
+| enters | first takes it in: a screen or form input, a capture, a translated event; the command when no screen is modeled. Several when it can enter several ways |
+| recorded | an event that stores it (every such event is a stop) |
+| changed | renames it (mapping), derives from it, or normalizes it as a specification or `documentation` states |
+| used | a command that carries or checks it, a projection or read model, a screen that shows it, a specification that decides on it |
+| leaves | a reaction or outbound translation that hands it outside |
+
+Each declaration appears once, with the role that says most. Order by flow; branches follow their
+source (after the recording event: its read models, then reactions). Open with a headline ("enters
+in 1 place, recorded in 2 events, used in 3 places"), then the table (role, declaration address,
+property name there, slice, note). A value recorded but never read, or shown but in no read
+model, is a finding. For personal data, link the journey to the compliance processing record
+(`cratis-chronicle-compliance`). Changes asked afterwards are ordinary model work.
+
 ## Structural gaps to look for
 | Slice kind | Expect | Flag when missing |
 |---|---|---|
@@ -70,7 +114,19 @@ Do not flag a gap the documentation or the slice name marks intentional (an inte
 with no screen). Judge unintentional gaps against the slice title, and surface only those.
 Orphans that a documented terminal reason explains are not findings.
 
+## Delivery status (optional)
+`.play` has no status field. When the brief names the tracking issues, count slices per delivery
+status (todo, in progress, blocked, done; `cratis-screenplay-delivery-planning`) and flag stalled
+work: `blocked` without a named cause, `in progress` with no change since the last period.
+Otherwise the report carries no status counts.
+
 ## Not carried over
-Slice status counts (`Planned`, `InProgress`, `Done`) are not in the report: `.play` has no
-status field. Delivery status lives in the GitHub issue or `STATE.md`. An orphan that a board
+Slice status counts are not in the report without that brief. An orphan that a board
 tool could not see is skipped with a note, never guessed.
+
+## Optional read-only passes
+
+Optional, on request, all read-only and yielding edit requests: one subject's information journey
+(`references/model-inventory-report.md`), a resilience pass over business-critical scope after the
+critic review and before acceptance (`references/stressor-analysis.md`), and a slice-by-slice
+explanation or impact walkthrough (`references/walkthrough.md`).

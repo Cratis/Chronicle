@@ -3,8 +3,7 @@
 
 import { EventStoreCard } from 'Components/Common/EventStoreCard';
 import { EventStoreKeyFigures } from 'Components/Common/EventStoreKeyFigures';
-import { HomeViewModel } from './HomeViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
+import { ObserveEventStores } from 'Features/EventStores';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
 import { MdAdd } from 'react-icons/md';
@@ -14,7 +13,9 @@ import { AddEventStoreDialog } from './AddEventStoreDialog';
 import chronicleLogo from './Security/chronicle.svg';
 import { version } from '../version';
 
-export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
+export const Home = () => {
+    const [eventStoresResult] = ObserveEventStores.use();
+    const eventStores = eventStoresResult.data.map(_ => _.name);
     const basePath = useRelativePath('event-store');
     const [AddEventStoreDialogWrapper, showAddEventStoreDialog] = useDialog(AddEventStoreDialog);
 
@@ -30,7 +31,7 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
             </header>
 
             <div className={css.grid}>
-                {viewModel.eventStores.map((eventStore) => (
+                {eventStores.map((eventStore) => (
                     <EventStoreCard
                         key={eventStore}
                         title={eventStore}
@@ -47,4 +48,4 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
             <AddEventStoreDialogWrapper />
         </div>
     );
-});
+};

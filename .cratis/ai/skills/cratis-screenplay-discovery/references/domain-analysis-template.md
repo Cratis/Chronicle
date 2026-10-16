@@ -1,6 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-discovery/references/domain-analysis-template.md -->
 # Domain analysis note
 
+## Contents
+
+- When to write one
+- Working it out
+- Intake rigor for documents
+- Template
+- Requirements that make a good source
+- Questions for the domain expert
+- Not every failure is an event
+- Quality checks before sharing
+
 Use this when requirements arrive as prose (a brief, tickets, a recorded session, an interview
 transcript) and you want one readable summary before or alongside the first `.play` edits. The
 `.play` model is the source of truth; this note is a work record that points to it. It lives in
@@ -27,6 +38,9 @@ Skip it when the input is already short and structured; go straight to `referenc
    identity. These are groupings of events, not attribute lists.
 5. Note the questions the requirements do not answer.
 
+## Intake rigor for documents
+The reading discipline for a written source (certainty marks, exact figures, contradictions, a coverage pass, the facts file, fact-to-declaration mapping and the blueprint summary) is in `document-intake.md`.
+
 ## Template
 ```markdown
 # Domain analysis: <domain>
@@ -48,7 +62,7 @@ Human roles, then system actors (internal or external; what sets them off).
 - <Entity>: <PastTenseEvent>: when, why, who or what causes it.
 
 ## Rules and constraints
-- <Rule>: condition and consequence, as stated in the source.
+- <Rule> [stated | implied | assumed]: condition and consequence, as stated in the source, with its locator.
 
 ## Questions for the domain expert
 - <Unclear process, missing actor, boundary condition>.

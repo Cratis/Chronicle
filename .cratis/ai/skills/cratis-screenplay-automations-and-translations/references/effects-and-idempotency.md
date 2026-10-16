@@ -1,6 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/references/effects-and-idempotency.md -->
 # Effects and idempotency
 
+## Contents
+
+- Three guarantees, three proofs
+- Where the external call sits
+- Refusal disposition and redelivery
+- Retry identity
+- Ordering and lost acknowledgements
+- Projection lag and rebuild
+- What to write down (slice `documentation` + `STATE.md`)
+- Chronicle realization
+
 ## Three guarantees, three proofs
 See "Effect guarantees and recovery traps" in SKILL.md.
 
@@ -28,18 +39,28 @@ key; write a reconciliation case.
 
 ## Refusal disposition and redelivery
 
-At Screenplay 4.125.0 an invocation can state ordered `on refused` selectors for
+An invocation can state ordered `on refused` selectors for
 validation, constraint (optionally named) or explicit authorization denial.
 Bare refusal does not include authorization. A matching branch declares a fact
 or leaf `acknowledge`; `$refusal.reason`/`.message` are String details and
-`.constraint` belongs only to constraint selectors. This is **authoring-only**
-(PLAY0268), not evidence that a duplicate was safely acknowledged at runtime.
+`.constraint` belongs only to constraint selectors and names the first violated
+constraint. The first matching branch wins; a handled refusal stops the trigger's
+remaining invocations, not other reactions. Mixed refusals classify authorization,
+then constraint, then validation. A rejected branch append ends the scenario.
+Acknowledgement records handling, not completion; unhandled validation/constraint
+refusals stay assertable with `then error`.
+
+Requires Screenplay 4.160.0 or later (`screenplay --version`) for executable refusal branches and `$refusal` values (ESM v19); older compilers report PLAY0268.
 
 Recovery syntax `when redelivered <Event> to <Reaction>` selects exactly one
 existing given occurrence; it is not append or replay. `then no events` makes a
-no-new-facts contract explicit but remains unadmitted too. Full selectors,
-occurrence matching and checked source examples: captures-and-reactions
+no-new-facts contract explicit, including the settled cascade; after append it
+excludes the input fact. Specify retry/recovery behavior this way rather than
+re-appending the input or claiming an external effect was deduplicated. Full
+selectors, occurrence matching and examples: captures-and-reactions
 `references/refusals-and-redelivery.md`.
+
+Requires Screenplay 4.157.0 or later (`screenplay --version`) for executable redelivery and no-event assertions (ESM v17); older compilers report PLAY0268.
 
 Infrastructure/contract errors, Unsupported and concurrency are never domain
 refusals. No `by concurrency` exists: fail/retry transient contention. Record the

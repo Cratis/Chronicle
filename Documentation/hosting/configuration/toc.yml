@@ -8,6 +8,8 @@
   href: features.md
 - name: Storage
   href: storage.mdx
+- name: Storage Connection Resolution
+  href: storage-connection-resolution.md
 - name: Compliance Storage
   href: compliance-storage.md
 - name: Clustering

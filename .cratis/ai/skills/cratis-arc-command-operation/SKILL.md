@@ -18,20 +18,19 @@ Chronicle is not required.
 
 ## Verified product sources
 
-| Package / source assembly | Verified version | Purpose |
-| --- | --- | --- |
-| `Cratis.Arc.Core` | `22.75.0` | `Cratis.Arc.Commands`: operation declarations, pipeline, scopes, recovery observations |
-| `Cratis.Arc.Core.CodeAnalysis` / `Cratis.Arc.Core.Generators` | `22.75.0` | ARC0016–ARC0018 and typed invocation; generator ships inside Core, not as a standalone package |
-| `Cratis.Arc.ProxyGenerator` | `22.75.0` | Excludes operations and batches from the client response |
-| `Cratis.Arc.Testing` | `22.75.0` | `Cratis.Arc.Testing.Commands.CommandScenario<TCommand>` and operation assertions |
-| `Cratis.Arc.Chronicle` / `Cratis.Arc.Chronicle.Testing` | `22.75.0` | Deferred event commitment and real in-process constraint-rejection specs |
+| Package / source assembly | Purpose |
+| --- | --- |
+| `Cratis.Arc.Core` | `Cratis.Arc.Commands`: operation declarations, pipeline, scopes, recovery observations |
+| `Cratis.Arc.Core.CodeAnalysis` / `Cratis.Arc.Core.Generators` | ARC0016–ARC0018 and typed invocation; generator ships inside Core, not as a standalone package |
+| `Cratis.Arc.ProxyGenerator` | Excludes operations and batches from the client response |
+| `Cratis.Arc.Testing` | `Cratis.Arc.Testing.Commands.CommandScenario<TCommand>` and operation assertions |
+| `Cratis.Arc.Chronicle` / `Cratis.Arc.Chronicle.Testing` | Deferred event commitment and real in-process constraint-rejection specs |
 
-Rechecked at **Arc v22.75.0**; operation/recovery sources and the linked lessons
-are unchanged since the prior 22.48.1 verification.
-[Operation docs](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/commands/operations/index.md),
-[execution reference](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/commands/operations/reference.md),
+Sources:
+[Operation docs](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/index.md),
+[execution reference](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/reference.md),
 `Source/DotNET/Arc.Core/Commands/`, the analyzer/generator, and the testing
-sources. Reverify for other versions. These are C# APIs, not the separate
+sources. These are C# APIs, not the separate
 Arc for TypeScript server API.
 
 ## Choose the boundary
@@ -56,7 +55,7 @@ state before `Handle()`; returning operations does not make hidden I/O pure.
 Use an immutable record implementing `ICommandOperation`. Business data belongs
 in properties; services belong in method parameters. This example reuses the
 application-owned `ReservationId`, `SeatId`, and `ISeatReservations` from Arc's
-[reservation example](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/commands/operations/implementing.md).
+[reservation example](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/implementing.md).
 The provider's `Reserve` and `Cancel` methods return `Task`; they are not Arc APIs.
 
 ```csharp
@@ -267,7 +266,7 @@ migration. Provider tests must separately prove ownership and idempotency.
 - Calling an existing command: `cratis-arc-command-execution`.
 - Reliable reactions to committed facts: `cratis-chronicle-reactor`.
 - Specialized framework return-value interpretation: Arc's
-  [response value handlers](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/commands/response-value-handlers.md).
+  [response value handlers](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/response-value-handlers.md).
 
 ## Verify
 

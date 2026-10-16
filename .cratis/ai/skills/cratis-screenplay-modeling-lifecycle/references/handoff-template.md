@@ -8,6 +8,7 @@
 - 3. Edit request (identity-affecting or MCP-only changes)
 - 4. Cold-readable questions
 - 5. Who records the model used
+- Session state, report and packet
 
 ## 1. State file: `.ai-work/screenplay/<model-slug>/STATE.md`
 
@@ -134,3 +135,17 @@ Each agent writes the model it ran on into the packet when the harness exposes i
 `model: not exposed`. The main session copies every contributing author's and the reviewer's
 model into STATE.md. A reviewer on the same model as an author is a same-model review: it is
 labelled, it is additional evidence, and the user decides whether it is enough.
+
+## Session state, report and packet
+
+- **State**: `.ai-work/screenplay/<model-slug>/STATE.md`, untracked (`rules/local-work-artifacts.md`),
+  overwritten and bounded: Interview Trail (one row per phase), summary, five verdict lines,
+  source identity, each author's and reviewer's model, open questions, decisions. Overwrite it
+  before loading the next phase skill; hand off from it at a milestone.
+- **Phase report**: exhaustive, never shortened to save tokens; the final message when the brief
+  says so, else a task file outside the model root.
+- **Handoff packet** (about 40 lines, appended): outcome, mode, model root, source identity,
+  changed declarations, edit requests, five verdict lines, gaps, assumptions, open questions,
+  next phase, report pointer. Templates: `references/handoff-template.md`,
+  `references/phase-report-inventories.md`; `references/reasoning-notes.md`;
+  `references/code-reading-and-tokens.md`.

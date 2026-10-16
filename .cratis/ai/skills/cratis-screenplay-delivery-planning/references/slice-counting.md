@@ -26,7 +26,7 @@ Plan these as separate lines, not slice weight:
 - documentation and training.
 
 ## Realization check
-Before pricing a slice as rendered, run the admission probe in `cratis-screenplay-render-and-gap-fill` for the whole model. Do not restate version pins in a plan; cite `cratis-screenplay-toolchain` `references/versions.md` for the pair you used. A slice Stage refuses (an `STAGE-ESM-*` code) is hand-written work with the model as contract: price it as hand-written and record the refusal code.
+Before pricing a slice as rendered, run the admission probe in `cratis-screenplay-render-and-gap-fill` for the whole model. Do not restate version pins in a plan; record the `screenplay --version` and `cratis --version` you used. A slice Stage refuses (an `STAGE-ESM-*` code) is hand-written work with the model as contract: price it as hand-written and record the refusal code.
 
 ## Weights
 Weights are the team's, calibrated from completed slices, not constants of the method. Start with a simple scale and let history replace it:

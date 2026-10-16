@@ -45,16 +45,9 @@ Chronicle provides two ways to define constraints:
 
 A constraint checks a fixed rule about values and event types. It cannot count, sum or compare, so it cannot express "at most five courses per student" or "no more than the stock on hand". For a rule that depends on state, use a [decision read](../read-models/decision-reads.mdx) and a guarded append.
 
-| | Constraint | Decision read |
-|---|---|---|
-| Use it for | A value is unique, or something is created once | A rule over state you read: a count, a stock, a status |
-| What it protects | A value across every event source in the sequence, or one event per source | One key's history, for the event types the model uses |
-| Needs a read first | No | Yes |
-| Covers writers that do not take part | Yes. The kernel checks every append | No. Only appends that carry the guard |
-| Cost | An index lookup inside the append | A fold of the key's history, every time |
-| Fails as | A constraint violation on the append result | A concurrency violation naming the model and key |
+A constraint is checked inside the append for every writer, with no read first. A decision read folds one key's history and guards only the appends that carry it. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares them side by side.
 
-A decision read cannot make a value unique across keys, and a constraint cannot count. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares all the options, and [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code.
+A decision read cannot make a value unique across keys, and a constraint cannot count. [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code.
 
 Know the limits of what a constraint covers:
 

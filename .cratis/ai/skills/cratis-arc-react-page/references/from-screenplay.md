@@ -24,9 +24,9 @@ Three different claims are mixed in any "screen to page" mapping. Keep them apar
 
 | Claim | Status | Evidence |
 | --- | --- | --- |
-| What each `screen`, `form` and interaction construct means | Verified | Screenplay `v4.66.0`: `Documentation/screenplay/{screens,forms,interactions}.md` |
-| What Stage does with a screen | Verified: it draws it through Scene, it does not write a React page | Stage `v4.24.0`: `Documentation/reference/stage-rendering.md` ("It does not generate screens for it"), `Documentation/reference/default-scene-composition.md` ("does not ... generate per-screen TypeScript components"), `Source/Contracts/Scene/ScreenDirectiveConverter.cs` (`data`, `action`, `section`, `title`, `table`, `summary` become Scene elements) |
-| Which Components and Arc API gives a page the same behavior | Verified API; the pairing is this skill's convention | `@cratis/components` `v4.26.4` (`DataPage`, `DataTables`, `CommandDialog`, `CommandForm`) and the sibling references |
+| What each `screen`, `form` and interaction construct means | Verified | Screenplay `Documentation/screenplay/{screens,forms,interactions}.md` |
+| What Stage does with a screen | Verified: it draws it through Scene, it does not write a React page | Stage `Documentation/reference/stage-rendering.md` ("It does not generate screens for it"), `Documentation/reference/default-scene-composition.md` ("does not ... generate per-screen TypeScript components"), `Source/Contracts/Scene/ScreenDirectiveConverter.cs` (`data`, `action`, `section`, `title`, `table`, `summary` become Scene elements) |
+| Which Components and Arc API gives a page the same behavior | Verified API; the pairing is this skill's convention | `@cratis/components` (`DataPage`, `DataTables`, `CommandDialog`, `CommandForm`) and the sibling references |
 
 A hand-written Arc React page and a Scene-rendered screen are different surfaces;
 they share Components, not ownership or runtime APIs. Scene is the experimental
@@ -124,12 +124,18 @@ field because `berthId` is the identifier, not something the user types.
 | `action CancelBerth` on a list with a table | `MenuItem` with `disableOnUnselected`; the selected row supplies the identifier | Verified prop |
 | `action` with no `label` | The model gives no text. Use the command name, spaced, and report it | Gap |
 | `action X` with `navigate to S [by p]` | Navigate to the page for `S` after the command succeeds, in `onSuccess`; pass `p` from the response or the row | Assumption: `screens.md` does not say when it navigates. The form's `on submit` is defined as "after a successful submit"; confirm with the model owner |
-| `on row-click navigate to S by p` | `DataPage` and `DataTableForQuery` forward no row-click prop at `4.6.0` (only `DataTableCore` has `onRowClick`, and it takes rows, not a query). Use controlled `selection` and `onSelectionChange` to navigate, or a link in a `Column` `body` | Gap: selection is not a click; report which you chose |
+| `on row-click navigate to S by p` | `DataPage` and `DataTableForQuery` forward no row-click prop (only `DataTableCore` has `onRowClick`, and it takes rows, not a query). Use controlled `selection` and `onSelectionChange` to navigate, or a link in a `Column` `body` | Gap: selection is not a click; report which you chose |
 | `section`, `sidebar`, `main`, `template MasterDetail` | Page layout. Keep the section names as component names so the page can be compared to the model. `MasterDetail` over a list is `detailsComponent` | Convention: Components has no screen-template concept |
-| `title`, `label`, `message` written as `$strings.key` | The text of that key in the `.strings` file for the locale, never retyped from memory | Verified token ([internationalization.md](https://github.com/Cratis/Screenplay/blob/v4.66.0/Documentation/screenplay/internationalization.md)); the runtime mechanism is application-owned |
+| `title`, `label`, `message` written as `$strings.key` | The text of that key in the `.strings` file for the locale, never retyped from memory | Verified token ([internationalization.md](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/internationalization.md)); the runtime mechanism is application-owned |
 | `ui profile`, `theme`, `layout`, `arrangement` | Not page code. Theming is `cratis-components-styling`; the shell is the application's | Design-only |
 | A Level 3 `react` block | The block is already the implementation, with typed `Props`. Port it into a component that honors those `Props` | Convention |
 | `file Screens/X.tsx` | That file is the page. The model keeps the contract; the file must still show the declared data and actions | Stage's handling of the file reference is not verified |
+
+A screen hosting actions from several slices has one page composition point. The page may import
+those slices' exported dialogs or components and pass props; a slice's React internals do not
+import another slice's internals, because that couples their removal. Identity, tenant and theme
+state belongs in application-level providers. Removing a slice folder and its page registration
+should remove the feature without edits inside another slice.
 
 ## `form` and `field`
 
@@ -154,14 +160,14 @@ restate a rule ([queries-and-commands.md](queries-and-commands.md)).
 
 ## Interactions: `on`, `uses`, `behavior`
 
-The action set is closed ([interactions.md](https://github.com/Cratis/Screenplay/blob/v4.66.0/Documentation/screenplay/interactions.md)).
+The action set is closed ([interactions.md](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/interactions.md)).
 
 | Model action | Page |
 | --- | --- |
 | `execute <Command>` | `CommandDialog`, or `Command.use()` then `execute()` for a command with no user input ([queries-and-commands.md](queries-and-commands.md)) |
 | `confirm "text"` | `useConfirmationDialog`; declining stops what follows |
 | `notify info\|warning\|error "text"` | `toast.info/warn/error({ title, description })`, or `toastCommandResult` for a command result |
-| `refresh <Query>` | For a query you read with the hook, call the `perform` function from `[result, perform, setSorting]` ([queries-and-commands.md](queries-and-commands.md)). An observable query updates by itself and has no `perform`. Gap: `DataPage` only forwards `onRefresh` to your own callback at `4.6.0`; it does not re-run its internal snapshot query, so an explicit refresh of a `DataPage` list has no verified mechanism. Use an observable query, or read the query yourself and render with `DataTableCore`-level components, and report the choice |
+| `refresh <Query>` | For a query you read with the hook, call the `perform` function from `[result, perform, setSorting]` ([queries-and-commands.md](queries-and-commands.md)). An observable query updates by itself and has no `perform`. Gap: `DataPage` only forwards `onRefresh` to your own callback; it does not re-run its internal snapshot query, so an explicit refresh of a `DataPage` list has no verified mechanism. Use an observable query, or read the query yourself and render with `DataTableCore`-level components, and report the choice |
 | `open dialog <Template>` / `close dialog` | `useDialog` / `closeDialog(DialogResult.Ok)` |
 | `navigate to <Screen>` / `navigate back` | The application's router |
 | `set <target> to <value>` | View-model state |

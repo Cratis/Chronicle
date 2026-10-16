@@ -124,6 +124,20 @@ public interface IEventStoreStorage
     IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
+    /// Checks whether first-time kernel setup completed. Missing markers in older stores mean uninitialized.
+    /// </summary>
+    /// <returns>Whether initialization completed.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> IsInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Durably records successful first-time kernel setup. Only the store's initializer grain writes this marker.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>
@@ -136,4 +150,15 @@ public interface IEventStoreStorage
     /// Namespace names are matched exactly; they are derived byte for byte into physical database names.
     /// </remarks>
     IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Drop the data stored for a namespace. Called once the namespace's observers have been removed.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> whose data to drop.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Storage providers that keep a namespace's data apart from the other namespaces override this. The default
+    /// does nothing, leaving the data in place.
+    /// </remarks>
+    Task DropNamespace(EventStoreNamespaceName @namespace) => Task.CompletedTask;
 }

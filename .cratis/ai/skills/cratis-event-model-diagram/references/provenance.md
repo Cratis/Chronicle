@@ -18,3 +18,12 @@ carry no such rule, and Screenplay commands may have several origins).
 
 - Mermaid `eventmodeling` diagram type: https://mermaid.js.org/syntax/eventmodeling.html.
 - Event Modeling (Adam Dymitruk) and Martin Dilger, *Understanding Eventsourcing*: the timeline as left-to-right business flow.
+
+### Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
+
+| Source skill | Used in | How |
+|---|---|---|
+| `detect-model-drift` | `SKILL.md` step 4 | idea, own wording: the last commit touching the artifact is the baseline, and behavior commits since then are walked oldest first |

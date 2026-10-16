@@ -15,54 +15,19 @@
 
 ## Declare the value and command
 
-Generated parameters arrived in Arc **22.66.0**, scenario pinning in **22.67.0**,
-and analyzers in **22.68.0**. The examples and behavior here are verified at
-**v22.68.0**, which pins Fundamentals **7.23.0**.
+Requires Arc 22.66.0 for generated parameters.
 
-Use a concept for a server-owned new identifier. This standalone Arc example
-allocates an id; it does not append an event or persist a cart:
+Requires Arc 22.67.0 for scenario pinning.
 
-```csharp
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+Requires Arc 22.68.0 for the ARC0022–ARC0025 analyzers.
 
-using Cratis.Arc.Commands.ModelBound;
-using Cratis.Concepts;
-
-namespace Shopping.Carts;
-
-/// <summary>
-/// Represents a cart identifier.
-/// </summary>
-/// <param name="Value">The underlying identifier.</param>
-public record CartId(Guid Value) : ConceptAs<Guid>(Value), IGeneratable<CartId>
-{
-    /// <summary>
-    /// Creates a new cart identifier.
-    /// </summary>
-    /// <returns>A new cart identifier.</returns>
-    public static CartId New() => new(GenerateValue.Uuid());
-}
-
-/// <summary>
-/// Allocates a server-owned cart identifier.
-/// </summary>
-[Command]
-public record AllocateCartId
-{
-    /// <summary>
-    /// Returns the allocated identifier to the caller.
-    /// </summary>
-    /// <param name="cartId">The server-generated identifier.</param>
-    /// <returns>The allocated identifier.</returns>
-    public CartId Handle([GeneratedValue("cart")] CartId cartId) => cartId;
-}
-```
-
-For a Chronicle stream identity, derive `CartId` from `EventSourceId<Guid>`
-instead; see `cratis-fundamentals-concept`. Return `(id, event)` to both append
-and give the caller the new stream id, as in SKILL.md. An identifier is not an
-event, and generation alone does not persist anything.
+For the current threaded example, read [shop commands](shop-generation.md) and
+[shop concepts](../../cratis-fundamentals-concept/references/shop-generation.md).
+Those declarations show:
+CustomerId (`cus_` + ULID), context-aware TypeID OrderId, NanoID InviteCode and
+secret bytes ApiKey. They allocate responses, not events or persisted entities.
+For a real Chronicle stream identity use `EventSourceId<T>`; return `(id, event)`
+to append and return the stream ID, or use an explicit event-source wrapper.
 
 Keep existing/client-chosen identifiers and references on command properties.
 Services and read models remain ordinary dependencies, not generated values.
@@ -78,7 +43,7 @@ The type must be non-nullable and implement `IGeneratable<TSelf>` for itself;
 a raw `Guid`, nullable concept or by-reference parameter is invalid. Use domain
 concepts; the runtime's type check is the self-generatable interface contract.
 
-`[GeneratedValue]` uses the parameter name. `[GeneratedValue("cart")]` keeps the
+`[GeneratedValue]` uses the parameter name. `[GeneratedValue("customerId")]` keeps the
 pin/capture name stable across a parameter rename. Names are case-sensitive,
 non-whitespace and unique within the command.
 
@@ -95,7 +60,8 @@ turn the defect into a user rejection or disable validation to make it pass.
 
 Validated values enter `CommandContext.GeneratedValues` in parameter-resolution
 order. Each capture has zero-based `Order`, `Name`, declared `Type` and `Value`;
-`Get<CartId>("cart")` retrieves the latest matching capture. Rejected values are
+`Get<CustomerId>("customerId")` retrieves the latest matching capture for the
+shop's CustomerId parameter. Rejected values are
 not captured. A Handle parameter is not a request property and is not audited
 as command input. Do not log or trace captures or validator failure text, which
 can contain values. Returning a value or putting it in an event still follows the
@@ -103,7 +69,7 @@ ordinary response, event and compliance contracts.
 
 ## Analyzer diagnostics
 
-Arc v22.75.0 reports these at compile time; none has a code fix. Runtime
+Arc reports these at compile time; none has a code fix. Runtime
 handler-construction checks remain for declarations compiled without analyzers.
 
 | Diagnostic | Severity | Fix |
@@ -115,12 +81,11 @@ handler-construction checks remain for declarations compiled without analyzers.
 
 ## Migrate generation inside Handle
 
-For `var id = new CartId(Guid.NewGuid());` or `var id = CartId.New();` in
-`Handle()`, keep the request contract unchanged:
+For `var id = CustomerId.New();` in `Handle()`, keep the request unchanged:
 
-1. Make the concept implement `IGeneratable<CartId>` with static `New()` using
-   `GenerateValue.Uuid()` or `GenerateValue.UuidV7()`.
-2. Replace the local allocation with `[GeneratedValue("cart")] CartId cartId`
+1. Keep CustomerId's `IGeneratable<CustomerId>` strategy (`cus_` + ULID), or
+   OrderId's context contract, as shown in [shop generation](shop-generation.md).
+2. Replace local allocation with `[GeneratedValue("customerId")] CustomerId customerId`
    on `Handle()`, then use that parameter in the existing return/operation shape.
 3. Return the id if the caller needs it; a capture is not an automatic response.
 4. Pin the concept by generated name in pipeline specifications. For a pure
@@ -147,23 +112,22 @@ site: `PinGeneratedValue<TCommand, TOtherCommand>(name, concept)`.
 
 Published guides:
 
-- [Generated values](/arc/backend/csharp/commands/generated-values/)
-- [Pin generated values in command specs](/arc/backend/csharp/testing/generated-values/)
-- [Migrate generated identifiers](/arc/upgrading/generated-values/)
-- Analyzer pages: [ARC0022](/arc/backend/csharp/code-analysis/arc0022/),
-  [ARC0023](/arc/backend/csharp/code-analysis/arc0023/),
-  [ARC0024](/arc/backend/csharp/code-analysis/arc0024/),
-  [ARC0025](/arc/backend/csharp/code-analysis/arc0025/).
+- [Generated values](https://www.cratis.io/arc/backend/csharp/commands/generated-values/)
+- [Pin generated values in command specs](https://www.cratis.io/arc/backend/csharp/testing/generated-values/)
+- [Migrate generated identifiers](https://www.cratis.io/arc/upgrading/generated-values/)
+- Analyzer pages: [ARC0022](https://www.cratis.io/arc/backend/csharp/code-analysis/arc0022/),
+  [ARC0023](https://www.cratis.io/arc/backend/csharp/code-analysis/arc0023/),
+  [ARC0024](https://www.cratis.io/arc/backend/csharp/code-analysis/arc0024/),
+  [ARC0025](https://www.cratis.io/arc/backend/csharp/code-analysis/arc0025/).
 
-Source rechecked at **Arc v22.75.0** (generation/pinning APIs unchanged since
-the prior verification): `Source/DotNET/Arc.Core/Commands/ModelBound/GeneratedValueAttribute.cs`,
+Source: `Source/DotNET/Arc.Core/Commands/ModelBound/GeneratedValueAttribute.cs`,
 `Commands/GeneratedValueParameters.cs`, `GeneratedValueFactories.cs`,
 `CommandHandlerArgumentResolver.cs`, `GeneratedValueResolution.cs`;
 `Source/DotNET/Arc.Core.CodeAnalysis/DiagnosticDescriptors.cs`; and
 `Source/DotNET/Testing/Commands/CommandScenarioGeneratedValueExtensions.cs`.
 
-This release has no freshness/collision guard, contextual clock/tenant/pattern
-generation, or additional built-in strategies beyond Fundamentals' UUID/UUIDv7
-helpers at this Arc tag. Screenplay 4.147.0+ separately admits concept `generate`
+Contextual generation (received time and tenant) and Fundamentals' additional strategies need a newer Arc; [sources and Clock/Tenant
+setup](shop-generation.md). Arc does not supply a native freshness/collision
+allocator or a pattern contract. Screenplay separately admits concept `generate`
 strategies and freshness; see `cratis-screenplay-command-surface/references/generated-values-and-responses.md`
 for that language contract and Stage's explicit scopes, not native Arc freshness support.

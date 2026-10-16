@@ -10,15 +10,14 @@
 - Extend the failure coverage
 - Migrate an existing service-backed Handle
 
-Rechecked at **Arc v22.75.0**; operation assertions and these lessons are unchanged
-since 22.48.1. These class excerpts follow the product's
-[standalone lesson](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/command-operations.md)
-and [Chronicle rejection lesson](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/command-operations-with-chronicle.md).
+These class excerpts follow the product's
+[standalone lesson](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/command-operations.md)
+and [Chronicle rejection lesson](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/command-operations-with-chronicle.md).
 See "Observe and test on the backend" in SKILL.md.
 
 The standalone examples reuse `ReservationId`, `SeatId`, `ISeatReservations`,
 `ReserveSeat`, `BookSeat`, `SeatReservation`, and `BookSeats` from the
-[application declarations](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/commands/operations/implementing.md).
+[application declarations](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/implementing.md).
 Add these imports to each standalone spec file (and its own namespace):
 
 ```csharp
@@ -221,7 +220,7 @@ public class when_the_organization_is_already_onboarding : Specification, IAsync
 
 Seed the constraint in the **event log** through `EventScenario.Given`, not only
 in a read-model dictionary. This follows the maintained
-[real-rejection spec](https://github.com/Cratis/Arc/blob/v22.48.1/Source/DotNET/Chronicle.Specs/Commands/for_CommandScenario/operations/when_a_real_constraint_rejects_the_commit.cs).
+[real-rejection spec](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Specs/Commands/for_CommandScenario/operations/when_a_real_constraint_rejects_the_commit.cs).
 It proves known non-commit and eligible compensation with the in-process store,
 not uncertain remote acknowledgments or the external provider's durability.
 
@@ -238,7 +237,7 @@ not uncertain remote acknowledgments or the external provider's durability.
 - Missing/throwing compensation: `Incomplete`, `NotAvailable`/`Failed`, exact
   `UncompensatedCount`/`FailedCompensationCount`, and remaining callbacks attempted.
 
-Arc's [failure recipes](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/testing/command-operation-failures.md)
+Arc's [failure recipes](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/command-operation-failures.md)
 contain the full cases. Run `dotnet test <Your.Specs.csproj>`; assert behavior,
 not just command success. These corpus excerpts are source-checked, not compiled
 by the corpus text-verification gate. Test provider ownership, repeated finalized
@@ -246,7 +245,7 @@ requests, conflicting keys, and delayed creates at the provider integration boun
 
 ## Migrate an existing service-backed Handle
 
-Follow the [migration recipe](https://github.com/Cratis/Arc/blob/v22.48.1/Documentation/backend/csharp/commands/operations/migrating.md):
+Follow the [migration recipe](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/migrating.md):
 
 1. Separate acquired inputs, decision, and service writes. Preserve the input,
    endpoint, and response; move the write into an operation and return it with

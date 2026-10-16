@@ -52,14 +52,14 @@ time: `CommandAs<T>()`, `ArgumentsAs<T>()`, `ArtifactAs<T>()`, `ValueAs<T>()`, a
 `StateAs<T>()`/`EventAs<T>()` on the reducer context. A payload of another type
 throws `ContextPayloadTypeMismatch`.
 
-At Screenplay 4.125.0, typed contexts before generation (`CommandValidation`,
+Typed contexts before generation (`CommandValidation`,
 `ConceptValidation`, `RulePredicate`, `PolicyPredicate`) expose **input properties
 only**. Generated values exist only after authorization/validation, so they are
 absent from those shapes. A generated identifier's policy subject is `unavailable`,
 not the eventual id; never authorize against it. The handler CommandContext retains
 the full command shape, including generated properties. Sidecars belong to the same
 compilation/revision as their requirements, not a shape borrowed from another model.
-Source: `v4.125.0:Documentation/screenplay/context.md`.
+Source: `Documentation/screenplay/context.md`.
 
 ## The values they carry
 
@@ -101,17 +101,17 @@ An unknown `$context.` path is reported, so a typo does not silently become null
 
 ## Caller paths and identity details
 
-Checked at Screenplay 4.127.0: `$identity.<property>` is the same caller value as
+Checked: `$identity.<property>` is the same caller value as
 `$context.identity.<property>`. Prefer `$identity` in new mappings; the older root
-is supported, not deprecated. Historical `cratis` CLI 3.41.0 bundled Screenplay 4.114.0, which predated both:
-its parser rejected a top-level `identity` block (`PLAY0001`), and with `--executable` it read a
-`$identity.<property>` mapping as a raw expression (`PLAY0268`). Those checks used standalone 4.127.0;
-they are not current parser claims; compiler pins are in toolchain `references/versions.md`. Check current renderer
+is supported, not deprecated. An older CLI-bundled compiler can reject a top-level `identity` block (`PLAY0001`) and read a
+`$identity.<property>` mapping as a raw expression (`PLAY0268`); compiler versions are covered in toolchain `SKILL.md`. Check current renderer
 admission separately before choosing caller mappings. Built-ins are `id`, `name`, `userName`,
 `isAuthenticated`, `roles`, `claims.<name>` (everything after `claims.` is opaque).
 Bare `$identity` reports PLAY0152; unknown properties report PLAY0155. Only
 `$identity.id`/`.name`/`.userName` bind in portable `produces` mappings, exactly
 like the older forms; roles, authentication status and claims still report PLAY0268.
+
+Requires Screenplay 4.121.0 or later (`screenplay --version`) for `$identity`; before it use `$context.identity`.
 
 A top-level `identity` block declares additional typed caller details:
 
@@ -144,7 +144,7 @@ Declarations alone do not block executable readiness. Executable reads of
 `$identity.<detail>` report PLAY0268; `$context.identity` stays built-ins only.
 `scoped to` is an opaque scope name, not a detail reference. PLAY0633–0646 diagnose
 source/header/type/cardinality errors; there are no automatic identity repairs.
-Authority: v4.127.0 `identity.md`, `context.md`, `diagnostics.md`.
+Authority: `identity.md`, `context.md`, `diagnostics.md`.
 
 ## Production metadata is not a context expression
 

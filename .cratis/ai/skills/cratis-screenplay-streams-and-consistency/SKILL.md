@@ -13,36 +13,11 @@ which it only records, and what a retry, a race or a replay does. Grammar lives 
 skills; this skill owns the decisions. The `.play` model is the source of truth: a rule that
 lives only in code, or only in a description, is a finding, not a solution.
 
-**First append into a scope (Chronicle v19.50.0, version-qualified).** The default optimistic
-strategy compares the scope's tail sequence number. When nothing matches the scope yet (the
-first event on a new event source, or the first event of a new source type, stream type or
-stream id), there is no tail and the append is **not checked**: two writers opening the same
-source or narrowed partition can both succeed. This is the append most exposed to a race, so a
-concurrency scope alone does not protect "only one writer may open this". For a target that
-needs it:
-- enable the check, application-wide with `ConcurrencyOptions.CheckFirstAppendIntoAScope`
-  (default `false`) or per append with `ConcurrencyScopeBuilder.ExpectingNoMatchingEvent()`,
-  and handle the `ConcurrencyViolation` it can now raise; or
-- use a unique event constraint, which the kernel enforces for every writer whether or not the
-  append declared a scope (the model's `unique event`).
-Require target evidence that the check ran: a concurrent first-append scenario against a real
-Chronicle, asserting one append wins, one is rejected, and `IAppendResult.ConcurrencyCheckPerformed`
-is `true` (a skipped check and a passing one look identical otherwise; a current client against
-an older kernel always reads `false`). This was source- and documentation-inspected, not
-concurrency-tested here. The Stage scaffold pins Chronicle client/kernel and Arc releases (see `cratis-stage-rendering-and-sandbox` `references/rendered-application.md`;
-the CLI bundle's Chronicle is in `cratis-screenplay-toolchain` `references/versions.md`); the APIs exist for gap-fill, not as automatically rendered enforcement.
+**First append into a scope is not checked by default.** The optimistic strategy compares the scope's tail sequence number; with no matching event yet there is no tail, so two writers opening the same source can both succeed. A concurrency scope alone does not protect "only one writer may open this": enable `ConcurrencyOptions.CheckFirstAppendIntoAScope` or `ExpectingNoMatchingEvent()`, or use a unique event constraint. Treat the default as unchecked until target evidence shows otherwise. Read [references/consistency-and-concurrency.md](references/consistency-and-concurrency.md) ("First append into a scope") for the options and the evidence to require.
 
-## Verified product sources
+## Product sources
 
-| Product | Pin | Used for |
-| --- | --- | --- |
-| Screenplay | v4.68.0 (`79801bf`) | ESM v7 generated values (`generated identifier`, decision 0026) and decision 0025's numbering; the diagnostics below were read at v4.66.0 (`c89198b`): `identifier`, `for`, constraints, generations, `id` pins, diagnostics PLAY0019/0135/0268/0271/0273/0391-0393/0446-0449/0469/0471 |
-| Chronicle | v19.50.0 (read; first read at v19.32.0 `f17a2ff`) | CHR0012, CHR0034; open defects #3744, #4123, #4131 (still open) |
-| Arc | v22.72.0 | `[ProtectedDecision]` and `DecisionRead<T>` (since v22.39.0) |
-| Stage | v4.89.1 | rendered apps pin the Arc and Chronicle client/kernel listed in the Stage skill's `references/rendered-application.md`; protected-read APIs available to gap-fill. Historical 4.24.2 admission probe: ESM v4, evolved events refused with `STAGE-ESM-026` |
-
-Full pin table: `references/versions.md` in `cratis-screenplay-toolchain`. Re-check the three
-Chronicle issues before relying on a constraint in a later release.
+Read [references/product-sources.md](references/product-sources.md) when checking a rule against the Screenplay, Chronicle, Arc or Stage sources.
 
 ## When / when not
 - Use: choosing `identifier` and `for`; adding or naming a `constraint`; a rule that depends on
@@ -62,22 +37,7 @@ missing, one question at a time, with options. **Unattended:** assume the most c
 option, mark it `ASSUMED` in the slice or module `documentation` and in the session `STATE.md`
 (`.ai-work/screenplay/<model-slug>/STATE.md`), and continue.
 
-1. **Instance.** "What is the real-world thing this stream is about, and when does it start and
-   end?" Follow-up: if the answer needs "and" for two lifecycles, ask which facts live
-   independently of the other.
-2. **Competition.** "Can two people do this at once, and what must never happen then?" Follow-up:
-   for each answer ask whether it is a uniqueness, a count or a state rule.
-3. **Retry.** "If the reply is lost and the client sends the request again, what should the
-   second request see?" Follow-up: is the identifier chosen before the first attempt?
-4. **Ownership** (full protocol and options in `references/boundaries.md`). Who decides these
-   rules and operates them when they fail; how much can each side move alone; which external
-   systems take part and who owns each adapter; what delay or disagreement the business
-   tolerates. Follow-up on technical-function teams: which business capability does each serve?
-5. **Growth.** "Roughly how many events per instance per year, over how many years, and which
-   commands read the stream versus a view?" Follow-up: if the estimate is large, check the
-   identity before anything else (`references/stream-patterns.md`, Growth and snapshots).
-6. **Change.** "Has this event ever been stored in a running system?" It decides whether an edit
-   is ordinary or contract evolution.
+Ask only what is missing: (1) instance - what real-world thing the stream is about; (2) competition - what must never happen when two people act at once; (3) retry - what a repeated request should see; (4) ownership; (5) growth; (6) change - whether the event was ever stored in a running system. Read [references/interview-batch.md](references/interview-batch.md) for each question's follow-up; ownership options are in `references/boundaries.md`.
 
 ## Procedure
 1. **Establish identity and membership.** For every `concept XId` used as an `identifier`, write
@@ -88,10 +48,10 @@ option, mark it `ASSUMED` in the slice or module `documentation` and in the sess
    invariant consequences, not names or length. For Chronicle keep event-source identity,
    namespace, process-stream routing and concurrency scope apart
    (`references/chronicle-boundaries.md`). Declared `eventsource`/`stream`/`streamId` and
-   command/specification routes bind and reference-execute as ESM v8 on 4.125.0.
-   The pinned CLI (toolchain `references/versions.md`) reaches Stage construct checks through v15; keep the routing
+   command/specification routes bind and reference-execute as ESM v8.
+   The CLI (toolchain `references/renderable-subset.md`) reaches Stage construct checks through its bundled ceiling; keep the routing
    contract when target admission requires gap-fill. Forms/boundaries:
-   toolchain `references/sources-and-streams.md`. A `generated identifier` (ESM v7, standalone 4.68.0 and later; Stage 4.89.1 renders supported UUID/String strategies and v15 freshness; unsupported types/results still refuse -028/-038) is
+   toolchain `references/sources-and-streams.md`. A `generated identifier` (ESM v7; Stage renders supported UUID/String strategies and v15 freshness; unsupported types/results still refuse -028/-038) is
    generated fresh on every acceptance: it is not a retry identity, and generated values give no
    idempotency, retry or deduplication guarantee. When a retry must find the same stream, the caller
    supplies the identifier before the first attempt.
@@ -110,7 +70,8 @@ option, mark it `ASSUMED` in the slice or module `documentation` and in the sess
    - Forbidden: a caller-supplied copy of state in `require`, a boolean attestation input
      (`confirmsX == true`) standing in for a rule, and rules hidden in `handler` or
      implementation-hint prose. An unguarded materialized read is unsafe for a protected
-     decision; that is not "read models never drive decisions".
+     decision; that is not "read models never drive decisions". See
+     `../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md`.
 3. **Play the races and retries.** For each enforced or recorded rule write the concurrent case
    (two commands at once), the retry case (same request again after a lost reply) and the
    duplicate case (same intent, new id). State the outcome and which construct produces it.
@@ -129,20 +90,22 @@ option, mark it `ASSUMED` in the slice or module `documentation` and in the sess
    `references/compliance.md` for allowed types and the policy/encryption distinction.
 5. **Plan evolution** with `references/evolution.md`: classify each event change (additive,
    meaning change, rename, removal, split or merge) and write its compatibility scenarios before
-   editing. Pin persisted/public enum member numbers before reordering or removing
-   members; never renumber or reuse a published number. Positional pins preserve
-   executable bytes; non-positional pins need ESM v12 consumer admission.
+   editing. Admit the **release baseline** in the release job; admitted
+   revisions need `newGeneration`. Modes/CLI/MCP: `references/evolution.md`.
+   Pin persisted/public enum member numbers before reordering or removing members (`references/evolution.md`, "Enum member numbers").
+
    Renames and other identity-affecting edits are made by the identity owner (the
    identity procedure in `cratis-screenplay-modeling-lifecycle`).
 6. **Test ownership and interfaces** with `references/boundaries.md`: ownership interview,
    interface and processor inventory, one real interaction walked across each boundary, coupling
    check. Keep team, module, stream and deployment boundaries distinct; inbound facts via
    Translate; unresolved decisions stay visible.
+   Read [references/multi-service-models.md](references/multi-service-models.md) when the system spans several services, each with its own event store and model folder.
 7. **Record and gate.** Durable rationale in feature and slice `documentation`; open consistency
    decisions and capability gaps in `STATE.md`. Then the gate below.
 
 ## Rules
-**Compiler contracts** (diagnostics at Screenplay v4.66.0 and v4.68.0; capability per tool in `versions.md`)
+**Compiler contracts** (diagnostics; capability per tool in the toolchain `references/executable-subset.md`)
 - `identifier` on an event property is PLAY0019; the source id is never payload by declaration.
   Copying it as a payload value is PLAY0469 (information, warning for inline events).
 - In the executable model a production's `for` must resolve to the command's scalar identifier:
@@ -150,32 +113,31 @@ option, mark it `ASSUMED` in the slice or module `documentation` and in the sess
 - Constraint names are application-wide identities (PLAY0392); properties must be declared
   directly on the event (PLAY0391); never mix event and property rules under one name (PLAY0135);
   `ignore casing` is not allowed on `unique event` (PLAY0393).
-- Generations are declared in full, numbered 1..N without gaps, in the same slice
-  (PLAY0446-0448). Referencing a removed property is PLAY0273; a `given` needing a historical
-  shape is PLAY0449. An `id` pin equal to the event's current name is PLAY0471 (information).
+- Generations are declared in full, numbered 1..N without gaps, in the same slice (PLAY0446-0448); `id` pins are shared by all generations and unique application-wide (PLAY0472); `storedName` needs ESM v16. See `references/evolution.md` ("Generations, pins and storedName diagnostics").
+
 - `reads` is PLAY0271 and `require` over read-model paths is PLAY0268 at binding. A `concurrency`
   block compiles but is PLAY0271 at binding. Keep both when they state real intent; they are not
   protection. `description` text never reaches rendered code: a rule that lives only in prose is
   unenforced there.
-- `pii` and `secret` bind as ESM v13 on standalone 4.142.0 (since 4.141.0) and the pinned CLI;
+- `pii` and `secret` bind as ESM v13;
   enum/identity compliance and protected events with explicit subject marks still
   refuse PLAY0268 (command-surface `references/compliance.md`). Legacy markers are
   deprecated (PLAY0565). Never remove protection to pass a tool. PLAY0515 also refuses
   scalar/composite stream-id types and route mapping sources, including nested paths.
-- At 4.127.0 stream-id literals must be nonempty, well-formed NFC text (refused,
-  not normalized); integer ids in Double mode stay within ±(2^53−1). Exact mode
-  has no such bound but is unadmitted. PLAY0504 is an error for route/destination
-  nominal type mismatch. Composite ids use at least two named scalar parts,
-  complete named mappings and canonical comparison, not guessed legacy splits.
-  Stored key-schema changes require a new stream identity or migration; see
-  toolchain `references/sources-and-streams.md`.
-- Chronicle (open at v19.50.0): the SQL and InMemory providers do not settle unique claims
-  (#3744); index updates run after commit and may fail silently (#4123); composite values can
-  collide on the separator (#4131). A declared constraint is a declaration, not a runtime test.
-- `[ProtectedDecision]` is available in Arc v22.39.0 or later, including Stage 4.73.1's
-  rendered package set. It is not emitted protection: gap-fill must enroll an admitted
+- Stream-id literals must be nonempty NFC text; composite ids use at least two named scalar parts; PLAY0504 is an error for route/destination type mismatch; a stored stream name exactly `All` refuses binding with PLAY0273 (rename via `propose-rename`). Read [references/stream-id-rules.md](references/stream-id-rules.md) when choosing stream-id types, literals, composite ids or renaming a stream.
+
+- Chronicle limits: before 19.59.6 (InMemory: 19.59.3) the SQL and InMemory providers do not settle unique claims (see the Requires line below);
+  index updates run after commit and may fail silently; composite values can
+  collide on the separator. A declared constraint is a declaration, not a runtime test.
+- `[ProtectedDecision]` ships in Arc and Stage's rendered package set. It is not emitted protection: gap-fill must enroll an admitted
   decision read, or redesign the stream/identity when the shape is refused
   (`references/consistency-and-concurrency.md`, section 3).
+
+Requires Screenplay 4.150.0 or later (`screenplay --version`) for the `All` stored-stream refusal, 4.152.0 or later for `storedName` (ESM v16) and 4.153.0 or later for the release baseline.
+
+Requires Arc 22.39.0 or later and Chronicle 19.23.0 or later for `[ProtectedDecision]`.
+
+Requires Chronicle 19.59.6 or later (19.59.3 for the InMemory provider) for the SQL provider to settle unique-constraint claims; before it, two concurrent appends can both claim one value.
 
 **Modeling defaults** (deviate with a recorded reason)
 - One business identity per stream; cross-stream references are payload properties.
@@ -197,15 +159,7 @@ option, mark it `ASSUMED` in the slice or module `documentation` and in the sess
 - Team and system often align, but not by law: decide modules on ownership, language and change
   cadence, and record where they differ.
 
-**Review questions** (findings only with a domain consequence)
-- What single question does this stream answer? Does it grow for the right reason?
-- What happens when two people do this at the same moment? When the reply is lost?
-- Is any stream a collection or a log wearing an instance's name (decision tree and red flags in
-  `references/stream-patterns.md`)?
-- Does an optional property cover two situations that the business names differently?
-- Does a consumer in another module depend on an event we treat as internal?
-- Could this calculated value matter historically (price, assessment)? Then it may be a fact.
-- Is "eventually consistent" here a business choice, or an unexamined gap?
+**Review questions** (findings only with a domain consequence): read [references/review-questions.md](references/review-questions.md) for the stream, race, optional-property, boundary and eventual-consistency questions (decision tree and red flags for collection- or log-shaped streams are in `references/stream-patterns.md`).
 
 ## Gate
 Do not report done until all hold; otherwise report what is open:
@@ -230,14 +184,7 @@ Do not report done until all hold; otherwise report what is open:
   `bash` the repository's compile check over this skill folder.
 
 ## Route near misses
-- Construct grammar: `cratis-screenplay-command-surface` (identifier, `for`, constraints),
-  `cratis-screenplay-projections`; compiler facts and traps: `cratis-screenplay-toolchain`.
-- Chronicle C# compliance and event-source ids: `cratis-chronicle-event-modeling`.
-- Reactions, todo lists, captures, external facts: `cratis-screenplay-automations-and-translations`.
-- Commands, read models and lineage: `cratis-screenplay-slice-design`. Specs:
-  `cratis-screenplay-scenario-coverage`.
-- Reviewing someone else's model: `cratis-screenplay-model-review`.
-- Rendering and the code left to write after it: `cratis-screenplay-render-and-gap-fill`.
+Read [references/neighbouring-skills.md](references/neighbouring-skills.md) when the work is grammar, Chronicle C# compliance, reactions, slice design, review or rendering rather than stream and consistency decisions.
 
 ## Lineage
 Adapted in part from TrogonStack/agentskills (MIT); attribution and provenance entries are in

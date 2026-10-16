@@ -17,7 +17,7 @@ One spec in the slice does not cover the others.
 | queue opens / closes | item appears, item disappears | `then query …ById`; `when append <Closing>` + `then no readmodel … for` |
 | already done | trigger re-delivered after the result exists | `given <Result>` + `when <Command>` -> `then error "<fixed constraint message>"` |
 | invoked command rejects | validation or constraint refuses | command spec in its StateChange slice; record what the queue shows afterwards |
-| no declared actor | invoked command is gated | specify its denial; for the trusted path declare reaction `runs as system role` and reference-test with standalone 4.125.0 |
+| no declared actor | invoked command is gated | specify its denial; for the trusted path declare reaction `runs as system role` and reference-test with a standalone compiler that admits v10 |
 | clock boundary | due exactly at the instant, just before, just after | `given clock` + `when clock`; boundary semantics are contested in the docs, mark the expectation as an assumption |
 | each branch | does every filter and conditional production have both outcomes? | concrete triggering and non-triggering values; assert the resulting facts or view |
 | denied actor | every command and query under an inherited module/feature `authorize` needs its own denial; also, can an unauthorized caller reach a gated invoked command by another origin? | command spec with otherwise-valid inputs, `given caller` carrying the wrong role/claim (or no caller) and `then denied`; separate from the caller-less reaction gap |
@@ -58,13 +58,13 @@ One spec in the slice does not cover the others.
 - Projection lag: the reaction's `reads` sees the queue before or after the closing fact?
   The decision must not depend on it (it is not protected).
 
-## Spec limits (tool differences: `cratis-screenplay-toolchain` `references/versions.md`)
+## Spec limits (tool differences: `cratis-screenplay-toolchain` `SKILL.md`)
 - Current admitted Automation/Translate specifications run through standalone
   `screenplay test` or MCP `run-specifications`. Validate/render alone is not V4;
   report unsupported/unbound separately from passing scenarios.
-- With Screenplay 4.66.0 (standalone or cratis 3.28.2), a command spec lists the cascade (v6 semantics: after
-  `when <Command>`, `then` lists every new fact, including reaction appends). Only when a
-  cratis before 3.28.2 bundle (4.60.1) is the V1 tool does it report a false PLAY0285 on a cascade (cli#242):
+- A command spec lists the cascade (v6 semantics: after
+  `when <Command>`, `then` lists every new fact, including reaction appends). Only when the V1
+  tool's compiler stops before v6 does it report a false PLAY0285 on a cascade:
   then keep the cascade out of the command spec, specify it in the Automation slice
   (`when append <Trigger>`) and record the expectation. See `cratis-screenplay-scenario-coverage`.
 - `given capture` never persists between specs: state the baseline in each spec that needs it.

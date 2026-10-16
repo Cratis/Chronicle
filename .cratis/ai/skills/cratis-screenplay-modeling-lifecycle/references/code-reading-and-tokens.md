@@ -10,8 +10,8 @@ how little output is printed. They govern reading and printing, never the model'
 | Rule | Allowed | Not allowed |
 |---|---|---|
 | C1 modeling (P1-P7) | existing `.play`, user documents, tickets, Screenplay docs | opening feature code to "see how it works" |
-| C2 review | a locator such as `src/Billing/InvoiceService.cs:120-140` cited by a legacy packet row | browsing the repository to verify a hunch |
-| C3 legacy | provider inventory; generated `.play` plus diagnostics; Prologue output; one handler to resolve a named evidence row, logged as `E7 <- RefundHandler.cs:44-61`; a bounded sample of an entry point the generator skipped | reading every controller before L1; treating "not seen in capture" as "does not exist" |
+| C2 review | a locator such as `src/Billing/InvoiceService.cs` cited by a legacy packet row | browsing the repository to verify a hunch |
+| C3 legacy | provider inventory; generated `.play` plus diagnostics; Prologue output; one handler to resolve a named evidence row, logged as `E7 <- RefundHandler.cs`; a bounded sample of an entry point the generator skipped | reading every controller before L1; treating "not seen in capture" as "does not exist" |
 | C4 render | `Customizations/*`; the generated line a build error names; the declared extension contract and the generated types it touches | scrolling managed output; editing a managed file |
 | C5 gap-fill | the code agent reads code for the non-renderable slice, with the slice and its specs as the contract | changing behavior the specs do not describe without recording it |
 | C6 runtime | read-only queries against a running Chronicle system (`cratis-chronicle-cli-operations`) | reading code to guess runtime state; using Chronicle tooling on a non-Chronicle legacy app |

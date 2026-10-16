@@ -16,9 +16,9 @@ first-run problem — start by checking the CSS entry.
 
 ## Verified product sources
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | its package manifest (`exports`, no vendor UI dependency or peer), `Source/tokens.css`, `Source/MIGRATION.md`, `Documentation/Styling/*`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/*` |
+| Package | Verified from |
+| --- | --- |
+| `@cratis/components` | its package manifest (`exports`, no vendor UI dependency or peer), `Source/tokens.css`, `Source/MIGRATION.md`, `Documentation/Styling/*`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/*` |
 
 Components declares **no** PrimeReact, PrimeIcons or PrimeUI dependency or peer.
 React Aria supplies focus, overlay, collection and date behavior *internally* —
@@ -115,7 +115,7 @@ document.documentElement.classList.toggle('cratis-dark', darkMode);
   `:root:not(.cratis-light)`. Match the scheme selectors' specificity and place
   overrides after the import, including subtree selectors when using islands.
   Or omit `theme` and use the product-theme setup below.
-- Components 4.22.1+ maps Arc's `--color-error` / `--color-error-bg` in both dark
+- Requires Components 4.22.1: it maps Arc's `--color-error` / `--color-error-bg` in both dark
   schemes. A product theme omitting `theme` must define those variables itself;
   do not carry forward the old dark-error contrast workaround.
 
@@ -178,6 +178,7 @@ dot, a traffic-light indicator.
   review — move it to a class.
 - Name classes with a prefix matching the component.
 - Import product CSS *after* the Components entries so it wins the cascade.
+- When a customer supplies brand material, keep their CSS and tokens verbatim in product-owned files, map them onto the `--cratis-*` tokens, and use the baseline theme for every decision their material does not cover.
 
 ## Step 5 — Parts: reaching inside a component
 
@@ -241,21 +242,7 @@ There is no global provider `pt`.
 
 ## Renderer adapters — when a vendor look is wanted
 
-The default renderer is built in; omit `library` on the provider. Three optional
-adapter packages exist — `@cratis/components.mui` (MUI 9),
-`@cratis/components.primereact` (PrimeReact 11), `@cratis/components.primereact10`
-— and each adapts exactly **nine primitive slots**: button, icon-button, text
-input, text area, checkbox, radio, switch, progress bar (`common.progress`, not
-`common.progressBar`), surface. Install and upgrade each adapter at **exactly
-the same version** as `@cratis/components`; Node >=22 is required. The broader
-renderer contract also has an atomic `common.tooltip` slot accepting any React
-node, but it is not one of the nine stable presentation slots. Pass the
-adapter's manifest to the provider's `library` prop. Dialogs, dropdowns, tables,
-date pickers, tooltips, paginators, toasts and steppers stay Components-owned
-regardless; an adapter never restores a vendor's public API, and the vendor's
-own provider, theme and license remain the application's, outside Components.
-Reach for an adapter only when the product genuinely wants that vendor's look on
-those nine controls — mapping tokens is almost always the smaller change.
+The default renderer is built in; omit `library` on the provider. Reach for an adapter only when the product wants a vendor look on nine primitive controls; mapping tokens is almost always the smaller change. The adapters cover nine primitive slots; the progress bar slot is `common.progress`, not `common.progressBar`. Read [references/renderer-adapters.md](references/renderer-adapters.md) when choosing or installing an adapter.
 
 ## Where Tailwind fits
 

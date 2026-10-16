@@ -13,13 +13,13 @@ application's constraints discovered and active.
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `19.50.1` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
-| `Cratis.Chronicle` | `19.50.1` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle.Testing` | `EventScenario`, its `Given`/`When` builders, the `IAppendResult` `Should*` assertions |
+| `Cratis.Chronicle` | `IEventSequence.Append`/`AppendMany`, `IAppendResult`, `ConstraintViolation` |
 
 Sources: `Source/Clients/Testing/EventSequences/`, `TestingEventStore.cs`,
-and `Source/Clients/DotNET/EventSequences/` at **v19.50.0**.
+and `Source/Clients/DotNET/EventSequences/`.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing
@@ -72,7 +72,7 @@ in the loaded assemblies — which is what makes a constraint specification work
 without wiring. Pass an `ICanProvideConstraints` to the single-argument
 constructor when the specification needs a narrower set.
 
-At v19.50.0 it implements `IDisposable`: dispose in `Destroy()`.
+It implements `IDisposable`: dispose in `Destroy()`.
 `new EventScenario(sequenceId, eventStore, @namespace)` selects identifiers;
 constructors also accept per-run `Defaults`. One scenario shares production
 in-memory storage across its sequences and uses the kernel append grain,
@@ -81,6 +81,13 @@ undiscovered schemas fail with `EventSchemaNotDiscovered`. Appends to one
 sequence serialize, so racing claims of the same unique value cannot both win.
 Seeding can specify source/stream routing through the `ForEventSource`,
 `For<TEvent>` and `ForEvents` overloads.
+
+Requires Chronicle 19.59.0 for `scenario.ReadModels` to read and observe
+projections (including children and joins) and reducers from the scenario's own
+events, not a shared default store. Check the testing package version; on older
+packages use a dedicated `ReadModelScenario` rather than assuming shared storage.
+Requires Chronicle 19.52.0 for per-run `Defaults` to honor marker-free
+`ExplicitArtifacts`; see the .NET client's discovery reference.
 
 ## Step 2 — Seed prior state through `Given`
 

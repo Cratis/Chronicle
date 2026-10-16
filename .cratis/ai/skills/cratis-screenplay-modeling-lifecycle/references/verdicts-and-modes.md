@@ -10,16 +10,17 @@
 - Render revision drift
 - Tool-version gaps
 - Modes
+- Reporting the verdicts
 
 Exact commands, exit codes, admitted subsets and every version-specific fact live in
-`cratis-screenplay-toolchain` (`references/versions.md` and its subset references). This file
+`cratis-screenplay-toolchain` (`SKILL.md` and its subset references). This file
 defines what each result means and how to report it. Do not copy version facts here.
 
 ## Five independent results
 
 | Result | Evidence | Does NOT prove |
 |---|---|---|
-| V1 authorable | folder-mode validate with warnings as errors. The standalone compiler includes imports in folder and file mode; `cratis` CLI 3.28.2 file validation ignored imports (cli#244, probed); since 3.28.4 (PR #258) it compiles the file with its imports, but folder mode stays the recommended cross-tool check | semantics, binding, specs |
+| V1 authorable | folder-mode validate with warnings as errors. The standalone compiler includes imports in folder and file mode; an older `cratis` CLI file validation ignored imports; a current CLI compiles the file with its imports, but folder mode stays the recommended cross-tool check | semantics, binding, specs |
 | V2 executable diagnostics | the executable model reports no diagnostics for the scope | that any spec runs or passes |
 | V3 binding-ready | the model binds to the executable semantic model | that any spec runs or passes |
 | V4 reference specs run | the reference execution route only: engine, and per `.play` specification passed / failed / unsupported (overall model may be unbound) | rendering, generated code, build or target tests |
@@ -216,3 +217,10 @@ skill):
   `run-specifications`, obligations/smells and opt-in completeness are released
   at the toolchain pin; they do not prove full field lineage or target behavior.
   Check `cratis-screenplay-toolchain` before changing a verdict.
+
+## Reporting the verdicts
+
+Report all five at checkpoints and handoffs (between edit batches only those you ran), each a
+result or "not run: <reason>" naming tool and version. Never infer one from another or "fix" a
+correct model to silence a diagnostic (record a tool-version gap). Commands, report template,
+source identity: `references/verdicts-and-modes.md`. Read `references/verdicts-and-modes.md` before recording verdicts or establishing the source identity for acceptance.

@@ -4,7 +4,7 @@
 
 # Closing scope and recovery
 
-Verified at **Cratis/Chronicle v19.50.0**:
+Source: `Cratis/Chronicle`:
 `Source/Clients/DotNET/EventSequences/{IEventSequence,ClosedStreamScope,CompleteStreamError}.cs`,
 `Events/Constraints/ClosesStreamAttribute.cs`,
 `Documentation/closing-streams/` and `Documentation/scenarios/close-the-books.mdx`.

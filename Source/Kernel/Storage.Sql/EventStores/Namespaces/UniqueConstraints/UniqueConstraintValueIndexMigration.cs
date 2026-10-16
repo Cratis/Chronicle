@@ -78,7 +78,7 @@ internal static class UniqueConstraintValueIndexMigration
 
     static async Task<bool> EnsureSqlServerValueLength(UniqueConstraintDbContext context, string tableName, string table, string index, ILogger<UniqueConstraintMigrator> logger)
     {
-        var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @table AND COLUMN_NAME = 'Value'", tableName);
+        var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = 'Value'", tableName);
         if (length == 200)
         {
             return true;
@@ -104,11 +104,11 @@ internal static class UniqueConstraintValueIndexMigration
         var query = "SELECT \"unique\" FROM pragma_index_list(@table) WHERE name = @index";
         if (context.Database.IsSqlServer())
         {
-            query = "SELECT CAST(is_unique AS INT) FROM sys.indexes WHERE object_id = OBJECT_ID(QUOTENAME(@table)) AND name = @index";
+            query = "SELECT CAST(is_unique AS INT) FROM sys.indexes WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME(@table)) AND name = @index";
         }
         else if (context.Database.IsNpgsql())
         {
-            query = "SELECT CASE WHEN i.indisunique THEN 1 ELSE 0 END FROM pg_index i JOIN pg_class idx ON idx.oid = i.indexrelid JOIN pg_class tbl ON tbl.oid = i.indrelid JOIN pg_namespace ns ON ns.oid = tbl.relnamespace WHERE ns.nspname = 'public' AND tbl.relname = CAST(@table AS name) AND idx.relname = CAST(@index AS name)";
+            query = "SELECT CASE WHEN i.indisunique THEN 1 ELSE 0 END FROM pg_index i JOIN pg_class idx ON idx.oid = i.indexrelid JOIN pg_class tbl ON tbl.oid = i.indrelid JOIN pg_namespace ns ON ns.oid = tbl.relnamespace WHERE ns.nspname = current_schema() AND tbl.relname = CAST(@table AS name) AND idx.relname = CAST(@index AS name)";
         }
 
         return Scalar(context, query, tableName);

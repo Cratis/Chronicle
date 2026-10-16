@@ -15,7 +15,7 @@
 
 A trailing `key` on a top-level read-model property declares instance identity.
 One explicit mark replaces inference and binds byte-identically to the equivalent
-inferred identifier. Several marks declare a composite key. At 4.135.0, identity
+inferred identifier. Several marks declare a composite key. Identity
 selection is:
 
 1. Explicit `key` marks take precedence over inference.
@@ -97,7 +97,7 @@ keep tenant/subject ownership at the runtime boundary, not in editable UI filter
 A composite absence fixture uses an object with every named part. Query result
 assertions may omit keys when arguments already select the instance.
 
-At Screenplay 4.135.0, composite read-model keys, query `by` blocks and fixtures
+Composite read-model keys, query `by` blocks and fixtures
 over those views remain authoring-only: binding reports PLAY0268 citing
 Screenplay#599 (still open). They do not reference-execute or render. This is not
 ESM v10 admission; v10 covers reaction identity, production routes and observer
@@ -116,8 +116,8 @@ model and projection/query shape, not just the key modifier.
   preserved. Use the model-authoring proposal/preview/apply contract, not a text
   shortcut around an identity-preserving refusal.
 
-Source: Screenplay `v4.135.0:Documentation/screenplay/{readmodels,queries,commands,reactions,specifications}.md`,
-`fixtures/named-read-model-keys.play`, decision 0060, and
+Source: Screenplay `Documentation/screenplay/{readmodels,queries,commands,reactions,specifications}.md`,
+`fixtures/named-read-model-keys.play`, and
 `Source/DotNET/Screenplay/Semantics/SemanticModelBinder.ReadModels.cs` (identity inference).
-Its authoring delivery shipped
-in 4.129.0; that release did not deliver #599's executable composite-key contract.
+Its authoring delivery does not include
+an executable composite-key contract.

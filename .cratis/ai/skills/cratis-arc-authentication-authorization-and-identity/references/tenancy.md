@@ -10,7 +10,7 @@
 - Development listing
 - Where the boundary is
 
-Verified against `Cratis.Arc.Core` `22.75.0`. Types are in `Cratis.Arc.Tenancy`.
+Source: `Cratis.Arc.Core`. Types are in `Cratis.Arc.Tenancy`.
 
 Arc tenancy is **request-scoped tenant resolution**. It answers "which tenant is
 this request for". It is not Chronicle's tenant namespace isolation, and it does
@@ -78,7 +78,7 @@ Arc for .NET has no tenancy-required switch. Empty header/query resolution
 becomes `NotSet`; Chronicle's `TenantNamespaceResolver` maps `IsDefault` (both
 `NotSet` and `Default`) to its default namespace. Refuse unresolved tenants in
 application authorization when required; resolution alone is not isolation.
-Sources at Arc v22.75.0: `Arc.Core/Tenancy/TenancyOptions.cs` and
+Sources: `Arc.Core/Tenancy/TenancyOptions.cs` and
 `Chronicle/Tenancy/TenantNamespaceResolver.cs` under `Source/DotNET`.
 Compare against `TenantId.NotSet` explicitly, or use
 `CurrentTenantIdIsNotSet.ThrowIfNotSet(...)`, wherever an unresolved tenant must
@@ -101,7 +101,7 @@ created after beginning it.
 The endpoint follows `Introspection.IdentityDiscovery` and discovery access:
 anonymous only in Development by default, authenticated elsewhere, or unmapped
 when the host cannot authenticate. Return development fixtures only.
-Source: [Arc v22.75.0 secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## Where the boundary is
 

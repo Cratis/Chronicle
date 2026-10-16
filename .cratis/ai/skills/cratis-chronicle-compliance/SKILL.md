@@ -14,12 +14,12 @@ decide the event shape — the subject is what erasure operates on.
 
 ## Verified product sources
 
-This skill is verified against this exact public release:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `19.50.1` | `Cratis.Chronicle.Compliance.GDPR`, `Cratis.Chronicle.SubjectAttribute`, `IEventSequence.Redact`, `IReadModels.Release` |
-| `Cratis.Chronicle.CodeAnalysis` | `19.50.1` | `CHR0026`, `CHR0034`, `CHR0035`, `CHR0043`, `CHR0046` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | `Cratis.Chronicle.Compliance.GDPR`, `Cratis.Chronicle.SubjectAttribute`, `IEventSequence.Redact`, `IReadModels.Release` |
+| `Cratis.Chronicle.CodeAnalysis` | `CHR0026`, `CHR0034`, `CHR0035`, `CHR0043`, `CHR0046` |
 
 Reverify product sources before claiming support for another version.
 
@@ -64,7 +64,7 @@ are `[PII]` for personal data and `[Encrypted]` for retained operational secrets
 there is no `[Redact]`, `[Erase]`, `[Anonymize]`, or `[Encrypt]` annotation.
 Redaction is an API call. `[NotAudited]` belongs to Arc, not Chronicle.
 
-`[Encrypted]` (`Cratis.Chronicle.ProtectedValues`, Chronicle 19.32.0+) is a
+`[Encrypted]` (`Cratis.Chronicle.ProtectedValues`) is a
 security marker, not a compliance category: it encrypts an operational secret
 (API key, token, a company's bank account number) at rest with no data subject
 and no erasure. Never put it on a value that is also `[PII]` (analyzer
@@ -76,6 +76,11 @@ that is also a command property takes both `[Encrypted]` and `[NotAudited]`.
 `PIIManager` refuses to delete security keys. Custom security metadata providers
 live in `Cratis.Chronicle.Confidentiality` (`ICanProvideSecurityMetadataForType`
 and `ICanProvideSecurityMetadataForProperty`).
+
+Requires Chronicle 19.54.1 for encrypted non-string properties/concepts (such as
+`int` and `bool`) to append and deserialize with their original types across
+subject, namespace and global scopes. Check the kernel version; earlier kernels
+can fail those appends. Verify a protected-value round trip, not only compilation.
 
 Mark only genuinely personal values. Business metadata, identifiers of
 non-persons, and amounts stay unmarked — every marked value costs an encryption
@@ -162,7 +167,7 @@ What this does and does not do:
   number/boolean → `0`/`false`; nullable number/boolean → `null`; collection →
   empty collection; object/value object → empty object. An erased `0`, `false`
   or empty string is indistinguishable from a genuinely recorded one.
-  Source at v19.50.0: `Documentation/compliance/erasing-a-subject.mdx`.
+  Source: `Documentation/compliance/erasing-a-subject.mdx`.
 - Appending a new `[PII]` value for an erased subject **fails** with
   `EncryptionKeyErased`. It does not quietly mint a new key. Call
   `AllowNewEncryptionKeyFor` deliberately if the subject must be re-enrolled.
@@ -193,14 +198,14 @@ Use redaction for content that should never have been appended. Use key erasure
 for a subject exercising a right to erasure. They are different mechanisms and
 one does not imply the other.
 
-Since 19.11.0, redaction also drops retained causation property values, revision
+Requires Chronicle 19.11.0 for redaction to also drop retained causation property values, revision
 history and content hashes. It does not reach backups, oplogs or events already
 forwarded elsewhere. Subject erasure does **not** erase causation values: these
 are not encrypted under the subject key. Kernel configuration
 `events.causationPropertyRetention = Omit`
 (`Cratis__Chronicle__Events__CausationPropertyRetention`) prevents **new** retention
 on appends, forwarding, revisions and redactions; it does not rewrite history.
-Source at v19.50.0: `Documentation/hosting/configuration/events.md` and
+Source: `Documentation/hosting/configuration/events.md` and
 `Documentation/compliance/erasing-a-subject.mdx`.
 
 Adding `[PII]` / `[Encrypted]` to an existing generation is accepted with a warning

@@ -28,6 +28,9 @@ internal static class KernelConnectionErrors
             case RpcException { StatusCode: StatusCode.Unavailable }:
                 return KernelConnectionErrorKind.ConnectionLost;
 
+            case RpcException rpc when IsClientNotConnected(rpc):
+                return KernelConnectionErrorKind.SessionLost;
+
             case RpcException:
                 return KernelConnectionErrorKind.Failure;
 
@@ -39,6 +42,11 @@ internal static class KernelConnectionErrors
                 if (kinds.Contains(KernelConnectionErrorKind.Failure))
                 {
                     return KernelConnectionErrorKind.Failure;
+                }
+
+                if (kinds.Contains(KernelConnectionErrorKind.SessionLost))
+                {
+                    return KernelConnectionErrorKind.SessionLost;
                 }
 
                 return kinds.Contains(KernelConnectionErrorKind.ConnectionLost)
@@ -61,4 +69,8 @@ internal static class KernelConnectionErrors
     /// </remarks>
     internal static bool IsInterruptedByShutdown(this Exception exception, CancellationToken stoppingToken) =>
         stoppingToken.IsCancellationRequested && exception.ClassifyStreamError() != KernelConnectionErrorKind.Failure;
+
+    static bool IsClientNotConnected(RpcException exception) =>
+        exception.Status.Detail.Contains("ClientIsNotConnected", StringComparison.Ordinal)
+        || exception.Message.Contains("ClientIsNotConnected", StringComparison.Ordinal);
 }

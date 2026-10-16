@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_observing_instances.given;
@@ -16,7 +17,7 @@ public class and_reading_the_container_fails : a_sql_read_model
 
     async Task Because()
     {
-        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns<Task<DbContextScope<ReadModelDbContext>>>(_ => throw new InvalidOperationException("database unavailable"));
         Subscribe();
         _error = await Catch.Exception(async () => await _initial.Task.WaitAsync(TimeSpan.FromSeconds(15)));

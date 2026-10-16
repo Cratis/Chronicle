@@ -12,7 +12,7 @@ At least one `when` and a nonempty action list in every branch are required.
 Do not mix alternatives with plain actions or `where`; a one-line
 `when … execute …` belongs to labeled actions, not interactions.
 
-This complete model validates on standalone Screenplay 4.127.0:
+This complete model validates on the standalone compiler:
 
 ```screenplay
 module Billing
@@ -68,5 +68,5 @@ UI is deferred from backend ESM (PLAY0269), not executable gesture proof. The
 board draws a static prototype; renderers must explicitly admit alternatives or
 report unsupported, never flatten them into plain actions.
 
-Authority: Screenplay v4.127.0 `interactions.md`, `diagnostics.md`,
-`mcp/authoring-tools.md`; decision 0048.
+Authority: Screenplay `interactions.md`, `diagnostics.md`,
+`mcp/authoring-tools.md`.

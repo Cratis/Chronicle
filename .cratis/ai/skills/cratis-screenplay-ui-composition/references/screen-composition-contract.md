@@ -19,7 +19,7 @@
 This reference is the authoring checklist for the screens-release UI surface. It
 records the contract an agent must look for in the installed Screenplay tool and
 in peer runtime/render contracts; it is not a second language definition. The syntax
-below was re-read at Screenplay v4.139.0 (`screens.md`, `forms.md`, `templates.md`,
+below was re-read (`screens.md`, `forms.md`, `templates.md`,
 `contributions.md`, `ui-profile.md` and `fixtures/screen-release-ui.play`); the shapes are released, not proposed. When a
 syntax form below is not present in `syntax-schema` or does not compile with the
 project's selected Screenplay version, report the support level instead of
@@ -35,38 +35,31 @@ hand-writing an alternate shape.
   without dropping it, silently falling back or replacing it with a default.
 
 Keep those three lines separate in reports. Correct an old limitation only when
-the package/version you are using proves the new level. Historical verified vector:
-CLI 3.43.0 with its default `cratis/stage:4.52.0` and bundled Screenplay 4.127.0;
-the executed vector renders on Scene 4.15.0. Packages published since are newer than
-that vector and are not claimed browser-verified. Scene 4.17.0 was the earlier
-source-checked runtime summary, not a new executed vector. Scene runtime capabilities
-below were source-checked at the current scaffold's Scene tag; this does not
-re-label the historical execution result. Current pins:
-`cratis-screenplay-toolchain/references/versions.md`.
-All three levels hold for the canonical `ScreenComposition` corpus on the historical vector:
+the package/version you are using proves the new level. The canonical `ScreenComposition`
+corpus was executed through the public CLI with its default Stage and Scene runtime. Scene
+runtime capabilities below were source-checked at the current scaffold's Scene tag. Tool
+versions: `cratis-screenplay-toolchain/SKILL.md`.
+
+All three levels hold for the canonical `ScreenComposition` corpus:
 
 - authoring and executable admission: MCP opens it with `sourceSuccess true`,
   `semanticSuccess true`, `executableReady true`, and the stdio MCP harness sends
   real proposal/apply requests, rejects a stale revision and preserves an
   authored comment on disk;
-- runtime: render publishes, and the browser acceptance run on CLI 3.40.7 /
-  `cratis/stage:4.51.1` passed 51 assertions with none blocked or pending
-  (Cratis/Screenplay#605) - native command forms, required fields, scoped
-  comments, deep links, stale-response handling and theme included. On CLI
-  3.43.0 an agent-edited column was rendered, run and seen in the browser.
+- runtime: render publishes, and the browser acceptance run passes with none blocked or pending
+  - native command forms, required fields, scoped comments, deep links, stale-response handling
+  and theme included. An agent-edited column was rendered, run and seen in the browser.
 
-Guarded Close and double-click: Stage refused both with `STAGE-SCENE-ACTION-001` and
-`STAGE-SCENE-INTERACTION-001` from Stage 4.51 through 4.57. Since Stage 4.65 they render and
-run (public CLI 3.53.1 with `cratis/stage:4.73.1`, Cratis/Screenplay#671); the codes remain the
+Guarded Close and double-click: an older Stage refuses both with `STAGE-SCENE-ACTION-001` and
+`STAGE-SCENE-INTERACTION-001`; a current Stage renders and runs them, and the codes remain the
 refusal for a guard Stage cannot evaluate, which is never emulated. Studio production Play
-proof is a separate vector (Cratis/Screenplay#173). Refusing an unresolvable UI
-profile and recovering a rendered application shipped in Cratis/cli#301. (History: on Stage 4.24.2 or
-cratis 3.28.x renderers authored screens were reported as omitted/default composition; Stage 4.73.1
-(CLI 3.53.1) renders navigation contributions and toolbars, and `CLI-RENDER-015`, which refused them, is retired.)
+proof is a separate vector. A renderer refuses an unresolvable UI
+profile and recovers a rendered application. A current Stage renders navigation contributions
+and toolbars; `CLI-RENDER-015`, which refused them, is retired.
 
-On CLI 3.53.1 (`cratis/stage:4.73.1`, corpus 4.137.0+) the browser run also passes a module-level navigation contribution, an unlisted
+The browser run also passes a module-level navigation contribution, an unlisted
 screen reached through the hierarchy, and a toolbar item that opens a dialog with its `presentation` (icon-only, hint)
-honoured (Cratis/Screenplay#665, Cratis/Stage#336 and #337).
+honoured.
 
 ## Data context and component bindings
 
@@ -129,9 +122,9 @@ presentation offers, never access control. Downstream runtime support is separat
 from parsing; do not publish an empty plain action as equivalent behavior.
 The complete checked model and conditions are in
 `cratis-screenplay-read-surface` `references/guarded-actions.md`, grounded in
-Screenplay v4.125.0 `screens.md`. Historical CLI 3.41.0/Stage 4.51.3 checks reported
-unsupported screen actions with STAGE-SCENE-ACTION-001; since Stage 4.65 a guard of the form
-`item.<field>` compared with a literal is evaluated at runtime (Cratis/Screenplay#671).
+Screenplay `screens.md`. An older Stage reports
+unsupported screen actions with STAGE-SCENE-ACTION-001; a current Stage evaluates a guard of the form
+`item.<field>` compared with a literal at runtime.
 
 ## Exposed template configuration
 
@@ -246,8 +239,8 @@ when a single screen owns the button. A parameter that reads a selection is a ty
 data-context path). A dialog destination must state every input with a typed `with`/`parameter`
 binding; a runtime default is not an authored contract.
 
-Scene 4.21 runtime capabilities (source-checked at Scene v4.21.0, not a browser
-run or a recheck at the newer scaffold pin). Authoring acceptance, executable
+Scene runtime capabilities (source-checked, not a browser
+run). Authoring acceptance, executable
 admission and runtime support stay separate — a Scene release is not a Stage
 release. The current Stage scaffold pins a newer Scene release (Stage skill
 `references/rendered-application.md`); never upgrade managed files by hand:
@@ -348,3 +341,9 @@ columns, `on row-click navigate to <Screen> by <param>`, sections, conditional
 `when … execute … with … from …` actions and localized labels.
 The AI corpus may link to that path and name the expected checks, but must not copy
 the `.play` source into `.cratis/ai/` or maintain a second canonical application.
+
+These constructs went unhighlighted and uncompleted by the Monaco and VS Code
+language service until every construct the parser
+dispatches on had a keyword entry. On an older language-service version they still
+look unrecognized — **check `screenplay`, not the editor**, because absent
+highlighting was never evidence that a construct is wrong.

@@ -124,6 +124,10 @@ VALUES (2, N'Orders', N'TenantA', N'orders_tenant_a_recovered');
 
 `DatabaseMigrationIncomplete` is a different failure: an object already exists but EF migration history still has pending migrations. The error names the database and first pending migration. Repair the schema/history mismatch from a backup and verified schema evidence; Chronicle does not treat duplicate objects as proof that migration completed.
 
+## Platform-managed databases
+
+When a platform decides where each event store and namespace lives, configure [storage connection resolution](storage-connection-resolution.md) to resolve the server, database, schema and identity per namespace and purpose. `createIfMissing: false` stops Chronicle from creating databases, and `schema` keeps its tables in the schema you grant.
+
 ## SQLite
 
 ```json
@@ -159,4 +163,7 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
+| schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
+| createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
+| connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 

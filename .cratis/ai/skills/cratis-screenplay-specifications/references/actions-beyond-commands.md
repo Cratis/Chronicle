@@ -15,22 +15,17 @@ assert a value mapped from `$context.occurred`. In a command's `produces`, that
 mapping executes when the scenario has `given clock`. It is not the same as
 `$eventContext.occurred` in a projection, which the execution plan refuses (SKILL.md, "Reference execution — what actually runs").
 
-**Which tools bind these actions** (probed: `screenplay mcp` 4.66.0 and `cratis screenplay mcp` 3.28.2
-report the complete example in [reactions-and-cascades.md](reactions-and-cascades.md) `executableReady` with no executable error, in
-`open-workspace` readiness and `read-workspace` view `executable-diagnostics`;
-`cratis` before 3.28.2 bundled 4.60.1 and did not):
+**Which tools bind these actions.** A compiler that admits ESM v6 binds the clock, trigger
+and capture actions, and the `Automation` and `Translate` slices, reactions and captures they
+drive; the reference runner executes them through `screenplay test` or MCP `run-specifications`,
+with the semantics in [Reactions and cascades](reactions-and-cascades.md). The complete example in
+that reference reports `executableReady` with no executable error in `open-workspace` readiness
+and `read-workspace` view `executable-diagnostics`.
 
-- **Screenplay 4.66.0 (ESM v6, from 4.61.0), standalone and `cratis` 3.28.2:** the clock, trigger
-  and capture actions, and the `Automation` and `Translate` slices, reactions and
-  captures they drive, bind. The reference runner executes them through `screenplay test` or MCP
-   `run-specifications`, with
-  the semantics in [Reactions and cascades](reactions-and-cascades.md).
-- **`cratis` before 3.28.2 (Screenplay 4.60.1, ESM v1-v5):**
-  **`when query` executed. The clock, trigger and capture actions did not.** They parsed, printed and were
-  checked against the application, but binding reported `PLAY0268` naming the
-  proposed ESM v6 (decision 0022), and an `Automation` or `Translate` slice reported
-  *is not admitted by ESM v1*. Only binding showed this: `cratis screenplay validate`
-  does not bind, so it stayed green.
+A compiler that stops before ESM v6 executes `when query` only. The clock, trigger and capture
+actions parse, print and are checked against the application, but binding reports `PLAY0268`
+naming ESM v6, and an `Automation` or `Translate` slice reports *is not admitted by ESM v1*.
+Only binding shows this: `cratis screenplay validate` does not bind, so it stays green.
 
 Write the actions either way - they state what sets the slice off. Report each as
 bound and not executed, or as parsed only, naming the tool that said so.

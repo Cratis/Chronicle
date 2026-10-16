@@ -65,7 +65,7 @@ into exactly one of these:
    plus a `then denied` specification using `given caller as <Persona>` for a
    synthesized witness, or an explicit effective-gate caller (`cratis-screenplay-scenario-coverage`). Every command and query
    under an inherited module or feature `authorize` gets its own denial spec. Ownership
-   against a text, Uuid, Date or DateTime subject renders at Stage 4.73.1; other subjects are STAGE-ESM-015: note it.
+   against a text, Uuid, Date or DateTime subject renders; other subjects are STAGE-ESM-015: note it.
 2. **Gap or target requirement.** The check depends on stored state ("only the requester may
    withdraw") or cannot be gated today. Record it as a gap with its target enforcement for
    `cratis-screenplay-streams-and-consistency`; it is not enforcement and not a passed denial.

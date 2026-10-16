@@ -28,6 +28,14 @@ public interface INamespaces
     [Operation]
     Task<CommandResult> EnsureNamespace(EnsureNamespaceRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RemoveNamespace command.
+    /// </summary>
+    /// <param name = "request">The RemoveNamespace request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> RemoveNamespace(RemoveNamespaceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllNamespaces query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -50,6 +58,25 @@ public interface INamespaces
 /// </summary>
 [ProtoContract]
 public class EnsureNamespaceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the RemoveNamespaceRequest message.
+/// </summary>
+[ProtoContract]
+public class RemoveNamespaceRequest
 {
     /// <summary>
     /// Gets or sets the EventStore.

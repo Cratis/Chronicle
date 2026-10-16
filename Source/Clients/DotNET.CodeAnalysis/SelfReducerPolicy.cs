@@ -129,6 +129,29 @@ internal static class SelfReducerPolicy
         }
     }
 
+    /// <summary>
+    /// Recognizes declared event metadata, including historical generations and inherited markers.
+    /// </summary>
+    /// <param name="type">The event parameter type.</param>
+    /// <returns>Whether runtime event discovery can recognize the type from its metadata.</returns>
+    internal static bool HasEventTypeMetadata(INamedTypeSymbol type) =>
+        Attributes(type).Any(attribute => IsEventDeclarationAttribute(attribute.AttributeClass));
+
+    static bool IsEventDeclarationAttribute(INamedTypeSymbol? attribute)
+    {
+        for (var current = attribute; current is not null; current = current.BaseType)
+        {
+            var name = current.ToDisplayString();
+            if (name == WellKnownTypes.ClientEventTypeAttributeName || name == WellKnownTypes.KernelEventTypeAttributeName ||
+                name == "Cratis.Chronicle.Events.EventTypeGenerationForAttribute")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     static bool IsInherited(INamedTypeSymbol? attribute)
     {
         for (var current = attribute; current is not null; current = current.BaseType)

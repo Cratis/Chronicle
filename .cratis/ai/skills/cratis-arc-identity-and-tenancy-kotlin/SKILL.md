@@ -16,11 +16,11 @@ and verify all three separately. A tenant header alone proves no membership.
 
 ## Verified product sources
 
-Verified at `Arc.Kotlin v7.7.0`: `Source` authentication/identity/tenancy contracts,
+Source: `Arc.Kotlin`: `Source` authentication/identity/tenancy contracts,
 `Integrations/SpringBoot/ArcTenancyProperties.java`, platform security classes,
 `Documentation/guides/security.mdx`, `ambient-tenancy.mdx` and
-`reference/configuration.mdx`. Use `io.cratis:arc-spring-boot-starter:7.7.0`
-(or `io.cratis:cratis:7.7.0` for Chronicle integration), with matching plugin/KSP.
+`reference/configuration.mdx`. Use `io.cratis:arc-spring-boot-starter:<version>`
+(or `io.cratis:cratis:<version>` for Chronicle integration), with matching plugin/KSP.
 These are JVM contracts; do not infer the same switches exist in Arc .NET.
 
 ## Authenticate and expose identity details

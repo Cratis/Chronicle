@@ -6,7 +6,7 @@ read-only evidence, not authority to change anything.
 
 Confirm permission, server context, event store, namespace and data sensitivity first. Use
 the installed `cratis` CLI catalog for exact commands (`cratis-chronicle-cli-operations`, read-only; `cratis-chronicle-mcp-inspection` for MCP inspection) and scope every
-read by identity, type, range or page. Check `cratis-screenplay-toolchain` `references/versions.md` for what the installed tools
+read by identity, type, range or page. Check `cratis-screenplay-toolchain` `SKILL.md` for what the installed tools
 support before relying on any inspection tool.
 
 For the extraction question at hand, inspect only what is relevant: event schemas and

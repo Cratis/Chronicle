@@ -4,7 +4,7 @@
 <!-- Copyright (c) Cratis. All rights reserved. -->
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
-Verified at **Arc v22.75.0**. Use the plain `Specification` base for pure decisions;
+Use the plain `Specification` base for pure decisions;
 these helpers add proof of framework composition, not HTTP transport.
 
 ## Query pipeline
@@ -17,10 +17,12 @@ conversion, validation, authorization and rendering. Use `QueryArguments` from
 under test with `ICurrentPrincipalAccessor` in `Services`. Scheme-selected queries
 fail closed in-process: HTTP authentication needs a hosted integration spec.
 
-At Arc 22.75.1+ (re-verified at 22.76.0), both query and command scenarios preserve
+Both query and command scenarios preserve
 explicit `ICurrentPrincipalAccessor`, `ICurrentPrincipalOverride` and
 `IAuthorizationPolicyRuntime` registrations rather than replacing them with defaults.
 Configure them before first execution and specify both authorized and denied callers.
+
+Requires Arc 22.75.1 or later for query and command scenarios to preserve explicit principal and authorization services.
 Source: `Source/DotNET/Testing/ScenarioServices.cs`, `Queries/QueryScenario.cs`,
 `Commands/CommandScenario.cs`.
 
@@ -34,8 +36,22 @@ change streams; the harness does not emulate it.
 The discovered `IQueryScenarioExtender` supports additional context/services.
 With `Cratis.Arc.Chronicle.Testing` and its Queries namespace, use
 `Given.ForEventSource(id).ReadModel(instance)` or `.Events(...)` before performing.
-The query must read that source via injected `IReadModels`; seeding does not
-replace arbitrary stores or produce later observable emissions after appends.
+The query must read through injected `IReadModels`; seeding does not replace
+arbitrary stores.
+
+Requires Arc 22.87.0 and Chronicle 19.54.0 for scenario `IReadModels.Observe<T>(filter)` snapshots from given events or pinned models,
+including new emissions after scenario command appends. Pins need a readable key
+or throw `PinnedReadModelCannotBeObserved`.
+Requires Arc 22.91.1 and Chronicle 19.59.1 for default-mode children, joins and reducers to observe through scenario-owned storage (the initial Arc package was not published); older default mode cannot
+observe children, so use decision mode. Check both package versions.
+
+For a query with `by`, `filter` or `scoped to`, seed instances for two keys, two filter values
+or two tenants with distinct callers, as applicable, and assert that each call returns only its
+own instances, plus the empty case. This pins the caller-isolation decision in
+`cratis-screenplay-read-surface` ("by vs filter"); caller scope must come from trusted context,
+not a caller-supplied tenant filter. Compare whole returned items when the contract states every
+value; otherwise assert each named value. A query backed by a database still needs that provider's
+integration setup: scenario pins do not replace arbitrary stores.
 
 ## Guarded decisions
 
@@ -48,7 +64,12 @@ Queue interference using `AppendConcurrently(id, route, event)` and assert a
 nonempty decision is rejected on the intended boundary. An empty identical-retry
 append deliberately returns no scope and cannot prove the conflict guard.
 
-`ShouldHaveCompletedStream(type, id)` proves successful completion.
+Requires Arc 22.92.0 for `AppendConcurrently` without decision reads; older Arc
+needs decision mode. Its early interference does not make a plain read guarded;
+assert the actual scope/outcome, not merely that the competing append ran.
+
+`ShouldHaveCompletedStream(type, id)` proves successful completion;
+`ShouldHaveCompletedStream(ClosedStreamScope)` asserts the exact source and route.
 `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` checks projection
 admission in assembly-wide specs. These APIs are in
 `Cratis.Arc.Chronicle.Testing.Commands`. Routed seeding is refused in legacy mode.
@@ -60,7 +81,7 @@ boundaries explicit in either mode; decision mode is not a MongoDB substitute.
 
 ## Sources
 
-- [Query scenarios](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/testing/query-scenario.md)
-- [Stream decisions and routed specs](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/chronicle/commands/stream-decisions.md)
-- [Decision-mode extension](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Chronicle.Testing/Commands/CommandScenarioChronicleExtensions.cs)
-- [Admission assertion](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Chronicle.Testing/Commands/DecisionReadAdmissions.cs)
+- [Query scenarios](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/query-scenario.md)
+- [Stream decisions and routed specs](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/commands/stream-decisions.md)
+- [Decision-mode extension](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Testing/Commands/CommandScenarioChronicleExtensions.cs)
+- [Admission assertion](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Testing/Commands/DecisionReadAdmissions.cs)

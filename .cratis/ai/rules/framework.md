@@ -16,7 +16,7 @@ Everything tagged `profile: universal` holds in framework repos exactly as in ap
 
 ## What does NOT apply
 
-Skip these `profile: application` rules entirely when in a framework repo: `vertical-slices.md`, `reactors.md`, `react.md`, `components.md`, `dialogs.md`, `frontend-quality.md`, `frontend-testing.md`, `storybook.md`, `efcore.md`, `efcore.specs.md`. Do not create vertical-slice folders, `[Command]`/`Handle()` records, read models, or MVVM app components in framework source.
+Skip these `profile: application` rules entirely when in a framework repo: `vertical-slices.md`, `reactors.md`, `react.md`, `components.md`, `dialogs.md`, `frontend-quality.md`, `frontend-testing.md`, `storybook.md`, `efcore.md`, `efcore.specs.md`, `mongodb.md`. Do not create vertical-slice folders, `[Command]`/`Handle()` records, read models, or MVVM app components in framework source.
 
 ## The repos and their shape
 
