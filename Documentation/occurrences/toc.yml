@@ -4,3 +4,5 @@
   href: lifecycle.mdx
 - name: Effect receipts
   href: effect-receipts.mdx
+- name: Testing
+  href: testing.mdx
