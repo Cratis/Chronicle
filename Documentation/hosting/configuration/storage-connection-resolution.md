@@ -47,11 +47,13 @@ The standard `cratis/chronicle` image supports `Template` and `Http`, because bo
 
 ## The HTTP contract
 
-Chronicle posts the request as JSON:
+The `Http` resolver calls a plain REST endpoint, which you can implement in any language. The contract is the same for MongoDB and SQL storage, and the same one Arc uses: the [connection resolution contract](/arc/connection-resolution-contract/) specifies the request, the response, the status codes, caching and security, and includes an OpenAPI description. Chronicle resolves all of its storage through one resolver, so one endpoint serves every database, whichever storage type you run.
+
+What Chronicle adds is its `scope`, listed under [what Chronicle asks](#what-chronicle-asks). A request for a namespace looks like this:
 
 ```http
 POST https://platform-mgmt.example/internal/connections
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 { "storage": "SqlServer", "purpose": "Schema", "scope": { "kind": "namespace", "eventStore": "orders", "namespace": "acme" } }
 ```
@@ -66,13 +68,7 @@ Your endpoint answers with the parts it decides:
 }
 ```
 
-| Status | Meaning |
-| --- | --- |
-| `200 OK` with a body | Apply the parts in the body |
-| `204 No Content` | Keep Chronicle's default for this database |
-| Anything else | The connection fails |
-
-Static headers, such as an API key, go under `http.headers`. The default timeout is 10 seconds (`http.timeout`).
+Answer `204 No Content` to keep Chronicle's default for a database. Any status other than `200` or `204` fails the connection. Static headers, such as an API key, go under `http.headers`. The default timeout is 10 seconds (`http.timeout`).
 
 ## A database per tenant on Azure SQL
 
