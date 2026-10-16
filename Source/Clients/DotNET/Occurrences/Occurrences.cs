@@ -17,12 +17,14 @@ namespace Cratis.Chronicle.Occurrences;
 public partial class Occurrences(IEventStore eventStore) : IOccurrences, IOccurrencesForUnitOfWork
 {
     TriggerRegistry? _triggers;
+    Func<Task>? _registerForTesting;
     JsonSerializerOptions _jsonOptions = JsonSerializerOptions.Default;
 
     /// <inheritdoc/>
     public async Task<OccurrenceRecordResult> Record(object trigger, string idempotencyId)
     {
         OccurrenceSupport.Require(eventStore.Connection);
+        if (_registerForTesting is not null) await _registerForTesting();
         if (string.IsNullOrWhiteSpace(idempotencyId)) throw new TriggerNotValid("An occurrence idempotency identity must not be empty.");
         if (TriggerRegistry.IsLifecycle(trigger.GetType())) throw new TriggerNotValid("Lifecycle triggers are recorded by host startup or EndActivation, not application ingress.");
         var registration = _triggers?.Get(trigger.GetType()) ?? throw new TriggerNotValid("Trigger discovery has not been configured for this occurrence service.");

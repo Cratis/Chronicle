@@ -135,6 +135,16 @@ public partial class Occurrences : IDisposable, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Discovers the in-process scenario's trigger catalog and registers it on ingress, without workers or lifecycle work.
+    /// Receipt-only access must not depend on occurrence ingress support.
+    /// </summary>
+    internal void InitializeForTesting()
+    {
+        _triggers?.Discover();
+        _registerForTesting = _triggers is null ? null : _triggers.Register;
+    }
+
     async Task RunWorkers(Task previous, long epoch)
     {
         // Reconnect registration must not join user code in the connection callback, but a new

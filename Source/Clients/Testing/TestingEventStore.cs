@@ -45,6 +45,7 @@ namespace Cratis.Chronicle.Testing;
 internal sealed class TestingEventStore : IDisposable
 {
     readonly ConcurrentDictionary<EventSequenceId, Lazy<KernelSequences::IEventSequence>> _grains = new();
+    readonly ConcurrentDictionary<string, Occurrences.InProcessOccurrenceQueue> _occurrenceQueues = new();
     readonly EventStoreStorages _storages;
     readonly Func<IEventTypes> _eventTypes;
     readonly JsonSerializerOptions _json = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
@@ -57,7 +58,9 @@ internal sealed class TestingEventStore : IDisposable
     /// <param name="name">The event store name.</param>
     /// <param name="ns">The namespace name.</param>
     /// <param name="eventTypes">The discovered event types.</param>
-    internal TestingEventStore(EventStoreName name, EventStoreNamespaceName ns, Func<IEventTypes> eventTypes)
+    /// <param name="time">Optional occurrence clock.</param>
+    /// <param name="capabilities">Optional kernel capabilities.</param>
+    internal TestingEventStore(EventStoreName name, EventStoreNamespaceName ns, Func<IEventTypes> eventTypes, ScenarioTime? time = null, KernelCapabilitiesForTesting? capabilities = null)
     {
         Name = name;
         Namespace = ns;
@@ -67,14 +70,32 @@ internal sealed class TestingEventStore : IDisposable
             new InMemoryJobsStorage(new NoJobTypes()),
             _ => new DiscoveredEventTypesStorage(new EventTypesStorage(), eventTypes));
         Storage = new Storage.InMemory.Storage(_storages, new SystemStorage());
-        _grainFactory = new InProcessGrainFactory(sequenceResolver: ResolveSequence);
-        Connection = new ChronicleConnectionForTesting(_grainFactory, Storage, Compliance, _json, eventTypes, Dispose);
+        Time = time ?? new ScenarioTime();
+        Capabilities = capabilities ?? new KernelCapabilitiesForTesting();
+        if (capabilities is null) Capabilities.Current();
+        _grainFactory = new InProcessGrainFactory(sequenceResolver: ResolveSequence, occurrenceResolver: ResolveOccurrenceQueue);
+        Connection = new ChronicleConnectionForTesting(_grainFactory, Storage, Compliance, _json, eventTypes, Dispose, Capabilities, Replies);
     }
 
     /// <summary>
     /// Gets the event store name.
     /// </summary>
     internal EventStoreName Name { get; }
+
+    /// <summary>
+    /// Gets the occurrence clock.
+    /// </summary>
+    internal ScenarioTime Time { get; }
+
+    /// <summary>
+    /// Gets the kernel capabilities.
+    /// </summary>
+    internal KernelCapabilitiesForTesting Capabilities { get; }
+
+    /// <summary>
+    /// Gets the reply-loss driver.
+    /// </summary>
+    internal DropReplyInterceptor Replies { get; } = new();
 
     /// <summary>
     /// Gets the namespace name.
@@ -110,6 +131,7 @@ internal sealed class TestingEventStore : IDisposable
         {
             ((IDisposable)grain.Value).Dispose();
         }
+        foreach (var queue in _occurrenceQueues.Values) queue.Dispose();
         _storages.Dispose();
     }
 
@@ -167,6 +189,9 @@ internal sealed class TestingEventStore : IDisposable
         }
         return new EventSequence(Name, Namespace, id, Connection, _eventTypes(), constraints, serializer, new CorrelationIdAccessor(), new NoConcurrencyScopeStrategies(), new CausationManager(), new NoUnitOfWorkManager(), new BaseIdentityProvider(), _json, eventSources: eventSources);
     }
+
+    Occurrences.InProcessOccurrenceQueue ResolveOccurrenceQueue(string key) =>
+        _occurrenceQueues.GetOrAdd(key, static (value, root) => new Occurrences.InProcessOccurrenceQueue(root.Storage, value, root.Time), this);
 
     KernelSequences::IEventSequence ResolveSequence(string key)
     {
