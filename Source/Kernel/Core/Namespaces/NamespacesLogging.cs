@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Namespaces;
 
 internal static partial class NamespacesLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Namespace '{Namespace}' was removed but the removal could not be recorded")]
+    internal static partial void CouldNotRecordNamespaceRemoval(this ILogger<INamespaces> logger, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Trace, "Adding namespace '{Namespace}'")]
     internal static partial void AddingNamespace(this ILogger<INamespaces> logger, EventStoreNamespaceName @namespace);
 

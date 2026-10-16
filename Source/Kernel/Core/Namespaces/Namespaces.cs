@@ -60,4 +60,21 @@ public class Namespaces(
     /// <inheritdoc/>
     public Task<IEnumerable<EventStoreNamespaceName>> GetAll() =>
         Task.FromResult(State.Namespaces.Select(_ => _.Name).ToArray().AsEnumerable());
+
+    /// <inheritdoc/>
+    public async Task Forget(EventStoreNamespaceName @namespace)
+    {
+        var existing = State.Namespaces.FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.InvariantCultureIgnoreCase));
+        if (existing is null) return;
+
+        var eventStoreName = (EventStoreName)this.GetPrimaryKeyString();
+        State.Namespaces.Remove(existing);
+
+        // Recorded once the namespace is gone, so a retry of a half-done removal is not reported as done.
+        var result = await GrainFactory.GetSystemEventSequence().Append($"{eventStoreName}/{@namespace}", new NamespaceRemoved(eventStoreName, @namespace));
+        if (!result.IsSuccess)
+        {
+            logger.CouldNotRecordNamespaceRemoval(@namespace);
+        }
+    }
 }

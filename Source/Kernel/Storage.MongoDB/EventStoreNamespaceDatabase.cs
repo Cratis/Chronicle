@@ -26,6 +26,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     static readonly string[] _obsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
 
     readonly IMongoDatabase _database;
+    readonly string _databaseName;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
@@ -53,6 +54,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         Client = clientManager.GetClientFor(settings);
+        _databaseName = databaseName;
         _database = Client.GetDatabase(databaseName);
     }
 
@@ -102,6 +104,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         }
 
         _indexedEventSequences.TryAdd(eventSequenceId, true);
+    }
+
+    /// <inheritdoc/>
+    public async Task Drop()
+    {
+        _indexedEventSequences.Clear();
+        await Client.DropDatabaseAsync(_databaseName).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

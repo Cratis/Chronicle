@@ -136,4 +136,15 @@ public interface IEventStoreStorage
     /// Namespace names are matched exactly; they are derived byte for byte into physical database names.
     /// </remarks>
     IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Drop the data stored for a namespace. Called once the namespace's observers have been removed.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> whose data to drop.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Storage providers that keep a namespace's data apart from the other namespaces override this. The default
+    /// does nothing, leaving the data in place.
+    /// </remarks>
+    Task DropNamespace(EventStoreNamespaceName @namespace) => Task.CompletedTask;
 }
