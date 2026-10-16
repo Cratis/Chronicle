@@ -2,12 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events.Constraints;
 
 namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    static bool CanUpdateConstraintIndex(IConstraintValidator validator, ConstraintValidationContext context) => validator switch
+    {
+        // A no-op must not consume a write deadline or become pending when another constraint
+        // exhausted the turn. That would make unrelated appends trigger extra repair writes.
+        UniqueConstraintValidator => validator.CanValidate(context) || ((UniqueConstraintDefinition)validator.Definition).RemovedWith.Contains(context.EventTypeId),
+        ClosesStreamConstraintValidator => validator.CanValidate(context),
+        _ => true
+    };
+
     async Task UpdateConstraintIndexes(IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> contexts)
     {
         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
@@ -16,7 +26,7 @@ public partial class EventSequence
             ExcludeLiveConstraintKeys(context, number);
             var updates = context.IndexUpdates.ToArray();
             if (number > _constraintIndexPosition) MarkConstraintIndexGap(_constraintIndexPosition);
-            foreach (var (validator, updater) in updates.Where(update => !_pendingConstraintIndexes.ContainsKey(update.Validator.Definition.Name)))
+            foreach (var (validator, updater) in updates.Where(update => CanUpdateConstraintIndex(update.Validator, context) && !_pendingConstraintIndexes.ContainsKey(update.Validator.Definition.Name)))
             {
                 var name = validator.Definition.Name;
                 var outcome = await AttemptConstraintIndexUpdate(updater, number, name, budget.Token);
