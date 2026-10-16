@@ -1,26 +1,36 @@
 ---
 title: Scenarios
-description: Working .NET and Elixir examples that make a write-side rule hold with the Chronicle client, from a unique value to a rule across two keys.
+description: Working .NET and Elixir examples that make a write-side rule hold with the Chronicle client, ordered from a unique value to processes, numbering and editing conflicts.
 ---
 
 Use this page when you know the shape of your rule and want to see it as code. Each scenario names the rule, shows the shape that holds, and says what happens when two writers race. To pick a mechanism first, read [Choosing how a rule holds](./choosing.mdx). The examples use the .NET and Elixir clients.
 
-| Rule | Mechanism | Scenario |
-|---|---|---|
-| A username must be unique | Constraint | [Unique username](#unique-username) |
-| An account can be opened once | Constraint | [Create once](#create-once) |
-| A member may have three loans | Decision read | [A limit on one key](#a-limit-on-one-key) |
-| An account may withdraw 5000 a month | Decision read scoped to one stream | [A limit inside one stream](#a-limit-inside-one-stream) |
-| A course has seats, a student has a course limit | Two decision reads, one `AppendMany` | [A rule across two keys](#a-rule-across-two-keys) |
-| Invoice numbers have no gaps | One numbering source, one decision read | [Gapless invoice numbers](#gapless-invoice-numbers) |
-| The same rule in an ASP.NET Core endpoint | Decision reads in a unit of work | [In an ASP.NET Core endpoint](#in-an-aspnet-core-endpoint) |
-| Two people edit the same project | Explicit concurrency scope | [An editing conflict](#an-editing-conflict) |
-| A customer's onboarding has steps and an end | Stream guard and a closing event | [A process with steps and an end](#a-process-with-steps-and-an-end) |
-| Overbooking is rare and fixable | Repair with a reactor | [A rare violation you can repair](#a-rare-violation-you-can-repair) |
+| Level | Rule | Mechanism | Scenario |
+|---|---|---|---|
+| Simple | A username must be unique | Constraint | [Unique username](#unique-username) |
+| Simple | An account can be opened once | Constraint | [Create once](#create-once) |
+| Simple | A member may have three loans | Decision read | [A limit on one key](#a-limit-on-one-key) |
+| Two entities | A course has seats, a student has a course limit | Two decision reads, one `AppendMany` | [A rule across two keys](#a-rule-across-two-keys) |
+| Inside one stream | An account may withdraw 5000 a month | Decision read scoped to one stream | [A limit inside one stream](#a-limit-inside-one-stream) |
+| Inside one stream | The same limit, with the stream declared on the read model | Per-stream read model | [With a per-stream read model](#a-limit-inside-one-stream-with-a-per-stream-read-model) |
+| Process | A customer's onboarding has steps and an end | Stream guard and a closing event | [A process with steps and an end](#a-process-with-steps-and-an-end) |
+| Numbering | Invoice numbers have no gaps | One numbering source, one decision read | [Gapless invoice numbers](#gapless-invoice-numbers) |
+| Editing | Two people edit the same project | Explicit concurrency scope | [An editing conflict](#an-editing-conflict) |
+| Host | The same rule in an ASP.NET Core endpoint | Decision reads in a unit of work | [In an ASP.NET Core endpoint](#in-an-aspnet-core-endpoint) |
+| Repair | Overbooking is rare and fixable | Repair with a reactor | [A rare violation you can repair](#a-rare-violation-you-can-repair) |
+| Test | Show that a guard rejects a race | Read, append a competing event, append | [Test the race](#test-the-race) |
 
-## Unique username
+Each scenario names the rule, the mechanism, the guard in one line and what not to use. The scenarios run from the simplest to the most involved.
+
+## Simple
+
+A value, a create-once rule, or a limit on one key.
+
+### Unique username
 
 A username must be unique. Declare it on the event and append as usual.
+
+**Guard:** Constraint. **Do not use:** A decision read or an explicit scope: they guard one key's history, not a value across keys.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/unique-username" variants="csharp,elixir" />
 
@@ -30,17 +40,21 @@ Read the result. An append that fails a constraint does not throw. If you ignore
 
 Uniqueness is checked within one event sequence in one namespace. Two tenants in different namespaces can hold the same username. To let a user change their username and release the old one, or to release it when the user is removed, see [model-bound constraints](../constraints/model-bound/index.md) and [declarative constraints](../constraints/declarative/index.mdx). The reasoning is in [Understanding constraints](../understanding-constraints.mdx).
 
-## Create once
+### Create once
 
 An account can be opened only once. Put `[Unique]` on the event type.
+
+**Guard:** Constraint on the event type. **Do not use:** A read model that asks whether it exists, then an append.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/create-once" variants="csharp,elixir" />
 
 The kernel accepts one `AccountOpened` per event source. A second one for the same event source is rejected with a constraint violation, even when two requests race. Do not write "does the account exist?" against a read model and then append: two requests can both see that it does not.
 
-## A limit on one key
+### A limit on one key
 
 A member may have at most three active loans. The rule is a count over one key's history, so use a decision read.
+
+**Guard:** `member-1`, the event types of the model, after the tail at read. **Do not use:** A plain read of a materialized read model, or a read of a loan's own event source.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/member-loans" variants="csharp,elixir" />
 
@@ -59,7 +73,27 @@ Two cautions:
 - A GUID key must be in lowercase canonical form (`D`) in every writer, including writers that are not .NET.
 - If loans can start on a source nobody reads, a new key is in nobody's guard. Keep the rule on the one key that carries the facts.
 
-## A limit inside one stream
+## Two entities
+
+A rule that spans two keys.
+
+### A rule across two keys
+
+A course has a capacity, and a student may take at most five courses. Neither number lives in one place, so you need two reads and two events.
+
+**Guard:** One guard per source, both validated with the one `AppendMany`. **Do not use:** Two separate appends, or a guard on only one side.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/course-subscription" variants="csharp,elixir" />
+
+Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. Where DCB tags one event with both entities, Chronicle records the fact once for each. [DCB examples in Chronicle](./dcb-examples.mdx#course-subscription) says when that is acceptable. The two events have their own types, `CourseSeatTaken` and `StudentJoinedCourse`, so each read model folds only its own. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
+
+`GetDecisionConflicts` tells you which read changed, so you can report "the course is now full" and not only "try again".
+
+## Inside one stream
+
+A rule about one part of one entity.
+
+### A limit inside one stream
 
 An account may withdraw at most 5000 a month. The rule concerns one account's `Transactions` stream for one month, so read that stream and nothing else. Use a decision read scoped to the stream.
 
@@ -68,6 +102,8 @@ An account may withdraw at most 5000 a month. The rule concerns one account's `T
 ```text
 guard BankAccount-7: types=[MoneyWithdrawn], sourceType=BankAccount, streamType=Transactions, streamId=2026-10, after <tail at read>
 ```
+
+**Do not use:** a read of the whole account, which adds conflicts from other months, or a constraint, which cannot count.
 
 What makes this work:
 
@@ -84,19 +120,45 @@ Two cautions:
 
 The same code in an event source definition with declared dimensions is in [Event source scenarios](../event-sources/scenarios.mdx#a-monthly-limit-on-one-stream).
 
-## A rule across two keys
+### A limit inside one stream with a per-stream read model
 
-A course has a capacity, and a student may take at most five courses. Neither number lives in one place, so you need two reads and two events.
+The same monthly limit, with the stream declared on the read model so that no read can fold more than that stream. Put `[EventStream<TSource>("Transactions")]` on the model. It is passive, keyed by the account, and a read must name the stream.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/course-subscription" variants="csharp,elixir" />
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/per-stream-model" variants="csharp" />
 
-Chronicle stores one event source ID per event, so one fact about two entities is written as two events, one per source. Where DCB tags one event with both entities, Chronicle records the fact once for each. [DCB examples in Chronicle](./dcb-examples.mdx#course-subscription) says when that is acceptable. The two events have their own types, `CourseSeatTaken` and `StudentJoinedCourse`, so each read model folds only its own. `AppendMany` writes them atomically: either both are appended or neither is. Both decision reads guard the same append. If another student takes the last seat, or the student subscribes elsewhere, after you read, the append is rejected and neither event is written.
+**Guard:** `SavingsAccount-7`, `SavingsWithdrawn`, source type `SavingsAccount`, stream type `Transactions`, the month, after the tail at read. **Do not use:** a key-only read of the model, which is refused, or a materialized whole-account model, which mixes months.
 
-`GetDecisionConflicts` tells you which read changed, so you can report "the course is now full" and not only "try again".
+- **The declaration is the contract.** A key-only read is refused with `ReadModelRequiresStreamScope`, and a read with another stream type or without the source type is refused with `StreamScopeDoesNotMatchReadModel`, rather than folding more. See [Read models scoped to one event stream](../read-models/per-stream.mdx) for the refusals and the plain-read overload.
+- **Every writer must use the definition's route.** An event appended to the stream without the source type is neither folded nor guarded.
+- **[CHR0064](../code-analysis/CHR0064.mdx)** reports an invalid declaration at build time. How the guard widens when you add reads is in [How guards are derived](./how-guards-are-derived.mdx#per-stream-read-models).
 
-## Gapless invoice numbers
+## Process, numbering and editing conflicts
+
+Rules about a sequence, a lifecycle or what a user saw.
+
+### A process with steps and an end
+
+A customer's onboarding has steps, and a finished onboarding accepts nothing more. The stream is the consistency boundary: every writer of one customer's onboarding must see every other. Declare the dimensions on the definition, and close the stream with an event.
+
+**Guard:** Any event in this customer's `Onboarding` stream, after the tail at append. **Do not use:** A reactor as the guard, or a decision read when the whole stream is the boundary.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/onboarding-process" variants="csharp,elixir" />
+
+```text
+guard Customer-12: any type, streamType=Onboarding, after <tail at append>
+```
+
+- **The guard is coarse on purpose.** It has no event types, so any event in this customer's `Onboarding` stream counts. The tail is read when the append is made, not when the user last looked. Two writers that append at the same moment conflict. A step that another writer appended earlier, and that your writer never read, does not. If a decision depends on what the writer saw, use a decision read. The first append into a new stream is not checked unless you turn on `CheckFirstAppendIntoAScope`, see [Concurrency](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default).
+- **A closing event ends the process.** `OnboardingCompleted` carries `[ClosesStream]`. The kernel writes it and closes the stream in one step, so a late or repeated step is refused with a `StreamClosed` constraint violation. See [Closing events](../closing-streams/closing-events.mdx).
+- **Different customers do not conflict.** The source ID is part of the guard.
+
+A reactor that drives the process is not a guard. It runs after the event is written and can see an event again after a recovery, so make each step safe to repeat. The reactor version is in [A process stream](../event-sources/scenarios.mdx#a-process-stream).
+
+### Gapless invoice numbers
 
 Invoices get numbers with no gaps and no duplicates, across all invoices. No single invoice owns the sequence, so make the sequence an event source. Append every `InvoiceCreated` to one numbering source and guard it with a decision read of the last number.
+
+**Guard:** `invoice-numbering`, `InvoiceCreated`, after the tail at read. **Do not use:** A `[Unique]` constraint alone: it stops duplicates, not gaps.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/invoice-number" variants="csharp,elixir" />
 
@@ -112,9 +174,23 @@ The cost is built in:
 - **A restarting sequence needs a new source.** If numbering restarts each year, use one numbering source per year to keep each history short.
 - **Later invoice events go elsewhere.** The invoice read model is keyed by the invoice number carried in the event, so the rest of an invoice's life can live on its own event source.
 
-## In an ASP.NET Core endpoint
+### An editing conflict
+
+Two people open the same project and both rename it. The second save should not silently replace the first. The decision is based on what the user saw, not on what the server read, so build the scope from the revision the user saw.
+
+**Guard:** The revision the user saw, the event types that should invalidate it. **Do not use:** A materialized read model to load the form, or a scope built after you loaded the data.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/editing-conflict" variants="csharp,elixir" />
+
+Order matters. Capture the revision first, then load the data for the form, and return the revision with the form. Load the data from the event log, a passive read model or a decision read, so it includes every event up to the captured revision. Do not load it from a materialized read model: it updates asynchronously and may lag behind the captured tail. The revision would then claim the user saw events the form never showed, and the scope would accept a save made over a change the user did not see. Send the revision back with the change. The scope rejects the append when a `ProjectRenamed` event for that project was appended after that revision. Narrowing to `ProjectRenamed` means another person editing a different field does not cause a conflict. List every event type that should invalidate the user's view, and no others.
+
+If the project has no events yet, the tail is `Unavailable`, which an explicit scope skips. The example turns it into `EventSequenceNumber.BeforeFirst`, which means "no `ProjectRenamed` event yet". `ExpectingNoMatchingEvent()` or a constraint also work.
+
+### In an ASP.NET Core endpoint
 
 In a web request, use the request's unit of work: `IDecisionReads.Get<T>` enrolls each read, and `Transactional.Append` stages the events. The middleware that `AddCratisChronicle` registers starts a unit of work for every request. See [Add Chronicle to an ASP.NET Core app](../get-started/aspnetcore.mdx).
+
+**Guard:** The reads enrolled in the request's unit of work. **Do not use:** A plain `eventLog.Append`, or letting the middleware commit after the response.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/web-endpoint" variants="csharp,elixir" />
 
@@ -126,35 +202,15 @@ Three details decide whether the rule holds:
 
 For ownership rules and the full list of unit-of-work behavior see [Decision reads](../read-models/decision-reads.mdx) and [Transactions and unit of work](../events/transactions.mdx).
 
-## An editing conflict
+## Repair and test
 
-Two people open the same project and both rename it. The second save should not silently replace the first. The decision is based on what the user saw, not on what the server read, so build the scope from the revision the user saw.
+Accepting a rare violation, and proving the rule holds.
 
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/editing-conflict" variants="csharp,elixir" />
-
-Order matters. Capture the revision first, then load the data for the form, and return the revision with the form. Load the data from the event log, a passive read model or a decision read, so it includes every event up to the captured revision. Do not load it from a materialized read model: it updates asynchronously and may lag behind the captured tail. The revision would then claim the user saw events the form never showed, and the scope would accept a save made over a change the user did not see. Send the revision back with the change. The scope rejects the append when a `ProjectRenamed` event for that project was appended after that revision. Narrowing to `ProjectRenamed` means another person editing a different field does not cause a conflict. List every event type that should invalidate the user's view, and no others.
-
-If the project has no events yet, the tail is `Unavailable`, which an explicit scope skips. The example turns it into `EventSequenceNumber.BeforeFirst`, which means "no `ProjectRenamed` event yet". `ExpectingNoMatchingEvent()` or a constraint also work.
-
-## A process with steps and an end
-
-A customer's onboarding has steps, and a finished onboarding accepts nothing more. The stream is the consistency boundary: every writer of one customer's onboarding must see every other. Declare the dimensions on the definition, and close the stream with an event.
-
-<ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/onboarding-process" variants="csharp,elixir" />
-
-```text
-guard Customer-12: any type, streamType=Onboarding, after <tail at append>
-```
-
-- **The guard is coarse on purpose.** It has no event types, so any event in this customer's `Onboarding` stream counts. The tail is read when the append is made, not when the user last looked. Two writers that append at the same moment conflict. A step that another writer appended earlier, and that your writer never read, does not. If a decision depends on what the writer saw, use a decision read. The first append into a new stream is not checked unless you turn on `CheckFirstAppendIntoAScope`, see [Concurrency](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default).
-- **A closing event ends the process.** `OnboardingCompleted` carries `[ClosesStream]`. The kernel writes it and closes the stream in one step, so a late or repeated step is refused with a `StreamClosed` constraint violation. See [Closing events](../closing-streams/closing-events.mdx).
-- **Different customers do not conflict.** The source ID is part of the guard.
-
-A reactor that drives the process is not a guard. It runs after the event is written and can see an event again after a recovery, so make each step safe to repeat. The reactor version is in [A process stream](../event-sources/scenarios.mdx#a-process-stream).
-
-## A rare violation you can repair
+### A rare violation you can repair
 
 Selling a seat too many is rare, and you can fix it afterwards. Guarding every reservation costs a fold and can reject customers for a rare problem. Append normally, then let a reactor notice and append a correcting event.
+
+**Guard:** None. A reactor appends a correcting event. **Do not use:** A decision read, when a short, visible violation is not acceptable.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/repair-reactor" variants="csharp,elixir" />
 
@@ -168,9 +224,11 @@ Repair has limits:
 
 Use it only when a short, visible violation is acceptable. Otherwise use a decision read.
 
-## Test the race
+### Test the race
 
 A test that never interleaves a competing writer cannot show the rule holds. Read, append a competing event, then do the guarded append.
+
+**Guard:** The guard under test. **Do not use:** A test that never interleaves a competing append.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/test-the-race" variants="csharp,elixir" />
 

@@ -38,6 +38,17 @@ guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2
 
 A withdrawal in `2026-11`, or a withdrawal on another account, does not conflict. See [A limit inside one stream](./scenarios.mdx#a-limit-inside-one-stream).
 
+### Per-stream read models
+
+A [per-stream read model](../read-models/per-stream.mdx) declares its stream with `[EventStream<TSource>("Transactions")]`. Its read must carry the declared event source type, the stream type and a stream ID, so the guard keeps all three dimensions. A read without them is refused, so the guard never falls back to the whole source.
+
+```text
+// GetDetached<WithdrawalsThisMonth>(BankAccount-7, "Transactions", "2026-10", "BankAccount")
+guard BankAccount-7: types=[MoneyWithdrawn], sourceType=BankAccount, streamType=Transactions, streamId=2026-10, after <tail at read>
+```
+
+Two reads of the same source still merge as described below, so a second read in another month widens the guard. [CHR0064](../code-analysis/CHR0064.mdx) reports a declaration that cannot produce this guard.
+
 An absent model is guarded too. When no matching event existed at the read, an event of the model's types that arrives later conflicts. This is how "create it only if it does not exist yet" holds.
 
 ## Several reads on one source
@@ -86,6 +97,8 @@ Chronicle does not guess whether your own scope is enough. It checks.
 | A decision read and an aggregate-style contributed read on one source | `ReadAndAggregateOnSameSource` |
 
 Two scopes mean the same when they have the same position and the same expectation, and each covers the other. Scopes that mean the same are merged into one.
+
+[CHR0063](../code-analysis/CHR0063.mdx) reports a scope built for one stream of a definition and passed to an append that writes another stream.
 
 A scope covers a read when its source, source type, stream type and stream ID are each unset or equal, its event types are empty or a superset, and its position is the same or earlier.
 

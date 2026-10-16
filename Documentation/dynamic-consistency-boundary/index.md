@@ -44,16 +44,21 @@ DCB as specified lets one event belong to several entities through tags, and let
 | A rule that spans two entities | A rule that depends on data outside the event log |
 | Writers that rarely touch the same facts at the same time | A single key written by many writers all the time: conflicts will be constant |
 
-## Where to go next
+## Read in this order
 
-| You want to | Read |
-|---|---|
-| See how Chronicle maps these ideas | [Dynamic Consistency Boundary in Chronicle](./chronicle.md) |
-| See the canonical DCB examples as Chronicle code | [DCB examples in Chronicle](./dcb-examples.mdx) |
-| Declare event sources and streams as the boundary's dimensions | [Event sources and streams](../event-sources/index.mdx) and [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) |
-| Pick the right mechanism for a rule | [Choosing how a rule holds](./choosing.mdx) |
-| See working examples | [Scenarios](./scenarios.mdx) |
-| Find a quick answer | [Questions and answers](./faq.md) |
+The pages run from the simplest use to the most detailed. Stop when you have what you need.
+
+| Step | You want to | Read |
+|---|---|---|
+| 1 | Pick the mechanism for a rule | [Choosing how a rule holds](./choosing.mdx) |
+| 2 | See a rule like yours as code, from a unique value to a process | [Scenarios](./scenarios.mdx) |
+| 3 | Fold one stream of an entity, such as one month | [Read models scoped to one event stream](../read-models/per-stream.mdx) |
+| 4 | See how Chronicle maps DCB, and the canonical examples | [Dynamic Consistency Boundary in Chronicle](./chronicle.md) and [DCB examples in Chronicle](./dcb-examples.mdx) |
+| 5 | Know exactly which events make an append fail | [How guards are derived](./how-guards-are-derived.mdx) |
+| 6 | Weigh the cost and find what stays outside the guard | [Costs and limits](./limits.mdx) |
+| 7 | Make a host refuse unguarded reads | [Read protection](../read-models/read-protection.mdx) |
+| | Declare event sources and streams as the boundary's dimensions | [Event sources and streams](../event-sources/index.mdx) and [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) |
+| | Find a quick answer | [Questions and answers](./faq.md) |
 
 ## References
 
