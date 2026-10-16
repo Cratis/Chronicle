@@ -44,7 +44,7 @@ public class and_snapshot_scopes_normalize_to_duplicates : for_ReindexConstraint
     async Task Because() => _error = await Catch.Exception(() => _reindexer.Commit(CancellationToken.None));
 
     [Fact] void should_commit_without_a_duplicate_key_failure() => _error.ShouldBeNull();
-    [Fact] void should_keep_exactly_one_rebuilt_scope() => _legacy.Count.ShouldEqual(1);
-    [Fact] void should_store_the_rebuilt_position() => _legacy.Single().SequenceNumber.ShouldEqual((EventSequenceNumber)4);
-    [Fact] void should_remove_every_stale_duplicate() => _legacy.Exists(row => row.Scope.EventStreamId?.Value == "May").ShouldBeFalse();
+    [Fact] void should_keep_the_retained_scope_closed() => _legacy.Exists(row => row.Scope.EventStreamId?.Value == "April").ShouldBeTrue();
+    [Fact] void should_store_the_rebuilt_position() => _legacy.First(row => row.Scope.EventStreamId?.Value == "April").SequenceNumber.ShouldEqual((EventSequenceNumber)4);
+    [Fact] void should_remove_every_row_of_the_removed_scope() => _legacy.Exists(row => row.Scope.EventStreamId?.Value == "May").ShouldBeFalse();
 }

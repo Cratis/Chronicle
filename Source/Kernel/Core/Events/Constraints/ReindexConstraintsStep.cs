@@ -136,7 +136,7 @@ public class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key), Guid.NewGuid());
+            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key), Guid.NewGuid(), DateTimeOffset.UtcNow);
             var jobStepKey = (JobStepKey)key!;
 
             var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);

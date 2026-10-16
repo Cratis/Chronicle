@@ -27,6 +27,13 @@ public partial class EventSequence
         var previous = _constraintIndexRebuildRuns.Keys.FirstOrDefault(active => active.Value == runId.Value);
         if (previous is not null)
         {
+            // A Starting from an older attempt that arrives late must not end the newer run.
+            if (runId.Started < previous.Started)
+            {
+                RememberFinishedConstraintIndexRebuild(runId);
+                logger.IgnoringFinishedConstraintIndexRebuild(_eventSequenceKey, runId);
+                return;
+            }
             await ConstraintIndexRebuilt(previous, _constraintIndexRebuildRuns[previous], ConstraintIndexRebuildOutcome.ProgressUnknown);
         }
         SynchronizeIndexedDefinitions();
@@ -56,7 +63,12 @@ public partial class EventSequence
             if (active is null) return;
             runId = active;
         }
-        if (!_constraintIndexRebuildRuns.TryGetValue(runId, out var rebuilt)) return;
+        if (!_constraintIndexRebuildRuns.TryGetValue(runId, out var rebuilt))
+        {
+            // Never started here (or already ended): remember it so a late Starting for it is ignored.
+            if (runId.Attempt != Guid.Empty) RememberFinishedConstraintIndexRebuild(runId);
+            return;
+        }
         foreach (var name in rebuilt)
         {
             if (!_rebuildingConstraintIndexes.TryGetValue(name, out var count)) continue;
@@ -101,9 +113,7 @@ public partial class EventSequence
             if (clear) _rebuildOwnsBoundary = false;
             _constraintIndexRebuildRuns.Remove(runId);
             _constraintIndexRebuildStarts.Remove(runId);
-            _finishedConstraintIndexRebuilds.Add(runId);
-            _finishedConstraintIndexRebuildOrder.Enqueue(runId);
-            if (_finishedConstraintIndexRebuildOrder.Count > 256) _finishedConstraintIndexRebuilds.Remove(_finishedConstraintIndexRebuildOrder.Dequeue());
+            RememberFinishedConstraintIndexRebuild(runId);
         }
         catch
         {
@@ -115,6 +125,13 @@ public partial class EventSequence
         {
             UpdateConstraintIndexRepairTimer();
         }
+    }
+
+    void RememberFinishedConstraintIndexRebuild(ConstraintIndexRebuildRunId runId)
+    {
+        if (!_finishedConstraintIndexRebuilds.Add(runId)) return;
+        _finishedConstraintIndexRebuildOrder.Enqueue(runId);
+        if (_finishedConstraintIndexRebuildOrder.Count > 256) _finishedConstraintIndexRebuilds.Remove(_finishedConstraintIndexRebuildOrder.Dequeue());
     }
 
     bool IsUniqueConstraint(ConstraintName name) => _indexedDefinitions.TryGetValue(name, out var definition) && definition is UniqueConstraintDefinition;

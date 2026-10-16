@@ -8,7 +8,9 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="Value">The stable job step identifier.</param>
 /// <param name="Attempt">The attempt nonce, or empty for an outside-worker cancellation.</param>
+/// <param name="Started">When the attempt began; a later attempt of the same step has a later value, which orders late deliveries.</param>
 [GenerateSerializer]
 public sealed record ConstraintIndexRebuildRunId(
     [property: Id(0)] Guid Value,
-    [property: Id(1)] Guid Attempt = default);
+    [property: Id(1)] Guid Attempt = default,
+    [property: Id(2)] DateTimeOffset Started = default);

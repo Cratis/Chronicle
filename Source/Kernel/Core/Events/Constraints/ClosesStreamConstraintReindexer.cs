@@ -126,29 +126,25 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
             var snapshot = rebuild.Snapshot.Values.SelectMany(rows => rows).GroupBy(closure => closure.Scope.Normalized()).ToDictionary(group => group.Key, group => group.ToArray());
             foreach (var (scope, closure) in rebuild.Pending)
             {
-                if (snapshot.TryGetValue(scope, out var previous))
-                {
-                    // Remove only the extras before replacing the survivor: a failed write must
-                    // leave at least one old or rebuilt closure protecting the scope.
-                    foreach (var duplicate in previous.Skip(1))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        beforeWrite?.Invoke();
-                        await storage.Reopen(rebuild.Definition.Name.Value, duplicate.Scope, cancellationToken);
-                    }
-                    if (previous.Length == 1 && previous[0].SequenceNumber == closure.SequenceNumber && previous[0].ClosedAt == closure.ClosedAt) continue;
-                }
+                // A scope that stays closed is never reopened, not even to remove its duplicate rows:
+                // SQL deletes every row of the normalized scope on Reopen, so a cancel or failure before
+                // the following Close would leave the scope open. Close replaces the retained row and
+                // duplicate closed rows are harmless.
+                if (snapshot.TryGetValue(scope, out var previous) && previous.Length == 1 && previous[0].SequenceNumber == closure.SequenceNumber && previous[0].ClosedAt == closure.ClosedAt) continue;
                 cancellationToken.ThrowIfCancellationRequested();
                 beforeWrite?.Invoke();
                 await storage.Close(closure, cancellationToken);
             }
             foreach (var scope in snapshot.Keys.Where(scope => !rebuild.Pending.ContainsKey(scope)))
             {
-                foreach (var row in snapshot[scope])
+                // Reopen removes every row of the normalized scope on SQL but one row per call on MongoDB,
+                // so repeat until it reports nothing left to remove.
+                var reopened = true;
+                while (reopened)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     beforeWrite?.Invoke();
-                    await storage.Reopen(rebuild.Definition.Name.Value, row.Scope, cancellationToken);
+                    reopened = await storage.Reopen(rebuild.Definition.Name.Value, snapshot[scope][0].Scope, cancellationToken);
                 }
             }
         }
