@@ -84,8 +84,6 @@ In a host that uses [read protection](../read-models/read-protection.mdx), the f
 
 For the retry inside the kernel after a duplicate sequence number: the kernel renumbers the append and validates concurrency scopes again before it retries, so decision-read guards keep working. It does not run constraints again on that path.
 
-For the retry inside the kernel after a duplicate sequence number: the kernel renumbers the append and validates concurrency scopes again before it retries, so decision-read guards keep working. It does not run constraints again on that path.
-
 ## Next steps
 
 - [Choosing how a rule holds](./choosing.mdx)

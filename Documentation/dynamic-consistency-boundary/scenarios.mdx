@@ -210,7 +210,7 @@ Accepting a rare violation, and proving the rule holds.
 
 Selling a seat too many is rare, and you can fix it afterwards. Guarding every reservation costs a fold and can reject customers for a rare problem. Append normally, then let a reactor notice and append a correcting event.
 
-**Guard:** None. A reactor appends a correcting event. **Do not use:** A decision read, when a short, visible violation is not acceptable.
+**Guard:** None. A reactor appends a correcting event. **Do not use:** Repair, when a short, visible violation is not acceptable. Guard the decision with a decision read instead.
 
 <ChronicleClientTabs snippet="dynamic-consistency-boundary/scenarios/repair-reactor" variants="csharp,elixir" />
 

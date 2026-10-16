@@ -38,6 +38,8 @@ guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2
 
 A withdrawal in `2026-11`, or a withdrawal on another account, does not conflict. See [A limit inside one stream](./scenarios.mdx#a-limit-inside-one-stream).
 
+An absent model is guarded too. When no matching event existed at the read, an event of the model's types that arrives later conflicts. This is how "create it only if it does not exist yet" holds.
+
 ### Per-stream read models
 
 A [per-stream read model](../read-models/per-stream.mdx) declares its stream with `[EventStream<TSource>("Transactions")]`. Its read must carry the declared event source type, the stream type and a stream ID, so the guard keeps all three dimensions. A read without them is refused, so the guard never falls back to the whole source.
@@ -48,8 +50,6 @@ guard BankAccount-7: types=[MoneyWithdrawn], sourceType=BankAccount, streamType=
 ```
 
 Two reads of the same source still merge as described below, so a second read in another month widens the guard. [CHR0064](../code-analysis/CHR0064.mdx) reports a declaration that cannot produce this guard.
-
-An absent model is guarded too. When no matching event existed at the read, an event of the model's types that arrives later conflicts. This is how "create it only if it does not exist yet" holds.
 
 ## Several reads on one source
 
