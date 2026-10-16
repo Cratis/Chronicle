@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -33,6 +34,8 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
         public bool CompletionSucceeded;
         public bool StatisticsHandledFirstAppend;
         public bool DefinitionsAreUnique;
+        public bool Initialized;
+        public int ProjectionRegistrations;
 
         public override bool AutoDiscoverArtifacts => false;
         public override IEnumerable<Type> EventTypes => [typeof(CustomerNamed)];
@@ -41,8 +44,12 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
         {
             builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
             builder.SiloBuilder.ConfigureServices(services =>
+            {
+                services.AddSingleton(provider => new given.CountingKernelProjections(ActivatorUtilities.CreateInstance<KernelProjections>(provider)));
+                services.AddSingleton<IKernelProjections>(provider => provider.GetRequiredService<given.CountingKernelProjections>());
                 services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState, (provider, _) =>
-                    ActivatorUtilities.CreateInstance<SignalingObserverStorage>(provider)));
+                    ActivatorUtilities.CreateInstance<SignalingObserverStorage>(provider));
+            });
         };
 
         async Task Establish()
@@ -57,6 +64,9 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
 
         async Task Because()
         {
+            // Race the first ensures before any client registration has initialized this implicitly created store.
+            await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+                _services.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = _storeName }).EnsureSuccess()));
             _store = await ChronicleClient.GetEventStore(_storeName, "new-tenant");
             await _store.DiscoverAll();
             await _store.RegisterAll();
@@ -73,6 +83,8 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
                 _services.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = _storeName }).EnsureSuccess()));
             var definitions = (await Services.GetRequiredService<IStorage>().GetEventStore(_storeName).Observers.GetAll()).ToArray();
             DefinitionsAreUnique = definitions.Length > 0 && definitions.DistinctBy(definition => definition.Identifier).Count() == definitions.Length;
+            Initialized = await Services.GetRequiredService<IStorage>().GetEventStore(_storeName).IsInitialized();
+            ProjectionRegistrations = Services.GetRequiredService<given.CountingKernelProjections>().CallsFor(_storeName);
         }
     }
 
@@ -80,4 +92,6 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
     [Fact] void should_complete_the_first_append() => Context.CompletionSucceeded.ShouldBeTrue();
     [Fact] void should_have_statistics_handle_the_first_append() => Context.StatisticsHandledFirstAppend.ShouldBeTrue();
     [Fact] void should_keep_one_definition_per_observer_after_concurrent_ensures() => Context.DefinitionsAreUnique.ShouldBeTrue();
+    [Fact] void should_initialize_projections_once_despite_concurrent_ensures_and_reconnects() => Context.ProjectionRegistrations.ShouldEqual(1);
+    [Fact] void should_durably_record_completed_initialization() => Context.Initialized.ShouldBeTrue();
 }
