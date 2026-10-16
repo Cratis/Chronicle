@@ -41,7 +41,6 @@ import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 import { Captures } from './General/Captures/Captures';
 import { Dashboard } from './Dashboard/Dashboard';
-import { NamespaceScope } from './NamespaceScope';
 import { Dashboard as NamespaceDashboard } from './Namespaces/Dashboard/Dashboard';
 
 export const EventStore = () => {
@@ -131,7 +130,7 @@ export const EventStore = () => {
                 <Route path={'servers'} element={<Servers />} />
                 <Route path={'development-tools'} element={<DevelopmentTools />} />
 
-                <Route path={':namespace'} element={<NamespaceScope />}>
+                <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'dashboard'} replace />} />
                     <Route path={'dashboard'} element={<NamespaceDashboard />} />
                     <Route path={'recommendations'} element={<Recommendations />} />
