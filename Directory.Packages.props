@@ -14,6 +14,8 @@
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.6.1" />
+    <!-- Pin MessagePack, pulled in transitively by Aspire.Hosting at 2.5.302, to a patched build (GHSA-qhrr-8q5h-9q3h affects < 2.5.303). -->
+    <PackageVersion Include="MessagePack" Version="2.5.307" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
