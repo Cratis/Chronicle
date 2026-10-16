@@ -572,6 +572,42 @@ public partial class EventSequence(
         IEnumerable<IdentityId> causedByChain,
         Occurrences.EffectReceipt? effectReceipt = null)
     {
+        var (eventsToAppend, constraintContexts) = await BuildStorageBatch(validatedEvents, correlationId, causation, causedByChain);
+        var appendResult = await AppendBatchToStorage(eventsToAppend, correlationId, effectReceipt);
+        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
+        var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
+
+        var (appendedEventsList, unsettled) = await SettleAppendedBatch(appendResult.AsT0.ToList(), eventsToAppend, correlationId, effectReceipt);
+        if (unsettled is not null) return unsettled;
+
+        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
+        // use this position to distinguish a commit-before-ack from a range already accounted for.
+        if (eventsToAppend.Count > 0)
+        {
+            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
+        }
+
+        if (appendedEventsList.Count > 0)
+        {
+            await CompleteConfirmedAppend(
+                appendedEventsList,
+                constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
+        }
+
+        return new AppendManyResult
+        {
+            CorrelationId = correlationId,
+            SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
+            EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
+        };
+    }
+
+    async Task<(List<EventToAppendToStorage> Events, List<ConstraintValidationContext> ConstraintContexts)> BuildStorageBatch(
+        IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext)> validatedEvents,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain)
+    {
         var eventsToAppend = new List<EventToAppendToStorage>();
         var constraintContexts = new List<ConstraintValidationContext>();
 
@@ -611,6 +647,14 @@ public partial class EventSequence(
             nextSequenceNumber = nextSequenceNumber.Next();
         }
 
+        return (eventsToAppend, constraintContexts);
+    }
+
+    async Task<Result<IEnumerable<AppendedEvent>, AppendManyResult>> AppendBatchToStorage(
+        List<EventToAppendToStorage> eventsToAppend,
+        CorrelationId correlationId,
+        Occurrences.EffectReceipt? effectReceipt)
+    {
         async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendToStorage()
         {
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
@@ -618,7 +662,7 @@ public partial class EventSequence(
                 ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
                 : await EventSequenceStorage.AppendMany(eventsToAppend);
         }
-        var appendResult = effectReceipt is null
+        return effectReceipt is null
             ? await AppendWithRetries<IEnumerable<AppendedEvent>, AppendManyResult>(
                 AppendToStorage,
                 error => RenumberAppendMany(eventsToAppend, error),
@@ -630,60 +674,34 @@ public partial class EventSequence(
                     return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] };
                 })
             : await AppendEffectToStorage(eventsToAppend, effectReceipt, correlationId);
-        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
-        var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
+    }
 
-        List<AppendedEvent> appendedEventsList = new();
-        await appendResult.Match(
-            success =>
-            {
-                appendedEventsList = success.ToList();
-                return Task.CompletedTask;
-            },
-            _ => Task.CompletedTask);
+    async Task<(List<AppendedEvent> Events, AppendManyResult? Failure)> SettleAppendedBatch(
+        List<AppendedEvent> appendedEventsList,
+        List<EventToAppendToStorage> eventsToAppend,
+        CorrelationId correlationId,
+        Occurrences.EffectReceipt? effectReceipt)
+    {
+        if (appendedEventsList.Count == eventsToAppend.Count) return (appendedEventsList, null);
 
-        appendedEventsList ??= [];
-        if (appendedEventsList.Count != eventsToAppend.Count)
-        {
-            // AppendEffectToStorage reads exactly one event per slot after reconciling its receipt range,
-            // so an incomplete acknowledgment can only come from the ordinary storage append path.
+        // AppendEffectToStorage reads exactly one event per slot after reconciling its receipt range,
+        // so an incomplete acknowledgment can only come from the ordinary storage append path.
 #if DEBUG
-            Debug.Assert(effectReceipt is null, "Effect receipt settlement returns every event in its durable range.");
+        Debug.Assert(effectReceipt is null, "Effect receipt settlement returns every event in its durable range.");
 #else
-            if (effectReceipt is not null)
-            {
-                return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.EffectReceiptUnsettled] };
-            }
+        if (effectReceipt is not null)
+        {
+            return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.EffectReceiptUnsettled] });
+        }
 #endif
-            var readBack = await ReadBackAppend(eventsToAppend);
-            if (readBack is null)
-            {
-                await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
-                return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] };
-            }
-            appendedEventsList = readBack;
+        var readBack = await ReadBackAppend(eventsToAppend);
+        if (readBack is null)
+        {
+            await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+            return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
         }
 
-        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
-        // use this position to distinguish a commit-before-ack from a range already accounted for.
-        if (eventsToAppend.Count > 0)
-        {
-            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
-        }
-
-        if (appendedEventsList.Count > 0)
-        {
-            await CompleteConfirmedAppend(
-                appendedEventsList,
-                constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
-        }
-
-        return new AppendManyResult
-        {
-            CorrelationId = correlationId,
-            SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
-            EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
-        };
+        return (readBack, null);
     }
 
     async Task<Result<TAppended, TFailure>> AppendWithRetries<TAppended, TFailure>(

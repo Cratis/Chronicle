@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events.Constraints;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -35,48 +36,14 @@ public partial class EventSequence
         using var hard = new CancellationTokenSource(duration, ConstraintIndexTimeProvider);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(soft.Token, cancellationToken);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(hard.Token, cancellationToken);
-        await ContinueConstraintIndexRepair(timerTurn, end, persist, budget.Token, deadline.Token, hard.Token);
+        await ContinueConstraintIndexRepair(new(timerTurn, end, persist, budget.Token, deadline.Token, hard.Token));
     }
 
-    async Task ContinueConstraintIndexRepair(bool timerTurn, DateTimeOffset end, bool persist, CancellationToken budget, CancellationToken deadline, CancellationToken snapshotLimit)
+    async Task ContinueConstraintIndexRepair(ConstraintIndexRepairTurn turn)
     {
         try
         {
-            _constraintIndexReplay ??= CreateConstraintIndexReplay();
-            var result = await _constraintIndexReplay.Continue(int.MaxValue, budget).WaitAsync(deadline);
-            foreach (var name in result.Abandoned)
-            {
-                _abandonedConstraintIndexes.Add(name);
-                _replayAbandonedIndexes.Add(name);
-            }
-            CountReplaySettledErrors(result.SettledWithError);
-            foreach (var (name, failure) in result.Failed)
-            {
-                logger.ConstraintIndexUpdateOutcome(_eventSequenceKey, name, failure.Position ?? State.ConstraintIndexWatermark!, State.ConstraintIndexWatermark!, State.SequenceNumber, ConstraintIndexUpdateOutcome.Failed, failure.Error);
-            }
-            var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay.StorageCallSucceeded);
-            foreach (var (name, failure) in poisoned)
-            {
-                _constraintIndexReplay.SettlePoison(name, failure.Position!);
-                logger.ConstraintIndexPoisonEvent(_eventSequenceKey, name, failure.Position!, failure.Error);
-                _metrics?.ConstraintIndexPoisonEvent();
-            }
-            CountReplaySettledErrors(result.SettledWithError + poisoned.Count);
-            if (_constraintIndexReplay.RangeReadFailed)
-            {
-                MarkConstraintIndexGap(State.ConstraintIndexWatermark!);
-            }
-            if (result.Failed.Keys.Any(name => !poisoned.ContainsKey(name)) || result.Abandoned.Any())
-            {
-                BackOffConstraintRepair();
-            }
-            else if (poisoned.Count > 0)
-            {
-                _constraintRepairFailures = 0;
-                _nextConstraintRepairAttempt = default;
-            }
-            if (!result.IsCompleted) return;
-            CompleteConstraintIndexRepair(timerTurn);
+            if (!await ContinueConstraintIndexReplay(turn)) return;
         }
         catch (Exception error)
         {
@@ -89,15 +56,72 @@ public partial class EventSequence
         }
 
         _metrics?.ConstraintIndexRepaired();
-        if (!persist) return;
+        if (!turn.Persist) return;
+        await PersistConstraintIndexRepairSnapshot(turn);
+    }
+
+    async Task<bool> ContinueConstraintIndexReplay(ConstraintIndexRepairTurn turn)
+    {
+        _constraintIndexReplay ??= CreateConstraintIndexReplay();
+        var result = await _constraintIndexReplay.Continue(int.MaxValue, turn.Budget).WaitAsync(turn.Deadline);
+        foreach (var name in result.Abandoned)
+        {
+            _abandonedConstraintIndexes.Add(name);
+            _replayAbandonedIndexes.Add(name);
+        }
+        CountReplaySettledErrors(result.SettledWithError);
+        foreach (var (name, failure) in result.Failed)
+        {
+            logger.ConstraintIndexUpdateOutcome(_eventSequenceKey, name, failure.Position ?? State.ConstraintIndexWatermark!, State.ConstraintIndexWatermark!, State.SequenceNumber, ConstraintIndexUpdateOutcome.Failed, failure.Error);
+        }
+        var poisoned = SettleConstraintIndexPoison(result);
+        CountReplaySettledErrors(result.SettledWithError + poisoned.Count);
+        if (_constraintIndexReplay.RangeReadFailed)
+        {
+            MarkConstraintIndexGap(State.ConstraintIndexWatermark!);
+        }
+        ScheduleNextConstraintRepair(result, poisoned);
+        if (!result.IsCompleted) return false;
+        CompleteConstraintIndexRepair(turn.TimerTurn);
+        return true;
+    }
+
+    IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> SettleConstraintIndexPoison(ConstraintIndexReplayResult result)
+    {
+        var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay!.StorageCallSucceeded);
+        foreach (var (name, failure) in poisoned)
+        {
+            _constraintIndexReplay.SettlePoison(name, failure.Position!);
+            logger.ConstraintIndexPoisonEvent(_eventSequenceKey, name, failure.Position!, failure.Error);
+            _metrics?.ConstraintIndexPoisonEvent();
+        }
+
+        return poisoned;
+    }
+
+    void ScheduleNextConstraintRepair(ConstraintIndexReplayResult result, IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> poisoned)
+    {
+        if (result.Failed.Keys.Any(name => !poisoned.ContainsKey(name)) || result.Abandoned.Any())
+        {
+            BackOffConstraintRepair();
+        }
+        else if (poisoned.Count > 0)
+        {
+            _constraintRepairFailures = 0;
+            _nextConstraintRepairAttempt = default;
+        }
+    }
+
+    async Task PersistConstraintIndexRepairSnapshot(ConstraintIndexRepairTurn turn)
+    {
         try
         {
-            var remaining = end - ConstraintIndexTimeProvider.GetUtcNow();
+            var remaining = turn.End - ConstraintIndexTimeProvider.GetUtcNow();
             if (remaining <= TimeSpan.Zero) throw new TimeoutException("No repair budget remains for the state snapshot.");
             using var snapshot = new CancellationTokenSource(remaining < TimeSpan.FromMilliseconds(250) ? remaining : TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
 
             // Timer disposal cancels the fold token, not the completed repair's snapshot.
-            using var snapshotDeadline = CancellationTokenSource.CreateLinkedTokenSource(snapshot.Token, snapshotLimit);
+            using var snapshotDeadline = CancellationTokenSource.CreateLinkedTokenSource(snapshot.Token, turn.SnapshotLimit);
             await WriteStateAsync().WaitAsync(snapshotDeadline.Token);
         }
         catch (Exception error)
@@ -114,28 +138,33 @@ public partial class EventSequence
     {
         foreach (var scope in _replayScopes)
         {
-            var name = scope.Definition.Name;
-            if (_replayAbandonedIndexes.Contains(name)) continue;
-            if (_abandonedConstraintIndexes.Remove(name))
-            {
-                _constraintIndexesAwaitingConfirmation.Add(name);
-                continue;
-            }
-            if (_constraintIndexesAwaitingConfirmation.Contains(name))
-            {
-                if (!timerTurn) continue;
-                _constraintIndexesAwaitingConfirmation.Remove(name);
-            }
-            if (_pendingConstraintIndexes.TryGetValue(name, out var from) && from < scope.From) continue;
-            if (_replayEndPoint < State.SequenceNumber) _pendingConstraintIndexes[name] = _replayEndPoint;
-            else _pendingConstraintIndexes.Remove(name);
-            _constraintIndexPoisonTracker.ForgetSettledBefore(name, _replayEndPoint);
+            CompleteConstraintIndexScope(scope, timerTurn);
         }
         if (_constraintIndexPosition < _replayEndPoint) _constraintIndexPosition = _replayEndPoint;
         _constraintIndexReplay = null;
         _constraintRepairFailures = 0;
         _nextConstraintRepairAttempt = default;
         UpdateConstraintIndexWatermark();
+    }
+
+    void CompleteConstraintIndexScope(ConstraintIndexReplayScope scope, bool timerTurn)
+    {
+        var name = scope.Definition.Name;
+        if (_replayAbandonedIndexes.Contains(name)) return;
+        if (_abandonedConstraintIndexes.Remove(name))
+        {
+            _constraintIndexesAwaitingConfirmation.Add(name);
+            return;
+        }
+        if (_constraintIndexesAwaitingConfirmation.Contains(name))
+        {
+            if (!timerTurn) return;
+            _constraintIndexesAwaitingConfirmation.Remove(name);
+        }
+        if (_pendingConstraintIndexes.TryGetValue(name, out var from) && from < scope.From) return;
+        if (_replayEndPoint < State.SequenceNumber) _pendingConstraintIndexes[name] = _replayEndPoint;
+        else _pendingConstraintIndexes.Remove(name);
+        _constraintIndexPoisonTracker.ForgetSettledBefore(name, _replayEndPoint);
     }
 
     void BackOffConstraintRepair()
@@ -170,4 +199,6 @@ public partial class EventSequence
             SettledPoison = _constraintIndexPoisonTracker.Settled
         };
     }
+
+    readonly record struct ConstraintIndexRepairTurn(bool TimerTurn, DateTimeOffset End, bool Persist, CancellationToken Budget, CancellationToken Deadline, CancellationToken SnapshotLimit);
 }

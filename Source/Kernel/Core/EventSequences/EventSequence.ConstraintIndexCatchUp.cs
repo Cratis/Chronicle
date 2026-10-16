@@ -111,32 +111,45 @@ public partial class EventSequence
                 cancellationToken.ThrowIfCancellationRequested();
                 if (@event.Context.SequenceNumber >= State.SequenceNumber) break;
                 if (count >= 1000) return count;
-                ConstraintValidationContext? context = null;
-                try
-                {
-                    var plaintext = await content.Release(@event, cancellationToken);
-                    context = new([], @event.Context.EventSourceId, @event.Context.EventType.Id, plaintext, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId);
-                }
-                catch (Exception error) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // The source and stream dimensions remain readable even when its values do not.
-                    // Excluding the whole source is conservative and lets unrelated history catch up.
-                    logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
-                }
+                var context = await TryCreateCatchUpContext(content, @event, cancellationToken);
                 _catchUpExcludedThrough = @event.Context.SequenceNumber.Next();
                 count++;
-                foreach (var definition in definitions)
-                {
-                    if (context is null) _catchUpExcluded.IncludeSource(definition, @event.Context);
-                    else _catchUpExcluded.Include(definition, context);
-                    if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
-                    RaiseConstraintCatchUpBoundary();
-                    return count;
-                }
+                if (ExcludeCatchUpEvent(definitions, context, @event)) return count;
             }
         }
         _catchUpExcludedThrough = State.SequenceNumber;
         return count;
+    }
+
+    async Task<ConstraintValidationContext?> TryCreateCatchUpContext(StoredConstraintEventContent content, AppendedEvent @event, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var plaintext = await content.Release(@event, cancellationToken);
+            return new([], @event.Context.EventSourceId, @event.Context.EventType.Id, plaintext, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId);
+        }
+        catch (Exception error) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The source and stream dimensions remain readable even when its values do not.
+            // Excluding the whole source is conservative and lets unrelated history catch up.
+            logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
+            return null;
+        }
+    }
+
+    bool ExcludeCatchUpEvent(UniqueConstraintDefinition[] definitions, ConstraintValidationContext? context, AppendedEvent @event)
+    {
+        // Returns true when the exclusion cap was reached and the catch-up boundary was raised.
+        foreach (var definition in definitions)
+        {
+            if (context is null) _catchUpExcluded.IncludeSource(definition, @event.Context);
+            else _catchUpExcluded.Include(definition, context);
+            if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
+            RaiseConstraintCatchUpBoundary();
+            return true;
+        }
+
+        return false;
     }
 
     ConstraintIndexReplay CreateCatchUpReplay()

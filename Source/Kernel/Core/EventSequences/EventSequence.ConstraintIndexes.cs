@@ -34,21 +34,13 @@ public partial class EventSequence
 
     async Task InitializeConstraintIndexes()
     {
-        _indexedDefinitions.Clear();
-        _pendingConstraintIndexes.Clear();
-        _closingCoverageStarts.Clear();
-        _abandonedConstraintIndexes.Clear();
-        _constraintIndexesAwaitingConfirmation.Clear();
-        _constraintIndexReplay = null;
-        _lastAppendRepairEnded = null;
-        _nextConstraintRepairAttempt = default;
-        _constraintRepairFailures = 0;
+        ResetConstraintIndexTracking();
 
         var upgrading = State.ConstraintIndexWatermark is null;
         State.ConstraintIndexWatermark = State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
         _constraintIndexPosition = State.SequenceNumber;
         SynchronizeIndexedDefinitions(State.ConstraintIndexWatermark);
-        if (upgrading && State.SequenceNumber > EventSequenceNumber.First && _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Any())
+        if (NeedsHistoricalCatchUp(upgrading))
         {
             State.ConstraintIndexCatchUpBelow ??= State.SequenceNumber;
         }
@@ -68,6 +60,22 @@ public partial class EventSequence
         }
     }
 
+    void ResetConstraintIndexTracking()
+    {
+        _indexedDefinitions.Clear();
+        _pendingConstraintIndexes.Clear();
+        _closingCoverageStarts.Clear();
+        _abandonedConstraintIndexes.Clear();
+        _constraintIndexesAwaitingConfirmation.Clear();
+        _constraintIndexReplay = null;
+        _lastAppendRepairEnded = null;
+        _nextConstraintRepairAttempt = default;
+        _constraintRepairFailures = 0;
+    }
+
+    bool NeedsHistoricalCatchUp(bool upgrading) =>
+        upgrading && State.SequenceNumber > EventSequenceNumber.First && _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Any();
+
     void SynchronizeIndexedDefinitions(EventSequenceNumber? coverageStart = null)
     {
         var definitions = _constraints!.IndexedDefinitions.ToDictionary(definition => definition.Name);
@@ -75,8 +83,7 @@ public partial class EventSequence
         {
             foreach (var name in definitions.Where(pair => _indexedDefinitions.TryGetValue(pair.Key, out var previous) && !pair.Value.Equals(previous)).Select(pair => pair.Key))
             {
-                _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
-                _catchUpPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+                ForgetSettledPoison(name);
             }
             _constraintIndexReplay = null;
             _catchUpReplay = null;
@@ -85,8 +92,7 @@ public partial class EventSequence
         }
         foreach (var name in _indexedDefinitions.Keys.Concat(_pendingConstraintIndexes.Keys).Except(definitions.Keys).ToArray())
         {
-            _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
-            _catchUpPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+            ForgetSettledPoison(name);
             _indexedDefinitions.Remove(name);
             _pendingConstraintIndexes.Remove(name);
             _closingCoverageStarts.Remove(name);
@@ -102,6 +108,12 @@ public partial class EventSequence
             }
         }
         UpdateConstraintIndexRepairTimer();
+    }
+
+    void ForgetSettledPoison(ConstraintName name)
+    {
+        _constraintIndexPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
+        _catchUpPoisonTracker.ForgetSettledBefore(name, State.SequenceNumber);
     }
 
     void MarkConstraintIndexPending(ConstraintName name, EventSequenceNumber from)

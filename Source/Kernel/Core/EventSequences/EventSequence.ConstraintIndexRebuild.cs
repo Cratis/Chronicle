@@ -57,52 +57,73 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome)
     {
-        if (runId.Attempt == Guid.Empty && !_constraintIndexRebuildRuns.ContainsKey(runId))
-        {
-            var active = _constraintIndexRebuildRuns.Keys.FirstOrDefault(candidate => candidate.Value == runId.Value);
-            if (active is null) return;
-            runId = active;
-        }
+        if (ActiveConstraintIndexRebuild(runId) is not { } activeRun) return;
+        runId = activeRun;
         if (!_constraintIndexRebuildRuns.TryGetValue(runId, out var rebuilt))
         {
             // Never started here (or already ended): remember it so a late Starting for it is ignored.
             if (runId.Attempt != Guid.Empty) RememberFinishedConstraintIndexRebuild(runId);
             return;
         }
-        foreach (var name in rebuilt)
-        {
-            if (!_rebuildingConstraintIndexes.TryGetValue(name, out var count)) continue;
-            if (count > 1) _rebuildingConstraintIndexes[name] = count - 1;
-            else _rebuildingConstraintIndexes.Remove(name);
-        }
+        ReleaseRebuildingConstraintIndexes(rebuilt);
         if (rebuilt.Any(_catchUpDefinitionNames.Contains)) ResetRebuildCatchUp();
         var unknown = outcome.WroteAnything && outcome.ProcessedThrough is null;
         if (unknown)
         {
-            _catchUpDefinitionNames.UnionWith(rebuilt.Where(IsUniqueConstraint));
-            var started = _constraintIndexRebuildStarts[runId];
-            var from = State.ConstraintIndexCatchUpBelow is { } existing && existing < started ? existing : started;
-            State.ConstraintIndexCatchUpBelow = from;
-            foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, from);
-
-            // Progress is not known, so the durable boundary now belongs to catch-up rather than
-            // to the job. Catch-up must be allowed to run once the remaining rebuilds end.
-            _rebuildOwnsBoundary = false;
+            HandRebuildBoundaryToCatchUp(runId, rebuilt);
         }
         else if (outcome.ProcessedThrough is { } processed)
         {
-            foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, processed.Next());
-            UpdateConstraintIndexWatermark();
-            try
-            {
-                await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None, persist: false);
-            }
-            catch (Exception error)
-            {
-                logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
-            }
+            await RepairAfterRebuild(rebuilt, processed);
         }
 
+        await CompleteConstraintIndexRebuild(runId, rebuilt, unknown);
+    }
+
+    ConstraintIndexRebuildRunId? ActiveConstraintIndexRebuild(ConstraintIndexRebuildRunId runId) =>
+        runId.Attempt != Guid.Empty || _constraintIndexRebuildRuns.ContainsKey(runId)
+            ? runId
+            : _constraintIndexRebuildRuns.Keys.FirstOrDefault(candidate => candidate.Value == runId.Value);
+
+    void ReleaseRebuildingConstraintIndexes(ConstraintName[] rebuilt)
+    {
+        foreach (var name in rebuilt.Where(_rebuildingConstraintIndexes.ContainsKey))
+        {
+            var count = _rebuildingConstraintIndexes[name];
+            if (count > 1) _rebuildingConstraintIndexes[name] = count - 1;
+            else _rebuildingConstraintIndexes.Remove(name);
+        }
+    }
+
+    void HandRebuildBoundaryToCatchUp(ConstraintIndexRebuildRunId runId, ConstraintName[] rebuilt)
+    {
+        _catchUpDefinitionNames.UnionWith(rebuilt.Where(IsUniqueConstraint));
+        var started = _constraintIndexRebuildStarts[runId];
+        var from = State.ConstraintIndexCatchUpBelow is { } existing && existing < started ? existing : started;
+        State.ConstraintIndexCatchUpBelow = from;
+        foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, from);
+
+        // Progress is not known, so the durable boundary now belongs to catch-up rather than
+        // to the job. Catch-up must be allowed to run once the remaining rebuilds end.
+        _rebuildOwnsBoundary = false;
+    }
+
+    async Task RepairAfterRebuild(ConstraintName[] rebuilt, EventSequenceNumber processed)
+    {
+        foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, processed.Next());
+        UpdateConstraintIndexWatermark();
+        try
+        {
+            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None, persist: false);
+        }
+        catch (Exception error)
+        {
+            logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
+        }
+    }
+
+    async Task CompleteConstraintIndexRebuild(ConstraintIndexRebuildRunId runId, ConstraintName[] rebuilt, bool unknown)
+    {
         var boundary = State.ConstraintIndexCatchUpBelow;
         var clear = _rebuildOwnsBoundary && _rebuildingConstraintIndexes.Count == 0 && !unknown;
         if (clear) State.ConstraintIndexCatchUpBelow = null;

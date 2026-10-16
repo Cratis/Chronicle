@@ -45,21 +45,11 @@ public partial class EventSequence
     {
         try
         {
-            if (publication is not null)
-            {
-                var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
-                if ((await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt))
-                {
-                    await ReconcileExistingPublication(receipt, eventType);
-                    return AppendResult.Success(correlationId, receipt.SequenceNumber);
-                }
-            }
+            if (await TryReconcilePublication(publication, eventType, correlationId) is { } reconciled) return reconciled;
 
             await RefreshConstraintsIfChanged();
-            await PrepareConstraintIndexes([eventType.Id]);
-            if (IsGovernedByPendingIndex(eventType.Id))
+            if (await RefusedByPendingConstraintIndex([eventType.Id]))
             {
-                _metrics?.ConstraintIndexRefused();
                 return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
             }
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
@@ -108,6 +98,26 @@ public partial class EventSequence
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
+    }
+
+    async Task<AppendResult?> TryReconcilePublication(EventPublication? publication, EventType eventType, CorrelationId correlationId)
+    {
+        if (publication is null) return null;
+
+        var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+        if (!(await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt)) return null;
+
+        await ReconcileExistingPublication(receipt, eventType);
+        return AppendResult.Success(correlationId, receipt.SequenceNumber);
+    }
+
+    async Task<bool> RefusedByPendingConstraintIndex(IReadOnlyCollection<EventTypeId> eventTypeIds)
+    {
+        await PrepareConstraintIndexes(eventTypeIds);
+        if (!eventTypeIds.Any(IsGovernedByPendingIndex)) return false;
+
+        _metrics?.ConstraintIndexRefused();
+        return true;
     }
 
     IDisposable BeginConcurrencyValidation(EventSourceId eventSourceId, ConcurrencyScope scope) =>

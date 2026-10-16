@@ -39,29 +39,14 @@ public partial class EventSequence
 
             await RefreshConstraintsIfChanged();
             events = events as IList<EventToAppend> ?? events.ToList();
-            await PrepareConstraintIndexes(events.Select(@event => @event.EventType.Id));
-            if (events.Any(@event => IsGovernedByPendingIndex(@event.EventType.Id)))
+            if (await RefusedByPendingConstraintIndex(events.Select(@event => @event.EventType.Id).ToList()))
             {
-                _metrics?.ConstraintIndexRefused();
                 return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.ConstraintIndexUnavailable] };
             }
 
             // Share batch claims so events cannot both claim the same unique value before indexes update.
             var batchClaims = new ConstraintBatchClaims();
-            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
-            foreach (var eventToAppend in events)
-            {
-                var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);
-                if (resolvedEventSourceType.TryGetError(out var eventSourceError))
-                {
-                    getValidAndCompliantEvents.Add((eventToAppend, eventSourceError));
-                    continue;
-                }
-
-                var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
-                getValidAndCompliantEvents.Add((e, result));
-            }
+            var getValidAndCompliantEvents = await ValidateBatchEvents(events, correlationId, batchClaims);
 
             var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
 
@@ -101,5 +86,28 @@ public partial class EventSequence
                 Errors = [new AppendError(ex.Message)]
             };
         }
+    }
+
+    async Task<List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>> ValidateBatchEvents(
+        IEnumerable<EventToAppend> events,
+        CorrelationId correlationId,
+        ConstraintBatchClaims batchClaims)
+    {
+        var validated = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+        foreach (var eventToAppend in events)
+        {
+            var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);
+            if (resolvedEventSourceType.TryGetError(out var eventSourceError))
+            {
+                validated.Add((eventToAppend, eventSourceError));
+                continue;
+            }
+
+            var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
+            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
+            validated.Add((e, result));
+        }
+
+        return validated;
     }
 }

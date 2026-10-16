@@ -49,29 +49,37 @@ public partial class EventSequence
         var outcome = ConstraintIndexUpdateOutcome.NotAttempted;
         for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
         {
-            if (attempt > 0)
-            {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(attempt == 1 ? 100 : 400), ConstraintIndexTimeProvider, cancellationToken);
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    return ConstraintIndexUpdateOutcome.NotAttempted;
-                }
-            }
+            if (attempt > 0 && !await WaitBeforeConstraintIndexRetry(attempt, cancellationToken)) return ConstraintIndexUpdateOutcome.NotAttempted;
             (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(number, token), cancellationToken, ConstraintIndexTimeProvider);
-            if (error is not null)
-            {
-                logger.ConstraintIndexUpdateOutcome(_eventSequenceKey, name, number, State.ConstraintIndexWatermark!, State.SequenceNumber, outcome, error);
-                if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned or ConstraintIndexUpdateOutcome.NotAttempted) _metrics?.ConstraintIndexUpdateFailed();
-            }
-            if (outcome == ConstraintIndexUpdateOutcome.SettledWithError) _metrics?.ConstraintIndexSettledWithError();
-            if (outcome == ConstraintIndexUpdateOutcome.Abandoned) _abandonedConstraintIndexes.Add(name);
+            ObserveConstraintIndexUpdate(outcome, error, name, number);
             if (outcome is not (ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned)) break;
         }
 
         // An unconfirmed attempt must be folded again in a later timer turn even if a retry succeeded.
         return _abandonedConstraintIndexes.Contains(name) ? ConstraintIndexUpdateOutcome.Abandoned : outcome;
+    }
+
+    async Task<bool> WaitBeforeConstraintIndexRetry(int attempt, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(attempt == 1 ? 100 : 400), ConstraintIndexTimeProvider, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+
+    void ObserveConstraintIndexUpdate(ConstraintIndexUpdateOutcome outcome, Exception? error, Concepts.Events.Constraints.ConstraintName name, EventSequenceNumber number)
+    {
+        if (error is not null)
+        {
+            logger.ConstraintIndexUpdateOutcome(_eventSequenceKey, name, number, State.ConstraintIndexWatermark!, State.SequenceNumber, outcome, error);
+            if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned or ConstraintIndexUpdateOutcome.NotAttempted) _metrics?.ConstraintIndexUpdateFailed();
+        }
+        if (outcome == ConstraintIndexUpdateOutcome.SettledWithError) _metrics?.ConstraintIndexSettledWithError();
+        if (outcome == ConstraintIndexUpdateOutcome.Abandoned) _abandonedConstraintIndexes.Add(name);
     }
 }
