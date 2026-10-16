@@ -45,7 +45,7 @@ internal sealed class TriggerRegistry(IEventStore eventStore, IClientArtifactsPr
     internal void Discover()
     {
         var builtIns = artifacts.OccurrenceHandlers.SelectMany(_ => _.GetInterfaces()).Where(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IOccurrenceHandler<>)).Select(_ => _.GenericTypeArguments[0]).Where(IsLifecycle).ToArray();
-        var triggers = artifacts.Triggers.Concat(builtIns.Length > 0 ? [typeof(Startup), typeof(Shutdown)] : []).Distinct().ToArray();
+        var triggers = artifacts.Triggers.Where(type => !IsLifecycle(type)).Concat(builtIns.Length > 0 ? [typeof(Startup), typeof(Shutdown)] : []).Distinct().ToArray();
         var registrations = triggers.ToDictionary(type => type, type =>
         {
             var marker = type.GetCustomAttribute<TriggerAttribute>();
