@@ -9,7 +9,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging.Abstractions;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Namespaces.for_NamespaceRemover.given;
 
