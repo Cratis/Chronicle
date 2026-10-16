@@ -11,11 +11,11 @@ The rule requires all of these signals:
 
 - The containing type is a concrete, non-generic class or record that does not implement `IReducer` or `IReducerFor<T>`.
 - The type carries Arc's `[ReadModel]` attribute, including inherited metadata, or already has a valid self-reduction method or a static `Reduce` near miss recognized by Chronicle's self-reducer policy.
-- The method is public and non-generic, with two or three ordinary parameters: an `[EventType]` class or interface, exactly the containing model type (nullable or non-nullable), and optionally `EventContext`.
+- The method is public and non-generic, with two or three ordinary parameters: a class or interface with event declaration metadata (`[EventType]` or `[EventTypeGenerationFor<T>]`, including inherited metadata), exactly the containing model type (nullable or non-nullable), and optionally `EventContext`.
 - The result is exactly the containing model or `Task` of that model, including nullable results.
 - The name is not exactly `Reduce`, or the method is not static.
 
-Ordinary helpers, factories, collection-returning queries, non-event arguments, and unrelated types are not reported. The rule deliberately requires a visible `[EventType]` attribute; event membership supplied only by registration or through a dispatch base type is not inferred. A method already reported by CHR0058 as an invalid sibling `Reduce` declaration does not also receive CHR0065.
+Ordinary helpers, factories, collection-returning queries, non-event arguments, and unrelated types are not reported. The rule requires visible event declaration metadata and respects attribute inheritance. Historical generations and types inheriting event markers count; event membership supplied only by registration or inferred from known derived events of an unmarked dispatch base type does not. A method already reported by CHR0058 as an invalid sibling `Reduce` declaration does not also receive CHR0065.
 
 ## Severity
 

@@ -62,8 +62,8 @@ public sealed class SelfReducerIntentAnalyzer : DiagnosticAnalyzer
     static bool HasFoldShape(IMethodSymbol method, INamedTypeSymbol model, Compilation compilation) =>
         method is { DeclaredAccessibility: Accessibility.Public, IsGenericMethod: false } &&
         method.Parameters.Length is 2 or 3 && method.Parameters.All(SelfReducerPolicy.IsPlainParameter) &&
-        method.Parameters[0].Type is { TypeKind: TypeKind.Class or TypeKind.Interface } eventType &&
-        WellKnownTypes.HasEventTypeAttribute(eventType) &&
+        method.Parameters[0].Type is INamedTypeSymbol { TypeKind: TypeKind.Class or TypeKind.Interface } eventType &&
+        SelfReducerPolicy.HasEventTypeMetadata(eventType) &&
         SelfReducerPolicy.Equal(method.Parameters[1].Type, model) &&
         (method.Parameters.Length == 2 || SelfReducerPolicy.Equal(method.Parameters[2].Type, compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName))) &&
         SelfReducerPolicy.ReturnsModel(method, model, compilation);
