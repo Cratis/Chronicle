@@ -62,7 +62,7 @@ public class LifecycleFanOut(IEventStoreStorage store, Func<string?, string, Tas
     /// <summary>
     /// Completes one bounded page; an interrupted prefix is safe to repeat after restart.
     /// </summary>
-    /// <returns>Whether unfinished intents remain. A failed intent retains its acknowledged prefix for retry.</returns>
+    /// <returns>Whether unfinished intents remain. A transiently failed intent retains its acknowledged prefix for retry; a permanent identity conflict is logged and skipped.</returns>
     public async Task<bool> Reconcile()
     {
         foreach (var intent in await store.LifecycleFanOut.GetPending(16))
@@ -89,7 +89,13 @@ public class LifecycleFanOut(IEventStoreStorage store, Func<string?, string, Tas
             await wake(name, template.Trigger.Value);
             var occurrence = template with { Id = OccurrenceIdentities.ForLifecycle(template.Kind, intent.ActivationId, name) };
             var result = await store.GetNamespace(new EventStoreNamespaceName(name)).Occurrences.Record(occurrence);
-            if (result == OccurrenceRecordResult.OccurrenceIdConflict) throw new LifecycleOccurrenceNotValid("A lifecycle identity is occupied by different content.");
+            if (result == OccurrenceRecordResult.OccurrenceIdConflict)
+            {
+                // Permanent: the identity is occupied by different content and will never accept this occurrence.
+                // Retrying cannot succeed, so record the terminal outcome in the log and move past this namespace
+                // instead of leaving the intent pending forever.
+                logger.LifecycleOccurrenceIdentityConflict(intent.Occurrence.Id.Value, name);
+            }
         }
         await store.LifecycleFanOut.Advance(intent.Occurrence.Id, end);
     }

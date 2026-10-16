@@ -10,6 +10,8 @@ public class when_reconciling_with_a_poisoned_intent : given.a_fan_out
     Exception? _error;
     LifecycleFanOutIntent? _poisoned;
     LifecycleFanOutIntent? _healthy;
+    IEnumerable<LifecycleFanOutIntent> _pending;
+    bool _deliveredToTheUnconflictedNamespace;
 
     async Task Establish()
     {
@@ -28,9 +30,13 @@ public class when_reconciling_with_a_poisoned_intent : given.a_fan_out
         _error = await Catch.Exception(_fanOut.Reconcile);
         _poisoned = await _intents.Get(OccurrenceIdentities.ForLifecycle(OccurrenceKind.Startup, "poisoned"));
         _healthy = await _intents.Get(OccurrenceIdentities.ForLifecycle(OccurrenceKind.Shutdown, "healthy"));
+        _pending = await _intents.GetPending(16);
+        _deliveredToTheUnconflictedNamespace = await _namespaces["two"].Get(OccurrenceIdentities.ForLifecycle(OccurrenceKind.Startup, "poisoned", "two")) is not null;
     }
 
     [Fact] void should_isolate_the_failure() => _error.ShouldBeNull();
-    [Fact] void should_preserve_the_failed_prefix_for_retry() => _poisoned!.Progress.ShouldEqual(0);
+    [Fact] void should_finish_the_intent_instead_of_retrying_a_permanent_conflict() => _poisoned!.Progress.ShouldEqual(2);
+    [Fact] void should_leave_nothing_pending() => _pending.ShouldBeEmpty();
+    [Fact] void should_still_deliver_to_the_namespace_without_a_conflict() => _deliveredToTheUnconflictedNamespace.ShouldBeTrue();
     [Fact] void should_complete_the_unrelated_intent() => _healthy!.Progress.ShouldEqual(2);
 }
