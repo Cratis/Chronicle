@@ -57,10 +57,6 @@ internal static class KernelConnectionErrors
         return exception.InnerException?.ClassifyStreamError() ?? KernelConnectionErrorKind.Failure;
     }
 
-    static bool IsClientNotConnected(RpcException exception) =>
-        exception.Status.Detail.Contains("ClientIsNotConnected", StringComparison.Ordinal)
-        || exception.Message.Contains("ClientIsNotConnected", StringComparison.Ordinal);
-
     /// <summary>
     /// Check whether an error thrown while handling an event was caused by the observer shutting down.
     /// </summary>
@@ -73,4 +69,8 @@ internal static class KernelConnectionErrors
     /// </remarks>
     internal static bool IsInterruptedByShutdown(this Exception exception, CancellationToken stoppingToken) =>
         stoppingToken.IsCancellationRequested && exception.ClassifyStreamError() != KernelConnectionErrorKind.Failure;
+
+    static bool IsClientNotConnected(RpcException exception) =>
+        exception.Status.Detail.Contains("ClientIsNotConnected", StringComparison.Ordinal)
+        || exception.Message.Contains("ClientIsNotConnected", StringComparison.Ordinal);
 }

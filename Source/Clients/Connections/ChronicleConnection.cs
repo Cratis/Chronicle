@@ -202,6 +202,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </remarks>
     public Task Connect() => Connect(respectFailureBackoff: true);
 
+    /// <inheritdoc/>
+    public void RequestReconnect() => _watchDog.RequestReconnect();
+
     /// <summary>
     /// Reconnect on behalf of the watchdog, which must always get to attempt.
     /// </summary>
@@ -595,9 +598,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
         }
     }
-
-    /// <inheritdoc/>
-    public void RequestReconnect() => _watchDog.RequestReconnect();
 
     async Task OnSessionDropped()
     {
