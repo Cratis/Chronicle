@@ -20,7 +20,7 @@ The first read of each model type in a process makes two more calls to list defi
 | Constraint | None extra | An index lookup inside the append | Not expected to grow with history |
 | Explicit scope | One tail call to capture the position | One filtered tail query at commit | Not measured |
 | Materialized plain read | 1 | Reads the stored instance | Nothing |
-| Passive plain read | 1 | The first read folds the key's history. Later reads apply newer events while the kernel keeps the instance in memory | History, on first read |
+| Passive plain read | 1 | Every read folds the key's history from the start; nothing is kept between reads | History, on every read |
 | Decision read | About 4 per attempt, up to 3 attempts, plus 2 on first use of a type | Folds the key's whole history of the model's event types, every time | History times reads |
 
 A decision read is linear in the key's history and nothing caches it. Reads of one model type are expected to queue behind each other in the kernel, across keys. That has not been measured.
