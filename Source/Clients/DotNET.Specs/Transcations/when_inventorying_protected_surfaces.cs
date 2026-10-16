@@ -135,6 +135,7 @@ public class when_inventorying_protected_surfaces : Specification
             "Artifact discovery and registration are administration, not command decision state.",
             "IEventStore.DiscoverAll`0/0",
             "IEventStore.RegisterAll`0/0",
+            "IEventStore.RemoveNamespace`0/2",
             "IReadModels.Register`0/0",
             "IReadModels.Register`1/0",
             "IProjections.Discover`0/0",
