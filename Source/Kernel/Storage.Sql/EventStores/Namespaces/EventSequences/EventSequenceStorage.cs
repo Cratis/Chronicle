@@ -399,6 +399,7 @@ public partial class EventSequenceStorage(
         eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
+        eventEntry.RevisedGeneration = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -470,6 +471,7 @@ public partial class EventSequenceStorage(
             eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
+            eventEntry.RevisedGeneration = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }
