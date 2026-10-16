@@ -26,6 +26,24 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets the payload contracts registered for application and lifecycle triggers.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented trigger definition storage.</exception>
+    Occurrences.ITriggerDefinitionsStorage TriggerDefinitions => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets application-scoped occurrences, separately from every namespace's queue.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented occurrence storage.</exception>
+    Occurrences.IOccurrencesStorage Occurrences => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets event-store definitions and application-scoped schedule cursors.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented schedule storage.</exception>
+    Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Gets the event store the storage represents.
     /// </summary>
     EventStoreName EventStore { get; }

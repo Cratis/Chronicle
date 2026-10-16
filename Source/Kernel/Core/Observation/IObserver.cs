@@ -522,6 +522,17 @@ public interface IObserver : IGrainWithStringKey
     Task<FastForwardResult> FastForward();
 
     /// <summary>
+    /// Position a brand new observer at the tail of the event sequence, so that it does not observe history that
+    /// predates its first registration.
+    /// </summary>
+    /// <remarks>
+    /// Only an observer that has never been persisted is positioned. One that already has state keeps its position,
+    /// which makes the call safe to repeat on every registration. Call it before subscribing.
+    /// </remarks>
+    /// <returns>True if the observer was new and has been positioned at the tail, false if it already existed.</returns>
+    Task<bool> StartAtTailWhenNew();
+
+    /// <summary>
     /// Attempt to recover all failed partitions.
     /// </summary>
     /// <returns>Awaitable task.</returns>

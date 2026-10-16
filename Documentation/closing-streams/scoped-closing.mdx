@@ -49,3 +49,5 @@ If the last fact itself should end the scope, declare it as a [closing event](cl
 Event-driven closures alone do not produce `AlreadyCompleted`. The call succeeds and writes a manual closure as well, which a `ReopenedBy` event can no longer undo.
 
 Closing is final for manual closures. If you closed the wrong scope, see [Inspecting and repairing](inspecting-and-repairing.mdx).
+
+To build the scope from an event source definition rather than from strings, see [Close a stream of a definition](../event-sources/closing.mdx). A closed scope makes the decisions taken on it final, which is why it fits a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md) that ends.

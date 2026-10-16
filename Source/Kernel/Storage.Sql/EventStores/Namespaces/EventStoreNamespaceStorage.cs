@@ -40,6 +40,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="converter">The schema-aware content converter.</param>
 public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
 {
+    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
+
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
 
@@ -134,5 +142,12 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     /// still matters for deciding whether eager rehydration has anything to do - so it is answered the same way as
     /// the other backends: whether any event sequence has recorded state for this namespace.
     /// </remarks>
-    public async Task<bool> HasData() => (await GetEventSequences()).Any();
+    public async Task<bool> HasData()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        return await scope.DbContext.EventSequences.AnyAsync() ||
+            await scope.DbContext.Set<Sql.EventStores.Occurrences.OccurrenceEntry>().AnyAsync() ||
+            await scope.DbContext.Set<Sql.EventStores.Occurrences.ScheduleCursorEntry>().AnyAsync() ||
+            await scope.DbContext.Set<Sql.EventStores.Occurrences.EffectReceiptEntry>().AnyAsync();
+    }
 }

@@ -43,7 +43,7 @@ It is another projection input, not the code-first default.
 | A model distributed as a shared contract | Separate `IReducerFor<T>` for stateful logic; fluent projection for mapping | Keep behavior in the consuming application without adding transitions or mapping attributes to the contract. |
 | An observer assembly that cannot reference Chronicle | Nominated plain class | Register it at the composition root and let Chronicle infer its one model from supported instance methods. Nomination does not relax signature validation. |
 | An Arc application with queries and state transitions on one record | Self-reducing model with `[ReadModel]` and static query methods | Keep the state, static `Reduce` methods, and query surface together. Apply the version guidance below so reduction does not become an endpoint. |
-| State a command must read on demand | A passive model | `[Passive]` on the model, or `.Passive()` on a fluent projection, avoids materialization lag. For a decision that must remain valid until append, use [decision reads](../read-models/decision-reads.mdx) only with an admitted projection shape. A fresh passive reducer read does not protect the decision from a concurrent append. |
+| State a command must read on demand | A passive model | `[Passive]` on the model, or `.Passive()` on a fluent projection, avoids materialization lag. For a decision that must remain valid until append, use [decision reads](../read-models/decision-reads.mdx) only with an admitted projection or reducer shape. A fresh passive reducer read does not protect the decision from a concurrent append. |
 | A definition edited in the Workbench or authored in Screenplay | PDL | The definition is text owned by the tooling workflow. Check Chronicle's supported expression subset and save settings. |
 
 :::caution[Arc query discovery]
@@ -148,7 +148,7 @@ The separate column covers both `IReducerFor<T>` and a nominated plain instance 
 | [Passive reads](../read-models/consistency.md) | `[Passive]` on model | `.Passive()` | No native passive clause | `[Passive]` on model | `[Passive]` on model |
 | [Append-metadata filters](filtering.mdx) | No | No | No | Tags, source type, stream type | Tags, source type, stream type |
 | [Replay lifecycle hooks](../reducers/self-reducing-read-models.mdx#optional-replay-hooks) | No handler hooks | No handler hooks | No hook clauses | Static `Task` hooks; hook services allowed | Replay notification interfaces |
-| [Decision reads](../read-models/decision-reads.mdx) | Admitted shapes only | Admitted shapes only | No direct .NET client-catalog registration path | Refused | Refused |
+| [Decision reads](../read-models/decision-reads.mdx) | Admitted shapes only | Admitted shapes only | No direct .NET client-catalog registration path | Admitted without filters or constructor dependencies | Admitted without filters |
 | [ReadModelScenario](../testing/read-models/scenario.mdx) | Yes | Yes | No direct PDL overload | Yes | Yes, including nominated plain classes |
 
 Metadata subscription filters have no stream-ID option. Observer tags are descriptive labels, not

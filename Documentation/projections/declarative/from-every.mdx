@@ -38,10 +38,6 @@ Use a root `FromAll` mapping only when the parent must also observe unrelated ev
 
 Clients that support multiple every-event declarations merge the property mappings into one projection definition.
 
-:::note[Elixir]
-Elixir's `from_every/1` macro accumulates multiple declarations, but the registration coordinator currently only sends the first one to the kernel — a second `from_every` call is silently dropped. Use a single `from_every` call with all of the property mappings combined instead.
-:::
-
 <ChronicleClientTabs snippet="projections/declarative/from-every/multiple-declarations" />
 
 ## Common Use Cases

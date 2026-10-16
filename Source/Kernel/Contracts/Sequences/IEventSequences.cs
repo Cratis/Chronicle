@@ -360,6 +360,12 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(17)]
     public string? EventSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(18)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -379,6 +385,18 @@ public class AppendResponse
     /// </summary>
     [ProtoMember(2)]
     public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails? EffectReceipt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectAlreadyRecorded.
+    /// </summary>
+    [ProtoMember(12)]
+    public bool EffectAlreadyRecorded { get; set; }
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -500,6 +518,12 @@ public class AppendManyRequest
     /// </summary>
     [ProtoMember(10)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -519,6 +543,18 @@ public class AppendManyResponse
     /// </summary>
     [ProtoMember(2)]
     public IEnumerable<global::System.UInt64> SequenceNumbers { get; set; } = new List<global::System.UInt64>();
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptDetails? EffectReceipt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectAlreadyRecorded.
+    /// </summary>
+    [ProtoMember(12)]
+    public bool EffectAlreadyRecorded { get; set; }
 
     /// <summary>
     /// Gets or sets the IsSuccess.
@@ -628,6 +664,12 @@ public class AppendManyForEventSourcesRequest
     /// </summary>
     [ProtoMember(9)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope>? ConcurrencyScopes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -689,6 +731,12 @@ public class AppendManyForEventSourcesWithNamedTagsRequest
     /// </summary>
     [ProtoMember(9)]
     public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.EventSourceConcurrencyScope>? ConcurrencyScopes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -762,6 +810,12 @@ public class AppendManyWithNamedTagsRequest
     /// </summary>
     [ProtoMember(11)]
     public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -877,6 +931,12 @@ public class AppendWithNamedTagsRequest
     /// </summary>
     [ProtoMember(18)]
     public string? EventSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(19)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
 }
 
 /// <summary>
@@ -1344,6 +1404,12 @@ public class AppendedEventResponse
     /// </summary>
     [ProtoMember(6)]
     public IEnumerable<global::System.Collections.Generic.KeyValuePair<int, string>> GenerationalContent { get; set; } = new List<global::System.Collections.Generic.KeyValuePair<int, string>>();
+
+    /// <summary>
+    /// Gets or sets the RevisedGeneration.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::System.UInt32? RevisedGeneration { get; set; }
 }
 
 /// <summary>

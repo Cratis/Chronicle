@@ -92,6 +92,8 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
         modelBuilder
             .Entity<EventSequences.EventSequenceState>(entity =>

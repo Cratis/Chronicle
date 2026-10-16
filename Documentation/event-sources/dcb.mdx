@@ -1,0 +1,62 @@
+---
+title: Event sources and the Dynamic Consistency Boundary
+description: Where an event source definition fits a Dynamic Consistency Boundary decision model and append condition in Chronicle, and where it does not.
+---
+
+Use this page if you decide on state you read and want to know what a definition contributes. The idea of a boundary that the decision defines is in [Dynamic Consistency Boundary](../dynamic-consistency-boundary/index.md). How Chronicle maps it is in [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
+
+## What a definition contributes
+
+A definition does not make Chronicle a DCB event store. A DCB store reads by event type and tag across one global sequence, and an event can carry several tags. In Chronicle, the stream metadata of an event plays the role of the tags: the event source id, the event source type, the event stream type and the event stream id. Each has exactly one value per event, and a concurrency scope can narrow to any of them. Custom [tags](../events/appending-with-tags.mdx) are a different thing and take no part in consistency.
+
+An event source definition is the typed, declared way to choose which of those dimensions guard an append. `ConcurrencyDimensions` on the event source and on each stream says which of the four values an append is guarded by, and Chronicle builds the append condition from them: the position of the log plus that narrowing. When Chronicle derives the scope from the definition, appending through the definition also guarantees that the event carries the values the guard was built from. An explicit scope you build yourself carries no such guarantee: you align it with what you read and write.
+
+### How coarse the guard is
+
+A guard built from a definition covers every event in the narrowed range, whatever its event type. When the dimensions are the event source id, the stream type and the stream id, the boundary is one stream of one event source. In DCB terms that is a coarse, aggregate-like boundary. It is the right choice when the stream is the consistency boundary: all writers of that stream must see each other's changes, as with the events of one month of an account, or the steps of one transfer.
+
+When a rule depends on only some events, or on a state you read first, use a [decision read](../read-models/decision-reads.mdx). Its guard is the key plus the event types of the read model, which is DCB's advice to keep a decision model minimal and not greedy. A definition and a decision read work together, as the example below shows. In Arc, a [stream decision](/arc/backend/csharp/chronicle/commands/stream-decisions/) guards a whole stream in the same coarse way.
+
+| DCB concept | In Chronicle, with a definition |
+|---|---|
+| Decision model | A [decision read](../read-models/decision-reads.mdx): a flat projection keyed by the event source id, folded for one decision. For one stream, a stream-scoped read |
+| Query: event types are ORed | The event types of the read model |
+| Query: tags are ANDed | The stream metadata: the event source id, and optionally the event source type, stream type and stream id, each equal to one value. A definition chooses which of them guard an append |
+| A tag that plays the role of a stream | The event stream type and event stream id of a stream the definition declares |
+| A boundary as wide as a stream | The dimensions a definition declares. Any event type in the range counts |
+| Append condition (`failIfEventsMatch` with `after`) | The concurrency scope: the position taken before the read, plus that narrowing |
+| One event with several tags | Not available. One value per dimension, so one event source and one stream per event |
+
+## A guarded decision on one stream
+
+An account may make five withdrawals a month. The rule concerns one account's `Transactions` stream for one month, so the decision model reads only that stream. A broader read, such as every event of the account, would make the boundary needlessly wide: a deposit in another month would conflict with the withdrawal.
+
+<ChronicleClientTabs snippet="event-sources/dcb/guarded-decision" variants="csharp" />
+
+What makes this work:
+
+- **The read takes its values from the definition.** `definition.EventSourceType` and the stream's `EventStreamType` are what the append will write, so the guard and the event cannot drift apart.
+- **The read notes the log position before it folds**, which is the DCB `after`. A guard built after the read could miss an event that arrived in between.
+- **The event goes through the same definition and stream** as the guard describes. If it went to another stream, the guard would not see it on the next decision.
+- **The guard replaces the definition's default scope** for this event source id. The dimensions declared on the definition apply to appends without a guard, not to guarded ones.
+- **An event on another account, another month or another stream does not conflict**, and neither does a deposit in the same month, because the model reads only `MoneyWithdrawn`.
+
+When the guard rejects the append, nothing is written. Read again and decide again; Chronicle does not retry for you.
+
+## Keep the decision model small
+
+DCB's advice holds here: load only the events the decision needs. A definition makes that easy, because streams are natural small boundaries. Put facts that are decided together in one stream and facts that are decided separately in different streams. If one rule needs a monthly total and another needs the account's status, give them two reads, not one read that folds everything.
+
+## Where a definition does not help
+
+A definition does not give you DCB's several-entities-per-event model. When one fact concerns two entities, such as a student joining a course, Chronicle records one event per event source in one atomic append, each guarded by its own read. The [DCB examples](../dynamic-consistency-boundary/dcb-examples.mdx) show the idiomatic Chronicle answer for each canonical DCB example, including the ones where a constraint or a read on a key that is only read avoids recording a fact twice.
+
+A closed stream makes a boundary final: appends to it are refused, so a later event cannot invalidate a decision you took about it. See [Close a stream](./closing.mdx).
+
+## Next steps
+
+- [Decision reads](../read-models/decision-reads.mdx)
+- [Read protection](../read-models/read-protection.mdx)
+- [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx)
+- [DCB examples in Chronicle](../dynamic-consistency-boundary/dcb-examples.mdx)
+- [Concurrency per event source and stream](./concurrency.mdx)

@@ -1,0 +1,48 @@
+---
+title: Migrate from string routing
+description: Move from eventSourceType and eventStreamType strings and the matching attributes to an event source definition without orphaning stored events.
+---
+
+Use this page when your code appends with `eventSourceType:`, `eventStreamType:` and `eventStreamId:` strings and observes with `[EventSourceType]` and `[EventStreamType]`, and you want one declared place for those names.
+
+## What changes and what does not
+
+The stored events do not change. A definition writes the same two values the strings did: the event source type and the event stream type. If the definition's names equal the strings you used, events you wrote before the migration still match the new filters, and new events match the old ones.
+
+What the definition adds is the declaration, the checks on both sides, the stream-level concurrency dimensions and `EventContext.EventSource`, which is set only on events appended through a definition. Older events have it empty.
+
+## Steps
+
+1. **Collect the strings in use.** Search for `eventSourceType:`, `eventStreamType:`, `[EventSourceType(` and `[EventStreamType(`. Each distinct event source type becomes a definition. Each distinct stream type that goes with it becomes a stream.
+2. **Declare the definitions with the existing strings as names.** Do not tidy the casing in this step. `order` and `Order` are different event source types.
+3. **Switch the appends** to `Append<TSource>` with `eventStream:` and `eventStreamId:`. Keep the stream id values as they were.
+4. **Switch the observers** to `[FromEventSource<TSource>("stream")]`.
+5. **Build.** The analyzer reports a stream the definition does not declare ([CHR0055](../code-analysis/CHR0055.mdx)) and a leftover string attribute that contradicts the typed filter ([CHR0056](../code-analysis/CHR0056.mdx)). Remove the leftover attributes.
+6. **Choose the concurrency dimensions** once the routing is typed. Until you declare any, the appends keep the guard they had.
+
+## Before and after
+
+Before, the routing is repeated at every call site and in every observer:
+
+<ChronicleClientTabs snippet="event-sources/migrating/before" variants="csharp" />
+
+After, it is declared once:
+
+<ChronicleClientTabs snippet="event-sources/migrating/after" variants="csharp" />
+
+The definition names are `order` and `payments`, the strings from before, so the existing events still match.
+
+## Do it in stages
+
+You can migrate one event source at a time. Appends and observers that still use strings keep working, because the kernel accepts appends that do not name a definition exactly as it always did, even when their event source type happens to equal a registered name. Typed and string forms interoperate as long as the values are equal: a `[FromEventSource<T>]` observer receives events written with the matching strings, and a string observer receives events written through the definition.
+
+## When the strings and the names must differ
+
+If you want a new, cleaner name, treat it as a rename, not a migration. Events already stored keep the old event source type, and observers on the new name will not see them. See [Questions and pitfalls](./faq.mdx#what-happens-when-i-rename-an-event-source-or-a-stream).
+
+## Next steps
+
+- [Define an event source](./defining.mdx)
+- [Filter observers](./filtering.mdx)
+- [Filter by event source type](../events/filtering/by-event-source-type.mdx)
+- [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md): what a typed definition does and does not change about consistency.

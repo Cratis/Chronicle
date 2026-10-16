@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 public interface IConcurrencyScopeStrategies
 {
     /// <summary>
+    /// Gets the append concurrency options, including explicit-scope compatibility switches.
+    /// </summary>
+    ConcurrencyOptions Options => new();
+
+    /// <summary>
     /// Gets the appropriate <see cref="IConcurrencyScopeStrategy"/> for the given <see cref="IEventSequence"/>.
     /// </summary>
     /// <param name="eventSequence">The <see cref="IEventSequence"/> for which to get the concurrency scope strategy.</param>

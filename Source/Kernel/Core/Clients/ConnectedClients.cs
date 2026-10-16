@@ -5,6 +5,8 @@ using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Occurrences;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,12 +20,14 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="storage">The infrastructure storage for disconnected leases.</param>
 [KeepAlive]
 [ConnectedClientsPlacement]
 public class ConnectedClients(
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
-    IOptions<ChronicleOptions> options) : Grain, IConnectedClients
+    IOptions<ChronicleOptions> options,
+    IStorage storage) : Grain, IConnectedClients
 {
     readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
@@ -99,6 +103,10 @@ public class ConnectedClients(
 
         meter.ConnectedClients(_clients.Count);
 
+        // Expiry is best effort and must not hold up connection bookkeeping. Leases also expire
+        // by kernel time, so a failed scope only delays redelivery until its lease deadline.
+        var now = DateTimeOffset.UtcNow;
+        _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
         return Task.CompletedTask;
     }
 

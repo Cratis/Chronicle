@@ -25,6 +25,18 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreNamespaceStorage
 {
     /// <summary>
+    /// Gets this namespace's occurrence queue infrastructure.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented occurrence storage.</exception>
+    Occurrences.IOccurrencesStorage Occurrences => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets this namespace's version-fenced schedule cursors and atomic turns.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented schedule storage.</exception>
+    Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
     /// </summary>
     IChangesetStorage Changesets { get; }

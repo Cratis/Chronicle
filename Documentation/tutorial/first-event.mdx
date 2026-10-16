@@ -26,7 +26,7 @@ Every event is about *something* — here, a specific book. Chronicle calls that
 
 By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
 
-Kotlin, Java, Elixir, and TypeScript don't currently have an equivalent typed-id wrapper — event source ids in those clients are plain strings, so the compiler can't stop you from mixing up a book's id and a member's the way it can in C#.
+Kotlin, Java, and TypeScript don't currently have an equivalent typed-id wrapper — event source ids in those clients are plain strings, so the compiler can't stop you from mixing up a book's id and a member's the way it can in C#. Elixir marks a `Chronicle.Concept` with `event_source_id: true` to mark a type as an event source id.
 
 ## Append it
 

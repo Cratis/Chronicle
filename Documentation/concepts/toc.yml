@@ -18,6 +18,8 @@
   href: namespaces.md
 - name: Event Sequence
   href: event-sequence.md
+- name: Effect receipts
+  href: effect-receipts.md
 - name: Observers
   href: observers.mdx
 - name: Projections, reducers, and reactors

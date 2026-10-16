@@ -22,6 +22,8 @@
   href: dynamic-consistency-boundary/toc.yml
 - name: Events
   href: events/toc.yml
+- name: Event Sources
+  href: event-sources/toc.yml
 - name: Event Seeding
   href: event-seeding/toc.yml
 - name: Configuration

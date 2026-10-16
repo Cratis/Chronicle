@@ -19,8 +19,9 @@ The check is registered under the name **`chronicle`**, with the tags **`chronic
 | --- | --- |
 | Not connected, or the kernel cannot be reached | Failure status (Unhealthy by default) |
 | Connected, but artifact registration has not completed | Failure status |
+| Connected, but `Registration.IsRegistering` is `true`, even after an earlier success | Failure status |
 | Connected, but registration stopped with an exception or any declared projection artifact failed | Failure status |
-| Connected and `Registration.IsSuccess` is `true` | Healthy |
+| Connected, `Registration.IsSuccess` is `true`, and `IsRegistering` is `false` | Healthy |
 | Connected, `AutoDiscoverAndRegister` is off, and the application has not run `RegisterAll` | Healthy |
 
 A registration failure carries the run's exception on the result, when there was one, and the
@@ -74,8 +75,12 @@ The host starts even when the kernel is unreachable. `UseCratisChronicle` attemp
 the application has started, logs a warning if it cannot get one, and leaves the client's watchdog to
 keep retrying. The health check is what reports that state in the meantime — so a readiness probe
 holds traffic back until the connection comes up and artifact registration succeeds, rather than
-the host failing to start at all. When the client reconnects, readiness keeps reporting the previous
-registration outcome until the new registration run finishes.
+the host failing to start at all. After a kernel restart, readiness drops while the client is
+disconnected and stays down while it re-registers after reconnecting. `Registration.IsRegistering`
+marks that interval even though the outcome retains the previous run's success or failure. A manual
+`RegisterAll` also makes readiness fail while it is running, including when automatic registration
+is off. Background-retry attempts set `IsRegistering` too; between attempts, readiness still fails
+because the last registration outcome is a failure. `WaitForRegistration` waits for the new run's outcome rather than returning the previous one.
 
 ## Related
 

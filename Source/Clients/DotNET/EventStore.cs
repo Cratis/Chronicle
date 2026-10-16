@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -75,6 +76,8 @@ public partial class EventStore : IEventStore
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
     StorePreparationGate? _preparation;
+    volatile RegistrationOutcome _registration = RegistrationOutcome.NotRun;
+    long _identityDriftEpoch;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -317,6 +320,7 @@ public partial class EventStore : IEventStore
         if (autoDiscoverAndRegister)
         {
             Connection.Lifecycle.OnConnected += RegisterAll;
+            Connection.Lifecycle.OnDisconnected += MarkRegistrationAfterDisconnect;
         }
     }
 
@@ -390,7 +394,11 @@ public partial class EventStore : IEventStore
     public IIdentityManager Identities { get; }
 
     /// <inheritdoc/>
-    public RegistrationOutcome Registration { get; private set; } = RegistrationOutcome.NotRun;
+    public RegistrationOutcome Registration
+    {
+        get => _registration;
+        private set => _registration = value;
+    }
 
     /// <inheritdoc/>
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
@@ -432,10 +440,11 @@ public partial class EventStore : IEventStore
     public Task RegisterAll()
     {
         Preparation.ThrowIfReentered();
-        var flight = LazyInitializer.EnsureInitialized(
-            ref _registerAllFlight,
-            () => new SingleFlightRegistration(RegisterAllCore));
-        return flight.Run();
+        lock (RegistrationSync)
+        {
+            Registration = Registration with { IsRegistering = true };
+            return _registrationTask ??= CompleteRegistration();
+        }
     }
 
     /// <inheritdoc/>
@@ -464,6 +473,7 @@ public partial class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
+        ReadProtectionGuard.Read(nameof(GetNamespaces));
         var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
         return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
@@ -471,63 +481,72 @@ public partial class EventStore : IEventStore
     async Task RegisterAllCore()
     {
         _logger.RegisterAllArtifacts();
-        var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true;
-        var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
-        var effectsStarted = false;
-
-        try
+        while (true)
         {
-            await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
-            {
-                Func<Task> registerEventTypes = EventTypes.Register;
-                Func<Task> registerReadModels = ReadModels.Register;
-                try
-                {
-                    if (EventTypes is EventTypes nativeEventTypes)
-                    {
-                        var payload = await nativeEventTypes.PrepareRegistration();
-                        registerEventTypes = () => nativeEventTypes.RegisterPrepared(payload);
-                    }
-                    if (ReadModels is ReadModels.ReadModels nativeReadModels)
-                    {
-                        var payload = nativeReadModels.PrepareRegistration();
-                        registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    Preparation.RecordPayloadFailure(exception);
-                    throw;
-                }
-                if (!isBackgroundRetry)
-                {
-                    drift = await DetectIdentityDrift();
-                }
+            var epoch = DisconnectEpoch;
+            var isBackgroundRetry = _backgroundRegistrationRetryContext?.Value == true && epoch == _identityDriftEpoch;
+            var drift = isBackgroundRetry ? Registration.IdentityDrift : ImmutableList<ArtifactIdentityDrift>.Empty;
+            var effectsStarted = false;
+            Exception? runFailure = null;
 
-                // Background retries reuse the findings of the run that started them, so the policy still applies.
-                ThrowIfIdentityDriftMustFail(drift);
-                effectsStarted = true;
-                await RegisterAllArtifactsWithRetries(registerEventTypes, registerReadModels);
-                Preparation.PublishRegistrationOutcome(failure =>
-                    Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = drift });
-            });
-        }
-        catch (Exception exception)
-        {
-            // A run that failed is still an answer, and the only one a waiting consumer can act on. Leaving the
-            // outcome unset instead would make a failed registration indistinguishable from one still in flight, so
-            // every waiter would sit out its whole timeout and then report a timeout rather than this. Whatever
-            // registered before the failure is reported alongside it, because a partial read side is what the
-            // consumer now has. The connection lifecycle still gets the exception, and a later reconnect that
-            // succeeds replaces this outcome wholesale.
-            Preparation.PublishRegistrationOutcome(
-                failure => Registration = new RegistrationOutcome(true, _projections.ArtifactRegistrations, failure) { IdentityDrift = drift },
-                exception);
-            if (effectsStarted && exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
+            try
             {
-                StartBackgroundRegistrationRetry();
+                await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
+                {
+                    Func<Task> registerEventTypes = EventTypes.Register;
+                    Func<Task> registerReadModels = ReadModels.Register;
+                    try
+                    {
+                        if (EventTypes is EventTypes nativeEventTypes)
+                        {
+                            var payload = await nativeEventTypes.PrepareRegistration();
+                            registerEventTypes = () => nativeEventTypes.RegisterPrepared(payload);
+                        }
+                        if (ReadModels is ReadModels.ReadModels nativeReadModels)
+                        {
+                            var payload = nativeReadModels.PrepareRegistration();
+                            registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Preparation.RecordPayloadFailure(exception);
+                        throw;
+                    }
+                    if (!isBackgroundRetry)
+                    {
+                        drift = await DetectIdentityDrift();
+                        _identityDriftEpoch = epoch;
+                    }
+
+                    // Background retries reuse findings only on the same connection epoch. A restarted kernel
+                    // needs a fresh snapshot, including when a reconnect joined an unfinished background attempt.
+                    ThrowIfIdentityDriftMustFail(drift);
+                    effectsStarted = true;
+                    await RegisterAllArtifactsWithRetries(registerEventTypes, registerReadModels);
+                });
             }
-            throw;
+            catch (Exception exception)
+            {
+                runFailure = exception;
+            }
+
+            if (!PublishRegistration(epoch, drift, runFailure))
+            {
+                // A reconnect joined this flight. Its kernel needs a complete registration of its own.
+                continue;
+            }
+
+            if (runFailure is not null)
+            {
+                if (effectsStarted && runFailure is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
+                {
+                    StartBackgroundRegistrationRetry();
+                }
+                ExceptionDispatchInfo.Capture(runFailure).Throw();
+            }
+
+            return;
         }
     }
 

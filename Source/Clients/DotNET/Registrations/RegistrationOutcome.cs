@@ -53,7 +53,7 @@ namespace Cratis.Chronicle.Registrations;
 /// <em>before</em> the handlers run, and only rolled back <em>after</em> they have all finished, so polling it races:
 /// it reads <see langword="true"/> while registration is still in flight and while a registration that is about to be
 /// reported as failed is still running. It answers "connected", which is necessary and not sufficient. Use
-/// <see cref="IEventStore.Registration"/>, which only ever transitions once registration has completed.
+/// <see cref="IEventStore.Registration"/> and its <see cref="IsRegistering"/> flag instead.
 /// </para>
 /// </remarks>
 public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistration> Artifacts, Exception? Failure = null)
@@ -72,6 +72,12 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     /// Gets a value indicating whether registration ran, finished, and every declared artifact registered.
     /// </summary>
     public bool IsSuccess => HasRun && Failure is null && Artifacts.All(_ => _.IsRegistered);
+
+    /// <summary>
+    /// Gets a value indicating whether a registration run is in flight, or a reconnect will re-register after
+    /// a disconnect. The other members describe the previous run while this is true.
+    /// </summary>
+    public bool IsRegistering { get; init; }
 
     /// <summary>
     /// Gets the likely identity changes detected before this registration run, retained across background retries.
@@ -99,6 +105,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public virtual bool Equals(RegistrationOutcome? other) =>
         other is not null &&
         HasRun == other.HasRun &&
+        IsRegistering == other.IsRegistering &&
         Equals(Failure, other.Failure) &&
         Artifacts.SequenceEqual(other.Artifacts) &&
         IdentityDrift.SequenceEqual(other.IdentityDrift);
@@ -108,6 +115,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     {
         var hashCode = default(HashCode);
         hashCode.Add(HasRun);
+        hashCode.Add(IsRegistering);
         hashCode.Add(Failure);
         foreach (var artifact in Artifacts)
         {

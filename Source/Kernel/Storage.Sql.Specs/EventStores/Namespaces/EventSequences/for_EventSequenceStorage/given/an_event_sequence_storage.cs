@@ -26,7 +26,7 @@ public class an_event_sequence_storage : Specification, IDisposable
 {
     protected string _tableName = EventSequenceId.Log.Value;
     protected static readonly EventStoreName _eventStore = "test-store";
-    protected static readonly EventStoreNamespaceName _namespace = "test-namespace";
+    protected EventStoreNamespaceName _namespace = "test-namespace";
     protected EventSequenceId _eventSequenceId = EventSequenceId.Log;
     string? _provider;
     protected static readonly EventType _eventType = new("some-event-type", EventTypeGeneration.First);

@@ -29,17 +29,17 @@ public partial class UnitOfWork
         }
     }
 
-    static ConcurrencyScope MergeRequiredScope(EventSourceId source, ConcurrencyScope effective, ConcurrencyScope required)
+    static ConcurrencyScope MergeRequiredScope(EventSequenceId sequence, EventSourceId source, ConcurrencyScope effective, ConcurrencyScope required)
     {
         if (required == ConcurrencyScope.NotSet) return effective;
         if (effective == ConcurrencyScope.NotSet) return required;
         if (RequiredScopesAreEqual(effective, required)) return effective;
-        throw new ConflictingEnrollmentScope(source, effective, required);
+        throw new ConflictingEnrollmentScope(source, effective, required, sequence);
     }
 
     static bool RequiredScopesAreEqual(ConcurrencyScope first, ConcurrencyScope second) =>
         first.SequenceNumber == second.SequenceNumber &&
-        first.EventSourceId == second.EventSourceId &&
+        first.EventSourceId?.Value == second.EventSourceId?.Value &&
         Normalize(first.EventStreamType) == Normalize(second.EventStreamType) &&
         Normalize(first.EventStreamId) == Normalize(second.EventStreamId) &&
         Normalize(first.EventSourceType) == Normalize(second.EventSourceType) &&
@@ -64,7 +64,7 @@ public partial class UnitOfWork
                     ? MaterializeConcurrencyScope(enrollment.SuppliedScope)
                     : enrollment.SuppliedScope;
                 var required = requirements.GetValueOrDefault(source, ConcurrencyScope.NotSet);
-                effective = MergeRequiredScope(source, effective, required);
+                effective = MergeRequiredScope(sequence, source, effective, required);
 
                 // Scope-only entries retain recorded requirements but do not consult contributors.
                 if (enrollment.Events.Count != 0)
@@ -72,16 +72,16 @@ public partial class UnitOfWork
                     foreach (var registration in contributors)
                     {
                         var contribution = MaterializeConcurrencyScope(registration.Contributor.GetRequiredScope(enrollment));
-                        effective = MergeRequiredScope(source, effective, contribution);
-                        required = MergeRequiredScope(source, required, contribution);
+                        effective = MergeRequiredScope(sequence, source, effective, contribution);
+                        required = MergeRequiredScope(sequence, source, required, contribution);
                     }
                 }
                 if (required != ConcurrencyScope.NotSet)
                 {
-                    if (_concurrencyScopes.TryGetValue(source, out var existing)) MergeRequiredScope(source, existing, required);
+                    if (_concurrencyScopes.TryGetValue(source, out var existing)) MergeRequiredScope(sequence, source, existing, required);
                     requirements[source] = required;
                 }
-                if (effective != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(source))
+                if (!IsEnforcingReadProtection && effective != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(new(source.Value)))
                 {
                     throw new DecisionReadConflictsWithConcurrencyScope(source);
                 }
@@ -91,7 +91,7 @@ public partial class UnitOfWork
                 ((_eventSequenceId is not null && _eventSequenceId != sequence) || _legacyEventSequenceIds.Any(_ => _ != sequence)))
             {
                 var (source, required) = requirements.First();
-                throw new ConflictingEnrollmentScope(source, scopes.GetValueOrDefault(source, ConcurrencyScope.NotSet), required);
+                throw new ConflictingEnrollmentScope(source, scopes.GetValueOrDefault(source, ConcurrencyScope.NotSet), required, sequence);
             }
             return new(enrollments, contributors, scopes, requirements);
         }

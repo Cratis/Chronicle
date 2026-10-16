@@ -48,6 +48,17 @@ public interface IReadModels
     Task<TReadModel> GetInstanceById<TReadModel>(ReadModelKey key, ReadModelSessionId? sessionId = null);
 
     /// <summary>
+    /// Folds an instance of a read model declaring <see cref="EventStreamAttribute{TSource}"/> from one stream.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="eventSourceId">The owning event source id, also the model key.</param>
+    /// <param name="eventStreamId">The stream id. The default id does not narrow by stream id.</param>
+    /// <returns>The instance, or null when no matching events created it. This plain read supplies no append guard.</returns>
+    /// <exception cref="DecisionReadRefused">The implementation does not support stream scope.</exception>
+    Task<TReadModel> GetInstanceById<TReadModel>(EventSourceId eventSourceId, EventStreamId eventStreamId)
+        => throw new DecisionReadRefused(DecisionReadRefusalReason.StreamScopeNotSupported, typeof(TReadModel));
+
+    /// <summary>
     /// Get a read model instance by its key.
     /// </summary>
     /// <param name="readModelType">The read model type.</param>

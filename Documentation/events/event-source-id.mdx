@@ -27,3 +27,7 @@ Because `EventSourceId<T>` carries an implicit conversion to `EventSourceId`, yo
 When you use `EventSourceId<T>` in a command or query parameter, the Arc ProxyGenerator reads the underlying type `T` and emits a TypeScript proxy that reflects the concrete type rather than a plain string. This gives you a fully typed frontend experience that matches the domain model on the server.
 
 See [Arc type mapping](/arc/backend/csharp/proxy-generation/type-mapping/) for details on how proxy generation works and how to configure it.
+
+## One event source id per event
+
+Every event has exactly one event source id. That is why Chronicle records a fact about two entities as two events, one for each event source, in one atomic append, and why [tags](../concepts/tagging.mdx) cannot stand in for a second id in a consistency check. See [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md). To declare the kind of event source and its named streams, see [Event sources and streams](../event-sources/index.mdx).

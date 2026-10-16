@@ -16,6 +16,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
@@ -258,6 +259,7 @@ public partial class Reducers : IReducers
     /// <inheritdoc/>
     public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
     {
+        ReadProtectionGuard.Read(nameof(GetInstanceById));
         var handler = GetHandlerForReadModelType(readModelType);
         var filter = ObserverEventFilter.For(handler.ReducerType, _eventStore.EventSources);
         var events = (await _eventStore
@@ -288,6 +290,7 @@ public partial class Reducers : IReducers
     /// <inheritdoc/>
     public async Task<IEnumerable<object>> GetInstances(Type readModelType, EventCount? eventCount = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
         var handler = GetHandlerForReadModelType(readModelType);
         var events = await _eventStore
             .GetEventSequence(handler.EventSequenceId)
@@ -373,6 +376,8 @@ public partial class Reducers : IReducers
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
+        EventStreamReadModel.RefuseReducer(readModelType);
+        EventStreamReadModel.RefuseReducer(reducerType);
         var descriptor = new ReducerDescriptor(reducerType, readModelType, ReducerCatalog.IsSelfReducer(reducerType));
         ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, readModelType, reducerType, descriptor.IsSelfReducing);
 

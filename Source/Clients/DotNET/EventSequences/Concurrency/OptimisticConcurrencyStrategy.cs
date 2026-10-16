@@ -69,7 +69,7 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, Concurr
             eventStreamType,
             eventStreamId,
             eventSourceType,
-            eventTypes);
+            eventTypes) { IssuedByStrategy = true };
     }
 
     /// <inheritdoc/>
@@ -108,6 +108,6 @@ public class OptimisticConcurrencyStrategy(IEventSequence eventSequence, Concurr
             scopedStreamType,
             scopedStreamId,
             scopedSourceType,
-            eventTypes);
+            eventTypes) { IssuedByStrategy = true };
     }
 }

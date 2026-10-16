@@ -11,11 +11,19 @@ public record CourseDefined(string Name, int Capacity);
 [EventType]
 public record CourseCapacityChanged(int Capacity);
 
+// Events of the course's own story.
 [EventType]
-public record StudentSubscribedToCourse(Guid StudentId, Guid CourseId);
+public record CourseSeatTaken(Guid StudentId);
 
 [EventType]
-public record StudentUnsubscribedFromCourse(Guid StudentId, Guid CourseId);
+public record CourseSeatReleased(Guid StudentId);
+
+// Events of the student's own story.
+[EventType]
+public record StudentJoinedCourse(Guid CourseId);
+
+[EventType]
+public record StudentLeftCourse(Guid CourseId);
 
 [FromEvent<CourseDefined>]
 public record CourseSeats(
@@ -23,15 +31,15 @@ public record CourseSeats(
     [SetFrom<CourseDefined>(nameof(CourseDefined.Capacity))]
     [SetFrom<CourseCapacityChanged>(nameof(CourseCapacityChanged.Capacity))]
     int Capacity,
-    [Increment<StudentSubscribedToCourse>]
-    [Decrement<StudentUnsubscribedFromCourse>]
+    [Increment<CourseSeatTaken>]
+    [Decrement<CourseSeatReleased>]
     int Subscribed);
 
-[FromEvent<StudentSubscribedToCourse>]
+[FromEvent<StudentJoinedCourse>]
 public record StudentCourses(
     Guid Id,
-    [Increment<StudentSubscribedToCourse>]
-    [Decrement<StudentUnsubscribedFromCourse>]
+    [Increment<StudentJoinedCourse>]
+    [Decrement<StudentLeftCourse>]
     int Subscribed);
 
 public enum SubscribeOutcome
@@ -69,12 +77,11 @@ public static class SubscribeStudentToCourse
             return SubscribeOutcome.StudentHasTooManyCourses;
         }
 
-        // One fact, two event sources: each read model folds only the events of its own source.
-        var subscribed = new StudentSubscribedToCourse(studentId, courseId);
+        // One fact, two event sources, two event types: each read model counts only the types of its own source.
         var result = await eventStore.EventLog.AppendMany(
             [
-                new EventForEventSourceId(courseId, subscribed),
-                new EventForEventSourceId(studentId, subscribed)
+                new EventForEventSourceId(courseId, new CourseSeatTaken(studentId)),
+                new EventForEventSourceId(studentId, new StudentJoinedCourse(courseId))
             ],
             guardedBy: [course, student]);
 

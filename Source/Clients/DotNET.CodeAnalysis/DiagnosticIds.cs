@@ -9,6 +9,21 @@ namespace Cratis.Chronicle.CodeAnalysis;
 public static class DiagnosticIds
 {
     /// <summary>
+    /// Declared concurrency omits the event source id and applies across sources.
+    /// </summary>
+    public const string ConcurrencyWithoutEventSourceId = "CHR0062";
+
+    /// <summary>
+    /// A definition-linked scope guards a different stream than a routed append.
+    /// </summary>
+    public const string RouteScopeStreamMismatch = "CHR0063";
+
+    /// <summary>
+    /// A read model's event stream declaration is invalid.
+    /// </summary>
+    public const string InvalidEventStreamReadModel = "CHR0064";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

@@ -35,6 +35,11 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError ConstraintIndexUnavailable = nameof(ConstraintIndexUnavailable);
 
     /// <summary>
+    /// Represents a retryable effect receipt write whose outcome could not be settled by lookup.
+    /// </summary>
+    public static readonly AppendError EffectReceiptUnsettled = nameof(EffectReceiptUnsettled);
+
+    /// <summary>
     /// Implicitly convert from string to <see cref="AppendError"/>.
     /// </summary>
     /// <param name="id">String to convert from.</param>

@@ -55,6 +55,20 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
             "A stream-scoped decision read cannot select all stream types. Supply a specific event stream type, or use a source-wide read for an event-source-keyed projection.",
         DecisionReadRefusalReason.StreamKeyRequiresExplicitStreamId =>
             "A stream-keyed projection cannot use the default stream id because it does not narrow the fold to one instance key. Supply an explicit event stream id.",
+        DecisionReadRefusalReason.GenerationDeliveryNotSupported =>
+            "The session fold uses Compatibility delivery and cannot honor a Pinned projection. Use Compatibility delivery for this projection.",
+        DecisionReadRefusalReason.ReducerDependencies =>
+            "The reducer has constructor dependencies. Only ILogger<T> infrastructure dependencies are allowed.",
+        DecisionReadRefusalReason.ReducerFilters =>
+            "reducer filters its events",
+        DecisionReadRefusalReason.ReducerGeneration =>
+            "The handler's declared event generation is unavailable or the event was revised to another generation.",
+        DecisionReadRefusalReason.ReducerDispatchIncomplete =>
+            "The reducer did not dispatch every fetched event of its handled types.",
+        DecisionReadRefusalReason.ReadModelRequiresStreamScope =>
+            "The read model is scoped to one event stream and was read without it. Use a stream-scoped decision read, or supply the event source id and stream id to the plain instance read.",
+        DecisionReadRefusalReason.StreamScopeDoesNotMatchReadModel =>
+            "The supplied stream type or event source type does not match the read model's declaration. Pass the declared stream and the event source definition's source type.",
         _ => string.Empty
     };
 }

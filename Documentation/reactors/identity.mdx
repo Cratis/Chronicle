@@ -15,7 +15,7 @@ For a reactor that is already deployed, **use its current stored id**, not a new
 
 ## Why side effects run again
 
-A new observer catches up from the beginning of the event sequence as ordinary observation, not replay. Its handlers can send every historical notification or repeat every external write. `OnceOnly` excludes replay; it does not suppress this initial catch-up. See [What OnceOnly guarantees](once-only.mdx#what-it-does-and-does-not-guarantee).
+A new observer catches up from the beginning of the event sequence as ordinary observation, not replay. Its handlers can send every historical notification or repeat every external write. `OnceOnly` excludes replay; it does not suppress this initial catch-up. Mark the reactor with [StartAtTail](start-at-tail) to skip history on its first registration, and see [What OnceOnly guarantees](once-only.mdx#what-it-does-and-does-not-guarantee).
 
 Preserving the old id keeps its processing position. It does not provide exactly-once execution: recovery can still re-deliver an event, so keep side effects [idempotent](delivery-identity.mdx).
 

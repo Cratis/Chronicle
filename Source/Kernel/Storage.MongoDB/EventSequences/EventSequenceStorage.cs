@@ -1078,6 +1078,10 @@ public partial class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await ReceiptCollection.EnsureIndexesAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"),
+                new CreateIndexOptions { Name = "occurrenceId" })).ConfigureAwait(false);
         await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),

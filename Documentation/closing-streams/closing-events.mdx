@@ -62,6 +62,10 @@ Set `EventSequences` on the attribute to restrict a declaration to specific even
 
 Registering or changing a declaration closes nothing in history. Only events appended afterwards close scopes. A reindex that names the constraint rebuilds its closures from the log, see [Closing streams](index.mdx#guarantees-and-limits) for the guarantees, the crash window and the redaction limit. A closing-constraint rebuild must not run while appends to the sequence are in flight.
 
+## Streams of an event source definition
+
+When the stream belongs to an [event source definition](../event-sources/index.mdx), append the closing event through the definition to that stream. See [Close a stream of a definition](../event-sources/closing.mdx). A closed stream also settles a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md) decision about it: nothing appended later can invalidate it.
+
 ## Test it
 
 `EventScenario` supports closing and reopening events. See [EventScenario](../testing/events/scenario.mdx#closing-and-reopening-streams).

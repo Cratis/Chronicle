@@ -5,6 +5,10 @@ description: Short answers about making write-side rules hold with the Chronicle
 
 Use this page for a quick answer. Each answer links to the page that explains it.
 
+## Is Chronicle a DCB event store?
+
+No. Chronicle supports DCB-style decision models and append conditions within its event-source model. Each event has one event source ID and tags take no part in consistency, so you cannot tag one event with several entities or query by tags. See [Dynamic Consistency Boundary in Chronicle](./chronicle.md) and [DCB examples in Chronicle](./dcb-examples.mdx).
+
 ## Does reading a read model before I append make my rule safe?
 
 No. A read model shows state. It does not note where in the log it stopped, and it does not guard the append. Two requests can read the same state and both append. Use a [constraint](../constraints/index.md) for uniqueness and a [decision read](../read-models/decision-reads.mdx) for a rule over state. See [Choosing how a rule holds](./choosing.mdx).
@@ -31,7 +35,11 @@ Yes. Take one decision read per entity, and append one event per event source in
 
 ## Why does a fact about two entities need two events?
 
-An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each.
+An event has exactly one event source ID, and a decision read folds only the events of its own source. To let both entities' read models see the fact, write it once for each. This records one fact as two events, which DCB avoids with tags. It is acceptable when each event is a fact in its own entity's story, and the two events need their own types, so each read model counts only its own source's events. When it is not, prefer a form with one event: a constraint, or one event on one source with a decision read over the key you only read. See [DCB examples in Chronicle](./dcb-examples.mdx).
+
+## Where do event source definitions fit?
+
+A definition names the event source type, the streams and the concurrency dimensions an append is guarded by. A decision read can be scoped to one stream, and appending through the definition makes the event carry the same values as the guard. See [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx).
 
 ## Does an absent read model get guarded?
 
@@ -47,7 +55,7 @@ About four calls per attempt, a fold of the key's whole history of the model's e
 
 ## Why was my decision read refused?
 
-The model has a shape Chronicle cannot guard exactly: a reducer or self-reducing model, a join, children, a key that is not the event source ID, or no `Id` property. It throws `DecisionReadRefused` with a typed reason. Use a flat projection keyed by event source, with an `Id` property that is a string or a GUID. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections).
+The model has a shape Chronicle cannot guard exactly: a reducer with filters or constructor dependencies, a join, children, a key that is not the event source ID, or no `Id` property. It throws `DecisionReadRefused` with a typed reason. Use a flat projection keyed by event source, with an `Id` property that is a string or a GUID, or a reducer without filters or dependencies. See [admitted projections](../read-models/decision-reads.mdx#admitted-projections) and [reducers](../read-models/decision-reads.mdx#reducers).
 
 ## Why did my conflict not reach the HTTP response?
 
@@ -79,7 +87,7 @@ Decision reads need kernel 19.0.0 or later. A stream-scoped read needs a kernel 
 
 ## Do decision reads work from every client?
 
-Decision reads are part of the .NET client. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
+Decision reads are part of the .NET and Elixir clients. Constraints are enforced by the kernel, so they apply to appends from every client. Your SDK's own pages list what it offers.
 
 ## Why is protection opt-in?
 
@@ -88,6 +96,34 @@ Making it the default would change what existing code does, and a protected path
 ## How do I test a rule?
 
 Append a competing event between the read and the guarded append, and assert the conflict. A test without that interleaving cannot show the guard works. See [Test the race](./scenarios.mdx#test-the-race).
+
+## What is read protection?
+
+An option for code that owns a unit of work. Inside one protected invocation, `IDecisionReads.Get` and `GetFor` enroll each read as a guard for the commit, and a plain read, a detached read or an immediate append is refused. It makes the mistake of deciding on an unguarded read an error instead of a silent race. See [Read protection](../read-models/read-protection.mdx).
+
+## What is the difference between an advisory and a contributed read allowance?
+
+Both open a region where a raw read is allowed. An `Advisory` read guards nothing: use it for a screen, a hint or a log, where a stale value is fine. A `Contributed` read influences the decision, so you enroll it yourself with `EnrolContributedRead` before you use the value, and it becomes part of the guard. Both need a reason. See [Read allowances](../read-models/read-protection.mdx#read-allowances).
+
+## When should I enforce read protection?
+
+When you own the code that begins and completes the unit of work, such as a command pipeline or a request host, and the rules there depend on state. Skip it for a single guarded append, where passing the decision read to `AppendMany(guardedBy:)` is enough, and for uniqueness, where a constraint is simpler. Protection refuses what it cannot guard exactly and costs a fold per read, so enable it where the rules need it.
+
+## Is read protection the same as Arc's read-protection setting?
+
+They are two layers. Read protection is the Chronicle API: the frame, the allowances and the refusals. Arc's setting is how an Arc project drives that API for its commands. [How Arc uses this API](../read-models/read-protection.mdx#how-arc-uses-this-api) maps one to the other.
+
+## Why did my guard cover more than I read?
+
+Guards only widen when they merge. Two reads of one source in different streams keep only the stream values they share: outside a read-protection frame both stream values are dropped when either differs, under a frame each value is kept only if the reads agree on it. A [declared dimension set](../event-sources/concurrency.mdx) on a definition, committed under a read-protection frame, adds its dimensions where they equal the read's and makes the guard match any event type. The result can cause extra conflicts but never misses one. See [How guards are derived](./how-guards-are-derived.mdx).
+
+## How do I see what an append is guarded by?
+
+Under a read-protection frame, call `IUnitOfWork.GetAppendConditions()` after the commit. It lists one condition per guarded source, with its event types, stream values, position and origins. See [See what a commit guarded](./how-guards-are-derived.mdx#see-what-a-commit-guarded).
+
+## Can I read two streams of one source in the same decision?
+
+Yes, but the merged guard widens to what the reads have in common. Outside a read-protection frame, the guard covers every stream of that source when either the stream type or the stream ID differs. Under a frame, only the dimension that differs is dropped: two months of `Transactions` give a guard over every `Transactions` stream ID, and two stream types with the same stream ID keep that ID. If the rule truly spans two streams, read the whole source once so the guard says what it covers. If it does not, split the rule into two decisions. See [Several reads on one source](./how-guards-are-derived.mdx#several-reads-on-one-source).
 
 ## Where do I go if I use Arc commands?
 

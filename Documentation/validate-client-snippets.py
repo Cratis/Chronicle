@@ -124,6 +124,13 @@ DCB_PREFIX = "dynamic-consistency-boundary/"
 DCB_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.DynamicConsistencyBoundary"
 
 
+# The event source and stream guides compile the same way: one generator-only namespace per page, with
+# the using directives kept inside it, so each page's snippets share the definitions and events they
+# introduce without colliding with the names used on the other pages.
+EVENT_SOURCES_PREFIX = "event-sources/"
+EVENT_SOURCES_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.EventSourceGuides"
+
+
 def page_namespace(relative_path: str, prefix: str, root: str) -> str | None:
     if not relative_path.startswith(prefix):
         return None
@@ -138,6 +145,10 @@ def site_concepts_namespace(relative_path: str) -> str | None:
 
 def dcb_namespace(relative_path: str) -> str | None:
     return page_namespace(relative_path, DCB_PREFIX, DCB_NAMESPACE_ROOT)
+
+
+def event_sources_namespace(relative_path: str) -> str | None:
+    return page_namespace(relative_path, EVENT_SOURCES_PREFIX, EVENT_SOURCES_NAMESPACE_ROOT)
 
 # This excerpt is from an ASP.NET Core action. Supply only the action context
 # and a final response in the compiler harness; keep the public snippet intact.
@@ -293,7 +304,7 @@ def generate_source() -> str:
     for path in files:
         relative_path = snippet_key(path)
         snippet_usings, body = split_usings(extract_snippet(path))
-        dcb_ns = dcb_namespace(relative_path)
+        dcb_ns = dcb_namespace(relative_path) or event_sources_namespace(relative_path)
         if dcb_ns is not None:
             scoped_usings = "\n".join(sorted(set(snippet_usings)))
             declarations.append(f"namespace {dcb_ns}\n{{\n{textwrap.indent(scoped_usings, '    ')}\n\n{textwrap.indent(body, '    ')}\n}}")

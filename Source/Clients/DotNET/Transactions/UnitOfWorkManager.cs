@@ -55,6 +55,7 @@ public class UnitOfWorkManager(
             activitySource,
             lifecyclePolicy,
             logger);
+        ReadProtectionGuard.RequireUnit(unitOfWork);
         _current.Value = unitOfWork;
         _unitsOfWork[correlationId] = unitOfWork;
         return unitOfWork;
@@ -63,6 +64,7 @@ public class UnitOfWorkManager(
     /// <inheritdoc/>
     public void SetCurrent(IUnitOfWork unitOfWork)
     {
+        ReadProtectionGuard.RequireUnit(unitOfWork);
         _current.Value = unitOfWork;
         _unitsOfWork[unitOfWork.CorrelationId] = unitOfWork;
         unitOfWork.OnCompleted(UnitOfWorkCompleted);

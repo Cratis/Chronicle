@@ -14,6 +14,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -250,6 +251,7 @@ public class Projections(
     /// <inheritdoc/>
     public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
     {
+        ReadProtectionGuard.Read(nameof(Query));
         var result = await _servicesAccessor.Services.Projections.Preview(new PreviewProjectionRequest
         {
             EventStore = eventStore.Name,

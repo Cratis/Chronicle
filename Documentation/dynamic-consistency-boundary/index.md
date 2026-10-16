@@ -32,6 +32,10 @@ A fixed boundary forces unrelated facts into one consistency scope. A stream or 
 
 The cost is that the decision carries its own query and position, and the store must evaluate the condition when it appends. A conflict is normal: the caller reads again and decides again.
 
+## DCB and Chronicle
+
+DCB as specified lets one event belong to several entities through tags, and lets a decision query by any combination of them. Chronicle supports DCB-style decision models and append conditions within its own model, where each event has exactly one event source and tags take no part in consistency. It is not a DCB event store. Where DCB tags one event with a student and a course, Chronicle writes two events, one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](./chronicle.md) says what maps and what does not, and [DCB examples in Chronicle](./dcb-examples.mdx) gives the Chronicle answer to each canonical DCB example.
+
 ## When it fits and when it does not
 
 | It fits | It does not fit |
@@ -45,6 +49,8 @@ The cost is that the decision carries its own query and position, and the store 
 | You want to | Read |
 |---|---|
 | See how Chronicle maps these ideas | [Dynamic Consistency Boundary in Chronicle](./chronicle.md) |
+| See the canonical DCB examples as Chronicle code | [DCB examples in Chronicle](./dcb-examples.mdx) |
+| Declare event sources and streams as the boundary's dimensions | [Event sources and streams](../event-sources/index.mdx) and [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) |
 | Pick the right mechanism for a rule | [Choosing how a rule holds](./choosing.mdx) |
 | See working examples | [Scenarios](./scenarios.mdx) |
 | Find a quick answer | [Questions and answers](./faq.md) |

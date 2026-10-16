@@ -281,12 +281,7 @@ public class EventStoreSubscriptionsManager(
 
             // Not subscribed yet, or subscribed with a stale event type list - (re)subscribe now
             logger.Subscribing(definition.Identifier, namespaceName);
-            await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress,
-                _targetEventStoreName.Value,
-                automatic: true);
+            await Subscribe(observer, definition);
         }
         catch (Exception ex)
         {
@@ -297,8 +292,17 @@ public class EventStoreSubscriptionsManager(
 
     async Task<bool> IsSubscribedToCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)
     {
-        var subscribedEventTypeIds = (await observer.GetEventTypes()).Select(eventType => eventType.Id).ToHashSet();
-        return subscribedEventTypeIds.SetEquals(definition.EventTypes.Select(eventType => eventType.Id));
+        var observerDefinition = await observer.GetDefinition();
+        var currentMode = observerDefinition?.GenerationDelivery ?? EventGenerationDelivery.Compatibility;
+        if (currentMode != definition.GenerationDelivery)
+        {
+            return false;
+        }
+
+        var eventTypes = await observer.GetEventTypes();
+        return definition.GenerationDelivery == EventGenerationDelivery.Pinned
+            ? eventTypes.ToHashSet().SetEquals(definition.EventTypes)
+            : eventTypes.Select(eventType => eventType.Id).ToHashSet().SetEquals(definition.EventTypes.Select(eventType => eventType.Id));
     }
 
     async Task<bool> CheckSubscriptionForNamespace(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
@@ -306,7 +310,14 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var observer = GetObserver(definition, namespaceName);
-            return await observer.IsSubscribed();
+            if (!await observer.IsSubscribed())
+            {
+                return false;
+            }
+
+            var current = await observer.GetDefinition();
+            return (current?.GenerationDelivery ?? EventGenerationDelivery.Compatibility) == definition.GenerationDelivery &&
+                (definition.GenerationDelivery == EventGenerationDelivery.Compatibility || await IsSubscribedToCurrentEventTypes(observer, definition));
         }
         catch (Exception ex)
         {
@@ -319,13 +330,24 @@ public class EventStoreSubscriptionsManager(
     {
         var observer = GetObserver(definition, namespaceName);
         logger.Subscribing(definition.Identifier, namespaceName);
-        await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-            ObserverType.External,
-            definition.EventTypes.ToArray(),
-            localSiloDetails.SiloAddress,
-            _targetEventStoreName.Value,
-            automatic: true);
+        await Subscribe(observer, definition);
     }
+
+    Task Subscribe(IObserver observer, EventStoreSubscriptionDefinition definition) =>
+        definition.GenerationDelivery == EventGenerationDelivery.Pinned
+            ? observer.SubscribeWithGenerationDelivery<IEventStoreSubscriptionObserverSubscriber>(
+                ObserverType.External,
+                definition.EventTypes.ToArray(),
+                localSiloDetails.SiloAddress,
+                definition.GenerationDelivery,
+                _targetEventStoreName.Value,
+                automatic: true)
+            : observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
+                ObserverType.External,
+                definition.EventTypes.ToArray(),
+                localSiloDetails.SiloAddress,
+                _targetEventStoreName.Value,
+                automatic: true);
 
     async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, EventStoreSubscriptionDefinition definition)
     {

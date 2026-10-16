@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -46,6 +47,11 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the name of the stream declared by <see cref="EventSource"/> the event is appended to.
     /// </summary>
     public string? EventStream { get; init; }
+
+    /// <summary>
+    /// Gets or inits concurrency dimensions to resolve individually at an Enforce commit.
+    /// </summary>
+    public ConcurrencyDimensions? DeclaredConcurrency { get; init; }
 
     /// <summary>
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.

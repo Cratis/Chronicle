@@ -34,7 +34,20 @@ public sealed class EventsWithConcurrencyScopes
     public EventsWithConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+        : this(events, concurrencyScopes, false)
     {
+    }
+
+    /// <summary>Initializes a batch with identity validation scoped to read protection.</summary>
+    /// <param name="events">The events to append, retaining caller IDs.</param>
+    /// <param name="concurrencyScopes">The independently labeled concurrency scopes.</param>
+    /// <param name="useReadProtectionIdentity">Whether validation compares source labels by wire value.</param>
+    internal EventsWithConcurrencyScopes(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes,
+        bool useReadProtectionIdentity)
+    {
+        EventSourceId Label(EventSourceId source) => useReadProtectionIdentity ? new(source.Value) : source;
         var materializedEvents = events.ToArray();
         foreach (var @event in materializedEvents)
         {
@@ -42,29 +55,31 @@ public sealed class EventsWithConcurrencyScopes
         }
 
         Events = Array.AsReadOnly(materializedEvents);
-        var eventTargets = materializedEvents.Select(_ => _.EventSourceId).ToHashSet();
+        var eventTargets = materializedEvents.Select(_ => Label(_.EventSourceId)).ToHashSet();
 
         var materializedConcurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope>();
+        var labels = new HashSet<EventSourceId>();
         foreach (var (eventSourceId, concurrencyScope) in concurrencyScopes)
         {
             ThrowIfLabelIsNotSpecified(eventSourceId);
 
             var materializedConcurrencyScope = Materialize(concurrencyScope);
-            if (materializedConcurrencyScope.EventSourceId is not null && materializedConcurrencyScope.EventSourceId != eventSourceId)
+            if (materializedConcurrencyScope.EventSourceId is not null && Label(materializedConcurrencyScope.EventSourceId) != Label(eventSourceId))
             {
                 throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(eventSourceId, materializedConcurrencyScope.EventSourceId);
             }
 
-            if (!eventTargets.Contains(eventSourceId) &&
+            if (!eventTargets.Contains(Label(eventSourceId)) &&
                 (materializedConcurrencyScope == ConcurrencyScope.NotSet || materializedConcurrencyScope.IsIncomplete))
             {
                 throw new IndependentConcurrencyScopeMustBeExplicit(eventSourceId);
             }
 
-            if (!materializedConcurrencyScopes.TryAdd(eventSourceId, materializedConcurrencyScope))
+            if (!labels.Add(Label(eventSourceId)))
             {
                 throw new DuplicateConcurrencyScopeForEventSourceId(eventSourceId);
             }
+            materializedConcurrencyScopes.Add(eventSourceId, materializedConcurrencyScope);
         }
 
         ConcurrencyScopes = new ReadOnlyDictionary<EventSourceId, ConcurrencyScope>(materializedConcurrencyScopes);

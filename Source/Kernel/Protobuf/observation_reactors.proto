@@ -107,6 +107,7 @@ message ReactorDefinition {
    ObserverFilters Filters = 6;
    bool IsNotReplayable = 7;
    EventGenerationDelivery GenerationDelivery = 8;
+   bool StartAtTail = 9;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

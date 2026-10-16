@@ -103,6 +103,7 @@ internal class ModelBoundProjectionBuilder(
             definition.EventSequenceId = InferEventSequenceId(modelType, definition, _currentEventStoreName);
         }
 
+        EventStreamReadModel.ValidateProjection(modelType, definition);
         return definition;
     }
 
