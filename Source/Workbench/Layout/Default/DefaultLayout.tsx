@@ -11,74 +11,60 @@ import css from './DefaultLayout.module.css';
 import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
 import { ErrorBoundary } from '@cratis/components/Common';
-import { useContext, useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useContext, useMemo } from 'react';
 import * as Shared from 'Shared';
-import { WorkbenchProvider } from './context/WorkbenchContext';
-import { replaceEventStoreNamespaceInPath } from './replaceEventStoreNamespaceInPath';
-import { resolveSidebarNamespace } from './resolveSidebarNamespace';
+import { useWorkbenchContext, WorkbenchProvider } from './context/WorkbenchContext';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
     basePath?: string;
 }
 
-export const DefaultLayout = (props: IDefaultLayoutProps) => {
+const DefaultLayoutFrame = (props: IDefaultLayoutProps) => {
     const params = useParams<Shared.EventStoreAndNamespaceParams>();
     const sidebarBasePath = generatePath(props.basePath ?? '', params);
     const layoutContext = useContext(LayoutContext);
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [namespace, setNamespace] = useState(params.namespace ?? '');
-
-    useEffect(() => {
-        setNamespace(previous => resolveSidebarNamespace(params.namespace, previous));
-    }, [params.namespace]);
-
-    const namespaceSelected = (namespace: string) => {
-        setNamespace(namespace);
-        const newRoute = replaceEventStoreNamespaceInPath(location.pathname, params.eventStore, params.namespace, namespace);
-        if (newRoute !== location.pathname) {
-            navigate(newRoute);
-        }
-    };
+    const { namespace } = useWorkbenchContext();
+    const menuParams = useMemo(() => ({ namespace }), [namespace]);
 
     return (
         <ErrorBoundary>
-            <WorkbenchProvider>
-                <div
-                    className={`${!layoutContext.layoutConfig.leftSidebarOpen
-                        ? css.sidebarClosed
-                        : ''
-                        }`}>
-                    <header className={css.appHeader}>
-                        <TopBar />
-                    </header>
+            <div className={layoutContext.layoutConfig.leftSidebarOpen ? '' : css.sidebarClosed}>
+                <header className={css.appHeader}>
+                    <TopBar />
+                </header>
 
-                    <aside className={css.appLeftSidebar}>
-                        <div className={css.sidebarContainer}>
-                            <NamespaceSelector onNamespaceSelected={namespaceSelected} />
-                            {props.menu && (
-                                <MenuProvider params={{ namespace }}>
-                                    <SidebarMenu
-                                        items={props.menu}
-                                        basePath={sidebarBasePath}
-                                    />
-                                </MenuProvider>
-                            )}
-                        </div>
-                    </aside>
+                <aside className={css.appLeftSidebar}>
+                    <div className={css.sidebarContainer}>
+                        <NamespaceSelector />
+                        {props.menu && (
+                            <MenuProvider params={menuParams}>
+                                <SidebarMenu
+                                    items={props.menu}
+                                    basePath={sidebarBasePath}
+                                />
+                            </MenuProvider>
+                        )}
+                    </div>
+                </aside>
 
-                    <main className={css.appOutlet}>
-                        <ErrorBoundary>
-                            <Outlet key={params.namespace} />
-                        </ErrorBoundary>
-                    </main>
-                    <footer className={css.appFooter}>
-                        <Footer />
-                    </footer>
-                </div>
-            </WorkbenchProvider>
+                <main className={css.appOutlet}>
+                    <ErrorBoundary>
+                        {/* A different event store or namespace gets pages that have never seen the old one,
+                            so every open query asks again for the data of the place it is now in. */}
+                        <Outlet key={`${params.eventStore}/${params.namespace ?? ''}`} />
+                    </ErrorBoundary>
+                </main>
+                <footer className={css.appFooter}>
+                    <Footer />
+                </footer>
+            </div>
         </ErrorBoundary>
     );
 };
+
+export const DefaultLayout = (props: IDefaultLayoutProps) => (
+    <WorkbenchProvider>
+        <DefaultLayoutFrame {...props} />
+    </WorkbenchProvider>
+);

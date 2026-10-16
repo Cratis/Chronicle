@@ -1,44 +1,28 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMemo, useState, useEffect, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 
 import { Popover, type PopoverRootOpenChangeEvent } from "primereact/popover";
 import { useLayoutContext } from "../context/LayoutContext";
 import { CurrentNamespace } from "./CurrentNamespace";
 import { InputText } from 'primereact/inputtext';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { INamespaceSelectorProps, NamespaceSelectorViewModel } from './NamespaceSelectorViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
+import { useWorkbenchContext } from '../context/WorkbenchContext';
 import css from './NamespaceSelector.module.css';
-import { useParams } from 'react-router-dom';
-import { type EventStoreAndNamespaceParams } from 'Shared';
 
-export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, INamespaceSelectorProps>(NamespaceSelectorViewModel, ({ viewModel }) => {
+export const NamespaceSelector = () => {
     const { layoutConfig } = useLayoutContext();
+    const { namespace, namespaces, selectNamespace: select } = useWorkbenchContext();
     const [search, setSearch] = useState<string>('');
-    const params = useParams<EventStoreAndNamespaceParams>();
-
-    useEffect(() => {
-        if (params.eventStore) {
-            viewModel.setEventStore(params.eventStore);
-        }
-    }, [params.eventStore, viewModel]);
-
-    useEffect(() => {
-        if (params.namespace) {
-            viewModel.syncNamespaceFromRoute(params.namespace);
-        }
-    }, [params.namespace, viewModel]);
-
     const [isNamespacePanelOpen, setIsNamespacePanelOpen] = useState(false);
 
-    const selectNamespace = (namespace: string) => {
-        viewModel.onNamespaceSelected(namespace);
+    const selectNamespace = (selected: string) => {
+        select(selected);
         setIsNamespacePanelOpen(false);
     };
 
-    const filteredNamespaces = useMemo(() => viewModel.namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [viewModel.namespaces, search]);
+    const filteredNamespaces = useMemo(() => namespaces.filter((t) => t.toLowerCase().includes(search.toLowerCase())), [namespaces, search]);
 
     return (
         <div>
@@ -47,7 +31,7 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
                 onOpenChange={(event: PopoverRootOpenChangeEvent) => setIsNamespacePanelOpen(event.value ?? false)}>
                 <Popover.Trigger as="div">
                     <CurrentNamespace compact={!layoutConfig.leftSidebarOpen}
-                        namespace={viewModel.currentNamespace} />
+                        namespace={namespace} />
                 </Popover.Trigger>
 
                 <Popover.Portal>
@@ -72,4 +56,4 @@ export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, IName
                 </Popover.Portal>
             </Popover.Root>
         </div>);
-});
+};
