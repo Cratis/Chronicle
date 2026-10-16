@@ -18,4 +18,12 @@ public interface IChronicleConnection : IDisposable
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Connect();
+
+    /// <summary>
+    /// Ask the connection to drop its session and connect again, which gives the client a new connection id and
+    /// re-registers everything with the kernel. Used when the kernel reports that it no longer knows this client.
+    /// </summary>
+    void RequestReconnect()
+    {
+    }
 }
