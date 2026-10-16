@@ -3,6 +3,9 @@
 
 namespace Cratis.Chronicle.Events.for_EventGenerationRelease.when_releasing;
 
+// Models the event shape SQL storage produced before default reads delivered the revision (#4751): a context
+// generation above the revised generation. SQL storage now reads a revised event at its revision's generation,
+// so this documents the release logic only, not current SQL read behavior.
 public class and_sql_records_a_revision_below_the_context_generation : given.a_release_boundary
 {
     void Establish() => _event = _event with
