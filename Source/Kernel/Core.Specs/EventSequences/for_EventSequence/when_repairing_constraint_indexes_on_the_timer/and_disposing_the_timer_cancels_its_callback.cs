@@ -18,6 +18,8 @@ public class and_disposing_the_timer_cancels_its_callback : given.an_event_seque
 
     async Task Establish()
     {
+        // Hold the snapshot explicitly; scheduler load must not consume its 250 ms budget.
+        _eventSequence.ConstraintIndexTimeProvider = new given.RepairClock();
         await Seed(0);
         _timer = Substitute.For<IGrainTimer>();
         _timer.When(timer => timer.Dispose()).Do(_ => _callback.Cancel());

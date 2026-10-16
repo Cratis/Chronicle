@@ -34,7 +34,7 @@ public class a_closing_constraint_reindex_step : Specification
     protected ReindexConstraintsStep _step;
     protected Catch<JobStepResult> _result;
     protected IEventSequence _sequence;
-    protected readonly ConstraintIndexRebuildRunId _runId = new(Guid.NewGuid());
+    protected ConstraintIndexRebuildRunId _runId = new(Guid.NewGuid());
     protected CancellationToken _cancellationToken;
 
     async Task Establish()
@@ -66,6 +66,11 @@ public class a_closing_constraint_reindex_step : Specification
 
         var silo = new TestKitSilo();
         _sequence = Substitute.For<IEventSequence>();
+        _sequence.ConstraintIndexRebuildStarting(Arg.Any<ConstraintIndexRebuildRunId>(), Arg.Any<IEnumerable<ConstraintName>>()).Returns(call =>
+        {
+            _runId = call.Arg<ConstraintIndexRebuildRunId>();
+            return Task.CompletedTask;
+        });
         silo.AddProbe(_ => _sequence);
         silo.AddService(storage);
         silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());

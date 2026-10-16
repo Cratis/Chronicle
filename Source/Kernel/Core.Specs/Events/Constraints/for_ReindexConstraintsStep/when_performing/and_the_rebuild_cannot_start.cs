@@ -8,7 +8,11 @@ namespace Cratis.Chronicle.Events.Constraints.for_ReindexConstraintsStep.when_pe
 
 public class and_the_rebuild_cannot_start : for_ReindexConstraintsStep.given.a_handoff_reindex_step
 {
-    void Establish() => _sequence.ConstraintIndexRebuildStarting(_runId, Arg.Any<IEnumerable<ConstraintName>>()).Returns(Task.FromException(new IOException("Sequence unavailable")));
+    void Establish() => _sequence.ConstraintIndexRebuildStarting(Arg.Any<ConstraintIndexRebuildRunId>(), Arg.Any<IEnumerable<ConstraintName>>()).Returns(call =>
+    {
+        _runId = call.Arg<ConstraintIndexRebuildRunId>();
+        return Task.FromException(new IOException("Sequence unavailable"));
+    });
 
     async Task Because() => await Perform();
 

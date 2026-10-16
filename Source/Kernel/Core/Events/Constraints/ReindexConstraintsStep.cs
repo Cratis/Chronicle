@@ -112,13 +112,21 @@ public class ReindexConstraintsStep(
     /// <inheritdoc/>
     protected override async ValueTask<object?> CreateCancelledResultFromCurrentState(ReindexConstraintsStepState currentState)
     {
-        var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key));
-        var jobStepKey = (JobStepKey)key!;
-        var definitions = await storage.GetEventStore(jobStepKey.Scope).Constraints.GetDefinitions();
-        var names = definitions.Where(definition => definition.AppliesTo(currentState.EventSequenceId) && currentState.Changes.Any(change => change.Name == definition.Name && (definition is ClosesStreamConstraintDefinition || (definition is UniqueConstraintDefinition && change.RequiresReindex)))).Select(definition => definition.Name).Distinct().ToArray();
-        if (names.Length > 0)
+        try
         {
-            await ReportRebuilt(grainFactory.GetEventSequence(currentState.EventSequenceId, jobStepKey.Scope, jobStepKey.Namespace), runId, names, ConstraintIndexRebuildOutcome.ProgressUnknown);
+            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key));
+            var jobStepKey = (JobStepKey)key!;
+            var definitions = await storage.GetEventStore(jobStepKey.Scope).Constraints.GetDefinitions();
+            var names = definitions.Where(definition => definition.AppliesTo(currentState.EventSequenceId) && currentState.Changes.Any(change => change.Name == definition.Name && (definition is ClosesStreamConstraintDefinition || (definition is UniqueConstraintDefinition && change.RequiresReindex)))).Select(definition => definition.Name).Distinct().ToArray();
+            if (names.Length > 0)
+            {
+                await ReportRebuilt(grainFactory.GetEventSequence(currentState.EventSequenceId, jobStepKey.Scope, jobStepKey.Namespace), runId, names, ConstraintIndexRebuildOutcome.ProgressUnknown);
+            }
+        }
+        catch (Exception error)
+        {
+            // No confirmed terminal delivery: retain the grain's conservative rebuilding mark.
+            logger.ConstraintIndexRebuildCancellationHandoffFailed(error);
         }
         return null;
     }
@@ -128,7 +136,7 @@ public class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key));
+            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key), Guid.NewGuid());
             var jobStepKey = (JobStepKey)key!;
 
             var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);

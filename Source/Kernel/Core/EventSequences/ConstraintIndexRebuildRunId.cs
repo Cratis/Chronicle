@@ -4,7 +4,11 @@
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
-/// Identifies a kernel constraint rebuild by its stable job step identity.
+/// Identifies one attempt of a kernel constraint rebuild.
 /// </summary>
-/// <param name="Value">The job step identifier.</param>
-public record ConstraintIndexRebuildRunId(Guid Value) : ConceptAs<Guid>(Value);
+/// <param name="Value">The stable job step identifier.</param>
+/// <param name="Attempt">The attempt nonce, or empty for an outside-worker cancellation.</param>
+[GenerateSerializer]
+public sealed record ConstraintIndexRebuildRunId(
+    [property: Id(0)] Guid Value,
+    [property: Id(1)] Guid Attempt = default);

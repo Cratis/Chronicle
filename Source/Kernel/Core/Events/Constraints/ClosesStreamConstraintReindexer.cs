@@ -123,19 +123,33 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
         foreach (var rebuild in _rebuilds.Where(rebuild => !rebuild.Skipped))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var snapshot = rebuild.Snapshot.Values.SelectMany(rows => rows).ToDictionary(closure => closure.Scope.Normalized());
+            var snapshot = rebuild.Snapshot.Values.SelectMany(rows => rows).GroupBy(closure => closure.Scope.Normalized()).ToDictionary(group => group.Key, group => group.ToArray());
             foreach (var (scope, closure) in rebuild.Pending)
             {
-                if (snapshot.TryGetValue(scope, out var previous) && previous.SequenceNumber == closure.SequenceNumber && previous.ClosedAt == closure.ClosedAt) continue;
+                if (snapshot.TryGetValue(scope, out var previous))
+                {
+                    // Remove only the extras before replacing the survivor: a failed write must
+                    // leave at least one old or rebuilt closure protecting the scope.
+                    foreach (var duplicate in previous.Skip(1))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        beforeWrite?.Invoke();
+                        await storage.Reopen(rebuild.Definition.Name.Value, duplicate.Scope, cancellationToken);
+                    }
+                    if (previous.Length == 1 && previous[0].SequenceNumber == closure.SequenceNumber && previous[0].ClosedAt == closure.ClosedAt) continue;
+                }
                 cancellationToken.ThrowIfCancellationRequested();
                 beforeWrite?.Invoke();
                 await storage.Close(closure, cancellationToken);
             }
             foreach (var scope in snapshot.Keys.Where(scope => !rebuild.Pending.ContainsKey(scope)))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                beforeWrite?.Invoke();
-                await storage.Reopen(rebuild.Definition.Name.Value, scope, cancellationToken);
+                foreach (var row in snapshot[scope])
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    beforeWrite?.Invoke();
+                    await storage.Reopen(rebuild.Definition.Name.Value, row.Scope, cancellationToken);
+                }
             }
         }
     }

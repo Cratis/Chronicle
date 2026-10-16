@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -9,6 +10,7 @@ public partial class EventSequence
 {
     readonly Dictionary<ConstraintName, int> _rebuildingConstraintIndexes = [];
     readonly Dictionary<ConstraintIndexRebuildRunId, ConstraintName[]> _constraintIndexRebuildRuns = [];
+    readonly Dictionary<ConstraintIndexRebuildRunId, EventSequenceNumber> _constraintIndexRebuildStarts = [];
     readonly HashSet<ConstraintIndexRebuildRunId> _finishedConstraintIndexRebuilds = [];
     readonly Queue<ConstraintIndexRebuildRunId> _finishedConstraintIndexRebuildOrder = [];
     bool _rebuildOwnsBoundary;
@@ -22,10 +24,16 @@ public partial class EventSequence
             return;
         }
         if (_constraintIndexRebuildRuns.ContainsKey(runId)) return;
+        var previous = _constraintIndexRebuildRuns.Keys.FirstOrDefault(active => active.Value == runId.Value);
+        if (previous is not null)
+        {
+            await ConstraintIndexRebuilt(previous, _constraintIndexRebuildRuns[previous], ConstraintIndexRebuildOutcome.ProgressUnknown);
+        }
         SynchronizeIndexedDefinitions();
         var rebuilding = names.Distinct().ToArray();
         if (rebuilding.Length == 0) return;
         _constraintIndexRebuildRuns.Add(runId, rebuilding);
+        _constraintIndexRebuildStarts.Add(runId, State.SequenceNumber);
         if (_replayScopes.Any(scope => rebuilding.Contains(scope.Definition.Name))) _constraintIndexReplay = null;
         if (rebuilding.Any(_catchUpDefinitionNames.Contains)) ResetRebuildCatchUp();
         foreach (var name in rebuilding)
@@ -42,6 +50,12 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome)
     {
+        if (runId.Attempt == Guid.Empty && !_constraintIndexRebuildRuns.ContainsKey(runId))
+        {
+            var active = _constraintIndexRebuildRuns.Keys.FirstOrDefault(candidate => candidate.Value == runId.Value);
+            if (active is null) return;
+            runId = active;
+        }
         if (!_constraintIndexRebuildRuns.TryGetValue(runId, out var rebuilt)) return;
         foreach (var name in rebuilt)
         {
@@ -54,8 +68,10 @@ public partial class EventSequence
         if (unknown)
         {
             _catchUpDefinitionNames.UnionWith(rebuilt.Where(IsUniqueConstraint));
-            State.ConstraintIndexCatchUpBelow ??= State.SequenceNumber;
-            foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, State.ConstraintIndexCatchUpBelow);
+            var started = _constraintIndexRebuildStarts[runId];
+            var from = State.ConstraintIndexCatchUpBelow is { } existing && existing < started ? existing : started;
+            State.ConstraintIndexCatchUpBelow = from;
+            foreach (var name in rebuilt.Where(_indexedDefinitions.ContainsKey)) MarkConstraintIndexPending(name, from);
 
             // Progress is not known, so the durable boundary now belongs to catch-up rather than
             // to the job. Catch-up must be allowed to run once the remaining rebuilds end.
@@ -84,6 +100,7 @@ public partial class EventSequence
             await PersistCatchUpState(CancellationToken.None);
             if (clear) _rebuildOwnsBoundary = false;
             _constraintIndexRebuildRuns.Remove(runId);
+            _constraintIndexRebuildStarts.Remove(runId);
             _finishedConstraintIndexRebuilds.Add(runId);
             _finishedConstraintIndexRebuildOrder.Enqueue(runId);
             if (_finishedConstraintIndexRebuildOrder.Count > 256) _finishedConstraintIndexRebuilds.Remove(_finishedConstraintIndexRebuildOrder.Dequeue());

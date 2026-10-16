@@ -13,6 +13,14 @@ public class and_it_fails_in_the_middle_of_a_batch : given.an_event_sequence_wit
 
     void Establish()
     {
+        var clock = new given.RepairClock();
+        _eventSequence.ConstraintIndexTimeProvider = clock;
+
+        // Only retry backoffs advance time; scheduler load cannot exhaust the turn budget.
+        clock.TimerCreated = due =>
+        {
+            if (due.TotalMilliseconds is 100 or 400) clock.Advance(due);
+        };
         _update = number => number == (EventSequenceNumber)1 ? Task.FromException(new given.SimulatedStateWriteError()) : Task.CompletedTask;
         _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>()).Returns(call =>
             Task.FromResult(Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(call.Arg<IEnumerable<EventToAppendToStorage>>().Select(e => new AppendedEvent(EventContext.From(EventStore, EventStoreNamespace, e.EventType, e.EventSourceType, e.EventSourceId, e.EventStreamType, e.EventStreamId, e.SequenceNumber, e.CorrelationId), e.Content)).ToArray())));

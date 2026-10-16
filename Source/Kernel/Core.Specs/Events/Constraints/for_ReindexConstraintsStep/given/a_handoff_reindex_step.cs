@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ReindexConstraintsStep.given;
 
@@ -15,8 +16,9 @@ public class a_handoff_reindex_step : a_closing_constraint_reindex_step
         _unique = new("unique", [new("Registered", ["email"])]);
         _definitions.Add(_unique);
         _state.Changes = [new("unique", true, [ConstraintChangeType.EventAdded])];
-        _sequence.ConstraintIndexRebuildStarting(_runId, Arg.Any<IEnumerable<ConstraintName>>()).Returns(_ =>
+        _sequence.ConstraintIndexRebuildStarting(Arg.Any<ConstraintIndexRebuildRunId>(), Arg.Any<IEnumerable<ConstraintName>>()).Returns(call =>
         {
+            _runId = call.Arg<ConstraintIndexRebuildRunId>();
             _calls.Add("starting");
             return Task.CompletedTask;
         });
