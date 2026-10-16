@@ -23,26 +23,7 @@ rule is in `cratis-screenplay-modeling-lifecycle` ("Decide the level first"); it
 
 ## Verified product sources
 
-Version pins live once in `cratis-screenplay-toolchain` `references/versions.md`; read it before
-selecting the compiler and renderer for delivery: the CLI bundles its own Screenplay and Stage;
-its compiler version differs from the standalone pin. Render options (`--scope`,
-`--check`, `--package-set`) and exit codes were read at cli `v3.53.1` `Documentation/reference/screenplay.md`
-and `cratis render --help`; admission at Stage `v4.89.1` (`SemanticVersionFeatures.cs:105`,
-`SemanticVersionFeatureAdmission.cs:25-46`, `SemanticCratisAdmission.Automation.cs:15-123`). Stage's scaffold pins Arc and
-Chronicle releases, which are not the latest (`cratis-stage-rendering-and-sandbox`
-`references/rendered-application.md`). Source reading is not a new render run.
-
-Runs: the worked example (`references/worked-example.md`) was probed with cratis 3.53.1 (observed; the
-3.28.2/3.28.3 runs are history). With public CLI 3.43.0 (Stage 4.52.0) the canonical `ScreenComposition`
-corpus was rendered and published successfully, and an MCP-edited copy was rendered, run and checked in
-the browser; the CLI 3.40.7 browser acceptance run passed 51 assertions (Cratis/Screenplay#605). The AI
-repository's `screenplay-mcp-transcript.ts` harness proves the real stdio proposal/apply path against the
-packaged CLI. Guarded Close actions and double-click interactions were refused (`STAGE-SCENE-ACTION-001`,
-`STAGE-SCENE-INTERACTION-001`) on that vector; since Stage 4.65 they render and run, and the codes
-remain for a guard Stage cannot evaluate, which is never emulated (Cratis/Screenplay#671). UI-profile
-rejection (`CLI-RENDER-007` to `-010`) and render-then-recover shipped in 3.41.0 (Cratis/cli#301). The
-renderer facts are owned by `cratis-stage-rendering-and-sandbox`; this skill links them and never
-restates the admission table.
+Tool versions are covered in `cratis-screenplay-toolchain` `SKILL.md`; read it before selecting the compiler and renderer for delivery: the CLI bundles its own Screenplay and Stage. Read [references/product-sources.md](references/product-sources.md) when checking a render claim against the CLI, Stage or probe sources; the renderer facts are owned by `cratis-stage-rendering-and-sandbox`.
 
 ## When to use / when not
 
@@ -55,11 +36,7 @@ restates the admission table.
 ## Interview phase
 **Skip if** the request names the model root, the application name, the destination and the
 decision on non-renderable scope. Otherwise ask only what is missing:
-1. **Which model, which accepted version?** (root, source identity from the lifecycle report).
-2. **Application name** for `--name` (it is part of the application identity: keep it identical on every re-render).
-3. **Destination.** Default `.ai-work/screenplay/<model-slug>/render-probe/<App>`; any other destination needs the user's intent.
-4. **If admission fails:** stay in design mode, change the model for business reasons, or gap-fill by hand? (the three cases below).
-5. **Seams:** outside systems, styles or packages the rendered app needs (`Customizations/`).
+Ask only what is missing: the model and accepted version, the application name for `--name` (identical on every re-render), the destination, the decision if admission fails (the three cases below), and the seams (`Customizations/`). Read [references/delivery-protocol.md](references/delivery-protocol.md) ("Interview batch for render delivery") for the defaults.
 
 Unattended: assume visibly (probe destination, default name from the model root folder), never
 assume an answer to 4, and record it as `blocked` for the user.
@@ -72,32 +49,36 @@ assume an answer to 4, and record it as `blocked` for the user.
 | **B. Generated base plus authorized gap-fill** | an admitted render (whole, or a `--scope` of the admitted slices) exists and the user separately authorized hand-written scope, or a seam the model names needs an adapter | the generated output stays managed and untouched; hand-written code lives in `Customizations/` or a separate project (seam adapters by this skill, business gap-fill by `slice-implementer`), serves named model elements only, never claims render admission, and V5 is reported for the generated base **with its scope stated** |
 | **C. Fully hand-written delivery** | the scope cannot render and no generated base is wanted | `slice-implementer` delivers it with the model as the contract (`references/gap-fill-handoff.md`); V5 is `not run: no render` |
 
-Evolved events are gap-fill too: Stage still refuses (4.89.1) any evolved event and its dependent scope with `STAGE-ESM-026`, because it cannot render Chronicle event-type migrations yet (Stage#204). Events at their initial revision still render. Hand-write the evolved events and their migrations per `cratis-chronicle-event-type-migration`, with the model as the contract.
+Evolved events are gap-fill too: Stage still refuses any evolved event and its dependent scope with `STAGE-ESM-026`, because it cannot render Chronicle event-type migrations yet (Stage#204). Events at their initial revision still render. Hand-write the evolved events and their migrations per `cratis-chronicle-event-type-migration`, with the model as the contract.
 
 Supported UUID/String generation strategies, v15 freshness and scalar/named `returns`
-responses, fixtures and `then returns` render with CLI 3.57.0 / Stage 4.89.1. Unsupported generated
+responses, fixtures and `then returns` render with the CLI and Stage. Unsupported generated
 types (`STAGE-ESM-028`) and result combinations (`-038`) still require case A or C:
 preserve the model and its specifications. See Stage's `references/admission.md`.
 Supported event-triggered Automation slices also render as managed Chronicle reactors;
 refused reactions, captures and Translate slices remain gap-fill.
 
 Models with event sources, streams or command routes bind and reference-execute as ESM v8 on the standalone
-tool, so report V3 and V4 from that tool. The pinned CLI/Stage pair
-(`cratis-screenplay-toolchain/references/versions.md`) reaches v8 route checks
-and construct admission through v15. Public/foreign events and production overrides
+tool, so report V3 and V4 from that tool. The CLI/Stage pair
+(`cratis-screenplay-toolchain/references/renderable-subset.md`) reaches v8 route checks
+and construct admission through v16. Public/foreign events and production overrides
 still refuse; semantic reaction/reducer filters and role/authenticated `runs as` render.
 Claim-reading/opaque system gates, legacy actor/filter paths and mixed effects still refuse. Keep refused scope as case A/C,
 never infer target support from binding. Read Stage's `references/admission.md` and
 toolchain `references/sources-and-streams.md`.
 
 **Mixed reaction effects.** A reaction that both `produces` events and `invokes` commands is refused by
-Stage (`STAGE-ESM-037`, Stage#207) although Arc 22.72.0 and later run one reactor returning events
+Stage (`STAGE-ESM-037`) although Arc runs one reactor returning events
 and commands (events appended first as one batch, then commands in order, no cross-effect
 transaction; a retry can repeat the events). The scaffold now includes the mixed-result handler,
 but Stage still refuses it because redelivery can duplicate events. `[OnceOnly]` excludes replay,
 not retries. Keep the modeled reaction whole; gap-fill needs a proven retry-safe realization,
 not splitting or dropping effects to get a render. Source: Stage
-`v4.89.1:Documentation/reference/reaction-rendering.md:53-98`.
+`Documentation/reference/reaction-rendering.md`.
+
+Read Stage's `references/admission.md` when checking v17/v19 or query validation:
+primitive query arguments still answer absence, not Screenplay's Validation.
+Query errors need v18 admission; do not delete rules or claim parity.
 
 Two rules hold in every case: a customization never makes a rejected model renderable, and
 a whole-application V5 is never claimed from a subset. `--scope` renders an admitted part (the whole
@@ -110,8 +91,8 @@ model still compiles and binds) and its V5 states the scope.
    `references/verdicts-and-modes.md` "Source identity"), the model root, `--name`,
    `--project-name`, `--root-namespace` and target `cratis`. Take V1 and V3 from
    `cratis-screenplay-toolchain`; report each with tool and version. V3 from a different
-   compiler version does not prove the cratis-bundled binder admits the model (the bundle is
-   4.147.1, the standalone tool 4.149.0). `cratis screenplay validate --executable <root>` binds with
+   compiler version does not prove the cratis-bundled binder admits the model (the bundle
+   can be older than the standalone tool). `cratis screenplay validate --executable <root>` binds with
    the bundled compiler and writes nothing: use it as the bundled-binder check (toolchain `references/verdicts.md`).
 2. **Probe.** `cratis render <model-root> --name <App> --destination <probe-dir> -o json`
    (exit 0 published, 5 refused with nothing published, 1 missing input); add `--check` to plan
@@ -122,9 +103,9 @@ model still compiles and binds) and its V5 states the scope.
 3. **When admission fails** (case A) present the options, the user decides:
    (a) keep design mode and record the gaps; (b) narrow to renderable mode, where the modeler
    changes the model for business reasons and **without** removing protection (`pii`,
-   authorization, rules); (c) deliver the non-renderable scope by hand (case C), with a ledger
-   entry (`references/drift-and-ledger.md`); (d) render the admitted part with `--scope` and gap-fill the rest
-   (case B).
+   authorization, rules); (c) deliver the non-renderable scope by hand (case C), with a fallback
+   record entry (`references/drift-and-fallback-record.md`); (d) render the admitted part with
+   `--scope` and gap-fill the rest (case B).
 4. **Publish.** The probe destination by default. Another destination needs the user's intent;
    `--force` needs approval naming its effect and destination (a request that already names them
    counts). Read the receipt: written, unchanged, removed, `recovered`. `recovered: true` means
@@ -144,8 +125,9 @@ model still compiles and binds) and its V5 states the scope.
    default composition is a failure (Stage 4.24 rendered the default composition only).
 8. **Drift:** `cratis render ... --check` (exit 6 pending); also compare the manifest's `semanticRevision`
    with a fresh render under the same inputs. For hand-written scope, `cratis screenplay conform` gives
-   structural code-vs-model evidence (`references/drift-and-ledger.md`).
-9. **Hand off** the packet: verdict lines, spec mapping, edit requests for the modeler, ledger
+   structural code-vs-model evidence (`references/drift-and-fallback-record.md`). For changes since verification,
+   follow that reference's "Hand-written code changed since it was last verified" procedure.
+9. **Hand off** the packet: verdict lines, spec mapping, edit requests for the modeler, fallback record
    entries, UI omissions, learning candidates (at most 3).
 
 ## Hand-written parts
@@ -156,9 +138,9 @@ Adapters and non-renderable scope follow the contract rules of `cratis-applicati
 
 - Hand-written scope is `done` only when no specification lacks an executable equivalent
   (`cratis-application-slice-conformance` `references/build-prompts.md`).
-- One ledger scope per `slice-implementer` brief; the brief carries addresses and paths, not contents.
+- One scope per `slice-implementer` brief; the brief carries addresses and paths, not contents.
 - Model-enforced rules realized in code (state-dependent rules) need a protected read or
-  concurrency scope; never claim them from prose. Stage 4.89.1 rendered apps scaffold
+  concurrency scope; never claim them from prose. Stage-rendered apps scaffold
   the Arc/Chronicle set in `cratis-stage-rendering-and-sandbox` `references/rendered-application.md`; API availability alone is not verified enforcement.
 - Adapters that call outside systems follow `cratis-engineering-effect-boundaries`; slice
   specifications follow `cratis-application-slice-specifications`.
@@ -174,10 +156,10 @@ Adapters and non-renderable scope follow the contract rules of `cratis-applicati
 - Code reading is bounded: `Customizations/*`, the file and line a build or test error names,
   and the declared hooks. Never browse managed output, `bin/` or `obj/`.
 - `description` and `documentation` reach rendered code only as XML documentation comments (Stage#178),
-  never as behavior. A rule stated only in prose is unenforced: ledger entry or target requirement,
+  never as behavior. A rule stated only in prose is unenforced: fallback record entry or target requirement,
   never "delivered".
-- The `cratis run` sandbox enforces neither validation nor authorization on its default engine; it
-  is no evidence for denial behaviour.
+- The `cratis run` sandbox's default engine enforces only simple literal validation rules and no
+  authorization; it is no evidence for denial behaviour or for any other rule.
 - Never remove `pii`, `secret`, authorization or rules to get a render through; report the gap.
 - Stop and ask only on a genuine contradiction between model, specs, descriptions and declared
   contracts, after reading the slice fully (`cratis-screenplay-modeling-lifecycle` `references/stop-or-assume.md`).
@@ -191,13 +173,13 @@ Adapters and non-renderable scope follow the contract rules of `cratis-applicati
 Before reporting done:
 - Source identity, tool versions, `--name` and destination are recorded.
 - V5 is four lines: admission, publication, build (Debug), tests (Debug), each a result or `not run: <reason>`.
-- Every diagnostic is classified; every non-renderable scope has a ledger entry or the user's decision to stay in design mode.
+- Every diagnostic is classified; every non-renderable scope has a fallback record entry or the user's decision to stay in design mode.
 - No managed file was edited; no `--force` without approval naming it.
 
 ## Verify
 
 - Expected specifications versus generated classes versus passed, listed; a count is not a mapping.
-- Fallback delivery: the ledger entry maps specifications to tests, records the field inventory
+- Fallback delivery: the fallback record entry maps specifications to tests, records the field inventory
   and divergences, and `cratis-application-slice-conformance` returned a status.
 - A passing test does not claim runtime guarantees (namespace, subject, constraint scope, guarded
   reads, migrations, replay) or omitted UI were delivered.
@@ -206,20 +188,15 @@ Before reporting done:
 
 ## Route near misses
 
-- Changing the model, mode or slices: `cratis-screenplay-slice-design`, `cratis-screenplay-modeling-lifecycle`.
-- Which specification forms Stage accepts: `cratis-screenplay-scenario-coverage`, `cratis-screenplay-specifications`.
-- Verdict commands, subsets, versions: `cratis-screenplay-toolchain`.
-- Renderer facts, publication recovery, sandbox: `cratis-stage-rendering-and-sandbox`.
-- Refused automation or translation scope (the refused behavior is gap-fill): `cratis-screenplay-automations-and-translations`.
-- Hand-written code against its contract: `cratis-application-slice-conformance`.
-- Code review of delivered code: `cratis-code-review`.
+Read [references/neighbouring-skills.md](references/neighbouring-skills.md) when the work is model changes, specification forms, tooling, renderer facts, refused scope, conformance or code review rather than render delivery.
 
 ## References (load on demand)
 
 - `references/renderability-gate.md` - classify the probe's codes, estimate the blast radius.
 - `references/delivery-protocol.md` - inputs, commands, reading results, `Customizations/`.
-- `references/gap-fill-handoff.md` - the brief for `slice-implementer`, ledger flow.
-- `references/drift-and-ledger.md` - drift, publication refusals, the fallback ledger.
+- `references/gap-fill-handoff.md` - the brief for `slice-implementer`, fallback record flow.
+- `references/drift-and-fallback-record.md` - drift, publication refusals, the fallback record, code changed since verification.
+- Read `references/hand-written-changes.md` when investigating hand-written changes against the contract; it defines finding kinds, resolution routing and the report.
 - Read `references/worked-example.md` when preparing the classification and report for a refused render; it contains a complete model.
 - Read `references/provenance.md` when checking sources and attribution for the render workflow or gap-fill brief.
 

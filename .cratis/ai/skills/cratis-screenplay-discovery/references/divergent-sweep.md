@@ -37,3 +37,12 @@ open question with the assumption in use.
 | Competition candidate | a competing-claim spec; consistency design |
 | Duplicate candidate | a duplicate/retry spec |
 | Ending | removal from affected views |
+
+## Review questions (ask; do not apply mechanically)
+- A different story, or a different ending of the same story?
+- Does an optional field hide two situations (two events), or one fact with an optional detail?
+- Can several be in progress at once for the same party?
+- What happens when it fails, is withdrawn, expires, or is corrected afterwards?
+- Owned by this business, or reported to it by an outside party?
+- Can two parties want the same scarce thing at once? Who wins?
+- After this point, can it still be called off, and by whom?

@@ -5,8 +5,17 @@ No TrogonStack text is adapted in this skill. Nebulit material is credited in th
 
 | Item | Source | Licence | Treatment | Where in this skill |
 |---|---|---|---|---|
-| Component APIs, props and hooks | Cratis Components 4.26.4 and Arc, see *Verified product sources* | MIT | original | SKILL.md, references/ |
-| Screenplay and Stage facts in the screen mapping | Cratis/Screenplay v4.66.0 and Cratis/Stage v4.24.0 documentation and source | MIT | original | references/from-screenplay.md |
+| Component APIs, props and hooks | Cratis Components and Arc, see *Product sources* | MIT | original | SKILL.md, references/ |
+| Screenplay and Stage facts in the screen mapping | Cratis/Screenplay and Cratis/Stage documentation and source | MIT | original | references/from-screenplay.md |
+
+## Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with their explicit consent.
+
+| Source skill | Used in | How |
+|---|---|---|
+| supabase-react `build-state-change`, `build-state-view` and build-kit composition guideline | `from-screenplay.md`, Level 1 and 2 | copied and translated: page composition through exported dialogs/components, no cross-slice internals, deletability and application-level providers |
 
 ## Adapted closely (Martin Dilger and Nebulit GmbH)
 

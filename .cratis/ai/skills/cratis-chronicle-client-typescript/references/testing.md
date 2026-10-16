@@ -11,7 +11,7 @@
 - Materialization — ReadModelScenario
 - Use kernel-backed tests outside the boundary
 
-Verified at `Cratis/Chronicle.TypeScript` **v6.51.0**:
+Source: `Cratis/Chronicle.TypeScript`:
 `Source/testing/index.ts`, `EventScenario.ts`, `ReactorScenario.ts`,
 `ReadModelScenario.ts`, and `Documentation/testing.md`.
 Import the three scenarios from `@cratis/chronicle/testing`. They share

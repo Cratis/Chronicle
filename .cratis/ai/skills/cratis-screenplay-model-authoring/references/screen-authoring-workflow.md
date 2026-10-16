@@ -12,6 +12,7 @@
 - 3. Review and apply with revision checks
 - 4. Validate authoring and executable readiness
 - 5. Run/render using the same configuration
+- Edit the application shell
 - 6. Use Screenplay-owned fixtures
 - Replay the workflow in CI without a Screenplay checkout
 - Edit, render, run and see it in the browser
@@ -65,19 +66,31 @@ For a new canonical application this usually creates or changes:
 - localized `$strings` keys referenced by labels.
 
 Use `referencePolicy: "Safe"` unless unresolved debt is explicitly part of the
-accepted model. Structural edits use `CanonicalizeTouchedDocuments`; literal or
-mapping-only changes may use `PreserveTrivia`.
+accepted model. Structural AST edits use `CanonicalizeTouchedDocuments`; literal
+or mapping-only AST changes may use `PreserveTrivia`. For hand-written whole
+source documents, use `propose-source` with `PreserveExactSource` so structural
+edits keep supplied comments and layout (including line endings and BOM policy).
+Choose canonical printing only when that output is wanted.
+
+Requires Screenplay 4.158.0 or later (`screenplay --version`) for exact structural source edits; older servers refuse them.
 
 ## 3. Review and apply with revision checks
 
 Before applying:
 
 - `read-proposal view=changes` and document before/after views;
-- check introduced diagnostics and `droppedCommentCount`;
+- report the proposal's `summary`, not an invented count-based recap;
+- inspect `authoringDiagnosticSeverities.errors` and `codes`, not merely a nonzero
+  `authoringDiagnosticCount`: PLAY0288 alone reports canonical printing even
+  without comment loss. Proposal checks and `after.readiness` source diagnostics
+  are different counts; page `read-proposal view=diagnostics`;
+- keep checking `introducedExecutableErrors` and `droppedCommentCount`;
 - compare every screen/form/toolbar binding against field lineage;
 - reject proposals that silently drop a requested screen directive or package
   setting;
 - apply only with the before revisions returned by `open-workspace` / proposal.
+
+Requires Screenplay 4.156.0 or later (`screenplay --version`) for proposal summaries and severity counts; older servers lack these fields.
 
 After `apply`, discard old handles and revisions. Reopen/read the workspace and
 verify the source and identity state changed as expected.
@@ -117,24 +130,49 @@ Before re-rendering an edited model over an earlier render, preview it:
 cratis render <model-folder> --name <ApplicationName> --destination <render-dir> --check -o json
 ```
 
-`--check` (CLI 3.44.0) plans exactly like a render and reports per path what a real
+`--check` plans exactly like a render and reports per path what a real
 render would write, delete, leave unchanged or refuse, without writing anything. It
 exits `0` when the destination is current, `6` (`changes_pending`) when a render
-would change it and `5` when planning is refused. Since CLI 3.45.0 the receipt lists
+would change it and `5` when planning is refused. The receipt lists
 for every path the semantic declarations it realizes (`sources`: id, kind and a
 `Module/Feature/Slice/Name` address) and a `bySource` view mapping each declaration
 to its files. After an MCP edit, use `bySource` to confirm the edited screen or
-binding changed exactly the files you expect, and `semantic-diff` (MCP, Screenplay
-4.131.0: `before` and `after` as `{ "workspace": "active" }`, `{ "path": "<folder>" }`
+binding changed exactly the files you expect, and `semantic-diff` (MCP:
+`before` and `after` as `{ "workspace": "active" }`, `{ "path": "<folder>" }`
 or `{ "workspaceJson": "<export>" }`) to compare the model before and after the
-edit. These are newer than the verified vector: report them as published, not as
-executed there.
+edit.
+
+Requires cratis CLI 3.44.0 or later (`cratis --version`) for `cratis render --check`.
 
 For screens-release parity, the smoke check must assert that every authored
 screen, template, component, form, toolbar, outlet, route and package/icon use is
 represented in the generated plan or runtime diagnostics. A consumer that cannot
 implement one reports a blocking diagnostic. Silent fallback to the default screen
 composition is a failure.
+
+## Edit the application shell
+
+Navigation regions, toolbar buttons, blueprint template references and sample data are typed nodes and follow the same
+open, read, propose, review, apply, reopen loop; the syntax and rules are in
+`cratis-screenplay-ui-composition` (`references/application-shell.md`). The vectors to replay against are the
+`screen-shell-navigation-positive` source case and its rejection vectors in `Cratis.Screenplay.CanonicalCorpus`.
+
+1. `read-ast` with `kind` `NavigationRegionSyntax`, `NavigationItemSyntax`, `ToolbarButtonSyntax`,
+   `TemplateAssignmentSyntax`, `ScreenTemplateReferenceSyntax` or `SampleDataPackSyntax`, `includeContent: true`.
+   Select the occurrence by its parent: a region belongs to the `LayoutSyntax` or a `ModuleSyntax`, and the same item id
+   can appear in several regions.
+2. `propose-ast` with `replace` (copy the returned node, change `mode`, `items`, `slice`, `version` or a row value),
+   `add` to a member the node kind declares (`navigation`, `items`, `children`, `buttons`) or `remove`. A member that
+   holds nothing is not in the node JSON; `add` still accepts it.
+3. Read the proposal's diagnostics before applying. A refusal such as `PLAY0750` (a module item targeting another
+   module), `PLAY0762` (a button on a State View slice), `PLAY0722` (a blueprint no profile lists) or `PLAY0714` (an
+   unknown active pack) is the answer; change the proposal, not the rule.
+4. `apply` with both revisions. A `StaleRevision` means the model moved: reopen, re-read the nodes and propose again.
+5. Switching a module from inherit to override copies the application's items; retarget each copy to the module's own
+   features first or the proposal is refused.
+
+Requires Screenplay 4.188.0 or later (`screenplay --version`) to `add` the first region, button or sub-item to a member
+the node JSON omits while empty; an older MCP server answers "Unknown typed syntax member".
 
 ## 6. Use Screenplay-owned fixtures
 
@@ -143,15 +181,8 @@ not to the AI corpus. Link to the fixture path and run its published checks; do 
 copy those `.play` files into `.cratis/ai/` or into a skill reference as a
 maintained duplicate.
 
-Historical verified public vector and executable checks:
+Executable checks against the corpus:
 
-- executed toolchain: public CLI 3.43.0 (`23e5a24`), whose default runtime was
-  `cratis/stage:4.52.0` and which bundled Screenplay 4.127.0. Published since,
-  and not verified by this vector: Scene 4.17.0, Screenplay 4.133.1, Stage 4.64.0,
-  previous CLI 3.46.1 (bundling Screenplay 4.130.0, then-default Stage 4.52.0) and
-  Studio 0.152.2. Current pins: `cratis-screenplay-toolchain/references/versions.md`.
-  Compiler claims from this `cratis` probe are 4.127.0 claims, not current
-  bundled-compiler claims;
 - fixture root: `Source/DotNET/Screenplay.CanonicalCorpus/Corpus/ScreenComposition/v1/source/folder`
   in the Screenplay repository;
 - Screenplay repo tool (available checkout): `dotnet run --project Source/DotNET/Tool
@@ -164,25 +195,21 @@ Historical verified public vector and executable checks:
   `apply`, real `apply` and `open-workspace` again. It uses a scratch copy,
   changes `application.play` with a comment-preservation probe, fails closed on a
   stale revision, applies with the matching revision and verifies the comment
-  remains on disk. On CLI 3.43.0: 9 requests and 9 responses, 37 tools,
-  `executableReady true`, stale apply `StaleRevision`, comment preserved;
+  remains on disk. A passing run shows `executableReady true`, stale apply `StaleRevision` and the comment preserved;
 - render (`cratis render <corpus-folder> --name ScreenComposition --destination
-  <dir> -o json`) with CLI 3.43.0 publishes the corpus; the browser acceptance
-  run on CLI 3.40.7 passed 51 assertions (Cratis/Screenplay#605);
-- guarded Close and double-click: refused with `STAGE-SCENE-ACTION-001` and
-  `STAGE-SCENE-INTERACTION-001` on this historical vector, rendered and run since
-  Stage 4.65 (live browser run on CLI 3.53.1 with `cratis/stage:4.73.1`,
-  Cratis/Screenplay#671); the codes remain for a guard Stage cannot evaluate. Studio
-  production Play proof is a separate vector (Cratis/Screenplay#173). UI-profile
-  rejection and render-then-recover shipped in Cratis/cli#301.
+  <dir> -o json`) publishes the corpus;
+- guarded Close and double-click: Stage renders and runs them; the codes
+  `STAGE-SCENE-ACTION-001` and `STAGE-SCENE-INTERACTION-001` remain for a guard Stage
+  cannot evaluate. Studio production Play proof is a separate vector. UI-profile
+  rejection and render-then-recover are covered by the CLI.
 
 ## Replay the workflow in CI without a Screenplay checkout
 
 `screens-smoke.sh <work-folder>` in the AI repository's `screens-smoke` verification folder installs the pinned public `cratis` CLI,
 materializes the published `Cratis.Screenplay.CanonicalCorpus` folder source (so the corpus stays Screenplay-owned and
 is never copied), replays the MCP transcript with the revision-checked column edit, renders the edited folder and
-requires the column in the generated `scene.json`. The pins live in `screens-smoke.json` and follow the verified
-vector above; the corpus package is the one that records that vector. The corpus verification job runs it on every
+requires the column in the generated `scene.json`. The pins live in `screens-smoke.json`; the corpus package records the
+expected results. The corpus verification job runs it on every
 change. With `SCREENS_SMOKE_BROWSER=1` (the CI job sets it) it also runs the edited folder with `cratis run`
 and checks the edited column and a created row in Chromium with the pinned Playwright, so the browser step below runs in
 corpus CI too; locally it needs Docker.
@@ -206,11 +233,6 @@ reaches a running application, end to end, on the installed public CLI:
    `Work item id` column header and the new item's id in the table. It needs
    Docker and a resolvable `playwright` (`SCREENPLAY_PLAYWRIGHT_NODE_PATH`); exit
    `0` verified, `1` edit not visible, `2` could not run.
-
-Executed on public CLI 3.43.0 (`23e5a24`, Stage 4.52.0, bundled Screenplay
-4.127.0): 9/9 MCP requests with the column on disk, render `published` with the
-column in `scene.json`, and all five browser checks passed against
-`cratis/stage:4.52.0` (also passed earlier on CLI 3.41.0 / `cratis/stage:4.51.3`).
 
 Report a corpus the released compiler, MCP server or renderer refuses as a
 capability/version-pairing gap with the exact diagnostics; never soften it to a

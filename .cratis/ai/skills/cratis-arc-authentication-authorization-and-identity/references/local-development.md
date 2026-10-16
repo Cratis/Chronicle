@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md -->
 # Running with an identity locally
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.75.0`.
+Source: `Cratis.Arc.Core` and `Cratis.Arc`.
 
 ## What Arc does not give you
 
@@ -29,11 +29,11 @@ public record User(ClientPrincipal MicrosoftIdentity, object Details);
 public interface ICanProvideUsers { Task<IEnumerable<User>> Provide(); }
 ```
 
-At **v22.75.0**, both follow `Introspection.IdentityDiscovery` and discovery
+Both follow `Introspection.IdentityDiscovery` and discovery
 access settings: anonymous by default only in Development, authenticated elsewhere,
 or unmapped (404) if the host cannot authenticate. Return development fixtures,
 not production users or tenants.
-Source: [secure defaults](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/upgrading/secure-defaults.mdx).
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## Supplying an identity locally
 
@@ -87,3 +87,10 @@ Any local mechanism that lets the caller author its own principal is exactly the
 production risk described in [authentication](authentication.md). Keep it behind
 an environment check, and make sure the deployed application is unreachable
 except through the ingress that owns those headers.
+
+## Development fixtures
+
+Those endpoints follow the discovery exposure settings above. Return development
+fixtures from development providers; test deployed discovery access explicitly.
+Forwarded headers sent locally require the host-wide trust opt-in too; do not
+carry that shortcut into a directly reachable deployed host.

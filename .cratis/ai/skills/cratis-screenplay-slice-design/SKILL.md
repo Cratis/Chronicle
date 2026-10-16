@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-slice-design
-description: "Shape Screenplay slices from a discovered timeline: commands with reachable, authorized origins and traced inputs, rules placed by layer, a per-command refusal inventory, events-vs-views decisions, read models per screen component with queries that follow the business view, Level-1 screens, field lineage, state-transition tables, slice dependencies and the next slice. Use after discovery, when adding a capability or deciding command inputs, rule placement, read-model shape or screen data. Not for: stream boundaries or invariants across streams (use `cratis-screenplay-streams-and-consistency`), reactions and captures (use `cratis-screenplay-automations-and-translations`), which scenarios to write (use `cratis-screenplay-scenario-coverage`), or auditing a finished model (use `cratis-screenplay-model-review`)."
+description: "Shape Screenplay slices from a discovered timeline: commands with reachable, authorized origins and traced inputs, rules placed by layer, a per-command refusal inventory, events-vs-views decisions, read models per screen component with queries that follow the business view, Level-1 screens, field lineage, state-transition tables, slice dependencies and the next slice. Use when designing slices after discovery, adding a capability or deciding command inputs, rule placement, read-model shape or screen data. Not for: stream boundaries or invariants across streams (use `cratis-screenplay-streams-and-consistency`), reactions and captures (use `cratis-screenplay-automations-and-translations`), which scenarios to write (use `cratis-screenplay-scenario-coverage`), or auditing a finished model (use `cratis-screenplay-model-review`)."
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-slice-design/SKILL.md -->
@@ -34,27 +34,7 @@ the decision behind each shown field, and how fresh each view must be. Otherwise
 batch, only what is missing. Unattended: assume visibly, record each assumption in the phase
 report and slice `documentation`, and continue.
 
-1. **Origin of each action.** Is it (A) user-initiated only, (B) automated, (C) a mix, or
-   started by a clock or outside system (schedule, webhook, feed)? Impact: separates screen
-   commands from automation (and a trusted path); clocks and outside records are designed in
-   `cratis-screenplay-automations-and-translations` (trigger, capture, reaction over imports).
-   Follow-up: if a mix, which user actions start automation, and what does it decide on its
-   own? If outside systems, which one and what data does it send?
-2. **Critical fields.** Which data matters most on each screen, and what decision does the
-   person make from each field? Impact: fields with no decision behind them are questions, not
-   requirements. Follow-up: for a field nobody can justify, ask whether it is history worth
-   keeping or can go.
-3. **Freshness and cost.** How stale may each view be, and what does a stale answer cost?
-   Impact: picks projection versus reducer, and one-shot versus `observable`. Follow-up: if a
-   wrong answer is expensive (a booking, a payment), that decision needs a protected read
-   (`references/rule-layers.md`), not a view. For every calculated or aggregated figure
-   (a total, a count, an average) ask whether it recalculates as source data changes ("so it
-   belongs in a view - does that match your expectation?") or whether someone agrees or
-   certifies a value (a fact, step 5).
-4. **Granularity.** When someone changes these values, why? Impact: separates decisions from
-   forms. Follow-up: when a screen edits several values, ask for each who changes it and why.
-5. **Existing UI or constraints.** Is there a screen or system to match? Impact: origins and
-   screen data. Follow-up: ask to see it; styling belongs to `cratis-screenplay-ui-composition`.
+Ask the batch below only for what the request leaves open: (1) origin of each action - user, automated, mixed or clock/outside system; (2) which fields matter and what decision each supports; (3) freshness and cost of a stale answer, with each calculated figure confirmed as a view ("does that match your expectation?"); (4) granularity - why each value changes; (5) existing UI or constraints. Read [references/command-inventory.md](references/command-inventory.md) ("Interview batch for slice design") for the impact and follow-up of each.
 
 ## Procedure
 
@@ -75,16 +55,17 @@ report and slice `documentation`, and continue.
    separate reasons change these values, then split (`references/slicing.md` *Generic edits*).
    One input per thing the caller decides or supplies; `identifier` on the property naming the
    instance (omit only for allocation); inline `produces event <Name>` (no `for`) when the command owns the event; plain `produces <Name>` needs `for <identifier>`. Trace each input
-   (`references/field-lineage.md`). A conditional input is a granularity question: two
+   (`references/field-lineage.md`) and list the values each rule reads: input, state or context
+   (`references/command-inventory.md`). A conditional input is a granularity question: two
    decisions are two commands; one decision with a dependent rule is an implication
    (`require a == false or b > c`). Never a boolean attestation input (`confirmsX == true`)
    standing in for a rule. Place each rule in its layer (`references/rule-layers.md`). A rule
    over stored state is written as `reads <View>` + `require ... message "..."` and marked
    **NOT enforced in the model today** in the slice `description`, with its target named (Arc
-   `[ProtectedDecision]` + `DecisionRead<T>` on Arc 22.39.0+ (available to gap-fill
-   code with the Arc and Chronicle the Stage 4.73.1 scaffold pins); Chronicle DCB; or a constraint). Never copy state
+   `[ProtectedDecision]` + `DecisionRead<T>` (Requires Arc 22.39.0 or later; available to gap-fill
+   code with the Arc and Chronicle the Stage scaffold pins); Chronicle DCB; or a constraint). Never copy state
    into the command as input or hide a rule in `handler` / hint prose; descriptions reach code
-   only as XML comments (Stage#178). Fill the **refusal inventory**: success, each distinct refusal with
+   only as XML comments. Fill the **refusal inventory**: success, each distinct refusal with
    layer and message, and the denied persona.
 4. **Name and shape the event.** Past tense, the specific change that became true
    (`LockerRelocated`, `VolumeCorrected`); never `XUpdated`/`Changed`/`Edited`/`Saved`/
@@ -94,16 +75,13 @@ report and slice `documentation`, and continue.
    `$context.occurred` or caller identity. No event-source id in the payload (it is the `for`);
    references to other instances are payload. No nullable property by default (a required value
    or a separate event). No PII on the identifier; one data subject per stream. Add a field only
-   when something downstream needs it. At 4.127.0 personal values use bare `pii`,
+   when something downstream needs it. Personal values use bare `pii`,
    operational secrets `secret`; declare processing use/basis/retention in `purpose`,
    not a reason. An event-property `subject` may identify a different person from
    the stream but is report-only, not runtime propagation. See command-surface
    `references/compliance.md`.
-   Trace caller details to claims or a keyed single-result identity-source query
-   (built-in/claim/literal key, detail-independent effective gate, compatible result).
-   The `identity` block is authoring metadata; executable `$identity.<detail>` reads
-   remain PLAY0268. `scoped to` is opaque, not a detail reference; see command-surface
-   `references/context.md`.
+   Trace caller details to claims or a keyed single-result identity-source query; `$identity.<detail>` reads remain `PLAY0268` (details: `references/field-lineage.md`, "Tracing caller details").
+
 5. **Events or views?** For each value someone needs: was it decided or supplied (event), or
    can it be worked out from facts already recorded (view)? Test, anti-patterns and where the
    outputs of an automation go: `references/read-model-design.md` *Events or views*. Decided calculations (a quoted
@@ -114,14 +92,8 @@ report and slice `documentation`, and continue.
    slice is `read model -> screen -> command -> event`. Pick the builder (declarative projection first, reducer when
    guards cannot be expressed). The query follows the business view: a list where people scan a
    list, a keyed lookup where they open one thing. For **executable or renderable scope**, every
-   read model needs one unambiguous identity: explicit trailing `key` first, else
-   single-instance queries agreeing on `by xId XId`, else conventional `*Id` inference
-   only with an admitted list query and no single-instance identifier. Queryless views
-   need explicit `key`; read-surface `references/named-keys.md` gives the exact fallback.
-   The identifier equals the projection's effective key (decision table in
-   `references/read-model-design.md`; Stage rule in `references/admission.md` of
-   `cratis-stage-rendering-and-sandbox`). Collections and observable delivery bind at
-   4.135.0; check renderer admission separately.
+   read model needs one unambiguous identity: explicit trailing `key` first. Read `references/read-model-design.md` ("Executable identity of a read model") for the fallback order, the key decision table and the Stage rule.
+
    Whose rows is part of the view; a caller-supplied filter is not access control.
 7. **Screens, Level 1.** `data <RM> via query <Q>` plus `action <Command>` per thing the user
    can do there. Build each slice as read model, screen, command, event. A screen acting on an
@@ -132,7 +104,7 @@ report and slice `documentation`, and continue.
    (`references/read-model-design.md`). One actor's point of view
    per screen, at a real beat of the story, not one per persona for symmetry; know where the
    actor sees each state change's result. Beyond Level 1: `cratis-screenplay-ui-composition`.
-8. **Lineage pass.** Build the matrix in `references/field-lineage.md` from the `.play` files
+8. **Lineage pass.** After each field edit run `--check field-origins,input-surfaces`. Build the matrix in `references/field-lineage.md` from the `.play` files
    (read them), not from memory or an earlier summary. For each read model, write one line per
    contributing event in its StateView slice `documentation`: which fields it sets and why. An
    event with no reason does not belong in the view. A field without an origin is a gap: add
@@ -143,31 +115,20 @@ report and slice `documentation`, and continue.
    the request names the next capability, build that; if the brief authorizes selecting one, use the heuristic there and state why (Not knowing the next capability is never a reason to stop); scope complete or no candidate left: close the turn.
 10. **Validate** after the batch: V1 with warnings as errors, then V3 when the mode is
     executable or renderable, with the tool and version named (`cratis-screenplay-toolchain`
-    `references/verdicts.md`). Hand off with the model root and source revision, the slices
-    touched, and **one line per element** (command with origin classified [USER] or [AUTO]
-    and refusals, screen with `data`, read model with consumers, slice with events consumed),
-    not only problems; a new slice adds why it was chosen. Decided refusals go to
-    `cratis-screenplay-scenario-coverage`, never to open questions.
+    `references/verdicts.md`). Hand off with one line per element (command with origin classified [USER] or [AUTO] and refusals, screen `data`, read-model consumers, events consumed), not only problems; decided refusals go to `cratis-screenplay-scenario-coverage`, never to open questions. Full shape: `references/slicing.md` ("Handoff line per element").
 
 ## Rules
 
 ### Compiler contracts (the tool enforces these)
 
-- At most one `identifier` per command; never on an event property; never on a read-model
-  property (use `key`; otherwise identity comes from single-instance `by`, or
-  conventional `*Id` only with an admitted list query and no single-instance identifier).
-  Queryless read models need explicit `key`.
-- At most one builder (projection or reducer) per read model (`PLAY0191`).
-- A query's `by` goes on its own body line. Optional keyed and collection queries
-  bind, including observable delivery. Caller-supplied equality filters on collections
-  bind as ESM v14 since 4.143.0; `by` ANDs with supplied filters. `from`, single-result
-  filters, scope, performer and composite `by` remain PLAY0268 for their respective
-  context/cardinality/opaque/multipart gaps. Read read-surface
-  [equality filters](../cratis-screenplay-read-surface/references/equality-filters.md).
+- At most one `identifier` per command; never on an event property or read-model property (use `key`). At most one builder per read model (`PLAY0191`). Read `references/read-model-design.md` ("Identifier and key contract") for the exact rules.
+
+- A query's `by` goes on its own body line; `from`, single-result filters, scope, performer and composite `by` remain `PLAY0268`; equality filters on collections bind as ESM v14. Read `references/read-model-design.md` ("Query binding") for the binding rules.
+
 - A `unique` constraint names a property the event declares directly; the constraint name is
   its identity (renaming starts an empty index).
 - Unauthorized is `then denied`; a broken rule is `then error`; authorization runs first.
-- A mapping to an undeclared target fails only at binding (V3, PLAY0273); a declared property that nothing maps (for example after a one-sided rename that AutoMap relied on) is reported by no tool: check field lineage by hand.
+- A mapping to an undeclared target fails only at binding (V3, `PLAY0273`); trace unmapped declared properties by hand too (`references/read-model-design.md`, "Mappings to undeclared or unmapped properties").
 
 ### Modeling defaults (follow unless the domain gives a reason not to)
 
@@ -175,16 +136,9 @@ report and slice `documentation`, and continue.
 - One business decision usually produces one event; a decision establishing several facts the
   business recognises separately may produce several (say why in `documentation`).
 - Copy an identity into an event payload only when a consumer needs it as a value.
-- Keep the one-line summary in `description`, including short status markers such as
-  **NOT enforced in the model today** (with its target) or **ASSUMED**; record durable
-  reasoning, assumptions, causes and rejected alternatives in fenced Markdown
-  `documentation` on the module, feature, slice, command, event, read model or reaction, not `//` comments or disconnected notes. These are report-only, not
-  enforcement. Read [model reasoning](references/model-reasoning.md) for owners,
-  syntax, folder merge and PLAY0558/0559.
-- Rule coverage: for each value carrying a rule, list every path that sets it
-  (`references/slicing.md`). A constraint on a claim covers every event setting that claim;
-  value invariants live in the concept so they travel; command-level conditions are reviewed
-  per path, not copied blindly.
+- Keep the one-line summary in `description` (with markers such as **NOT enforced in the model today**); durable reasoning goes in fenced Markdown `documentation`, report-only. Read [model reasoning](references/model-reasoning.md) for owners, syntax, folder merge and PLAY0558/0559.
+
+- Rule coverage: for each value carrying a rule, list every path that sets it (`references/slicing.md`, "Rule coverage"); value invariants live in the concept.
 
 ### Review questions
 
@@ -193,31 +147,11 @@ collections, invariants, who sees which rows); report a finding only with a doma
 
 ## Public boundaries and view identity
 
-Translate crosses an application boundary: inbound consumes foreign public events
-or data and produces private facts; outbound folds private facts into exactly one
-local public event type. Commands never publish public events. Put direction in
-the slice outline and trace every exported field; read automations-and-translations
-`references/public-events-and-direction.md` for the released ESM v9 contract.
-
-Mark view identity with trailing `key`. Use a composite key for independent view
-coordinates (resource + period), a natural single id for one entity's state.
-Supply every named part in single-instance queries and command/trigger reads;
-see read-surface `references/named-keys.md`. Composite view keys remain
-unadmitted at 4.135.0 (PLAY0268, #599), unlike admitted composite stream routes.
-Keep the true identity and report the gap rather than inventing a concatenated id.
+Translate crosses an application boundary (inbound consumes foreign public events; outbound folds private facts into exactly one local public event type); commands never publish public events. Mark view identity with trailing `key`; composite view keys remain unadmitted (`PLAY0268`) - keep the true identity and report the gap. Read [references/public-boundaries-and-keys.md](references/public-boundaries-and-keys.md) when a slice crosses an application boundary or a view needs a composite identity.
 
 ## Identity-affecting edits on an existing model
 
-Classify an edit by whether it changes catalog addresses. When `.screenplay/identities.json`
-exists, adding, removing or renaming an addressed element (declarations, properties of commands, events,
-read models, composite types and triggers, queries, query arguments, specifications), moving
-declarations between files, creating, deleting, renaming or moving a mapped `.play` document, and any
-contract change to a persisted event go through MCP, performed by the identity owner
-(`cratis-screenplay-modeling-lifecycle`, *Classify by catalog address*; evolution classes:
-`cratis-screenplay-streams-and-consistency`). Bounded text edits are only for edits that
-preserve addresses (descriptions, rule and expression bodies, mappings between existing
-members). Without `identities.json`, plain text edits are fine. Never use a text edit to get
-around a refusal from the typed tools.
+When `.screenplay/identities.json` exists, adding, removing or renaming an addressed element, moving declarations or mapped documents, and any contract change to a persisted event go through MCP, performed by the identity owner (`cratis-screenplay-modeling-lifecycle`); a text edit never gets around a typed-tool refusal. Read [references/identity-edits.md](references/identity-edits.md) for which edits are bounded text edits.
 
 ## Gate
 
@@ -239,15 +173,9 @@ Slice design is done when these hold; otherwise report what is open.
       per rule-carrying value; slice dependencies recorded.
 - [ ] V1 passed, and V3 (executable/renderable scope) with expected codes only, tool and version named.
 
-## Verified product sources
+## Product sources
 
-| Source | Pin | Used for |
-| --- | --- | --- |
-| Screenplay | `v4.66.0` (`c89198b`) | `commands.md`, `constraints.md`, `specifications.md`, `diagnostics.md` (`PLAY0191`, `PLAY0268`, `PLAY0271`, `PLAY0350`, `PLAY0381`, `PLAY0397`), `projections/keys.md` |
-
-Examples compile with `screenplay` 4.68.0 `--warnaserror` and `cratis screenplay validate
---warnings-as-errors` (cratis 3.28.2 or later); other pins: `cratis-screenplay-toolchain`
-`references/versions.md`. Compiling proves syntax, not that the model is executable or renders.
+Read [references/product-sources.md](references/product-sources.md) when checking a rule against the Screenplay sources and diagnostics (`PLAY0191`, `PLAY0268`, `PLAY0271`).
 
 ## Verify
 
@@ -257,12 +185,7 @@ Examples compile with `screenplay` 4.68.0 `--warnaserror` and `cratis screenplay
 
 ## Route near misses
 
-- Grammar: `cratis-screenplay-command-surface`, `cratis-screenplay-read-surface`,
-  `cratis-screenplay-projections`; layout and forms: `cratis-screenplay-ui-composition`.
-- Streams and invariants: `cratis-screenplay-streams-and-consistency`; automations and captures:
-  `cratis-screenplay-automations-and-translations`.
-- Scenarios and specification forms: `cratis-screenplay-scenario-coverage`,
-  `cratis-screenplay-specifications`; audit: `cratis-screenplay-model-review`.
+Read [references/neighbouring-skills.md](references/neighbouring-skills.md) when the work is grammar, layout, streams, automations, scenarios or audit rather than slice design.
 
 ## References (load on demand)
 

@@ -76,6 +76,28 @@ language tabs. Never hand-edit a generated proxy or a synchronized docs copy.
 6. Record the source revision and verification scope in the change summary,
    not as a permanent receipt embedded in the page.
 
+## Version constraints belong in the page; the test log does not
+
+A reader needs the versions that change what they install or write. Published
+prose can say that a feature needs a minimum release ("This needs Chronicle
+<version> or later"), pin packages and images in the commands a reader runs, and
+name the one release where behavior changed.
+
+Keep the author's verification record out of the page. Exact SDK builds, image
+digests or commit SHAs recorded for provenance, the date it was run, "tested
+with X on Y", "also checked against a development server", counts of passing
+specifications and a list of which tabs were not run are all a log of what
+the author did. A reader cannot act on them, they are stale by the next
+release, and a page that ends in an audit trail reads as generated, not
+written. Put them in the change summary, the pull request comment or
+`.ai-work/`, per the step above.
+
+Test each version sentence: would a reader install or write something
+different because of it? If not, remove it. A real limitation stays, stated as
+a fact about the product ("the Kotlin client has no equivalent yet"), not as a
+record of what was and was not run. A digest in a command the reader runs is
+part of the command, not a note, and stays.
+
 ## Know what the owning gate actually checks
 
 Look for a snippet validator before designing another checker. Arc and

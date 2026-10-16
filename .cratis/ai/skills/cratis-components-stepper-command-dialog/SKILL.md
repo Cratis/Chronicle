@@ -13,10 +13,10 @@ field across every step is valid.
 
 ## Verified product sources
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | its package manifest, `Source/CommandDialog/*` (`StepperCommandDialog`, `CommandStepper`, `StepperPanel`), `Documentation/StepperCommandDialog/*`, `Documentation/CommandStepper/*` |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
+| Package | Verified from |
+| --- | --- |
+| `@cratis/components` | its package manifest, `Source/CommandDialog/*` (`StepperCommandDialog`, `CommandStepper`, `StepperPanel`), `Documentation/StepperCommandDialog/*`, `Documentation/CommandStepper/*` |
+| `@cratis/arc.react` | peer range declared by `@cratis/components` |
 
 ## Choose it over `CommandDialog` when
 
@@ -162,8 +162,8 @@ Stepper-level props (inherited from the stepper customization surface):
 
 Command-form props (`initialValues`, `currentValues`, `validateOn`,
 `validateOnInit`, `onSuccess`, `onValidationFailure`, `onFailed`,
-`autoServerValidate`, …) all apply as well. Horizontal steppers show names below
-numbers and wrap (4.26.3+). Panels are named by their headers through
+`autoServerValidate`, …) all apply as well. Horizontal steppers (Requires Components 4.26.3) show names below
+numbers and wrap. Panels are named by their headers through
 `aria-labelledby`; custom header ids are preserved.
 
 While `confirmBeforeExecute` is pending, fields are disabled; changed command
@@ -208,10 +208,7 @@ validation failures), and guards against double submission.
 ## Route near misses
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code

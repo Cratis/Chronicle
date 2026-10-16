@@ -1,8 +1,8 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/references/translation-patterns.md -->
 # Translation patterns
 
-Complete compiled example: `translate-example.md` (binds on Screenplay 4.66.0, also in cratis 3.28.2; the cratis 3.27.1
-bundle compiled it but rejected the slice at binding).
+Complete compiled example: `translate-example.md` (binds as ESM v6; a compiler that stops before v6
+compiles it but rejects the slice at binding).
 
 ## 1. Where outside facts may enter
 Only two routes, both in a `Translate` slice:

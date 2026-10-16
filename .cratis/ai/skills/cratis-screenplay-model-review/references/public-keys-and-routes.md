@@ -17,7 +17,7 @@ Add these to the element sweep, with evidence pinned to the declaration:
 - Is the view identity explicitly marked `key` or unambiguously inferred? Does each
   single-instance query/read supply every part exactly once, with compatible types,
   and do state fixtures contain all parts? Do PDL keys align with the view's key?
-  Composite view keys still refuse binding at 4.139.0 (PLAY0268, #599); compilation
+  Composite view keys still refuse binding (PLAY0268); compilation
   is not executable evidence. Read read-surface `references/named-keys.md`.
 - Does a production override replace the whole source/stream/id route, rather than
   assume partial inheritance? Is its `for` destination still explicit and compatible?

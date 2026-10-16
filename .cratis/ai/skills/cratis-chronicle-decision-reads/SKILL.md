@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-decision-reads
-description: Guard a state-dependent Chronicle decision with IDecisionReads, projection admission, ambient unit-of-work enrollment and commit conflict handling. Use when an append must remain valid for the facts read, when choosing whole-source versus stream-scoped reads, or diagnosing DecisionReadRefused and scope conflicts. Do not use for ordinary query reads, append-time uniqueness alone, or defining an Arc command's ProtectedDecision API.
+description: Guard a state-dependent Chronicle decision with IDecisionReads, projection admission, ambient unit-of-work enrollment and commit conflict handling, and choose which mechanism makes a write-side rule hold (constraint, decision read, stream decision, aggregate, explicit scope, reactor repair or a plain read). Use when an append must remain valid for the facts read, when a rule must hold under concurrent writers, when choosing whole-source versus stream-scoped reads, or diagnosing DecisionReadRefused and scope conflicts. Do not use for ordinary query reads, append-time uniqueness alone, or defining an Arc command's ProtectedDecision API.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-decision-reads/SKILL.md -->
@@ -16,17 +16,48 @@ carries a guard to commit. The append is rejected when a later event inside that
 guard could change the decision. This is the Chronicle side of a dynamic
 consistency boundary (DCB), not authorization or a replacement for unique constraints.
 
+Read [choosing how a rule holds](references/choosing-how-a-rule-holds.md) first
+when the question is which mechanism to use, or before writing code that reads
+state and then appends. It carries the routing steps, the matrix with what not to
+use, and the traps. A plain read, a validator read, `Result<,>` and
+`concurrency: true` are never the guard.
+
 ## Verified product sources
 
-| Product | Version | Sources |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `19.50.1` | `Source/Clients/DotNET/ReadModels/{IDecisionReads,DecisionReads,DecisionRead,DecisionReadRefusalReason}.cs` |
-| `Cratis.Chronicle` transactions | `19.50.1` | `Source/Clients/DotNET/Transactions/{IUnitOfWork,UnitOfWork,DecisionReadCommitOwner,UnitOfWorkLifecyclePolicy}.cs` |
-| `Cratis.Chronicle` scope resolution | `19.50.1` | `Source/Clients/DotNET/EventSequences/Concurrency/DefinitionConcurrencyScopeResolver.cs` |
+| Product | Sources |
+| --- | --- |
+| `Cratis.Chronicle` | `Source/Clients/DotNET/ReadModels/{IDecisionReads,DecisionReads,DecisionRead,DecisionReadRefusalReason}.cs` |
+| `Cratis.Chronicle` transactions | `Source/Clients/DotNET/Transactions/{IUnitOfWork,UnitOfWork,DecisionReadCommitOwner,UnitOfWorkLifecyclePolicy}.cs` |
+| `Cratis.Chronicle` scope resolution | `Source/Clients/DotNET/EventSequences/Concurrency/DefinitionConcurrencyScopeResolver.cs` |
 
-The client surface began in 19.9.0; stream-scoped reads require the newer kernel
-surface added in 19.39.0. Reverify a client/kernel pair rather than disabling
+Requires Chronicle 19.9.0 for decision reads, and a Chronicle 19.39.0 kernel for stream-scoped reads.
+
+Reverify a client/kernel pair rather than disabling
 compatibility checking to force a read through.
+
+Requires Chronicle 19.62.0 for host enrollment contributors:
+`IUnitOfWork.AddEnrollmentContributor(IUnitOfWorkEnrollmentContributor)` returns
+a disposable removal handle. Contributors require scopes before staging through
+`AddEvent`, `AddEvents`, named-tag and transactional append paths. Equal scopes
+merge; a conflict throws `ConflictingEnrollmentScope` without staging that call.
+Required scopes remain until completion even after handle disposal; contributed
+units accept only one sequence. Reentrant mutation and failed `Enrolled`
+notifications fail closed (`UnitOfWorkMutatedDuringEnrollment`,
+`UnitOfWorkEnrollmentNotificationFailed`). This is a host integration extension,
+not a command-side alternative to returned guarded events. Check the client
+package version; older custom units throw
+`UnitOfWorkEnrollmentContributorsNotSupported` when attached.
+
+Requires Arc 22.100.0 or later with Chronicle client 19.65.2 or later for Arc's
+generated-identifier guard on direct unit-of-work and transactional writes,
+including nested commands. Check `dotnet list package --include-transitive`;
+older Arc needs returned events or an explicit whole-source `BeforeFirst` scope
+for direct writes. A conflict against an enrolled generated guard is reported as
+Arc's `ConflictingConcurrencyScopes`, without identifier or scope values, rather
+than Chronicle's `ConflictingEnrollmentScope`; unrelated enrollment conflicts keep
+the Chronicle failure. Read
+[generated-target freshness](../cratis-arc-command/references/fresh-identifiers.md)
+for the covered APIs, scope lifetime, rollback and immediate-append boundary.
 
 ## Route the work
 
@@ -35,9 +66,11 @@ compatibility checking to force a read through.
   their unit-of-work ownership in a handler. The Chronicle `DecisionRead<T>`
   below is not a license to invent an Arc wrapper shape.
 - For a unique value claimed atomically or a closed stream, use
-  **cratis-chronicle-event-constraints**.
+  **cratis-chronicle-event-constraints**. A decision read guards one key's
+  history, not a value across keys: it is the wrong tool for uniqueness.
 - For read-model declarations, use **cratis-chronicle-read-model** and
-  **cratis-chronicle-projection**. Ordinary `IReadModels` reads do not enroll guards.
+  **cratis-chronicle-projection**. Ordinary `IReadModels` reads do not enroll
+  guards, materialized or passive.
 - In model-first scope, settle the rule and its refusal/concurrency specifications
   in the accepted model using **cratis-screenplay-event-modeling** before gap-fill.
   Never broaden a projection or bypass model protection just to make admission pass.
@@ -47,7 +80,10 @@ compatibility checking to force a read through.
 `IDecisionReads` is in `Cratis.Chronicle.ReadModels`; obtain the reader with
 `eventStore.GetDecisionReads()` (`ReadModels/DecisionReadExtensions.cs`).
 `Admit<T>()` / `AdmitForStream<T>()` check shape **without I/O**, returning
-`DecisionReadAdmission(IsAdmitted, Reason)`. A successful shape check is not
+`DecisionReadAdmission(IsAdmitted, Reason)`. The model needs an `Id` property
+(string, or a Guid in lowercase hyphenated form) and an event-source-keyed flat
+projection. Reducers, including self-reducing models, are refused with
+`Reducer`; a missing `Id` or an unconvertible key refuses with `KeyConversion`. A successful shape check is not
 runtime read success: definitions, key conversion and fold completion are also
 checked while reading.
 
@@ -77,14 +113,22 @@ projection also needs an explicit stream id, not the default wildcard.
 `AdmitForStream<T>()` checks this shape; unsupported readers/kernels refuse with
 `StreamScopeNotSupported`. Do not fall back to an unguarded query on refusal.
 
+Requires Arc 22.81.0 for these stream overloads inside Arc commands to use
+command protection, caching and enrollment; older Arc refuses them. Check Arc
+as well as the Chronicle client/kernel pair before choosing this path.
+
 ## Commit and inspect conflicts
 
 Enroll the read **before** staging its decision's events through
 `EventLog.Transactional` and let the owning unit of work commit. Inspect
 `IsSuccess`, append errors/constraint violations/concurrency violations and
 `GetDecisionConflicts()`; the latter reports decision conflicts without exposing
-sequence numbers. A checked empty append validates its scope without writing
-an event. Do not mistake "no event" for "no consistency check".
+sequence numbers. On a kernel whose append validators accept an empty batch
+(a kernel that does so when a scope carries an actual boundary or expects no matching event), a checked empty
+append validates its scope and writes nothing; a kernel that rejects it surfaces
+`DecisionReadValidateOnlyNotSupported`, which fails closed. Do not mistake "no
+event" for "no consistency check", and assert validate-only in an integration
+specification before relying on it.
 
 Do not attach a separate explicit concurrency scope to a source already guarded
 by a decision read: `DecisionReadConflictsWithConcurrencyScope` rejects that
@@ -97,6 +141,26 @@ On a real conflict, reread and **re-decide** with the same authorization and
 business rule; never resend stale events as if a retry fixed the decision. A
 DCB guard protects event facts, not external side effects. Durable follow-up
 belongs in a reactor/outbox; use **cratis-chronicle-reactor**.
+
+## When not to use a decision read
+
+A guard detects every matching event after its boundary, whoever wrote it, but it
+protects only the decision that carries it. A writer that decides on the same facts
+without a guard can still append on stale state, so the rule holds only when every
+deciding writer is guarded or the rule is a constraint.
+
+- Uniqueness or create-once: a constraint. Two keys that must each be unique are
+  not a read problem.
+- A UX hint or a display: a plain read. A decision read costs about four calls per
+  attempt and refolds the key's whole history every time.
+- A hot key with a long history: shorten the history, or accept an advisory read
+  and repair with a reactor.
+- External state, revise/redact, other sequences: no guard covers them.
+- The unit commits in the ASP.NET Core middleware: it commits after the response
+  and reports no concurrency violation. Call
+  `IUnitOfWorkCompletionFeature.CommitAsync()` before responding.
+- Protection is opt-in in Arc (`[ProtectedDecision]`), so an unmarked command with
+  a read model is still unguarded.
 
 ## Verify
 

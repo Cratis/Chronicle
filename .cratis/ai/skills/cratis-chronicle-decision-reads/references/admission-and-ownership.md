@@ -4,7 +4,7 @@
 
 # Admission and commit ownership
 
-Verified at **Cratis/Chronicle v19.50.0**:
+Source: `Cratis/Chronicle`:
 `Source/Clients/DotNET/ReadModels/DecisionReads.cs`, `DecisionReadRefusalReason.cs`,
 `Source/Clients/DotNET/Transactions/UnitOfWork.cs`, `DecisionReadCommitOwner.cs`,
 and `UnitOfWorkLifecyclePolicy.cs`.

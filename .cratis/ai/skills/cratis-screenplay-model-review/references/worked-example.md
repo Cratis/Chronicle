@@ -14,7 +14,7 @@ A small model with one seeded design defect, reviewed in critic mode. The model 
 `berths.play`; line numbers below refer to it. The report follows `report-template.md` and is
 shortened: it shows the flagged checks of each phase and elides the passing ones, which a real
 report lists in full. The model compiles and, on the standalone 4.139.0 tool, binds and runs one specification (the
-`ListBerths` list query binds since Screenplay 4.105.0). The report works in design mode, so it
+`ListBerths` list query binds on Screenplay 4.105.0 or later). The report works in design mode, so it
 does not run V3 or V4.
 
 ## The model under review
@@ -173,7 +173,7 @@ Confidence: medium (design mode; V2 to V5 not run)
 
 ## After the fix
 The same scope after the modeler applied the edit request and added denial specifications.
-The review is re-run only on the changed scope. The query contract is unchanged: no edit request asked for a different query, so `ListBerths => BerthSummary[]` stays. This document compiles and binds, and its four specifications pass in `screenplay test` (4.139.0). Replacing the list with a keyed lookup would change the contract and needs its own domain-justified edit request. Stage 4.73.1 would refuse the snapshot list (`STAGE-ESM-010`); only an `observable` list or a keyed lookup renders.
+The review is re-run only on the changed scope. The query contract is unchanged: no edit request asked for a different query, so `ListBerths => BerthSummary[]` stays. This document compiles and binds, and its four specifications pass in `screenplay test`. Replacing the list with a keyed lookup would change the contract and needs its own domain-justified edit request. Stage 4.73.1 would refuse the snapshot list (`STAGE-ESM-010`); only an `observable` list or a keyed lookup renders.
 
 ```screenplay
 concept BerthId : Uuid

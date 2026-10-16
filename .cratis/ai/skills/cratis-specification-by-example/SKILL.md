@@ -40,7 +40,7 @@ In a language without those analyzers the same rules hold; the reviewer enforces
 them instead of the compiler. Reverify against the owning product repository
 before claiming behavior for another version.
 
-The `Cratis.Synopsis.Tool` dotnet tool (verified at `v1.1.3`) reads these
+The `Cratis.Synopsis.Tool` dotnet tool (verified) reads these
 names statically, never running code, and writes one HTML or JSON behavior
 document from C#, TypeScript, Gherkin and Screenplay specifications:
 `dotnet tool install --global Cratis.Synopsis.Tool`, then `synopsis . --open`
@@ -62,9 +62,7 @@ the documentation it produces.
   model). Decide this with the decision rule in
   `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
   model under the model root covers this scope, or the repository is opted in
-  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set `mcpServers.screenplay.root`
-  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
-  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`); framework, infrastructure, client, adapter and not-opted-in
   brownfield work stays code-first. Opted in but no model for this scope: model
   it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
   before writing specifications. If those Screenplay skills are not installed,

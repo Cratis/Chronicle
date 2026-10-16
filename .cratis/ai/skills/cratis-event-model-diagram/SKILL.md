@@ -22,7 +22,7 @@ before relying on a construct.
 
 The Cratis artifacts a diagram refers to were originally checked against `Cratis.Chronicle`
 18.3.0 and re-read against Chronicle 19.50.0 and the Arc query and command surface it is used with
-(current pins: `cratis-screenplay-toolchain` `references/versions.md`). The Mermaid claim above is
+(tool versions: `cratis-screenplay-toolchain` `SKILL.md`). The Mermaid claim above is
 external and was not re-verified here.
 
 ## What an event model is
@@ -154,7 +154,12 @@ language. Include commands that emit no event.
    every behavior appears, classified by the type the authority gives it. A clean
    render proves valid Mermaid, not completeness — close the gaps against the
    authority, never from memory. List model/code drift in the report instead of
-   resolving it in the diagram.
+   resolving it in the diagram. When the code is the authority, also find what changed since
+   the diagram was last updated: the last commit touching the diagram file is the baseline; list
+   the behavior commits in the module's folders since then
+   (`git log --reverse <baseline>..HEAD -- <module folders>`), oldest first, and check each against
+   the diagram. When an accepted model is the authority, report code that disagrees with it through
+   `cratis-screenplay-render-and-gap-fill` (hand-written changes), not in the diagram.
 
 ## Common mistakes
 

@@ -6,15 +6,14 @@ the automation-and-translation addendum to `cratis-screenplay-render-and-gap-fil
 skill for the admission, publication and ownership rules.
 
 ## Stage rendering versus gap-fill
-CLI 3.57.0 / Stage 4.89.1 render supported event-triggered Automation slices as Chronicle
+The CLI and Stage render supported event-triggered Automation slices as Chronicle
 reactors. Translate/captures, non-event triggers and opaque bodies remain `STAGE-ESM-024`;
 Claim-reading/opaque `runs as` gates (`-034`), legacy `from` (`-035`), mixed effects (`-037`), unsupported mappings (`-039`)
 and protected destinations (`-040`) also remain refused. Command specs that cascade into
 reactions remain `-011`; supported single-hop append specs now render, as do semantic
 reaction `from` and role/authenticated system identities. Only refused scope is hand-written delivery with the model as
-its contract. Source: Stage `v4.89.1:Documentation/reference/reaction-rendering.md:6-98`;
-full admission: `cratis-stage-rendering-and-sandbox` `references/admission.md`. (History: cratis
-3.28.2 and 3.28.3 refused such a model whole with `STAGE-ESM-016`, and 3.27.1 stopped earlier with PLAY0268.)
+its contract. Source: Stage `Documentation/reference/reaction-rendering.md`;
+full admission: `cratis-stage-rendering-and-sandbox` `references/admission.md`.
 
 A reaction that both `produces` events and `invokes` commands stays one modeled reaction. Hand-write one
 retry-safe reactor: the scaffold already includes Arc's mixed-result handler, but it appends
@@ -28,13 +27,13 @@ with `cratis-screenplay-render-and-gap-fill`.
 | Model element | Realization | Skill |
 |---|---|---|
 | reaction `when <Event>` with `invokes` or `produces` | Chronicle reactor returning commands or events | `cratis-chronicle-reactor` |
-| trusted actor for `invokes` | `[ExecuteCommandsAsSystem("<role>")]` on the reactor plus a policy requiring the role (Arc, since v20.56.0; available in Stage 4.51.3's rendered Arc 22.50.5) | `cratis-chronicle-reactor` |
+| trusted actor for `invokes` | `[ExecuteCommandsAsSystem("<role>")]` on the reactor plus a policy requiring the role (Arc; see the Requires line below) | `cratis-chronicle-reactor` |
 | clock trigger, application trigger | scheduler or host signal that raises the occurrence | `cratis-engineering-effect-boundaries` |
 | call to an outside system | adapter behind an effect boundary, keyed by the idempotency key in the model | `cratis-engineering-effect-boundaries` |
-| capture source (webhook, poll, topic) | adapter that authenticates, parses and appends | `cratis-engineering-effect-boundaries` |
+| capture source (webhook, poll, topic) | adapter that authenticates (the provider's signature or shared secret, never an application user token, because the provider cannot obtain one), parses and appends, keeping the provider's retry identity | `cratis-engineering-effect-boundaries` |
 | replay versus recovery redelivery | `[OnceOnly]` for replay; a receipt keyed by `ReactorDelivery.Id` for recovery | `cratis-chronicle-reactor` |
 
-Stage 4.51.3 rendered apps pin Arc 22.50.5/Chronicle 19.32.0, so
+Rendered apps pin their own Arc and Chronicle releases, so
 `[ProtectedDecision]` and `DecisionRead<T>` are available to gap-fill, not
 Stage-emitted enforcement. Admit the projection/key and enroll the read in the
 active unit of work; never edit managed `Directory.Packages.props`.

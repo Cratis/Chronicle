@@ -62,7 +62,10 @@ cost real disk and accumulate across sessions. After the merge succeeds:
 1. Leave the worktree you worked in: `cd` to the main checkout (`git worktree list` shows it first).
 2. Run `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh` and report its summary line.
    It fetches, checks out nothing, and removes only worktrees and local branches whose work is
-   verifiably on the default branch (this one included); it never forces and reports what it kept and why.
+   verifiably on the default branch; it never forces and reports what it kept and why. Worktrees holding
+   non-empty `.ai-work/` directories are kept by default. Preserve any needed records before a manual
+   `--include-work-records` opt-in; automatic hooks never opt in. Use `git worktree lock <path>` to pin a
+   long-lived worktree; locked worktrees remain kept even with opt-in.
 3. `git switch main && git pull --ff-only` in the main checkout so it matches the merged result.
 
 Claude Code and Pi also run the script from a hook after `gh pr merge` and at session start; running it

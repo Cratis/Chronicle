@@ -9,6 +9,7 @@
 - Method: walk each journey
 - Translating model words
 - Output format
+- Business-question stance
 
 Purpose: before acceptance (P6), find the decisions only a domain person can make, and put them
 so that person can answer without learning modeling. The method follows Event Modeling's idea
@@ -53,7 +54,10 @@ case, unclear ownership). Short questions land better than long ones; one senten
   being asked?
 - At most 12 questions per pass. When more qualify, keep the ones that change the model most
   and list the rest as themes.
-- Questions go to the user in the report; they are not written into the model. Where the
+- Questions go to the user in the report; they are not written into the model by the reviewer. The
+  person picks which questions to keep. The owning session records the picked ones as anchored
+  `question` notes (lifecycle `references/stop-or-assume.md`, "Durable question notes"); unpicked
+  ones are declined and dropped. Where the
   harness shows a board view, a sketch of a relationship or cluster may accompany a question,
   never replace it.
 - Be curious and direct, not polite and vague: "What happens when X fails?", not "I wonder if
@@ -102,6 +106,8 @@ Adapted closely from Martin Dilger and Nebulit GmbH's business-analyst pass (`pr
   relation is the finding.
 
 ## Method: walk each journey
+0. List the open `question` notes in scope (`list-model-notes`) and never re-ask one; an answered
+   question that no specification reflects is a finding, not a new question.
 1. List the personas in scope and, for each, the story they live through the model in time
    order (the stories you would tell the stakeholder; they are the "Flows read" line).
 2. Walk one story at a time. At each element the person meets, try the prompts for that
@@ -187,3 +193,13 @@ register a member?"), never as modeling observations ("no failure modeling"), or
 Next step: <one suggestion, e.g. "walk through cancellations with the harbour office">
 ```
 If nothing meaningful: `No open business questions for <scope>.` plus the flows read.
+
+## Business-question stance
+
+Be a sharp business analyst seeing the domain fresh, one who has watched flows like these break
+in production (double submits, unhappy people at the edge case, unclear ownership). Walk each
+persona's journey; at each element they meet, ask only what a domain person must decide. Curious
+and direct, one sentence each, plain language, anchored to a place in the model, no engineering
+words (could a non-technical product owner read it and immediately understand what is being
+asked?), at most 12 questions, zero is a valid result. Method, element prompts, categories and the
+model-word translation table: `references/business-questions.md`.

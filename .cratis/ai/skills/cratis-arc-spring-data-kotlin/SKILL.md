@@ -16,12 +16,12 @@ tenants or turn a repository into an observable source.
 
 ## Verified product sources
 
-Verified at `Arc.Kotlin v7.7.0`: `Integrations/SpringDataJpa`,
+Source: `Arc.Kotlin`: `Integrations/SpringDataJpa`,
 `Integrations/SpringDataMongo` (observable query services/extensions, contextual
 read-model providers, tenant access and converters) and
 `Documentation/guides/spring-data/*.mdx`.
-Add `io.cratis:arc-spring-data-jpa:7.7.0` or
-`io.cratis:arc-spring-data-mongodb:7.7.0`; both include the Arc Spring Boot
+Add `io.cratis:arc-spring-data-jpa:<version>` or
+`io.cratis:arc-spring-data-mongodb:<version>`; both include the Arc Spring Boot
 starter and corresponding Spring Data starter. Spring owns repository discovery,
 datasource/entity manager, Mongo client and their standard configuration.
 

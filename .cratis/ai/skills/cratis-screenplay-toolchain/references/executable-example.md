@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-toolchain/references/executable-example.md -->
 # Executable example (StateChange and StateView)
 
-A small model that compiles with 0 diagnostics and binds executable (`authoringAccepted` true, `executableReady` true, 0 executable diagnostics) on both tools when opened through MCP with a fixed root (see [mcp-loop.md](../../cratis-screenplay-model-authoring/references/mcp-loop.md) and [versions.md](versions.md)). Prose: [executable-subset.md](executable-subset.md).
+A small model that compiles with 0 diagnostics and binds executable (`authoringAccepted` true, `executableReady` true, 0 executable diagnostics) on both tools when opened through MCP with a fixed root (see [mcp-loop.md](../../cratis-screenplay-model-authoring/references/mcp-loop.md) and [verdicts.md](verdicts.md)). Prose: [executable-subset.md](executable-subset.md).
 
 ```screenplay
 // Executable example: StateChange + StateView, command and query protection, reference specifications.

@@ -71,7 +71,12 @@ phase, a decision important enough that a later reader could misread the model (
 - **Carry-forward**: slices with commands (reachable, authorized origins), events, read models with
   projections and queries, screens, reactions and captures, consistency decisions, slice dependencies.
 - **Gate**: V1 clean after the batch; every command has a reachable, authorized origin; every screen
-  data need is served by a read model; every field has a known origin.
+  data need is served by a read model; every field has a known origin; every persona's Does line
+  reaches a screen or form `action` for that decision and every Reads line has a screen whose
+  `data` shows it. A persona with neither is missing screens (add them) or is not part of this
+  scope (revise its Does/Reads in discovery, or record why). A read-only persona is legitimate.
+  The opt-in `personas` check (`PLAY0574`, `PLAY0575`) proves gate reachability, not screen
+  reachability, so this walk stays manual.
 - **Skip when**: no reactions, schedules or outside facts are in scope (automations); event-source
   identity, destinations, constraints, stored-state decisions, retries and persisted-contract
   evolution are absent or already verified and unchanged (streams). Command count is not the criterion.
@@ -107,11 +112,7 @@ phase, a decision important enough that a later reader could misread the model (
 - **Carry-forward**: the accepted **source identity** (`verdicts-and-modes.md`).
 - **Commit at P6**: the accepted `.play` files and `.screenplay/identities.json` when present.
   The user commits, or explicitly authorizes the owning session to commit; the modeler never
-  commits on its own. Committing a model under the model root is the team's act of acceptance
-  and opts the repository in (`git ls-tree -r --name-only HEAD -- <root>` lists the `.play`
-  file). Staged or untracked files under the root are drafts, not contracts for code agents.
-  A committed file with working-tree edits is a model change in progress; its HEAD version is
-  the contract until the change is committed.
+  commits on its own. Run `cratis-screenplay-modeling-lifecycle`'s `scripts/model-first-status.mjs` to check acceptance, drafts and model changes in progress.
 - **Gate**: explicit acceptance and the model commit before P7-P9. After committing, recompute
   the source identity. Its digest must equal the digest reviewed at P5; only the commit part may
   differ. If the digest differs, return to P4/P5 for the changed scope. Record the post-commit
@@ -122,6 +123,7 @@ phase, a decision important enough that a later reader could misread the model (
 - **Input**: the accepted identity.
 - **Carry-forward**: V3, and V4 where a route exists.
 - **Gate**: V3 ready; V4 result or "V4 not run: no route". Specs written or bound is never "specs pass".
+- **Optional after V3**: a behavior walk in the Stage sandbox (`cratis-stage-rendering-and-sandbox`); findings go to the model owner, and it is not V3, V4 or V5 evidence.
 - **Skip when**: design mode.
 
 ## P8 Render or fall back (`cratis-screenplay-render-and-gap-fill`)
@@ -154,6 +156,16 @@ No other phase is skipped. P3-P5 scale to the change but always run for semantic
 | Review request | P5 | report only |
 | Executable or render request on an accepted model | P7 / P8 | P9 |
 | Question from a running Chronicle system | read-only `cratis-chronicle-cli-operations` | update the model at P2 if needed |
+
+**Slices under delivery.** Where a delivery plan exists (the `cratis-screenplay-delivery-planning`
+status block), check a slice's planning status before changing it. A `todo` slice changes through
+the entry points above. A slice that is `in progress`, `blocked` or `done` is read-only for
+modeling unless the request names it. Naming it is the approval for exactly those declarations
+and nothing wider. Otherwise do the rest of the request, return an edit request naming the slice,
+its status and the intended change, and open the packet's report with that part as NOT done. The
+reason: someone is building against the slice as it stands. Changing a `done` slice reopens its
+delivery: tell the plan owner, and expect conformance (`cratis-application-slice-conformance`) and
+the affected specifications to rerun.
 
 ## Resume mid-workflow
 1. Read STATE.md only, not old transcripts.

@@ -65,3 +65,17 @@ reviewer should challenge.
 - An event nobody can say the cause of.
 - A workflow with no terminal fact or no failure path.
 - Answers that describe screens or tables instead of what happened.
+
+## Critical questions
+
+1. **How complete is the input?** (written spec / documented rules / rough list / word of
+   mouth / running system). Thin input means a heavier step 4. Follow up: for a rough list or
+   word of mouth, probe for missing scenarios and ask the rules to be stated.
+2. **Who has the final word on business meaning?** Follow up: only engineers present means
+   every meaning is an assumption to confirm; recommend inviting the domain expert.
+3. **Where is it complex, disputed or fragile today?** (the hotspots). Follow up, per hotspot:
+   what goes wrong there, what happened the last time.
+4. **Which rules must always or never hold?** Follow up, per rule: what does the person see
+   when refused, and must the business remember the breach (a fact only if so)?
+5. **Who takes part, and what may each role not do?** Follow up: for each Cannot, is it an
+   authority limit or a rule for everyone?

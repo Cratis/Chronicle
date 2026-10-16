@@ -7,9 +7,7 @@
 - `null` is not always what absence looks like
 - Which provider owns a read model type
 
-Arc injection verified at **v22.75.0**, with Chronicle dependency 19.39.1;
-separate Chronicle absence behavior below retains its original version context.
-Source: [read models in commands](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
+Source: [read models in commands](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
 Plain models and keyed reads are advisory, not concurrency guards. For protected
 reads use [decisions and routing](decisions-and-routing.md): opt into
 `[ProtectedDecision]` before taking `DecisionRead<T>`; constructor-injected
@@ -38,6 +36,12 @@ var other = await readModels.GetInstanceById<<Other>>((EventSourceId)<OtherId>);
 `ReadModelKey` converts implicitly from `EventSourceId`, `Guid` and `string`, so
 the cast is all that is needed.
 
+Requires Arc 22.93.0 for ARCCHR0023 (no unique key-type match), ARCCHR0025
+(keyless command reads a newly generated id and finds no model) and ARCCHR0026
+(command or validator reads Chronicle state through `IMongoCollection<T>`).
+These diagnostics expose lookup mistakes; they do not change plain-read protection.
+Check the package version, and inspect keys explicitly on older versions.
+
 ## Nullability is the required/optional switch
 
 | Parameter | No instance for the command's key |
@@ -57,7 +61,8 @@ A command that carries no usable key at all fails inside the resolver with
 failure rather than a server fault.
 
 `ARC0006` warns when a read-model parameter is non-nullable, precisely because a
-command-scoped read model can be missing. Make it nullable when absence is part
+command-scoped read model can be missing (it does not fire for model-bound
+projections). Make it nullable when absence is part
 of the command's valid behavior; keep it non-nullable when absence really is a
 rejection. When absence is a rejection, check the nullable parameter and return
 `ValidationResult.Error(...)` through `Result<TEvent, ValidationResult>`; never
@@ -82,6 +87,11 @@ created: Chronicle computes it on demand and seeds the initial state from the
 read model's schema, filling every non-nullable value property with its type
 default. Neither the `is null` guard nor the non-nullable "must exist" switch
 fires there.
+
+Requires Chronicle 19.53.3 for nullable string/bool concepts in read-model schemas
+to stay nullable, including unset passive properties. Check the client version;
+older schemas can turn these into defaults. Event-type schemas are unaffected,
+and this does not turn an absent passive projection into `null`.
 
 ⚠️ This is invisible when a status enum's `0` is a real state — absent becomes
 byte-identical to freshly created, so a command reads never-invited as already

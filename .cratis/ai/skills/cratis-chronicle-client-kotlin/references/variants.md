@@ -1,11 +1,12 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-kotlin/references/variants.md -->
 ## Variants — mutually exclusive read models for one entity's lifecycle
 
-> Verified at `Chronicle.Kotlin v6.13.0` (`projections/VariantOf.kt`,
-> `EntersOn.kt`, `GlobalFor.kt`, `ProjectionsService.kt`). Annotations shipped in
-> `6.3.0`; end-to-end support requires `6.5.0` or later. Earlier definitions
-> stored `$eventSourceId` keys empty: replay affected projections once on upgrade.
-> Take the version from Maven Central, not the checked-in source.
+Source: `Cratis/Chronicle.Kotlin` (`projections/VariantOf.kt`,
+`EntersOn.kt`, `GlobalFor.kt`, `ProjectionsService.kt`).
+
+Requires Chronicle.Kotlin 6.5.0 for end-to-end variant key support. Earlier definitions
+stored `$eventSourceId` keys empty: replay affected projections once on upgrade.
+Take the version from Maven Central, not the checked-in source.
 
 Some entities do not have one shape for their whole lifetime — a work item is a
 backlog entry until a pull request exists for it, then it is a pull request

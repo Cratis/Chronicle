@@ -9,14 +9,14 @@ and Nebulit GmbH. The notice is in this skill's `LICENSE`.
 
 | Source file | Used in | How |
 |---|---|---|
-| `.claude/skills/eventmodeling-storyboarding-events/SKILL.md`, "Common Patterns": input screen, status screen, error state | `references/screen-patterns.md` | Adapted closely and mapped to `screen`, `data`, `action` and `specification` (`then error`); one screen per column, lanes, actor perspective rows and mandatory rendering not adopted; the example is compiled with Screenplay 4.139.0 |
+| `.claude/skills/eventmodeling-storyboarding-events/SKILL.md`, "Common Patterns": input screen, status screen, error state | `references/screen-patterns.md` | Adapted closely and mapped to `screen`, `data`, `action` and `specification` (`then error`); one screen per column, lanes, actor perspective rows and mandatory rendering not adopted; the example compiles with the standalone compiler |
 
 Not adopted: HTML screen reconstruction and wireframe sketching (`html-screen`, `storyboard-screen`), which are board
 mechanics; Screenplay screens are declarative and Stage renders them.
 
 ## Other lineage
 
-- Screenplay language documentation and the released tool, pinned in `cratis-screenplay-toolchain`
-  `references/versions.md`: the `readmodel`, `query` and `screen` constructs.
+- Screenplay language documentation and the released tool, as described in `cratis-screenplay-toolchain`
+  `SKILL.md`: the `readmodel`, `query` and `screen` constructs.
 - Event Modeling (Adam Dymitruk) and Martin Dilger, *Understanding Eventsourcing*: the screen as the point where
   a person reads a view and decides.

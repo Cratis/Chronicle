@@ -23,3 +23,7 @@ domain consequence.
 - Where is each invariant enforced atomically, and what happens if two people try at once or a
   command is retried (`cratis-screenplay-streams-and-consistency`)?
 - Who may see these rows, and is that enforced by scope/`from`, not by a caller filter?
+- Does a command have several origins (a screen action and a reaction, or two personas)? That is
+  allowed. Confirm that each origin makes the same decision under the same rules, refusals and
+  gate. If one origin needs a different rule or a trusted actor the other must not have, split
+  the command.

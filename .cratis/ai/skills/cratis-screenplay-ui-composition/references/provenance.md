@@ -5,7 +5,7 @@ No TrogonStack text is adapted in this skill. Nebulit material is credited in th
 
 | Item | Source | Licence | Treatment | Where in this skill |
 |---|---|---|---|---|
-| Language constructs, rules and Verify list | Cratis/Screenplay v4.31.0 documentation, re-verified at v4.66.0 | MIT | original | SKILL.md |
+| Language constructs, rules and Verify list | Cratis/Screenplay documentation | MIT | original | SKILL.md |
 
 ## Adapted closely (Martin Dilger and Nebulit GmbH)
 

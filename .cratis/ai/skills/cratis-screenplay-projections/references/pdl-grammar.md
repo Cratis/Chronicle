@@ -13,7 +13,7 @@ Checked against `Documentation/screenplay/projections/{grammar,semantic-model,ke
 and `Source/DotNET/Screenplay/Parsing/ProjectionParser.cs` at Screenplay tag
 `v4.31.0` (commit `355dffb`); the header `description` and the dynamic dictionary-key target
 (`Target = ["@"] Path [DynamicKey]`, `DynamicKey = "." "$eventContext" "." EventContextPath`) were added in
-later releases and re-read at v4.139.0.
+later releases and re-read.
 
 The grammar says what **parses**. It does not say what an event does at runtime:
 Chronicle's lowering decides that (Screenplay decision 0001), and the
