@@ -67,4 +67,10 @@ public interface IEventStoreNamespaceDatabase
     /// materializes it.
     /// </remarks>
     Task<bool> HasAnyCollections();
+
+    /// <summary>
+    /// Drop the database holding the namespace's event store data.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Drop();
 }
