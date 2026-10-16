@@ -20,6 +20,9 @@ internal static partial class EventSequenceConstraintIndexLogging
     [LoggerMessage(Level = LogLevel.Error, Message = "Constraint {Constraint} on {Sequence} settled poison event {Position} after five identical non-transient failures; reindex after fixing the cause")]
     internal static partial void ConstraintIndexPoisonEvent(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintName constraint, EventSequenceNumber position, Exception exception);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "An earlier state snapshot for event sequence {Sequence} was not persisted")]
+    internal static partial void EventSequenceSnapshotNotPersisted(this ILogger<EventSequence> logger, EventSequenceKey sequence, Exception exception);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Constraint indexes on {Sequence} were repaired but the snapshot at watermark {Watermark} was not persisted")]
     internal static partial void ConstraintIndexRepairSnapshotNotPersisted(this ILogger<EventSequence> logger, EventSequenceKey sequence, EventSequenceNumber watermark, Exception exception);
 

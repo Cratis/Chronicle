@@ -166,6 +166,13 @@ public partial class EventSequence
         };
     }
 
+    /// <summary>
+    /// Gets the currently registered definitions whose catch-up membership was fixed at activation.
+    /// </summary>
+    /// <remarks>
+    /// Membership is not persisted; a later activation selects its own registered definitions.
+    /// </remarks>
+    /// <returns>The definitions eligible for this activation's historical catch-up.</returns>
     IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name));
 
     StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter);

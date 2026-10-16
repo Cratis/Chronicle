@@ -29,7 +29,7 @@ public partial class EventSequence
             {
                 // The original caller observes its failure too. A newer snapshot may supersede it,
                 // but must never overtake an abandoned write that could still land afterwards.
-                logger.ConstraintIndexRepairSnapshotNotPersisted(_eventSequenceKey, State.ConstraintIndexWatermark!, error);
+                logger.EventSequenceSnapshotNotPersisted(_eventSequenceKey, error);
             }
         }
         await base.WriteStateAsync();
@@ -41,14 +41,9 @@ public partial class EventSequence
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, token);
         if (_catchUpSnapshotWrite is { } previous)
         {
-            try
-            {
-                await previous.WaitAsync(deadline.Token);
-            }
-            finally
-            {
-                if (previous.IsCompleted) _catchUpSnapshotWrite = null;
-            }
+            // Wait for completion, not success. Keep the predecessor chained so WriteSnapshotAfter
+            // observes and logs its failure; the deadline below still applies to this attempt.
+            await previous.WaitAsync(deadline.Token).ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
         }
         deadline.Token.ThrowIfCancellationRequested();
         var write = _catchUpSnapshotWrite = WriteStateAsync();

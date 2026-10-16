@@ -111,7 +111,7 @@ public partial class ConstraintIndexReplay
             }
             _catchUpGroupIndex++;
         }
-        if (_catchUpGroups.Exists(group => group.Release?.Released == true && group.Claim is { Claimed: false })) return false;
+        if (_catchUpGroups.Exists(group => group.Release?.Released == true && group.Claim is { Claimed: false } claim && CanWrite(claim))) return false;
         await barrier.Allow(CancellationToken.None);
         return _catchUpGroupIndex == _catchUpGroups.Count;
     }
