@@ -55,20 +55,12 @@ public class UniqueConstraintsStorage(
     /// <inheritdoc/>
     public async IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (definition.Mode == UniqueConstraintMode.PerValue)
+        var values = definition.Mode == UniqueConstraintMode.PerValue
+            ? StreamPerValue(eventSourceId, definition, scopeKey, cancellationToken)
+            : StreamPerEventSource(eventSourceId, definition, scopeKey, cancellationToken);
+        await foreach (var value in values.WithCancellation(cancellationToken))
         {
-            using var cursor = await GetValuesCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintValueIndex> { BatchSize = 100 }, cancellationToken);
-            while (await cursor.MoveNextAsync(cancellationToken))
-            {
-                foreach (var row in cursor.Current) yield return row.Value;
-            }
-            yield break;
-        }
-
-        using var sources = await GetCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintIndex> { BatchSize = 100 }, cancellationToken);
-        while (await sources.MoveNextAsync(cancellationToken))
-        {
-            foreach (var row in sources.Current) yield return row.Value;
+            yield return value;
         }
     }
 
@@ -176,12 +168,35 @@ public class UniqueConstraintsStorage(
     public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default) =>
         await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
+    static async IAsyncEnumerable<UniqueConstraintValue> Drain<TRow>(IAsyncCursor<TRow> cursor, Func<TRow, UniqueConstraintValue> value, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using (cursor)
+        {
+            while (await cursor.MoveNextAsync(cancellationToken))
+            {
+                foreach (var row in cursor.Current) yield return value(row);
+            }
+        }
+    }
+
     static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique, CancellationToken cancellationToken) =>
         collection.Indexes.CreateOneAsync(
             new CreateIndexModel<UniqueConstraintIndex>(
                 Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
                 new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }),
             cancellationToken: cancellationToken);
+
+    async IAsyncEnumerable<UniqueConstraintValue> StreamPerValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var cursor = await GetValuesCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintValueIndex> { BatchSize = 100 }, cancellationToken);
+        await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
+    }
+
+    async IAsyncEnumerable<UniqueConstraintValue> StreamPerEventSource(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var cursor = await GetCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintIndex> { BatchSize = 100 }, cancellationToken);
+        await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
+    }
 
     async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, CancellationToken cancellationToken)
     {
