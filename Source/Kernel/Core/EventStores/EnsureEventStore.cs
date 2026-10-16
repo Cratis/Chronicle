@@ -53,13 +53,9 @@ public record EnsureEventStore(EventStoreName Name)
         var namespaces = grainFactory.GetGrain<INamespaces>(Name);
         await namespaces.EnsureDefault();
 
-        // The server registers the kernel's own projections - such as the event statistics - for the stores that
-        // exist when it starts. A store created after that has none of them until the next restart, so every read
-        // of them fails; registering here closes that gap. A store that already existed has them, and every client
-        // connecting ensures its store, so registering again then would only repeat the work on each connect.
-        if (!exists)
-        {
-            await kernelProjections.DiscoverAndRegister(Name);
-        }
+        // Storage existence does not imply initialization: observer discovery can create the store before this
+        // command runs. Reconcile on every ensure, including retries after partial initialization. The non-reentrant
+        // managers skip unchanged definitions, so reconnects and concurrent silos do not repeat registration work.
+        await kernelProjections.DiscoverAndRegister(Name);
     }
 }

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
 using Orleans.Storage;
@@ -47,10 +46,6 @@ public class a_log_with_a_failing_snapshot(PatternCaptureFixture fixture) : Spec
         (await _store.WaitForRegistration(TimeSpan.FromSeconds(30))).IsSuccess.ShouldBeTrue();
         _key = new(KernelEventSequenceId.Log, _store.Name.Value, _store.Namespace.Value);
 
-        // This fixture disables kernel startup. Identity-drift reads can implicitly provision the store before
-        // EnsureEventStore, which only registers kernel projections for a new store (#4952). Bootstrap them explicitly so this scenario
-        // isolates the failed snapshot from that provisioning defect.
-        await Services.GetRequiredService<IKernelProjections>().DiscoverAndRegister(_key.EventStore);
         _snapshotStorage = (FailingEventSequenceStateStorage)Services.GetRequiredKeyedService<IGrainStorage>(WellKnownGrainStorageProviders.EventSequences);
         _snapshotStorage.Target = _key;
         _observerStorage = (PatternCaptureFixture.SignalingObserverStorage)Services.GetRequiredKeyedService<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState);
