@@ -39,10 +39,9 @@ public class LifecycleOccurrences(IStorage storage, ILogger<LifecycleOccurrences
     /// <inheritdoc/>
     public async Task<string> Record(OccurrenceKind kind, string activationId, bool allNamespaces)
     {
-        var result = await _fanOut.Record(kind, activationId, allNamespaces);
-
-        // The durable insert determines the reply. Recovery of any intent is independent of ingress.
+        // Install recovery before a write whose acknowledgement can be lost after the commit.
         if (allNamespaces) Arm();
+        var result = await _fanOut.Record(kind, activationId, allNamespaces);
         return JsonSerializer.Serialize(result);
     }
 
