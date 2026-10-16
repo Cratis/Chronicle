@@ -27,7 +27,7 @@ public record DecisionConflict(
     public ReadModelIdentifier ReadModel => ReadModelType.GetReadModelIdentifier();
 
     /// <summary>
-    /// Gets the <see cref="EventTypeId"/> of the first event that changed the read model after it was read, if known.
+    /// Gets the <see cref="EventTypeId"/> of the first event matching the decision's guard after the read, if known. Reads that share a guard are merged, so it can belong to another read under the same guard.
     /// </summary>
     /// <remarks>
     /// Null when the conflict was not caused by a reported concurrency violation, or the kernel did not report the event.
@@ -36,7 +36,7 @@ public record DecisionConflict(
     public EventTypeId? ConflictingEventTypeId { get; init; }
 
     /// <summary>
-    /// Gets the <see cref="EventSequenceNumber"/> of the first event that changed the read model after it was read, if known.
+    /// Gets the <see cref="EventSequenceNumber"/> of the first event matching the decision's guard after the read, if known. Reads that share a guard are merged, so it can belong to another read under the same guard.
     /// </summary>
     /// <remarks>
     /// Null when the conflict was not caused by a reported concurrency violation, or the kernel did not report the event.
