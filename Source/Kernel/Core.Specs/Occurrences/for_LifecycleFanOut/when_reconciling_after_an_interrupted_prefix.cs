@@ -30,7 +30,7 @@ public class when_reconciling_after_an_interrupted_prefix : given.a_fan_out
         _intent = await _intents.Get(OccurrenceIdentities.ForLifecycle(OccurrenceKind.Startup, "rollout"));
     }
 
-    [Fact] void should_expose_the_interrupted_write() => _failure.ShouldBeOfExactType<IOException>();
+    [Fact] void should_isolate_the_interrupted_write_for_retry() => _failure.ShouldBeNull();
     [Fact] void should_not_duplicate_the_acknowledged_namespace() => _one.Length.ShouldEqual(1);
     [Fact] void should_complete_the_unwritten_namespace() => _two.Length.ShouldEqual(1);
     [Fact] void should_acknowledge_the_complete_snapshot() => _intent!.Progress.ShouldEqual(2);

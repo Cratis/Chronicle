@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Occurrences;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Occurrences;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="store">The event-store storage.</param>
 /// <param name="wake">Installs delivery wake-ups before each namespace write.</param>
 /// <param name="clock">The kernel clock.</param>
-public class LifecycleFanOut(IEventStoreStorage store, Func<string?, string, Task> wake, TimeProvider clock)
+/// <param name="logger">Reports intents left pending for retry.</param>
+public class LifecycleFanOut(IEventStoreStorage store, Func<string?, string, Task> wake, TimeProvider clock, ILogger<LifecycleFanOut> logger)
 {
     /// <summary>
     /// Records one logical activation without ever refreshing an existing namespace snapshot.
@@ -60,23 +62,35 @@ public class LifecycleFanOut(IEventStoreStorage store, Func<string?, string, Tas
     /// <summary>
     /// Completes one bounded page; an interrupted prefix is safe to repeat after restart.
     /// </summary>
-    /// <returns>The reconciliation work. Any unknown storage result propagates.</returns>
-    /// <exception cref="LifecycleOccurrenceNotValid">An identity is occupied by conflicting content.</exception>
-    public async Task Reconcile()
+    /// <returns>Whether unfinished intents remain. A failed intent retains its acknowledged prefix for retry.</returns>
+    public async Task<bool> Reconcile()
     {
         foreach (var intent in await store.LifecycleFanOut.GetPending(16))
         {
-            var end = Math.Min(intent.Progress + 100, intent.Namespaces.Count);
-            for (var index = intent.Progress; index < end; index++)
+            try
             {
-                var name = intent.Namespaces[index];
-                var template = intent.Occurrence;
-                await wake(name, template.Trigger.Value);
-                var occurrence = template with { Id = OccurrenceIdentities.ForLifecycle(template.Kind, intent.ActivationId, name) };
-                var result = await store.GetNamespace(new EventStoreNamespaceName(name)).Occurrences.Record(occurrence);
-                if (result == OccurrenceRecordResult.OccurrenceIdConflict) throw new LifecycleOccurrenceNotValid("A lifecycle identity is occupied by different content.");
+                await Reconcile(intent);
             }
-            await store.LifecycleFanOut.Advance(intent.Occurrence.Id, end);
+            catch (Exception exception)
+            {
+                logger.FailedReconcilingLifecycleIntent(exception, intent.Occurrence.Id.Value);
+            }
         }
+        return (await store.LifecycleFanOut.GetPending(1)).Any();
+    }
+
+    async Task Reconcile(LifecycleFanOutIntent intent)
+    {
+        var end = Math.Min(intent.Progress + 100, intent.Namespaces.Count);
+        for (var index = intent.Progress; index < end; index++)
+        {
+            var name = intent.Namespaces[index];
+            var template = intent.Occurrence;
+            await wake(name, template.Trigger.Value);
+            var occurrence = template with { Id = OccurrenceIdentities.ForLifecycle(template.Kind, intent.ActivationId, name) };
+            var result = await store.GetNamespace(new EventStoreNamespaceName(name)).Occurrences.Record(occurrence);
+            if (result == OccurrenceRecordResult.OccurrenceIdConflict) throw new LifecycleOccurrenceNotValid("A lifecycle identity is occupied by different content.");
+        }
+        await store.LifecycleFanOut.Advance(intent.Occurrence.Id, end);
     }
 }

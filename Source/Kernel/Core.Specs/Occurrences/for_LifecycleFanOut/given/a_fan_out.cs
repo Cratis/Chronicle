@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Occurrences.for_LifecycleFanOut.given;
 
@@ -36,7 +37,7 @@ public class a_fan_out : Specification
         _fanOut = Recreate();
     }
 
-    protected LifecycleFanOut Recreate() => new(_store, BeforeWrite, TimeProvider.System);
+    protected LifecycleFanOut Recreate() => new(_store, BeforeWrite, TimeProvider.System, NullLogger<LifecycleFanOut>.Instance);
 
     Task BeforeWrite(string? scope, string trigger)
     {
