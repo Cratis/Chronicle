@@ -12,6 +12,10 @@ namespace Cratis.Chronicle.Integration.for_OldKernelOccurrences;
 /// <summary>
 /// Runs a released kernel independently of the current-image integration fixtures.
 /// </summary>
+/// <remarks>
+/// Build the client and its project references with -p:Version=19.74.0, as the publish workflow does.
+/// ProtocolVersion comes from the Contracts assembly, not from the test or application assembly.
+/// </remarks>
 public sealed class OldKernelFixture : IAsyncLifetime
 {
     /// <summary>
@@ -33,6 +37,8 @@ public sealed class OldKernelFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        Assert.True(Contracts.ProtocolVersion.Current.StartsWith("19.", StringComparison.Ordinal),
+            "Build this integration project AND its references with -p:Version=19.74.0. An unversioned Contracts assembly speaks protocol 1, not 19; do not skip the compatibility check.");
         await _kernel.StartAsync();
         var port = _kernel.GetMappedPublicPort(35000);
         _requests = new(port);
