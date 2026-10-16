@@ -166,8 +166,7 @@ projection expressions, not every expression accepted by Screenplay.
 
 **A reducer is the wrong fit when you are rebuilding projection features yourself.** Counts and sums
 already have mapping operations. Cross-source joins, custom aggregation keys, and mutually exclusive
-variant groups belong to projections. Reducers are event-source keyed and cannot participate in
-protected decision reads. Choose an instance reducer over a self reducer only when its separation,
+variant groups belong to projections. Reducers are event-source keyed. A classic reducer with filters or constructor dependencies other than `ILogger<T>` cannot be read as a protected decision read; a self-reducing read model is exempt from the dependency rule. See [Reducers as decision reads](../read-models/decision-reads.mdx#reducers). Choose an instance reducer over a self reducer only when its separation,
 DI, or instance behavior is useful; do not hide durable state in the service instance. Replay invokes
 your code again, and none of the reducer forms promises exactly-once execution or external effects.
 

@@ -12,7 +12,7 @@ Use a decision read when a rule depends on state you read first: a count, a stoc
 | Guards an absent model too | A concurrent creation conflicts |
 | Is optimistic concurrency | Nothing is retried for you and nothing is locked |
 
-For a unique value or a create-once rule, a [constraint](../constraints/index.md) is simpler and cheaper. A plain read through `IReadModels` or an injected read model guards nothing, even when it is passive. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code, and the measured cost is in [What a decision read costs](../dynamic-consistency-boundary/choosing.mdx#what-a-decision-read-costs). To see exactly what a guard covers, read [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
+For a unique value or a create-once rule, a [constraint](../constraints/index.md) is simpler and cheaper. A plain read through `IReadModels` or an injected read model guards nothing, even when it is passive. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code, and the measured cost is in [What a decision read costs](../dynamic-consistency-boundary/limits.mdx#what-a-decision-read-costs). To see exactly what a guard covers, read [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
 
 ## Your first decision read
 
@@ -106,7 +106,7 @@ The stream type and stream id are strings here. With an [event source definition
 
 The stream-scoped overload requires a specific stream type: `EventStreamType.All` refuses with `AllStreamsNotSupported`. `EventStreamId.Default` is allowed for event-source-keyed projections with a specific stream type, including stream types that use only the default ID. As in other Chronicle event filters, this default does not narrow by stream ID: the fold and guard cover every ID within that source and stream type. Stream-keyed projections require an explicit stream ID; the default refuses with `StreamKeyRequiresExplicitStreamId` because it could fold several instance keys together.
 
-Multiple reads for the same source still merge at their earliest boundary and union their event types. If their stream type or stream ID differs, the merged guard widens. Outside a read-protection frame it drops **both stream values**, checking all streams of that source. Under a frame each value is kept only when the reads agree on it. Different source types are dropped in both cases, so all source types count. This can produce extra conflicts, but cannot miss a change affecting either read.
+Reads of the same source merge into one guard, and reads of different streams widen it. [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#several-reads-on-one-source) has the merge rules.
 
 A materialized projection keyed only by stream ID can collide when two event sources use the same stream ID. Prefer a passive projection (`[Passive]`) for these decision folds, or use a composite key for materialization. Composite-key projections are not admitted for protected decision reads. Command-property binding belongs to Arc; Chronicle supplies the explicit read API.
 
@@ -116,9 +116,7 @@ Use `[EventStream<TSource>(stream)]` from `Cratis.Chronicle.ReadModels` when a m
 
 Key-only `Get`, `GetFor` and `GetDetached` refuse with `ReadModelRequiresStreamScope`. Use the stream overload and pass the declaration's event source type as well as its stream type; an omitted or different source type, or a different stream type, refuses with `StreamScopeDoesNotMatchReadModel`. `AdmitForStream<T>()` assesses the stream shape; key-only `Admit<T>()` reports the required scope. Reducers, stream-keyed models, undeclared streams and `All` are invalid declarations.
 
-For queries, `IReadModels.GetInstanceById<T>(EventSourceId, EventStreamId)` takes the stream and source types from the declaration and supplies no guard. Key-only instance reads, collection reads and watchers are refused. See [Read models scoped to one event stream](per-stream.mdx) for a monthly-limit example on `BankAccount/Transactions/2026-10`.
-
-The declaration's source type filters both the fold and the guard. Events appended to that stream without it are neither folded nor guarded. Every writer must use the same definition route. `EventStreamId.Default` still means no narrowing by stream ID; pass a specific month for a monthly rule. Existing models without this attribute retain their current key-only and stream-scoped behavior.
+The plain instance read, the route every writer must use and a worked monthly limit are on [Read models scoped to one event stream](per-stream.mdx). Existing models without this attribute retain their current key-only and stream-scoped behavior.
 
 ## Limits and assumptions
 
