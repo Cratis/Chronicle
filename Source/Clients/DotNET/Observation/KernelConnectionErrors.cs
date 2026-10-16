@@ -28,6 +28,9 @@ internal static class KernelConnectionErrors
             case RpcException { StatusCode: StatusCode.Unavailable }:
                 return KernelConnectionErrorKind.ConnectionLost;
 
+            case RpcException rpc when IsClientNotConnected(rpc):
+                return KernelConnectionErrorKind.SessionLost;
+
             case RpcException:
                 return KernelConnectionErrorKind.Failure;
 
@@ -41,6 +44,11 @@ internal static class KernelConnectionErrors
                     return KernelConnectionErrorKind.Failure;
                 }
 
+                if (kinds.Contains(KernelConnectionErrorKind.SessionLost))
+                {
+                    return KernelConnectionErrorKind.SessionLost;
+                }
+
                 return kinds.Contains(KernelConnectionErrorKind.ConnectionLost)
                     ? KernelConnectionErrorKind.ConnectionLost
                     : KernelConnectionErrorKind.Cancelled;
@@ -48,6 +56,10 @@ internal static class KernelConnectionErrors
 
         return exception.InnerException?.ClassifyStreamError() ?? KernelConnectionErrorKind.Failure;
     }
+
+    static bool IsClientNotConnected(RpcException exception) =>
+        exception.Status.Detail.Contains("ClientIsNotConnected", StringComparison.Ordinal)
+        || exception.Message.Contains("ClientIsNotConnected", StringComparison.Ordinal);
 
     /// <summary>
     /// Check whether an error thrown while handling an event was caused by the observer shutting down.

@@ -596,6 +596,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    /// <inheritdoc/>
+    public void RequestReconnect() => _watchDog.RequestReconnect();
+
     async Task OnSessionDropped()
     {
         if (_connectTcs?.Task.IsCompleted == true)
