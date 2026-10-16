@@ -58,12 +58,24 @@ public class an_append_with_settlement : an_event_sequence_with_repairable_index
         _eventSequenceStorage.GetTailSequenceNumber().Returns(_ => _log.GetTailSequenceNumber());
     }
 
-    protected async Task AppendBatch()
+    protected async Task AppendBatch(bool governed = false)
     {
         var first = ValidatedEvent();
         var second = ValidatedEvent();
-        first.ConstraintContext = new([_recordingValidator], first.Event.EventSourceId, first.Event.EventType.Id, first.CompliantEvent);
-        second.ConstraintContext = new([_recordingValidator], second.Event.EventSourceId, second.Event.EventType.Id, second.CompliantEvent);
+        if (governed)
+        {
+            first.Event = first.Event with { EventType = _eventType };
+            second.Event = second.Event with { EventType = new("OtherEvent", EventTypeGeneration.First) };
+            first.CompliantEvent = Content();
+            second.CompliantEvent = Content();
+            first.ConstraintContext = _currentValidation.Establish(first.Event.EventSourceId, first.Event.EventType.Id, first.CompliantEvent);
+            second.ConstraintContext = _currentValidation.Establish(second.Event.EventSourceId, second.Event.EventType.Id, second.CompliantEvent);
+        }
+        else
+        {
+            first.ConstraintContext = new([_recordingValidator], first.Event.EventSourceId, first.Event.EventType.Id, first.CompliantEvent);
+            second.ConstraintContext = new([_recordingValidator], second.Event.EventSourceId, second.Event.EventType.Id, second.CompliantEvent);
+        }
         _error = await Cratis.Specifications.Catch.Exception(async () => _batchResult = await _eventSequence.AppendManyToStorage([first, second], CorrelationId.New(), [], []));
     }
 }

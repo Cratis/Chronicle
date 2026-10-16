@@ -26,8 +26,26 @@ public partial class EventSequence
         var tail = await EventSequenceStorage.GetTailSequenceNumber();
         if (tail != EventSequenceNumber.Unavailable && tail >= State.SequenceNumber)
         {
-            MarkConstraintIndexGap(State.SequenceNumber);
+            var first = State.SequenceNumber;
+            var adoptedTails = new Dictionary<EventTypeId, EventSequenceNumber>();
+            using var cursor = await EventSequenceStorage.GetRange(first, tail);
+            while (await cursor.MoveNext())
+            {
+                foreach (var @event in cursor.Current)
+                {
+                    var context = @event.Context;
+                    if (!adoptedTails.TryGetValue(context.EventType.Id, out var previous) || previous < context.SequenceNumber)
+                        adoptedTails[context.EventType.Id] = context.SequenceNumber;
+                }
+            }
+            MarkConstraintIndexGap(first);
+            foreach (var (type, number) in adoptedTails)
+            {
+                if (!State.TailSequenceNumberPerEventType.TryGetValue(type, out var previous) || previous < number)
+                    State.TailSequenceNumberPerEventType[type] = number;
+            }
             State.SequenceNumber = tail.Next();
+            await SpillAppendedEventsQueuesToCatchup();
         }
         _appendTailUncertain = false;
     }

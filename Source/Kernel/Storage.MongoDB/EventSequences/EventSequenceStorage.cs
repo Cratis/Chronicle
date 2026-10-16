@@ -330,7 +330,7 @@ public partial class EventSequenceStorage(
         }
         catch (Exception error)
         {
-            throw ClassifyAppendFailure(error, writeIssued);
+            throw ClassifySingleAppendFailure(error, writeIssued);
         }
     }
 
@@ -1187,6 +1187,30 @@ public partial class EventSequenceStorage(
         !writeIssued || (error is MongoException mongo && !mongo.HasErrorLabel("UnknownTransactionCommitResult") && mongo.HasErrorLabel("TransientTransactionError"))
             ? new EventsNotCommitted(error)
             : error;
+
+    /// <summary>
+    /// Classifies a single-event append failure independently of transaction settlement.
+    /// </summary>
+    /// <param name="error">The append failure.</param>
+    /// <param name="writeIssued">Whether the insert was issued.</param>
+    /// <returns>The original error or proof that the insert was rejected.</returns>
+    internal static Exception ClassifySingleAppendFailure(Exception error, bool writeIssued)
+    {
+        // MongoDB server error_codes.yml names 121 (DocumentValidationFailure) and 10334 (BSONObjectTooLarge):
+        // https://github.com/mongodb/mongo/blob/r8.0.0/src/mongo/base/error_codes.yml
+        // Legacy size uasserts 17419/17420 reject before updateDocument/insertDocument:
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L750-L753
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L885-L887
+        if (error is MongoWriteException
+            {
+                WriteError: { Category: ServerErrorCategory.Uncategorized, Code: 121 or 10334 or 17419 or 17420 },
+                WriteConcernError: null
+            } write && !write.HasErrorLabel("UnknownTransactionCommitResult"))
+        {
+            return new EventsNotCommitted(error);
+        }
+        return ClassifyAppendFailure(error, writeIssued);
+    }
 
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
     {
