@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences.Migrations;
 /// Adds durable lifecycle namespace snapshots at event-store scope.
 /// </summary>
 [DbContext(typeof(EventStoreDbContext))]
-[Migration("ES-Occurrences-v19_70_0")]
-public class v19_70_0 : Migration
+[Migration("ES-Occurrences-v19_74_0")]
+public class v19_74_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder) => migrationBuilder.CreateTable(
