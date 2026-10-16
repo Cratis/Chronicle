@@ -14,7 +14,7 @@ public class when_reconnect_is_requested : given.a_connection_watchdog
             return Task.CompletedTask;
         };
         _watchDog.Start();
-        await _reconnected.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _reconnected.Task.WaitAsync(TimeSpan.FromSeconds(10), _time);
         await _cancellationTokenSource.CancelAsync();
     }
 
