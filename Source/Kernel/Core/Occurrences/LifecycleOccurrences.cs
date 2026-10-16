@@ -48,10 +48,13 @@ public class LifecycleOccurrences(IStorage storage, ILogger<LifecycleOccurrences
     /// <inheritdoc/>
     public async Task Ensure()
     {
-        Arm();
         try
         {
-            if (!await _fanOut.Reconcile())
+            if (await _fanOut.Reconcile())
+            {
+                Arm();
+            }
+            else
             {
                 _timer?.Dispose();
                 _timer = null;
@@ -59,6 +62,7 @@ public class LifecycleOccurrences(IStorage storage, ILogger<LifecycleOccurrences
         }
         catch (Exception exception)
         {
+            Arm();
             logger.FailedReconcilingLifecycleOccurrences(exception, this.GetPrimaryKeyString());
         }
     }
