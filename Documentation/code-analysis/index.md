@@ -65,6 +65,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0055](CHR0055) | Unknown event stream on typed event-source filter | Error | `[FromEventSource<TSource>("stream")]` must name a stream the event source definition declares |
 | [CHR0056](CHR0056) | Explicit routing contradicts typed event-source filter | Error | `[EventSourceType]` or `[EventStreamType]` on the same type may only repeat what `[FromEventSource<TSource>]` already says |
 | [CHR0057](CHR0057) | An artifact must target one read model | Warning | A class implementing multiple closed projection or reducer interfaces fails during default artifact discovery; split it into one artifact per read model |
+| [CHR0065](CHR0065) | Read model fold method will not be discovered | Warning | An event fold on a read model has the wrong name or is not static, so it cannot be discovered as a self reducer |
 
 ## Explicit registration evidence
 

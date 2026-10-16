@@ -24,6 +24,11 @@ public static class DiagnosticIds
     public const string InvalidEventStreamReadModel = "CHR0064";
 
     /// <summary>
+    /// A read model fold method will not be discovered because of its name or instance declaration.
+    /// </summary>
+    public const string SelfReducerMethodWillNotBeDiscovered = "CHR0065";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";
