@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mig
 /// Adds nullable constraint index coverage and catch-up state without inventing coverage for existing sequences.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.EventSequences}-{nameof(v19_65_1)}")]
-public class v19_65_1 : Migration
+[Migration($"NS-{WellKnownTableNames.EventSequences}-{nameof(v19_74_3)}")]
+public class v19_74_3 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
