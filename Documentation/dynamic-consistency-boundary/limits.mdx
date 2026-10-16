@@ -32,7 +32,7 @@ One run, on a loaded machine, so read the ratios and not the milliseconds.
 | Operation (median ms) | 10 events on the key | 100 events on the key |
 |---|---|---|
 | Materialized `GetInstanceById` | 2.1 | 5.3 |
-| Passive, instance already in memory | 3.7 | 8.7 |
+| Passive, instance already in memory (19.54.0 only; later versions fold fresh on every read) | 3.7 | 8.7 |
 | Passive, fresh fold | 8.1 | 13.9 |
 | **Decision read (`GetDetached`)** | **12.7** | **22.6** |
 | Tail call, then fetch the key's events and fold them yourself | 5.3 | 19.2 |
