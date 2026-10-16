@@ -235,74 +235,17 @@ public partial class EventSequenceStorage(
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(
         IEnumerable<EventToAppendToStorage> events)
     {
-        EventToAppendToStorage[] eventsToAppend;
-        var causedByPerEvent = new List<Identity>();
-        try
-        {
-            eventsToAppend = events.Select(e => e with
-            {
-                CausedByChain = e.CausedByChain.ToArray(),
-                Causation = SnapshotCausation(e.Causation),
-                Tags = e.Tags.ToArray(),
-                ContentHashes = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes)
-            }).ToArray();
-            foreach (var e in eventsToAppend)
-            {
-                causedByPerEvent.Add(await identityStorage.GetFor(e.CausedByChain).ConfigureAwait(false));
-            }
-        }
-        catch (Exception error)
-        {
-            throw new EventsNotCommitted(error);
-        }
-
+        var (eventsToAppend, causedByPerEvent) = await SnapshotBatch(events);
         var appended = new List<AppendedEvent>();
 
         lock (_lock)
         {
-            var sequenceNumbers = new HashSet<EventSequenceNumber>();
-            if (eventsToAppend.Any(@event => !sequenceNumbers.Add(@event.SequenceNumber) || _events.Exists(existing => existing.Context.SequenceNumber == @event.SequenceNumber)))
+            if (FindDuplicateSequenceNumber(eventsToAppend) is { } duplicate)
             {
-                var nextAvailable = _events.Count == 0
-                    ? EventSequenceNumber.First
-                    : (EventSequenceNumber)(_events.Max(@event => @event.Context.SequenceNumber.Value) + 1);
-                return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable));
+                return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(duplicate);
             }
 
-            var stored = new List<AppendedEvent>();
-            StoredEventMetadata[] metadata;
-            try
-            {
-                for (var index = 0; index < eventsToAppend.Length; index++)
-                {
-                    var e = eventsToAppend[index];
-                    var appendedEvent = BuildAppendedEvent(
-                        e.SequenceNumber,
-                        e.EventSourceType,
-                        e.EventSourceId,
-                        e.EventStreamType,
-                        e.EventStreamId,
-                        e.EventType,
-                        e.CorrelationId,
-                        e.Causation,
-                        causedByPerEvent[index],
-                        e.Tags,
-                        e.Occurred,
-                        e.GenerationalContent,
-                        e.ContentHashes,
-                        e.Subject,
-                        e.NamedTags,
-                        e.EventSource);
-
-                    stored.Add(appendedEvent);
-                    appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));
-                }
-                metadata = stored.Select((e, index) => BuildMetadata(e, eventsToAppend[index].CausedByChain)).ToArray();
-            }
-            catch (Exception error)
-            {
-                throw new EventsNotCommitted(error);
-            }
+            var (stored, metadata) = BuildBatch(eventsToAppend, causedByPerEvent, appended);
 
             // Publish only after the entire batch, its acknowledgments and metadata have been built.
             for (var index = 0; index < eventsToAppend.Length; index++)
@@ -906,5 +849,79 @@ public partial class EventSequenceStorage(
             GenerationalContent = content.ToDictionary(kvp => (int)kvp.Key.Value, kvp => Serialize(kvp.Value)),
             GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
         };
+    }
+
+    async Task<(EventToAppendToStorage[] Events, List<Identity> CausedByPerEvent)> SnapshotBatch(IEnumerable<EventToAppendToStorage> events)
+    {
+        var causedByPerEvent = new List<Identity>();
+        try
+        {
+            var eventsToAppend = events.Select(e => e with
+            {
+                CausedByChain = e.CausedByChain.ToArray(),
+                Causation = SnapshotCausation(e.Causation),
+                Tags = e.Tags.ToArray(),
+                ContentHashes = new Dictionary<EventTypeGeneration, EventHash>(e.ContentHashes)
+            }).ToArray();
+            foreach (var e in eventsToAppend)
+            {
+                causedByPerEvent.Add(await identityStorage.GetFor(e.CausedByChain).ConfigureAwait(false));
+            }
+
+            return (eventsToAppend, causedByPerEvent);
+        }
+        catch (Exception error)
+        {
+            throw new EventsNotCommitted(error);
+        }
+    }
+
+    DuplicateEventSequenceNumber? FindDuplicateSequenceNumber(EventToAppendToStorage[] eventsToAppend)
+    {
+        var sequenceNumbers = new HashSet<EventSequenceNumber>();
+        if (!eventsToAppend.Any(@event => !sequenceNumbers.Add(@event.SequenceNumber) || _events.Exists(existing => existing.Context.SequenceNumber == @event.SequenceNumber))) return null;
+
+        var nextAvailable = _events.Count == 0
+            ? EventSequenceNumber.First
+            : (EventSequenceNumber)(_events.Max(@event => @event.Context.SequenceNumber.Value) + 1);
+        return new DuplicateEventSequenceNumber(nextAvailable);
+    }
+
+    (List<AppendedEvent> Stored, StoredEventMetadata[] Metadata) BuildBatch(EventToAppendToStorage[] eventsToAppend, List<Identity> causedByPerEvent, List<AppendedEvent> appended)
+    {
+        var stored = new List<AppendedEvent>();
+        try
+        {
+            for (var index = 0; index < eventsToAppend.Length; index++)
+            {
+                var e = eventsToAppend[index];
+                var appendedEvent = BuildAppendedEvent(
+                    e.SequenceNumber,
+                    e.EventSourceType,
+                    e.EventSourceId,
+                    e.EventStreamType,
+                    e.EventStreamId,
+                    e.EventType,
+                    e.CorrelationId,
+                    e.Causation,
+                    causedByPerEvent[index],
+                    e.Tags,
+                    e.Occurred,
+                    e.GenerationalContent,
+                    e.ContentHashes,
+                    e.Subject,
+                    e.NamedTags,
+                    e.EventSource);
+
+                stored.Add(appendedEvent);
+                appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));
+            }
+            var metadata = stored.Select((e, index) => BuildMetadata(e, eventsToAppend[index].CausedByChain)).ToArray();
+            return (stored, metadata);
+        }
+        catch (Exception error)
+        {
+            throw new EventsNotCommitted(error);
+        }
     }
 }

@@ -58,8 +58,7 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         cancellationToken.ThrowIfCancellationRequested();
         lock (_lock)
         {
-            return Task.FromResult(_values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
-                .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray().AsEnumerable());
+            return Task.FromResult(ValuesOwnedBy(eventSourceId, definition, scopeKey).AsEnumerable());
         }
     }
 
@@ -69,9 +68,7 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
         cancellationToken.ThrowIfCancellationRequested();
         lock (_lock)
         {
-            var values = _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
-                .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray();
-            return new UniqueConstraintValues(values, cancellationToken);
+            return new UniqueConstraintValues(ValuesOwnedBy(eventSourceId, definition, scopeKey), cancellationToken);
         }
     }
 
@@ -174,4 +171,8 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 
         return Task.CompletedTask;
     }
+
+    UniqueConstraintValue[] ValuesOwnedBy(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey) =>
+        _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
+            .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray();
 }
