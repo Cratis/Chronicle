@@ -58,6 +58,9 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Error, "Failed appending many events in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void ErrorAppendingMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
 
+    [LoggerMessage(LogLevel.Error, "Append outcome unknown from slot {First} in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Check the correlation id before appending again")]
+    internal static partial void AppendOutcomeUnknown(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber first);
+
     [LoggerMessage(LogLevel.Debug, "Grain.EventSequence.AppendMany calling storage with {Count} events for {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void AppendManyCallingStorage(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count);
 

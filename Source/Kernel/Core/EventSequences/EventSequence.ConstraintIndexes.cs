@@ -145,6 +145,7 @@ public partial class EventSequence
 
     async Task PrepareConstraintIndexes(IEnumerable<EventTypeId> types)
     {
+        await RefreshUncertainAppendTail();
         SynchronizeIndexedDefinitions();
         if ((_pendingConstraintIndexes.Count > 0 || _constraintIndexPosition < State.SequenceNumber) && types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }

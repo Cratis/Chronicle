@@ -24,6 +24,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
     protected IMongoCollection<Event> _collection;
     protected Json.IExpandoObjectConverter _expandoObjectConverter;
     protected IEventTypesStorage _eventTypesStorage;
+    protected IIdentityStorage _identityStorage;
     protected EventType _eventType;
     protected IMongoCollection<BsonDocument> _rawEvents;
 
@@ -49,7 +50,7 @@ public abstract class a_replica_set_event_sequence_storage(ReplicaSetMongoDBFixt
         _eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
             .Returns(new EventTypeSchema(_eventType, EventTypeOwner.None, EventTypeSource.Unknown, new JsonSchema()));
 
-        var identityStorage = Substitute.For<IIdentityStorage>();
+        var identityStorage = _identityStorage = Substitute.For<IIdentityStorage>();
         identityStorage.GetFor(Arg.Any<IEnumerable<IdentityId>>()).Returns(Identity.System);
 
         _expandoObjectConverter = Substitute.For<Json.IExpandoObjectConverter>();

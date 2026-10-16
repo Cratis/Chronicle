@@ -13,6 +13,9 @@ public class and_an_acknowledgment_skipped_another_index : given.an_event_sequen
 
     async Task Establish()
     {
+        _eventHashCalculator.Calculate(Arg.Any<EventTypeId>(), Arg.Any<EventSourceId>(), Arg.Any<System.Dynamic.ExpandoObject>()).Returns((EventHash)"submitted-hash");
+        _eventSequenceStorage.ReadBackAppend(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
+            .Returns(call => _log.ReadBackAppend(call.ArgAt<EventSequenceNumber>(0), call.ArgAt<EventSequenceNumber>(1), call.ArgAt<CancellationToken>(2)));
         _failWrites = true;
         await AppendAnEvent();
         _failWrites = false;
@@ -24,7 +27,9 @@ public class and_an_acknowledgment_skipped_another_index : given.an_event_sequen
         var other = ValidatedEvent();
         other.Event = other.Event with { EventType = new("OtherEvent", EventTypeGeneration.First) };
         other.CompliantEvent = Content();
-        await Cratis.Specifications.Catch.Exception(() => _eventSequence.AppendManyToStorage([other], CorrelationId.NotSet, [], []));
+        other.ConstraintContext = _currentValidation.Establish(other.Event.EventSourceId, other.Event.EventType.Id, other.CompliantEvent);
+        var acknowledged = await _eventSequence.AppendManyToStorage([other], CorrelationId.NotSet, [], []);
+        acknowledged.IsSuccess.ShouldBeTrue();
         _snapshots.BeforeWrite = async () => _otherWasIndexedAtPersistence = (await _claims.GetFor(other.Event.EventSourceId, _otherDefinition)).Any();
         _eventSourceId = EventSourceId.New();
     }

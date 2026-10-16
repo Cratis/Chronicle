@@ -58,6 +58,7 @@ public class an_event_sequence : Specification
     protected IConstraintValidation _constraintValidation;
     protected IConstraintValidation _currentValidation;
     protected IEventTypeMigrations _eventTypeMigrations;
+    protected IEventHashCalculator _eventHashCalculator = Substitute.For<IEventHashCalculator>();
     protected IPatternCapture _patternCapture;
     protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
@@ -201,7 +202,7 @@ public class an_event_sequence : Specification
         _silo.AddService(_complianceManager);
         _silo.AddService(_expandoObjectConverter);
         _silo.AddService(Substitute.For<IEventSerializer>());
-        _silo.AddService(Substitute.For<IEventHashCalculator>());
+        _silo.AddService(_eventHashCalculator);
         _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
         {
             Events = new Configuration.Events

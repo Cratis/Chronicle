@@ -40,6 +40,9 @@ internal static partial class EventSequenceMetrics
     [Counter<int>("chronicle-event-sequences-constraint-index-refusals", "Number of appends refused for pending constraint indexes")]
     internal static partial void ConstraintIndexRefused(this IMeterScope<EventSequence> scope);
 
+    [Counter<int>("chronicle-event-sequences-append-outcomes-unknown", "Number of appends whose storage outcome could not be settled")]
+    internal static partial void AppendOutcomeUnknown(this IMeterScope<EventSequence> scope);
+
     [Gauge<ulong>("chronicle-event-sequences-constraint-index-lag", "Events not yet covered by confirmed constraint updates")]
     internal static partial void ConstraintIndexLag(this IMeterScope<EventSequence> scope, ulong lag);
 }
