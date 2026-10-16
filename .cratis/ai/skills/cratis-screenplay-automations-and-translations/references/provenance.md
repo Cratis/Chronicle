@@ -23,7 +23,7 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 
 | Source file | Used in | How |
 |---|---|---|
-| `.claude/skills/eventmodeling-designing-automation-chains/SKILL.md`: resolve the chain when introduced; exhaustive per-automation verification | `SKILL.md` intro and "Gate", `references/audit-format.md` | restored from #493; the six verification questions adapted closely as "Per-chain questions", translated to Screenplay (no board, no `validate_model`) |
+| `.claude/skills/eventmodeling-designing-automation-chains/SKILL.md`: resolve the chain when introduced; exhaustive per-automation verification | `SKILL.md` intro and "Gate", `references/audit-format.md` | the six verification questions adapted closely as "Per-chain questions", translated to Screenplay (no board, no `validate_model`) |
 | same: pending membership not status; opening and closing events | `references/automation-patterns.md` section 2, `references/audit-format.md` question 6 | adapted closely; our todo-list example kept |
 | same: worker only for a new decision; redundant second stage and the `Synced` tell | `references/automation-patterns.md` section 7 "Redundant second stage" | adapted closely, marina berth example in place of Martin Dilger and Nebulit GmbH's |
 | same: silently skipping a missing target | `SKILL.md` "Gate", `references/audit-format.md` | idea inverted: an absent target is an unresolved dependency |
@@ -36,16 +36,13 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 ## Carried forward
 `references/automation-patterns.md`, `translation-patterns.md`, `effects-and-idempotency.md`,
 `cases-to-specify.md` and both examples come from the earlier Cratis drafts of this skill.
-Changes in this version: the examples are complete fenced documents that compile (the translate
-example's anonymous-booking spec gained the `given caller` PLAY0389 requires; the todo-list
-example's list query, `reads` and retry sweep moved to marked design-only excerpts so the core
-binds); tool-qualified verdict text; the trusted-actor text now names `[ExecuteCommandsAsSystem]`
-(Arc v20.56.0). Actor syntax was reverified at Screenplay v4.125.0
-`reactions.md`, `ReactionIdentityParser.cs`, `ReactionRefusalValidator.cs` and the
-binder's v10 selection; the checked scenario passed reference execution. CLI
-3.41.0's older parser and Stage 4.51.3's v7 planner were historical target limits.
-Previous CLI 3.46.1 refused v10 at its version gate. The pinned CLI/Stage pair
-(toolchain `references/versions.md`) renders role/authenticated reaction identity; claim-reading/opaque gates retain
-STAGE-ESM-034 (Stage `v4.89.1:Documentation/reference/reaction-rendering.md:57-59`).
-Public/direction forms and routes/filters follow Screenplay v4.135.0 decisions
-0049–0051 and 0060–0066, not the older inbound-only translation scope.
+
+## Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
+
+| Source skill | Used in | How |
+|---|---|---|
+| `build-automation-workflow` (axon stack): the decision table of signals that call for a workflow | `references/automation-patterns.md` §10 | copied and translated: the signal rows are kept, each answered with a Screenplay shape (chained Automation slices, pending-work views, clock reactions); the engine, step-handler and test mechanics are not adopted; the timeout and compensation-order checks follow its workflow tests |
+| `build-webhook` (supabase stack): inbound webhooks verify the provider's own signature, and the endpoint contract is written for an integrator who cannot read the code | `references/realization-and-gap-fill.md` (capture row), `references/integration-contracts.md` "Publish the inbound contract" | copied and translated: provider-signature authentication and the integrator-facing contract are kept; the function-registration and local-serve mechanics are dropped; "generate the aggregate id when the caller omits it" is not adopted because it breaks retry identity |

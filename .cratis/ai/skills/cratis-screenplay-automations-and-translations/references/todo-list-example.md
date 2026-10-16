@@ -6,17 +6,15 @@
 - Design-only additions
 
 A complete model: a result opens a work item, a reaction invokes a command, the command's fact
-closes the item. It binds on Screenplay 4.66.0 (`executableReady: true`), standalone and through `cratis screenplay mcp`
-3.28.2. Historical rendering: 3.28.2 refused the whole model (`STAGE-ESM-016`),
-Stage 4.73.1 the reaction (`-024`). Stage 4.89.1 renders supported event reactions,
-but this model's clock/cascade specs remain refused (`-024`/`-011`); keep them intact. The cratis 3.27.1 bundle (4.60.1)
-rejected the Automation slice at binding with PLAY0268. Versions: `cratis-screenplay-toolchain` `references/versions.md`.
+closes the item. It binds as ESM v6 (`executableReady: true`), standalone and through `cratis screenplay mcp`.
+Stage renders supported event reactions, but this model's clock/cascade specs remain
+refused (`-024`/`-011`); keep them intact. A compiler that stops before v6 rejects the
+Automation slice at binding with PLAY0285 or PLAY0268. Versions: `cratis-screenplay-toolchain` `SKILL.md`.
 
 The first spec lists the whole cascade (`then` names every new fact: `CoursePassed`, and
 `CertificateSent` through the reaction), and `given clock` supplies the instant that
-`$context.occurred` needs. Both 4.66.0 tools accept that cascade; the cratis 3.27.1 bundle reported a false PLAY0285 on it
-(cli#242). These specs were not
-run in that historical probe; current admitted scenarios can be run with
+`$context.occurred` needs. Both tools accept that cascade when they admit v6; an older compiler reports a false PLAY0285 on it.
+Current admitted scenarios can be run with
 standalone `screenplay test` or MCP `run-specifications`.
 
 What the model proves and what it does not:
@@ -28,7 +26,7 @@ What the model proves and what it does not:
 - The actor behind `SendCertificate` is a recorded security decision in the `Certification`
   module `description`: this example declares no reaction identity, so its
   invocations remain caller-less. A gated trusted path can instead declare
-  `runs as system role` on 4.125.0 (ESM v10), with separate CLI/Stage refusal.
+  `runs as system role` (ESM v10), with separate CLI/Stage refusal.
 - Report reference outcomes only after executing the selected scenarios.
 
 ```screenplay expect PLAY0469,PLAY0516
@@ -191,10 +189,11 @@ module Certification
 ## Design-only additions
 
 Two things a real queue often wants stay out of the complete model above: a list query (the
-visible queue) and a retry sweep that reads the whole view. The list query binds (Screenplay 4.105.0
-or later; it was PLAY0268 at 4.66.0, and Stage refuses a snapshot list); the sweep needs a code body the
-reference does not run, and durable per-item fan-out is outside the language (Screenplay#286). Say so
+visible queue) and a retry sweep that reads the whole view. The list query binds (Stage refuses a snapshot list); the sweep needs a code body the
+reference does not run, and durable per-item fan-out is outside the language. Say so
 in the verdict.
+
+Requires Screenplay 4.105.0 or later (`screenplay --version`) for the list query; before it the list query is refused with PLAY0268.
 
 ```screenplay excerpt parent=assets/pending-certificates.play
 // Parent: the complete document above, slice StateView CertificatesToSend.

@@ -83,3 +83,12 @@ PLAY0477. These diagnostics have no automatic repair; choose the owning text.
 
 Authority: Screenplay v4.127.0 `slices.md` and `specifications.md`. The complete
 model above validates and its specification passes on standalone 4.127.0.
+
+## Summary versus documentation
+
+- Keep the one-line summary in `description`, including short status markers such as
+  **NOT enforced in the model today** (with its target) or **ASSUMED**; record durable
+  reasoning, assumptions, causes and rejected alternatives in fenced Markdown
+  `documentation` on the module, feature, slice, command, event, read model or reaction, not `//` comments or disconnected notes. These are report-only, not
+  enforcement. The rest of this reference covers owners,
+  syntax, folder merge and PLAY0558/0559.

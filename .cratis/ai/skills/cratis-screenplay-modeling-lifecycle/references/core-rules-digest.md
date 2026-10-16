@@ -104,6 +104,12 @@ does not belong on the timeline. The anti-patterns below are what skipping this 
 - **UI-interaction events.** `ButtonClicked` is UI state; model it only if the business cares.
 - **Technical events.** `ApiCalled` describes machinery; find the business outcome underneath.
 - **Recomputed events.** A value that changes whenever its source data changes is a read-model field.
+- **Generic structure.** `SubmitForm` with `content`, or a record of `fields` and `entries`, says
+  nothing about the business. Model one real flow with real values: `ReportHullDamage` ->
+  `HullDamageReported` with berth `A-12` and "Scratched starboard bow, about 40 cm". The exception
+  is a platform that is itself the product: its own facts (`FormTemplatePublished`) are the
+  business. Brownfield generic engines are read the same way
+  (`cratis-screenplay-legacy-extraction`).
 
 ## Structural shapes (candidates)
 Check these only when the model's wiring is visible; a count over the threshold is a prompt to
@@ -124,6 +130,7 @@ for modelers. The full signal, consequence and fix per shape is in
 
 ## Quick self-check
 - [ ] Every event is past tense and a business fact.
+- [ ] The model follows one real flow with real values, not a generic structure.
 - [ ] Every command is imperative intent, not a data load.
 - [ ] Every read model is named for its data.
 - [ ] No event carries a value that is only recomputed from other events.

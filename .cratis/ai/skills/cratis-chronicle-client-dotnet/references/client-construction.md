@@ -4,7 +4,7 @@
 
 # Construct a standalone client
 
-Verified at **Cratis/Chronicle v19.50.0**:
+Source: Cratis/Chronicle:
 `Source/Clients/DotNET/ChronicleClient.cs` and `IChronicleClient.cs`.
 
 The options constructor takes these optional collaborators:

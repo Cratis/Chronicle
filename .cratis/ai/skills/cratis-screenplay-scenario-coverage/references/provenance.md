@@ -2,7 +2,7 @@
 # Provenance
 
 Lineage of `cratis-screenplay-scenario-coverage`. The method was first drafted for the Cratis
-corpus from Screenplay specification semantics (verified at tag v4.66.0) and refined against two
+corpus from Screenplay specification semantics and refined against two
 external event-modeling skill sets.
 
 ## Adapted closely (MIT)
@@ -24,13 +24,23 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 | Source file | Used in | How |
 |---|---|---|
 | `.claude/skills/eventmodeling-elaborating-scenarios/SKILL.md`: Interview Phase, Workshop Facilitation Guide, Multi-Role Review, Common Workshop Mistakes, Tips for Rapid Creation | `SKILL.md` "Interview phase", `references/scenario-workshop.md` | Text shared with TrogonStack's version (rows above, MIT; rationale, "what if" capture and multi-role review passages are not Nebulit-only); the Nebulit file is recorded here for completeness. Time-boxes and the three-to-five quota are kept only as optional pacing (`scenario-workshop.md` "Optional pacing"), subordinate to the coverage matrix |
-| same file: GWT vs. Storyline decision rule, Workflow 0 (decide per read model before drafting any payload; one reused schema may indicate a skipped judgment), todo lists as the prime storyline candidate, repeated event type as a driver | `SKILL.md` Procedure 5, `references/view-and-story-specs.md` "Worked family: a todo list" | Restored from #493 and adapted closely; storylines become lifecycle families of independent specs because Screenplay has no multi-step specification (Screenplay#394); storyline JSON, beats and layout dropped (board transport) |
+| same file: GWT vs. Storyline decision rule, Workflow 0 (decide per read model before drafting any payload; one reused schema may indicate a skipped judgment), todo lists as the prime storyline candidate, repeated event type as a driver | `SKILL.md` Procedure 5, `references/view-and-story-specs.md` "Worked family: a todo list" | Adapted closely; storylines become lifecycle families of independent specs because Screenplay has no multi-step specification; storyline JSON, beats and layout dropped (board transport) |
 | same file: Scenario Types (seven questions, "not a good/bad pair", skip only for a domain reason) | `references/scenario-catalogue.md` | Idea; our own, broader catalogue kept |
 | same file: Quality Checklist (no command has only two scenarios; read models a separate, equally mandatory pass; why behind rules documented) | `SKILL.md` "Quality checklist" | Adapted closely; board posting and `expectEmptyList` items dropped |
 | same file: Gherkin Best Practices (good and bad givens, outcomes, rejections), Key Principles | `references/scenario-examples.md` "Good and bad forms" | Shared with TrogonStack's version (row above); adapted closely, mapped to `.play` specification style |
 | `.claude/skills/eventmodeling-elaborating-scenarios/references/examples.md`: command, state validation, view, list-view, error-path and compensation examples | `references/scenario-examples.md` | Category structure and cases (retry after failure, state violations, reversal with a consequence, list and accumulating views) adapted closely; shared with TrogonStack's version for most categories; rewritten as Screenplay specifications in the compiled `references/invoicing-dues-example.md` (runnable) and `references/invoicing-dues-design.md` (design mode, stored-state rules), with the capture, retry and refund-request specs added by us |
 | `.claude/skills/examples/SKILL.md`: neighborhood-first reading, never overwrite existing examples, short domain-specific values, report fields changed and reused | `references/scenario-catalogue.md` "Example data" | Handoff report (fixtures changed, preserved, reused value origins, inconsistencies) adapted; rest idea, our own wording kept (board tooling, `add_field_examples` and name-based type guessing dropped because declared types decide values) |
 | `.claude/skills/eventmodeling-elaborating-scenarios/SKILL.md`: Step 3 skip unresolved steps, board-only restrictions, "every scenario produces events" | none | Considered and not adopted: removing a prerequisite changes the test; Screenplay has rejections and queries |
+
+### Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
+
+| Source skill | Used in | How |
+|---|---|---|
+| `eventmodeling-elaborating-scenarios` | `references/scenario-catalogue.md` sections 2 and 5, *Example data*; `references/scenario-examples.md`; `references/coverage-matrix.md` *Cell values*; `SKILL.md` | adapted closely: a rejection earns a scenario only if a domain expert could recognize the rule, the duplicate question put as a business question, essential values shown in the body with the rest left out, descriptions that carry no fact a step could state, and a closed list of technical cases left unspecified; concept-rule and once-only specifications are kept on purpose, and a repeat the business would notice is never technical |
+| `eventmodeling-elaborating-scenarios` (examples, error-state and compensation scenarios) and `eventmodeling-identifying-outputs` (error states shown) | `references/scenario-catalogue.md` sections 9 (*Shown*, *Recoverable*) and 10 (follow-up work after a reversal) | copied and translated: the payment-failure view update and the retry after failure, and the compensation triggered by a cancellation, restated as view and retry specifications and an Automation-slice specification; the board scenario syntax is dropped |
 
 ## Cratis-original
 Coverage matrix and obligation derivation from declarations, cell vocabulary (`spec`, `n/a`,
@@ -40,11 +50,9 @@ Chronicle verification obligations, version skew for reaction cascades, spec for
 the berth reservations example.
 
 ## Product facts checked
-- Screenplay v4.66.0 (`c89198b`): `Documentation/screenplay/specifications.md` (actions, outcomes,
+- Screenplay `Documentation/screenplay/specifications.md` (actions, outcomes,
   `then denied`, `then no readmodel`, `then query`, `then events in any order`, PLAY0352,
-  PLAY0389) and the probes recorded in the version table of `cratis-screenplay-toolchain`
-  `references/versions.md`.
-- Screenplay#390 (specification obligations in MCP) and #394 (multi-step specifications) were
-  open when written: cited as not available.
-- Stage v4.24.0: `STAGE-ESM-015` and `STAGE-ESM-011` admission diagnostics for policies and
+  PLAY0389) and the capability notes in `cratis-screenplay-toolchain`
+  `references/executable-subset.md`.
+- Stage `STAGE-ESM-015` and `STAGE-ESM-011` admission diagnostics for policies and
   fixtures (`Documentation/guides/build-renderer-target.md`).

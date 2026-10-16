@@ -170,7 +170,7 @@ this piece different from the last one:
 - a reason the author owns, in words they would say out loud, supplied by them;
 - the limit, placed in the sentence it limits: "On macOS and Linux, the installer…".
 
-Where a sentence has nothing to add, cut it. Concreteness has a ceiling too. In historical
+Where a sentence has nothing to add, cut it. Concreteness has a ceiling too. In past
 headline experiments, extra concreteness helped headlines that were too vague and hurt ones
 that were already very concrete (HC-03). Packing identifiers into an opening won't rescue it.
 

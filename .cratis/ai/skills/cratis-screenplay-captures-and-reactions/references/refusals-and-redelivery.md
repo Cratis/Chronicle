@@ -13,14 +13,13 @@
 
 ## Select a refusal
 
-At Screenplay 4.125.0 these forms are authoring-only: binding refuses the whole
-model with PLAY0268, even when the source is valid. Do not execute them as append
-scenarios or silently drop branches. Sources: released `reactions.md`,
-`specifications.md`, decision 0030.
+Refusal branches and `$refusal` values bind and reference-execute as ESM v19.
+
+Requires Screenplay 4.160.0 or later (`screenplay --version`) for refusal execution; older compilers report PLAY0268.
 
 Inside an `invokes` block, ordered selectors state intended recovery:
 
-| Selector | Matches at future admission |
+| Selector | Matches |
 | --- | --- |
 | `on refused` | Validation or constraint, not authorization |
 | `on refused by validation` | Input/concept/require rejection |
@@ -32,44 +31,113 @@ The first matching selector wins. Repeated selectors or narrower branches after
 covering branches report PLAY0540; bare refusal does not cover authorization.
 Unknown named constraints report PLAY0542; known but inapplicable constraints
 also report PLAY0540. Authorization recovery requires a deliberate trusted path,
-not a fictional caller supplied by `given caller`. On current source a declared
-reaction `runs as` affects identity diagnostics, but refusal branches themselves
-remain unadmitted; do not infer their execution from that separate capability.
+not a fictional caller supplied by `given caller`. Declare the reaction's
+trusted actor with `runs as` when its invoked command requires one.
+Mixed refusals classify as authorization first, then constraint, then validation.
 
 ## Branch values and acknowledgement
 
 A branch contains leaf `acknowledge` alone, or ordinary `produces <Event>` blocks
 with mappings and optional `for`. Empty branches, repeated acknowledgement,
 acknowledgement plus productions, operations, inline events and attachments refuse.
-Acknowledgement states a terminal disposition, not a successful command or fact.
+Acknowledgement records that a refusal was handled, not that work completed.
 
 Branch event mappings may use String values `$refusal.reason` (validation,
-constraint, authorization), `$refusal.message` (verbatim details, including symbolic
-localization keys), and `$refusal.constraint` only in constraint selectors.
+constraint, authorization), `$refusal.message` (error messages joined with a newline
+verbatim, including symbolic localization keys), and `$refusal.constraint` (the first
+violated constraint's name) only in constraint selectors.
 Unknown members, wrong scope or incompatible targets report PLAY0541. Messages
 are display details, not stable identity; trigger inputs remain available, read
 aliases do not become branch inputs.
 
-The intended admitted behavior stops remaining invocations of that trigger after
-handling a refusal, but lets other reactions/cascades from accepted facts settle.
-The refused command adds no facts; branch appends obey normal constraints and
-cannot catch their own refusal through another branch. Unhandled refusal retains
-earlier accepted facts. This is a future contract, not passing runner behavior.
+A handled refusal stops remaining invocations of that trigger, while other
+reactions/cascades from accepted facts continue. The refused command adds no facts;
+branch appends obey normal constraints. A rejected branch append ends the scenario,
+not another refusal branch. Unhandled validation/constraint refusals remain assertable
+with `then error`; earlier accepted facts remain.
 
-## Redeliver an existing occurrence
+This complete model records a constrained duplicate as a refusal fact. Run
+`screenplay test <root>`: exit 0 with one passed scenario.
 
-The complete authoring model below compiles without warnings on 4.125.0;
-`screenplay test` intentionally returns 3/unbound with PLAY0268 for redelivery
-and no-event assertion, not a recovery pass:
-
-```screenplay test=unbound
+```screenplay
 module Billing
   feature Claims
     slice Automation Recovery
       event Approved
         invoice String
+      event Claimed
+      event Refused
+        reason String
+        constraint String
+        message String
+      command Approve
+        id String identifier
+        invoice String
+        produces Approved
+          for id
+          invoice = invoice
+      command Claim
+        id String identifier
+        produces Claimed
+          for id
+      constraint OneClaim
+        unique event Claimed
+        message "Already claimed"
       reaction Claimer
         when Approved
+          invoice
+          invokes Claim
+            id = invoice
+            on refused by constraint OneClaim
+              produces Refused
+                reason = $refusal.reason
+                constraint = $refusal.constraint
+                message = $refusal.message
+            on refused
+              acknowledge
+      specification RecordingTheDuplicate
+        given Claimed
+          for "invoice-1"
+        given Approved
+          for "invoice-1"
+          invoice = "invoice-1"
+        when redelivered Approved to Claimer
+        then Refused
+          for "invoice-1"
+          reason = "constraint"
+          constraint = "OneClaim"
+          message = "Already claimed"
+```
+
+## Redeliver an existing occurrence
+
+Recovery redelivery and explicit no-event assertions bind and reference-execute as ESM v17.
+
+Requires Screenplay 4.157.0 or later (`screenplay --version`); older compilers report PLAY0268.
+
+Run `screenplay test <root>` on this complete model: exit 0 with one passed scenario.
+
+```screenplay
+module Billing
+  feature Claims
+    slice Automation Recovery
+      event Approved
+        invoice String
+      event Claimed
+        invoice String
+      command Approve
+        id String identifier
+        invoice String
+        produces Approved
+          for id
+          invoice = invoice
+      reaction Claimer
+        when Approved
+          invoice
+          produces Claimed
+            for invoice
+            invoice = invoice
+        where invoice == "invoice-2"
       specification Recovery
         given Approved
           for "invoice-1"
@@ -86,12 +154,15 @@ exactly one definitely matching occurrence and no unknown candidates are require
 (PLAY0543). Equal duplicate givens are still separate candidates. A locator with
 no route is a wildcard; explicit stream ids compare canonically, and `no stream`
 selects only unrouted givens. This is the sole action, not an extra action after
-append. Intended delivery uses the existing occurrence, never appends it again.
+append. Givens establish state without firing reactions; delivery uses the existing
+occurrence only for the named reaction, honors its `from`/`where` filters, then
+settles the cascade. It never appends the input again.
 
-Leaf `then no events` explicitly expects no new facts after a non-append action.
-It may accompany view/query/response assertions, not events, any-order events,
-error or denial. It is invalid after `when append` (PLAY0545), and remains
-unadmitted even on a model without a refusal branch.
+Leaf `then no events` explicitly expects no new facts from the action and its
+cascade. After `when append`, it excludes the input fact and asserts nothing
+followed. It counts as a success outcome and may accompany view/query/response
+assertions, not events, any-order events, error or denial (PLAY0545). Omitting
+event expectations is not this explicit assertion.
 
 ## Recovery boundaries
 

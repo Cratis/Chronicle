@@ -96,8 +96,9 @@ class PagingInfo { page: number; size: number; totalItems: number; totalPages: n
 ```
 
 `page` is zero-based. `totalItems` is the total count. A read model returning a
-queryable gets server-side paging and sorting for free — use it whenever a list
-can grow. Over the wire the parameters are `page`, `pageSize`, `sortBy`, and
+queryable, or a MongoDB `Observe` subject, gets server-side paging and sorting
+for free — use one whenever a list can grow, and never page or sort in the
+query. Over the wire the parameters are `page`, `pageSize`, `sortBy`, and
 `sortDirection`.
 
 ### Change streams
@@ -227,7 +228,7 @@ or `exceptionDisplayComponent` (`ExceptionDisplayProps`); `showErrors={false}`
 hides built-in display. Dynamic accessors need `fieldName`; custom field validation
 failures block submit. `useIdentity(type)` deserializes typed details.
 Sources: `Source/JavaScript/Arc.React/Arc.tsx` and
-`commands/CommandForm/CommandForm.tsx` at v22.75.0.
+`commands/CommandForm/CommandForm.tsx`.
 
 ## `<Arc>` configuration
 

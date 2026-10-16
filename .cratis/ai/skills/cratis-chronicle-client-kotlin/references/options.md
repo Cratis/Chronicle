@@ -4,7 +4,7 @@
 
 # Chronicle options
 
-Verified at `Chronicle.Kotlin v6.13.0`: `ChronicleOptions.kt` and
+Source: `Cratis/Chronicle.Kotlin`: `ChronicleOptions.kt` and
 `readModels/DefaultReadModelNamingPolicy.kt`. `ChronicleOptions` is a data class
 with `@JvmOverloads` constructors.
 

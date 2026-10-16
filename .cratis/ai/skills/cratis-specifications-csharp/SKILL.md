@@ -21,29 +21,27 @@ MongoDB observations still need real infrastructure.
 
 ## Verified product sources
 
-This skill is verified against these exact public releases:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Specifications.XUnit` | `4.1.1` | `Specification` base, lifecycle discovery, `ShouldXxx` assertions, optional shared lifecycle |
-| `Cratis.Specifications` | `4.1.1` | `Catch.Exception`, `SpecificationMethods` (dependency of the XUnit package) |
-| `Cratis.Arc.Testing` | `22.76.0` (caller registrations); `22.75.0` (other scenario assertions) | `CommandScenario<TCommand>` preserves explicit principal/override/policy services from 22.75.1; see application-scenarios |
-| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Specifications.XUnit` | `Specification` base, lifecycle discovery, `ShouldXxx` assertions, optional shared lifecycle |
+| `Cratis.Specifications` | `Catch.Exception`, `SpecificationMethods` (dependency of the XUnit package) |
+| `Cratis.Arc.Testing` | `CommandScenario<TCommand>` preserves explicit principal/override/policy services; see application-scenarios |
+| `Cratis.Chronicle.Testing` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
 
-Reactor read-model seeding/absence, synchronous handler exceptions and the
-`EventContext.From` UTC default are verified separately at **Chronicle 19.46.0**
-and require **19.46.0+**; see the ReactorScenario section in
+Requires Chronicle 19.46.0 for reactor read-model seeding/absence, synchronous handler exceptions and the
+`EventContext.From` UTC default; see the ReactorScenario section in
 [application-scenarios.md](references/application-scenarios.md).
 
-Per-context in-process MongoDB host isolation is verified at
-`Cratis.Chronicle.XUnit.Integration` **19.51.0** (`ChronicleFixture.cs`,
+Per-context in-process MongoDB host isolation is in
+`Cratis.Chronicle.XUnit.Integration` (`ChronicleFixture.cs`,
 `ChronicleClientFixture.cs`, `MongoDBContextStorage.cs`); it is opt-in and does
 not isolate out-of-process/remote kernels. See [integration-specs.md](references/integration-specs.md).
 
-Generated-value scenario pinning is verified separately against
-`Cratis.Arc.Testing` **22.75.0** (introduced in **22.67.0**).
+Requires `Cratis.Arc.Testing` 22.67.0 for generated-value scenario pinning.
 
-Reverify against the owning product repository before claiming support for
+Check the owning product repository before claiming support for
 another version. Never translate an assertion or helper name from memory.
 
 ## Route near misses
@@ -57,10 +55,7 @@ another version. Never translate an assertion or helper name from memory.
   plain `Specification` base in this file and do not reach for the scenario
   family except to test the very engine that repository provides.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code
@@ -90,18 +85,13 @@ one. Out-of-process integration specifications are an advanced case reserved for
 boundaries the scenario helpers cannot reach — see
 [integration-specs.md](references/integration-specs.md).
 
-> **Historical validator-state order-sensitivity:** observed at 22.16-era Arc.
-> Process-wide provider replacement was fixed in 22.23.2; later releases isolated
-> scenario stores/services. Reproduce at 22.75.0 before applying the old
-> direct-validator/small `[Collection]` workaround; it is not verified here.
-
 ⚠️ `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
 which the validator skips, so an append that lets the strategy choose the scope
 never produces a concurrency violation. `ShouldHaveConcurrencyViolations()`
 cannot pass for such an append and its negation passes vacuously — specify concurrency against the
 real kernel with an out-of-process integration specification instead.
 
-For a class-based `ReactorScenario<TReactor>` on **Chronicle 19.46.0+**, seed each
+For a class-based `ReactorScenario<TReactor>` on a recent Chronicle (Requires Chronicle 19.46.0), seed each
 handler read-model parameter with `Given.ForEventSourceId(id).ReadModel(instance)`
 or declare intentional absence with `.NoReadModel<T>()`; `Given` events do not
 build it, even if passive. Missing setup throws
@@ -110,16 +100,23 @@ resolved read-model key. See the ReactorScenario reference for diagnostics,
 exception capture and UTC occurrence-time defaults.
 
 Specification projects are named `<Source>.Specs`. Add a `PackageReference` to
-`Cratis.Specifications.XUnit` 4.1.1, not just `Cratis.Specifications`; the C#
+`Cratis.Specifications.XUnit`, not just `Cratis.Specifications`; the C#
 namespace stays `Cratis.Specifications`. The house runner is xUnit **2.x**
-(2.9.3 at this tag), not xUnit v3. Supported targets are net8.0/net9.0/net10.0;
-net48 was dropped in 4.0.0 (retain 3.x for that target).
-`Cratis.Specifications.NUnit` 4.0.0+ is an alternative with the same base pattern,
+not xUnit v3. Supported targets are net8.0/net9.0/net10.0;
+net48 was dropped (retain 3.x for that target).
+`Cratis.Specifications.NUnit` is an alternative with the same base pattern,
 `[Test]` instead of `[Fact]`, and **public** test methods.
+
+Requires Chronicle 19.53.0 for CHR0039 to be an error: await every awaitable
+`Should*` assertion and use an `async Task` fact, or its failure is discarded.
+Check the analyzer package version; do not treat older warning-only builds as
+proof that those assertions ran.
 
 ### Pin server-generated Handle values
 
-For Arc 22.67.0+, `CommandScenario<TCommand>` defaults to strict generation:
+Requires Arc 22.67.0 for generated-value pinning.
+
+`CommandScenario<TCommand>` defaults to strict generation:
 without a named pin or `AllowGeneration()`, `Execute` returns a command result
 with `GeneratedValueNotPinned`, rather than throwing it. Import
 `Cratis.Arc.Testing.Commands`; configure `PinGeneratedValue(name, concept)`
@@ -297,8 +294,10 @@ between collaborators. That is where defects hide.
 
 ## Verify
 
+Requires `Cratis.Specifications` 4.0.0 for the analyzers.
+
 CRSPEC0001–CRSPEC0007 ship as **warnings** in `Cratis.Specifications`, `.XUnit`,
-and `.NUnit` 4.0.0+. A warnings-as-errors build enforces them: `should_` names,
+and `.NUnit`. A warnings-as-errors build enforces them: `should_` names,
 one specification per file (given contexts exempt), no facts on given contexts,
 test attributes on `should_` methods, no explicit base lifecycle calls, public
 specification classes, and no `Because` on given contexts. See

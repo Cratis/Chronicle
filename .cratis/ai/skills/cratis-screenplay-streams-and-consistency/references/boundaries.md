@@ -172,7 +172,7 @@ integration support.
 | Situation | Construct |
 |---|---|
 | another module in the same application | reference the event by name (cross-module resolution works within one application) |
-| another bounded context's contract | `event X from "store"` (shape declared locally, ESM v9); an unquoted `import Context.Event` or `import Q.X from "store"` has no local shape and stays PLAY0268 (see `versions.md` in `cratis-screenplay-toolchain`) |
+| another bounded context's contract | `event X from "store"` (shape declared locally, ESM v9); an unquoted `import Context.Event` or `import Q.X from "store"` has no local shape and stays PLAY0268 (see toolchain `references/executable-subset.md`) |
 | my own files | quoted `import "glob"` |
 | outside data entering | `Translate` slice: `capture`, or a translator `reaction` over an imported event (`cratis-screenplay-automations-and-translations`) |
 | our fact another context needs | a public summary event; the other side translates it into its own language |

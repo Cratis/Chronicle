@@ -43,11 +43,11 @@ artifact. Screenshot the smallest region that answers the question.
 
 ## Verified product sources
 
-This skill is verified against this exact source:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `19.50.1` | the Workbench application, its hosting, screens, and commands |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | the Workbench application, its hosting, screens, and commands |
 
 Reverify before claiming a screen, route, command, or configuration key for
 another version.
@@ -64,8 +64,8 @@ forward **all** traffic over h2c, including Workbench/REST, not HTTP/1.1.
 Restrict direct backend access. With authentication enabled, this requires an
 external HTTPS authority; the internal OAuth authority and `/connect/token`
 are unavailable. The .NET SDK's built-in ClientCredentials mode cannot use that
-external authority. Source: `Documentation/hosting/configuration/tls.md` at
-**v19.50.0**. Use **cratis-chronicle-hosting** for the deployment checklist.
+external authority. Source: `Documentation/hosting/configuration/tls.md`.
+Use **cratis-chronicle-hosting** for the deployment checklist.
 
 Configuration lives under `Cratis:Chronicle`, bound from a `chronicle.json` at
 the host root and from environment variables prefixed `Cratis__Chronicle__`.
@@ -79,6 +79,15 @@ the host root and from environment variables prefixed `Cratis__Chronicle__`.
 `Features:Workbench` is ANDed with `Features:Api`. **Setting `Features:Api` to
 false silently disables the Workbench**, because the Workbench is nothing but a
 client of that API.
+
+Requires Chronicle 19.55.0 for `Workbench:BasePath`
+(`Cratis__Chronicle__Workbench__BasePath`) behind a path-routed proxy. It prefixes
+page assets and API/stream/WebSocket routes and accepts stripped or retained
+prefixes; gRPC clients do not use it. Requires 19.56.1 for all navigation and
+Read Models redirects to retain that prefix. Check the kernel version; older
+kernels need a dedicated host/root route. This is explicit configuration, not
+`X-Forwarded-Prefix` trust. Leave it empty for a Stage-bundled kernel whose
+Workbench page is already rewritten by Stage.
 
 An application that embeds Chronicle can host the Workbench as a side-car web
 server instead, on its own port and optionally under a base path.
@@ -101,14 +110,14 @@ Read these before putting a Workbench on any reachable network.
   layer; the Sequences screen renders whatever event content the API returns.
   Whether an operator sees plaintext personal data depends on the server path,
   not on the UI. Assume they do.
-- **Forwarded headers are not trusted unconditionally.** At **v19.50.0**,
+- **Forwarded headers are not trusted unconditionally.**
   `X-Forwarded-For/Proto` is accepted only from loopback by default, or immediate
   proxy addresses configured in `forwardedHeaders.knownProxies/knownNetworks`
   (`Cratis__Chronicle__ForwardedHeaders__KnownProxies__0` and
   `__KnownNetworks__0`). `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` does not widen
   trust. Restrict the proxy subnet, never use a wildcard CIDR, and have the proxy
   **replace** client-supplied headers. Source: `Documentation/hosting/configuration/tls.md`,
-  "Trusted reverse proxies" at **v19.50.0**.
+  "Trusted reverse proxies".
 - The health endpoint, the antiforgery probe, the gRPC descriptor-set and
   compatibility calls, the initial-admin-password endpoints, and the gRPC
   `ResetKernelState` call answer anonymously (`[AllowAnonymous]`).
@@ -132,13 +141,12 @@ Reducers, Reactors, Sinks and a store-wide Sequences view have routes but no men
 entry (their menu lines are commented out in `EventStore.tsx`). Event types uses
 one list with a side panel (Schema and Observers tabs). Observer details includes
 connected clients in Summary; Failed partitions has Retry and a detail panel.
-The Help menu is available since 19.39.2. Source at **v19.50.0**:
+The Help menu needs Chronicle 19.39.2. Source:
 `Source/Workbench/Features/EventStore/EventStore.tsx`,
 `Namespaces/Observers/ObserverDetails.tsx`, `Namespaces/FailedPartitions/FailedPartitions.tsx`,
 and `General/EventTypes/TypeDetails.tsx` (paths relative to that feature).
-Do not infer that dashboard or stale-detail reports are fixed from the new menu:
-Cratis/Chronicle#4414 and #4418 remain unresolved in the release research; no
-runtime reproduction was performed here.
+Do not infer that dashboard or stale-detail problems are fixed from the Help menu;
+reproduce them against your own deployment.
 
 ## What each screen can change
 
@@ -150,6 +158,7 @@ Everything below mutates the running server.
 | Screen | Operation | Confirmed in the UI? |
 | --- | --- | --- |
 | Observers | Replay observer | yes |
+| Observers | Fast forward to sequence tail | yes |
 | Observers | Clear quarantine | **no** |
 | Observers | Remove observer | yes |
 | Failed partitions | Retry partition | **no** |
@@ -169,6 +178,11 @@ Everything below mutates the running server.
 | Users | Add, change password, require password change, remove | last two |
 | Applications | Add, change secret, remove | remove |
 | Development Tools | **Reset kernel state** | yes |
+
+Requires Chronicle 19.56.0 for Fast forward: it skips every unhandled event,
+discards failed partitions and retains already-built state. This is deliberate
+loss of pending processing, not a repair or replay. Read the hosting operations
+reference before authorizing it; older Workbenches have no such action.
 
 **A missing confirmation dialog is not permission.** Clear quarantine, retry
 partition, stop/resume/delete job, and perform recommendation all fire on the

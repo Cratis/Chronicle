@@ -98,6 +98,12 @@ changed="$(
 )"
 [ -n "$changed" ] || exit 0
 
+# Scope hints are advisory, never product verification or a gate failure.
+if [ -f "$here/cratis-slice-scope-report.sh" ]; then
+    printf '%s\n' "$changed" | bash "$here/cratis-slice-scope-report.sh" "$root" ||
+        printf 'cratis-quality-gate: ADVISORY slice scope report unavailable; gates continue unchanged.\n' >&2
+fi
+
 # ── Project discovery ────────────────────────────────────────────────────────
 # A gate names *what kind of project* it builds, never a product's file. The repository's
 # own solution or package is discovered here, so the shipped gates activate unchanged in an

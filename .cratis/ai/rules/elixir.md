@@ -12,13 +12,13 @@ paths:
 # Elixir Conventions
 
 Use Elixir and OTP idioms, not translated C# or JVM shapes. These conventions
-are grounded in `Cratis/Chronicle.Elixir v3.10.2` (`Source/chronicle/mix.exs`,
+are grounded in `Cratis/Chronicle.Elixir v3.13.0` (`Source/chronicle/mix.exs`,
 `.formatter.exs`, and `lib/chronicle/`). Client-specific APIs belong in the
 **cratis-chronicle-client-elixir** skill.
 
 ## Build and format
 
-- For Chronicle 3.10.x use Elixir 1.18 or later (`~> 1.18`).
+- For Chronicle 3.13.x use Elixir 1.18 or later (`~> 1.18`).
 - Run `mix compile --warnings-as-errors`, `mix test`, and
   `mix format --check-formatted` with the project's formatter inputs.
 - Use two-space indentation and let `mix format` own layout.

@@ -8,14 +8,14 @@
 
 - Address and query
 - Read evidence, not just a count
-- Propose a property change (4.142.0)
+- Propose a property change
 - Add with explicit sources and fixtures
 
-Screenplay 4.138.0 released property-path evidence in `find-references` and
-`dependencies`; this guidance was checked against 4.139.0. Discover installed
-`tools/list`: CLI 3.53.1's 4.137.0 bundle predates it. These are read-only
-inspection tools. Standalone 4.140.0 adds the separate `propose-property` rename/remove planner;
-4.142.0 adds `add`. The CLI bundle has neither capability.
+Property-path evidence in `find-references` and `dependencies` is read-only inspection.
+Discover installed `tools/list`: an older CLI bundle can predate it. The separate
+`propose-property` planner renames, removes and adds properties.
+
+Requires Screenplay 4.138.0 or later (`screenplay --version`) for property-path evidence, 4.140.0 or later for `propose-property` rename and remove, and 4.142.0 or later for add.
 
 ## Address and query
 
@@ -35,7 +35,7 @@ first inspect the event with `find-references`:
 }
 ```
 
-At 4.139.0 this returns two references (`produces`, `thenEvent`), with top-level
+This returns two references (`produces`, `thenEvent`), with top-level
 `totalCount: 2`, `references` and empty `ambiguous`, `incomplete`, `wrongKind`
 arrays. The event response has no `complete` field. Query its property separately:
 
@@ -86,7 +86,7 @@ navigate `targets`, not an assumed interpretation of `otherEnd`. Evidence roles 
 | `opaque` | Text names the property; code is not resolved |
 | `unclassified` | Conservative backstop found a name occurrence outside classified links |
 
-### Observed result on the compiled example (4.139.0)
+### Observed result on the compiled example
 
 The property `find-references` response has `success: true`, `complete: false`,
 `totalCount: 3`, `nextOffset: null`: two resolved references (`mapping-target`
@@ -124,11 +124,11 @@ identity-safe edit route with the connection owner. Never infer safe deletion fr
 zero resolved hits or edit every same-named field. An event-property change still
 needs a persisted-contract evolution decision; the catalog is not storage evidence.
 
-Source/output authority: `v4.139.0:Documentation/screenplay/mcp/reference.md`
+Source/output authority: `Documentation/screenplay/mcp/reference.md`
 (property links), `Source/DotNET/Screenplay.Mcp/McpPropertyDependencies.cs`,
-`McpToolSchemas.cs`, and decision 0044's released prerequisite index. The planner's release evidence is separate below.
+`McpToolSchemas.cs`, and the released prerequisite index. The planner's release evidence is separate below.
 
-## Propose a property change (4.142.0)
+## Propose a property change
 
 Use `propose-property`, not hand-composed `propose-ast` batches, for supported
 add/rename/remove changes along a proven chain. For add, inspect existing
@@ -154,20 +154,24 @@ Unrelated same-named fields appear in `property.notChanged`.
 Read `property.needsDecision` for refusal reasons and located candidates;
 `property.chainCandidates` lists unselected chain members, not automatic edits.
 A refusal returns `success: false` and no writable partial candidate. Missing an
-event mode returns `EventContractChangeRequiresDecision`; do not bypass it by
-text editing or claiming the catalog proves non-persistence.
+event mode without a baseline returns `EventContractChangeRequiresDecision`; never
+bypass it by text editing or claiming the catalog proves non-persistence.
 
-For any selected event property (including optional additions), choose exactly one mode: `newGeneration: true`
-appends N+1 and preserves history; `eventNeverPersisted: true` edits current N in
-place and requires actual knowledge that it was never stored. Neither flag selects
-additional events. New generations require transformations before Chronicle deployment.
+Read [release-baseline evidence](release-baseline.md) before choosing:
+`noBaseline` requires exactly one of `newGeneration: true` or
+`eventNeverPersisted: true`, even for optional additions; `notInBaseline` defaults
+to `inPlace`; `baselined` accepts only explicit `newGeneration: true`, otherwise
+`BaselinedRevisionImmutable`. Never assert non-persistence to unfreeze an admitted
+revision. New generations append N+1; in-place edits keep current N. Neither flag
+selects extra events. Chronicle still needs transformations before deployment.
 
 Default validation is `Authoring` (optional `Executable`), formatting
 `PreserveTrivia`, reference policy always `Safe`. Structural changes require
 explicit `CanonicalizeTouchedDocuments` consent. Inspect retained `read-proposal`
 and `view: "semantic-diff"` before `apply`; only apply writes source and identities.
 Review `property.generations`, always an array ordered by canonical event address,
-with one entry per selected event: `event`, `from`, `to`, `mode`. In-place edits
+with one entry per selected event: `event`, `from`, `to`, `mode`, `mutability`
+(`basis`, `releaseBaselineRevision`, `admittedIn`). In-place edits
 have equal revisions. `[]` means no accepted planned event edits, not success;
 there is no singular `property.generation`. `deployableWithoutTransformation`
 and `esmVersionKnown` are independent of authoring acceptance.
@@ -192,7 +196,7 @@ For a required addition with existing fixtures/assertions, supply `fixtureValue`
 as **literal source text**, for example `"\"normal\""` for a String value. The
 planner adds it to existing specification steps, examples and query results;
 `optional: true` adds no fixture values. A literal is not proof of behavior:
-inspect the assertions and, on Screenplay **4.145.0 and later**, run
+inspect the assertions and run
 `run-specifications` with `proposalId` on the retained candidate before `apply`.
 See [reference execution](mcp-tools.md#run-reference-specifications).
 
@@ -208,8 +212,8 @@ Use `CanonicalizeTouchedDocuments` for additions. Review `property.changed`
 bytes, dropped comments, identities and semantic diff before ordinary `apply`.
 Even an optional event addition needs the same explicit evolution mode above.
 
-Authority: Screenplay `v4.142.0:Source/DotNET/Screenplay.Mcp/McpWorkspaces.Property.cs`,
+Authority: `Source/DotNET/Screenplay.Mcp/McpWorkspaces.Property.cs`,
 `Screenplay/Workspaces/WorkspaceProperty{Request,Plan,Safety,Report}.cs`,
 `WorkspacePropertyAdd{Plan,Edits}.cs`, `WorkspacePropertyAssertionProvenance.cs`,
 `WorkspaceEventGenerations.cs`, and `Documentation/screenplay/mcp/{edit,reference,authoring-tools}.md`;
-the published contract's `mcpTools` entry for `propose-property`; decisions 0067 and 0044.
+the published contract's `mcpTools` entry for `propose-property`.

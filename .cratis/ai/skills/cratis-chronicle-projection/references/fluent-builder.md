@@ -11,8 +11,7 @@
 - When the fluent form is the only option
 - AutoMap default
 
-Verified against `Cratis.Chronicle` `18.3.0`, namespace
-`Cratis.Chronicle.Projections`.
+Namespace: `Cratis.Chronicle.Projections`.
 
 ## The interfaces
 
@@ -43,8 +42,7 @@ IProjectionBuilderFor<TReadModel> VariantOf<TIdentity>(Expression<Func<TReadMode
 IProjectionBuilderFor<TReadModel> EntersOn<TEvent>();
 ```
 
-`VariantOf<TIdentity>` and `EntersOn<TEvent>` require `Cratis.Chronicle`
-`19.1.0` or later — newer than this file's `18.3.0` baseline. See
+Requires `Cratis.Chronicle` 19.1.0 or later for `VariantOf<TIdentity>` and `EntersOn<TEvent>`. See
 [variants.md](variants.md) for the full mechanics: the identity type anchors a
 group of mutually exclusive read models, only the event named in `EntersOn`
 can create or resurrect the variant, and every other `.From<TEvent>()` on the
@@ -52,7 +50,7 @@ same builder is automatically reclassified into an update-only join. There is
 no fluent equivalent of the model-bound `[GlobalFor<T>]` shared handler — a
 mapping shared across variants is repeated on each variant's builder.
 
-At **Cratis/Chronicle v19.50.0**, `FromEvery` also maps child-only events onto
+`FromEvery` also maps child-only events onto
 the owning parent. `IFromEveryBuilder.ExcludeChildProjections()` opts out;
 model-bound `[FromEvery]` has no opt-out. `FromAll` can count into dictionary
 properties with a per-event context key (`Projections/FromEveryBuilder.cs`,

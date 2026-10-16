@@ -8,13 +8,10 @@ license: MIT
 # Chronicle event modeling
 
 > **Model-first check.** If an accepted model under the model root covers this scope, or the
-> repository is opted in (the root, the folder holding the project's `.play` files, holds a committed `.play`
-> file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project explicitly set `mcpServers.screenplay.root` in
-> `.cratis/ai.json`), the model is the source of truth: use
+> repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`), the model is the source of truth: use
 > `cratis-screenplay-event-modeling` (and the lifecycle in
 > `cratis-screenplay-modeling-lifecycle`, which holds the master definition)
-> instead of this skill. An empty directory, install output, a `.play` file
-> outside the root or an untracked or uncommitted draft is not consent. This skill is for
+> instead of this skill. This skill is for
 > hand-written C# models where the repository has not opted in (never force a
 > model; only the entry-point session proposes one, at most once per session), and for
 > code-level work against an already accepted contract (stream identity,
@@ -43,7 +40,7 @@ Verified against **Cratis/Chronicle v19.50.1**:
 `ProtectedValues/EncryptedAttribute.cs`, `EventSources/`, `Events/PublicAttribute.cs`,
 `Sinks/PublishToAttribute.cs`, and `Events/Constraints/ClosesStreamAttribute.cs`
 (paths under `Source/Clients/DotNET/` unless otherwise stated).
-Current version pins: `cratis-screenplay-toolchain` `references/versions.md`.
+Tool versions: `cratis-screenplay-toolchain` `SKILL.md`.
 
 | Package | Purpose |
 | --- | --- |
@@ -73,9 +70,20 @@ these are the `Automation` and `Translate` slice types.
 
 - **Behavior name and type** for each step in the flow.
 - **Commands** — their inputs and the authorization that gates them. Commands
-  are imperative intents.
+  are imperative intents. For each rejection condition, name the values it reads
+  as input, read state or context (time, caller, tenant). Context comes from the
+  command pipeline or an injected time source, never from the wall clock inside
+  the decision, so a specification can fix it.
+- **Who issues each command**: a named role or an automation, never a generic
+  user. Each role's "cannot" becomes authorization plus a denial specification.
+- **Story order**: the flow from its first trigger to every ending, with
+  branches and terminal facts named.
+- **Refused transitions**: per state, which commands are refused and by which
+  rule (a state-by-command table).
 - **Events** — past-tense, one-purpose facts. Names must be self-describing:
-  `<Entity><PastTenseVerb>`, never a bare `Created`.
+  `<Entity><PastTenseVerb>`, never a bare `Created`. Name them for one real
+  flow with real values. On a generic platform, model a case it handles
+  (`HullDamageReported`), not its machinery (`FormSubmitted` with `content`).
 - **The event-source id for every event.** Events never carry their own
   event-source id as a payload property; it lives in the event context. Deciding
   the id *is* deciding the stream boundary.
@@ -94,6 +102,20 @@ Do not append an event for derived or aggregate state. Project it from the sourc
 events instead; an event that records a total is a fact that can disagree with
 its own inputs.
 
+## Only domain facts, never repeats
+
+Append only real domain facts. A tick, a heartbeat, a `…Requested`/`…Started`/`…Skipped`/`…Undecided`
+event whose only job is to wake a reactor, a "last looked" timestamp, usage or cost telemetry and a
+non-answer such as "could not decide" are not facts; orchestrate with a durable job, a state machine,
+a reminder, a command operation or `ICommandPipeline` instead. An observation command (webhook, poll,
+sweep, retry, classifier) compares with current state and appends nothing when nothing changed.
+`…Changed` must be a real change, and a counter built from `[Increment]`/`[Decrement]` needs commands
+that refuse non-transitions. Read [references/event-log-hygiene.md](references/event-log-hygiene.md)
+when modeling an event vocabulary, an observation command or a counter, or measuring a log that grows
+faster than the product's activity. Read
+[references/event-log-cleanup-rollout.md](references/event-log-cleanup-rollout.md) when a release removes
+or reshapes many event types and the stored data must be repaired.
+
 ## Public facts and streams that end
 
 Declare source vocabulary with `IEventSource`, `[EventSource]` and `[EventStream]`;
@@ -106,9 +128,10 @@ manual scope completion, reopening and its crash/reindex limits. Closing refuses
 new appends; it does not erase history or stop projection replay. Specify a
 late append refusal and an unrelated scope remaining open.
 
-`[Public]` permits an event type to leave the event log; `[PublishTo("sequence")]`
-selects publication for projection/reducer output. Private types cannot go to
-outbox, and the event log is not a publication target. Translate inbox facts
+`[Public]` grants publication eligibility; `[PublishTo("sequence")]` selects the
+projection/reducer event-output destination (outbox by default), not eligibility.
+Owning-store membership can also grant eligibility, so private registration
+visibility alone does not forbid publication. The event log is not a publication target. Translate inbox facts
 into local facts at the boundary rather than treating external contracts as
 local commands. Named tags are plaintext, indexed metadata: never personal data.
 
@@ -133,7 +156,9 @@ If a field can only be filled by reaching into another behavior's read model to
 *learn a fact the events should have carried*, you have found a missing event or
 a wrong stream boundary. Fix the model. A read-only cross-slice read through
 Chronicle is allowed where the rule needs it (an injected read model read by
-explicit key, or a `[Passive]` projection for a command-side decision); see
+explicit key, or a `[Passive]` projection for a current read; a rule that must hold under
+concurrency needs a decision read or constraint, see
+[choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md)); see
 Cross-slice patterns in `rules/vertical-slices.md`. Make such a read deliberate
 and name it in the brief, with the consistency it needs: a rule that must hold
 under concurrency needs enrolled guarded reads, not plain injection or a stale
@@ -217,6 +242,9 @@ remain separately authorized; a ready model authorizes none of them.
   missing event.
 - Personal data has a decided subject, and the subject is person-level or the
   trade-off is surfaced.
+- No data-loading command (`LoadOrders`), UI event (`ButtonClicked`), technical
+  event (`ApiCalled`) or recomputed event.
+- Every state has its refusals listed.
 - The specification outline names the failures, not only the happy path.
 
 ## Route near misses
@@ -227,3 +255,4 @@ remain separately authorized; a ready model authorizes none of them.
   same; the artifact is a file that compiles, and the four behavior types above
   map onto its `StateChange`, `StateView`, `Automation` and `Translate` slices.
 - Drawing a decided model as a diagram: `cratis-event-model-diagram`.
+- A flow that crosses services, each owning its own event store: `cratis-multi-service-architecture`.

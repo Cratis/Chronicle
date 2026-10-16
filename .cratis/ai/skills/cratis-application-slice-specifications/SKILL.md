@@ -20,22 +20,19 @@ This skill decides **when to add a scenario** and **what to cover**. The C# mech
 (`Establish`/`Because`, substitutes, contexts) live in
 `cratis-specifications-csharp`.
 
-## Verified product sources
+## Product packages
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Arc.Testing` | `22.75.0` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
-| `Cratis.Arc.Chronicle.Testing` | `22.75.0` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
-| `Cratis.Chronicle.Testing` | `18.3.0` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
-| `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Arc.Testing` | `CommandScenario<TCommand>` and the `CommandResult` assertions |
+| `Cratis.Arc.Chronicle.Testing` | `Given`, `EventLog`, `AppendedEvents` and the appended-event assertions on a command scenario |
+| `Cratis.Chronicle.Testing` | `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` |
+| `Cratis.Specifications.XUnit` | The `Specification` base and the `ShouldXxx` assertions |
 
-> Arc command/query/decision scenario surface rechecked at v22.75.0. Arc depends
-> on Chronicle 19.39.1; later Chronicle reactor setup below has its own minimum
-> version and is not downgraded by this Arc verification.
+Reactor read-model setup and the `EventContext.From` UTC default below need a newer Chronicle than
+the Arc scenario surface itself; see `cratis-chronicle-reactor/references/specifications.md` for sources.
 
-Reactor read-model setup and the `EventContext.From` UTC default below are
-verified separately at **Chronicle 19.46.0**, the minimum version for that
-guidance; see `cratis-chronicle-reactor/references/specifications.md` for sources.
+Requires Chronicle 19.46.0 or later for class-based reactor read-model seeding and the `EventContext.From` UTC default.
 
 `Cratis.Testing` is the meta-package that brings `Cratis.Arc.Testing` and
 `Cratis.Arc.Chronicle.Testing` together. Reverify against the owning product
@@ -57,9 +54,7 @@ repository before claiming support for another version.
   the contract for this skill). Decide this with the decision rule in
   `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
   model under the model root covers this scope, or the repository is opted in
-  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set `mcpServers.screenplay.root`
-  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
-  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`); framework, infrastructure, client, adapter and not-opted-in
   brownfield work stays code-first. Opted in but no model for this scope: model
   it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
   before writing specifications. If those Screenplay skills are not installed,
@@ -81,6 +76,10 @@ list it in the report and, where a model exists, route it to
 
 Without a contract (code-first scope), derive the list from Step 3 and say that
 you did.
+
+### Reading a `.play` specification
+
+Read the actual assignments, not a prose retelling; `given` seeds events or a pinned read model, `when` fills the command, `then` becomes the appended-event predicate or an instance assertion, and `then denied` is `ShouldNotBeAuthorized()`, not a validation error. Read [references/reading-play-specifications.md](references/reading-play-specifications.md) when translating a `.play` specification, including `parameter`/`case` tables, into a specification class.
 
 ## Step 1 — Place the files
 
@@ -120,7 +119,7 @@ keep a scenario for that wiring and for appended-event behavior.
 | Automation or Translation — a reactor | `ReactorScenario<TReactor>` | `cratis-specifications-csharp` |
 | A host, transport, or real-infrastructure boundary | Out-of-process integration | `cratis-specifications-csharp` |
 
-For a class-based reactor scenario on **Chronicle 19.46.0+**, explicitly seed
+For a class-based reactor scenario, explicitly seed
 handler read-model parameters with `Given.ForEventSourceId(id).ReadModel(instance)`
 or declare intentional absence with `.NoReadModel<T>()`. An unseeded model throws
 `ReadModelNotSeededForReactorScenario` even if nullable; `Given` events do not
@@ -177,13 +176,8 @@ public class and_name_is_unique : Specification
 #endif
 ```
 
-The scenario's own surface is `Services`, `Context`, `Execute(command[, ct])`,
-`Validate(command)` (runs the filters without the handler), `LastResult`,
-`Operations` and the three operation assertions
-(`ShouldHaveExecutedOperation<T>()`, `ShouldHaveCompensatedOperation<T>()`,
-`ShouldHaveNoOperationInvocations()`); it is `IDisposable`/`IAsyncDisposable`.
-Seeding (`Given`), the event log and the event assertions arrive as extension
-members from the Chronicle integration.
+The scenario's surface (`Execute`, `Validate`, `LastResult`, `Operations`) is listed in [references/command-result-assertions.md](references/command-result-assertions.md); `Given` and the event assertions are extension members from the Chronicle integration.
+
 
 ## Step 5 — Seed prior state through `Given`
 
@@ -238,30 +232,7 @@ is named after: build the command valid in every other respect. Otherwise
 rule, and always run the "remove the rule, see it go red" check under *How it is
 proven*.
 
-`CommandResult` assertions, from `Cratis.Arc.Testing.Commands`, throwing
-`CommandResultAssertionException`:
-
-| Assertion | Says |
-| --- | --- |
-| `ShouldBeSuccessful()` / `ShouldNotBeSuccessful()` | Authorized, valid, no exceptions — or not |
-| `ShouldBeValid()` | Validation only; it checks neither authorization nor exceptions |
-| `ShouldHaveValidationErrors()` | At least one validation error |
-| `ShouldHaveValidationErrorFor(message)` | A validation error whose message **contains** that text (a substring match; compare messages for equality when exact wording is specified) |
-| `ShouldHaveValidationErrorBecauseOf(reason)` | A validation error with that `ValidationResultReason` |
-| `ShouldBeAuthorized()` / `ShouldNotBeAuthorized()` | The authorization outcome |
-| `ShouldHaveExceptions()` / `ShouldNotHaveExceptions()` | Whether the handler threw |
-| `ShouldHaveConstraintViolationFor(name)` | A constraint violation surfaced on the command result |
-
-`ShouldHaveValidationErrorBecauseOf(reason)` is the message-free way to say
-*which kind* of rejection happened — `ValidationResultReason.ConstraintViolation`,
-`ConcurrencyViolation`, `ValidatorFailed`, `Rule`. Prefer it over
-`ShouldHaveValidationErrorFor(message)`, which pins presentation text.
-
-Authorization failures are different in kind: an unauthorized result carries
-**no** validation errors, so assert `ShouldNotBeAuthorized()`. Adding an
-authorization attribute to an existing command therefore breaks both its
-happy-path and its validation-failure specifications — switch the assertions
-rather than patching around them.
+Read [references/command-result-assertions.md](references/command-result-assertions.md) when choosing a `CommandResult` assertion: `ShouldHaveValidationErrorBecauseOf(reason)` is the message-free way to say which kind of rejection happened, and an unauthorized result carries no validation errors, so assert `ShouldNotBeAuthorized()`.
 
 ## Step 7 — Assert what was appended
 
@@ -307,11 +278,10 @@ ideas recorded in `references/provenance.md`. Read `references/provenance.md` wh
 - **The command scenario reports success but nothing was appended.** The
   assertion is on `CommandResult` only; add a
   `ShouldHaveAppendedEvent<TCommand, TEvent>` fact.
-- **Injected-validator branches flip with test ordering.** This was observed in
-  the 22.16-era harness. Arc 22.23.2 stopped replacing the process-wide provider;
-  later releases isolated stores and event-source services per scenario. Reproduce
-  at 22.75.0 before applying the old direct-validator/small `[Collection]`
-  workaround; no current reproduction was verified here.
+- **Injected-validator branches flip with test ordering.** An older harness replaced the process-wide provider; current
+  releases isolate stores and event-source services per scenario. Reproduce
+  before applying the old direct-validator/small `[Collection]`
+  workaround.
 
 ## How it is proven
 

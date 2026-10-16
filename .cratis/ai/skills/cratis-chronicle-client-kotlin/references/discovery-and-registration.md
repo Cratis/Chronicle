@@ -1,12 +1,12 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-kotlin/references/discovery-and-registration.md -->
 ## Discovery and registration
 
-Verified at `Chronicle.Kotlin v6.13.0`: `ClientArtifacts`,
+Source: `Chronicle.Kotlin`: `ClientArtifacts`,
 `ArtifactRegistrations.registerAll` and `EventStore`.
 
 `ClientArtifacts` scans the classpath with ClassGraph
-(`artifacts/ClientArtifacts.kt:66-98`), and `ClientArtifacts.default` is a
-process-wide lazy singleton (`:156`). What it looks for (`:66-98`):
+(`artifacts/ClientArtifacts.kt`), and `ClientArtifacts.default` is a
+process-wide lazy singleton. What it looks for:
 
 | Kind | Rule |
 | --- | --- |
@@ -41,15 +41,15 @@ Explicit `registerAll()` starts the remaining observers then throws
 `ArtifactRegistrationFailed` listing failures. A kernel-rejected event-type
 registration throws `ChronicleCommandRejected`.
 
-**Registration re-runs on every reconnect.** `EventStore.kt:226-241` launches a
+**Registration re-runs on every reconnect.** `EventStore.kt` launches a
 coroutine on `Dispatchers.IO` collecting the connection lifecycle and
 re-registers each time. The connection id rotates on every disconnect because
 the kernel keys observer subscriptions by it
-(`connection/ConnectionLifecycle.kt:24-32`), so observers must re-register — and
+(`connection/ConnectionLifecycle.kt`), so observers must re-register — and
 they do.
 
 `store.awaitRegistration()` waits for the first attempted pass; its gate
 completes in `finally` even on failure. It throws `ChronicleConnectionFailed`
 when the kernel rejects the connection, as do gated appends.
-`store.registerAll()` (`:83`) runs it by hand when
+`store.registerAll()` runs it by hand when
 `autoDiscoverAndRegister = false`.

@@ -20,10 +20,10 @@ case where the shape itself is data.
 
 ## Verified product sources
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
+| Package | Verified from |
+| --- | --- |
+| `@cratis/components` | its package manifest and the `SchemaEditor` / `ObjectContentEditor` sources |
+| `react` | peer of `@cratis/components` |
 
 ## The schema type these editors consume
 

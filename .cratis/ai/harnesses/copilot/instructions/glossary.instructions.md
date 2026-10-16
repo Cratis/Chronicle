@@ -17,13 +17,14 @@ One precise line per load-bearing term, so the same word means the same thing ev
 - **Event sequence** — a named, append-ordered log; `EventSequenceId` (the event **log**, **outbox**, **inbox**).
 - **Event log** — the default event sequence where domain events are appended.
 - **Outbox / inbox** — cross-service event sequences: a producer appends its public contract event to the outbox; a consumer observes the inbox.
+- **Public event** — an event type that is part of the contract an event store exposes to other services (`[Public]`, or `[EventStore]` on the type or its assembly); events are private by default. The outbox accepts only public events, and the event log refuses them.
 - **EventContext** — metadata traveling with an event (event source id, sequence number, occurred, causation/correlation, subject).
 
 ## Read side
 
-- **Read model** — a `[ReadModel]` record holding queryable derived state, built by a projection or reducer; exposes `static` query methods.
-- **Projection** — declares how a read model is built by consuming **events** (model-bound attributes, or fluent `IProjectionFor<T>`); pure events→state, no side effects, never reads other read models.
-- **Reducer** — `IReducerFor<T>`; a "current state + event → next state" read-model builder; the last-resort escape hatch when projections can't express the transition.
+- **Read model** — derived state built from events by a projection or reducer; an optional Arc `[ReadModel]` record exposes static queries, but Chronicle-only models need no query attribute.
+- **Projection** — declares how events build a read model (model-bound attributes, fluent `IProjectionFor<T>`, or PDL outside application code); pure events→state, no side effects, never reads other read models.
+- **Reducer** — a "current state + event → next state" builder when transitions read better as code; new .NET code defaults to static `Reduce(event, model? current[, EventContext])` on a self-reducing model (no marker), with `IReducerFor<T>` for DI/replay instance behavior/separation and nominated plain classes when their assembly cannot reference Chronicle. See **cratis-chronicle-reducer**; other SDKs retain their own contracts.
 - **Reactor** — `IReactor`; observes events and produces **side effects** (notifications, commands, follow-up events). The "if this then that".
 - **Observer** — Chronicle's umbrella for anything consuming an event sequence (projection, reducer, reactor); carries subscription / replay / **quarantine** state. Projection replay and catch-up each walk the sequence in one globally ordered job step; a new catch-up failure stops that step. Full replay is inactive and completion does not resume a quarantined observer (Chronicle v19.50.1, `Documentation/concepts/observers.mdx`, `Observation/Jobs/{CatchUpObserver,ReplayObserver}.cs` under `Source/Kernel/Core/`).
 - **Sink** — where a read model is persisted (MongoDB, EF Core).
@@ -35,6 +36,8 @@ One precise line per load-bearing term, so the same word means the same thing ev
 - **Command** — a `[Command]` record expressing an imperative **intent**; its public `Handle()` produces event(s) (or a response).
 - **Provide()** — the command method that fetches/computes data after validation/authorization and before `Handle()`; may short-circuit with a `ValidationResult`.
 - **Causation chain** — the ordered links saying how an append came about (root process → command → …), each carrying properties. A command records its **name and its property values** there, so an event says what the command was asked to do; the chain lives in the event log and is as permanent as the events.
+- **Observation command** — a command whose input comes from outside the model's own decisions (webhook, poll, sweep, retry, classifier). It compares with current state and appends nothing when nothing changed; looking is not a fact.
+- **Signal event** — an event appended only to make a reactor do something (`…Requested`, `…Started`, `…Skipped`). Not a domain fact; use a job, state machine, command operation or `ICommandPipeline`.
 - **Constraint** — `IConstraint`; an **append-time** invariant (uniqueness / concurrency) enforced at the event-store level.
 - **DCB (Dynamic Consistency Boundary)** — enforcing a state-dependent rule under concurrency over explicitly enrolled event-state reads: stream decisions/exact scopes or protected, admitted projection decision reads. Plain injected models and `Result<TEvent, ValidationResult>` alone are advisory, not a guard.
 - **Consistency boundary** — the scope within which an invariant holds atomically (an event source, a routed stream, or the event state enrolled by an admitted protected decision read).
@@ -44,7 +47,7 @@ One precise line per load-bearing term, so the same word means the same thing ev
 ## Structure & types
 
 - **Slice** — the vertical unit of one behavior (command + events + projection + read model + component + specs), created/changed/deleted together.
-- **Slice types** — **State Change** (command → events), **State View** (events → read model), **Automation** (events → side effect, including a follow-up command or event — a Screenplay `produces` / `invokes`), **Translation** (data from *outside* the model's own facts → our own facts: an external system's or another service's data recorded as events we own, keeping the external fact distinct from the local one). A reactor that turns our own event into a follow-up event or command is an Automation, not a Translation.
+- **Slice types** — **State Change** (command → events), **State View** (events → read model), **Automation** (events → side effect, including a follow-up command or event — a Screenplay `produces` / `invokes`), **Translation** (data from *outside* the model's own facts → our own facts: an external system's or another service's data recorded as events we own, keeping the external fact distinct from the local one; a Screenplay `Translate` slice with `direction outbound` is the other direction, publishing our private facts as one public contract event). A reactor that turns our own event into a follow-up event or command is an Automation, not a Translation.
 - **Concept** — a `ConceptAs<T>`, a strongly-typed wrapper over a primitive domain value (never raw `Guid`/`string`/`int`).
 - **EventSourceId<T>** — the strongly-typed event-source identity; derive entity identities from this, not `ConceptAs<Guid>`.
 - **Proxy** — the generated TypeScript command/query client, produced from C# on a **Debug** build; carries a `// @generated by Cratis` header and is never hand-edited.

@@ -13,7 +13,7 @@
 
 ## Command defaults and complete overrides
 
-Named event sources/streams and command routes bind as ESM v8 (verified at 4.125.0).
+Named event sources/streams and command routes bind as ESM v8.
 A routed command's identifier and known destinations must match the source's nominal
 identifier type (PLAY0504). Allocation uses the generated identifier's type, or
 without one requires a UUID-based source. Composite `streamId` routes map every
@@ -32,7 +32,7 @@ Resolve the command route and every override eagerly after validation/requiremen
 and before generation. An invalid route in a skipped conditional production still
 rejects the command atomically as Contract, leaving no new facts or allocation.
 Mappings accept required nongenerated direct scalar command inputs or literals;
-property paths remain PLAY0268 (#574), generated inputs PLAY0273. A portable
+property paths remain PLAY0268, generated inputs PLAY0273. A portable
 unkeyed override replaces a keyed command id, never inherits it; a renderer must
 refuse that form if its adapter cannot clear inherited metadata.
 
@@ -102,22 +102,13 @@ and wrong source/stream, and unrouted input. Read [specification route forms](so
 
 ## Admission and evidence
 
-ESM v10 was first published in 4.125.0 (reaction system identity). Production
-routes and observer filters shipped in 4.129.0. Decision 0066 records that already
-shipped extension as a retroactive exception; all three are now one frozen v10
-contract. A consumer admitting v10 must include all three, not just identity.
-Composite **read-model** keys are separate and remain unadmitted (PLAY0268, #599).
+ESM v10 carries reaction system identity, production route overrides and observer filters as one
+frozen contract. A consumer admitting v10 must include all three, not just identity.
+Composite **read-model** keys are separate and remain unadmitted (PLAY0268).
 
-Previous CLI 3.46.1/Stage 4.52.0 refused versions above v7 before planning.
-The pinned CLI/Stage pair (`versions.md`) admits through v15 to construct checks: production overrides
+The CLI/Stage pair admits through its newest version to construct checks: production overrides
 still refuse STAGE-ESM-036; reaction/reducer filters render on the semantic path,
 while legacy syntax paths retain STAGE-ESM-035.
-Source: Stage `v4.89.1:Source/Rendering.Cratis/Semantics/SemanticVersionFeatureAdmission.cs:27-34`,
-`Documentation/reference/reaction-rendering.md:33-34,83-98`.
 A supported version number alone never proves target support or a passing render.
 
-Source: Screenplay `v4.135.0:Documentation/screenplay/{event-sources,readmodels,reactions,diagnostics}.md`,
-decisions 0061–0063/0066 and canonical corpus
-`Source/DotNET/Screenplay.CanonicalCorpus/Corpus/EventRoutes/{production-routes,observer-filters}/source/`.
-Stage `v4.67.0:Source/Rendering.Cratis/Semantics/{SemanticVersionFeatures,SemanticVersionFeatureAdmission}.cs`;
-CLI `v3.50.0:Source/Cli/Commands/Render/RenderedSemanticVersions.cs`.
+Requires Screenplay 4.125.0 or later (`screenplay --version`) for reaction system identity (ESM v10), and 4.129.0 or later for production route overrides and observer filters.

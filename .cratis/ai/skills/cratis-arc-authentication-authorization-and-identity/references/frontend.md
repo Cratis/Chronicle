@@ -7,8 +7,9 @@
 - `@cratis/arc.react/identity`
 - `RequireRole`
 - MVVM
+- Identity hook examples
 
-Verified against `@cratis/arc` and `@cratis/arc.react` `22.75.0`.
+Source: `@cratis/arc` and `@cratis/arc.react`.
 
 ## `@cratis/arc/identity`
 
@@ -46,7 +47,7 @@ interface IIdentity<TDetails = object> {
 Only a 404 enables the warned legacy-cookie fallback; a cookie never overrides
 401/403. Stop reading `.cratis-identity` in application code. Neither the memory
 cache nor the legacy fallback is an authorization boundary.
-Source: [Arc v22.75.0 IdentityProvider.ts](https://github.com/Cratis/Arc/blob/v22.75.0/Source/JavaScript/Arc/identity/IdentityProvider.ts).
+Source: [IdentityProvider.ts](https://github.com/Cratis/Arc/blob/main/Source/JavaScript/Arc/identity/IdentityProvider.ts).
 
 ## `@cratis/arc.react/identity`
 
@@ -116,3 +117,21 @@ server, where the decision cannot be edited.
 `@cratis/arc.react.mvvm` has **no** identity hook, provider, context, or type. It
 registers `IIdentityProvider` → `IdentityProvider` in its container so a view
 model can constructor-inject it. That is the whole integration.
+
+## Identity hook examples
+
+```tsx
+import { Arc } from '@cratis/arc.react';
+
+<Arc detailsType={<Details>}>{children}</Arc>
+```
+
+`<Arc>` renders the `IdentityProvider` context for you. Inside it:
+
+```tsx
+import { useIdentity, RequireRole } from '@cratis/arc.react/identity';
+
+const identity = useIdentity(<Details>, <defaultDetails>);
+// identity.id, .name, .roles, .details, .isSet, .isInRole(role)
+// identity.isLoading, identity.clearIdentity()
+```

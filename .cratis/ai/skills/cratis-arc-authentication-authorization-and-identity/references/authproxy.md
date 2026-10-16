@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/authproxy.md -->
 # Cratis AuthProxy as the trusted ingress
 
-Verified against Cratis AuthProxy `v2.30.5` (container image `cratis/authproxy`) and its documentation. AuthProxy is a reverse proxy that authenticates callers (OpenID Connect, JWT) and forwards the result to a backend in exactly the header contract Arc reads. It is the ingress the rest of this skill asks for. Other ingresses (Azure Container Apps or App Service EasyAuth, your own gateway) work if they meet the same four obligations; this page is specific to AuthProxy.
+Source: Cratis AuthProxy (container image `cratis/authproxy`) and its documentation. AuthProxy is a reverse proxy that authenticates callers (OpenID Connect, JWT) and forwards the result to a backend in exactly the header contract Arc reads. It is the ingress the rest of this skill asks for. Other ingresses (Azure Container Apps or App Service EasyAuth, your own gateway) work if they meet the same four obligations; this page is specific to AuthProxy.
 
 ## What it does to the headers
 

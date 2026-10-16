@@ -1,13 +1,20 @@
-<!-- cratis-ai-managed: skills/cratis-screenplay-render-and-gap-fill/references/drift-and-ledger.md -->
-# Drift, publication refusals and the fallback ledger
+<!-- cratis-ai-managed: skills/cratis-screenplay-render-and-gap-fill/references/drift-and-fallback-record.md -->
+# Drift, publication refusals and the fallback record
+
+## Contents
+
+- 1. Drift: the model changed, the output was not re-rendered
+- 2. Publication refusals (code changed under the model)
+- 3. Build breaks in `Customizations/` after a re-render
+- Hand-written code changed since it was last verified
+- 4. Fallback record
 
 ## 1. Drift: the model changed, the output was not re-rendered
 The ownership manifest `.cratis-render.json` at the destination records `semanticRevision`
 (`rev1:<sha256>`), the target, the renderer, the application name and a hash per managed file.
 
-Facts verified with `cratis render` 3.28.2 on one model (historical probe; still how identity works): the same files rendered under the names
-`Marina` and `Harbour` gave different `semanticRevision` values, so **the application name is part
-of the revision**. The MCP workspace names the application after the model root folder (without
+Rendering the same model under different application names changes `semanticRevision`, so
+**the application name is part of the revision**. The MCP workspace names the application after the model root folder (without
 `.screenplay/identities.json`), so its `modelRevision` is not comparable with a render's manifest
 revision by assumption. Without `.screenplay/identities.json` it changes when the root folder is
 renamed (relocating the root while keeping its name does not); source positions and descriptions do
@@ -35,7 +42,7 @@ Compare in this order:
    never V4 or V5; it needs the same generation options (`--domain`, `--feature-root`, `--module`,
    `--skip-segments`, `--modules-from-namespace-roots`) that reproduce the authored placement, or
    everything looks missing. MSBuild evaluates the project (use a trusted clone) and the bundle's
-   `Cratis.Arc.Screenplay` is the version in `cratis-screenplay-toolchain` `references/versions.md`, so recovery behaves like that adapter. It does not replace
+   `Cratis.Arc.Screenplay` is whichever version the CLI bundles (check `cratis --version` against the generator package loaded), so recovery behaves like that adapter. It does not replace
    `cratis-application-slice-conformance`, which reconciles specifications, rules and behavior.
    Whether it is meaningful on a Stage-rendered application is unverified.
 
@@ -60,10 +67,18 @@ Re-render checklist: `cratis-stage-rendering-and-sandbox` `references/rendered-a
 A generated contract changed. Read the error line and the generated type it names, fix the
 adapter, rebuild. Never edit the generated file.
 
-## 4. Fallback ledger
-One file per model: `.ai-work/screenplay/<model-slug>/fallback-ledger.md`, untracked. A durable
-record belongs in repository documentation or an issue, not in the ledger file. One entry per
-non-renderable scope:
+## Hand-written code changed since it was last verified
+
+Read `references/hand-written-changes.md` for the read-only investigation: agree the baseline,
+walk changes per file, distinguish undelivered scope from removed delivered code, and return
+restoration briefs or model edit requests including affected screens. Neither this investigation
+nor `conform` is a behavioral equivalence verdict; passing specifications remain necessary.
+
+## 4. Fallback record
+One file per model: `.ai-work/screenplay/<model-slug>/fallback-record.md`, untracked. A durable
+record belongs in repository documentation or an issue, not in this work record. Use the same
+fields for a hand-written slice's result packet; add probe-specific fields only where applicable.
+One entry per assigned scope, with realization rows per slice:
 
 | Field | Content |
 | --- | --- |
@@ -73,13 +88,22 @@ non-renderable scope:
 | class | capability gap / tool skew / model fix pending |
 | decision | stay design / renderable-mode change (user, date) / implementer |
 | fallback location | project and folder of the hand-written code |
+| delivered at | delivery code source identity, using the lifecycle's source-identity definition; name the accepted model identity separately |
+| element map | one row per qualified command, event, read model, query, screen, reaction or capture declaration: code symbol and repository-relative file location, or `no counterpart, because …` |
+| files | created and modified paths, distinguished |
+| seams touched outside the slice folder | each shared path, symbol and reason (registration, route, migration or adapter hook), or `none`; retain these for removal or re-delivery |
+| assumptions | each declaration address, non-behavioral choice and consequence if wrong, or `none`; the delivery block list wins |
+| checks run | exact iteration and completion commands, each with result or `not run: <reason>` |
 | spec mapping | `.play` specification to test name, one line each; missing tests listed |
-| field inventory | `n/n` command, event and read-model properties mapped; extras: none, or listed with reason |
+| field inventory | one row per command, event and read-model property with its input-to-code-to-storage chain where applicable, or `no counterpart, because …`; `n/n` mapped; extras: none, or listed with reason |
 | realization requirements applied | explicit realization notes from slice `description` or `documentation` applied, one line each; other description prose used as a hint is listed separately |
 | spec delta | at re-delivery: specifications added, changed or removed since `last verified`, each with test status |
 | divergences | where the code deliberately differs from the model, with reason and approver |
 | revisit trigger | issue and condition (for example "Stage#58 ships list queries") |
-| last verified | source identity and date the mapping was checked |
+| last verified | accepted model identity, code source identity and date the whole mapping and check results were reconciled |
+
+Keep one row per element, field and specification, with no code excerpts. These mappings help a
+reviewer navigate; they are not proof of behavior without the checks they name.
 
 When a revisit trigger fires, probe again; if the scope now renders, plan the migration from
 hand-written code to managed output with the user.

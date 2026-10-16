@@ -13,10 +13,14 @@
 #   2. its tip is merged into origin/<default> and its upstream is gone (the PR branch was deleted), or
 #   3. GitHub reports a merged pull request whose head commit is exactly this tip.
 # Anything else is KEPT and reported with the reason. Nothing is ever forced: a dirty, locked or
-# current worktree is kept, and `git worktree remove` is never given --force.
+# current worktree is kept, as is one holding .ai-work/ records unless explicitly opted in.
+# `git worktree remove` is never given --force.
 #
 # Usage:
-#   cratis-cleanup-worktrees.sh [--dry-run] [--quiet] [--no-fetch]   run in the repository (any worktree)
+#   cratis-cleanup-worktrees.sh [--dry-run] [--quiet] [--no-fetch] [--include-work-records]
+#                                                                 run in the repository (any worktree)
+#   --include-work-records                                       allow deletion of .ai-work/ records
+#                                                                 by hand only; ignored in hook mode
 #   cratis-cleanup-worktrees.sh --hook                                Claude hook mode: reads the hook JSON
 #                                                                     on stdin, acts only when relevant
 #   cratis-cleanup-worktrees.sh --self-test                           plants cases and fails if any is wrong
@@ -26,11 +30,12 @@
 # shellcheck disable=SC2016  # the self-test checks are single-quoted on purpose: they are eval-ed later
 set -uo pipefail
 
-DRY=0; QUIET=0; FETCH=1; HOOK=0; SELFTEST=0
+DRY=0; QUIET=0; FETCH=1; HOOK=0; SELFTEST=0; INCLUDE_WORK_RECORDS=0
 for a in "$@"; do
     case "$a" in
         --dry-run) DRY=1 ;; --quiet) QUIET=1 ;; --no-fetch) FETCH=0 ;;
         --hook) HOOK=1; QUIET=1 ;; --self-test) SELFTEST=1 ;;
+        --include-work-records) INCLUDE_WORK_RECORDS=1 ;;
         *) echo "cratis-cleanup-worktrees: unknown argument '$a'" >&2; exit 2 ;;
     esac
 done
@@ -38,6 +43,7 @@ done
 # ── Hook mode: decide whether this event is worth a sweep ─────────────────────
 EVENT="PostToolUse"
 if [ "$HOOK" = 1 ]; then
+    INCLUDE_WORK_RECORDS=0
     payload=''; IFS= read -r -d '' payload || true
     [ "${CRATIS_HOOKS_SKIP_CLEANUP:-}" = 1 ] && exit 0
     case "$payload" in *'"SessionStart"'*) EVENT="SessionStart" ;; esac
@@ -58,6 +64,7 @@ fi
 if [ "$SELFTEST" = 1 ]; then
     self=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
     t=$(mktemp -d "${TMPDIR:-/tmp}/cleanup-selftest.XXXXXX"); trap 'rm -rf "$t"' EXIT
+    t=$(cd "$t" && pwd -P)
     export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t CRATIS_CLEANUP_NO_GH=1
     git init -q --bare -b main "$t/origin.git"
     git clone -q "$t/origin.git" "$t/repo" 2>/dev/null; cd "$t/repo" || exit 2
@@ -67,6 +74,16 @@ if [ "$SELFTEST" = 1 ]; then
     mk dirty;      (cd "$t/wt-dirty" && echo x > x && git add x && git commit -qm x)
     mk unmerged;   (cd "$t/wt-unmerged" && echo u > u && git add u && git commit -qm u)
     mk fresh                                    # brand new, no commits: must survive
+    for b in records empty-records locked locked-detached; do
+        mk "$b"; (cd "$t/wt-$b" && echo "$b" > "$b" && git add "$b" && git commit -qm "$b")
+        git merge -q --no-ff "$b" -m "merge $b"
+    done
+    mkdir "$t/wt-records/.ai-work" "$t/wt-empty-records/.ai-work"
+    echo '.ai-work/' >> "$t/repo/.git/info/exclude"
+    echo handoff > "$t/wt-records/.ai-work/.handoff"
+    git -C "$t/wt-locked-detached" checkout -q --detach
+    git worktree lock "$t/wt-locked"
+    git worktree lock --reason pinned "$t/wt-locked-detached"
     git branch loose-delivered main; (git checkout -q loose-delivered && echo l > l && git add l && git commit -qm l && git checkout -q main)
     git merge -q --no-ff delivered -m "merge delivered" && git merge -q --no-ff dirty -m "merge dirty" && git merge -q --no-ff loose-delivered -m "merge loose"
     git push -q origin main
@@ -83,7 +100,23 @@ if [ "$SELFTEST" = 1 ]; then
     chk "fresh branch kept"            'git rev-parse -q --verify refs/heads/fresh >/dev/null'
     chk "main kept"                    'git rev-parse -q --verify refs/heads/main >/dev/null'
     chk "report names the removal"     'printf "%s" "$out" | grep -q "removed worktree"'
-    [ "$fail" = 0 ] && echo "cratis-cleanup-worktrees self-test: 10 checks passed" && exit 0
+    chk "work records kept"            '[ -f "$t/wt-records/.ai-work/.handoff" ]'
+    chk "work records branch kept"     'git rev-parse -q --verify refs/heads/records >/dev/null'
+    chk "work records reason reported" 'printf "%s" "$out" | grep -Fq "has untracked work records (.ai-work/)"'
+    chk "empty work records removed"   '[ ! -d "$t/wt-empty-records" ]'
+    chk "locked worktree kept"         '[ -d "$t/wt-locked" ]'
+    chk "locked branch kept"           'git rev-parse -q --verify refs/heads/locked >/dev/null'
+    chk "locked reason reported"       'printf "%s" "$out" | grep -Fq "worktree $t/wt-locked (locked): locked"'
+    chk "locked detached kept"         '[ -d "$t/wt-locked-detached" ]'
+    chk "locked detached reported"     'printf "%s" "$out" | grep -Fq "worktree $t/wt-locked-detached (detached): locked"'
+    out=$(printf '%s' '{"hook_event_name":"SessionStart"}' | "$self" --no-fetch --include-work-records --hook 2>&1) || { echo "FAIL: hook exit $?"; echo "$out"; exit 1; }
+    chk "hook ignores opt-in"          '[ -f "$t/wt-records/.ai-work/.handoff" ]'
+    out=$("$self" --no-fetch --include-work-records 2>&1) || { echo "FAIL: opt-in exit $?"; echo "$out"; exit 1; }
+    chk "opt-in removes work records"  '[ ! -d "$t/wt-records" ]'
+    chk "opt-in removes branch"        '! git rev-parse -q --verify refs/heads/records >/dev/null'
+    chk "opt-in keeps locked"          '[ -d "$t/wt-locked" ]'
+    chk "opt-in keeps locked detached" '[ -d "$t/wt-locked-detached" ]'
+    [ "$fail" = 0 ] && echo "cratis-cleanup-worktrees self-test: 24 checks passed" && exit 0
     echo "$out"; exit 1
 fi
 
@@ -134,6 +167,13 @@ process_worktree() {
     case "$here/" in "$wt"/*) note_kept "worktree $wt ($name): it is the current directory - run the sweep from the main checkout"; return 0 ;; esac
     if ! ev=$(delivered "$sha" "$br" "$([ -n "$br" ] && track_of "$br")"); then
         note_kept "worktree $wt ($name): work not delivered to $default"; return 0
+    fi
+    if [ "$INCLUDE_WORK_RECORDS" = 0 ] && [ -d "$wt/.ai-work" ]; then
+        local records
+        if ! records=$(find "$wt/.ai-work/." -mindepth 1 -maxdepth 1 -print -quit); then
+            note_kept "worktree $wt ($name): could not inspect work records (.ai-work/)"; return 0
+        fi
+        if [ -n "$records" ]; then note_kept "worktree $wt ($name): has untracked work records (.ai-work/)"; return 0; fi
     fi
     if [ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]; then note_kept "worktree $wt ($name): delivered but has uncommitted changes"; return 0; fi
     local kb; kb=$(du -sk "$wt" 2>/dev/null | awk '{print $1}')

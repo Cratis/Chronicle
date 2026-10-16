@@ -12,20 +12,18 @@
 ## Admission
 
 Sources, streams and command/specification routes bind and reference-execute as
-**ESM v8** since Screenplay 4.125.0. Current evidence: released `event-sources.md`,
-`specifications.md`, `Versions.cs`; the complete example below compiled with
-`--warnaserror` and passed `screenplay test` on 4.125.0.
+**ESM v8**. The complete example below compiles with `--warnaserror` and passes `screenplay test`.
 
-The pinned CLI/Stage pair (`versions.md`) admits through v15 to construct checks, including v8
-routes. Stage 4.89.1 renders routed read-model/query companion replay; reserved names and
-unformattable fixtures remain STAGE-ESM-030 (`Documentation/reference/event-source-routing.md:62-72`);
-run admission before promising parity. Previous CLI 3.46.1/Stage 4.52.0 refused
-above v7 with CLI-RENDER-004. Keep routing intact when a target refuses it;
-never remove routing to obtain a render. Pins: `versions.md`. Per-production
+Requires Screenplay 4.125.0 or later (`screenplay --version`) for sources, streams and routes; older compilers refuse them with PLAY0268.
+
+The CLI/Stage pair admits v8 routes to construct checks. Stage renders routed read-model/query
+companion replay; reserved names and unformattable fixtures remain STAGE-ESM-030;
+run admission before promising parity. A CLI that renders only older versions answers
+with CLI-RENDER-004. Keep routing intact when a target refuses it;
+never remove routing to obtain a render. Per-production
 v10 overrides and observer filters: `production-routes-and-filters.md`.
 
-The 4.68.0 historical binder refusal (`PLAY0268`, no admitted version then) is
-not the current disposition. Systems/operations and `numbers exact` source mode still report
+Systems/operations and `numbers exact` source mode still report
 PLAY0268; they are separate capabilities, not evidence against v8 routing.
 
 ## Declare and route
@@ -39,6 +37,24 @@ but refuse executable admission with PLAY0268. An unkeyed stream takes no id. Co
 use a bare nested `streamId` followed by all named part mappings exactly once.
 A property literally named `stream` is written `@stream` where the command clause
 would otherwise consume it. Do not invent source-only route syntax.
+
+Exactly `All` is reserved as a stored stream
+name (declaration name or `id "All"` pin), just as `Default` is reserved for a
+stored source name. Comparison is ordinal: streams `all`, `ALL` and `Default`
+remain valid. Authoring parses/prints these names; executable binding and MCP
+readiness refuse `All` with **PLAY0273**. Stage's STAGE-ESM-030 remains defense
+in depth, not an additional admitted route.
+
+Rename the stream through discovered `propose-rename`; an `id "All"` pin is
+not a fix. Remove or replace an existing `id "All"` with a typed edit, then
+review executable readiness before applying. Source/stream pins normally preserve
+stored names, but this rename
+must change the stored stream name. Chronicle uses `All` for appends without a
+stream, so existing history stored under `All` reads as source-only appends
+(or unrouted facts), not as the newly named stream. Moving that history needs
+an explicit Chronicle data migration, not a language repair or invented route.
+
+Requires Screenplay 4.150.0 or later (`screenplay --version`) for the reserved stream name `All`; earlier compilers accept it silently.
 
 ```screenplay
 concept AccountId : Uuid
@@ -89,7 +105,7 @@ a route. See `cratis-screenplay-specifications` for fixture provenance.
 
 ## Canonical keys and evolution
 
-At Screenplay 4.127.0, stream-id literals on command routes (PLAY0504) and
+Stream-id literals on command routes (PLAY0504) and
 specification routes (PLAY0549) must be nonempty, well-formed Unicode NFC text;
 invalid text is refused, never normalized. In Double numeric mode integer ids
 are within ±(2^53−1); Exact mode has no such bound but still refuses binding.
@@ -105,7 +121,6 @@ Format each part by the portable scalar rules, escape `%` to `%25` and `|` to
 route contradictions compare canonical values part by part (UUID case variants
 are equal). Changing a stored stream's key schema needs a new stream identity
 or migration. Keep hand-joined legacy ids as scalar text: never split by guesswork.
-Authority: v4.127.0 `event-sources.md`, `diagnostics.md`, decision 0033.
 
 ## Boundaries
 

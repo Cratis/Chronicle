@@ -4,9 +4,13 @@
 
 # Optional shared xUnit lifecycle
 
-Verified against `Cratis.Specifications.XUnit` 4.1.1,
+Source: `Cratis.Specifications.XUnit`,
 `SpecificationTestFramework.cs`, `SpecificationTestClassRunner.cs`, and
-`Specification.cs`. Introduced in 4.1.0. The house default remains stock xUnit
+`Specification.cs`.
+
+Requires `Cratis.Specifications.XUnit` 4.1.0.
+
+The house default remains stock xUnit
 per-fact execution.
 
 ## Opt in

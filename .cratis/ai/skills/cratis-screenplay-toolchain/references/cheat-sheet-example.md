@@ -1,14 +1,12 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-toolchain/references/cheat-sheet-example.md -->
 # Cheat-sheet example (design mode)
 
-One complete document with every construct family. Design mode, not executable. Prose rules: [cheat-sheet.md](cheat-sheet.md); tool versions: [versions.md](versions.md); what binds: [executable-subset.md](executable-subset.md).
+One complete document with every construct family. Design mode, not executable. Prose rules: [cheat-sheet.md](cheat-sheet.md); what binds: [executable-subset.md](executable-subset.md).
 
-Binding blockers: unquoted import, `reads` (PLAY0271), `starts with`. Caller-supplied collection equality filters bind as ESM v14 since 4.143.0; context/single-result filters remain blocked. Executable shapes are in the sibling examples. The bare-marker fence compiles warning-free on standalone 4.127.0; the earlier legacy-marker version compiled on 4.66.0 and CLI 3.28.2. `RecordingAPayment` lists the `InvoiceClosed` cascade, which the cratis 3.27.1 bundle (4.60.1) rejected with a false PLAY0285 ("outcome cannot be produced by 'RecordPayment'"); 3.28.2 accepts it.
+Binding blockers: unquoted import, `reads` (PLAY0271), `starts with`. Caller-supplied collection equality filters bind as ESM v14; context and single-result filters remain blocked. Executable shapes are in the sibling examples. `RecordingAPayment` lists the `InvoiceClosed` cascade; an older bundled compiler rejected it with a false PLAY0285 ("outcome cannot be produced by 'RecordPayment'").
 
-Concept compliance itself binds as ESM v13 on standalone 4.142.0 (first released
-in 4.141.0); reasons remain report-only PLAY0270. CLI 3.57.0 bundles Screenplay
-4.147.1 / Stage 4.89.1 and renders v13 concept protection. Binder-only PLAY0268
-refusals and subject-lineage limits: command-surface `references/compliance.md`.
+Concept compliance itself binds as ESM v13; reasons remain report-only PLAY0270. Stage renders v13 concept
+protection. Binder-only PLAY0268 refusals and subject-lineage limits: command-surface `references/compliance.md`.
 
 ```screenplay test=unbound
 // Design-mode cheat-sheet: every construct family; compiles warning-free on the standalone tool.
@@ -18,7 +16,7 @@ import Customers.CustomerRegistered        // unquoted = another bounded context
 
 concept InvoiceId : Uuid                   // primitives: Uuid String Int Decimal Bool Date DateTime Enum
 concept PaymentId : Uuid
-concept Email : String pii                 // v13 since 4.141.0; current standalone 4.142.0 binds; pinned CLI refuses
+concept Email : String pii                 // concept compliance binds as ESM v13
   pii reason "Identifies a person"
   validate
     not empty  message "An email is required"
@@ -159,7 +157,7 @@ module Billing
         number    String
       query InvoiceById => InvoiceRow optional        // keyed optional lookup (unfiltered lists bind too)
         by invoiceId InvoiceId
-      query ListInvoices => observable InvoiceRow[]   // caller-supplied equality filter: ESM v14 since 4.143.0
+      query ListInvoices => observable InvoiceRow[]   // caller-supplied equality filter: ESM v14
         filter number String optional
       projection InvoiceList => InvoiceRow
         from InvoiceRegistered
@@ -249,7 +247,7 @@ module Housekeeping                                   // no gates: this reaction
         produces event InvoiceMarkedOverdue
           overdueAt DateTime = $context.occurred
       // No command spec here: under ESM v6 it must list the ReminderSent cascade. The file is
-      // RecordingAPayment's cascade got a false PLAY0285 on cratis before 3.28.2; 3.28.2 accepts it.
+      // RecordingAPayment's cascade: an older bundled compiler reported a false PLAY0285 here.
       // The cascade form: automation-translate-example.md (SubscribingAMember).
 
     slice Automation RemindOverdue

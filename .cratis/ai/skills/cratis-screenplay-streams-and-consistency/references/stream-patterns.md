@@ -21,7 +21,7 @@ A stream in Screenplay is the event source a production lands on: `identifier` o
 command, `for <identifier>` on each `produces`, `$eventSourceId` in projections, `for "<id>"`
 in specifications. Choosing the identifier *is* choosing the stream.
 
-Composite stream keys (Screenplay 4.127.0) declare `streamId` with two or more
+Composite stream keys declare `streamId` with two or more
 named scalar parts and map every part on routes (specification parts are literals).
 Scalar forms remain valid. Text is nonempty, well-formed NFC; Double integer ids
 stay within ±(2^53−1). Protected concepts cannot be key types/parts or mapping
@@ -217,8 +217,8 @@ Some event stores decide consistency by a query over tagged events instead of on
 check to event types, source type or stream (`concurrency` block, Screenplay
 `commands.md`). Legacy concurrency metadata still fails binding (PLAY0271),
 but sources/streams/routes bind and reference-execute as ESM v8 on 4.125.0.
-Route admission does not make a view read protected. The pinned CLI (toolchain `references/versions.md`) reaches Stage construct checks
-through v10; see toolchain `references/versions.md`. Model the stream by business
+Route admission does not make a view read protected. The CLI (toolchain `references/renderable-subset.md`) reaches Stage construct checks
+through v10. Model the stream by business
 identity; when a rule truly needs a cross-stream decision, record it (see
 `consistency-and-concurrency.md`) rather than inventing a construct.
 

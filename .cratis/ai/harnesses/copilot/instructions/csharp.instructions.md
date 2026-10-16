@@ -338,7 +338,9 @@ These are the building blocks. Each type has a specific role in the vertical sli
 | `[ReadModel]` | Marks a record as a model-bound query — define static query methods on the record |
 | `CommandValidator<T>` | FluentValidation validator for commands |
 | `IProjectionFor<T>` | Fluent projection definition — AutoMap is on by default, never call `.AutoMap()` |
-| `IReducerFor<T>` | Imperative reducer — receives current state, returns new state |
+| Self-reducing model | New .NET reducer default: public static `Reduce(event, model? current[, EventContext])`, returns model or `Task<model>` (nullable results allowed); marker-free discovery, no fold-time DI |
+| `IReducerFor<T>` | Separate instance fold for injected services, replay instance behavior or separation from the model |
+| `ChronicleOptions.ExplicitArtifacts.RegisterReducer<T>()` | Nominate a plain instance class only when its assembly cannot reference Chronicle; also accepts self models (see **cratis-chronicle-client-dotnet**, discovery reference) |
 | `IReactor` | Marker interface for side-effect observers — method dispatch by event type parameter |
 | `IConstraint` | Constraint definition — enforced server-side by Chronicle at append time |
 | `AggregateRoot` | Chronicle aggregate root with `Apply()` and `Commit()` |

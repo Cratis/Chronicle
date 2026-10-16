@@ -1,6 +1,18 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-modeling-lifecycle/references/stop-or-assume.md -->
 # Stop or assume: triggers, question format and the interview protocol
 
+## Contents
+
+- Interview protocol (attended and unattended)
+- Durable question notes
+- Question format (STATE.md, packets, edit requests)
+- Delivery triggers (stop that scope)
+- Not triggers
+- Calibration
+- Always stop
+- Unblocking
+- Open question, decided rejection, contradiction
+
 ## Interview protocol (attended and unattended)
 Assume visibly during modeling; delivery blocks any guess that could encode a wrong rule,
 authorization, money or time behavior. Contradictions, a third review round, a gate only the
@@ -54,9 +66,9 @@ needs `then error` or `then denied`. Reopen when the evidence ceases to answer i
 
 Question gating is separate from V1: standalone Screenplay 4.144.0 has
 `--open-questions fail`; Cratis CLI 3.53.1 does not. Read toolchain
-`references/versions.md` "Model notes gate" when a phase requires no open questions.
-Product evidence: Screenplay `v4.144.0:Documentation/screenplay/model-notes.md:12-77,93-121`,
-`decisions/0045-model-notes-sidecar.md:40-79` and the model-authoring source table.
+`references/verdicts.md` "Model notes gate" when a phase requires no open questions.
+Product evidence: Screenplay `Documentation/screenplay/model-notes.md`,
+`decisions/0045-model-notes-sidecar.md` and the model-authoring source table.
 
 ## Question format (STATE.md, packets, edit requests)
 `Qn <declaration address>: <what is missing or contradictory, one sentence> - matters because
@@ -92,3 +104,16 @@ STATE.md with its note ID, resolve the question note by evidence, and realize th
 answer in the model or decision record. Settled rationale may also go in fenced
 `documentation`. Re-blocking a blocked scope is a no-op.
 Blocked delivery scopes are reported in the packet; the main session creates any issue.
+
+## Open question, decided rejection, contradiction
+
+Three unresolved things, never conflated: an **open question** (business meaning nobody decided:
+record it as a `question` note anchored to the element, with the assumption in use;
+not just chat, STATE.md or `description` text; it closes when answered, never by deletion),
+a **decided rejection** (a known refusal: a specification, `then denied` or
+`then error`, never a note) and a **contradiction** (model, specs and an agreed fact disagree:
+stop that scope and report). Finding tiers: `references/principles.md`.
+Read [question notes](#durable-question-notes) when
+recording or answering an open question: cite decisions in `refs`, resolve with
+`by: "external-decision"`, then realize the answer. Never put secrets or personal
+data in note text.

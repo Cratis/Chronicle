@@ -13,8 +13,8 @@
 - Supported scopes
 - Troubleshooting
 
-Rechecked at **Arc v22.75.0** (operation/recovery sources unchanged since 22.48.1), against the
-[product reference](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/commands/operations/reference.md)
+Checked against the
+[product reference](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/commands/operations/reference.md)
 and `Source/DotNET/Arc.Core/Commands/`. Types below are in
 `Cratis.Arc.Commands`. Start with [the skill](../SKILL.md) to choose the boundary.
 

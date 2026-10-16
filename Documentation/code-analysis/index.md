@@ -68,6 +68,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0062](CHR0062) | Concurrency applies across event sources | Info | A `Concurrency` declaration on a definition or stream that omits `EventSourceId` is a cross-source condition, not a guard for the state a command read |
 | [CHR0063](CHR0063) | Scope stream does not match append | Warning | A definition-linked scope guards a different stream than the single-route append it is passed to |
 | [CHR0064](CHR0064) | Invalid read model event stream | Error | A per-stream read model must name one declared stream, keep the event source ID as its key, and cannot be reducer-backed |
+| [CHR0065](CHR0065) | Read model fold method will not be discovered | Warning | An event fold on a read model has the wrong name or is not static, so it cannot be discovered as a self reducer |
 
 ## Explicit registration evidence
 

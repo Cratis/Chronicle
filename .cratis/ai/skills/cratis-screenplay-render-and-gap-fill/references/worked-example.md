@@ -6,13 +6,12 @@
 - The model
 - The probe
 - Classification
-- Decision and ledger entry
+- Decision and fallback record entry
 - The report
 
 A marina model with one renderable command and one snapshot list view. The model compiles and binds;
 `cratis render` refuses it, so nothing is published. The example shows how to classify, decide and
-report. Probed with the standalone compiler 4.139.0 and cratis 3.53.1 (scratch model, observed); the
-earlier 3.28.2 outcome (two `PLAY0268` binding errors) is history.
+report. Probed with the standalone compiler and the public CLI (scratch model, observed).
 
 ## The model
 
@@ -65,7 +64,7 @@ module Berths
 
 ## The probe
 
-Source identity recorded first (`<commit>+<digest>`), tools named: `screenplay 4.139.0`, `cratis 3.53.1`.
+Source identity recorded first (`<commit>+<digest>`), tools named with their versions (`screenplay --version`, `cratis --version`).
 V1 passed; the specification passes in `screenplay test`. Then:
 
 ```text
@@ -93,7 +92,7 @@ lookup, or marking the list `observable`. The first changes what the harbour mas
 second changes delivery from a snapshot to a live subscription. Both are **modeling decisions for
 the user**, never renderer workarounds. Here the user keeps the snapshot list.
 
-## Decision and ledger entry
+## Decision and fallback record entry
 
 Case A, then case B for `ReserveBerth` (rendered with `--scope`) and case C for the list: the user keeps
 the full model, the view is delivered by hand, and the model stays the contract.

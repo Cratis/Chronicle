@@ -4,7 +4,9 @@
 
 # Event sources and streams
 
-Verified at `Cratis/Chronicle.Elixir v3.10.2`: `Source/chronicle/lib/chronicle/event_sources/event_source.ex`, `event_sources/routing.ex`, `event_sequences/definition_routing.ex`, and `Documentation/event-sources.md`. Definitions require **Chronicle 19.30.0+**.
+Source: `Cratis/Chronicle.Elixir`: `Source/chronicle/lib/chronicle/event_sources/event_source.ex`, `event_sources/routing.ex`, `event_sequences/definition_routing.ex`, and `Documentation/event-sources.md`.
+
+Requires `cratis_chronicle` 3.10.0 and Chronicle kernel 19.30.0 for definitions.
 
 An event source definition gives appends a stable name, optional streams and default concurrency dimensions. It belongs to the append, not the event type; the same event type can go through different definitions. Appends without a definition keep their existing routing and have no registered-source metadata.
 
@@ -62,4 +64,4 @@ Without an explicit `:concurrency_scope`, the client reads the tail narrowed by 
 
 The wire carries one scope per event source id. Guarded entries of that id must agree on dimensions and selected source type, stream type and stream id. Unguarded entries never suppress a later guarded entry. Incompatible derived guards fail before any tail read or append; use separate batches, or deliberately supply one explicit scope on an entry for that id.
 
-Reactor and reducer contexts expose `:event_source` as the registered name, or `nil` for events appended without a definition. Their other context keys differ; do not assume the reactor context shape for a reducer.
+Reactor and reducer contexts expose `:event_source` as the registered name, or `nil` for events appended without a definition. Only reactor contexts carry `:delivery_id`.

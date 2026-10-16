@@ -1,6 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/references/integration-contracts.md -->
 # Integration contracts
 
+## Contents
+
+- Resolve only the unknowns
+- Trust and meaning
+- Trace both directions
+- Separate the identities
+- Publish the inbound contract
+- Recoverable failure
+- Faithful realization
+- Per-record-type contract
+
 Use before completing a new or changed translation. Keep accepted decisions in the relevant
 `.play` `documentation` and specs; open questions and target requirements go to `STATE.md`. Do
 not create a second canonical model.
@@ -49,6 +60,14 @@ cause. Create the correlation bridge when starting the outside interaction, or d
 unsolicited record gets one; cover a record that arrives before the bridge. Define duplicates
 by business occurrence, not by provider object id alone; state dedup scope, retention and
 atomic enforcement (a preliminary lookup is not a concurrency guarantee).
+
+## Publish the inbound contract
+An external integrator cannot read this codebase, so publish the inbound endpoint's contract for
+the provider's integrator: the path, the payload fields mapped from the capture, the
+authentication header (the provider's signature or shared secret, not an application user
+token), and the responses for a duplicate delivery and for each refusal. Answer a duplicate
+as already handled, and keep the provider's delivery or occurrence id as the retry identity
+rather than generating a new id per delivery, which would defeat deduplication.
 
 ## Recoverable failure
 Per failure class choose: ignore, reject, defer, terminal failure or reconcile; say what is

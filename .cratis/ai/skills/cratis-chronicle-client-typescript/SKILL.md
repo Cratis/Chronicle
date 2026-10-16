@@ -29,64 +29,37 @@ HTTP and never sees this package.
 | A connection string with no credentials | Silently falls back to the development client credentials |
 | Shipping the default TLS behavior | `skipTlsValidation` defaults to `true` |
 | Constructor-injecting without an `artifactActivator` | By default the client constructs the artifact itself |
-| Side-effect reactor without `@onceOnly()` | Reactors run again on kernel replay by default since 6.9.0 |
+| Side-effect reactor without `@onceOnly()` | Reactors run again on kernel replay by default |
 | Reading `result.sequenceNumber` as a number | It is a `bigint` behind `.value` |
 | A `@globalFor` mapping targeting a property one variant lacks | `GlobalHandlerPropertyNotOnVariant` when the group is built, not a silently skipped mapping |
 | Expecting a `@globalFor`-only class to appear as a projection | It is never registered on its own; it is merged into its variants |
 
 ## Verified product sources
 
-Verified against `Cratis/Chronicle.TypeScript` tag **`v6.51.0`**, reading
+Source: `Cratis/Chronicle.TypeScript`, reading
 `Source/**` and `Documentation/getting-started.md`, `testing.md`,
-`migrate-append-routing.md` and `reactors.md`. Source paths below refer to that tag.
+`migrate-append-routing.md` and `reactors.md`.
 
-| Package | Version | Where |
-| --- | --- | --- |
-| `@cratis/chronicle` | `6.51.0` | npm; `Source/package.json` carries a `1.0.0` placeholder |
-| `@cratis/chronicle.contracts` | `19.31.10` | Client's pinned dependency, not the latest contracts package |
-| `@cratis/fundamentals` | `^7.22.4` | **peer dependency** — you install it |
+| Package | Where |
+| --- | --- |
+| `@cratis/chronicle` | npm; `Source/package.json` carries a placeholder version |
+| `@cratis/chronicle.contracts` | Client's pinned dependency, not the latest contracts package |
+| `@cratis/fundamentals` | **peer dependency** — you install it |
 
-> **Do not read the version out of the repository.** `Source/package.json` says
-> `1.0.0`; `publish-version.js` overwrites it at publish time. Take the version
+> **Do not read the version out of the repository.** `Source/package.json` carries
+> a placeholder; `publish-version.js` overwrites it at publish time. Take the version
 > from npm.
 
-**Upgrade the kernel first.** The 5.x→6.0.0 migration changes omitted append
-routes and requires compatibility checks (kernel 18.4.1+); registered event
-sources introduced in 6.49.0 require kernel 19.30+. Reactors replay by default
-since 6.9.0, so review side-effect handlers when upgrading.
+**Upgrade the kernel first.** Reactors replay by default, so review side-effect handlers when
+upgrading.
+
+Requires Chronicle kernel 18.4.1 for the contract compatibility check and for omitted append routes.
+
+Requires `@cratis/chronicle` 6.49.0, Chronicle kernel 19.30.0 and `@cratis/chronicle.contracts` 19.30.0 for registered event sources.
 
 ## Project setup
 
-```shell
-yarn add @cratis/chronicle @cratis/fundamentals reflect-metadata
-```
-
-`@cratis/fundamentals` is a peer dependency, so it does not arrive on its own.
-`reflect-metadata` is now a regular dependency. Import it **once, at the entry
-point**, before any decorated class is loaded:
-
-```typescript
-import 'reflect-metadata';
-```
-
-The package is **ESM-only** and needs Node.js **22.19+** for its `undici`
-dependency (the client itself has no `engines` field). Standard TC39 decorators
-are supported (TypeScript 5.2+) and are the documentation default:
-
-```jsonc
-// tsconfig.json — standard decorator mode
-{
-    "compilerOptions": {
-        "target": "ES2022",
-        "lib": ["ES2022", "ESNext.Decorators"]
-    }
-}
-```
-
-Legacy mode with `experimentalDecorators: true` and
-`emitDecoratorMetadata: true` still works. Standard decorators and esbuild/tsx
-emit no type metadata: declare every serialized property with `@field(Type)`
-from `@cratis/fundamentals`; default values are only an inference fallback.
+Read [references/project-setup.md](references/project-setup.md) when installing the package, importing `reflect-metadata`, or choosing decorator settings. Standard TC39 decorators are the default; esbuild/tsx emit no type metadata, so every property needs `@field(Type)`.
 
 ## Connecting
 
@@ -119,54 +92,7 @@ exist — it calls `ensureEventStore`.
 `dispose()` is **synchronous**, not
 `Symbol.dispose` or `Symbol.asyncDispose`. After disposal every call throws.
 
-### Options
-
-`ChronicleOptions` has a **private constructor** (`Source/ChronicleOptions.ts`);
-use `ChronicleOptions.fromConnectionString(connectionString, options?)` or
-`ChronicleOptions.development(options?)`.
-
-The optional bag accepts `telemetry`, `logger`, `clientArtifactsProvider`,
-`discoveryPatterns`, `defaultSinkTypeId`, `reactorResultHandler`,
-`artifactActivator`, and `readModelNamingPolicy`. `defaultSinkTypeId` defaults
-to `WellKnownSinks.MongoDB`.
-
-> `programIdentifier`, `softwareVersion`, and `softwareCommit` exist on the type
-> but **neither public factory forwards them**, so they cannot be set.
-> Do not write guidance that configures them.
-
-### The connection string
-
-Schemes `chronicle://` and `chronicle+srv://`, default port `35000`
-(`Source/connection/ChronicleConnectionString.ts`). Query parameters: `apiKey`,
-`disableTls`, `skipTlsValidation`, `certificatePath`, `certificatePassword`,
-`loadBalancer`, `srvNameServer`.
-
-Two facts to carry into production guidance:
-
-- **`skipTlsValidation` defaults to `true`.** TLS is on but the certificate chain
-  is not validated, because a development kernel serves a self-signed
-  certificate. Set `?skipTlsValidation=false` against a real server.
-- **A connection string with no credentials silently falls back to the
-  development client credentials** (`Source/connection/ChronicleConnection.ts`).
-  An anonymous-looking connection string is not anonymous; it is
-  `chronicle-dev-client`.
-
-> **There is no `./connection` subpath export.** `ChronicleConnectionString`,
-> `ChronicleConnectionStringBuilder`, `AuthenticationMode`, and `LoadBalancerMode`
-> are unreachable from the public entry points — `Source/index.ts` never
-> re-exports them and `Source/package.json`'s `exports` map has no
-> `"./connection"` key. **Application code passes a connection *string*.** Do not
-> write an example that imports a connection-string type.
-
-The subpath exports that do exist: `.`, `./events`, `./eventSequences`,
-`./eventStoreSubscriptions`, `./compliance`, `./reactors`, `./reducers`,
-`./seeding`, `./readModels`, `./projections`, `./jobs`, `./webhooks`,
-`./externalServices`, `./identities`, `./observation`, `./sinks`, `./schemas`,
-`./types`, `./artifacts`, `./identity`, `./auditing`, `./correlation`,
-`./transactions`, `./confidentiality`, `./patterns`, `./testing`, and
-`./package.json`. Event-source APIs are root exports; there is no
-`./eventSources` subpath. `IncompatibleChronicleServer` and
-`RejectedChronicleCredentials` are also root exports.
+Read [references/connection-options.md](references/connection-options.md) when building `ChronicleOptions`, writing a connection string, or listing the public subpath exports. Pass a connection string; there is no `./connection` export.
 
 ## Event types
 
@@ -230,7 +156,9 @@ if (!result.isSuccess) {
   `concurrencyScope`, `concurrencyScopes`, `eventSource`, and `eventStream`.
   The reserved legacy `eventSourceId` option does not override the method's id.
 
-**Single `append()` supports routing and subject options.** Since 6.0.0 an
+Requires `@cratis/chronicle` 6.0.0 for omitted append routes.
+
+**Single `append()` supports routing and subject options.** An
 unspecified route is omitted on the wire; the kernel resolves source `Default`,
 stream type `All`, stream id `Default`. Subject precedence is the explicit option,
 then the event's `@subject()` property, then its event source id.
@@ -252,7 +180,7 @@ await unitOfWork.commit();
 ```
 
 `ITransactionalEventSequence` returns `Promise<void>`, not an `AppendResult`;
-results are on the unit of work. Since 6.51.0 transactional appends retain
+results are on the unit of work. Requires `@cratis/chronicle` 6.51.0 for transactional appends to retain
 routing, subject, occurrence, tags and concurrency scopes in enrollment order;
 conflicting scopes for one source throw `ConflictingConcurrencyScopesInUnitOfWork`
 before enrollment.
@@ -266,7 +194,7 @@ An unmatched name is simply never called. Reactors and reducers also support
 `@handles(EventType)` on a public instance method: one handler per event;
 a reactor handler cannot combine it with `@replay`.
 
-**Reactors replay by default since 6.9.0.** Use class `@onceOnly()` (not inherited)
+**Reactors replay by default.** Use class `@onceOnly()` (not inherited)
 or method `@onceOnly()` for effects that must not run on replay; `@replay(EventType)`
 provides a separate replay handler. This never prevents failed-partition
 redelivery or proves exactly-once effects.
@@ -336,29 +264,7 @@ in parallel, and re-runs for every cached event store on reconnect.
 
 ## Lifecycle
 
-- A health-check watchdog runs `getVersionInfo` every 5 seconds and reconnects on
-  failure; the interval handle is `unref()`'d so it does not hold the process open.
-- Reconnect uses exponential backoff with jitter, capped at 30 seconds, rebuilding
-  the gRPC channel on every attempt.
-- **Keepalive registration is what keeps observers alive.** Losing it triggers a
-  full reconnect, because the kernel tears down the client's observers otherwise.
-- Failed operations are retried once after reconnecting, keyed on gRPC status
-  codes 4/13/14 plus a substring match over the error text.
-
-The client reports its **installed package version**, read from
-`@cratis/chronicle/package.json`, and performs `CheckCompatibility` with
-`ProtocolVersion` and the contracts descriptor set before a connection is usable
-and before event-sequence calls. `IncompatibleChronicleServer` is a permanent
-verdict, not retried (`Source/connection/CompatibilityPreflight.ts`).
-Three consecutive credential rejections cause `RejectedChronicleCredentials`.
-A failed token request is logged and the call proceeds without a token (allowing
-an auth-less kernel); tokens come from the selected server, not the first host.
-
-Since 6.43.0 built-in spans use `cratis.chronicle.client.*` and scope
-`Cratis.Chronicle.Client`; metrics use seconds. Legacy millisecond metrics and
-`chronicle.*` attributes are retired except the retained exact-string
-`chronicle.sequence_number`. Historical constants, `ChronicleMetrics`, and
-`telemetry.spanNames` are deprecated; migrate dashboards.
+Read [references/lifecycle.md](references/lifecycle.md) when diagnosing reconnects, keepalive, rejected credentials or telemetry names. The client reports its installed package version, and `IncompatibleChronicleServer` is a permanent verdict, not retried.
 
 ## Artifact activation
 
@@ -380,7 +286,7 @@ reactors or read models with `EventScenario`, `ReactorScenario`, or
 | Registered sources/streams | Root `@eventSource`, repeatable `@eventStream`, `ConcurrencyDimensions`, `store.eventSources`; append `eventSource/eventStream`. Kernel 19.30+; see `Source/eventSources/` |
 | Named tags | `namedTags` on appends; batches cannot combine them with registered event sources |
 | Personal data and retained secrets | `@pii`, `@subject`, `store.pii`; `@encrypted` with `EncryptionScope` from `./confidentiality`; release through `readModels.release*`. Never combine PII/encrypted or put either on `eventSourceId` |
-| Subject migration | Subject uses `@subject()` since 6.41.1; earlier appended events used the source id for protection keys |
+| Subject migration | Subject uses `@subject()`; events appended before it used the source id for protection keys |
 | Operational catalogs | `store.observers` (list/remove), `store.patterns`; mutations need authority |
 | Diagnostics/privacy | `ChronicleOptions.telemetry` and per-client `logger`; source ids are omitted by default, raw/HMAC recording is opt-in |
 

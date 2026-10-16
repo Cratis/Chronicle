@@ -43,8 +43,12 @@ dumps, and similar coordination files. These are **work records, not documentati
   main checkout when a pull request merges or you finish a task (hooks also run it after
   `gh pr merge` and at session start where the harness supports them, and **ship-changes**
   ends with it). It removes a worktree and its branch only on evidence the work reached the
-  default branch — pushed is not merged — and never forces; ignored files such as a nested
-  `.ai-work/`, `.env` files and local databases are deleted with it, so move anything you
+  default branch — pushed is not merged — and never forces. Worktrees with non-empty `.ai-work/`
+  directories are kept by default as "has untracked work records (.ai-work/)". Manual
+  `--include-work-records` permits deleting those records after you preserve what you need;
+  automatic hooks never opt in. Pin a long-lived worktree with `git worktree lock <path>`;
+  locked worktrees are always kept, even with opt-in. Other ignored files such as `.env` files
+  and local databases can still be deleted with a removed worktree, so move anything you
   still need out first. Do not hand-remove worktrees or `git branch -D` a delivered branch
   when the script can; and `gh pr merge --delete-branch` from inside a worktree leaves the
   worktree and branch behind, which is why the script exists. If the branch must outlive the

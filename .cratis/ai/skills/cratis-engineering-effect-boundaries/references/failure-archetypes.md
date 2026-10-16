@@ -21,7 +21,7 @@ expensive, and what the contract required instead.
 
 ## 1. A swallowed conflict reported as a successful release
 
-*release-action #178.*
+*A release action.*
 
 **Boundary.** Publishing a version — the most public effect there is.
 
@@ -41,7 +41,7 @@ failed. "Caught an exception, carried on" is neither.
 
 ## 2. A generator that degrades silently
 
-*Arc #2571, #2564, #2527 — the proxy generator.*
+*Arc — the proxy generator.*
 
 **Boundary.** Generating TypeScript proxies from C# sources. The output is what
 the whole frontend compiles against.
@@ -77,7 +77,7 @@ line at the end of a stream nobody reads.
 
 ## 4. A container that stays `Running` after startup threw
 
-*Chronicle #3682.*
+*Chronicle — container startup.*
 
 **Boundary.** Process and container lifecycle — the state an orchestrator reads
 to decide whether to send traffic.
@@ -94,7 +94,7 @@ survives a failed start is not a degraded signal, it is a false one.
 
 ## 5. A constraint that only one implementation enforces
 
-*Chronicle #3744 — unique constraints on the SQL and in-memory providers.*
+*Chronicle — unique constraints on the SQL and in-memory providers.*
 
 **Boundary.** Persistence, and the invariant the store is supposed to guarantee.
 
