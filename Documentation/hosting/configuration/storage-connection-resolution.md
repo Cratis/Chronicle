@@ -30,20 +30,11 @@ Every part is optional:
 
 A connection string or a database means the platform owns the placement of that database. With only an identity, Chronicle keeps deriving and binding names, and only changes who connects. The cluster database is always `connectionDetails`, so for it only the identity and schema are used.
 
-## Two slots
+## Two slots and the resolvers
 
-Resolution has two slots with the same shape: `connection` decides where to connect, and `identity` decides who connects. Chronicle applies `connectionDetails`, then what `connection` resolved, then what `identity` resolved. A later part wins. So you can keep `connectionDetails` and fetch only the identity from your platform, or the other way around.
+Resolution has two slots with the same shape: `connection` decides where to connect, and `identity` decides who connects. Chronicle applies `connectionDetails`, then what `connection` resolved, then what `identity` resolved. A later part wins. This is Arc's model, so [two slots, one shape](/arc/backend/csharp/tenancy/connection-resolution/#two-slots-one-shape) and [choosing a resolver](/arc/backend/csharp/tenancy/connection-resolution/#choose-a-resolver) apply here unchanged, including the `Default`, `Template`, `Http` and `Custom` resolvers. Chronicle's template placeholders are `{kind}`, `{eventStore}`, `{namespace}`, `{purpose}` and `{storage}`.
 
-Each slot takes one of these resolvers:
-
-| Resolver | Use it when |
-| --- | --- |
-| `Default` | Nothing needs resolving. This is the default. |
-| `Template` | Placement follows a rule. Use `{kind}`, `{eventStore}`, `{namespace}`, `{purpose}` and `{storage}` as placeholders. |
-| `Http` | Your platform decides placement or hands out credentials. |
-| `Custom` | You host the kernel in your own process and register an `IConnectionResolver` in code. |
-
-The standard `cratis/chronicle` image supports `Template` and `Http`, because both are configuration only.
+The standard `cratis/chronicle` image supports `Template` and `Http`, because both are configuration only. `Custom` needs you to host the kernel in your own process and register an `IConnectionResolver` in code.
 
 ## The HTTP contract
 
@@ -142,9 +133,10 @@ The cluster database is always `connectionDetails`: Chronicle resolves only its 
 
 ## Credentials and caching
 
-Chronicle keeps resolutions **in memory only**, keyed by kind, event store, namespace and purpose. Credentials are never part of the key and never stored. An entry is renewed a minute before its `expiresAt`, or after `cacheDuration` (five minutes by default) when the resolver gives no expiry.
+Caching, expiry and credential handling follow [Arc's rules](/arc/backend/csharp/tenancy/connection-resolution/#caching-and-credentials), with the cache keyed by kind, event store, namespace and purpose. Chronicle adds the following:
 
-On SQL Server and PostgreSQL, the identity is applied each time a connection opens. A rotated password or refreshed token therefore takes effect without restarting. When a login fails, Chronicle drops the cached resolution and retries through its retry policy, resolving the identity again. On MongoDB, an access token is refreshed through the driver's OIDC callback. A resolved password is kept by the database client until the kernel restarts, so prefer tokens there.
+- On SQL Server and PostgreSQL, the identity is applied each time a connection opens. A rotated password or refreshed token takes effect without restarting. When a login fails, Chronicle drops the cached resolution and retries through its retry policy, resolving the identity again.
+- On MongoDB, an access token is refreshed through the driver's OIDC callback. A resolved password is kept by the database client until the kernel restarts, so prefer tokens there.
 
 ## Limits
 
