@@ -13,7 +13,7 @@ Configure the host's Chronicle options before starting it:
 
 A host that discovers lifecycle handlers without either policy fails with `ActivationIdRequired`. Chronicle never guesses a logical activation identity from an instance name or connection id.
 
-Generic hosts configured through the .NET client's `AddCratisChronicle` include lifecycle recording automatically. ASP.NET Core hosts add `builder.Services.AddChronicleOccurrenceLifecycle()` after configuring their Chronicle client. This uses the existing client's event-store options; it does not add an application trigger endpoint.
+Generic hosts and ASP.NET Core hosts configured through `AddCratisChronicle` include lifecycle recording automatically. `AddChronicleOccurrenceLifecycle()` is also available for custom host registration and is safe to call more than once. Lifecycle recording uses the existing client's event-store options; it does not add an application trigger endpoint.
 
 At host start, after successful artifact registration, Chronicle records `Startup`. Its identity is the length-prefixed SHA-256 of `startup` and the activation id. Starting another instance with the same activation records nothing new. Reconnecting does not create a new activation.
 
