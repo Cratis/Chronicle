@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-dotnet/references/hosting.md -->
 ## In a host
 
-Verified at **Cratis/Chronicle v19.50.0**, `ChronicleHostApplicationBuilderExtensions.cs`,
+Source: `Cratis/Chronicle`: `ChronicleHostApplicationBuilderExtensions.cs`,
 `ChronicleClientServiceCollectionExtensions.cs`, and
 `Source/Clients/Connections/ServiceCollectionExtensions.cs`.
 
@@ -13,18 +13,18 @@ await builder.Build().RunAsync();
 ```
 
 `AddCratisChronicle` is an extension on **`IHostApplicationBuilder`**
-(`Source/Clients/DotNET/ChronicleHostApplicationBuilderExtensions.cs:28`) and binds
-the `Cratis:Chronicle` configuration section by default (`:25`, `:37`), with
+(`Source/Clients/DotNET/ChronicleHostApplicationBuilderExtensions.cs`) and binds
+the `Cratis:Chronicle` configuration section by default, with
 `ValidateDataAnnotations().ValidateOnStart()`. The bound type is
 `ChronicleClientOptions : ChronicleOptions`, which adds a `[Required] EventStore`
 and an optional `EventStoreNamespaceResolverType`.
 
 > **`AddCratisChronicle` on `IServiceCollection` does not exist**, despite what
-> `Documentation/clients/dotnet/getting-started.md:61` shows. The real extensions
+> `Documentation/clients/dotnet/getting-started.md` shows. The real extensions
 > are on `IHostApplicationBuilder`, `WebApplicationBuilder` (in the AspNetCore
 > package), and Aspire's `IDistributedApplicationBuilder`. `IHostBuilder.AddCratisChronicle()`
 > also exists but only registers concept type converters
-> (`Source/Clients/DotNET/Hosting/HostBuilderExtensions.cs:18-23`) — it is not
+> (`Source/Clients/DotNET/Hosting/HostBuilderExtensions.cs`) — it is not
 > the wiring entry point. `IServiceCollection` has `AddCratisChronicleClient`
 and `AddCratisChronicleConnection` instead.
 
@@ -33,7 +33,7 @@ and `AddCratisChronicleConnection` instead.
 `WithNamespaceResolver`, `WithCamelCaseNamingPolicy`
 (`Source/Clients/DotNET/ChronicleBuilderExtensions.cs`). **There is no
 `WithClaimsBasedNamespaceResolver`**, despite a doc comment at
-`ChronicleOptions.cs:141` referring to one. Pass the resolver instead:
+`ChronicleOptions.cs` referring to one. Pass the resolver instead:
 `new ChronicleClient(options, namespaceResolver: new ClaimsBasedNamespaceResolver("tenant_id"))`.
 
 A host starts even when the kernel is unavailable. Calls while disconnected fail
@@ -44,11 +44,11 @@ logs visible. Host wiring registers `IEventSources` scoped.
 
 ### Development credentials are persisted
 
-At **v19.50.0**, ClientCredentials with both username and password absent uses
+ClientCredentials with both username and password absent uses
 `chronicle-dev-client` / `chronicle-dev-secret`:
-`Source/Clients/DotNET/ChronicleClient.cs:334-345` and
-`Source/Clients/Connections/ServiceCollectionExtensions.cs:57-68`.
-`Source/Kernel/Core/Setup/Authentication/AuthenticationService.cs:170-208`
+`Source/Clients/DotNET/ChronicleClient.cs` and
+`Source/Clients/Connections/ServiceCollectionExtensions.cs`.
+`Source/Kernel/Core/Setup/Authentication/AuthenticationService.cs`
 creates that application **directly in storage** only under `#if DEVELOPMENT`.
 This is a Debug-build symbol, not an ASP.NET environment setting
 (`Documentation/hosting/production.md`, "What makes a build a production build").

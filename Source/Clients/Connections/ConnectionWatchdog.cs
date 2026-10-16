@@ -39,11 +39,17 @@ public class ConnectionWatchdog(
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     DateTimeOffset _lastKeepAlive = (timeProvider ?? TimeProvider.System).GetUtcNow();
     int _running;
+    int _reconnectRequested;
 
     /// <summary>
     /// Records that a keep-alive was observed, marking the session as healthy.
     /// </summary>
     public void NotifyKeepAlive() => _lastKeepAlive = _timeProvider.GetUtcNow();
+
+    /// <summary>
+    /// Make the watchdog drop the session and reconnect on its next check, even though keep-alives still arrive.
+    /// </summary>
+    public void RequestReconnect() => Interlocked.Exchange(ref _reconnectRequested, 1);
 
     /// <summary>
     /// Starts monitoring the keep-alive heartbeat. Idempotent - a monitor that is already
@@ -69,7 +75,8 @@ public class ConnectionWatchdog(
             while (!cancellationToken.IsCancellationRequested)
             {
                 await tasks.Delay(MonitorIntervalMilliseconds, cancellationToken);
-                if (_timeProvider.GetUtcNow() - _lastKeepAlive <= _keepAliveStaleAfter)
+                var requested = Interlocked.Exchange(ref _reconnectRequested, 0) == 1;
+                if (!requested && _timeProvider.GetUtcNow() - _lastKeepAlive <= _keepAliveStaleAfter)
                 {
                     continue;
                 }

@@ -1,6 +1,15 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-modeling-lifecycle/references/provenance.md -->
 # Provenance and licences
 
+## Contents
+
+- Shared template for sibling skills (copy this header; replace the tables)
+- 1. Adapted from MIT sources
+- 2. Adapted closely (Martin Dilger and Nebulit GmbH)
+- Eventmodelers Build-Kits
+- Not adopted from agentic-engineer (rejected, with reasons)
+- 3. Method lineage
+
 ## Shared template for sibling skills (copy this header; replace the tables)
 
 Every new Screenplay method skill keeps a `references/provenance.md` shaped like this one. Three
@@ -42,13 +51,13 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 
 | Source file | Used in | How |
 |---|---|---|
-| `.claude/skills/eventmodeling-orchestrating-event-modeling/SKILL.md`: "Do not cut corners to save tokens or effort" (forbidden rationalizations, self-catch trigger, flag trade-offs to the user) | `SKILL.md` "Do not cut corners to save tokens or effort", `references/completeness-self-check.md` | Adapted closely; restored from #493. Board rationalizations (delete a node to dodge a placement conflict, "session-context" read model, collapsed translation chain) translated to Screenplay (modeled reaction, missing view, translation merged into worker behavior, denial and protection) |
-| same file: "Phase Transition Protocol" (what was done, carry-forward, open questions; trail row to Done) | `SKILL.md` "Lifecycle", `references/phases.md` "Phase transition protocol" | Adapted closely; restored from #493. Memory file replaced by STATE.md |
-| same file: "Documenting decisions inline" and Step 11 "What the note should actually contain" (cold reader, simple chapter stays brief) | `references/reasoning-notes.md` | Adapted closely; restored from #493. Feedback-lane reasoning uses `documentation`; counts and verdicts stay in STATE.md |
+| `.claude/skills/eventmodeling-orchestrating-event-modeling/SKILL.md`: "Do not cut corners to save tokens or effort" (forbidden rationalizations, self-catch trigger, flag trade-offs to the user) | `SKILL.md` "Do not cut corners to save tokens or effort", `references/completeness-self-check.md` | Adapted closely. Board rationalizations (delete a node to dodge a placement conflict, "session-context" read model, collapsed translation chain) translated to Screenplay (modeled reaction, missing view, translation merged into worker behavior, denial and protection) |
+| same file: "Phase Transition Protocol" (what was done, carry-forward, open questions; trail row to Done) | `SKILL.md` "Lifecycle", `references/phases.md` "Phase transition protocol" | Adapted closely. Memory file replaced by STATE.md |
+| same file: "Documenting decisions inline" and Step 11 "What the note should actually contain" (cold reader, simple chapter stays brief) | `references/reasoning-notes.md` | Adapted closely. Feedback-lane reasoning uses `documentation`; counts and verdicts stay in STATE.md |
 | same file: "Interview Phase" and "Mid-Workflow Entry" | `SKILL.md` "Interview phase (P0)" | Already adapted from TrogonStack (section 1); Martin Dilger and Nebulit GmbH's confirmation sentence kept |
-| `.claude/skills/eventmodeling-interview-protocol/SKILL.md`: "When to ask", "Unless told not to ask", "Recording the outcome" | `references/stop-or-assume.md` "Interview protocol" | Adapted closely; restored from #493. Interview file replaced by the STATE.md Interview Trail |
-| `.agent-modeling-kit/CLAUDE.md`: per-turn steps (screen the prompt, connect once, resolve context, start marker, invoke the matched skill never raw calls, questioning rule, close, learnings) | `references/per-turn-protocol.md`, `SKILL.md` "Run protocol" | Adapted closely; restored from #493. Board prompts and status calls translated to briefs, `Active:` in STATE.md and the `Outcome:` line; `<promise>` sentinels, `progress.txt` and learnings promotion not adopted |
-| `.agent-modeling-kit/AGENTS.md`: diagnose why a command failed before retrying it | `references/per-turn-protocol.md` step 5 | Adapted closely, restored; unknown-outcome MCP applies are never retried (toolchain trap 42) |
+| `.claude/skills/eventmodeling-interview-protocol/SKILL.md`: "When to ask", "Unless told not to ask", "Recording the outcome" | `references/stop-or-assume.md` "Interview protocol" | Adapted closely. Interview file replaced by the STATE.md Interview Trail |
+| `.agent-modeling-kit/CLAUDE.md`: per-turn steps (screen the prompt, connect once, resolve context, start marker, invoke the matched skill never raw calls, questioning rule, close, learnings) | `references/per-turn-protocol.md`, `SKILL.md` "Run protocol" | Adapted closely. Board prompts and status calls translated to briefs, `Active:` in STATE.md and the `Outcome:` line; `<promise>` sentinels, `progress.txt` and learnings promotion not adopted |
+| `.agent-modeling-kit/AGENTS.md`: diagnose why a command failed before retrying it | `references/per-turn-protocol.md` step 5 | Adapted closely; unknown-outcome MCP applies are never retried (toolchain trap 42) |
 | orchestrating `SKILL.md`: cross-context and integration gaps stated with the finding and the viable resolutions, matching the posted question | `references/reasoning-notes.md` item 6 | Adapted closely; the comment becomes an open question or STATE.md decision |
 | `.agent-modeling-kit/CLAUDE.md`: "never leave a prompt neither progressed nor closed" | `SKILL.md` "Run protocol", `references/stop-or-assume.md` | Idea; our wording kept |
 | `.claude/skills/request-feedback/SKILL.md`: when escalation applies and when it does not; do not guess and build anyway; write the question for a cold reader | `references/stop-or-assume.md`, `references/handoff-template.md` section 4 | Idea; our wording kept (question format, calibration) |
@@ -56,6 +65,18 @@ by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with the explicit c
 | `.claude/skills/eventmodeling-core-rules/SKILL.md`: modeling and critic postures never mixed; a known refusal is a documented rule | `SKILL.md` "Modes", "Do not cut corners to save tokens or effort" | Idea; our wording kept |
 | `.claude/skills/connect/SKILL.md`: discover capabilities once per session | `SKILL.md` "Run protocol", `references/identity-and-edits.md` | Idea; our wording kept |
 | `.claude/skills/eventmodeling-core-rules/SKILL.md`: modes (modeling versus critic), element definitions and naming, causality, role catalog, field lineage, open question versus decided failure, offline-first, anti-patterns, structural shapes, quick self-check | `references/core-rules-digest.md` | Adapted closely as a one-page card translated to `.play` constructs. Not adopted: lanes, the single-issuer command rule, linked copies, the translation chain with a never-closing todo list, "read model never drives command validation" (Screenplay `reads` + `require`), the update-feeding-read-model procedure; "bed" is a candidate signal here, not an always-flag |
+
+## Eventmodelers Build-Kits
+
+Source: https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits, by Martin Dilger and Nebulit GmbH
+(https://nebulit.de), used with the explicit consent of Martin Dilger and Nebulit GmbH.
+
+| Source skill | Used in | How |
+|---|---|---|
+| `eventmodeling-core-rules` ("Concrete Over Generic") | `references/core-rules-digest.md` *Anti-patterns to reject early*, *Quick self-check*; `cratis-chronicle-event-modeling` `SKILL.md` | copied and translated: one real flow with real values instead of a generic structure, with the carve-out for a platform that is itself the product |
+| `eventmodeling-orchestrating-event-modeling` (every role has a screen) and `eventmodeling-storyboarding-events` | `references/phases.md` P2 gate | adapted closely: a persona's Does and Reads lines reach a screen; a read-only persona stays legitimate |
+| kit `CLAUDE.md` (only touch slices whose status is `Created` unless confirmed; a subagent inherits no session state) | `references/phases.md` *Slices under delivery*; `references/per-turn-protocol.md` steps 2 and 3 | adapted closely: delivery status in the plan replaces board status; naming the slice is the approval for exactly those declarations |
+| `eventmodeling-designing-event-models`, `eventmodeling-core-rules`, `eventmodeling-plotting-events` | `cratis-chronicle-event-modeling` `SKILL.md` *Decide before implementing*, *Verify the brief* | adapted closely: command issuers, story order, refused transitions and the rejected event kinds, for the code-first brief |
 
 ## Not adopted from agentic-engineer (rejected, with reasons)
 

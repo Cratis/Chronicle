@@ -13,8 +13,7 @@ static (Java) methods are queries. KSP generates a reflection-free
 
 ## Verified product sources
 
-Verified against `Arc.Kotlin` at tag **`v7.7.0`**: JDK 17, Gradle 8.14.4,
-Kotlin 2.4.20, KSP 2.3.12, Spring Boot 4.1.1, JUnit Jupiter 6.1.3. `io.cratis:arc` supplies
+Source: `Arc.Kotlin`. `io.cratis:arc` supplies
 `io.cratis.arc.artifacts.ReadModel`, `io.cratis.arc.queries.Path`,
 `@QueryHttpMethod`, `@QueryTransport`, `ObservableState<T>`. The optional
 `arc-rxjava3` artifact adds RxJava 3 `Observable` support at runtime. The
@@ -214,7 +213,7 @@ site from opening a socket carrying your visitor's cookies.
 
 For repository-backed paging, concept converters, tenant-aware storage and
 Mongo/JPA observable snapshots, use `cratis-arc-spring-data-kotlin`.
-Arc `7.7.0` also aligns Chronicle projection collection names with Arc MongoDB;
+Arc also aligns Chronicle projection collection names with Arc MongoDB;
 read [../cratis-arc-command-kotlin/references/read-model-naming.md](../cratis-arc-command-kotlin/references/read-model-naming.md)
 when upgrading or customizing collection names.
 

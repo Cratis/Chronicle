@@ -4,3 +4,4 @@ export * from './AllNamespaces';
 export * from './EnsureNamespace';
 export * from './NamespaceNames';
 export * from './ObserveNamespaces';
+export * from './RemoveNamespace';

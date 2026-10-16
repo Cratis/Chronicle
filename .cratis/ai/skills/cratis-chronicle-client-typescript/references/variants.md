@@ -1,9 +1,10 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-typescript/references/variants.md -->
 ## Variants — mutually exclusive read models for one entity's lifecycle
 
-> Available since `@cratis/chronicle` 6.2.0; verified at **v6.51.0**
-> (`Source/projections/VariantReclassifier.ts` and model-bound decorators).
-> Read models are inferred; use `static readModelId` for a custom id.
+Requires `@cratis/chronicle` 6.2.0 or later.
+
+Source: `Source/projections/VariantReclassifier.ts` and model-bound decorators.
+Read models are inferred; use `static readModelId` for a custom id.
 
 Some entities do not have one shape for their whole lifetime — a work item is a
 backlog entry until a pull request exists for it, then it is a pull request

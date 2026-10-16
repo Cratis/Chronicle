@@ -12,14 +12,14 @@ license: MIT
 
 ## Verified product sources
 
-All claims and prop shapes are from **Cratis/Components v4.26.4**, source rather than unversioned examples.
+All claims and prop shapes are from **Cratis/Components** source rather than unchecked examples.
 
-| Package | Version | Sources |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | `Source/Common/ComboBox.tsx:44-161,223-295`; `ToggleGroup.tsx:21-87,109-145`; `Tabs.tsx:23-79,91-132`; `TagGroup.tsx:49-145,155-260`; `Breadcrumbs.tsx:23-61,81-126` |
-| React | `^19.0.0` peer | `Source/package.json:319-340` |
+| Package | Sources |
+| --- | --- |
+| `@cratis/components` | `Source/Common/ComboBox.tsx`; `ToggleGroup.tsx`; `Tabs.tsx`; `TagGroup.tsx`; `Breadcrumbs.tsx` |
+| React | `Source/package.json` |
 
-Imports are exported by `Source/Common/index.ts:11-15`; `Source/package.json:95-99` exposes the `Common` subpath. Use **cratis-components-styling** for the provider and CSS setup and **cratis-components-accessibility** for naming/focus. These controls do not replace Arc's generated `InputTextField`/other command fields; use **cratis-arc-react-page** for those bindings.
+Imports are exported by `Source/Common/index.ts`; `Source/package.json` exposes the `Common` subpath. Use **cratis-components-styling** for the provider and CSS setup and **cratis-components-accessibility** for naming/focus. These controls do not replace Arc's generated `InputTextField`/other command fields; use **cratis-arc-react-page** for those bindings.
 
 ## Choose the semantic control first
 
@@ -31,7 +31,7 @@ Imports are exported by `Source/Common/index.ts:11-15`; `Source/package.json:95-
 | Add/remove string values | `TagGroup` | `value: string[]`, `onChange(nextValues)` |
 | Show where the page sits in navigation | `Breadcrumbs` | `items: { label, href?, onNavigate? }[]`, outermost first |
 
-`ToggleGroup` is a single-selection value choice with radio-group semantics and one Tab stop. `Tabs` supplies real panels and tab/panel relationships. Do not use panel-less tabs as a fancy radio group (`ToggleGroup.tsx:78-87`, `Tabs.tsx:70-79`).
+`ToggleGroup` is a single-selection value choice with radio-group semantics and one Tab stop. `Tabs` supplies real panels and tab/panel relationships. Do not use panel-less tabs as a fancy radio group (`ToggleGroup.tsx`, `Tabs.tsx`).
 
 ## 1. Bind a picker, not its display text
 
@@ -67,14 +67,14 @@ export const AccountPicker = (props: AccountPickerProps) => (
 );
 ```
 
-The host loads options; ComboBox never fetches them. For server-filtered results, supply `inputValue`, `onInputChange` and `filter='none'`; the caller debounces/cancels requests and discards stale answers. Local `filter` defaults to `'contains'`; `'startsWith'` is also supported. Explicit open/focus shows all options rather than filtering to the selected label (`ComboBox.tsx:170-177,223-266`).
+The host loads options; ComboBox never fetches them. For server-filtered results, supply `inputValue`, `onInputChange` and `filter='none'`; the caller debounces/cancels requests and discards stale answers. Local `filter` defaults to `'contains'`; `'startsWith'` is also supported. Explicit open/focus shows all options rather than filtering to the selected label (`ComboBox.tsx`).
 
-Useful props (`:106-161`):
+Useful props:
 
 - `failure: ReactNode` replaces options with failure content. `loading` shows `loadingMessage`; `emptyMessage` is for a genuine empty result. Do not map denied/failed loads to an empty list without an explanation.
 - `optionLayout='inline' | 'stacked'` controls secondary `description` placement.
-- `action={{ label, onAction }}` offers a footer action receiving the current input text. It **does not select or create an option for you**. The handler may return a promise, but the component fires it without awaiting; the caller owns busy/error handling (`:268-287`).
-- `required`, `invalid`, `errorMessage`, `description`, `disabled`, `readOnly`, `name` and `id` cover field state. `id` belongs to the input for `<label htmlFor>`. `name` carries the selected key, not search text (`:133-156`).
+- `action={{ label, onAction }}` offers a footer action receiving the current input text. It **does not select or create an option for you**. The handler may return a promise, but the component fires it without awaiting; the caller owns busy/error handling.
+- `required`, `invalid`, `errorMessage`, `description`, `disabled`, `readOnly`, `name` and `id` cover field state. `id` belongs to the input for `<label htmlFor>`. `name` carries the selected key, not search text.
 
 ## 2. Choose a value or a panel
 
@@ -104,7 +104,7 @@ import { ToggleGroup, Tabs } from '@cratis/components/Common';
 />
 ```
 
-`ToggleGroup.onChange` receives a string, not a DOM event; selecting the already-selected value is ignored. `Tabs.onChange` also receives an ID string. Both offer `disabled`, accessible labeling, `className` and typed `pt` parts. ToggleGroup additionally exposes `invalid` and `aria-describedby` (`ToggleGroup.tsx:52-76,116-121`; `Tabs.tsx:51-68`). Do not infer route navigation from changing a tab; its job is revealing content.
+`ToggleGroup.onChange` receives a string, not a DOM event; selecting the already-selected value is ignored. `Tabs.onChange` also receives an ID string. Both offer `disabled`, accessible labeling, `className` and typed `pt` parts. ToggleGroup additionally exposes `invalid` and `aria-describedby` (`ToggleGroup.tsx`; `Tabs.tsx`). Do not infer route navigation from changing a tab; its job is revealing content.
 
 ## 3. Add tags without confusing display with read-only
 
@@ -122,9 +122,9 @@ import { TagGroup } from '@cratis/components/Common';
 />
 ```
 
-TagGroup defaults to `editable=true`, comma separators and `allowDuplicates=false`. Enter or separators commit trimmed nonempty values; paste splits on separators. Empty-entry Backspace removes the last tag (`TagGroup.tsx:94-109,127-145,190-260`).
+TagGroup defaults to `editable=true`, comma separators and `allowDuplicates=false`. Enter or separators commit trimmed nonempty values; paste splits on separators. Empty-entry Backspace removes the last tag (`TagGroup.tsx`).
 
-**`editable=false` only removes the adding input; existing tags remain removable.** Use `disabled` when removal must also be unavailable, or a display-only surface for noninteractive tags. Supply `removeLabel(value)` for localized accessible names. `removeIcon` overrides that group's glyph (ahead of provider `icons.remove`) without changing the button's name or keyboard behavior (`TagGroup.tsx:54-91,155-190`). Prefer unique values: removal is value-keyed, so this is not an identity-preserving collection editor (`:139-140`).
+**`editable=false` only removes the adding input; existing tags remain removable.** Use `disabled` when removal must also be unavailable, or a display-only surface for noninteractive tags. Supply `removeLabel(value)` for localized accessible names. `removeIcon` overrides that group's glyph (ahead of provider `icons.remove`) without changing the button's name or keyboard behavior (`TagGroup.tsx`). Prefer unique values: removal is value-keyed, so this is not an identity-preserving collection editor.
 
 ## 4. Build the breadcrumb trail from actual navigation
 
@@ -143,7 +143,7 @@ import { Breadcrumbs } from '@cratis/components/Common';
 />
 ```
 
-Earlier entries can supply `href` or router-owned `onNavigate`. The last item is current: its destination/callback is suppressed and React Aria supplies `aria-current='page'`. Separators are decorative; `separator` accepts any React node (`Breadcrumbs.tsx:97-126`). Supply a distinct landmark name if a page has multiple trails. Breadcrumbs do not discover routes or enforce access.
+Earlier entries can supply `href` or router-owned `onNavigate`. The last item is current: its destination/callback is suppressed and React Aria supplies `aria-current='page'`. Separators are decorative; `separator` accepts any React node (`Breadcrumbs.tsx`). Supply a distinct landmark name if a page has multiple trails. Breadcrumbs do not discover routes or enforce access.
 
 ## Verify the binding
 

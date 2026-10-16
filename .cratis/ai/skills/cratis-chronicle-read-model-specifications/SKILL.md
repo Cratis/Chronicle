@@ -12,21 +12,23 @@ against a sequence of events. No Chronicle server, no database, no network — t
 events go in, the materialized instance comes out.
 
 Pure reducer decisions use `Specification` plus a direct method call by
-default, with the event and current state supplied explicitly. Add
+default, with the event and current state supplied explicitly (for a self model,
+`Model.Reduce(@event, current)`). Add
 `ReadModelScenario<TReadModel>` only where declarative projection behavior,
 event dispatch, filtering, metadata or read-model wiring contribute proof.
 
 For a read-model scenario specification the **`Given` *is* the act**. There
 is no separate `When`: seeding the events is what makes the projection run.
 
-## Verified product sources
+## Product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle.Testing` | `19.50.1` | `ReadModelScenario<TReadModel>` and its `Given` builder |
-| `Cratis.Specifications.XUnit` | `4.x` | The `Specification` base and the `ShouldXxx` assertions |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle.Testing` | `Source/Clients/Testing/ReadModels/ReadModelScenario.cs`: scenario selection, self and nominated reducers |
+| `Cratis.Chronicle` | `Source/Clients/DotNET/Reducers/{SelfReducerMethods,RegisteredReducerReadModel}.cs`, `ReadModels/ReadModelBuilderOwnership.cs`: supported forms and ownership |
+| `Cratis.Specifications.XUnit` | The `Specification` base and the `ShouldXxx` assertions |
 
-Source: `Source/Clients/Testing/ReadModels/` at **Cratis/Chronicle v19.50.0**.
+Source: `Source/Clients/Testing/ReadModels/` in `Cratis/Chronicle`.
 
 ```bash
 dotnet add package Cratis.Chronicle.Testing
@@ -48,9 +50,7 @@ version.
   readmodel` rows are the contract). Decide this with the decision rule in
   `cratis-screenplay-modeling-lifecycle`: model-first only when an accepted
   model under the model root covers this scope, or the repository is opted in
-  (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set `mcpServers.screenplay.root`
-  in `.cratis/ai.json`); an empty directory, install output, a `.play` file
-  outside the root or an uncommitted draft does not count, and framework, infrastructure, client, adapter and not-opted-in
+  (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`); framework, infrastructure, client, adapter and not-opted-in
   brownfield work stays code-first. Opted in but no model for this scope: model
   it first (`cratis-screenplay-discovery`, then `cratis-screenplay-slice-design`)
   before writing specifications. If those Screenplay skills are not installed,
@@ -88,7 +88,11 @@ Scenarios implement `IDisposable`; call `_scenario.Dispose()` in `Destroy()`.
 and wins over discovery, **including a discovered reducer**. Per-run `Defaults`
 can take a client artifacts provider, service provider and options;
 `InMemoryClientArtifactsProvider` and `ChronicleOptions.ExplicitArtifacts` let a
-specification isolate registrations without global discovery.
+specification isolate registrations without global discovery. Nominate a plain
+instance reducer with `options.ExplicitArtifacts.RegisterReducer<PlainReducer>()`
+before constructing per-run `Defaults(artifacts, serviceProvider, options)`.
+The same API accepts a self model; default discovery needs no marker. Do not
+mutate `Defaults.Instance` across independent runs.
 
 ## Step 2 — Seed the events
 
@@ -115,6 +119,14 @@ For a filtered reducer, seed the routing metadata as well:
 `[EventSourceType]`, `[EventStreamType]` and `[FromEventSource<T>]` filters are honored;
 unrouted seeds no longer reach a handler for another stream. Child-before-parent
 writes are retried when the parent later arrives; decimal seeds retain exact values.
+
+Requires Chronicle 19.53.1 for nested child `IdentifiedBy` paths to update/remove
+the existing child rather than duplicate it, and 19.53.2 for in-memory child joins
+to preserve the root and all matching siblings. Check the testing/client versions;
+older in-memory outcomes can diverge from persistent sinks. Cover root properties,
+sibling preservation and nested child update/removal, not only one joined value.
+Requires Chronicle 19.58.0 for reducer tag filters and seeded tags/source/stream
+metadata to match production; include matching and excluded events.
 
 Events are processed in the order supplied. Seed before asserting, and do not
 try to separate a "setup" `Given` from an "act" `Given` — for a read model they
@@ -144,16 +156,28 @@ specific reason in the skip message.
 
 ## Step 4 — Know what the scenario picked
 
-Without an explicit `WithProjection`, the scenario finds a handler for `TReadModel` in this order:
+`WithProjection` overrides discovery, including a reducer. Otherwise:
 
-1. A **reducer** — a class implementing `IReducerFor<TReadModel>`.
-2. A **fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
-3. **Model-bound projection attributes** on `TReadModel` itself.
-4. A separate **model-bound projection** type registered for it.
+1. An **explicit projection recipe** for `TReadModel` suppresses reducer selection.
+2. A **registered reducer handler** targeting it: a self-reducing model, a
+   separate `IReducerFor<TReadModel>`, or an explicitly nominated plain instance
+   class. The scenario uses the store's handler catalog, not its own interface
+   scan. Self signatures and registered event membership still matter.
+3. A **fluent projection** implementing `IProjectionFor<TReadModel>`.
+4. **Model-bound attributes** directly on `TReadModel`, then the matching
+   model-bound entry in the artifacts provider.
 
-If none is found it throws `NoReadModelHandlerFound`. When a read model has both
-a reducer and a projection, the reducer wins — which is worth knowing when a
-specification exercises a path the running application does not.
+If no handler exists, processing throws `NoReadModelHandlerFound`. Classic
+reducer precedence does not authorize competing self-model builders: the store
+rejects those with `AmbiguousReadModelBuilder`. An inline scenario override can
+exercise a different path than production; do not mistake it for registration
+proof. See [reducers](../cratis-chronicle-reducer/SKILL.md) for signatures and
+static direct-call/scenario examples.
+
+For every reducer form, cover empty history, first-event null current, guarded
+branches, deletion and recreation. Scenarios substitute storage, observer
+lifecycle and compliance; they do not prove real-kernel registration, replay,
+transport, encryption, erasure or migration.
 
 For stricter runs, `WithStrictEventSubscription()` and `WithStrictFidelity()`
 turn silent mismatches into failures.
@@ -190,6 +214,8 @@ assembly, so specification code ships only in Debug. Dedicated spec projects
 need no wrapper. Keep one outcome per `should_` fact.
 
 ## Step 6 — Cover the read model, not just one event
+
+For `.play` setup, assertions and case tables, read `cratis-application-slice-specifications`, "Reading a `.play` specification".
 
 One summation example proves one event. Take the inventory from the contract
 (the `.play` read model and its specifications, or the agreed outline); without

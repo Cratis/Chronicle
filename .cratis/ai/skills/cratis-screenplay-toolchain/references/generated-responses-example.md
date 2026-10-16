@@ -3,11 +3,10 @@
 
 A small model with a generated identifier, a second generated value, an ordered record response, a scalar
 response, and specifications that pin both the emitted events and the response. It compiles with 0
-diagnostics, binds, and its two specifications pass in the reference runner on Screenplay 4.68.0
-(`Documentation/screenplay/fixtures/generated-responses.play` at `v4.68.0`). It needs the standalone
-`screenplay` 4.68.0 or later: the cratis CLI 3.28.3 bundles 4.66.0, which does not bind these constructs
-(`PLAY0268`), and `cratis render` does not render ESM v7 (Stage 4.24.2 refuses it with `STAGE-ESM-016`,
-Cratis/tracked in Stage#201). Rules and refusals: [executable-subset.md](executable-subset.md#generated-values-and-responses-esm-v7-standalone-4680-or-later-only).
+diagnostics, binds, and its two specifications pass in the reference runner. Rules and refusals:
+[executable-subset.md](executable-subset.md#generated-values-and-responses-esm-v7).
+
+Requires Screenplay 4.68.0 or later (`screenplay --version`); older compilers refuse these constructs with `PLAY0268`.
 
 ```screenplay
 // ESM v7 reference-executable example: deterministic generated fixtures, events and command responses.

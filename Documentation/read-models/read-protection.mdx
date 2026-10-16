@@ -152,7 +152,7 @@ Each message names the fix. Chronicle refuses rather than guard something it can
 ## Limits
 
 - **History mutation.** Revising or redacting an event does not advance the tail, so a read that was folded before the change is not invalidated. Inside a frame, `Revise` and `Redact` are refused; run them as separate administrative operations. Chronicle issue [#4900](https://github.com/Cratis/Chronicle/issues/4900) tracks a kernel check.
-- **Reducers.** A reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. See [Decision reads](decision-reads.mdx#reducers).
+- **Reducers.** A classic reducer is admitted only if it has no filters and no constructor dependencies other than `ILogger<T>`. A self-reducing read model is exempt from the dependency rule. See [Decision reads](decision-reads.mdx#reducers).
 - **Pinned delivery.** A projection with Pinned generation delivery is refused with `GenerationDeliveryNotSupported`.
 - **Source-less reads.** A contributed read must name an event source. Reads over many sources are refused.
 - **One event log.** Guards apply to one event sequence, the event log, and one unit of work cannot span sequences.
@@ -168,7 +168,7 @@ If you come from an Arc command, this table maps what you declare there to what 
 | A read-model parameter that is guarded | `IDecisionReads.GetFor<T>(unit, key)`, enrolled in the command's unit before the value is exposed |
 | A read the command declares unprotected, with a reason | `AllowReads(ReadAllowance.Advisory, reason)` around the read. The read guards nothing |
 | A read the host performs itself and then enrolls | `AllowReads(ReadAllowance.Contributed, reason)`, then `EnrolContributedRead` before the value is used |
-| A read model that cannot be guarded exactly | `DecisionReadRefused` with a typed reason, such as a join, a filtered reducer or a key that is not the event source ID |
+| A read model that cannot be guarded exactly | `DecisionReadRefused` with a typed reason, such as a join, a filtered reducer, a classic reducer with constructor dependencies or a key that is not the event source ID |
 | Events a command returns | Staged in the unit and appended by `CommitAsOwner`. An immediate append is refused with `ImmediateAppendWhileReadsAreProtected` |
 | A lost race | A conflict in `GetDecisionConflicts()`. Nothing was appended |
 

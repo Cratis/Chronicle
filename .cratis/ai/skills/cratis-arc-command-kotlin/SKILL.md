@@ -14,32 +14,22 @@ there is no controller or handler class to write by hand.
 
 ## Verified product sources
 
-Verified against `Arc.Kotlin` at tag **`v7.7.0`**: JDK 17, Gradle 8.14.4,
-Kotlin 2.4.20, KSP 2.3.12, Spring Boot 4.1.1, JUnit Jupiter 6.1.3.
+Source: `Arc.Kotlin`.
 Sources include `ArcSymbolProcessor.kt`, `GradlePlugin/ArcExtension.kt` and
 `Integrations/Cratis`/`Integrations/Chronicle` publishing blocks. Use a released
 version from Maven Central, not the local `0.0.0-SNAPSHOT`.
 
-| Artifact | Purpose |
-| --- | --- |
-| `io.cratis:arc` | `io.cratis.arc.artifacts.Command`, `CommandKey`, `FromServices` |
-| `io.cratis:arc-ksp` | the KSP processor that generates the command handler |
-| `io.cratis:arc-spring-boot-starter` | Spring Boot auto-configuration, the command pipeline host |
-| `io.cratis:cratis` | recommended single dependency for an event-sourced app: Arc, Spring Boot wiring and Chronicle integration (`7.5.0+`) |
-| `io.cratis:arc-chronicle-spring-boot-starter` | explicit alternative to `cratis`, same Arc version |
-| `io.cratis:arc-testing` | in-process command and query scenarios (test scope) |
-| `io.cratis:arc-spring-data-jpa`, `io.cratis:arc-spring-data-mongodb` | Spring Data read-model integrations |
-| `io.cratis:arc-rxjava3` | RxJava 3 observable queries |
-| `io.cratis:arc-observability-spring-boot-starter`, `io.cratis:arc-openapi-spring-boot-starter` | optional observability and OpenAPI |
-| `io.cratis.arc` Gradle plugin | applies Kotlin/JVM + KSP, adds the dependencies, configures the module name and proxy output |
+Read [references/artifacts.md](references/artifacts.md) when choosing `io.cratis` artifacts.
+
+Requires Arc.Kotlin 7.5.0 for the single `io.cratis:cratis` dependency.
 
 Arc.Kotlin has no Chronicle dependency by default. Add the optional Chronicle
 integration only when a command should append a returned event or read a
 Chronicle read model; without it, `handle()` returns an ordinary response value.
 For that setup prefer `implementation("io.cratis:cratis:<version>")` over the
-Arc-only starter in the example below. Arc `7.7.0` brings Chronicle.Kotlin
-`6.10.0` transitively; its compatibility gate uses kernel `19.21.1` (19.x).
-The standalone Chronicle `6.13.0` client needs `19.30.0`; do not assume that
+Arc-only starter in the example below. Arc brings a compatible Chronicle.Kotlin
+transitively, and its compatibility gate names the kernels it accepts. The standalone
+Chronicle client can need a newer kernel; do not assume that
 latest/latest is a verified Arc integration pair.
 
 Java applications still need Kotlin and KSP on the build — Arc generates Kotlin
@@ -49,42 +39,7 @@ application source files differ (Java records instead of Kotlin data classes).
 
 ## Set up the project
 
-```kotlin
-// settings.gradle.kts
-pluginManagement {
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-```
-
-```kotlin
-// build.gradle.kts
-plugins {
-    id("io.cratis.arc") version "<version>"
-    kotlin("plugin.spring") version "2.4.20"
-    id("org.springframework.boot") version "4.1.1"
-    id("io.spring.dependency-management") version "1.1.7"
-}
-
-repositories {
-    mavenCentral()
-}
-
-cratisArc {
-    moduleName.set("<ModuleName>")
-    dependencyVersion.set("<version>")
-    endpoints {
-        segmentsToSkip.set(<packageSegmentsUnderModuleRoot>)
-    }
-}
-
-dependencies {
-    implementation("io.cratis:arc-spring-boot-starter:<version>")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
-}
-```
+Read [references/project-setup.md](references/project-setup.md) when writing the Gradle build for a new project.
 
 The plugin applies Kotlin/JVM and KSP, targets JDK 17, and treats warnings as
 errors. `moduleName` names the generated artifact module and manifest; every
@@ -278,7 +233,7 @@ A value from `provide` still takes precedence over this injection. A missing
 model leaves the dependency unresolved rather than silently falling through to
 another store; an invalid key or unavailable store fails the command.
 
-Collection naming is shared with Arc's MongoDB integration in `7.7.0`.
+Collection naming is shared with Arc's MongoDB integration.
 Read [references/read-model-naming.md](references/read-model-naming.md) when
 upgrading an existing projection or overriding its storage collection name.
 
@@ -305,19 +260,7 @@ operation on an `@Authorize`-protected class is reachable without
 authentication — the shape a login-screen query needs on an otherwise
 protected read model):
 
-```kotlin
-@ReadModel
-@Authorize
-data class AuthenticationQueryItem(val message: String) {
-    companion object {
-        // Overrides the class: anyone may subscribe to this one.
-        @JvmStatic
-        @AllowAnonymous
-        fun anonymous(@FromServices source: AuthenticationQuerySource): Flow<AuthenticationQueryItem> =
-            source.observeAnonymous()
-    }
-}
-```
+Read [references/authorization-override-example.md](references/authorization-override-example.md) when you need the `@AllowAnonymous` operation-override example.
 
 Combining `@AllowAnonymous` with `@Authorize`/`@Roles` is only ever a
 contradiction — and only ever fails with `ARCKSP0108` — **on the exact same

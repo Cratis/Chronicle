@@ -20,12 +20,12 @@ survives a second tenant is not.
 
 ## Verified product sources
 
-This skill is verified against this exact source:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | `EventStoreNamespaceName`, `IEventStoreNamespaceResolver`, `IChronicleClient.GetEventStore` |
-| `Cratis.Chronicle.AspNetCore` | `18.3.0` | the header and subdomain namespace resolvers |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | `EventStoreNamespaceName`, `IEventStoreNamespaceResolver`, `IChronicleClient.GetEventStore` |
+| `Cratis.Chronicle.AspNetCore` | the header and subdomain namespace resolvers |
 
 Reverify product sources before claiming support for another version.
 
@@ -40,17 +40,17 @@ Reverify product sources before claiming support for another version.
 implicit conversion from `string`, a `Default` value of `"Default"`, and a
 `NotSet` value.
 
-For Arc .NET v22.75.0, there is no tenant-required configuration switch.
+In Arc .NET there is no tenant-required configuration switch.
 An unresolved header/query tenant is `TenantId.NotSet`; Arc's
 `TenantNamespaceResolver` maps `IsDefault` (`NotSet` or `Default`) to Chronicle's
 default namespace. Refuse unresolved tenants in application authorization where
-required, not through an invented switch. Sources at Arc v22.75.0:
+required, not through an invented switch. Sources:
 `Source/DotNET/Arc.Core/Tenancy/TenancyOptions.cs` and
 `Source/DotNET/Chronicle/Tenancy/TenantNamespaceResolver.cs`.
 
 ## What a namespace actually isolates
 
-Verified against the storage naming and the grain keys, not inferred:
+Derived from the storage naming and the grain keys, not inferred:
 
 **Per namespace:**
 
@@ -97,7 +97,7 @@ When the namespace is omitted, the registered **namespace resolver** supplies it
 `IEventStore` exposes the namespace it was resolved for, and
 `IEventStore.GetNamespaces(...)` lists them.
 
-Behind Cratis AuthProxy (`v2.30.5`) the tenant reaches the backend on
+Behind Cratis AuthProxy the tenant reaches the backend on
 `x-cratis-tenant-id`, from the proxy's own resolver (host, claim, route,
 subdomain, selection page or fixed), and Arc resolves it per request. Map that
 tenant to the Chronicle namespace through the resolver; the proxy does not
@@ -197,6 +197,7 @@ the tenant identifier in the resolver rather than relying on that.
 | Comparing sequence numbers across namespaces | they are independent sequences |
 | Erasing personal data in one namespace and calling it done | erasure is per namespace |
 | Relying on namespace casing | lookup is case-insensitive, storage naming is not |
+| Modeling each service as a namespace of one store, or naming a tenant's namespace differently per service | a namespace is a tenant inside one store; forwarding between services' stores keeps the namespace name (`cratis-multi-service-architecture`) |
 
 ## Verify
 

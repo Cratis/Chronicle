@@ -6,6 +6,7 @@
 - Start from the contract
 - Build order
 - Handler patterns
+- Redelivery against a refusing command
 - What no longer applies
 - Checklist
 - Specifications
@@ -62,9 +63,39 @@ give the reactor `[ExecuteCommandsAsSystem]` naming that role.
 | A condition narrows the trigger | Realize exactly the stated `where`. Show it with one specification where it skips and one for the neighboring case where it acts |
 | A fact on another event source | `EventForEventSourceId` with the stated target id |
 | The trigger's fields are not enough | Inject the read model the contract names; do not widen the mapping |
+| The invoked command refuses an exact repeat | Apply the contract's redelivery disposition to that refusal only; see below |
 
 Which return shape expresses "do nothing" for a given handler is established by a scenario that
 runs it, not assumed. Use only the return shapes listed in `SKILL.md`.
+
+## Redelivery against a refusing command
+Recovery can redeliver the trigger even with `[OnceOnly]`. If the invoked command's own
+"already done" rule refuses the repeat, returning that command without a refusal disposition
+fails the partition. Decide from the contract, in this order:
+
+1. A redelivery specification says the repeat is harmless (`then no events`). If the command's
+   own contract says an exact repeat succeeds without new facts, realize that no-op in the
+   command. Otherwise execute through the imperative pipeline (`cratis-arc-command-execution`)
+   and acknowledge only the exact already-done validation result or named constraint authorized
+   by the contract. Identify it from the command's rule and result, never by guessing an exception
+   type or treating every validation failure as a duplicate. Preserve the modeled system identity
+   when using the pipeline; a returned command's role handling is not implicit in an imperative call.
+2. A refusal branch states the disposition: realize its exact selector and its acknowledgment
+   or produced fact. Screenplay refusal branches reference-execute as v19 (Requires Screenplay 4.160.0);
+   render admission is a separate question per target, and hand-written delivery keeps the model as the contract.
+3. The redelivery specification expects an error, or no redelivery disposition is stated: do not
+   acknowledge on your own, because that changes failure behavior. Report the possibility of a
+   paused partition on recovery as an edit request to the model owner.
+
+Every other refusal, denial or exception still fails the handler. Never catch broadly: it hides
+mapping bugs and real validation failures. Authorization denial needs an explicit authorization
+selector; concurrency conflicts are not refusals and must fail for retry.
+
+For fan-out where the contract requires independent item progress, execute each item through the
+pipeline and apply the disposition at that call, not around the loop. A returned collection stops
+at the first failure, and even an acknowledged refusal can end that collection's execution; it
+cannot prove later items ran. Unexpected failures still fail the handler, so completed items need
+retry-safe behavior too.
 
 ## What no longer applies
 Processor identity strings, consumer instance ids, lock and retry configuration, a dead-letter
@@ -77,12 +108,16 @@ fact, not handled (`references/domain-failures.md`).
 - [ ] The slice contract was read first and every trigger, condition, command and field came from it
 - [ ] The trigger event is an `[EventType]` from the owning contracts project
 - [ ] The command (or events) it fires exists and has its own specifications
-- [ ] One handler per trigger event; first parameter is the trigger; no `ReactorSideEffect`, no injected `IEventLog`
+- [ ] One handler per trigger event; first parameter is the trigger; no invented `ReactorSideEffect` wrapper, no injected `IEventLog`
 - [ ] Every command or event field is mapped from the trigger, an injected read model or a stated mapping; none invented or defaulted
 - [ ] Every skip condition is the contract's, with a specification on each side of it
 - [ ] Handlers that return events or commands carry `[OnceOnly]`; the effect is idempotent regardless
 - [ ] A gated command has `[ExecuteCommandsAsSystem]` naming the role the command requires
 - [ ] Repeated delivery of the same trigger is specified (what happens when it fires twice)
+- [ ] If the invoked command refuses a repeat, its disposition comes from the contract and is
+  realized for exactly that rule; nothing is caught broadly
+- [ ] For a pending-work read model, the successful effect records the event that removes the
+  selected item, directly or through the invoked command; success leaves no completed work pending
 - [ ] A modeled slice matches its `.play` contract; the model was not edited to fit the code
 - [ ] The reactor has no route; a command meant only for the automation is gated and the reactor runs it as that role; no processor or lock configuration, no dead-letter store
 - [ ] The build has no `CHR0004`, `CHR0005`, `CHR0008`, `CHR0013`, `CHR0022`, `CHR0031` or `CHR0032` outstanding and the specifications pass
@@ -92,3 +127,6 @@ The trigger-to-command field mapping is part of the contract, so give it its own
 direct call asserting the returned command, or a `ReactorScenario` where wiring matters). The
 command's own `CommandScenario` covers the command side separately; neither replaces the other.
 Details: `references/specifications.md`.
+Where a pending-work view drives the reaction, its read-model specification seeds the trigger
+and then the completion event and asserts that the item is absent. Link it from the reaction's
+specification map: command success alone cannot show the queue will stop selecting that item.

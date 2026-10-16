@@ -15,8 +15,7 @@ that way; keep service calls, async work, and cross-member logic imperative.
 
 ## Verified product sources
 
-Verified against `Arc.Kotlin` at tag **`v7.7.0`**: JDK 17, Gradle 8.14.4,
-Kotlin 2.4.20, KSP 2.3.12, Spring Boot 4.1.1, JUnit Jupiter 6.1.3. `io.cratis:arc` supplies `io.cratis.arc.validation.FluentModelValidator`,
+Source: `Arc.Kotlin`. `io.cratis:arc` supplies `io.cratis.arc.validation.FluentModelValidator`,
 `CommandValidator<T>`, nongeneric `QueryValidator`, `ConceptValidator<T>`,
 `ModelValidator<T>`, `ConceptValidationExclusion`, `IgnoreValidation`,
 `CommandFilter`, `QueryFilter`. Sources: `queries/QueryValidator.kt`,

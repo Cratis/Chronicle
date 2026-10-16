@@ -118,17 +118,19 @@ Keep correlation and resulting private events in the model and report the runtim
 
 ## Admission and evidence
 
-ESM v9 shipped in Screenplay 4.117.0 and is selected only by use of public events,
+ESM v9 shipped and is selected only by use of public events,
 origins, direction, event-target builders or events-source captures. At 4.135.0,
 publication reference scenarios execute; imported shapes still refuse binding.
-Stage 4.52.0 (previous CLI 3.46.1, history) audited only through v7. The pinned CLI/Stage pair (toolchain `references/versions.md`)
-reaches construct admission through v15 but still refuses publication (STAGE-ESM-032), foreign
+Stage 4.52.0 (previous CLI 3.46.1, history) audited only through v7. The CLI/Stage pair (toolchain `references/renderable-subset.md`)
+reaches construct admission through its bundled ceiling but still refuses publication (STAGE-ESM-032), foreign
 events/events-source captures (STAGE-ESM-033); source admission is not rendering.
 
-Source: Screenplay `v4.135.0:Documentation/screenplay/fixtures/public-events.play`,
+Requires Screenplay 4.117.0 or later (`screenplay --version`) for public events (ESM v9).
+
+Source: Screenplay `Documentation/screenplay/fixtures/public-events.play`,
 `events.md`, `slices.md`, `captures.md`, decisions 0049–0051 and
 `Source/DotNET/Screenplay.CanonicalCorpus/PublicEventsCorpus.cs`.
-Renderer source: Stage `v4.52.0:Source/Rendering.Cratis/Semantics/SemanticCratisAdmission.cs`
-and `v4.67.0:Source/Rendering.Cratis/Semantics/SemanticVersionFeatures.cs`.
+Renderer source: Stage `Source/Rendering.Cratis/Semantics/SemanticCratisAdmission.cs`
+and `Source/Rendering.Cratis/Semantics/SemanticVersionFeatures.cs`.
 Diagnostics and repairs: toolchain `references/diagnostics.md`; version allocation:
-toolchain `references/versions.md`.
+toolchain `references/executable-subset.md`.

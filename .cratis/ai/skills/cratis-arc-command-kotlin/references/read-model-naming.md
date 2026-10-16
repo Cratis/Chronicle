@@ -4,9 +4,9 @@
 
 # Share Arc and Chronicle collection names
 
-Verified at `Arc.Kotlin v7.7.0`: `ChronicleArcAutoConfiguration.arcReadModelNamingPolicy`,
+Source: `Arc.Kotlin`: `ChronicleArcAutoConfiguration.arcReadModelNamingPolicy`,
 its Kotlin/Java conformance tests and `Documentation/guides/read-model-naming.mdx`.
-The integration depends on Chronicle.Kotlin `6.10.0`.
+The integration depends on Chronicle.Kotlin.
 
 With the MongoDB integration present, one Arc `NamingPolicy` bean is adapted
 into Chronicle's `ReadModelNamingPolicy`. Chronicle's starter passes it to the

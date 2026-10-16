@@ -10,7 +10,7 @@
 - Extension props
 - Conversion helpers
 
-Verified at Components v4.26.4: `Source/SchemaEditor/SchemaEditor.tsx`,
+Source: Components: `Source/SchemaEditor/SchemaEditor.tsx`,
 `Tree/TreeSchemaEditor.tsx`, `Tree/schemaConversion.ts`, and `index.ts`.
 All exports below come from `@cratis/components/SchemaEditor`.
 

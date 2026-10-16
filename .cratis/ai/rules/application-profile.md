@@ -1,5 +1,19 @@
 ---
-applyTo: "**/*"
+applyTo: "**/*.cs,**/*.csproj,**/*.ts,**/*.tsx,**/*.go,**/go.mod,**/go.sum,**/*.kt,**/*.kts,**/*.java,**/*.ex,**/*.exs,**/*.play"
+paths:
+  - "**/*.cs"
+  - "**/*.csproj"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/go.mod"
+  - "**/go.sum"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.java"
+  - "**/*.ex"
+  - "**/*.exs"
+  - "**/*.play"
 profile: application
 ---
 <!-- cratis-ai-managed: rules/application-profile.md -->
@@ -18,8 +32,8 @@ Pick exactly one type per slice folder — determined by what the slice *does*.
 
 | Type | What it does | Contents |
 | --- | --- | --- |
-| **State Change** | Accepts a command, appends events | Command + validator + event(s); optional `[Passive]` read model for command-side decisions |
-| **State View** | Projects events into a queryable read model | `[ReadModel]` + model-bound projection + static query method(s) |
+| **State Change** | Accepts a command, appends events | Command + validator + event(s); optional `[Passive]` for a current read; a rule that must hold under concurrency needs a decision read or constraint (see the `cratis-chronicle-decision-reads` skill, `references/choosing-how-a-rule-holds.md`) |
+| **State View** | Builds a queryable read model from events | `[ReadModel]` + projection mappings or reducer code + static query method(s) on the record |
 | **Automation** | Reacts to events, calls external systems / `ICommandPipeline`, or returns follow-up commands/events (including to another stream) | Reactor only |
 | **Translation** | Takes data from outside our own facts (an external system or another service) and records it as our facts | An adapter at the boundary, often a reactor |
 
@@ -31,7 +45,7 @@ Commands are imperative intents (`Register`, `Create`); the slice folder is the 
 
 Tagged **[contract]** (framework-enforced) or **[convention]** (house default). Mechanics and examples live in `vertical-slices.md`.
 
-1. **[contract] Model-bound — no controllers.** Commands are `[Command]` records with a public instance `Handle()` (Arc analyzers enforce this); queries are `static` methods on `[ReadModel]` records; projections/constraints/authorization use attributes. Arc generates the HTTP surface. Drop to fluent (`IProjectionFor<T>`, `IConstraint`) only when model-bound can't express the rule.
+1. **[contract] Model-bound — no controllers.** Commands are `[Command]` records with a public instance `Handle()` (Arc analyzers enforce this); queries are `static` methods on `[ReadModel]` records; projections/constraints/authorization use attributes. Arc generates the HTTP surface. For read-model style follow rule 11's ladder; for constraints use `IConstraint` when attributes cannot express the rule.
 2. **[contract] Command validation & data flow.** Put command rejection in `CommandValidator<T>`, global value invariants in `ConceptValidator<T>`, and fetched/computed handler data in **`Provide()`** (runs after validation/authorization; may short-circuit with `ValidationResult.Error` / `Result<TProvided, ValidationResult>`). Keep `Handle()` focused on event construction. For a state-dependent rule that must hold **under concurrency**, enroll a guarded stream decision (`IStreamReads`/`StreamDecision`) or use `[ProtectedDecision]` with an admitted `DecisionRead<T>`; plain injected models remain advisory. Return a typed rejection via `Result<TEvent, ValidationResult>` where needed; the result alone adds no guard. **Throwing from `Provide()`/`Handle()` is an exception (HTTP 500), not a validation rejection** — throw only for genuinely exceptional conditions, never for normal business rejection.
 3. **[contract] Event-source id resolution:** `ICanProvideEventSourceId` first; else the first qualifying property in declaration order — an `EventSourceId`/`EventSourceId<T>`-derived value *or* a `[Key]` property (no priority between them; two candidates is `ARCCHR0002`); else Arc generates one. A value actually used as a Chronicle stream identity derives from `EventSourceId<T>` with the underlying `IComparable` primitive — never `ConceptAs<Guid>` for that stream identity. `NotSet`, `New()`, and primitive→derived-id operators are optional domain/API conveniences, not Chronicle requirements; typed empty/zero values are real specified stream IDs, not `EventSourceId.Unspecified`.
 4. **[contract] Events never carry the event-source id** — it is implicit in the event context.
@@ -41,7 +55,7 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 8. **[convention] Every `[EventType]` has an XML `<summary>`** — a Cratis C# documentation convention (not a Chronicle rule); events live in the log forever, so record why they exist.
 9. **[convention] `[ReadModel]` properties carry no default values** except semantically meaningful enum initial states and `[SetValue<T>]`-driven `bool` flags. False defaults hide missing projection wiring.
 10. **[contract] AutoMap is on by default — never call `.AutoMap()`.** Match property names so AutoMap wires them; diverge with `[SetFrom<T>]` / fluent `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a scope where it was disabled with `.NoAutoMap()`.
-11. **[contract] Projections consume events and event context — never other read models.** Default to model-bound attributes; use fluent `IProjectionFor<T>` for joins/nested/context/transforms; use a reducer when the model is "current state + event → next state" (a valid style, not a failure mode).
+11. **[contract] Projections consume events and event context — never other read models.** **[convention]** For application code start with model-bound attributes, use fluent `IProjectionFor<T>` when mappings need structure, and choose reducer code when prior-state branches, calculations or guards read better as code (a normal choice, not a last resort). New .NET reducers default to static `Reduce` on the model; use `IReducerFor<T>` for injected services, replay instance behavior or separation, and nominate a plain instance class only when its assembly cannot reference Chronicle. PDL belongs outside application code. Follow the **cratis-chronicle-read-model** style ladder and **cratis-chronicle-reducer** signatures; preserve admission/ordering guards when converting. This does not change Stage's rendering contract or other SDK reducer contracts.
 12. **[contract] Model-bound query custom paths use `[Path("...")]`** (`PathAttribute`), not ASP.NET `[Route]`. Reserve `[Route]` for controller-based endpoints (which this convention avoids).
 13. **[convention] Cross-slice access is read-only through Chronicle** — inject another slice's read model or reference its events; never instantiate or DI another slice's command/handler/service.
 14. **[contract] Never inject `IEventLog` into `Handle()`** — express appends through return types (`IEnumerable<object>` with `EventForEventSourceId` wrappers for cross-stream). In application reactors, return side-effect events or commands (or use `ICommandPipeline` and inspect the result); don't reach for `IEventLog` directly.
@@ -55,7 +69,7 @@ Tagged **[contract]** (framework-enforced) or **[convention]** (house default). 
 
 - **Starting a brand-new application:** scaffold it instead of hand-writing the skeleton: `dotnet new install Cratis.Templates`, then `dotnet new cratis -n MyApp -o MyApp` (`--language Kotlin|Java`, `--Database MongoDB|PostgreSQL|MsSql|SQLite`; `cratis-aspire` for Aspire; `cratis-chronicle-console` or `cratis-chronicle-web` for a Chronicle client only). Non-interactive runs need `--allow-scripts yes`; the .NET templates target `net10.0`. The template writes `.cratis/ai.json`; run `cratis ai update` afterwards. Its `SomeModule/SomeFeature/Registration/` slice is the house shape. There is no Go, Python or Elixir template (verified at Cratis.Templates `v1.7.4`).
 - **Phase 0 — Find the contract / choose the level.** Before writing slice code, find what the code must match, and choose the level once for the whole scope.
-  1. **Look for a Screenplay model** under the model root (the folder holding the project's `.play` files, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`; search `**/*.play`) for the slice, command, event and read-model names. A `.play` file outside the root, an untracked or uncommitted draft, an empty directory, or an installed profile or skill is not opt-in; the repository is opted in only when the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured) or the project set that root explicitly (master definition: **cratis-screenplay-modeling-lifecycle**, "Decide the level first").
+  1. **Look for a Screenplay model** under the model root (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, root and drafts) for the slice, command, event and read-model names.
   2. **Model level** — an accepted model under the root covers the scope, or the repository is opted in and this scope has no model yet. The `.play` slice and its specs are the contract: change the model first (new behavior starts in discovery), verify it (V1–V3), get an independent review, then render with Stage or gap-fill by hand only what the renderer rejects. Hand-written code stays checked against the model (**cratis-application-slice-conformance**). Never edit Stage-managed output, never implement behavior the model does not state, never change the model to match existing code, never weaken protection to make it compile or render. Start with **cratis-screenplay-event-modeling** (decision rule), then **cratis-screenplay-modeling-lifecycle**. If the Screenplay skills are not installed, say so; do not author `.play` from memory.
   3. **Code level** — infrastructure (hosting, DI composition, identity wiring, CI, deployment), clients, Screenplay code attachments and handlers, adapters in the render's customization area, and scope Stage cannot render yet (the model remains the contract). Framework repositories and brownfield work that is not opted in also stay code-first. Only the entry-point session may propose a model, at most once per session and never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work; if declined, do not ask again. Confirm Module/Feature, slice name, slice type and domain requirements as before; for new behavior or unclear event vocabulary run **cratis-chronicle-event-modeling** first, and record the agreed outline (fields, events, rules, scenarios) where the team tracks work, if anywhere. If you write code first where a model exists, say the model now lags.
   4. **Trivial changes** keep the proportional-delegation policy; Phases 1–3 below apply to code you write at either level.

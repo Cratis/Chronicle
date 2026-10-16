@@ -3,8 +3,7 @@
 
 A deterministic UUIDv7 identifier and NanoID receipt, with an accepted response
 and a reused-source rejection. Fixtures, not random seeds, make this executable.
-Source contract: Cratis/Screenplay `v4.148.0:Documentation/screenplay/generated-values.md:30-60`;
-strategy encodings: `generated-values/strategies.md:34-89`.
+Contract: the Screenplay documentation pages `generated-values.md` and `generated-values/strategies.md`.
 
 ```screenplay
 concept InvoiceId : Uuid

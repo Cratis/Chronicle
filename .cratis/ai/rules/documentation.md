@@ -66,6 +66,7 @@ The project's voice is **direct, practical, and opinionated**. Write like an exp
 - Prefer `record` types for events, commands, and read models — match the codebase.
 - Use argument-free `[EventType]` for new events. A new generation or an explicit legacy identifier is valid only when documenting evolution of an existing stored-event contract.
 - A standalone example must be **complete and correct** at its stated scope. Mark a partial excerpt as an excerpt, state its prerequisites, and never leave an essential step behind `// ...`. Do not offer an incomplete block as click-to-copy code.
+- **State version requirements, not the test log.** Say which release a feature needs and pin what the reader runs. Do not end a page with how and when you verified it (SDK build, image digest or SHA, date, "tested with", which samples were not run); that belongs in the change summary. See **cratis-technical-examples**.
 - **Short illustrative snippets** may be purpose-built after checking their framework APIs against source. Derive substantial or runnable examples from compiled, tested sample or spec code; extract or check displayed snippets with the owning repository's tooling so they do not drift. Never substitute a bare “see the repository” link for showing the code.
 - Where a feature spans products or languages, show both sides when both matter. Keep causal explanations sequential; use tabs only for alternatives.
 

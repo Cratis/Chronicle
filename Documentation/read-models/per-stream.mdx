@@ -27,6 +27,8 @@ The attribute makes both model-bound and fluent projections **passive**: there i
 
 `ForAccount` uses the stream-aware `IReadModels.GetInstanceById<T>(EventSourceId, EventStreamId)` overload. This is a **plain read**: it supplies the same stream instance for a query but guards no later append. When the stream has not created an instance, it returns null.
 
+That overload throws `DecisionReadRefused` with `StreamScopeNotSupported` when the `IReadModels` implementation does not support stream scope. The interface's default implementation always throws it, so a custom or test double of `IReadModels` must override the overload. The client's own implementation also throws it when the kernel does not acknowledge stream scope.
+
 ## Reads must name the stream
 
 | Read | Result |
@@ -37,7 +39,7 @@ The attribute makes both model-bound and fluent projections **passive**: there i
 | `GetInstances`, snapshots, `Observe`, `Watch` or `GetWatcherFor` | Refused; there is no materialized collection or key-only stream identity |
 | A decision read with a different stream type or source type, including an omitted source type | `StreamScopeDoesNotMatchReadModel` |
 
-Reducers, stream-keyed models, undeclared streams and `EventStreamType.All` are not valid declarations. [CHR0064](../code-analysis/CHR0064.mdx) reports statically visible misuse; registration also rejects invalid declarations.
+Reducers, stream-keyed models, undeclared streams and `EventStreamType.All` are not valid declarations. [CHR0064](../code-analysis/CHR0064.mdx) reports statically visible misuse; registration also rejects invalid declarations. [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#per-stream-read-models) shows the guard such a read produces.
 
 Supply a specific month. `EventStreamId.Default` does **not** narrow by stream ID: it folds every ID of the declared stream type. The client permits that explicit choice, but it is not a monthly rule.
 
@@ -47,4 +49,4 @@ The declaration's event source type is part of both the fold and the guard. An e
 
 Reading a whole-source model as well, or another stream for the same source, widens the merged guard to the whole source. Source-level declared concurrency can also widen it. That adds conflicts; it does not lose protection. A per-stream model does not promise a narrow guard when other enrolled reads or declared concurrency require more history.
 
-Stream-scoped reads require a kernel that acknowledges stream scope. An older kernel refuses with `StreamScopeNotSupported` rather than returning a whole-source fold. Revision, redaction, external data and definition changes remain outside the [decision-read guarantee](decision-reads.mdx#limits-and-assumptions). Keep histories short enough to fold on demand; this is not a replacement for materialized list or live queries.
+Stream-scoped reads require a kernel that acknowledges stream scope. An older kernel refuses with `StreamScopeNotSupported` rather than returning a whole-source fold. Revision, redaction, external data and definition changes remain outside the guard. See [Costs and limits](../dynamic-consistency-boundary/limits.mdx#what-is-outside-the-guard). Keep histories short enough to fold on demand; this is not a replacement for materialized list or live queries.

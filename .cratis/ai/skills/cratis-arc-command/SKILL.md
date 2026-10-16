@@ -13,10 +13,7 @@ whatever `Handle()` returns into events, server-executed operations, a response,
 or a combination.
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code
@@ -25,27 +22,11 @@ or a combination.
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Arc.Core` | `22.75.0` | `Cratis.Arc.Commands.ModelBound.CommandAttribute`, `CommandResult`, `CommandValidator<T>` |
-| `Cratis.Arc.Chronicle` | `22.75.0` | event append handling, `Cratis.Arc.Chronicle.Commands.NotAuditedAttribute` |
-| `Cratis.Arc.ProxyGenerator.Build` | `22.75.0` | `CratisProxiesOutputPath` MSBuild integration |
-| `Cratis.Fundamentals` | `7.23.0` | `Cratis.Monads.Result<TResult, TError>` |
-| `Cratis.Chronicle` | `18.3.0` | `EventTypeAttribute`, `EventForEventSourceId`, `ICanProvideEventSourceId` |
-| `@cratis/arc` | `22.75.0` | `ICommand`, `CommandResult`, `ValidationResult` |
+Read [references/product-sources.md](references/product-sources.md) for the owning packages and `Result`.
 
-> Arc surface rechecked at v22.75.0, including the source-pinned references below.
-> Arc's package dependency is Chronicle 19.39.1 / Fundamentals 7.23.0; separately
-> version-qualified Chronicle/Fundamentals claims retain their own verification.
-
-Fundamentals rechecked at v7.23.0 in
-[`Result<TResult, TError>`](https://github.com/Cratis/Fundamentals/blob/v7.23.0/Source/DotNET/Fundamentals/Monads/Result%7BTResult,TError%7D.cs):
-success is first, error second, with implicit conversions from both types.
-
-Reverify before claiming support for another version. Arc without Chronicle is a
+Arc without Chronicle is a
 supported setup; everything on this page that appends events needs Chronicle.
-Operation guidance below is rechecked at **Arc v22.75.0**; see
-`cratis-arc-command-operation` for its source and recovery contract.
+See `cratis-arc-command-operation` for the operation source and recovery contract.
 
 ## Declare the command
 
@@ -150,48 +131,34 @@ Two consequences worth knowing before writing the first command:
 - **Events never carry their own event source.** Cross-stream writes use
   `EventForEventSourceId`; they are not expressed by a property on the event.
 
-```csharp
-[Command]
-public record Register<Thing>(<ConceptType> <Name>)
-{
-    public (<ThingId>, <ThingRegistered>) Handle([GeneratedValue("thing")] <ThingId> id) =>
-        (id, new(<Name>));
-}
-```
-
-```csharp
-[Command]
-public record Transfer(<AccountId> From, <AccountId> To, <Money> Amount)
-{
-    public IEnumerable<object> Handle() =>
-    [
-        new EventForEventSourceId(From, new <Withdrawn>(Amount)),
-        new EventForEventSourceId(To, new <Deposited>(Amount)),
-    ];
-}
-```
+Read [references/return-shape-examples.md](references/return-shape-examples.md) for create and cross-stream examples.
 
 ## Generate a server-owned new identifier
 
-**Arc 22.66.0+**, verified at **v22.75.0**: the create-command example above
-requires `<ThingId>` to implement `IGeneratable<ThingId>` with a static `New()`
-strategy (Fundamentals 7.23.0+; see `cratis-fundamentals-concept`). Replace
-`Guid.NewGuid()` or `<ThingId>.New()` inside `Handle()` with a generated parameter,
-not a new request property. Return the id as the ordinary response or in the
-id/event tuple so the caller receives it.
+Requires Arc 22.66.0 for `[GeneratedValue]`.
 
-`[GeneratedValue]` is in `Cratis.Arc.Commands.ModelBound` and applies only to
-parameters of a non-static command `Handle()`. Arc generates after `Provide()`
-control results permit execution, validates the concept, then invokes `Handle`.
-`Provide()` and DI cannot override it. Use a non-nullable self-generatable type,
-not raw `Guid`; names default to the parameter name or an explicit attribute name
-and are case-sensitive, non-empty and unique within the command.
+Replace local `New()` with a `[GeneratedValue]` Handle parameter,
+never a request property. Use a non-nullable self-generatable concept and a unique,
+case-sensitive generated name. Return the value explicitly if the caller needs it.
+Read [generated values](references/generated-values.md) for Provide/DI boundaries,
+validation/captures, ARC0022–ARC0025, migration and named pins; context
+factories are covered in the shop reference below.
 
-Keep client-chosen ids/references as inputs and services/read models as ordinary
-dependencies. A UUID is not a secret, token, authorization proof, idempotency key,
-or a gapless/sequential invoice number. For validation failures, captures,
-ARC0022–ARC0025, migration and the pinned-spec workflow, read
-[generated values](references/generated-values.md).
+## Choosing a strategy
+
+Use the [threaded shop example](references/shop-generation.md): CustomerId
+(`cus_` + ULID), context-aware TypeID OrderId, NanoID InviteCode and secret
+`Bytes(32)` ApiKey. Context factories receive captured
+received time/tenant (Requires Arc 22.83.0); Clock/Tenant scenario setup
+is shown there.
+
+Read references/fresh-identifiers.md when a generated value is an append target:
+Requires Arc 22.95.0 for whole-source emptiness protection, collision outcomes,
+explicit opt-out and decision-mode scenario setup.
+
+## When not to generate
+
+Read [references/generation-boundaries.md](references/generation-boundaries.md) when deciding whether to generate.
 
 ## Where the event source id comes from
 
@@ -204,25 +171,17 @@ Chronicle resolves the command's event source id in this order:
    property on the command;
 4. otherwise a freshly generated id.
 
-A command with more than one candidate property is ambiguous and `ARCCHR0002`
-warns; implement `ICanProvideEventSourceId` to say which value wins. Do not rely
-on property order.
-
-`[Key]` on a positional record's primary-constructor parameter is recognized
-and counted once. Child-only/nested read-model types are not standalone
-command-scoped models. `[EventSource<TSource>(stream)]` supplies source type and
-stream metadata on commands and aggregate roots.
+Two or more candidates raise `ARCCHR0002` (`[Key]` does not silence it); Arc
+silently takes the first declared. Implement `ICanProvideEventSourceId`.
 
 Read [decisions and routing](references/decisions-and-routing.md) when a command
 needs guarded state, stream-id templates, definition-backed routes, event tags or
 post-commit `CompleteStream`. Plain read-model injection remains advisory;
-`Result<,>` alone is not concurrency protection. Explicit routing on a returned
-`EventForEventSourceId` wins over command context.
+`Result<,>` and `concurrency: true` are not protection; see
+[choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
+A returned `EventForEventSourceId` route wins over command context.
 
-Two attributes are spelled `[Key]`. Chronicle reads `Cratis.Chronicle.Keys.KeyAttribute`.
-Marking `System.ComponentModel.DataAnnotations.KeyAttribute` in an application
-that uses Chronicle compiles, resolves nothing, and silently invents a new event
-source id for every command — `ARCCHR0008` reports it.
+Read [references/event-source-id-details.md](references/event-source-id-details.md) when marking `[Key]` (two attributes share the name; `ARCCHR0008`) or using `[EventSource<TSource>]`.
 
 ## Fetch what the handler needs with `Provide()`
 
@@ -230,21 +189,7 @@ source id for every command — `ARCCHR0008` reports it.
 is to keep IO out of `Handle`: it fetches or computes values, and Arc binds them
 to `Handle`'s parameters by type.
 
-```csharp
-[Command]
-public record Open<Thing>(<ThingId> Id, <OwnerId> OwnerId)
-{
-    public async Task<Result<<Owner>, ValidationResult>> Provide(IReadModels readModels)
-    {
-        var owner = await readModels.GetInstanceById<<Owner>>((EventSourceId)OwnerId);
-        return owner is null
-            ? ValidationResult.Error("Owner must exist.")
-            : owner;
-    }
-
-    public <ThingOpened> Handle(<Owner> owner) => new(owner.Id);
-}
-```
+Read [references/provide-example.md](references/provide-example.md) for a worked `Provide()` example.
 
 - Short-circuit with `ValidationResult.Error(...)`; do not throw for a rejection
   the user can act on. A thrown exception surfaces as `HasExceptions` and HTTP
@@ -255,7 +200,8 @@ public record Open<Thing>(<ThingId> Id, <OwnerId> OwnerId)
 - `Provide` runs after authorization and validation.
 
 An Arc read model can also be injected directly into `Provide`, `Handle`, or a
-`CommandValidator<T>` — but only by **the command's own resolved key**. Reading a
+`CommandValidator<T>` — but only by **the command's own resolved key**, as a plain
+read that guards nothing. Reading a
 read model keyed by anything else needs an explicit by-id read, and an absent
 instance does not always arrive as `null`. Read
 [read-model injection](references/read-model-injection.md) before relying on a
@@ -270,33 +216,12 @@ property is added.
 | Marking | Use for | Effect |
 | --- | --- | --- |
 | `[PII]` (Chronicle) | personal data | encrypted in the event and enrolled in erasure; already withheld from causation |
-| `[Encrypted]` (Chronicle, `Cratis.Chronicle.ProtectedValues`, 19.32.0+) | an operational secret the system retains — a third-party API key, a company's bank account number | encrypted at rest on the event, no erasure; does not withhold it from causation |
+| `[Encrypted]` (Chronicle, `Cratis.Chronicle.ProtectedValues`) | an operational secret the system retains — a third-party API key, a company's bank account number | encrypted at rest on the event, no erasure; does not withhold it from causation |
 | `[NotAudited]` (Arc Chronicle) | the same operational secret, and any credential given as a command input | withheld from causation, nothing else |
 
 A retained operational secret needs **both** `[Encrypted]` and `[NotAudited]`; either alone leaves a gap. A credential used for authentication (password, token) is marked `[NotAudited]` on the command and reaches an event only as a hash or a reference, never encrypted. Never combine `[PII]` with `[Encrypted]` (`CHR0053`).
 
-```csharp
-[Command]
-public record Change<Secret>(
-    <UserId> User,
-    [property: NotAudited] string Old<Secret>,
-    [property: NotAudited] string New<Secret>)
-{
-    public <SecretChanged> Handle(I<Hasher> hasher) => new(hasher.Hash(New<Secret>));
-}
-```
-
-`[NotAudited]` applies to a class, struct, property, or parameter. On the type it
-withholds every property at once. Marking the concept type instead makes it
-travel to every command that takes that value. The command is still named on the
-chain either way; only the values are withheld.
-
-`ARCCHR0009` warns when a property's *name* reads like a secret and is unmarked.
-It cannot see a secret whose name does not say so, so a clean build means
-"nothing obvious was missed", not "no secrets are recorded". When the name only
-reads like a secret and the value is safe to record, the framework's own guidance
-is to mark it `[NotAudited]` anyway or rename the property — the value is written
-either way, so the reading is all a reviewer has to go on.
+Read [references/causation-details.md](references/causation-details.md) when marking an input `[NotAudited]` or reading `ARCCHR0009`.
 
 ## Generate the TypeScript proxy
 
@@ -313,30 +238,16 @@ either way, so the reading is all a reviewer has to go on.
 file path. When configuring proxy generation or diagnosing missing or stale output, read [proxy generation](references/proxy-generation.md) for the full
 set of MSBuild knobs and the common failures.
 
-`[BlockOnValidationSeverity(ValidationResultSeverity.Warning)]` declares the
-lowest blocking severity for validation, `Provide` and execution. Caller
-`allowedSeverity`/`X-Allowed-Severity` can only make it stricter; `Unknown` blocks.
-The proxy carries `blockOnValidationSeverity` and honors it client-side.
+Read [references/proxy-generation.md](references/proxy-generation.md#blocking-severity) when a command declares `[BlockOnValidationSeverity]`.
 
 ## The generated client contract
 
 The generated proxy is a `Command` from `@cratis/arc`. Its members are the same
 whatever renders it:
 
-| Member | What it does |
-| --- | --- |
-| `route` | The generated route, including the configured API prefix |
-| `roles` | The roles the command declares; empty when it declares none |
-| `<property>` | Get or set one value; setting raises `propertyChanged` |
-| `hasChanges` | True when any value differs from the initial values |
-| `execute(allowedSeverity?, ignoreWarnings?)` | Sends the command; resolves to `CommandResult` |
-| `validate()` | Runs authorization and validation on the server without the handler |
-| `validateClientSide()` | Runs only the extracted rules locally; never touches the network |
-| `setInitialValues(values)` | Sets the change-tracking baseline |
-| `setInitialValuesFromCurrentValues()` | Rebaselines onto the current values |
-| `revertChanges()` / `clear()` | Restore the baseline / reset everything |
+Read [references/client-contract.md](references/client-contract.md) for the generated proxy members.
 
-Read `references/command-result.md` when branching on a command result or matching validation failures to fields. Branch on the specific flag, not only on `isSuccess`. The exact `CommandResult`
+Read `references/command-result.md` when branching on a command result, matching validation failures to fields, or mapping integration exceptions. Branch on the specific flag, not only on `isSuccess`. The exact `CommandResult`
 and `ValidationResult` shapes are in
 [command result](references/command-result.md) — in particular, a validation
 failure carries `members: string[]` (camelCased) and a numeric `severity`, not a

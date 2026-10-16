@@ -36,17 +36,16 @@ other infrastructure. Change behaviour in the model first, never in managed outp
   the intended event store and event sequence, and that a trigger event delivered there reaches
   it. Report this apart from the in-process specifications.
 
-## Verified product sources
+## Product facts
 
-This skill is a method: it names no API of its own. Product facts it relies on are pinned
-to these tags; when the Screenplay skills are installed their `references/versions.md`
-(in `cratis-screenplay-toolchain`) holds the full table.
+This skill is a method: it names no API of its own. When the Screenplay skills are installed their `SKILL.md`
+(in `cratis-screenplay-toolchain`) explains how to read the installed tool versions.
 
 | Fact used here | Source |
 | --- | --- |
-| Where each rule lives (validator, `Provide()`, handler result, constraint, exception) | `rules/vertical-slices.md` "The decision matrix" (Arc `v22.50.5` behaviour verified there) |
-| A customization never makes a rejected model renderable; managed output is never hand-edited | Stage `v4.24.0` (`Customizations/` is the unmanaged seam; managed output is regenerated) |
-| A command `handler` never binds (PLAY0268), so that slice is gap-fill with the model as contract | Screenplay `v4.66.0` (diagnostic PLAY0268) |
+| Where each rule lives (validator, `Provide()`, handler result, constraint, exception) | `rules/vertical-slices.md` "The decision matrix"  |
+| A customization never makes a rejected model renderable; managed output is never hand-edited | Stage (`Customizations/` is the unmanaged seam; managed output is regenerated) |
+| A command `handler` never binds (PLAY0268), so that slice is gap-fill with the model as contract | Screenplay (diagnostic PLAY0268) |
 
 ## Procedure
 
@@ -54,17 +53,13 @@ to these tags; when the Screenplay skills are installed their `references/versio
 Find the contract before touching code; say which one you are using. These steps are enough on
 their own when the Screenplay skills are not installed; the master decision rule, when they
 are, is `cratis-screenplay-modeling-lifecycle` ("Decide the level first").
-1. An accepted `.play` model under the model root (the folder holding the project's `.play` files, or the root
-   set by `mcpServers.screenplay.root` in `.cratis/ai.json`) covers the slice (search
+Decide opt-in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, model root and drafts.
+Staged or untracked `.play` files are drafts, not the contract; a `.play` outside the model root is not a contract.
+For a committed model with working-tree edits, HEAD remains the contract until the change is committed.
+1. An accepted `.play` model under the model root covers the slice (search
    `**/*.play` for the slice, command, event and read-model names): the `.play` slice and its
-   specifications are the contract. "Accepted" means the `.play` file is in the committed tree
-   (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured). Staged or untracked files under the
-   root are drafts, not contracts; a file outside the root is not a contract. A committed file
-   with uncommitted working-tree edits is a model change in progress: its HEAD version is the
-   contract until the change is committed.
-2. The repository is opted in (the root holds a committed `.play` file, or the project
-   explicitly set that root, even if it is empty; an empty unconfigured directory, install
-   output, an installed skill or an uncommitted draft does not count) but this
+   specifications are the contract.
+2. The repository is opted in but this
    scope has no model yet: new behaviour starts in discovery and slice design
    (`cratis-screenplay-discovery`, `cratis-screenplay-slice-design`); do not code first. If those
    skills are not installed, say so and do not author `.play` from memory.
@@ -117,9 +112,11 @@ Change the code, or return an edit request. Do not touch test files outside the 
 told to.
 
 Where the model is a `.play` and the code is Arc, Marten or Critter Stack, `cratis screenplay
-conform <model-root> --project <path>` (CLI 3.42.0 or later; exit 0/1/2) adds structural drift
+conform <model-root> --project <path>` (exit 0/1/2) adds structural drift
 evidence: exact-address comparison of recovered declarations, never behavior or equivalence. It
 runs MSBuild on the project (trusted clone only). It supplements, and never replaces, steps 2 to 4.
+
+Requires cratis CLI 3.42.0 or later (`cratis --version`) for `cratis screenplay conform`.
 
 ### 5. Delta delivery
 After a model or outline change, the work list is every element and specification that

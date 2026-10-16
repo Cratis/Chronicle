@@ -11,10 +11,7 @@ Build the page from the generated Arc proxies and the Cratis Components
 wrappers. Do not hand-roll a table, a dialog, or a fetch.
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Read the model's `screen` and `form` with
@@ -23,19 +20,16 @@ wrappers. Do not hand-roll a table, a dialog, or a fetch.
   scope (`cratis-screenplay-render-and-gap-fill`); never edit Stage-managed
   output.
 
-## Verified product sources
+## Product sources
 
-This skill is verified against these exact package contracts:
+This skill follows the `@cratis/components` package manifest (`exports`, peers), `Source/DataPage/*`,
+`Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*` and `Source/MIGRATION.md`.
+Peers declared by `@cratis/components`: `@cratis/arc` and `@cratis/arc.react` and `react`.
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | its package manifest (`exports`, peers), `Source/DataPage/*`, `Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*`, `Source/MIGRATION.md` |
-| `@cratis/arc` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
-| `@cratis/arc.react` | `>=20.3.1 <23` | peer range declared by `@cratis/components@4.26.4` |
-| `react` | `^19.0.0` | peer of `@cratis/components@4.26.4` |
+Requires `@cratis/arc` and `@cratis/arc.react` 20.3.1 or later (below 23) and `react` 19 or later, as `@cratis/components` declares them peers.
 
 `@cratis/arc.react.mvvm` ships with `@cratis/arc.react` and is an explicit
-application dependency. Reverify before claiming another version.
+application dependency.
 
 ## Import from subpaths, never the root barrel
 
@@ -54,13 +48,7 @@ import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs'
 
 ## Initial focus
 
-`DialogInitialFocus.Confirm` is the default and *arms* the confirm button — a
-browser fires `click` from the `keydown` of Enter, so a held Enter confirms.
-For a destructive dialog use `DialogInitialFocus.Cancel`, which focuses the
-least destructive action and degrades to `Content` when the button set has
-nothing to dismiss with. `DialogInitialFocus.Content` focuses the title so
-nothing is armed. There is deliberately no "focus nothing" option — a modal
-must move focus into itself.
+`DialogInitialFocus.Confirm` is the default and arms the confirm button, so a destructive dialog uses `DialogInitialFocus.Cancel`. Read [dialogs.md](references/dialogs.md) for the three options.
 
 ## Step 1 — Prerequisites
 
@@ -72,11 +60,10 @@ must move focus into itself.
   `@cratis/components`) above every Cratis component — it carries the locale,
   the Components-owned labels. Enable `toaster` (or mount one `<Toaster />`)
   for notifications; without it even `toastCommandResult` displays nothing.
-  Mount exactly one toaster, not both. The `cratis` template already mounts
-  `<CratisComponentsProvider toaster>` **inside** `<Arc>` at Templates `v1.7.4`
-  (`Templates/Cratis/.frontend/main.tsx:12–19`); the missing-toaster/outside-Arc
-  workaround for `v1.7.2` no longer applies to that template version. Check an
-  older application's entry point rather than adding a second toaster.
+  Mount exactly one toaster, not both. The `cratis` template mounts
+  `<CratisComponentsProvider toaster>` **inside** `<Arc>`
+  (`Templates/Cratis/.frontend/main.tsx`; Requires Templates 1.7.3 or later, earlier ones mount it outside `<Arc>` without a toaster),
+  so check its entry point rather than adding a second toaster.
 - The app must import the stylesheets explicitly; components do not import
   their own CSS:
 
@@ -218,65 +205,11 @@ validation never re-runs and the submit button stays disabled. Seed values that 
 
 ## Step 6 — Confirming, and showing that work is in progress
 
-Do not build a confirmation or busy dialog into a page. `ConfirmationDialog` and
-`BusyIndicatorDialog` are registered once at the app root through
-`DialogComponents` and raised by hook, which is what keeps every one of them
-identical:
-
-```tsx
-import { DialogComponents } from '@cratis/arc.react/dialogs';
-import { BusyIndicatorDialog, ConfirmationDialog } from '@cratis/components/Dialogs';
-
-<DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
-    <YourApp />
-</DialogComponents>
-```
-
-```tsx
-import { DialogButtons, DialogResult, useBusyIndicator, useConfirmationDialog } from '@cratis/arc.react/dialogs';
-
-const [confirm] = useConfirmationDialog();
-if (await confirm('Delete this account?', `"${account.name}" disappears permanently.`, DialogButtons.YesNo) !== DialogResult.Yes) return;
-```
-
-A busy indicator is modal and deliberately non-dismissible, so reserve it for
-work the user genuinely cannot proceed past — a multi-step import, a migration.
-For an ordinary command behind a button, the in-flight disabled button is the
-right control; a modal that flashes for 200 ms tells the user nothing. When you
-do use one, pair it with the close call in a `finally`:
-
-```tsx
-const [showBusy, closeBusy] = useBusyIndicator('Importing', 'This takes a moment.');
-showBusy();
-try { await importEverything(); } finally { closeBusy(); }
-```
+Do not build a confirmation or busy dialog into a page: register `ConfirmationDialog` and `BusyIndicatorDialog` once at the app root through `DialogComponents` and raise them by hook (`useConfirmationDialog`, `useBusyIndicator`). A busy indicator is modal and non-dismissible, so reserve it for work the user cannot proceed past, and pair `showBusy()` with a close in a `finally`. Read [dialogs.md](references/dialogs.md) for the registration and hook examples.
 
 ## Step 7 — Row selection and a details pane
 
-`selection` and `onSelectionChange` are controlled. The change event carries
-`value`, which is `null` when the selection is cleared.
-
-```tsx
-import type { DataTableSelectionChangeEvent } from '@cratis/components/DataTables';
-
-const [selected, setSelected] = useState<AccountSummary | null>(null);
-
-<DataPage
-    title='Accounts'
-    query={AllAccounts}
-    emptyMessage='No accounts yet.'
-    dataKey='id'
-    selection={selected}
-    onSelectionChange={(event: DataTableSelectionChangeEvent<AccountSummary>) => setSelected(event.value)}
-    detailsComponent={AccountDetails}>
-    <DataPage.Columns>
-        <Column field='name' header='Name' />
-    </DataPage.Columns>
-</DataPage>
-```
-
-`detailsComponent` receives `IDetailsComponentProps<T>` — `{ item, onRefresh? }`
-— and renders beside the table for the selected row.
+`selection` and `onSelectionChange` are controlled (`value` is `null` when cleared), and `detailsComponent` receives `{ item, onRefresh? }` for the selected row. Read [data-page.md](references/data-page.md) for the controlled-selection example.
 
 ## Step 8 — Snapshot or observable query
 

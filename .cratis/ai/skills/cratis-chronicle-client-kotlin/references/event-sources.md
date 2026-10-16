@@ -4,9 +4,11 @@
 
 # Event-source definitions and streams
 
-Verified at `Chronicle.Kotlin v6.13.0`: `eventSources/EventSource.kt`,
+Source: `Cratis/Chronicle.Kotlin`: `eventSources/EventSource.kt`,
 `EventStream.kt`, `ConcurrencyDimension.kt`, `EventSources.kt` and
-`eventSequences/EventSequenceEventSources.kt`. Requires kernel `19.30.0` or later.
+`eventSequences/EventSequenceEventSources.kt`.
+
+Requires Chronicle kernel 19.30.0 for named event source definitions.
 
 Definitions are optional: an append without one keeps the ordinary routing
 contract. A definition is a carrier class, never instantiated, discovered with

@@ -27,25 +27,15 @@ hand-copy Screenplay source between repositories. Keep Markdown that explains,
 questions or navigates the model in the repository's documentation; the `.play`
 source is the single flow model.
 
-## Verified product sources
+## Product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Screenplay` | `4.31.0` | PDL parser, validator, diagnostics, semantic binder |
-| `Cratis.Screenplay` | main `fd18129` | Inline event extraction and context identity guidance |
-| `Cratis.Screenplay` | `4.66.0` (`c89198b`) | Reducer-body binding (`Semantics/`); no PDL syntax change affects the examples |
+Screenplay `Documentation/screenplay/projections/` (including `semantic-model.md`, `keys.md`
+and `variants.md`), `readmodels.md`, `diagnostics.md`, `commands.md`, `events.md` and
+`mcp/authoring-tools.md` describe the PDL parser, validator, diagnostics, semantic binder and
+reducer-body binding (`Semantics/`). Every example below compiles with the standalone compiler.
+Reverify before claiming another version behaves the same.
 
-The update follows `commands.md`, `events.md` and `mcp/authoring-tools.md` at
-that main commit (after v4.52.0); no PDL example changes in this update.
-
-Originally checked against the Screenplay repository at tag `v4.31.0` (commit `355dffb`; the
-projection grammar was re-read at v4.139.0 for headers and dynamic keys):
-`Documentation/screenplay/projections/` (including `semantic-model.md`, `keys.md`
-and `variants.md`), `readmodels.md`, `diagnostics.md` and decisions 0001 and 0002.
-Every example below compiles with that version's compiler. Reverify before
-claiming another version behaves the same.
-
-**Chronicle decides what a projection means** (Screenplay decision 0001).
+**Chronicle decides what a projection means.**
 Screenplay owns the grammar; which instance an event affects, what a join may
 create and what a removal removes follow Chronicle's lowering. Syntax that
 compiles can still mean something other than it seems: read the warnings.
@@ -184,41 +174,11 @@ It takes a dotted path (`clear Owner.Note`) and escapes reserved names
 
 ## Arithmetic
 
-| Line | Effect |
-| --- | --- |
-| `count <prop>` | +1, expressing *counting occurrences* |
-| `increment <prop>` | +1, expressing *modifying state* |
-| `decrement <prop>` | −1 |
-| `add <prop> by <expr>` | += expression |
-| `subtract <prop> by <expr>` | −= expression |
-
-`count` and `increment` behave identically; the difference is intent. The target
-must be numeric.
+`count`/`increment` add one, `decrement` subtracts one, `add`/`subtract <prop> by <expr>` change by an expression; the target must be numeric. Read [references/joins.md](references/joins.md) for the full table.
 
 ## Joins
 
-Excerpt, inside a `projection` whose read model has `customerId` and
-`customerName`:
-
-```screenplay excerpt
-join customer on customerId
-  with CustomerCreated
-    customerName = name
-  with CustomerUpdated
-    customerName = name
-```
-
-`join <label> on <property>` (error `PLAY0063` otherwise), then one or more
-`with <EventType>` blocks (error `PLAY0064` otherwise). **A join never creates an
-instance**: a joined event updates every existing instance whose `on` property
-equals the joined event's event source id. Chronicle discards the label, but
-inside `children` and `nested` the compiler's completeness check (`PLAY0284`)
-counts the label as the field the join fills, so name it after that field there.
-Joins work at a projection's own level and inside `children`. Inside `nested`,
-Chronicle's engine does not wire a join, a `children` block or a
-`remove via join`; they bind, but the reference execution plan refuses them.
-A join cannot declare its own key or trigger removal — that is
-`remove via join on`.
+`join <label> on <property>` followed by `with <EventType>` blocks; **A join never creates an instance** (`PLAY0063`, `PLAY0064`). Read [references/joins.md](references/joins.md) when writing a join, including inside `children` or `nested`.
 
 ## Children and nested
 
@@ -266,41 +226,7 @@ coexist.
 
 ## Variants — one identity, mutually exclusive read models
 
-Excerpt: the events and the three read models (each with a keyed query) are
-declared elsewhere. Every event about an issue is appended with the issue's
-identifier as its event source.
-
-```screenplay excerpt
-projection WorkItem
-  from TitleChanged
-    title = title
-  variant BacklogItem
-    enters on IssueCreated
-  variant DevelopmentItem
-    enters on IssueStarted
-  variant PullRequestItem
-    enters on PullRequestCreated
-```
-
-Each variant is its own read model; only its `enters on` events create it.
-Everything else, including a projection-level shared handler, is update-only: it
-becomes a join on the variant's identifier, matched against the handler's key
-(here the event source).
-
-⚠️ **Mutual exclusion works through the event source identity.** Entering a
-variant removes the entity from its siblings, and that removal is always keyed by
-the entering event's source identity, whatever key the `enters on` line declares.
-Keep the event source equal to the entity's identifier, as above. An
-`enters on IssueStarted key issueId` whose `issueId` differs from the event
-source creates the development item under `issueId` but removes the backlog item
-keyed by the event source instead, so the issue stays in both variants.
-
-Diagnostics: no `enters on` (`PLAY0382`), a shared mapping a variant's read
-model lacks (`PLAY0383`), duplicate variant names (`PLAY0384`), an entering
-event claimed twice (`PLAY0385`). The executable model binds variants the way Chronicle's client SDK
-reclassifies them; Chronicle's hosted declaration language does not lower them
-yet (Cratis/Chronicle#4109). Use variants for genuinely different shapes, not for
-a single `status` field.
+Each `variant` is its own read model created only by its `enters on` events, and mutual exclusion works through the event source identity: keep the event source equal to the entity identifier or the issue stays in both variants. Read [references/variants.md](references/variants.md) when modeling an entity with exclusive lifecycle shapes or fixing `PLAY0382`–`PLAY0385`.
 
 ## When PDL is not enough — the reducer
 
@@ -335,7 +261,7 @@ What the executable model does with it (ESM v3):
 - The body is an opaque attachment identified by a content hash, never compiled
   or run by Screenplay. The reference runner cannot compute reducer state, so a
   specification that reads a reducer-built read model reports unsupported and
-  never passes. A target must supply the transition. Stage (4.73.1) admits only pure reducer bodies
+  never passes. A target must supply the transition. Stage admits only pure reducer bodies
 (Roslyn allowlist, `STAGE-ESM-019`/`-022`); an impure body is gap-fill code, and the model stays the contract.
 
 **Prefer a projection where one will do.** A reducer is code, and code is the part
@@ -345,10 +271,9 @@ Read [pdl-grammar.md](references/pdl-grammar.md) when checking exact syntax, int
 
 ## Verify
 
-- [ ] Standalone `screenplay <model> --warnaserror` (4.68.0) reports zero errors and zero
+- [ ] Standalone `screenplay <model> --warnaserror` reports zero errors and zero
       warnings; or `cratis screenplay validate --warnings-as-errors` on the model folder
-      (3.28.2 bundles the same Screenplay 4.66.0; before 3.28.2 bundled 4.60.1, ESM v5
-      or lower). Name which tool produced the result. If it reports diagnostics, correct the model and rerun the same command; report unresolved diagnostics as blockers rather than a passing verification.
+      (an older bundled compiler can stop at a lower ESM version). Name which tool produced the result. If it reports diagnostics, correct the model and rerun the same command; report unresolved diagnostics as blockers rather than a passing verification.
 - [ ] Each read model has **exactly one** builder.
 - [ ] No projection-level `key`; every `from` that must address the same
       instance is keyed on the same identity.
@@ -368,7 +293,7 @@ Read [pdl-grammar.md](references/pdl-grammar.md) when checking exact syntax, int
 - [ ] A reducer is present only because a projection genuinely could not express it,
       and every rule has a body in a tagged fence or a `file`.
 
-Read `cratis-screenplay-toolchain` (`references/versions.md`) when selecting a tool/version or checking tool capabilities and the executable and renderable subsets. Where a construct sits in the
+Read `cratis-screenplay-toolchain` when selecting a tool/version or checking tool capabilities and the executable and renderable subsets. Where a construct sits in the
 method: `cratis-screenplay-modeling-lifecycle` and `cratis-screenplay-slice-design`.
 
 ## Route near misses

@@ -16,12 +16,12 @@ This is test support, not an alternative production host.
 
 ## Verified product sources
 
-Verified at `Arc.Kotlin v7.7.0`: `Testing/src/main/kotlin/io/cratis/arc/testing`
+Source: `Arc.Kotlin`: `Testing/src/main/kotlin/io/cratis/arc/testing`
 (`CommandScenario`, `QueryScenario`, `ObservableQueryScenario`, result assertions),
 `Integrations/Chronicle/ChronicleCommandScenario.kt`, and
 `Documentation/guides/testing.mdx`. Add
-`testImplementation("io.cratis:arc-testing:7.7.0")`; align it with the runtime,
-plugin and KSP version. The repository uses JUnit Jupiter `6.1.3`.
+`testImplementation("io.cratis:arc-testing:<version>")`; align it with the runtime,
+plugin and KSP version.
 
 ## Choose the pipeline
 

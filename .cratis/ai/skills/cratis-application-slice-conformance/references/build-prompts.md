@@ -24,7 +24,7 @@ coordinator's ownership of status, git and shared notes.
   records in the repository) to understand the global structure.
 - **Owned paths.** Edit only the slice's own folder (`<Module>/<Feature>/<Slice>/`, backend,
   frontend and specifications together) and any path the brief names. Do not browse unrelated
-  slices. Bounded reads of what the contract references are allowed and expected: the events,
+  slices, except the single delivered sibling selected in section 2. Bounded reads of what the contract references are allowed and expected: the events,
   views, concepts and inherited authorization the slice names, and shared contracts it depends
   on. Leave routing and registration files alone unless the brief names them.
 - Each slice is self-contained and focused on one behavior; keep concerns separated inside it.
@@ -45,8 +45,24 @@ event names, command names and business rules come exclusively from the contract
 invent, assume or guess a field or a rule that is not in it.
 
 1. Read the slice from the contract in full: description, realization notes, specifications,
-   concepts, inherited authorization, referenced events and views.
-2. Determine the slice type:
+   concepts, inherited authorization, referenced events and views. An outline or summary is not
+   the declarations; never infer that a slice has no elements or specifications from it.
+   Before writing the decision, line up all the command's specifications and read them together:
+   what their `given` facts share identifies decision state; what makes their `then` differ
+   identifies branches. Each error expectation pins the stated rule to its given situation;
+   read the rules too, because examples do not authorize invented rejection conditions.
+2. Search case-insensitively for the qualified slice folder and its command, event, read-model
+   and reactor names before writing. If a realization exists, diff it against the contract and
+   update it in place within owned paths; never build a second realization. Reuse referenced
+   Chronicle event types and read models, not parallel copies. Persisted event shape changes go
+   through `cratis-chronicle-event-type-migration`, never an in-place property removal or rename;
+   identity-affecting changes return to the identity owner. If the required path is not owned,
+   report it rather than widening scope.
+3. For a new slice, read one delivered sibling of the same type: prefer the same feature, then
+   module, then shared events or read model. Read only its contract and realization files; mirror
+   file shape, naming, specification layout and authorized registration seams. The contract and
+   corpus rules outrank precedent; report a rule-breaking precedent rather than copying it.
+4. Determine the slice type:
    - `Translate` (a `capture`, or a translator `reaction` over an imported or captured event):
      outside data becomes our events. Realize by the actual construct and trigger, not the slice
      label: a capture is an ingestion adapter behind an effect boundary
@@ -60,18 +76,18 @@ invent, assume or guess a field or a rule that is not in it.
      `cratis-chronicle-projection`.
    - `StateChange` (the default: a `command` that `produces` events): `cratis-arc-command`,
      `cratis-arc-command-validation`.
-3. Invoke the matching skill and follow it completely; do not deviate.
-4. Verify against the contract (`SKILL.md` step 3 and `references/checklists.md`): every
+5. Invoke the matching skill and follow it completely; do not deviate.
+6. Verify against the contract (`SKILL.md` step 3 and `references/checklists.md`): every
    command field, event field, read-model property and specification appears in the
    implementation. No invented fields: if it is not in the contract, it is not in the code.
-5. **Iteration checks:** build the affected project and run the slice's own specifications while
+7. **Iteration checks:** build the affected project and run the slice's own specifications while
    you work.
-6. **Completion gate:** before reporting `done`, run what the repository's CI-equivalent gate
+8. **Completion gate:** before reporting `done`, run what the repository's CI-equivalent gate
    requires (its Tier 1 checks, plus the integration evidence for the behavior claimed;
    `cratis-screenplay-render-and-gap-fill` `references/gap-fill-handoff.md`, "What comes
    back"). Slice-only runs are never the completion gate; an unavailable check is
    `not run: <reason>`.
-7. Git effects (commit, merge, push) happen only when the brief separately authorizes them, and
+9. Git effects (commit, merge, push) happen only when the brief separately authorizes them, and
    a commit contains only the files you own. Otherwise leave the changes in the working tree and
    return the result.
 
@@ -94,9 +110,9 @@ ends the iteration; the brief, never the agent, changes scope.
    and two workers can both write it. Rely on atomic claiming only where a tracker provides a
    verified compare-and-set operation; there, a rejected claim means another worker owns the
    slice: do not retry it, take the next one assigned to you, or report that nothing remains.
-4. Work on one slice only; never chain two in one iteration. Under a ledger brief (one assigned
-   ledger scope, which may hold several slices), take one slice at a time within that scope and
-   never select another scope; one slice per run stays the default outside a ledger brief.
+4. Work on one slice only; never chain two in one iteration. Under a scoped brief (one assigned
+   scope, which may hold several slices), take one slice at a time within that scope and
+   never select another scope; one slice per run stays the default outside a scoped brief.
 5. Read the slice's contract. Explicit realization requirements in the description bind the
    implementation, cannot contradict executable parts and are never supplemented with inferred
    rules; descriptive prose that is not an explicit requirement is a hint. Name each requirement
@@ -110,19 +126,27 @@ ends the iteration; the brief, never the agent, changes scope.
    if the business logic is implemented as defined, the APIs exist, every scenario in the
    contract is implemented in code and the slice fulfills the contract. **There must be no
    specification in the contract without an executable equivalent in code.**
-9. Run the iteration checks, then the completion gate (section 2, steps 5 and 6).
+9. Run the iteration checks, then the completion gate (section 2, steps 7 and 8).
 10. Review the slice's specifications against `cratis-screenplay-scenario-coverage` when it is
     installed, and list any applicable scenario the contract lacks as a proposal for the
     contract (never add it as a second contract in code).
 11. Report the result packet (section 4) and finish.
 
-**Escalation.** If the requirements are genuinely ambiguous, contradictory or missing a
-decision you need, do not guess and do not build anyway: return an edit request (or ask the one
-specific question), report `blocked` and stop this iteration. This is an escalation path, not a
-routine step; read the contract and the slice-type skills fully first, since most slices are
-fully specified and need none.
+**Escalation.** Read the contract and slice-type skills fully before asking. Block that scope
+with one question or edit request for a missing or conflicting rule, authorization, money, time
+or identity behavior; an undecided event, command or field name; an undeclared/unimported
+referenced event or view; or prose contradicting executable parts. The lifecycle's
+`references/stop-or-assume.md` delivery triggers and unconditional stops apply and win.
+For non-behavioral details only, assume visibly and continue: a missing label may use the spaced
+command/property name, isolation may need fresh test identifiers, and file placement within the
+slice, invalid spec-name conversion or an unspecified layout may follow local conventions.
+Return each assumption with its address and consequence if wrong in the fallback record.
+`blocked` means progress needs a person, not that confirmation seemed safer.
+Write the question so someone reading it cold understands it: name the slice, the exact field,
+rule or specification, what is missing or contradictory, and the concrete choice needed.
+"Please clarify" alone gives the owner nothing answerable.
 
-Stop conditions: after one slice, stop regardless of what else is assigned (under a ledger brief,
+Stop conditions: after one slice, stop regardless of what else is assigned (under a scoped brief,
 after one slice, or when the assigned scope is done or blocked, and never continue into another
 scope); if nothing in the
 scope is assigned, report that and stop; if every slice in the scope is `done`, report that.
@@ -131,7 +155,10 @@ scope is assigned, report that and stop; if every slice in the scope is `done`, 
 
 Use the lifecycle's report and state format (`cratis-screenplay-modeling-lifecycle`
 `references/handoff-template.md`, with its `STATE.md` under `.ai-work/`) when it is installed,
-otherwise this shape. One packet per slice, returned to the coordinator, not appended per step:
+otherwise this shape. In either format, include the realization fields defined once in
+`cratis-screenplay-render-and-gap-fill/references/drift-and-fallback-record.md`, "Fallback record";
+do not create a second field schema. One packet per slice, returned to the coordinator, not
+appended per step:
 
 ```text
 Outcome: <qualified slice address> - done | partial | blocked

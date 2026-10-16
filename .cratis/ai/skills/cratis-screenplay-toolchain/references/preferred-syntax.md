@@ -53,7 +53,7 @@ implementation separately.
 
 ## Navigation `by` and form `columns`
 
-Both are current, not legacy (settled in Screenplay#688, v4.145.1). Screen
+Both are current, not legacy. Screen
 navigation passes the target's key with `by <parameter>` (`on row-click navigate
 to InvoiceDetail by invoiceId`) and further values with `parameter <name> from
 <binding>`; navigation inside an interaction block passes values with `with <name>
@@ -63,12 +63,8 @@ case needs; neither has a style diagnostic.
 
 ## Verified product sources
 
-Screenplay **v4.145.0** (syntax unchanged from 4.144.0):
-`Documentation/screenplay/types.md:23-25`, `concepts.md:34-37,142-146`,
-`ast-compatibility.md:68`, `commands.md:80-90,136-176,503`,
-`events.md:114,118-120`, `event-sources.md:7,86,132`, `reactions.md:298-312`,
-`interactions.md:105-107`, `folders.md:418-421`, `diagnostics.md:825,979-987,1013,1084,1105-1120,1271`.
-Printer: `Source/DotNET/Screenplay/Printing/ScreenplaySyntaxText.cs:41`,
-`ScreenplayPrinter.Expressions.cs:18-32`, `ScreenplayPrinter.Commands.cs:481-530`.
-Navigation and forms: Screenplay v4.145.1 `glossary.md:65`, `forms.md:40`; https://github.com/Cratis/Screenplay/issues/688.
+Screenplay documentation pages: `types.md`, `concepts.md`, `ast-compatibility.md`, `commands.md`,
+`events.md`, `event-sources.md`, `reactions.md`, `interactions.md`, `folders.md`, `glossary.md`,
+`forms.md` and `diagnostics.md`. Printer: the Screenplay printer's syntax text and its expression and
+command printing.
 The published contract is the selector's authority, not this hand-written table.

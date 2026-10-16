@@ -15,8 +15,8 @@ base: setup is separated from the action, and each `it()` verifies one outcome.
 
 ## Verified product sources
 
-Helper and setup patterns are verified against Fundamentals **v7.23.0**
-(`for_JsonSerializer/given/given.ts`, `vitest.setup.ts`) and Arc **v22.75.0**
+Helper and setup patterns come from Fundamentals
+(`for_JsonSerializer/given/given.ts`, `vitest.setup.ts`) and Arc
 (`Source/JavaScript/Arc/given.ts`). The execution stack is:
 
 | Framework | Role |

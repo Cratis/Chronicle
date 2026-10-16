@@ -32,8 +32,8 @@ A `persona` is authoring metadata: the binder reports it as information `PLAY027
 
 ## Policy negation
 
-At Screenplay 4.125.0, `not <condition>` is a portable ESM v7 policy-condition
-form (decision 0027), not a named-policy operator in `authorize`. It can negate
+`not <condition>` is a portable ESM v7 policy-condition
+form, not a named-policy operator in `authorize`. It can negate
 atoms/groups, not an opaque inline/file implementation. Precedence is `not`,
 then `and`, then `or`; parentheses override grouping. Double negation restores
 a known value, not an unknown target.
@@ -50,7 +50,7 @@ Opaque predicates reached in authored short-circuit order return unsupported,
 never false or permission under negation. Binding warns with PLAY0546 when a
 negated claim's target is optional, non-string, or a subject without a command
 identifier. This C# semantic check does not come from ordinary editor validation.
-Source: `v4.125.0:Documentation/screenplay/policies.md`.
+Source: `Documentation/screenplay/policies.md`.
 
 ## `seed`
 

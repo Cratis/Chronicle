@@ -28,4 +28,12 @@ public interface INamespaces : IGrainWithStringKey
     /// </summary>
     /// <returns>Collection of namespaces for the event store.</returns>
     Task<IEnumerable<EventStoreNamespaceName>> GetAll();
+
+    /// <summary>
+    /// Forget a namespace that has been removed: drop it from the namespaces this grain reports and record that it
+    /// was removed. Use <see cref="INamespaceRemover"/> to remove a namespace; this is its last step.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to forget.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Forget(EventStoreNamespaceName @namespace);
 }

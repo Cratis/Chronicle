@@ -23,7 +23,7 @@ of the same rule.
 **Why this differs from earlier guidance.** This skill used to say not to write
 specifications for rules like *"Name cannot be empty"* because the type system
 makes them unrepresentable. In Screenplay a concept `validate` is a runtime rule the
-reference runner executes, not a type-level guarantee . Without a
+reference runner executes, not a type-level guarantee. Without a
 rejection specification nothing proves the rule is wired to the command, and a
 rule moved or deleted by an edit goes unnoticed. The cost is one specification per
 rule; the rule stays on the concept, never copied into each command.

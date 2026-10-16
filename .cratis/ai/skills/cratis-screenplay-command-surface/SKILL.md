@@ -21,16 +21,15 @@ root. Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
-## Verified product sources
+## Product sources
 
-Pins: toolchain `references/versions.md`; sources below. Compilation is not execution.
+Tool versions: toolchain `SKILL.md`; sources below. Compilation is not execution.
 
-- `4.31.0`: original examples and executable boundaries; main `fd18129`: inline events, repairs, canonical `optional`.
-- `4.66.0` (`c89198b`): `handler`, code attachments, `persona` and compliance binding (`Semantics/SemanticModelBinder*.cs`, `Diagnostics/DiagnosticCodes.cs`).
-- `4.68.0` (`79801bf`): generated-value/response rule probes (ESM v7).
-- `4.127.0`: identity and compliance syntax (`identity.md`, `context.md`, `concepts.md`, `purposes.md`, `events.md`, `diagnostics.md`).
-- `4.141.0`: v13 compliance admission; rechecked at `4.142.0`: `references/compliance.md`.
-- `4.148.0`: v15 generation strategies/strict fixtures/freshness; Stage `4.89.1` realization: `references/generated-values-and-responses.md`.
+- Examples and executable boundaries; inline events, repairs, canonical `optional`.
+- `handler`, code attachments, `persona` and compliance binding (`Semantics/SemanticModelBinder*.cs`, `Diagnostics/DiagnosticCodes.cs`).
+- Generated-value and response rules (ESM v7).
+- Identity and compliance syntax (`identity.md`, `context.md`, `concepts.md`, `purposes.md`, `events.md`, `diagnostics.md`); v13 compliance admission: `references/compliance.md`.
+- v15 generation strategies, strict fixtures and freshness; Stage realization: `references/generated-values-and-responses.md`; shop: `references/shop-generation.md`.
 
 "Parses" and "runs" are different claims. The executable profile, and what
 each construct binds to, is in the `cratis-screenplay-model-authoring` language
@@ -155,9 +154,9 @@ view name when that view is read once.
 arrow of the event model; nothing checks at append time that the state is still
 current. The executable model rejects every `reads` and `concurrency` with
 `PLAY0271`, and `require` over a read-model path with `PLAY0268`, until
-decision-consistent reads exist (Screenplay #129, decision 0003). Adding a
-`concurrency` block does not fix this: its scope is not the read's watermark, and
-decision 0003 plans to make the combination an error once protected reads ship.
+decision-consistent reads exist. Adding a
+`concurrency` block does not fix this: its scope is not the read's watermark, and the
+combination is planned to become an error once protected reads ship.
 When a rule depends on state:
 
 - if it is uniqueness, declare a `unique` constraint (below);
@@ -165,7 +164,7 @@ When a rule depends on state:
   must enforce it consistently. Do not claim the model guarantees it.
 
 Do not use `reads` to fetch data the caller could supply. A composite-key view's `by` block is
-`PLAY0268` (#599; read-surface `references/named-keys.md`).
+`PLAY0268` (read-surface `references/named-keys.md`).
 
 ## `validate`
 
@@ -210,7 +209,7 @@ A continuation line extends the clause.
 `A and B`. Write the operator explicitly so the reader does not have to know this.
 
 - Several `authorize` lines on one command or query combine with AND, in authored
-  order. (Before v4.29.0 all but the last were silently dropped.)
+  order.
 - `authorize` on an enclosing `module` or `feature` is ANDed with the command's
   own gate; an `or` inside one gate never bypasses another gate.
 - Evaluation short-circuits left to right, module → feature → command. If it
@@ -229,116 +228,32 @@ choosing or omitting `for` on a production, or fixing `PLAY0469`-`PLAY0478`.
 
 ## `produces`
 
-- **Mapping sources** that bind to the executable model: a command property
-  (`= invoiceNumber`), a literal (`= "draft"`, `= 0`), `$context.occurred`, and
-  the caller's audit identity (`$identity.id`/`.name`/`.userName`, also supported
-  as `$context.identity.id`/`.name`/`.userName`, the same values as `$context.causedBy.*`). The last two select ESM v2.
-  `$context.tenant`, claims, roles, causation, `$env.` values, templates and
-  computed expressions parse but block binding (`PLAY0268`).
-- **`for <identifier>`** on an indented line names the event source the event is
-  appended to. At most one per `produces`. To bind, it must name the command's
-  `identifier` property (`PLAY0273` otherwise; a `generated identifier` command, ESM v7, may name another required scalar property); fanning out to another event
-  source parses but does not run today.
-- **`tag`** lines apply literal tags to this append. Tags also exist on the
-  `event` declaration, where they apply to every append of that type.
-- **Several unconditional `produces` blocks** are allowed — that is co-production,
-  and it is what an automation is *not*.
-- **`produces when <condition>`** takes the event name on the next indented line.
-  Conditions over command properties and constants bind; each is evaluated
-  independently, and when all are false the command is accepted with no events.
-  Compare an enumeration with a member bare (`status == sent`) or quoted
-  (`status == "sent"`); the bare form binds from v4.48.0, so quote it when a model
-  must bind on an older version.
-  Excerpt:
-
-```screenplay excerpt
-produces when isProForma == true
-  ProFormaInvoiceIssued
-    for invoiceId
-```
+Mapping sources that bind: a command property, a literal, `$context.occurred` and `$identity.*`; `for` must name the command `identifier` (`PLAY0273`); several unconditional `produces` are co-production. Read [references/constraints-produces-concurrency.md](references/constraints-produces-concurrency.md) when writing mappings, `tag`, or `produces when`.
 
 ## Routes and external operations
 
-Routes bind as ESM v8; production `stream Source.Stream` overrides
-select v10. Read toolchain [routes](../cratis-screenplay-toolchain/references/production-routes-and-filters.md)
-and [source/stream declarations](../cratis-screenplay-toolchain/references/sources-and-streams.md).
-`public event X` is a local export; `event X from "store"` is a locally declared,
-unverified foreign shape. Commands never produce public events. Read
-[translation direction](../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md)
-for the released ESM v9 boundary and quoted opaque origins.
-
-Use `system`, `uses` and inline/standalone `operation` declarations to state
-external work in the authored production sequence, with execute/compensate phase
-intent. These remain unadmitted (PLAY0268), not post-commit reactions. Read
-[operation intent](references/operations.md) for forms, boundaries and checked
-failure/compensation specification syntax.
+Commands never produce public events; external work stays unadmitted (`PLAY0268`). Read [references/routes-and-external-operations.md](references/routes-and-external-operations.md) when choosing routes, `stream` overrides, public or foreign events, or `system`/`uses`/`operation` declarations (see also [operation intent](references/operations.md)).
 
 ## `concurrency`
 
-Five dimensions, each at most once, and at most one `concurrency` block per
-command. It mirrors Chronicle's `ConcurrencyScope` for a target implementation;
-the executable model does not bind it (`PLAY0271`), and it does not protect a
-`reads` decision.
-
-| Dimension | Scopes the check to |
-| --- | --- |
-| `eventSource` | the command's own event source id |
-| `sourceType <Name>` | an event source type |
-| `streamType <Name>` | an event stream type |
-| `streamId <Name>` | an event stream id |
-| `events <A>, <B>` | the listed event types |
-
-An empty block or an unknown dimension is an error. Omitting `concurrency` does
-not mean unchecked appends: Chronicle's default optimistic concurrency applies
-to the routed scope. This does not make command `reads` protected.
+One `concurrency` block per command; it is not bound (`PLAY0271`) and does not protect a `reads` decision. Read [references/constraints-produces-concurrency.md](references/constraints-produces-concurrency.md) for the dimensions.
 
 ## Generated values and responses (ESM v7 and v15)
 
 UUID generation/responses bind as v7; serialized concept `generate` selects v15:
 UUIDv7/ULID/TypeID/NanoID/bytes, strict fixtures and whole-source freshness.
 Reuse rejects Concurrency, no append/retry. Generated rules/secrets and pattern/random/rule
-remain refused. Historical CLI 3.41.0 refusals: STAGE-ESM-028/029.
+remain refused.
 Read [references/generated-values-and-responses.md](references/generated-values-and-responses.md)
 for `generated`, `generate`, `returns`, strict fixtures/freshness and renderer limits.
+
+Requires Screenplay 4.147.0 or later (`screenplay --version`) for concept generation strategies (ESM v15), 4.150.0 or later for the stored stream `All` refusal, 4.141.0 or later for compliance (ESM v13) and 4.139.0 or later for non-positional enum numbers (ESM v12).
 Complete example: `cratis-screenplay-toolchain/references/generated-responses-example.md`.
 Routes and realization: `cratis-screenplay-toolchain/references/sources-and-streams.md`.
 
 ## `constraint` — uniqueness at append time
 
-Chronicle's constraints enforce **uniqueness only**. Excerpt: the events are
-declared in the same model.
-
-```screenplay excerpt
-constraint UniqueInvoiceNumber
-  unique invoiceNumber on InvoiceRegistered
-  released by InvoiceCancelled
-  ignore casing
-  message "That invoice number is already in use"
-
-constraint OneRegistrationPerInvoice
-  unique event InvoiceRegistered
-```
-
-- `unique <p>[, <p>…] on <Event>` — a value (or composite value, in order) held by
-  one event source is unavailable to every other. Repeat the line for other
-  events sharing the claim. The same event source may re-claim its own value; a
-  null value claims nothing. The property must be declared directly on the event
-  (`PLAY0391`).
-- `unique event <Event>` — the event occurs at most once per event source.
-- `released by <Event>` (repeatable) frees the claim; `ignore casing` applies to
-  property rules only (`PLAY0393`); `message` replaces the default violation text —
-  never put the colliding value in it.
-- **The name is the identity.** It is unique across the application (`PLAY0392`),
-  and renaming a constraint starts a new, empty index.
-- Chronicle updates the uniqueness index after the append commits; do not describe
-  it as an atomic index-and-append guarantee.
-
-⚠️ **Do not use `constraint … file <Path>` for other rules.** It can only name a
-hand-written Chronicle `IConstraint`, which can only declare uniqueness; it warns
-(`PLAY0396`) and the executable model rejects it. A state transition rule
-belongs in `validate`/`require`. Use a constraint when two concurrent appends must
-not both win — a `validate` rule cannot do that. Stage renders only single-text-property and
-`unique event` constraints (`STAGE-ESM-014`; `cratis-stage-rendering-and-sandbox` `references/admission.md`).
+Chronicle's constraints enforce **uniqueness only**; use one when two concurrent appends must not both win. Do not use `constraint … file <Path>` for other rules (`PLAY0396`). Read [references/constraints-produces-concurrency.md](references/constraints-produces-concurrency.md) when writing a `unique` constraint, `released by`, or `unique event`.
 
 ## `policy` and `persona`
 
@@ -347,11 +262,7 @@ declaring a policy, a persona, or a `seed` block.
 
 ## Event data subject
 
-One event property may carry trailing `subject`; it identifies the person whose
-data the event holds, not the stream identity. Only unprotected required scalar
-String/Uuid or String/Uuid/Int-backed concepts are allowed. The mark is report-only
-(PLAY0270), changes no ESM bytes and emits no C# `[Subject]` yet; read models are
-not supported. See [subject lineage](references/compliance.md#identify-the-person-not-the-stream).
+A trailing `subject` on an event property is report-only (`PLAY0270`); see [compliance](references/compliance.md#event-data-subject).
 
 ## `$context` and `$identity`
 
@@ -369,7 +280,7 @@ Four contexts, and **what each omits is load-bearing** — when writing a code b
 ## Verify
 
 - [ ] Validate the complete model root with warnings as errors; name the tool,
-      version and result. Pins: toolchain `references/versions.md`;
+      version and result. Tool versions: toolchain `SKILL.md`;
       bundle compatibility and execution are separate checks.
 - [ ] No unintended `PLAY0478` or `PLAY0479` information remains.
 - [ ] At most one command property carries `identifier`, and no event property does.
@@ -386,7 +297,7 @@ Four contexts, and **what each omits is load-bearing** — when writing a code b
       runnable or renderable without saying which tool admits it.
 - [ ] No event carries an optional property covering two situations.
 
-Compiler pins and admission: `cratis-screenplay-toolchain/references/versions.md`.
+Compiler versions and admission: `cratis-screenplay-toolchain/SKILL.md`.
 Method: `cratis-screenplay-modeling-lifecycle` and `cratis-screenplay-slice-design`.
 
 ## Route near misses

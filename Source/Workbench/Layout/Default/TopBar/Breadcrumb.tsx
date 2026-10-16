@@ -9,10 +9,11 @@ import css from './Breadcrumb.module.css';
 import { useEffect, useState } from 'react';
 import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { BreadCrumbViewModel } from './BreadCrumbViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
+import { ObserveEventStores } from 'Features/EventStores';
 
-export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => {
+export const Breadcrumb = () => {
+    const [eventStoresResult] = ObserveEventStores.use();
+    const eventStores = eventStoresResult.data.map(_ => _.name);
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams<Shared.EventStoreAndNamespaceParams>();
@@ -77,7 +78,7 @@ export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => 
                                 <Popover.Positioner>
                                     <Popover.Popup>
                                         <Popover.Content>
-                                            <ItemsList<string> items={viewModel.eventStores} onItemClicked={handleEventStoreClick} />
+                                            <ItemsList<string> items={eventStores} onItemClicked={handleEventStoreClick} />
                                         </Popover.Content>
                                     </Popover.Popup>
                                 </Popover.Positioner>
@@ -94,4 +95,4 @@ export const Breadcrumb = withViewModel(BreadCrumbViewModel, ({ viewModel }) => 
             )}
         </div>
     );
-});
+};

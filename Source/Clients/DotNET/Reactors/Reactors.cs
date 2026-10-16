@@ -642,6 +642,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                         return;
                     }
 
+                    // The kernel lost this client's registration. Retrying the same stream with the same connection id
+                    // can never work, so reconnect the whole client, which re-registers every reactor.
+                    if (errorKind == KernelConnectionErrorKind.SessionLost)
+                    {
+                        _logger.ReactorStreamLostConnection(handler.Id, ex);
+                        messages.Dispose();
+                        _eventStore.Connection.RequestReconnect();
+                        return;
+                    }
+
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();

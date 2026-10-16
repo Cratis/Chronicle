@@ -1,5 +1,5 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-toolchain/references/cheat-sheet.md -->
-# Screenplay cheat-sheet (tool versions: versions.md)
+# Screenplay cheat-sheet
 
 ## Contents
 
@@ -18,17 +18,15 @@ Released boundary forms: `public event X`, `event X from "store"`, Translate
 and capture `source events` with `from ForeignEvent` select v9. Read
 [public contracts](../../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md).
 View properties use trailing `key`; multipart `by` query/read blocks remain
-PLAY0268 (#599), not v10. Read [named keys](../../cratis-screenplay-read-surface/references/named-keys.md).
+PLAY0268, not v10. Read [named keys](../../cratis-screenplay-read-surface/references/named-keys.md).
 Production `stream Source.Stream` overrides and reaction/reducer `from Source[.Stream]`
 select released v10: [routes and filters](production-routes-and-filters.md).
-Qualifying non-route Double literals select published v11 at 4.135.0;
+Qualifying non-route Double literals select v11;
 `numbers exact` does not bind. Non-positional enum member numbers (`draft = 1`)
-select published v12 at 4.139.0; positional pins keep earlier bytes/version,
-while specifications still use names. The pinned CLI/Stage pair (`versions.md`) admits v12 and renders explicit numbers.
+select v12; positional pins keep earlier bytes/version,
+while specifications still use names. Stage admits v12 and renders explicit numbers.
 Syntax/example: command-surface `references/enum-numbers.md`.
-See `versions.md` for freeze and numeric boundaries.
-
-Current pins: `versions.md` (the single table). Compile evidence below keeps its historical tool labels.
+Published ESM versions never change meaning; later byte-changing features take a new version.
 
 The syntax lives in compiled example files next to this one (each is a Markdown file holding
 one complete `screenplay` fence). Copy shapes from them; do not write a form that none of
@@ -37,16 +35,16 @@ examples belong to `cheat-sheet-example.md` and its siblings.
 
 | File | Mode | V1, warnings as errors | V3 (binds) |
 | --- | --- | --- | --- |
-| `cheat-sheet-example.md` | design: every construct family | 0 diagnostics, both tools (cratis before 3.28.2 reported a false PLAY0285 on the `RecordingAPayment` cascade spec) | not ready by design (its header lists why; fewer blockers on the standalone tool) |
+| `cheat-sheet-example.md` | design: every construct family | 0 diagnostics, both tools (an older bundled compiler reported a false PLAY0285 on the `RecordingAPayment` cascade spec) | not ready by design (its header lists why; fewer blockers on the standalone tool) |
 | `executable-example.md` | executable, StateChange and StateView | 0 diagnostics, both tools | ready, both tools |
 | `pdl-example.md` | executable projections | 0 diagnostics, both tools | ready, both tools |
-| `automation-translate-example.md` | executable Automation and Translate (ESM v6) | 0 diagnostics, both tools (cratis before 3.28.2 could not bind it) | ready, both tools (cratis 3.28.2 or later) |
+| `automation-translate-example.md` | executable Automation and Translate (ESM v6) | 0 diagnostics, both tools (an older bundled compiler could not bind it) | ready, both tools |
 
 Screenplay sources: `Documentation/screenplay/grammar.md` (EBNF; checked against the parsers
 by `for_Documentation/when_comparing_the_grammar_against_the_parsers.cs`),
 `projections/grammar.md`, `captures/grammar.md`. Documentation examples compile in
 Screenplay CI (`when_compiling_every_example.cs`) against repository main: the standalone
-compiler (4.68.0; `cratis` 3.28.2 or later bundles 4.66.0, which lacks ESM v7); older cratis bundles differ (`versions.md`).
+compiler; the compiler bundled in `cratis` can be older and lack the newest ESM versions.
 
 ## Samples and preview fixtures
 
@@ -54,7 +52,7 @@ Invoicing is a warning-free syntax showcase, not a runnable whole-language proof
 The released samples policy excepts these preview families and points to dedicated
 fixtures; do not infer binder admission from the sample's coverage list:
 
-| Family | Screenplay v4.125.0 fixture |
+| Family | Screenplay fixture |
 | --- | --- |
 | Exact numbers | `Source/Screenplay/Compiler/Conformance/exact-named-rule-intent.play` |
 | Sources/streams/command routes | `Documentation/screenplay/fixtures/source-streams.play` |
@@ -62,9 +60,8 @@ fixtures; do not infer binder admission from the sample's coverage list:
 | Systems/operations/specification steps | `Documentation/screenplay/fixtures/operations.play` |
 | Refusals/redelivery/no-events | `Source/Screenplay/Compiler/Conformance/reaction-refusals-redelivery.play`, `no-events.play` in that directory |
 
-Source: `v4.125.0:.cratis/ai/rules/project/samples.md`. Its preview list retains
-sources/specification routes, but the released binder/runner admits them as v8;
-its old blanket PLAY0268 wording is not the current route verdict. Other rows
+The Screenplay samples policy lists these preview families. Sources and specification routes
+are admitted as v8 by the binder and runner, so a blanket PLAY0268 is not their verdict. Other rows
 remain unadmitted. Compile and test each relevant fixture with the chosen tool.
 
 ## Lexical and structural rules
@@ -88,7 +85,7 @@ remain unadmitted. Compile and test each relevant fixture with the chosen tool.
   generated identifier` (PLAY0484); legacy `?` is PLAY0479 (information).
 - Ownership policies: `require claim "ownerId" matches subject` (subject = command identifier
   or keyed query argument) or `matches <commandProperty>`; executable; renderable only for
-  text-backed targets at the 4.24-era Stage; Stage 4.73.1 also renders Uuid and Date claim targets (see `renderable-subset.md`; unsupported subjects: STAGE-ESM-015).
+  text-backed targets, Uuid and Date claim targets (see `renderable-subset.md`; unsupported subjects: STAGE-ESM-015).
 
 ## Exact numeric source mode
 
@@ -113,14 +110,14 @@ description, properties, `reads`, `authorize`, `validate`, `produces`/`handler`,
 ## `$context.` paths (command `produces`)
 `occurred`, `tenant`, `command.<p>`, `arguments.<p>`, `causedBy.subject|name|userName`,
 `causation.type`, `identity.id|name|userName|isAuthenticated|roles|claims.<n>`.
-Binder-supported (`BindOccurrence`, v4.66.0): `occurred`, `identity.id` (= `causedBy.subject`),
+Binder-supported: `occurred`, `identity.id` (= `causedBy.subject`),
 `identity.name` (= `causedBy.name`), `identity.userName` (= `causedBy.userName`). `tenant`,
 roles, claims, causation, `command.<p>`, `arguments.<p>`: PLAY0268. Binding is not execution:
 a reference scenario that supplies only a clock carries no caller audit identity, so check the
 reference runner before relying on identity paths in a specification. Renderable:
 `$context.occurred` only.
 
-At 4.127.0, `$identity.id`/`.name`/`.userName` map to the same ESM kinds as
+`$identity.id`/`.name`/`.userName` map to the same ESM kinds as
 `$context.identity`; prefer the shorter root, but the older one stays supported.
 Other built-ins parse but roles/claims/authentication status do not bind in
 produces mappings. Identity details are metadata: executable detail reads report

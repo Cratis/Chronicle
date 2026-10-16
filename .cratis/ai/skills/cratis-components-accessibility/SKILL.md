@@ -16,9 +16,9 @@ what is written here.
 
 ## Verified product sources
 
-| Package | Version | Verified from |
-| --- | --- | --- |
-| `@cratis/components` | `4.26.4` | `Source/Dialogs/*` (`DialogInitialFocus`, `DialogImplementation`), `Source/CommandForm/fields/fieldAccessibility.tsx`, `Source/for_accessibility/*`, `Source/SchemaEditor/*`, `Source/ObjectNavigationalBar/*`, `Source/MIGRATION.md`, `Documentation/Styling/pass-through.md`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/index.md` |
+| Package | Verified from |
+| --- | --- |
+| `@cratis/components` | `Source/Dialogs/*` (`DialogInitialFocus`, `DialogImplementation`), `Source/CommandForm/fields/fieldAccessibility.tsx`, `Source/for_accessibility/*`, `Source/SchemaEditor/*`, `Source/ObjectNavigationalBar/*`, `Source/MIGRATION.md`, `Documentation/Styling/pass-through.md`, `Documentation/Common/cratis-components-provider.md`, `Documentation/renderers/index.md` |
 
 Focus, overlay and collection behavior come from React Aria **internally** — the
 dialog is a React Aria `Modal` inside a `ModalOverlay`; you never import React

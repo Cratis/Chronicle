@@ -58,6 +58,8 @@ in notes. See "Evidence and privacy" in SKILL.md.
 5. Per workflow give the happy path, the decision points and the terminal facts in a few lines.
 6. Propose the next step: the next workflow, or `cratis-screenplay-slice-design` for this one.
 7. Update STATE.md (phase, status, carry-forward); keep durable rationale in fenced Markdown
-   `documentation`, summaries in `description`. At 4.127.0 canonical printing retains
+   `documentation`, summaries in `description`. Canonical printing retains
    documentation on its owner; MCP exposes it, but it changes no `modelRevision` and
    reaches no rendered code. Inspect dropped comments after canonicalizing edits.
+
+A hotspot (a pain point, a dispute) is an anchored `note` beside the event it concerns, never an event.

@@ -4,7 +4,7 @@
 <!-- Copyright (c) Cratis. All rights reserved. -->
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
-Verified at **Arc v22.75.0**. These are host configuration fragments, not a claim
+Source: Arc. These are host configuration fragments, not a claim
 that any arbitrary application is NativeAOT-compatible.
 
 ## Storage and Chronicle
@@ -24,11 +24,11 @@ same stack twice.
   EF migration skill for the actual context/provider/migration setup.
 
 Source signatures under `Source/DotNET`:
-[Cratis composition](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Cratis/WebApplicationBuilderExtensions.cs),
-[ASP.NET builder](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc/WebApplicationBuilderExtensions.cs),
-[Core builder](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/ArcApplicationBuilderExtensions.cs),
-[Chronicle integration](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Chronicle/ArcBuilderExtensions.cs),
-[MongoDB integration](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/MongoDB/ArcBuilderExtensions.cs).
+[Cratis composition](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Cratis/WebApplicationBuilderExtensions.cs),
+[ASP.NET builder](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc/WebApplicationBuilderExtensions.cs),
+[Core builder](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc.Core/ArcApplicationBuilderExtensions.cs),
+[Chronicle integration](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle/ArcBuilderExtensions.cs),
+[MongoDB integration](https://github.com/Cratis/Arc/blob/main/Source/DotNET/MongoDB/ArcBuilderExtensions.cs).
 
 ## MVC and NativeAOT
 
@@ -52,7 +52,7 @@ The switch also turns controllers off without `WithoutControllers()`. Arc
 registers the ASP.NET services it previously got through MVC (including CORS,
 endpoint API exploration and authorization). Do not infer that every provider,
 serializer or dependency is trim-safe just because MVC is off.
-[Controller boundary](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc/ControllersArcBuilderExtensions.cs).
+[Controller boundary](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc/ControllersArcBuilderExtensions.cs).
 
 ## Application JSON metadata
 
@@ -63,7 +63,7 @@ options read-only. Include the read models, query arguments and responses the
 application serializes, and **each** `CommandResult<TResponse>` used for typed
 command responses. Arc's own context cannot enumerate your generic responses.
 Reflection fallback only exists when reflection-based serialization is enabled.
-[Resolver contract](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Arc.Core/ArcOptions.cs).
+[Resolver contract](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc.Core/ArcOptions.cs).
 
 ## Optional event-model viewer
 
@@ -76,6 +76,6 @@ assembly **and** Development; explicit `Enabled=true` overrides that default.
 Do not enable the explorer in a deployed environment accidentally. Mapping it
 manually needs an intentional host policy, not an assumption of automatic gating.
 The Screenplay family owns generated-model content and compiler capability.
-Sources: [viewer registration](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Screenplay.Embedded/Hosting/EventModelViewerServiceCollectionExtensions.cs),
-[mapping](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Screenplay.Embedded/Hosting/EventModelEndpoints.cs),
-[automatic exposure](https://github.com/Cratis/Arc/blob/v22.75.0/Source/DotNET/Screenplay.Embedded/Hosting/EventModelViewerExposure.cs).
+Sources: [viewer registration](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Screenplay.Embedded/Hosting/EventModelViewerServiceCollectionExtensions.cs),
+[mapping](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Screenplay.Embedded/Hosting/EventModelEndpoints.cs),
+[automatic exposure](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Screenplay.Embedded/Hosting/EventModelViewerExposure.cs).

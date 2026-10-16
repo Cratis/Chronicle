@@ -72,7 +72,6 @@
 1 Integration/Client/for_ReadModels/when_a_subject_owns_a_pii_child_collection/and_reading_the_child_collection.cs
 1 Integration/Client/for_ReadModels/when_getting_instance_with_an_unset_optional/and_the_optional_is_an_enum.cs
 1 Integration/Client/for_ReadModels/when_getting_instances/and_read_model_has_pii_property.cs
-1 Integration/Client/for_ReadModels/when_projecting_a_large_number_of_events/across_many_event_sources.cs
 1 Integration/Client/for_Reducers/ConceptCollectionReducer.cs
 1 Integration/Client/for_Reducers/PointLocationReducer.cs
 1 Integration/Client/for_Reducers/ReducerFilteredByEventSourceType.cs  # knob

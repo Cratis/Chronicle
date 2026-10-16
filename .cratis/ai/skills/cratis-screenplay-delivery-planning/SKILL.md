@@ -31,7 +31,7 @@ it is not planned work yet.
 - **Render is not free of effort, and gap-fill is not free of risk.** Stage renders
   `StateChange` and `StateView`; `Automation` and `Translate` are hand-written against the
   model as contract. Check admission per slice with `cratis-screenplay-render-and-gap-fill`
-  (version pins: `cratis-screenplay-toolchain` `references/versions.md`) before pricing a slice as
+  (tool versions: `cratis-screenplay-toolchain` `SKILL.md`) before pricing a slice as
   rendered.
 - **Plans live in `.ai-work/`; tracking lives in GitHub issues** where the repository works
   that way. Never put a plan in the model, in `.cratis/`, or in a documentation folder.

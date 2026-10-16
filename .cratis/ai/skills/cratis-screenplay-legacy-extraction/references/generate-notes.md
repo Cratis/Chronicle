@@ -8,22 +8,23 @@
 - Coverage (what a provider reads)
 - Diagnostics are the loss list
 - Arc recovery and authoring-only options
-- Arc 22.76.0 enum and response recovery
-- Arc 22.70.0 compliance recovery
+- Enum and response recovery
+- Compliance recovery
 - Generated-document self-check on compiler upgrades
 - Reading the output cheaply
 
-Flags verified with `cratis screenplay generate --help` on the version recorded in
-cratis-screenplay-toolchain `references/versions.md`; behaviour from the cratis CLI
-(`v3.28.2:Source/Cli/Commands/Screenplay/`; the generate files are unchanged since `v3.27.1`), Arc `v22.50.5`
+Flags verified with `cratis screenplay generate --help` on the installed CLI (`cratis --version`); behaviour from the cratis CLI
+(`Source/Cli/Commands/Screenplay/`), Arc
 (`Documentation/backend/csharp/generating-a-screenplay.md`,
-`Source/DotNET/Screenplay/ScreenplayDiagnosticCodes.cs`), Screenplay.Generation `v0.18.0` and
-Screenplay.CritterStack `v0.24.0` (the versions cli 3.53.1 bundles). Later releases exist (Generation 0.18.1 preserves compiler warnings, including on successful generation; CritterStack 0.26.0 adds enum concepts, command-to-event production links and the `MixedSliceKindsSplit` and `ProductionLinkOmitted` diagnostics); do not claim them for `cratis screenplay generate` until a cli bundles them. Version-specific capability facts belong in cratis-screenplay-toolchain
-`references/versions.md`.
+`Source/DotNET/Screenplay/ScreenplayDiagnosticCodes.cs`), Screenplay.Generation and
+Screenplay.CritterStack (the versions the CLI bundles). Later releases can add capabilities (for example preserved compiler warnings, enum concepts, command-to-event production links and the `MixedSliceKindsSplit` and `ProductionLinkOmitted` diagnostics); do not claim them for `cratis screenplay generate` until a cli bundles them. Version-specific capability facts belong in cratis-screenplay-toolchain
+`SKILL.md`.
+
+Requires Screenplay.Generation 0.18.1 or later for preserved compiler warnings (including on successful generation), and Screenplay.CritterStack 0.26.0 or later for enum concepts, command-to-event production links and the `MixedSliceKindsSplit` and `ProductionLinkOmitted` diagnostics; check the bundled generator before relying on them.
 
 For the current standalone compiler and CLI bundle, use the toolchain's
-[version table](../../cratis-screenplay-toolchain/references/versions.md).
-The compliance and self-check sections below are source-checked at Arc 22.70.0
+[Tool versions and the contract](../../cratis-screenplay-toolchain/SKILL.md).
+The compliance and self-check sections below follow Arc
 (`Documentation/backend/csharp/generating-a-screenplay.md`,
 `Analysis/Types/{ConceptRegistry,PersonalDataMarkings,TypesTheDocumentCannotName}.cs`,
 `Emission/Concepts/ConceptSyntaxBuilder.cs`, `Emission/ProtectedIdentityAnnotations.cs`
@@ -31,7 +32,7 @@ and `Verification/ExpectedBindingDiagnostics.cs` under `Source/DotNET/Screenplay
 They require that generator release, not an older bundled adapter;
 a standalone compiler upgrade does not upgrade the generator.
 
-Option/admission evidence checked at CLI 3.41.0: released
+Option/admission evidence checked: released
 `GenerateScreenplaySettings.cs`, `ArcScreenplayGeneration.cs`, v7 planning specs
 and `Documentation/reference/screenplay.md`; older diagnostic probes below keep
 their original labels. Arc#3054 and CLI#270 describe the recovered-source expansion.
@@ -76,9 +77,36 @@ cratis screenplay generate <solution|project|folder> \
 ## Coverage (what a provider reads)
 | Provider | Reads | Does not read |
 |---|---|---|
-| Arc | commands, events, concepts, read models, projections, reducers, reactors, constraints, declarative FluentValidation rules, authorization policies, `produces` from constants and input paths, Chronicle integration specs as given/when/then, `.tsx` beside a slice as `screen` + `data via query` | handler bodies, rules written in code, computed messages (`SP0016`), screen bodies, captures, personas, seeds, `secret`. A rule held to `When`/`Unless` is written down as if unconditional and `SP0016` names the condition: read the diagnostic, do not trust the declaration |
+| Arc | commands, events, concepts, read models, projections, reducers, reactors, constraints, declarative FluentValidation rules, authorization policies, `produces` from constants and input paths, Chronicle integration specs as given/when/then (with `then denied` from a proven `ShouldNotBeAuthorized()`; see below), `.tsx` beside a slice as `screen`: `file`, `data … via query`, `title`, `table`/`column`, `action` and `toolbar actions`, read from Cratis Components only, plus `navigate to` from literal react-router gestures (see Navigation below) | handler bodies, rules written in code, computed messages (`SP0016`), screen `section`, `summary` and `layout`, other navigation (unread properties are `SP0028`; same-screen details, `useDialog` and enablement are `SP0077`), captures, personas, seeds, `secret` on older Arc (see Compliance recovery). A rule held to `When`/`Unless` is written down as if unconditional and `SP0016` names the condition: read the diagnostic, do not trust the declaration |
 | Marten / Critter Stack (preview; an independent optional adapter built on the neutral Screenplay.Generation SDK, not affiliated with JasperFx: review every `GEN`/`MARTEN`/`WOLVERINE` diagnostic by hand) | aggregates, snapshots, HTTP and message handlers, document operations, queries, outgoing and delayed messages, saga facts | saga lifecycle, policies, middleware bodies, runtime tenancy, upcasting; unbounded extension code is reported by presence only |
 | any non-.NET stack | nothing | use Prologue and targeted reads |
+
+Requires Arc.Screenplay 22.60.0 or later for `title`, `table`/`column` and `action` recovery from Cratis Components, and 22.82.0 or later for `toolbar actions` and the `SP0077` report.
+
+Requires Arc.Screenplay 22.94.0 or later for cross-slice screen actions, toolbar items and `data … via query`, qualified with the shortest unique module/feature/slice scope; before it, those cross-slice bindings were omitted with `SP0028`.
+
+### Navigation
+
+The Arc provider reads route tables from TSX files that import `Route`, `Routes`, `createBrowserRouter`, `createHashRouter` or `createMemoryRouter` from `react-router` or `react-router-dom`: nested `<Route path=… element={<Screen />}>` declarations inside `<Routes>`, or literal route objects passed directly to a `create*Router` call. A route's element must be a sole component imported through a named relative import whose module file is exactly one screen file. Two gestures then become navigation:
+
+- A menu item's `command={() => navigate('/literal')}` becomes `item <name> navigate to <Screen>`.
+- A `CommandDialog onSuccess={() => navigate('/literal')}` becomes `navigate to <Screen>` under that command's action. Dialogs exposing the same command must agree on the destination; a conflict is reported, not combined.
+
+`navigate` must come from `const navigate = useNavigate()` in the same component body, and only absolute, quoted literal paths match. A required route parameter such as `:id` supplied by `/authors/42` becomes `parameter id from literal "42"`. A destination in another slice is qualified like other cross-slice references. Computed paths, unresolved routes and other navigation are not inferred; write them by hand and expect a regeneration to leave them out.
+
+Requires Arc.Screenplay 22.96.0 or later for navigation from route tables; older releases write no `navigate to` and report an unread success callback as `SP0028`.
+
+### Denial specifications
+
+An unconditional `result.ShouldNotBeAuthorized()` on a scenario's command result becomes `then denied` only when the command has an emitted `authorize` gate with exactly recovered roles or policies (or the standard authentication-only gate), the scenario has an exactly recovered `given caller`, the generator's reference-runner probe denies that caller, and no other outcome is asserted (`ShouldNotBeSuccessful()` may accompany it). No `then no events` is written beside it. Otherwise the scenario is withheld and `SP0039` names why: caller or policy not recovered exactly, the caller satisfies the authorization, the denial cannot be decided from the caller, denial combined with another outcome, no stated policy explains it, or the command's own code can return a denial.
+
+Requires Arc.Screenplay 22.98.0 or later for `then denied`; older releases withhold every denial specification with `SP0039`.
+
+### Literal-case tables
+
+When body-less concrete specification classes pass literal values to the primary constructor of one abstract scenario (`class Ada() : Registering("Ada")`), the generator states the scenario once with typed `parameter` lines and one `case` row per class. It folds the rows only when substituting each row's values into the base reproduces that row's steps, outcomes and caller exactly; textual similarity is not enough. Otherwise every row is stated individually and Information `SP0076` names why.
+
+Requires Arc.Screenplay 22.99.0 or later for case tables; older releases state every row individually.
 
 ## Diagnostics are the loss list
 - Families: `SP####` (Arc), `MARTEN####`, `WOLVERINE####`, `VOG####`, `GEN####`,
@@ -110,14 +138,15 @@ The expanded Arc recovery surface includes:
 - Event scenarios as `when append`, and event-source-faithful `for` fixtures.
   Scenarios whose sources cannot be stated faithfully are omitted with SP0039;
   record the omission as a loss, never fabricate identities to retain a scenario.
-- Supported generated UUID command values and scalar/record responses by default,
-  without the authoring-only flag, for commands without successful scenarios.
-  Commands with successful scenarios retain the legacy representation until
-  deterministic generation fixtures and response expectations can be recovered.
+- Supported generated values (Arc.Screenplay 22.78.0 or later; non-UUID-v4 strategies 22.86.0 or later) and scalar/record
+  responses by default, without
+  the authoring-only flag. The older bundled adapter retains legacy representation
+  for commands with successful scenarios. Arc recovers generated Handle
+  parameters with concrete pins, but local `New()` values still have no pin seam;
+  [recovery forms, version gate and loss inventory](generated-recovery.md).
   Unsupported shapes/pre-generation protection remain code with SP0052.
 
-Generated values/responses select ESM v7. The historical CLI 3.41.0 check
-admitted v7 to planning, but Stage 4.51.3 refused those members with STAGE-ESM-028/029. CLI#261 is closed; do not say
+Generated values/responses select ESM v7. An older renderer refused those members with STAGE-ESM-028/029; do not say
 the compiler or CLI version gate universally refuses v7. Above v7 remains
 CLI-RENDER-004. A generated source model is evidence, not guaranteed render output.
 
@@ -125,14 +154,15 @@ Handler/reaction bodies, unresolved conditions and unproven origins still need
 source review. Do not infer generation/evolution/absence-assertion coverage from
 a package upgrade; read diagnostics and reconcile each recovered scenario.
 
-## Arc 22.76.0 enum and response recovery
+## Enum and response recovery
 
-Source-verified at Arc `v22.76.0:Source/DotNET/Screenplay/Emission/Concepts/ConceptSyntaxBuilder.cs`,
+Requires Arc.Screenplay 22.76.0 or later for enum and response recovery.
+
+Source-verified at Arc `Source/DotNET/Screenplay/Emission/Concepts/ConceptSyntaxBuilder.cs`,
 `Analysis/Types/{ConceptRegistry,FlagsEnumUses}.cs`, `Analysis/EnumConstants.cs`,
 `Analysis/Specifications/SpecificationReturnValues.cs`, and
-`Documentation/backend/csharp/generating-a-screenplay.md`. Arc 22.76.0 takes
-Screenplay 4.139.0, not 4.141.0. The CLI bundles an older generator; see the
-central toolchain `references/versions.md` rather than assuming parity.
+`Documentation/backend/csharp/generating-a-screenplay.md`. The CLI bundles an older generator; see the
+toolchain `SKILL.md` (installed versions) rather than assuming parity.
 
 Every enum member now emits its stored integer, including positional members.
 Sparse, negative and reordered values preserve identity when representable as int32
@@ -144,7 +174,9 @@ used by scenario constant resolution is kept. SP0067 reports `[Flags]` enums wit
 unnamed combinations and names the property uses; named members still emit, but
 unnamed combinations cannot become scenario values. Read every warning as a loss.
 
-Since 22.75.2, `result!` and `in` arguments remain reads for recovered `then returns`.
+`result!` and `in` arguments remain reads for recovered `then returns`.
+
+Requires Arc.Screenplay 22.75.2 or later for the read-versus-write classification of `result!`, `in` arguments and aliases of the result.
 Writes through any member/element of the executed result (assignment, increment,
 decrement, `ref`/`out`, including null-conditional chains) or aliases of the result
 or non-string reference values reached through it withhold the response assertion.
@@ -153,7 +185,11 @@ returned/yielded/lambda values and conditional/coalescing/tuple/collection flows
 Mutation through ordinary method calls is not analyzed. Inspect reported scenarios;
 never infer a response contract from a post-execution mutation.
 
-## Arc 22.70.0 compliance recovery
+## Compliance recovery
+
+Requires Arc.Screenplay 22.61.0 or later for `secret` recovery and the SP0058 and SP0059 diagnostics; before it, an operational secret concept is not recovered as `secret`.
+
+Requires Arc.Screenplay 22.70.0 or later for scope handling (SP0061), member `[PII]` recovery and the SP0062 and SP0063 diagnostics.
 
 A concept with both `[Encrypted]` and `[NotAudited]` becomes `secret`.
 Encryption or audit suppression alone, or only on a member, does not establish
@@ -166,9 +202,9 @@ without adding `secret`; an existing `pii` classification remains.
   `namespace` scope: the document instead implies Subject scope. Global behaves
   the same way. Set `ScreenplayOptions.AuthoringOnlyConstructs = true` (CLI
   adapter option `--authoring-only-constructs`) to emit `secret scope namespace`
-  or `secret scope global` in the concept body. This was syntax-only on that
-  compiler; standalone 4.142.0 admits concept compliance as ESM v13 (since 4.141.0).
-  That upgrade does not change the older generator or CLI bundle.
+  or `secret scope global` in the concept body. This is syntax-only on that
+  compiler; Screenplay admits concept compliance as ESM v13, and that
+  does not change an older generator or CLI bundle.
 - A concept also marked `[PII]` becomes `pii secret`, with no emitted scope:
   the C# providers render only `[PII]`; Chronicle rejects `[PII]` combined with
   `[Encrypted]`. Do not add a scope the provider ignores.

@@ -19,10 +19,10 @@ speaks in them; never model board mechanics (lanes, node ids, positions).
 | Chapter / workflow | `feature` | feature folder | vertical slices |
 | Slice | `slice` (one behaviour, not one artifact of each kind) | vertical slice folder | vertical slices |
 | Scenario (Given/When/Then) | `specification` | generated spec class `when_<spec_name>` (Debug) or hand-written C# specs | `cratis-screenplay-specifications`; C# spec skills |
-| Storyline (ordered beats) | a **family** of specifications sharing example data, each one transition (no storyline syntax at Screenplay 4.139.0) | several spec classes | specifications |
+| Storyline (ordered beats) | a **family** of specifications sharing example data, each one transition (no storyline syntax) | several spec classes | specifications |
 | Field validation | concept `validate` (every use) / command `validate`, `require` | `ConceptValidator<T>` / `CommandValidator<T>` | command validation |
 | Role permission ("Cannot") | `policy` + `authorize` + `then denied` spec; ownership via `claim ... matches subject` | `[Authorize(Policy)]`, generated policies | authorization |
-| Precondition on stream state | `reads` + `require` as stated intent, not enforced at Screenplay 4.139.0 (target: Arc `[ProtectedDecision]` + `DecisionRead<T>`, or Chronicle DCB; APIs available to gap-fill in the Arc and Chronicle the Stage 4.73.1 scaffold pins, not emitted protection) | decision over a guarded read | command validation |
+| Precondition on stream state | `reads` + `require` as stated intent, not enforced (target: Arc `[ProtectedDecision]` + `DecisionRead<T>`, or Chronicle DCB; APIs available to gap-fill in the Arc and Chronicle the Stage scaffold pins, not emitted protection) | decision over a guarded read | command validation |
 | Generated id (`derived:uuid4()`) | `generated` (authorable, not executable) | id supplied before `Handle()` | commands |
 | External system / outbound call | `Translate` slice (inbound); `system`/`operation` (authorable, not executable) or Automation (outbound) | `ICommandOperation` / reactor | operations, reactors |
 | HTML mockup | `screen` Level 1 + board (`visualize-model`) | default Scene composition | ui composition |
@@ -43,7 +43,7 @@ Screenplay meaning, and when you meet the older usage, translate it and say so.
 - Screenplay **`reaction`**: the construct that models it (`when` trigger, optional `where`,
   `invokes` a command or `produces` events).
 - Chronicle **reactor**: C# observer, usually for side effects; it does not by itself define
-  business decisions. Stage 4.89.1 renders supported event-triggered Automation as Chronicle reactors.
+  business decisions. Stage renders supported event-triggered Automation as Chronicle reactors.
   Translate/captures and refused reactions remain gap-fill. Mixed events and commands
   in one handler remain `STAGE-ESM-037`: Arc supports the return shape, but redelivery
   after a failed command duplicates events. Keep the reaction whole and prove retry safety.

@@ -1,4 +1,9 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-event-modeling/references/file-layout.md -->
+## Contents
+
+- Choose a file layout
+- Locate the model
+
 ## Choose a file layout
 
 Treat the model folder as one application and choose the coarsest layout
@@ -88,3 +93,17 @@ file is kept, and some order carries meaning: `authorize` gates and policy
 operands evaluate left to right, and specification events compare in authored
 order unless `then events in any order` is stated. Never encode meaning in the
 order of modules, features or slices.
+
+## Locate the model
+
+Look first for the project's existing `.play` files: the folder holding them is the
+model. A new model goes under the repository's `Source/` or `src/` folder, else in a
+`Screenplay/` folder at the repository root; never under `.cratis/`, which holds
+configuration and the shared AI corpus only. This is the
+conventional home for consumer-owned `.play` source; do not invent another
+location or search the whole repository before checking it.
+
+`cratis ai install` manages `.cratis/ai/`, never model files. Never
+hand-copy Screenplay source between repositories. Keep Markdown that explains,
+questions or navigates the model in the repository's documentation; the `.play`
+source is the single flow model.

@@ -1,20 +1,20 @@
 ---
 name: cratis-arc-query-paging
-description: Add server-side paging and sorting to a Cratis Arc read-model query — which return shapes Arc pages, the exact query-string keys, sorting pitfalls per storage provider, and the paged frontend hooks. Use when a list query can grow large enough that returning every row is wasteful, or needs server-side sorting. Do not use for general query creation or as a performance review.
+description: Add server-side paging and sorting to a Cratis Arc read-model query — which return shapes Arc pages, what a query author must not write (Skip, Take, OrderBy), how MongoDB pages and sorts without LINQ, the exact query-string keys, sorting pitfalls per storage provider, and the paged frontend hooks. Use when a list query can grow large enough that returning every row is wasteful, or needs server-side sorting, or a paged query fails with `Expression not supported`. Do not use for general query creation or as a performance review.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-query-paging/SKILL.md -->
 
 # Page and sort an Arc query
 
-Arc applies paging and sorting for you. You never write `Skip`/`Take` or read
-the query string — you choose a **return shape** that the framework can narrow.
+Arc applies paging and sorting for you. **A query never pages or sorts itself:**
+it does not write `Skip`, `Take`, `Limit` or `OrderBy` to serve `page`, `pageSize`
+or `sortby`, and it does not read the query string. It chooses a **return shape**
+Arc can narrow and, for MongoDB, builds that shape with the native driver API (see
+the MongoDB rule) rather than LINQ.
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD` lists a `.play` file there, narrowed to `-- <root>` when a root is configured), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code
@@ -23,17 +23,14 @@ the query string — you choose a **return shape** that the framework can narrow
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Arc.Core` | `22.75.0` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo` |
-| `Cratis.Arc.MongoDB` | `22.75.0` | `Observe` helpers that page at the source |
-| `Cratis.Arc.EntityFrameworkCore` | `22.75.0` | `DbSet<T>` observe helpers that page at the source |
-| `@cratis/arc.react` | `22.75.0` | `useWithPaging`, `useSuspenseWithPaging` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Arc.Core` | `QueryableQueryRenderer`, `Paging`, `Sorting`, `PagingInfo`, `IQueryContextManager` |
+| `Cratis.Arc.MongoDB` | `Observe` helpers that page and sort at the source with native `Find` |
+| `Cratis.Arc.EntityFrameworkCore` | `DbSet<T>` observe helpers that page at the source |
+| `@cratis/arc.react` | `useWithPaging`, `useSuspenseWithPaging` |
 
-> Rechecked at Arc v22.75.0: request parsing, paging validation and storage
-> observation contracts. Do not transfer a provider's ordering guarantee to another.
-
-Reverify before claiming support for another version. A small, bounded result
+Do not transfer a provider's ordering guarantee to another. A small, bounded result
 set does not need any of this — `IEnumerable<T>` is fine.
 
 ## The wire contract
@@ -53,9 +50,9 @@ Two consequences that surprise people:
 
 GET paging/sorting keys are matched case-insensitively. `QueryPipeline.ValidatePaging`
 runs the page validators whenever `paging.IsPaged`: negative page and zero or
-negative size fail validation. This was already true at 22.16.0. A missing sort
+negative size fail validation. This was already true. A missing sort
 direction parses as ascending, but GET sorting still needs both nonempty keys.
-Sources at Arc v22.75.0: `Arc.Core/Queries/QueryStringQueryRequestReader.cs`,
+Sources: `Arc.Core/Queries/QueryStringQueryRequestReader.cs`,
 `SortDirections.cs` and `QueryPipeline.cs` under `Source/DotNET`.
 
 ## Which return shapes page
@@ -65,38 +62,57 @@ return type.
 
 | Return | Paged? | How |
 | --- | --- | --- |
-| `T`, `T?`, `IEnumerable<T>`, `List<T>`, `T[]` | No | Nothing narrows the result |
-| `IQueryable<T>` | **Yes** | The query renderer counts, orders, then applies `Skip`/`Take` |
+| `T`, `T?`, `IEnumerable<T>`, `List<T>`, `T[]` | No | Nothing narrows the result. `Find(...).ToListAsync()` lands here |
+| `IQueryable<T>` | **Yes** | The query renderer counts, orders, then applies `Skip`/`Take` through LINQ |
 | `Task<IQueryable<T>>` | **Yes** | Awaited first, then rendered as the queryable it unwraps to |
-| `ISubject<IEnumerable<T>>` | **Yes, with a paging-aware storage helper** | Not by the renderer — the helper reads the ambient query context; a custom subject does not page automatically |
+| `ISubject<IEnumerable<T>>` from `collection.Observe(...)` | **Yes, at the source** | `Observe` reads the ambient query context and applies sort, `Skip` and `Limit` to a native `Find`, and counts with `CountDocumentsAsync` |
+| `ISubject<IEnumerable<T>>` you build yourself | **No** | The helper does the paging, not the renderer; a custom subject does not page automatically |
 | `ISubject<IQueryable<T>>` | **No** | No `Observe` overload returns it, and the renderer matches on the outer type |
 
 There is exactly one query renderer, and it is for `IQueryable`. Everything else
 that pages does so inside its storage provider.
 
+### MongoDB: page without LINQ
+
+The house preference for MongoDB is the native driver API, not `AsQueryable()`.
+The `IQueryable` shape is rendered with LINQ, so MongoDB translates the
+renderer's `Skip`/`Take` and the sort the client asked for, and any expression the
+translator cannot handle fails at request time as HTTP 500 with
+`Expression not supported`. A native `Find` has no translation step, so nothing
+can fail there.
+
+For a paged MongoDB list, return what `Observe` returns and pass a
+`FilterDefinition<T>`. Do not add paging or ordering:
+
 ```csharp
 [ReadModel]
 public record <ReadModel>(<...>)
 {
-    public static IQueryable<<ReadModel>> All(<Collection> collection) =>
-        collection.AsQueryable();
+    // Everything; Arc applies the client's sort, page and size.
+    public static ISubject<IEnumerable<<ReadModel>>> All(IMongoCollection<<ReadModel>> collection) =>
+        collection.Observe();
 
-    // Filter before returning; Arc pages on top of the filtered queryable.
-    public static IQueryable<<ReadModel>> Active(<Collection> collection) =>
-        collection.AsQueryable().Where(_ => !_.<IsArchived>);
-
-    // A default order so paging is stable when the caller sends no sortby.
-    public static IQueryable<<ReadModel>> AllByName(<Collection> collection) =>
-        collection.AsQueryable().OrderBy(_ => _.<Name>);
+    // Narrow with a filter definition; Arc pages on top of the filtered set.
+    public static ISubject<IEnumerable<<ReadModel>>> Active(IMongoCollection<<ReadModel>> collection) =>
+        collection.Observe(Builders<<ReadModel>>.Filter.Eq(item => item.<IsArchived>, false));
 }
 ```
 
-For a live paged list, return what `Observe` returns:
+`Observe` is also what serves a one-shot request: a plain `GET` or `QUERY` on an
+observable query returns the current value, and the observable-query HTTP skill
+covers the wait and streaming forms. The frontend uses the observable query's
+`useWithPaging`, which has no `perform`.
 
-```csharp
-public static ISubject<IEnumerable<<ReadModel>>> AllLive(<Collection> collection) =>
-    collection.Observe(item => !item.<IsArchived>);
-```
+`IQueryable<T>` stays the right shape for a LINQ-native provider such as Entity
+Framework Core. If a MongoDB query still returns `IQueryable<T>`, treat it as a
+known translation risk and move it to `Observe`.
+
+⚠️ **`Expression not supported ... Skip(0).Take(30).Cast()` on a paged MongoDB
+query.** Arc up to 22.50.5 appended LINQ `Cast<object>()` to the paged queryable
+while running read-model interceptors, and MongoDB cannot translate it, so every
+paged `IQueryable` request on MongoDB returned HTTP 500 whatever the query
+looked like. Arc 22.50.6 enumerates before casting. Upgrade first; the guidance
+above is what keeps the next unsupported expression from reaching the translator.
 
 `ARC0001` is an **error** when a query method's return type is none of the
 allowed shapes for its read model, and `ARC0014` is an error when a
@@ -104,7 +120,7 @@ query-shaped method on a read model is generic — a generic method is registere
 and routed but can never be invoked, because there is nothing to close its type
 parameters with.
 
-At v22.75.0, paged MongoDB observations re-read the page and total on each
+Paged MongoDB observations re-read the page and total on each
 change; unpaged observations retain incremental membership. The watch does not
 always fetch the whole collection. MongoDB observation breaks sort ties on `_id`
 and orders unsorted pages on `_id`. See the read-model skill's [versioned query-cost guidance](../cratis-chronicle-read-model/references/queries.md#cost-and-composition).
@@ -113,7 +129,10 @@ and orders unsorted pages on `_id`. See the read-model skill's [versioned query-
 
 - Do not `.ToList()` before returning an `IQueryable<T>` — that defeats
   `Skip`/`Take`.
-- Do not hard-code `Take(n)`; it fights `pageSize`.
+- Do not hard-code `Take(n)`, `Skip(n)` or `Limit(n)`; it fights `pageSize`.
+- Do not apply `OrderBy`/`ThenBy`/`Sort` to serve client-controlled sorting. On
+  `IQueryable<T>` the renderer applies the client's `OrderBy` after your query;
+  on `Observe` the helper applies the sort.
 - ⚠️ `(await ...).AsQueryable()` **pages correctly and costs everything.**
   LINQ-to-objects honours `Skip`/`Take`, so the rows are right and the whole set
   was read to produce them. Nothing in the build or the specs will tell you.
@@ -124,25 +143,37 @@ a second round trip to the store per query.
 
 ## Sorting behaves differently per shape
 
-⚠️ This is the sharpest edge here.
+⚠️ This is the sharpest edge here. The client's `sortby`/`sortDirection` is the
+only sort Arc applies; the query does not supply one.
 
-- For `IQueryable<T>`, the sort field is resolved with `ElementType.GetProperty(field)`
-  and the result is dereferenced without a guard. **An unknown `sortby` is a
-  server error (HTTP 500), not an ignored parameter.** Validate or constrain the
-  field before it reaches the query if callers can choose it.
-- The MongoDB and Entity Framework Core observe paths deliberately **degrade**:
-  an unknown sort field leaves the result unsorted rather than failing.
+- **MongoDB `Observe`.** The sort field is looked up in the document's BSON class
+  map by member name and applied by its **BSON element name**, so concept-typed
+  members sort by the stored value and renamed elements work. An unknown field
+  degrades to unsorted rather than failing. Ties break on `_id` ascending, and a
+  paged request with no sort is ordered by `_id`, so page boundaries are stable
+  without a default order.
+- **`IQueryable<T>`.** The sort field is resolved with
+  `ElementType.GetProperty(field)` and dereferenced without a guard. **An unknown
+  `sortby` is a server error (HTTP 500), not an ignored parameter.** Constrain the
+  field if callers can choose it. The renderer applies the client's sort with
+  `Queryable.OrderBy`, which starts a new primary ordering rather than a
+  `ThenBy`, so an order you wrote is not combined with it. The Entity
+  Framework Core observe path degrades like MongoDB.
+- **No server-side default order.** No `Observe` overload takes a sort, and a
+  paged request without `sortby` is ordered by `_id`. Do not add an `OrderBy` to
+  fake one. If a screen needs a meaningful initial order, pass it from the
+  frontend as the initial `sorting` argument to `useWithPaging(pageSize, args,
+  sorting)`; otherwise the order is `_id`.
 
-Because `sortby` is PascalCased, the client sends the camelCase property name
-the generated proxy uses and the server resolves the CLR property.
+`sortby` is PascalCased on the server, so the client sends the camelCase
+property name the generated proxy uses and the server resolves the CLR property.
+Generated proxies provide field-named sort helpers.
 
-Give any list with a natural order a default `OrderBy`; do not generalize the
-MongoDB observation tie-break to every `IQueryable` provider. Generated proxies
-provide field-named sort helpers. For composed MongoDB/EF observations, pass
-`ignoreQueryContext: true` to auxiliary sources so only the primary consumes
-client paging/sorting and writes totals. Single-instance observations emit
-`default` when absent/deleted/outside the filter; guard `hasData`/`isReady` in React.
-Source: [Arc v22.75.0 MongoDB observations](https://github.com/Cratis/Arc/blob/v22.75.0/Documentation/backend/csharp/mongodb/observing-collections.md).
+For composed MongoDB/EF observations, pass `ignoreQueryContext: true` to
+auxiliary sources so only the primary consumes client paging/sorting and writes
+totals. Single-instance observations emit `default` when absent, deleted or
+outside the filter; guard `hasData`/`isReady` in React.
+Source: [MongoDB observations](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/mongodb/observing-collections.md).
 
 ## Consume it from the frontend
 
@@ -170,8 +201,8 @@ result is not paged.
 
 ## Specify the data contract, not the paging
 
-Paging is the framework's responsibility. A specification should pin which rows
-the query selects and in what order.
+Paging and sorting are the framework's responsibility. A specification should pin
+which rows the query selects, not the page window or the client's order.
 
 ⚠️ A query method that takes a storage collection type cannot be reached from a
 read-model scenario: the scenario materializes read models in memory and has no
@@ -181,11 +212,13 @@ pinning, keep it in a method a specification can supply arguments to.
 
 ## Verify
 
-- The query returns `IQueryable<T>` / `Task<IQueryable<T>>` for one-shot paging,
-  or `ISubject<IEnumerable<T>>` for a live paged list — never
-  `ISubject<IQueryable<T>>`.
+- A MongoDB list returns `collection.Observe(<FilterDefinition>)`, not
+  `AsQueryable()`; a LINQ-native provider returns `IQueryable<T>` /
+  `Task<IQueryable<T>>`. Never `ISubject<IQueryable<T>>`.
+- The query contains no `Skip`, `Take`, `Limit`, `OrderBy` or `Sort` serving the
+  client's page or sort.
 - Nothing materializes the set before returning it.
-- A meaningful default order exists wherever the data has one.
+- Any default order a screen needs is the frontend's initial `sorting`, not a server `OrderBy`.
 - A caller-supplied `sortby` cannot reach an `IQueryable<T>` query as an unknown
   field.
 - The frontend destructures the tuple shape that matches the query kind.

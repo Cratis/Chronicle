@@ -231,6 +231,8 @@ export default function (pi: ExtensionAPI) {
 		if (!filePath) return;
 		if (!isInstalled(guardWrites)) return; // no guard installed in this repository - nothing to enforce
 		const payload = { cwd: ctx.cwd, tool_input: { file_path: filePath, content, new_string: newString } };
+		// The shared script resolves the write target's Git origin and allowDependencyManifestWrites setting;
+		// keep manifest defaults and generated/.env protection identical to Claude Code.
 		return runBlockingGuard(guardWrites, "cratis-guard-writes", "write", payload, ctx, "write guards");
 	});
 
