@@ -6,6 +6,8 @@
   href: dcb-examples.mdx
 - name: Choosing how a rule holds
   href: choosing.mdx
+- name: Costs and limits
+  href: limits.mdx
 - name: Scenarios
   href: scenarios.mdx
 - name: How guards are derived

@@ -1,0 +1,92 @@
+---
+title: Costs and limits
+description: What a decision read costs, with measured numbers and their environment, and where an append condition does not apply, so you can judge a rule before you rely on it.
+---
+
+Use this page to judge whether a guarded rule is worth its cost and to find what stays outside it. The mechanisms are in [Choosing how a rule holds](./choosing.mdx). Each limit below is stated where it applies.
+
+## What a decision read costs
+
+A decision read does not use the stored read model. For each attempt the client:
+
+1. Asks the kernel for the log's tail and for the tail of the key's model event types, in parallel.
+2. Folds the key's events in a fresh session and starts a session cleanup request without waiting for it.
+3. Retries, up to three attempts in total, if the fold stopped short of the second tail or ran past the first.
+
+The first read of each model type in a process makes two more calls to list definitions. At commit the kernel runs one filtered tail query for each guarded key, in parallel. An append with no guard of your own still gets the default optimistic check: the client reads a tail when the append is made (the first append into a scope is unchecked unless configured otherwise) and the kernel validates it at commit. That protects only the short window between that read and the commit, not the decision you made earlier.
+
+| Mechanism | Round trips | Work per read | Grows with |
+|---|---|---|---|
+| Constraint | None extra | An index lookup inside the append | Not expected to grow with history |
+| Explicit scope | One tail call to capture the position | One filtered tail query at commit | Not measured |
+| Materialized plain read | 1 | Reads the stored instance | Nothing |
+| Passive plain read | 1 | The first read folds the key's history. Later reads apply newer events while the kernel keeps the instance in memory | History, on first read |
+| Decision read | About 4 per attempt, up to 3 attempts, plus 2 on first use of a type | Folds the key's whole history of the model's event types, every time | History times reads |
+
+A decision read is linear in the key's history and nothing caches it. Reads of one model type are expected to queue behind each other in the kernel, across keys. That has not been measured.
+
+### Measured numbers
+
+One run, on a loaded machine, so read the ratios and not the milliseconds.
+
+| Operation (median ms) | 10 events on the key | 100 events on the key |
+|---|---|---|
+| Materialized `GetInstanceById` | 2.1 | 5.3 |
+| Passive, instance already in memory | 3.7 | 8.7 |
+| Passive, fresh fold | 8.1 | 13.9 |
+| **Decision read (`GetDetached`)** | **12.7** | **22.6** |
+| Tail call, then fetch the key's events and fold them yourself | 5.3 | 19.2 |
+
+- **Environment:** the `cratis/chronicle:19.54.0-development` container with the `Cratis.Chronicle` 19.54.0 client, on an Apple M4 Pro with 12 cores and a load average of 80 to 100. The log held 20 other event sources with 500 events each. Each cell is the median of 20 samples. It is one run, and it was not repeated on later versions.
+- **Result:** a decision read took about 1.6 times a fresh passive fold and 4 to 6 times a materialized read. It added roughly 10 to 20 ms over a materialized read.
+- **Guarded append:** the extra cost of the guarded commit was lost in the noise. A read plus guarded append totalled 31.7 ms at 10 events and 19.9 ms at 100 events. The drop is noise, not a trend.
+- **Not measured:** 1,000 and 10,000 events on the key, concurrent writers, the SQL storage provider, and the kernel queueing described above. The cost at those sizes follows the measured growth from 10 to 100 events (the decision read roughly doubled for ten times the events) and the linear fold. Measure your own model before you rely on it.
+
+## What is outside the guard
+
+An append condition compares the events appended after a position with a filter. It says nothing about changes that are not appended events matching that filter.
+
+- **Revisions and redactions.** Revising or redacting an earlier event does not advance the position. A decision made before the change can still commit. Constraints do not check history mutation either. An atomic check for this is not available today.
+- **Other event sequences.** A decision read and its guard apply to the event log. One unit of work cannot span event sequences.
+- **Data outside the event log.** Nothing in the log can invalidate a value that lives elsewhere, such as an external service, a clock or another store. Record the fact as an event first.
+- **Advisory reads.** A plain read, or a read under an `Advisory` allowance, guards nothing. A `[Unprotected]` read in Arc is the same.
+- **Writers that decide without a guard.** A guard detects a matching event whoever appended it. It protects only the decisions that carry it.
+
+A conflict report names the read model and the key that changed. It does not name the event that changed it.
+
+In a host that uses [read protection](../read-models/read-protection.mdx), the frame belongs to one unit of work and follows one asynchronous flow. Enrollment on another unit inside it is refused with `ReadProtectionUnitMismatch`.
+
+## Where a guard does not apply
+
+"Silent" means the rule can fail with no error and no failed result.
+
+| Situation | What happens | Silent or loud | What to do |
+|---|---|---|---|
+| You ignore the `AppendResult` | A constraint or concurrency rejection is a result, not an exception. The write is lost | Silent | Always check `IsSuccess`, then the specific violations |
+| You commit the request's unit of work after the response | The ASP.NET Core middleware commits after the action returns. It does not report a concurrency conflict to the caller | Silent to the caller | Call `IUnitOfWorkCompletionFeature.CommitAsync()` before you respond |
+| You take a decision read through the unit of work, then call plain `eventLog.Append` | The append is immediate and takes no part in the unit of work, so the guard never applies | Silent | Stage with `eventLog.Transactional.Append`, or use `GetDetached` with `AppendMany(guardedBy:)` |
+| A scope has no sequence number and no `ExpectingNoMatchingEvent()` | The kernel skips it | Silent. `ConcurrencyCheckPerformed` is `false` | Build scopes with a position, and assert `ConcurrencyCheckPerformed` in tests |
+| You capture the tail after you read the facts | Events appended in between are not guarded | Silent | Capture the tail first, or use a decision read |
+| The first append into a scope | Not checked by default, so two concurrent creators both pass | Silent | Use a constraint, `ExpectingNoMatchingEvent()`, or a decision read: it guards an absent model too. See [the first append](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default) |
+| You use a plain read for the decision | It guards nothing | Silent | See the table above |
+| The decision-read model has no `Id` property, or its shape is refused | `DecisionReadRefused`, with a reason | Loud | Fix the model. Check with `Admit<T>()` in a test |
+| The read model is keyed on a different event source than the one where the facts are written | The model is empty or partial, and the guard watches the wrong source | Silent | Append every fact the rule needs on the source you read |
+| New keys can join the set the rule counts over | A key nobody read is in nobody's guard | Silent | Model the rule on one key that carries the facts |
+| Revise, redact, a migration, another event sequence, or a projection definition changed elsewhere | A decision read does not detect them. A revision or redaction does not advance the log position that the guard compares | Silent | Pause the affected command producers and let in-flight decisions finish before you revise or redact, then resume with fresh reads. See [Concurrency](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions) |
+| A writer decides on the same rule without a guard | A guard detects its event whoever wrote it, but the unguarded writer's own decision is not protected and can break the rule | Silent | Guard every writer that decides on the rule, or use a constraint, which the kernel checks for every append |
+| A conflict | The append is rejected and nothing is written. Chronicle does not retry | Loud | Read again and resubmit |
+| A constraint's claim cannot be recorded after the event is durable | The event stays. A later duplicate can pass until you reindex the constraint | Silent, logged | Watch for the logged failure, and reindex |
+| A constraint across namespaces or event sequences | Constraints do not span them | Silent | Design the unique value per namespace |
+| Non-.NET writers append GUID event source IDs in another casing or format | The decision read's key no longer matches | Silent | Use lowercase canonical form in every writer |
+| A long or hot key | Reads get slower and conflicts more likely. Results are not wrong | Slow | Shorten the key's history |
+| A repair reactor triggers an irreversible side effect | A compensating event cannot undo it | Silent | Repair with events only, and make the repair safe to run twice |
+| Your tests never interleave a competing append | The race is never exercised | Silent | Append a competing event between the read and the guarded append, and assert the conflict. For Arc commands see the [pitfalls](/arc/backend/csharp/chronicle/consistency/pitfalls/) |
+
+For the retry inside the kernel after a duplicate sequence number: the kernel renumbers the append and validates concurrency scopes again before it retries, so decision-read guards keep working. It does not run constraints again on that path.
+
+## Next steps
+
+- [Choosing how a rule holds](./choosing.mdx)
+- [Scenarios](./scenarios.mdx)
+- [Decision reads](../read-models/decision-reads.mdx#limits-and-assumptions): the assumptions behind the guard.
+- [Concurrency](../events/concurrency.mdx)

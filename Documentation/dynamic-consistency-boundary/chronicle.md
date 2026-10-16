@@ -32,7 +32,10 @@ A fact about two entities is therefore written as two events, one per event sour
 | Append condition | `guardedBy:` on `AppendMany`, decision reads enrolled in a unit of work, or `concurrencyScopes:` and `concurrencyScope:` |
 | Atomic append across entities | `AppendMany` is all-or-nothing across event sources. A unit of work commits as one `AppendMany` |
 | Guarding a key that the decision only reads | A decision read's guard can sit on an event source that the append does not write to |
-| A small, non-greedy decision model | One decision read per concern, narrowed to one stream when the rule is about one stream. See [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx) |
+| A tag that plays the role of a stream | The event stream type and event stream ID of a stream an [event source definition](../event-sources/dcb.mdx) declares |
+| A boundary as wide as a stream | The dimensions a definition declares. Any event type in the range counts |
+| One event with several tags | Not available. One value per dimension, so one event source and one stream per event |
+| A small, non-greedy decision model | One decision read per concern, narrowed to one stream when the rule is about one stream, or a [per-stream read model](../read-models/per-stream.mdx) that always folds one stream |
 | A globally unique value | A [constraint](../constraints/index.md) |
 
 ## What DCB can do that Chronicle cannot
@@ -81,18 +84,16 @@ flowchart LR
 
 The kernel evaluates constraints first and then every scope, and writes nothing if either fails. Read models update afterwards, so a read after the append can still show old state for a moment.
 
-## History mutation is outside the guarantee
+## History mutation is outside the guard
 
-Append conditions, including guards derived from decision reads, compare appended events against a position. A revision or redaction of an earlier event does not advance that boundary, so a decision made before the mutation can still commit. Constraints do not supply a history-mutation guard either.
-
-Pause affected command producers and drain in-flight decisions before revising or redacting history, then resume with fresh reads. See the [contract and operational guidance](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions). An atomic mutation-epoch check is not available today.
+A revision or redaction of an earlier event does not advance the position that an append condition compares, so a decision made before the mutation can still commit. [Costs and limits](./limits.mdx#what-is-outside-the-guard) lists this and the other limits, and the [operational guidance](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions) says how to revise safely.
 
 ## What Chronicle adds
 
 - **Constraints.** The kernel enforces unique values, one event of a type per event source, and closed streams, for every writer, without a read. See [Constraints](../constraints/index.md).
 - **Event source definitions.** A typed declaration of an event source and its streams, with the concurrency dimensions each stream is guarded by. See [Event sources and streams](../event-sources/index.mdx).
 - **Closed streams.** A stream can be ended so no later append can invalidate a decision about it. See [Closing streams](../closing-streams/index.mdx).
-- **Admission checks.** A decision read refuses a model it cannot guard exactly, such as a join, a child collection or a reducer with filters or constructor dependencies, with a typed reason. It also checks that its fold reached the events it expected and retries up to three attempts.
+- **Admission checks.** A decision read refuses a model it cannot guard exactly, such as a join, a child collection or a classic reducer with filters or constructor dependencies other than `ILogger<T>`, with a typed reason. A self-reducing read model is exempt from the dependency rule. It also checks that its fold reached the events it expected and retries up to three attempts.
 - **Owner-only commit.** A unit of work that enrolled a decision read can be committed or rolled back only by its owner, so application code cannot commit it half-guarded.
 - **Visible skipped checks.** `ConcurrencyCheckPerformed` on the append result says whether a scope was compared. A skipped check does not look like a passing one.
 - **Conflicts mapped to your model.** `GetDecisionConflicts` tells you which read model and key changed, without exposing positions.
@@ -113,7 +114,7 @@ See [Concurrency](../events/concurrency.mdx#formalized-metadata-tags-for-concurr
 
 ## Aggregate roots and Arc
 
-Chronicle has no aggregate root. If you prefer that style, Cratis Arc provides it on top of Chronicle and takes the position before the aggregate applies events. Arc also adds protected decisions, which take decision reads as command parameters. Read [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) and [Aggregate roots](/arc/backend/csharp/chronicle/aggregates/).
+Chronicle has no aggregate root. If you prefer that style, Cratis Arc provides it on top of Chronicle and takes the position before the aggregate applies events. Arc also adds read protection, whose On mode reads a command's read-model parameters as decision reads. Read [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) and [Aggregate roots](/arc/backend/csharp/chronicle/aggregates/).
 
 ## Example: a rule across two entities
 
@@ -122,11 +123,13 @@ The course subscription rule needs two decision reads and two events. [Scenarios
 ## Next steps
 
 - [Choosing how a rule holds](./choosing.mdx)
+- [Costs and limits](./limits.mdx)
 - [DCB examples in Chronicle](./dcb-examples.mdx)
 - [Scenarios](./scenarios.mdx)
 - [Questions and answers](./faq.md)
 - [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx)
 - [Decision reads](../read-models/decision-reads.mdx)
 - [Read protection](../read-models/read-protection.mdx)
+- [Read models scoped to one event stream](../read-models/per-stream.mdx)
 - [Concurrency](../events/concurrency.mdx)
 - [Appending with tags](../events/appending-with-tags.mdx)

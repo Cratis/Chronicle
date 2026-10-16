@@ -65,6 +65,9 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0055](CHR0055) | Unknown event stream on typed event-source filter | Error | `[FromEventSource<TSource>("stream")]` must name a stream the event source definition declares |
 | [CHR0056](CHR0056) | Explicit routing contradicts typed event-source filter | Error | `[EventSourceType]` or `[EventStreamType]` on the same type may only repeat what `[FromEventSource<TSource>]` already says |
 | [CHR0057](CHR0057) | An artifact must target one read model | Warning | A class implementing multiple closed projection or reducer interfaces fails during default artifact discovery; split it into one artifact per read model |
+| [CHR0062](CHR0062) | Concurrency applies across event sources | Info | A `Concurrency` declaration on a definition or stream that omits `EventSourceId` is a cross-source condition, not a guard for the state a command read |
+| [CHR0063](CHR0063) | Scope stream does not match append | Warning | A definition-linked scope guards a different stream than the single-route append it is passed to |
+| [CHR0064](CHR0064) | Invalid read model event stream | Error | A per-stream read model must name one declared stream, keep the event source ID as its key, and cannot be reducer-backed |
 
 ## Explicit registration evidence
 
