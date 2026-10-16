@@ -25,6 +25,7 @@ public class an_ensure_command : Specification
     protected IEventSequence _systemSequence;
     protected bool _initialized;
     protected EventStoreInitializer _initializer;
+    protected IEventStoreInitializer _initializerReference;
     IGrainFactory _grains;
     EnsureEventStore _command;
 
@@ -48,18 +49,16 @@ public class an_ensure_command : Specification
         _systemSequence.Append(Arg.Any<EventSourceId>(), Arg.Any<object>(), default, default, default, default, default, default, default)
             .Returns(AppendResult.Success(CorrelationId.NotSet, EventSequenceNumber.First));
         silo.AddService(_storage);
-        silo.AddService(_eventTypes);
-        silo.AddService(_reactors);
         silo.AddService(_projections);
-        silo.AddProbe<INamespaces>(_ => _namespaces);
         silo.AddProbe<IEventSequence>(_ => _systemSequence);
         _initializer = await silo.CreateGrainAsync<EventStoreInitializer>(_name.Value);
         _grains = Substitute.For<IGrainFactory>();
-        var initializer = Substitute.For<IEventStoreInitializer>();
-        initializer.Ensure().Returns(_ => _initializer.Ensure());
-        _grains.GetGrain<IEventStoreInitializer>(_name.Value).Returns(initializer);
+        _grains.GetGrain<INamespaces>(_name.Value).Returns(_namespaces);
+        _initializerReference = Substitute.For<IEventStoreInitializer>();
+        _initializerReference.Ensure().Returns(_ => _initializer.Ensure());
+        _grains.GetGrain<IEventStoreInitializer>(_name.Value).Returns(_initializerReference);
         _command = new(_name);
     }
 
-    protected Task Ensure() => _command.Handle(_grains);
+    protected Task Ensure() => _command.Handle(_grains, _storage, _eventTypes, _reactors);
 }

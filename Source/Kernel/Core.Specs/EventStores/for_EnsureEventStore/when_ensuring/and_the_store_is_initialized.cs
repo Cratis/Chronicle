@@ -9,6 +9,7 @@ public class and_the_store_is_initialized : given.an_ensure_command
 
     Task Because() => Ensure();
 
+    [Fact] void should_bypass_the_initializer() => _initializerReference.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_touch_kernel_projections() => _projections.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_repeat_store_added_notification() => _systemSequence.ReceivedCalls().ShouldBeEmpty();
     [Fact] async Task should_not_write_the_marker_again() => await _store.DidNotReceive().MarkInitialized();
