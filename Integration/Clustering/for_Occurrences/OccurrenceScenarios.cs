@@ -80,7 +80,8 @@ public static class OccurrenceScenarios
         completed.Epoch.ShouldEqual(entered.Lease.Epoch + 1);
         completed.Receipts.Count().ShouldEqual(1);
         signals.Effects(id).ShouldEqual(1);
-        (await survivor.Store.EventLog.GetFromSequenceNumber(Events.EventSequenceNumber.First, id)).Count.ShouldEqual(1);
+        var events = await survivor.Store.EventLog.GetFromSequenceNumber(Events.EventSequenceNumber.First, id);
+        Assert.True(events.Count == 1, $"Settlements: {signals.Settlements}. Events: {string.Join("; ", events.Select(e => $"{e.Context.SequenceNumber}:{e.Context.EventType.Id}:{e.Context.CorrelationId}:{e.Context.Occurred:O}"))}");
 
         // Restore the two-silo fixture before another scenario uses its second application host.
         if (fixture.HasTwoSilos)
