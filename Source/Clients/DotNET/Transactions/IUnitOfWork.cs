@@ -184,8 +184,8 @@ public interface IUnitOfWork : IDisposable
     /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
     void AddDecisionRead(IDecisionRead read) => throw new UnitOfWorkDecisionReadsNotSupported(GetType());
 
-    /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
-    /// <returns>Decision conflicts, if any.</returns>
+    /// <summary>Gets the decision conflicts that refused the commit.</summary>
+    /// <returns>Decision conflicts, if any, with the first conflicting event when the kernel reported it.</returns>
     IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
 
     /// <summary>
