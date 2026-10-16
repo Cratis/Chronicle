@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -32,6 +33,9 @@ public class a_closing_constraint_reindex_step : Specification
     protected ReindexConstraintsStepState _state;
     protected ReindexConstraintsStep _step;
     protected Catch<JobStepResult> _result;
+    protected IEventSequence _sequence;
+    protected readonly ConstraintIndexRebuildRunId _runId = new(Guid.NewGuid());
+    protected CancellationToken _cancellationToken;
 
     async Task Establish()
     {
@@ -40,7 +44,7 @@ public class a_closing_constraint_reindex_step : Specification
         _rows = new();
         _closures = Substitute.For<IClosedStreamsConstraintStorage>();
         _closures.GetForOwner(Arg.Any<ClosedStreamOwner>()).Returns(call => _rows.GetForOwner(call.Arg<ClosedStreamOwner>()));
-        _closures.RemoveAllFor(Arg.Any<ClosedStreamOwner>()).Returns(call => _rows.RemoveAllFor(call.Arg<ClosedStreamOwner>()));
+        _closures.Reopen(Arg.Any<ClosedStreamOwner>(), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>()).Returns(call => _rows.Reopen(call.Arg<ClosedStreamOwner>(), call.Arg<ClosedStreamScope>(), call.Arg<CancellationToken>()));
         _closures.Close(Arg.Any<ClosedStream>()).Returns(call => _rows.Close(call.Arg<ClosedStream>()));
 
         var storage = Substitute.For<IStorage>();
@@ -61,18 +65,20 @@ public class a_closing_constraint_reindex_step : Specification
         sequence.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: Arg.Any<CancellationToken>()).Returns(_ => new EventCursor(_events));
 
         var silo = new TestKitSilo();
+        _sequence = Substitute.For<IEventSequence>();
+        silo.AddProbe(_ => _sequence);
         silo.AddService(storage);
         silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
         silo.AddService(Substitute.For<IExpandoObjectConverter>());
         silo.AddService(Substitute.For<IJobStepThrottle>());
         silo.AddService(NullLogger<ReindexConstraintsStep>.Instance);
         silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
-        _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(JobStepId.New(), new JobStepKey(JobId.New(), "store", "ns"));
+        _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(JobId.New(), "store", "ns"));
         _state = new() { EventSequenceId = EventSequenceId.Log, Changes = [new("closing", true, [ConstraintChangeType.EventAdded])] };
     }
 
     protected async Task Perform() => _result = await (Task<Catch<JobStepResult>>)typeof(ReindexConstraintsStep)
-        .GetMethod("PerformStep", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_step, [_state, CancellationToken.None])!;
+        .GetMethod("PerformStep", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_step, [_state, _cancellationToken])!;
 
     protected static ExpandoObject Payload(string property, object value)
     {

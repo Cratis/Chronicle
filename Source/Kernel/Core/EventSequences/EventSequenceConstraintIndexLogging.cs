@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class EventSequenceConstraintIndexLogging
 {
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring late Starting for finished constraint rebuild {RunId} on {Sequence}")]
+    internal static partial void IgnoringFinishedConstraintIndexRebuild(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Constraint {Constraint} on {Sequence} had index outcome {Outcome} at {Position}, watermark {Watermark}, exclusive tail {Tail}")]
     internal static partial void ConstraintIndexUpdateOutcome(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintName constraint, EventSequenceNumber position, EventSequenceNumber watermark, EventSequenceNumber tail, ConstraintIndexUpdateOutcome outcome, Exception exception);
 

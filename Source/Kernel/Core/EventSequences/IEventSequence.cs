@@ -51,6 +51,23 @@ public interface IEventSequence : IGrainWithStringKey
     Task RefreshConstraints();
 
     /// <summary>
+    /// Suspend repair writes for constraints being rebuilt by a job.
+    /// </summary>
+    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="names">The constraints being rebuilt.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ConstraintIndexRebuildStarting(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names);
+
+    /// <summary>
+    /// Restore index updates beyond a rebuild's confirmed progress.
+    /// </summary>
+    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="names">The rebuilt constraints.</param>
+    /// <param name="outcome">The job's confirmed write progress.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome);
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>

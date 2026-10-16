@@ -11,7 +11,7 @@ public partial class EventSequence
     void UpdateConstraintIndexRepairTimer()
     {
         var hasGap = _indexedDefinitions.Count > 0 && _constraintIndexPosition < State.SequenceNumber;
-        if (_pendingConstraintIndexes.Count == 0 && !hasGap && State.ConstraintIndexCatchUpBelow is null)
+        if (_pendingConstraintIndexes.Count == 0 && !hasGap && State.ConstraintIndexCatchUpBelow is null && _rebuildingConstraintIndexes.Count == 0)
         {
             if (_constraintIndexRepairTimerRunning) return;
             _constraintIndexRepairTimer?.Dispose();

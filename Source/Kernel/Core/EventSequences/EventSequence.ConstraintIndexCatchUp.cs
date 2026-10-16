@@ -53,6 +53,7 @@ public partial class EventSequence
 
     async Task RunConstraintIndexCatchUpTurn(CancellationToken cancellationToken)
     {
+        if (_rebuildOwnsBoundary) return;
         var slots = ConstraintIndexCatchUpSlots.For(storage);
         if (!slots.TryEnter(this)) return;
         _catchUpTracking = true;
@@ -173,7 +174,7 @@ public partial class EventSequence
     /// Membership is not persisted; a later activation selects its own registered definitions.
     /// </remarks>
     /// <returns>The definitions eligible for this activation's historical catch-up.</returns>
-    IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name));
+    IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name) && !_rebuildingConstraintIndexes.ContainsKey(definition.Name));
 
     StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter);
 }

@@ -68,7 +68,8 @@ public partial class EventSequence
     async Task ClearCatchUpRefusal(CancellationToken token)
     {
         var previous = State.ConstraintIndexCatchUpRefusing;
-        State.ConstraintIndexCatchUpRefusing = null;
+        var rebuilding = previous?.Where(_rebuildingConstraintIndexes.ContainsKey).ToArray();
+        State.ConstraintIndexCatchUpRefusing = rebuilding?.Length > 0 ? rebuilding : null;
         try
         {
             await PersistCatchUpState(token);
@@ -82,6 +83,7 @@ public partial class EventSequence
 
     async Task CompleteConstraintCatchUp(CancellationToken token)
     {
+        if (_rebuildingConstraintIndexes.Count > 0) return;
         var boundary = State.ConstraintIndexCatchUpBelow;
         State.ConstraintIndexCatchUpBelow = null;
         try

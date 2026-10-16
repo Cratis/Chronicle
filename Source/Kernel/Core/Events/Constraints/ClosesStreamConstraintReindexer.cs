@@ -18,8 +18,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// A redacted property-sourced transition can be reconstructed only from a closure snapshot at the same
 /// sequence number. If none exists, this entire owner's rebuild is skipped without modifying its rows.
 /// Other constraints continue rebuilding. Staging stores only the resulting scopes, not the event history.
-/// A closing-constraint rebuild must not run while appends to the sequence are in flight:
-/// installing the rebuilt index is not serialized with appends.
+/// Commit writes only differences. The event sequence's reindex handoff restores later live
+/// transitions that these writes overwrite; each scope stays old or rebuilt on a partial failure.
 /// </remarks>
 internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintStorage storage, ILogger<ReindexConstraintsStep> logger)
 {
@@ -113,20 +113,29 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
     }
 
     /// <summary>
-    /// Replace only owners whose full history was reconstructible, leaving skipped owners untouched.
+    /// Write differences only for owners whose full history was reconstructible, leaving skipped owners untouched.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="beforeWrite">Called before issuing a commit write.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Commit(CancellationToken cancellationToken)
+    internal async Task Commit(CancellationToken cancellationToken, Action? beforeWrite = null)
     {
         foreach (var rebuild in _rebuilds.Where(rebuild => !rebuild.Skipped))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await storage.RemoveAllFor(rebuild.Definition.Name.Value);
-            foreach (var closure in rebuild.Pending.Values)
+            var snapshot = rebuild.Snapshot.Values.SelectMany(rows => rows).ToDictionary(closure => closure.Scope.Normalized());
+            foreach (var (scope, closure) in rebuild.Pending)
+            {
+                if (snapshot.TryGetValue(scope, out var previous) && previous.SequenceNumber == closure.SequenceNumber && previous.ClosedAt == closure.ClosedAt) continue;
+                cancellationToken.ThrowIfCancellationRequested();
+                beforeWrite?.Invoke();
+                await storage.Close(closure, cancellationToken);
+            }
+            foreach (var scope in snapshot.Keys.Where(scope => !rebuild.Pending.ContainsKey(scope)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await storage.Close(closure);
+                beforeWrite?.Invoke();
+                await storage.Reopen(rebuild.Definition.Name.Value, scope, cancellationToken);
             }
         }
     }

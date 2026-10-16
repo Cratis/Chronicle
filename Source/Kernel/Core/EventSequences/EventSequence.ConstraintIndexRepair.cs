@@ -28,17 +28,17 @@ public partial class EventSequence
         }
     }
 
-    async Task RunConstraintIndexRepairTurn(TimeSpan duration, bool timerTurn, CancellationToken cancellationToken)
+    async Task RunConstraintIndexRepairTurn(TimeSpan duration, bool timerTurn, CancellationToken cancellationToken, bool persist = true)
     {
         var end = ConstraintIndexTimeProvider.GetUtcNow() + duration;
         using var soft = new CancellationTokenSource(duration - TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
         using var hard = new CancellationTokenSource(duration, ConstraintIndexTimeProvider);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(soft.Token, cancellationToken);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(hard.Token, cancellationToken);
-        await ContinueConstraintIndexRepair(timerTurn, end, budget.Token, deadline.Token, hard.Token);
+        await ContinueConstraintIndexRepair(timerTurn, end, persist, budget.Token, deadline.Token, hard.Token);
     }
 
-    async Task ContinueConstraintIndexRepair(bool timerTurn, DateTimeOffset end, CancellationToken budget, CancellationToken deadline, CancellationToken snapshotLimit)
+    async Task ContinueConstraintIndexRepair(bool timerTurn, DateTimeOffset end, bool persist, CancellationToken budget, CancellationToken deadline, CancellationToken snapshotLimit)
     {
         try
         {
@@ -89,6 +89,7 @@ public partial class EventSequence
         }
 
         _metrics?.ConstraintIndexRepaired();
+        if (!persist) return;
         try
         {
             var remaining = end - ConstraintIndexTimeProvider.GetUtcNow();
@@ -150,7 +151,7 @@ public partial class EventSequence
 
     ConstraintIndexReplay CreateConstraintIndexReplay()
     {
-        _replayScopes = _pendingConstraintIndexes.Where(pair => _indexedDefinitions.ContainsKey(pair.Key)).Select(pair => new ConstraintIndexReplayScope(_indexedDefinitions[pair.Key], pair.Value)).ToArray();
+        _replayScopes = _pendingConstraintIndexes.Where(pair => _indexedDefinitions.ContainsKey(pair.Key) && !_rebuildingConstraintIndexes.ContainsKey(pair.Key)).Select(pair => new ConstraintIndexReplayScope(_indexedDefinitions[pair.Key], pair.Value)).ToArray();
         _replayAbandonedIndexes.Clear();
         _replaySettledErrors = 0;
         _replayEndPoint = State.SequenceNumber;
