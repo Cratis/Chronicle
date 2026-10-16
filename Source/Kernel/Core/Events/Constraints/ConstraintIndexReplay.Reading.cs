@@ -103,16 +103,15 @@ public partial class ConstraintIndexReplay
 
     bool InSegment(string key) => BitConverter.ToUInt32(SHA256.HashData(Encoding.UTF8.GetBytes(key))) % (uint)_segments == (uint)_segment;
 
-    void SetUnique(UniqueConstraintDefinition definition, EventSourceId source, string scope, UniqueConstraintValue? retained, UniqueConstraintValue? value, EventSequenceNumber position)
+    void SetUnique(UniqueKey key, UniqueState state)
     {
-        var key = new UniqueKey(definition.Name, source, scope, retained);
         if (!InSegment($"{key.Name}\0{key.Scope}\0{key.Source}\0{key.Retained}")) return;
         if (!_unique.ContainsKey(key) && _unique.Count + _closed.Count + _differences.Count >= keyLimit)
         {
             _overflow = true;
             return;
         }
-        _unique[key] = new(definition, value, position);
+        _unique[key] = state;
         TrackKeys();
     }
 
@@ -121,41 +120,7 @@ public partial class ConstraintIndexReplay
         var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
         if (definition.RemovedWith.Contains(context.EventTypeId))
         {
-            var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
-            if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
-            {
-                var properties = removal.GetPropertiesAndValues(context).ToArray();
-                if (properties.Length > 0)
-                {
-                    var value = new UniqueConstraintValue(properties.GetValue(definition.IgnoreCasing));
-                    SetUnique(definition, context.EventSourceId, scope, value, null, position);
-                }
-            }
-            else if (definition.Mode == UniqueConstraintMode.PerValue)
-            {
-                var retainedValues = unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken).GetAsyncEnumerator(cancellationToken);
-                try
-                {
-                    while (await retainedValues.MoveNextAsync().AsTask().WaitAsync(cancellationToken))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        SetUnique(definition, context.EventSourceId, scope, retainedValues.Current, null, position);
-                        if (!Fits()) return;
-                    }
-                }
-                finally
-                {
-                    await retainedValues.DisposeAsync().AsTask().WaitAsync(cancellationToken);
-                }
-                foreach (var key in _unique.Keys.Where(key => key.Name == definition.Name && key.Source == context.EventSourceId && key.Scope == scope).ToArray())
-                {
-                    _unique[key] = new(definition, null, position);
-                }
-            }
-            else
-            {
-                SetUnique(definition, context.EventSourceId, scope, null, null, position);
-            }
+            await IncludeUniqueRemoval(definition, context, scope, position, cancellationToken);
             return;
         }
 
@@ -163,11 +128,58 @@ public partial class ConstraintIndexReplay
         var values = definition.GetPropertiesAndValues(context).ToArray();
         if (values.Length == 0)
         {
-            if (definition.Mode == UniqueConstraintMode.PerEventSource) SetUnique(definition, context.EventSourceId, scope, null, null, position);
+            if (definition.Mode == UniqueConstraintMode.PerEventSource) SetUniqueRemoved(definition, context.EventSourceId, scope, null, position);
             return;
         }
         var claim = new UniqueConstraintValue(values.GetValue(definition.IgnoreCasing));
-        SetUnique(definition, context.EventSourceId, scope, definition.Mode == UniqueConstraintMode.PerValue ? claim : null, claim, position);
+        var retained = definition.Mode == UniqueConstraintMode.PerValue ? claim : null;
+        SetUnique(new(definition.Name, context.EventSourceId, scope, retained), new(definition, claim, position));
+    }
+
+    void SetUniqueRemoved(UniqueConstraintDefinition definition, EventSourceId source, string scope, UniqueConstraintValue? retained, EventSequenceNumber position) =>
+        SetUnique(new(definition.Name, source, scope, retained), new(definition, null, position));
+
+    async Task IncludeUniqueRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope, EventSequenceNumber position, CancellationToken cancellationToken)
+    {
+        var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
+        if (definition.Mode != UniqueConstraintMode.PerValue)
+        {
+            SetUniqueRemoved(definition, context.EventSourceId, scope, null, position);
+        }
+        else if (removal?.Properties.Any() == true)
+        {
+            var properties = removal.GetPropertiesAndValues(context).ToArray();
+            if (properties.Length > 0)
+            {
+                SetUniqueRemoved(definition, context.EventSourceId, scope, new UniqueConstraintValue(properties.GetValue(definition.IgnoreCasing)), position);
+            }
+        }
+        else
+        {
+            await IncludeRetainedValueRemoval(definition, context, scope, position, cancellationToken);
+        }
+    }
+
+    async Task IncludeRetainedValueRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope, EventSequenceNumber position, CancellationToken cancellationToken)
+    {
+        var retainedValues = unique.GetForStream(context.EventSourceId, definition, scope, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (await retainedValues.MoveNextAsync().AsTask().WaitAsync(cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                SetUniqueRemoved(definition, context.EventSourceId, scope, retainedValues.Current, position);
+                if (!Fits()) return;
+            }
+        }
+        finally
+        {
+            await retainedValues.DisposeAsync().AsTask().WaitAsync(cancellationToken);
+        }
+        foreach (var key in _unique.Keys.Where(key => key.Name == definition.Name && key.Source == context.EventSourceId && key.Scope == scope).ToArray())
+        {
+            _unique[key] = new(definition, null, position);
+        }
     }
 
     async Task IncludeClosing(ClosesStreamConstraintDefinition definition, AppendedEvent @event, ExpandoObject plaintext, CancellationToken cancellationToken)

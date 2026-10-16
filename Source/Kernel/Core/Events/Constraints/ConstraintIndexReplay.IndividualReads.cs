@@ -36,23 +36,31 @@ public partial class ConstraintIndexReplay
             StorageCallSucceeded = true;
             if (position == EventSequenceNumber.Unavailable || position >= _endPoint) return (true, count);
             _operationPosition = position;
-            if (_scopes.Any(scope => position >= scope.From && !IsPoison(scope.Definition.Name, position)))
-            {
-                var @event = await ReadIndividualEvent(position, cancellationToken);
-                if (!await IncludeEvent(@event, cancellationToken)) return (false, count);
-            }
+            if (!await IncludeIndividualEvent(position, cancellationToken)) return (false, count);
             _position = position.Next();
             _operationPosition = null;
             count++;
-            var through = _readIndividually ? _individualReadFailureEnd : _knownBadReadEnd;
-            if ((through is { } end && _position! >= end) || (_readIndividually && --_individualReadsRemaining <= 0))
-            {
-                _readIndividually = false;
-                _individualReadFailureEnd = null;
-                return (false, count);
-            }
+            if (EndsIndividualReadWindow()) return (false, count);
         }
         return (false, count);
+    }
+
+    async Task<bool> IncludeIndividualEvent(EventSequenceNumber position, CancellationToken cancellationToken)
+    {
+        if (!_scopes.Any(scope => position >= scope.From && !IsPoison(scope.Definition.Name, position))) return true;
+
+        var @event = await ReadIndividualEvent(position, cancellationToken);
+        return await IncludeEvent(@event, cancellationToken);
+    }
+
+    bool EndsIndividualReadWindow()
+    {
+        var through = _readIndividually ? _individualReadFailureEnd : _knownBadReadEnd;
+        if (!((through is { } end && _position! >= end) || (_readIndividually && --_individualReadsRemaining <= 0))) return false;
+
+        _readIndividually = false;
+        _individualReadFailureEnd = null;
+        return true;
     }
 
     async Task<AppendedEvent> ReadIndividualEvent(EventSequenceNumber position, CancellationToken cancellationToken)

@@ -34,6 +34,28 @@ public partial class ConstraintIndexReplay
         _remainingCatchUpSegments = new(Enumerable.Range(0, _segments).Where(segment => segment != _segment));
     }
 
+    static bool TryIndexRelease(ConstraintIndexReplayDifference difference, Dictionary<ValueKey, ConstraintIndexReplayDifference> releases)
+    {
+        if (difference.Release is null)
+        {
+            difference.Released = true;
+            return true;
+        }
+
+        return difference.PreviousValues.Count == 1 && releases.TryAdd(new(difference.Name, difference.ScopeKey, difference.PreviousValues[0]), difference);
+    }
+
+    static bool TryIndexClaim(ConstraintIndexReplayDifference difference, Dictionary<ValueKey, ConstraintIndexReplayDifference> claims)
+    {
+        if (difference.Claim is null || difference.Value is not { } value)
+        {
+            difference.Claimed = true;
+            return true;
+        }
+
+        return claims.TryAdd(new(difference.Name, difference.ScopeKey, value), difference);
+    }
+
     void AdvanceSegment()
     {
         if (_remainingCatchUpSegments is { } remaining)
@@ -51,32 +73,37 @@ public partial class ConstraintIndexReplay
     {
         var barrier = CatchUp!;
         if (_differences.Exists(difference => !barrier.IsExcluded(difference) && barrier.IsPending(difference.Name))) return false;
-        if (_segment < _segments || _differences.Count > Math.Max(1, keyLimit / 2)) barrier.UnderRefusal = true;
-        if (!barrier.UnderRefusal)
-        {
-            _catchUpGroups ??= PlanCatchUpGroups(budget);
-            if (_catchUpGroups.Count == 0 && _differences.Exists(difference => !barrier.IsExcluded(difference))) barrier.UnderRefusal = true;
-        }
-        if (barrier.UnderRefusal)
-        {
-            await barrier.Refuse(_differences.Select(difference => difference.Name).Distinct(), budget);
-            await ReleaseDifferences(budget);
-            if (Interrupted() || budget.IsCancellationRequested) return false;
-            await ClaimDifferences(budget);
-            if (Interrupted() || budget.IsCancellationRequested) return false;
-            if (_differences.Exists(difference => CanWrite(difference) && (!difference.Released || !difference.Claimed))) return false;
-            if (_segment >= _segments && (!_needsRetryPass || _retryPass))
-            {
-                await barrier.Allow(CancellationToken.None);
-                barrier.UnderRefusal = false;
-            }
-        }
-        else if (!await WriteCatchUpGroups(budget))
-        {
-            return false;
-        }
+        PlanRefusal(barrier, budget);
+        var written = barrier.UnderRefusal ? await WriteUnderRefusal(barrier, budget) : await WriteCatchUpGroups(budget);
+        if (!written) return false;
         _catchUpGroups = null;
         _catchUpGroupIndex = 0;
+        return true;
+    }
+
+    void PlanRefusal(ConstraintIndexCatchUpWriting barrier, CancellationToken budget)
+    {
+        if (_segment < _segments || _differences.Count > Math.Max(1, keyLimit / 2)) barrier.UnderRefusal = true;
+        if (barrier.UnderRefusal) return;
+
+        _catchUpGroups ??= PlanCatchUpGroups(budget);
+        if (_catchUpGroups.Count == 0 && _differences.Exists(difference => !barrier.IsExcluded(difference))) barrier.UnderRefusal = true;
+    }
+
+    async Task<bool> WriteUnderRefusal(ConstraintIndexCatchUpWriting barrier, CancellationToken budget)
+    {
+        await barrier.Refuse(_differences.Select(difference => difference.Name).Distinct(), budget);
+        await ReleaseDifferences(budget);
+        if (Interrupted() || budget.IsCancellationRequested) return false;
+        await ClaimDifferences(budget);
+        if (Interrupted() || budget.IsCancellationRequested) return false;
+        if (_differences.Exists(difference => CanWrite(difference) && (!difference.Released || !difference.Claimed))) return false;
+        if (_segment >= _segments && (!_needsRetryPass || _retryPass))
+        {
+            await barrier.Allow(CancellationToken.None);
+            barrier.UnderRefusal = false;
+        }
+
         return true;
     }
 
@@ -87,28 +114,7 @@ public partial class ConstraintIndexReplay
         await barrier.Refuse(_differences.Select(difference => difference.Name).Distinct(), budget);
         while (_catchUpGroupIndex < _catchUpGroups.Count && !budget.IsCancellationRequested)
         {
-            var group = _catchUpGroups[_catchUpGroupIndex];
-
-            // Once started, a group finishes independently of the soft turn budget. Each of its
-            // at most two writes is attempted once under its own one-second deadline.
-            if (group.Release is { } release && !release.Released && CanWrite(release))
-            {
-                release.Released = await Write(release, release.Release!, CancellationToken.None);
-                if (!release.Released)
-                {
-                    barrier.UnderRefusal = true;
-                    return false;
-                }
-            }
-            if (group.Claim is { } claim && !claim.Claimed && CanWrite(claim))
-            {
-                claim.Claimed = await Write(claim, claim.Claim!, CancellationToken.None);
-                if (!claim.Claimed)
-                {
-                    barrier.UnderRefusal = true;
-                    return false;
-                }
-            }
+            if (!await WriteCatchUpGroup(_catchUpGroups[_catchUpGroupIndex], barrier)) return false;
             _catchUpGroupIndex++;
         }
         if (_catchUpGroups.Exists(group => group.Release?.Released == true && group.Claim is { Claimed: false } claim && CanWrite(claim))) return false;
@@ -116,31 +122,58 @@ public partial class ConstraintIndexReplay
         return _catchUpGroupIndex == _catchUpGroups.Count;
     }
 
+    async Task<bool> WriteCatchUpGroup(CatchUpGroup group, ConstraintIndexCatchUpWriting barrier)
+    {
+        // Once started, a group finishes independently of the soft turn budget. Each of its
+        // at most two writes is attempted once under its own one-second deadline.
+        if (group.Release is { } release && !release.Released && CanWrite(release))
+        {
+            release.Released = await Write(release, release.Release!, CancellationToken.None);
+            if (!release.Released)
+            {
+                barrier.UnderRefusal = true;
+                return false;
+            }
+        }
+        if (group.Claim is { } claim && !claim.Claimed && CanWrite(claim))
+        {
+            claim.Claimed = await Write(claim, claim.Claim!, CancellationToken.None);
+            if (!claim.Claimed)
+            {
+                barrier.UnderRefusal = true;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     List<CatchUpGroup> PlanCatchUpGroups(CancellationToken budget)
     {
-        var releases = new Dictionary<ValueKey, ConstraintIndexReplayDifference>();
-        var claims = new Dictionary<ValueKey, ConstraintIndexReplayDifference>();
+        if (!TryIndexCatchUpWrites(budget, out var releases, out var claims)) return [];
+
+        var groups = releases.Keys.Concat(claims.Keys.Where(key => !releases.ContainsKey(key))).Select(key => new CatchUpGroup(releases.GetValueOrDefault(key), claims.GetValueOrDefault(key))).ToList();
+        return OrderCatchUpGroups(groups, budget);
+    }
+
+    bool TryIndexCatchUpWrites(
+        CancellationToken budget,
+        out Dictionary<ValueKey, ConstraintIndexReplayDifference> releases,
+        out Dictionary<ValueKey, ConstraintIndexReplayDifference> claims)
+    {
+        releases = [];
+        claims = [];
         foreach (var difference in _differences.Where(difference => !CatchUp!.IsExcluded(difference)))
         {
             budget.ThrowIfCancellationRequested();
-            if (difference.Release is not null)
-            {
-                if (difference.PreviousValues.Count != 1 || !releases.TryAdd(new(difference.Name, difference.ScopeKey, difference.PreviousValues[0]), difference)) return [];
-            }
-            else
-            {
-                difference.Released = true;
-            }
-            if (difference.Claim is not null && difference.Value is { } value)
-            {
-                if (!claims.TryAdd(new(difference.Name, difference.ScopeKey, value), difference)) return [];
-            }
-            else
-            {
-                difference.Claimed = true;
-            }
+            if (!TryIndexRelease(difference, releases) || !TryIndexClaim(difference, claims)) return false;
         }
-        var groups = releases.Keys.Concat(claims.Keys.Where(key => !releases.ContainsKey(key))).Select(key => new CatchUpGroup(releases.GetValueOrDefault(key), claims.GetValueOrDefault(key))).ToList();
+
+        return true;
+    }
+
+    List<CatchUpGroup> OrderCatchUpGroups(List<CatchUpGroup> groups, CancellationToken budget)
+    {
         var ready = new Queue<CatchUpGroup>();
         var dependants = new Dictionary<ConstraintIndexReplayDifference, CatchUpGroup>();
         foreach (var group in groups)

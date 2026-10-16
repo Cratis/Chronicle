@@ -42,19 +42,7 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
         var poisoned = new Dictionary<ConstraintName, ConstraintIndexReplayFailure>();
         foreach (var (name, failure) in failures)
         {
-            if (!storageSucceeded || failure.Position is not { } position || classifier.IsTransient(failure.Error))
-            {
-                _runs.Remove(name);
-                continue;
-            }
-            var type = failure.Error.GetType();
-            var identity = FailureIdentity(failure.Error);
-            var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type && previous.Identity == identity ? previous.Count + 1 : 1;
-            _runs[name] = new(position, type, identity, count);
-            if (count < 5) continue;
-            _settled.Add((name, position));
-            poisoned.Add(name, failure);
-            _runs.Remove(name);
+            if (RecordFailure(name, failure, storageSucceeded)) poisoned.Add(name, failure);
         }
         return poisoned;
     }
@@ -68,19 +56,33 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
     static string? ProviderFailureIdentity(Exception error)
     {
         // Keep provider dependencies outside Core while recognizing codes beneath storage wrappers.
-        foreach (var name in _errorCodeProperties)
-        {
-            if (error.GetType().GetProperty(name)?.GetValue(error) is { } code) return $"{error.GetType().FullName}:{name}:{code}";
-        }
-        if (error is AggregateException aggregate)
-        {
-            foreach (var inner in aggregate.InnerExceptions)
-            {
-                if (ProviderFailureIdentity(inner) is { } identity) return identity;
-            }
-            return null;
-        }
+        if (ErrorCodeIdentity(error) is { } codeIdentity) return codeIdentity;
+        if (error is AggregateException aggregate) return aggregate.InnerExceptions.Select(ProviderFailureIdentity).FirstOrDefault(identity => identity is not null);
         return error.InnerException is { } cause ? ProviderFailureIdentity(cause) : null;
+    }
+
+    static string? ErrorCodeIdentity(Exception error) => _errorCodeProperties
+        .Select(name => (Name: name, Code: error.GetType().GetProperty(name)?.GetValue(error)))
+        .Where(property => property.Code is not null)
+        .Select(property => $"{error.GetType().FullName}:{property.Name}:{property.Code}")
+        .FirstOrDefault();
+
+    bool RecordFailure(ConstraintName name, ConstraintIndexReplayFailure failure, bool storageSucceeded)
+    {
+        // Returns true when the failure has now repeated enough to be settled as poison.
+        if (!storageSucceeded || failure.Position is not { } position || classifier.IsTransient(failure.Error))
+        {
+            _runs.Remove(name);
+            return false;
+        }
+        var type = failure.Error.GetType();
+        var identity = FailureIdentity(failure.Error);
+        var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type && previous.Identity == identity ? previous.Count + 1 : 1;
+        _runs[name] = new(position, type, identity, count);
+        if (count < 5) return false;
+        _settled.Add((name, position));
+        _runs.Remove(name);
+        return true;
     }
 
     sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, string Identity, int Count);

@@ -49,6 +49,7 @@ public partial class ConstraintIndexReplay(
     int _segment;
     int _applied;
     int _settled;
+    int _processed;
     int _settledWithError;
     int _maxKeysHeld;
     Phase _phase;
@@ -89,14 +90,8 @@ public partial class ConstraintIndexReplay(
     /// <returns>The accumulated progress and this turn's failed constraints.</returns>
     public async Task<ConstraintIndexReplayResult> Continue(int eventLimit = 1000, CancellationToken cancellationToken = default)
     {
-        RangeReadFailed = false;
-        StorageCallSucceeded = false;
-        _failed.Clear();
-        _abandoned.Clear();
-        _operationConstraint = null;
-        _operationPosition = null;
-        if (_scopes.Length == 0) _phase = Phase.Complete;
-        var processed = 0;
+        PrepareTurn();
+        _processed = 0;
         try
         {
             if (_phase is Phase.Collecting or Phase.Releasing or Phase.Claiming)
@@ -108,60 +103,7 @@ public partial class ConstraintIndexReplay(
             }
             while (_phase != Phase.Complete && !cancellationToken.IsCancellationRequested)
             {
-                if (_phase == Phase.Reading)
-                {
-                    if (processed >= eventLimit) break;
-                    var (finished, count) = await ReadSegment(eventLimit - processed, cancellationToken);
-                    processed += count;
-                    if (Interrupted()) break;
-                    if (!finished) continue;
-                    _phase = Phase.Collecting;
-                }
-                if (_phase == Phase.Collecting)
-                {
-                    await CollectDifferences(cancellationToken);
-                    AdvanceSegment();
-                    if (_segment < _segments && _differences.Count < Math.Max(1, keyLimit / 2))
-                    {
-                        BeginSegment();
-                        continue;
-                    }
-                    _phase = Phase.Releasing;
-                }
-                if (_phase == Phase.Releasing && CatchUp is not null)
-                {
-                    if (!await WriteCatchUp(cancellationToken)) break;
-                    _phase = Phase.Claiming;
-                }
-                if (_phase == Phase.Releasing)
-                {
-                    await ReleaseDifferences(cancellationToken);
-                    if (Interrupted()) break;
-                    _phase = Phase.Claiming;
-                }
-                if (_phase == Phase.Claiming)
-                {
-                    if (CatchUp is null) await ClaimDifferences(cancellationToken);
-                    if (Interrupted()) break;
-                    _differences.Clear();
-                    if (_segment < _segments)
-                    {
-                        BeginSegment();
-                    }
-                    else if (_needsRetryPass && !_retryPass)
-                    {
-                        // Re-read instead of retaining an unbounded list of refused claims from flushed segments.
-                        // All releases have now completed; already-written final keys produce no difference.
-                        _retryPass = true;
-                        _remainingCatchUpSegments = null;
-                        _segment = 0;
-                        BeginSegment();
-                    }
-                    else
-                    {
-                        _phase = Phase.Complete;
-                    }
-                }
+                if (await RunPhaseSteps(eventLimit, cancellationToken)) break;
             }
         }
         catch (Exception) when (cancellationToken.IsCancellationRequested)
@@ -170,15 +112,109 @@ public partial class ConstraintIndexReplay(
         }
         catch (Exception error)
         {
-            RangeReadFailed = _operationConstraint is null && _operationPosition is null;
-            foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct())
-            {
-                if (_operationPosition is { } position && IsPoison(constraint, position)) continue;
-                Fail(constraint, _operationPosition, error);
-            }
+            ReportTurnFailure(error);
         }
 
         return new(_phase == Phase.Complete, _applied, _settled, _settledWithError, new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(_failed), _abandoned.ToArray());
+    }
+
+    void PrepareTurn()
+    {
+        RangeReadFailed = false;
+        StorageCallSucceeded = false;
+        _failed.Clear();
+        _abandoned.Clear();
+        _operationConstraint = null;
+        _operationPosition = null;
+        if (_scopes.Length == 0) _phase = Phase.Complete;
+    }
+
+    void ReportTurnFailure(Exception error)
+    {
+        RangeReadFailed = _operationConstraint is null && _operationPosition is null;
+        foreach (var constraint in _operationConstraint is { } name ? [name] : _scopes.Select(scope => scope.Definition.Name).Distinct())
+        {
+            if (_operationPosition is { } position && IsPoison(constraint, position)) continue;
+            Fail(constraint, _operationPosition, error);
+        }
+    }
+
+    async Task<bool> RunPhaseSteps(int eventLimit, CancellationToken cancellationToken)
+    {
+        // Runs the phases that follow each other within one pass. Returns true when the turn must stop.
+        if (_phase == Phase.Reading && await ReadPhase(eventLimit, cancellationToken)) return true;
+        if (_phase == Phase.Collecting) await CollectPhase(cancellationToken);
+        if (_phase == Phase.Releasing && CatchUp is not null && await CatchUpPhase(cancellationToken)) return true;
+        if (_phase == Phase.Releasing && await ReleasePhase(cancellationToken)) return true;
+        return _phase == Phase.Claiming && await ClaimPhase(cancellationToken);
+    }
+
+    async Task<bool> ReadPhase(int eventLimit, CancellationToken cancellationToken)
+    {
+        if (_processed >= eventLimit) return true;
+        var (finished, count) = await ReadSegment(eventLimit - _processed, cancellationToken);
+        _processed += count;
+        if (Interrupted()) return true;
+        if (finished) _phase = Phase.Collecting;
+        return false;
+    }
+
+    async Task CollectPhase(CancellationToken cancellationToken)
+    {
+        await CollectDifferences(cancellationToken);
+        AdvanceSegment();
+        if (_segment < _segments && _differences.Count < Math.Max(1, keyLimit / 2))
+        {
+            BeginSegment();
+            return;
+        }
+
+        _phase = Phase.Releasing;
+    }
+
+    async Task<bool> CatchUpPhase(CancellationToken cancellationToken)
+    {
+        if (!await WriteCatchUp(cancellationToken)) return true;
+        _phase = Phase.Claiming;
+        return false;
+    }
+
+    async Task<bool> ReleasePhase(CancellationToken cancellationToken)
+    {
+        await ReleaseDifferences(cancellationToken);
+        if (Interrupted()) return true;
+        _phase = Phase.Claiming;
+        return false;
+    }
+
+    async Task<bool> ClaimPhase(CancellationToken cancellationToken)
+    {
+        if (CatchUp is null) await ClaimDifferences(cancellationToken);
+        if (Interrupted()) return true;
+        _differences.Clear();
+        AdvanceAfterClaims();
+        return false;
+    }
+
+    void AdvanceAfterClaims()
+    {
+        if (_segment < _segments)
+        {
+            BeginSegment();
+        }
+        else if (_needsRetryPass && !_retryPass)
+        {
+            // Re-read instead of retaining an unbounded list of refused claims from flushed segments.
+            // All releases have now completed; already-written final keys produce no difference.
+            _retryPass = true;
+            _remainingCatchUpSegments = null;
+            _segment = 0;
+            BeginSegment();
+        }
+        else
+        {
+            _phase = Phase.Complete;
+        }
     }
 
     bool Interrupted() => _failed.Count > 0 || _abandoned.Count > 0;

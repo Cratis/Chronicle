@@ -13,7 +13,20 @@ public partial class ConstraintIndexReplay
     int _uniqueCollectIndex;
     int _closingCollectIndex;
 
+    static bool UniqueMatches(UniqueKey key, UniqueState state, UniqueConstraintValue[] current)
+    {
+        if (key.Retained is not null) return current.Contains(key.Retained) == (state.Value is not null);
+
+        return state.Value is null ? current.Length == 0 : current.Length == 1 && current[0] == state.Value;
+    }
+
     async Task CollectDifferences(CancellationToken cancellationToken)
+    {
+        await CollectUniqueDifferences(cancellationToken);
+        await CollectClosingDifferences(cancellationToken);
+    }
+
+    async Task CollectUniqueDifferences(CancellationToken cancellationToken)
     {
         _uniqueCollectKeys ??= _unique.Keys.ToArray();
         while (_uniqueCollectIndex < _uniqueCollectKeys.Length)
@@ -31,28 +44,14 @@ public partial class ConstraintIndexReplay
             _operationPosition = state.Position;
             var current = await CurrentValues(key, state, cancellationToken);
             _unique.Remove(key);
-            var retained = key.Retained;
-            var matches = state.Value is null ? current.Length == 0 : current.Length == 1 && current[0] == state.Value;
-            if (retained is not null) matches = current.Contains(retained) == (state.Value is not null);
-            if (!matches)
-            {
-                Func<CancellationToken, Task>? release = null;
-                if (retained is not null && current.Contains(retained))
-                {
-                    release = token => unique.RemoveValue(key.Source, state.Definition, retained, key.Scope, token);
-                }
-                else if (retained is null && current.Length > 0)
-                {
-                    release = token => unique.Remove(key.Source, state.Definition, key.Scope, token);
-                }
-                Func<CancellationToken, Task>? claim = state.Value is { } value
-                    ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, token)
-                    : null;
-                _differences.Add(new(key.Name, state.Position, release, claim, key.Scope, state.Value, current, key.Source, key.Retained));
-            }
+            if (!UniqueMatches(key, state, current)) _differences.Add(UniqueDifference(key, state, current));
             _uniqueCollectKeys[_uniqueCollectIndex++] = null;
             TrackKeys();
         }
+    }
+
+    async Task CollectClosingDifferences(CancellationToken cancellationToken)
+    {
         _closingCollectKeys ??= _closed.Keys.ToArray();
         while (_closingCollectIndex < _closingCollectKeys.Length)
         {
@@ -69,17 +68,37 @@ public partial class ConstraintIndexReplay
             _operationPosition = state.Position;
             var current = await closed.GetFor(key.Name.Value, key.Scope, cancellationToken).WaitAsync(cancellationToken);
             _closed.Remove(key);
-            if (current?.SequenceNumber != state.Closure?.SequenceNumber)
-            {
-                var final = state.Closure;
-                Func<CancellationToken, Task> claim = final is { } closure
-                    ? token => closed.Close(closure, token)
-                    : token => closed.Reopen(key.Name.Value, key.Scope, token);
-                _differences.Add(new(key.Name, state.Position, null, claim, string.Empty, null, []));
-            }
+            if (current?.SequenceNumber != state.Closure?.SequenceNumber) _differences.Add(ClosingDifference(key, state));
             _closingCollectKeys[_closingCollectIndex++] = null;
             TrackKeys();
         }
+    }
+
+    ConstraintIndexReplayDifference UniqueDifference(UniqueKey key, UniqueState state, UniqueConstraintValue[] current)
+    {
+        var retained = key.Retained;
+        Func<CancellationToken, Task>? release = null;
+        if (retained is not null && current.Contains(retained))
+        {
+            release = token => unique.RemoveValue(key.Source, state.Definition, retained, key.Scope, token);
+        }
+        else if (retained is null && current.Length > 0)
+        {
+            release = token => unique.Remove(key.Source, state.Definition, key.Scope, token);
+        }
+        Func<CancellationToken, Task>? claim = state.Value is { } value
+            ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, token)
+            : null;
+        return new(key.Name, state.Position, release, claim, key.Scope, state.Value, current, key.Source, key.Retained);
+    }
+
+    ConstraintIndexReplayDifference ClosingDifference(ClosingKey key, ClosingState state)
+    {
+        var final = state.Closure;
+        Func<CancellationToken, Task> claim = final is { } closure
+            ? token => closed.Close(closure, token)
+            : token => closed.Reopen(key.Name.Value, key.Scope, token);
+        return new(key.Name, state.Position, null, claim, string.Empty, null, []);
     }
 
     async Task<UniqueConstraintValue[]> CurrentValues(UniqueKey key, UniqueState state, CancellationToken cancellationToken)

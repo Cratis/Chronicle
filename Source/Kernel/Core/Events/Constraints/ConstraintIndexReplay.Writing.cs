@@ -22,41 +22,50 @@ public partial class ConstraintIndexReplay
         foreach (var difference in decidingOrder.Where(CanWrite))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (difference.Claim is null)
-            {
-                difference.Claimed = true;
-                continue;
-            }
-            if (difference.Retry)
-            {
-                difference.Claimed = await Write(difference, difference.Claim, cancellationToken);
-                continue;
-            }
-            WritingConstraint = difference.Name;
-            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken, ConstraintIndexTimeProvider);
-            WritingConstraint = null;
-            if (MustRetry(difference, outcome))
-            {
-                if (_segment < _segments)
-                {
-                    // A remaining segment may release this value. The fixed range retains its final claim
-                    // for a bounded retry re-fold; completed keys produce no further write.
-                    _needsRetryPass = true;
-                    difference.Claimed = true;
-                }
-                else
-                {
-                    difference.Retry = true;
-                }
-                continue;
-            }
-            difference.Claimed = Record(difference, outcome, error, cancellationToken);
+            await ClaimDifference(difference, cancellationToken);
         }
         foreach (var difference in _differences.Where(difference => difference.Retry && !difference.Claimed && CanWrite(difference)))
         {
             cancellationToken.ThrowIfCancellationRequested();
             difference.Claimed = await Write(difference, difference.Claim!, cancellationToken);
         }
+    }
+
+    async Task ClaimDifference(ConstraintIndexReplayDifference difference, CancellationToken cancellationToken)
+    {
+        if (difference.Claim is null)
+        {
+            difference.Claimed = true;
+            return;
+        }
+        if (difference.Retry)
+        {
+            difference.Claimed = await Write(difference, difference.Claim, cancellationToken);
+            return;
+        }
+        WritingConstraint = difference.Name;
+        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken, ConstraintIndexTimeProvider);
+        WritingConstraint = null;
+        if (MustRetry(difference, outcome))
+        {
+            DeferClaim(difference);
+            return;
+        }
+        difference.Claimed = Record(difference, outcome, error, cancellationToken);
+    }
+
+    void DeferClaim(ConstraintIndexReplayDifference difference)
+    {
+        if (_segment >= _segments)
+        {
+            difference.Retry = true;
+            return;
+        }
+
+        // A remaining segment may release this value. The fixed range retains its final claim
+        // for a bounded retry re-fold; completed keys produce no further write.
+        _needsRetryPass = true;
+        difference.Claimed = true;
     }
 
     bool CanWrite(ConstraintIndexReplayDifference difference) => !IsPoison(difference.Name, difference.Position) && !_failed.ContainsKey(difference.Name) && !_abandoned.Contains(difference.Name) &&
