@@ -647,7 +647,14 @@ public partial class EventSequence(
         {
             // AppendEffectToStorage reads exactly one event per slot after reconciling its receipt range,
             // so an incomplete acknowledgment can only come from the ordinary storage append path.
+#if DEBUG
             Debug.Assert(effectReceipt is null, "Effect receipt settlement returns every event in its durable range.");
+#else
+            if (effectReceipt is not null)
+            {
+                return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.EffectReceiptUnsettled] };
+            }
+#endif
             var readBack = await ReadBackAppend(eventsToAppend);
             if (readBack is null)
             {

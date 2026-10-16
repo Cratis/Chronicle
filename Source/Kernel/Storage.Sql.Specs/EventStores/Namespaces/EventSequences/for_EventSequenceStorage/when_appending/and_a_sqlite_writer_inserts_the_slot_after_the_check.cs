@@ -31,8 +31,8 @@ public class and_a_sqlite_writer_inserts_the_slot_after_the_check : given.a_stor
 
     async Task Because() => _error = await Catch.Exception(async () => (await Append(4UL)).TryGetError(out _duplicate));
 
-    [Fact] void should_not_throw_the_unique_violation() => _error.ShouldBeNull();
-    [Fact] void should_report_the_duplicate_slot() => _duplicate.ShouldNotBeNull();
-    [Fact] void should_use_the_committed_tails_next_number() => _duplicate.NextAvailableSequenceNumber.ShouldEqual((EventSequenceNumber)10UL);
-    [Fact] void should_preserve_the_competing_writers_slot() => Stored(4UL).SequenceNumber.ShouldEqual(4UL);
+    [given.sqlite.Fact] void should_not_throw_the_unique_violation() => _error.ShouldBeNull();
+    [given.sqlite.Fact] void should_report_the_duplicate_slot() => _duplicate.ShouldNotBeNull();
+    [given.sqlite.Fact] void should_use_the_committed_tails_next_number() => _duplicate.NextAvailableSequenceNumber.ShouldEqual((EventSequenceNumber)10UL);
+    [given.sqlite.Fact] void should_preserve_the_competing_writers_slot() => Stored(4UL).SequenceNumber.ShouldEqual(4UL);
 }
