@@ -1,12 +1,12 @@
 ---
 id: 0012-keyed-appends-travel-on-their-own-rpcs
 title: Keyed appends travel on their own RPCs, a key hit marks the constraint gap without other side work, and keyed storage reports a proven non-commit the way decision 0008 does
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-decided:
-decider:
+decided: 2026-10-17
+decider: Sindre Wilting (delegated to L0)
 supersedes: 0007-idempotent-keyed-appends
 applies-to:
   - Source/Kernel/Core/Sequences/**
