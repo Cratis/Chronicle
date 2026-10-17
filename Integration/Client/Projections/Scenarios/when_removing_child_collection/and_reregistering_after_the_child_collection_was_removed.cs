@@ -46,6 +46,8 @@ public class and_reregistering_after_the_child_collection_was_removed(context co
         {
             // Simulate the production sequence: the projection-related grains go idle and deactivate,
             // then a new client build re-registers the projection without the child collection.
+            await WaitForClientRegistration();
+
             await DeactivateAllGrains();
 
             ConversationProjection.WithReactions = false;

@@ -20,7 +20,7 @@ The first read of each model type in a process makes two more calls to list defi
 | Constraint | None extra | An index lookup inside the append | Not expected to grow with history |
 | Explicit scope | One tail call to capture the position | One filtered tail query at commit | Not measured |
 | Materialized plain read | 1 | Reads the stored instance | Nothing |
-| Passive plain read | 1 | The first read folds the key's history. Later reads apply newer events while the kernel keeps the instance in memory | History, on first read |
+| Passive plain read | 1 | Every read folds the key's history from the start; nothing is kept between reads | History, on every read |
 | Decision read | About 4 per attempt, up to 3 attempts, plus 2 on first use of a type | Folds the key's whole history of the model's event types, every time | History times reads |
 
 A decision read is linear in the key's history and nothing caches it. Reads of one model type are expected to queue behind each other in the kernel, across keys. That has not been measured.
@@ -32,7 +32,7 @@ One run, on a loaded machine, so read the ratios and not the milliseconds.
 | Operation (median ms) | 10 events on the key | 100 events on the key |
 |---|---|---|
 | Materialized `GetInstanceById` | 2.1 | 5.3 |
-| Passive, instance already in memory | 3.7 | 8.7 |
+| Passive, instance already in memory (19.54.0 only; later versions fold fresh on every read) | 3.7 | 8.7 |
 | Passive, fresh fold | 8.1 | 13.9 |
 | **Decision read (`GetDetached`)** | **12.7** | **22.6** |
 | Tail call, then fetch the key's events and fold them yourself | 5.3 | 19.2 |
@@ -52,7 +52,7 @@ An append condition compares the events appended after a position with a filter.
 - **Advisory reads.** A plain read, or a read under an `Advisory` allowance, guards nothing. A `[Unprotected]` read in Arc is the same.
 - **Writers that decide without a guard.** A guard detects a matching event whoever appended it. It protects only the decisions that carry it.
 
-A conflict report names the read model and the key that changed. It does not name the event that changed it.
+A conflict report names the read model and the key that changed. When the kernel reports it, it also names the type and sequence number of the first event that matched the guard after the read, which can belong to another read merged into the same guard.
 
 In a host that uses [read protection](../read-models/read-protection.mdx), the frame belongs to one unit of work and follows one asynchronous flow. Enrollment on another unit inside it is refused with `ReadProtectionUnitMismatch`.
 

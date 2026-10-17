@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
+using Cratis.Chronicle.Contracts.Namespaces;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Registrations;
 
@@ -15,6 +17,12 @@ public partial class EventStore
     long _disconnectEpoch;
     long _publishedDisconnectEpoch;
 
+    /// <summary>
+    /// Gets whether this event store was retired because its namespace was removed while the client was disconnected.
+    /// A retired event store does not register again, and the client creates a new one if the namespace is used again.
+    /// </summary>
+    internal bool IsRetired { get; private set; }
+
     object RegistrationSync => LazyInitializer.EnsureInitialized(ref _registrationSync);
 
     long DisconnectEpoch
@@ -25,6 +33,38 @@ public partial class EventStore
             {
                 return _disconnectEpoch;
             }
+        }
+    }
+
+    /// <summary>
+    /// Register after the connection was made, unless this is a reconnect and the namespace was removed meanwhile.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task RegisterAfterConnect()
+    {
+        // Registering in a namespace creates it. After a reconnect that would bring back a namespace that was removed
+        // while this client was away - with its observers and, on first use, its data - so a namespace the kernel no
+        // longer lists is let go instead. Failing to ask is not a reason to let go: register as usual.
+        if (Interlocked.Read(ref _disconnectEpoch) > 0 && Namespace != EventStoreNamespaceName.Default && await WasNamespaceRemoved())
+        {
+            IsRetired = true;
+            DetachAutomaticRegistration();
+            return;
+        }
+
+        await RegisterAll();
+    }
+
+    async Task<bool> WasNamespaceRemoved()
+    {
+        try
+        {
+            var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
+            return !namespaces.Any(_ => string.Equals(_.Name, Namespace.Value, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 

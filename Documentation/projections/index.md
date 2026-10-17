@@ -40,7 +40,7 @@ The one decision worth making up front is *when* the read model has to be correc
 | | [Materialized (eventual)](eventual-consistency) | [Passive (on demand)](declarative/passive.mdx) |
 | --- | --- | --- |
 | **When it updates** | Shortly after the event is appended (the default) | Computed on demand, without a persistent sink |
-| **Cost** | Cheap reads, scales freely | First read folds the history; cached projection state can apply only newer events |
+| **Cost** | Cheap reads, scales freely | Every read folds the history from the start |
 | **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now*, such as state a command decides on |
 
 Start materialized. Make a read model passive only when a workflow genuinely can't tolerate it being a

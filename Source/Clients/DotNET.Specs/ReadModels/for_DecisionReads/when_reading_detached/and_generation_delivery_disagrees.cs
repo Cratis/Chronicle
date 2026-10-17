@@ -25,5 +25,7 @@ public class and_generation_delivery_disagrees : given.a_decision_reader
     async Task Because() => _error = await Catch.Exception(() => _reader.GetDetached<Model>("source"));
 
     [Fact] void should_refuse_definition_disagreement() => ((DecisionReadRefused)_error).Reason.ShouldEqual(DecisionReadRefusalReason.DefinitionMismatch);
+    [Fact] void should_name_the_difference() => _error.Message.ShouldContain("differs in: GenerationDelivery");
+    [Fact] void should_recheck_once_before_refusing() => _projectionService.ReceivedCalls().Count().ShouldEqual(2);
     [Fact] void should_not_start_the_fold() => _folds.ShouldEqual(0);
 }

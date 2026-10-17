@@ -285,7 +285,8 @@ public partial class Observer
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
-                        await Unsubscribe();
+                        // The batch is not advanced, so whatever subscription takes over catches up from the same position.
+                        await PromoteSupersededRegistrationOrUnsubscribe();
                         stateChanged = true;
                     }
 

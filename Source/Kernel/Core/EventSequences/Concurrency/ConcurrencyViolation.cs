@@ -14,4 +14,15 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 public record ConcurrencyViolation(
     EventSourceId EventSourceId,
     EventSequenceNumber ExpectedSequenceNumber,
-    EventSequenceNumber ActualSequenceNumber);
+    EventSequenceNumber ActualSequenceNumber)
+{
+    /// <summary>
+    /// Gets the <see cref="EventTypeId"/> of the first event that matched the scope after the expected sequence number, if it could be read.
+    /// </summary>
+    public EventTypeId? ConflictingEventTypeId { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> of the first event that matched the scope after the expected sequence number, if it could be read.
+    /// </summary>
+    public EventSequenceNumber? ConflictingSequenceNumber { get; init; }
+}

@@ -1,0 +1,46 @@
+# Deliver an application trigger durably
+
+Record a typed application trigger when background work must survive a client restart. Chronicle stores an occurrence outside the event log and delivers it at least once under a renewable lease. Triggers do not create domain events or appear in projections.
+
+This guide covers the .NET client's namespace-scoped application triggers. The kernel must advertise `occurrences`; registration and recording fail with `OccurrencesNotSupported` when support is absent or unknown. Receipt-backed effects additionally require `effect-receipts`.
+
+## Define the payload and handler
+
+1. Mark a concrete payload record with `[Trigger("stable-id")]` from `Cratis.Chronicle.Occurrences`. Keep that identifier stable across deployments. Two types cannot declare the same identifier in one event store.
+2. Implement `IOccurrenceHandler<TTrigger>`. Its `Handle(TTrigger trigger, OccurrenceContext context, CancellationToken cancellationToken)` method returns `Task`. Declare one handler for each trigger type; triggers without handlers can still be recorded for another worker to deliver.
+3. Keep payloads free of personal data and secrets. Trigger payloads are plaintext, are retained with the occurrence, and are not crypto-shredded. The kernel refuses schemas carrying compliance metadata.
+
+The normal artifact discovery finds both types. With a custom `IClientArtifactsProvider`, supply its `Triggers` and `OccurrenceHandlers` collections. Existing providers default both collections to empty. Options-based explicit registrations for other artifact kinds do not hide these discovered collections.
+
+Registration prepares JSON schemas before sending any artifact registrations. The client registers trigger definitions before starting occurrence workers, and repeats registration after reconnect. With automatic discovery disabled, use `DiscoverAll()` and `RegisterAll()` on the event store yourself. Inspect `WaitForRegistration()` before recording work that depends on startup registration.
+
+## Record the work
+
+Call `eventStore.Occurrences.Record(trigger, idempotencyId)` on the namespace-bound event store. Supply an idempotency identity from the originating request or durable job, not a new random value on every retry. This is an in-process API: it creates no application HTTP endpoint.
+
+Inspect the returned `OccurrenceRecordResult.Status`:
+
+| Status | Meaning |
+| --- | --- |
+| `Recorded` | The occurrence is durable before the reply. |
+| `AlreadyRecorded` | The same trigger, identity and payload already exist. Nothing new was recorded. |
+| `OccurrenceIdConflict` | The identity was reused with different content. Nothing changed. |
+| `OccurrencePayloadInvalid` | The trigger or payload does not satisfy its registered contract. Nothing was recorded. |
+
+After a lost reply, repeat the same call with the same payload and identity. Do not manufacture a replacement identity to get past an uncertain acknowledgement.
+
+## Make effects safe to repeat
+
+A handler receives the occurrence's stable identity, trigger, kind, kernel-recorded time, attempt number and fenced lease through `OccurrenceContext`. Each attempt has a fresh correlation id and an `Occurrence` causation link; attempts remain connected through the stable occurrence identity. Execution does not backdate events to the trigger's recorded time.
+
+Obtain a stable effect key with `context.EffectKey(name)` for each effect. Pass its `Value` to external endpoints that support idempotency. For Chronicle writes, enroll the key in the unit of work as described in [Settle an occurrence effect with a receipt](effect-receipts.mdx). An immediate append bypasses that receipt and can duplicate events on redelivery.
+
+Returning successfully completes the lease. Throwing fails the attempt so the kernel can retry with backoff and eventually quarantine it. A superseded worker's completion returns `OccurrenceLeaseLost`; the client treats that attempt as done rather than failing another worker's claim. A transport failure during completion leaves the durable state to settle on redelivery; it is not reported as a handler failure.
+
+## Keep the worker alive and honor cancellation
+
+The client observes occurrence status to wake its claim loop. It claims one occurrence at a time for each trigger, requests a sixty-second lease and renews every twenty seconds while the handler runs. A broken observation stream is reattached; durable queue state, not notification delivery, determines the next claim.
+
+Honor the handler's cancellation token. Disconnect, lease-renewal failure, supersession and client disposal cancel active attempts. Cancellation abandons the lease without recording a handler failure; another worker can reclaim it. An asynchronous disposal of the occurrence service waits for cooperative handlers and releases their scopes and subscriptions. Synchronous client disposal requests cancellation without blocking on user code.
+
+At-least-once delivery still permits overlapping attempts after a lost lease or a worker that ignores cancellation. Receipts deduplicate Chronicle effects, not arbitrary external side effects. Successful attempts are ordered, but a retrying earlier occurrence does not block later claimable work.
