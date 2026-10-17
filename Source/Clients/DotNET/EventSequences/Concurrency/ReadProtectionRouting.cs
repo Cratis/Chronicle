@@ -61,7 +61,7 @@ internal static class ReadProtectionRouting
                 contributions.Add(new(group.Key, declared ? ReadProtectionContributionKind.DeclaredRouting : ReadProtectionContributionKind.DefaultRouting, scope, commit.Target, $"routing of {routing?.EventSource.Value ?? @event.Event.GetType().Name}/{@event.EventStreamType}"));
             }
         }
-        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0);
+        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0, commit.ValidateReadsWithoutEvents);
     }
 
     static async Task<ConcurrencyScope> ResolveLegacy(EventSourceId source, IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries, IConcurrencyScopeStrategy strategy)

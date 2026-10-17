@@ -83,4 +83,10 @@ public interface IOccurrenceQueue : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Wake();
+
+    /// <summary>
+    /// Installs durable delivery wake-ups before lifecycle ingress writes directly to storage.
+    /// </summary>
+    /// <returns>The durable wake registration.</returns>
+    Task Prepare();
 }

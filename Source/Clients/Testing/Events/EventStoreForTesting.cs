@@ -87,6 +87,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     readonly Lazy<IPatterns> _patterns;
     readonly Lazy<IPIIManager> _pii;
     readonly Lazy<IIdentityManager> _identities;
+    readonly Lazy<Chronicle.Occurrences.Occurrences> _occurrences;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -114,7 +115,20 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
     /// <param name="options">Optional Chronicle settings, including explicit artifacts and the unit-of-work lifecycle policy.</param>
     public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options)
-        : this(serviceProvider, clientArtifactsProvider, options, null, null)
+        : this(serviceProvider, clientArtifactsProvider, options, testingStore: null, eventLog: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes an isolated store with explicit occurrence time and optional capability advertisement.
+    /// </summary>
+    /// <param name="serviceProvider">Artifact services.</param>
+    /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
+    /// <param name="options">Client options.</param>
+    /// <param name="time">The occurrence clock.</param>
+    /// <param name="capabilities">Optional capabilities; the default advertises Current.</param>
+    public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, ScenarioTime time, KernelCapabilitiesForTesting? capabilities = null)
+        : this(serviceProvider, clientArtifactsProvider, options, null, null, time, capabilities)
     {
     }
 
@@ -126,8 +140,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <param name="options">The scenario's client settings.</param>
     /// <param name="testingStore">The scenario's storage, or null to create a new store.</param>
     /// <param name="eventLog">The scenario's selected event log, or null to create one.</param>
+    /// <param name="time">Optional occurrence clock.</param>
+    /// <param name="capabilities">Optional kernel capabilities.</param>
 #pragma warning disable CA2000 // Dispose objects before losing scope
-    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog)
+    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog, ScenarioTime? time = null, KernelCapabilitiesForTesting? capabilities = null)
     {
         _scenarioEventLog = eventLog;
         ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
@@ -150,7 +166,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _namingPolicy);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
-        TestingStore = AdoptOrCreateStorage(testingStore);
+        TestingStore = testingStore ?? new TestingEventStore("testing", "default", () => _eventTypes!, time, capabilities);
         Connection = TestingStore.Connection;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
@@ -262,6 +278,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             EventSources));
         _pii = new Lazy<IPIIManager>(() => new PIIManager(Name, Namespace, Connection));
         _identities = new Lazy<IIdentityManager>(() => new IdentityManager(Name, Namespace, Connection));
+        _occurrences = new(CreateOccurrences);
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -273,6 +290,24 @@ public class EventStoreForTesting : IEventStore, IDisposable
 
     /// <inheritdoc/>
     public IChronicleConnection Connection { get; }
+
+    /// <summary>
+    /// Gets the explicitly driven occurrence clock.
+    /// </summary>
+    public ScenarioTime Time => TestingStore.Time;
+
+    /// <summary>
+    /// Gets the kernel capability switch. Schemas are selected during construction; later switches affect operations only.
+    /// </summary>
+    public KernelCapabilitiesForTesting Capabilities => TestingStore.Capabilities;
+
+    /// <summary>
+    /// Gets the commit-then-drop-reply driver.
+    /// </summary>
+    public DropReplyInterceptor Replies => TestingStore.Replies;
+
+    /// <inheritdoc/>
+    public Chronicle.Occurrences.IOccurrences Occurrences => _occurrences.Value;
 
     /// <inheritdoc/>
     public IEventTypes EventTypes => _eventTypes;
@@ -384,6 +419,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (_occurrences.IsValueCreated) _occurrences.Value.Dispose();
         TestingStore.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -425,8 +461,13 @@ public class EventStoreForTesting : IEventStore, IDisposable
         where TReadModel : class =>
         _readModelsForTesting.RegisterInstance(eventSourceId, instance);
 
-    TestingEventStore AdoptOrCreateStorage(TestingEventStore? scenarioStorage) =>
-        scenarioStorage ?? new TestingEventStore("testing", "default", () => _eventTypes);
+    Chronicle.Occurrences.Occurrences CreateOccurrences()
+    {
+        var occurrences = new Chronicle.Occurrences.Occurrences(this);
+        occurrences.Configure(ClientArtifactsProvider, JsonSchemaGenerator, _jsonSerializerOptions, ServiceProvider, _artifactActivator, new CausationManager(), new BaseIdentityProvider(), NullLogger<Chronicle.Occurrences.Occurrences>.Instance, ClientOptions);
+        occurrences.InitializeForTesting();
+        return occurrences;
+    }
 
     ReadModelsForTesting CreateReadModelsForStorage(IReadModels inner, TestingEventStore? scenarioStorage)
     {

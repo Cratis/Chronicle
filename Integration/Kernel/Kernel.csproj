@@ -9,6 +9,8 @@
         <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
 
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
+        <ProjectReference Include="../Clustering/Clustering.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
@@ -17,6 +19,7 @@
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Testcontainers.PostgreSql" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
