@@ -56,7 +56,11 @@ Prefer context properties for audit metadata. Use payload properties only when t
 
 The kernel now honors child inclusion in every-event mappings. In .NET, `[FromEvery]` includes events handled only by child projections, including nested child collections. A child's event updates the containing parent's audit fields using the child's resolved parent key; it does not create a root document keyed by the child identifier.
 
-This changes existing projections: a child-only event now advances a root `[FromEvery]` timestamp even without a root `[FromEvent]` for that event. In the declaration language, `every` includes child events by default; use `exclude children` to keep mappings local to their level.
+A child-only event advances a root `[FromEvery]` timestamp even without a root `[FromEvent]` for that event. In the declaration language, `every` includes child events by default; use `exclude children` to keep mappings local to their level.
+
+Put `[FromEvery]` on a child's own property to update that child instead. The mapping applies on the child's creating event as well as later events handled by that child. The same ownership rule applies to nested objects and `[FromAll]`: a mapping belongs to the object that declares it. Parent fields are never copied into a newly added child.
+
+For compatibility with clients that still put child mappings at the root, see [Child and nested properties](./from-all.mdx#child-and-nested-properties). A property declared on both root and child cannot be disambiguated until the client is upgraded.
 
 ## Limitations
 
