@@ -142,7 +142,12 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
 
         base.OnModelCreating(modelBuilder);
         Occurrences.OccurrenceModel.Configure(modelBuilder);
-        modelBuilder.Entity<Occurrences.TriggerDefinitionEntry>(entity =>
+        modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
+        {
+            entity.ToTable("LifecycleFanOutIntents");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        }).Entity<Occurrences.TriggerDefinitionEntry>(entity =>
         {
             entity.ToTable("TriggerDefinitions");
             entity.HasKey(row => row.Id);

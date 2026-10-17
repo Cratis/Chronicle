@@ -4,6 +4,7 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
@@ -18,7 +19,7 @@ internal static class StorageWriteConflicts
     /// </summary>
     /// <param name="error">The provider error.</param>
     /// <returns>Whether a unique constraint refused the write.</returns>
-    public static bool IsUnique(Exception error) => (error is DbUpdateException update ? update.InnerException : error) switch
+    public static bool IsUnique(Exception error) => Unwrap(error) switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
         SqlException sql => sql.Number is 2601 or 2627,
@@ -31,11 +32,23 @@ internal static class StorageWriteConflicts
     /// </summary>
     /// <param name="error">The provider error.</param>
     /// <returns>Whether the write conflicted with another transaction.</returns>
-    public static bool IsTransactionConflict(Exception error) => (error is DbUpdateException update ? update.InnerException : error) switch
+    public static bool IsTransactionConflict(Exception error) => Unwrap(error) switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.SerializationFailure || postgres.SqlState == PostgresErrorCodes.DeadlockDetected,
         SqlException sql => sql.Number == 1205,
         SqliteException sqlite => sqlite.SqliteErrorCode is 5 or 6,
         _ => false
+    };
+
+    /// <summary>
+    /// Finds the provider error, including the last attempt's failure reported by a retrying execution strategy.
+    /// </summary>
+    /// <param name="error">The error as thrown.</param>
+    /// <returns>The provider error, if any.</returns>
+    static Exception? Unwrap(Exception error) => error switch
+    {
+        RetryLimitExceededException { InnerException: { } inner } => Unwrap(inner),
+        DbUpdateException update => update.InnerException,
+        _ => error
     };
 }

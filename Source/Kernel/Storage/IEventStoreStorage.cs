@@ -26,6 +26,12 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets the durable lifecycle fan-out intents for this event store.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The provider has not implemented lifecycle intents.</exception>
+    Occurrences.ILifecycleFanOutStorage LifecycleFanOut => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Gets the payload contracts registered for application and lifecycle triggers.
     /// </summary>
     /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented trigger definition storage.</exception>

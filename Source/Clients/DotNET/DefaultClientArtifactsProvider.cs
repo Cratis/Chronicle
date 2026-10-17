@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
@@ -66,6 +67,28 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _eventSeeders = [];
     IEnumerable<Type> _eventTypeMigrators = [];
     IEnumerable<Type> _eventSources = [];
+    IEnumerable<Type> _triggers = [];
+    IEnumerable<Type> _occurrenceHandlers = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Triggers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _triggers;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> OccurrenceHandlers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _occurrenceHandlers;
+        }
+    }
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes
@@ -327,6 +350,9 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
                 _eventSources = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IEventSource>() && _.IsClass && !_.IsAbstract && !_.IsGenericTypeDefinition).ToArray();
                 _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
+
+                _triggers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<TriggerAttribute>()).ToArray();
+                _occurrenceHandlers = assembliesProvider.DefinedTypes.Where(_ => _.IsClass && !_.IsAbstract && !_.ContainsGenericParameters && _.HasInterface(typeof(IOccurrenceHandler<>))).ToArray();
 
                 // Publish all artifact arrays together only after every discovery step succeeds.
                 _initialized = true;
