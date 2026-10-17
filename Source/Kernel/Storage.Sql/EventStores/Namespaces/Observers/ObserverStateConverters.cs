@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
@@ -19,6 +20,8 @@ public static class ObserverStateConverters
         new()
         {
             Id = definition.Identifier,
+            TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
+            Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
@@ -38,7 +41,12 @@ public static class ObserverStateConverters
                     a.SequenceNumber.Value,
                     a.Messages,
                     a.StackTrace)),
-                fp.IsResolved)).ToList(),
+                fp.IsResolved)
+            {
+                RecoveryCursor = fp.RecoveryCursor,
+                RecoveryOwner = fp.RecoveryOwner,
+                Hold = fp.Hold
+            }).ToList(),
             FailedPartitionCount = definition.FailedPartitionCount,
             IsReplaying = definition.IsReplaying,
             SubscribesToAllEvents = definition.SubscribesToAllEvents
@@ -68,12 +76,17 @@ public static class ObserverStateConverters
                     Messages = a.Messages,
                     StackTrace = a.StackTrace
                 }),
-                IsResolved = fp.IsResolved
+                IsResolved = fp.IsResolved,
+                RecoveryCursor = fp.RecoveryCursor,
+                RecoveryOwner = fp.RecoveryOwner,
+                Hold = fp.Hold
             }).ToList(),
             state.FailedPartitionCount,
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
+            Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,

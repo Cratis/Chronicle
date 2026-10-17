@@ -144,6 +144,22 @@ public interface IEventStoreStorage
     Task MarkInitialized() => throw new EventStoreInitializationNotSupported();
 
     /// <summary>
+    /// Checks the observer-enablement marker, independently of first-time kernel setup.
+    /// Missing markers in legacy stores mean observer initialization has not completed.
+    /// </summary>
+    /// <returns>Whether observer initialization completed for the event store.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> AreObserversInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Persists observer enablement after the initialization operation's cluster checks.
+    /// This storage operation performs no initialization or runtime state changes itself.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkObserversInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>
