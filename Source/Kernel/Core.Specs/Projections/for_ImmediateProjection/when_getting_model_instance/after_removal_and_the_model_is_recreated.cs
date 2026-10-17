@@ -9,14 +9,14 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.for_ImmediateProjection.when_getting_model_instance;
 
-public class after_removal_is_cached_and_the_model_is_recreated : given.an_immediate_projection
+public class after_removal_and_the_model_is_recreated : given.an_immediate_projection
 {
     readonly EventType _createdEventType = new("ModelCreated", EventTypeGeneration.First);
     readonly EventType _removedEventType = new("ModelRemoved", EventTypeGeneration.First);
     readonly EventType _recreatedEventType = new("ModelRecreated", EventTypeGeneration.First);
     ProjectionResult _afterRemoval;
-    ProjectionResult _firstCachedAbsence;
-    ProjectionResult _secondCachedAbsence;
+    ProjectionResult _firstRepeatedAbsence;
+    ProjectionResult _secondRepeatedAbsence;
     ProjectionResult _afterRecreation;
     SingleReadModelProjectionState _recreationInitialState;
     int _processingCalls;
@@ -26,19 +26,20 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
         var created = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_createdEventType, 1);
         var removed = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_removedEventType, 2);
         var recreated = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_recreatedEventType, 3);
-        var tails = new Queue<EventSequenceNumber>([(EventSequenceNumber)2, (EventSequenceNumber)2, (EventSequenceNumber)2, (EventSequenceNumber)3]);
-        var createAndRemoveCursor = CreateCursor(created, removed);
-        var recreateCursor = CreateCursor(recreated);
+        var recreationCursor = CreateCursor(created, removed);
+        var page = -1;
+        recreationCursor.Current.Returns(_ => page == 0 ? [created, removed] : [recreated]);
+        recreationCursor.MoveNext().Returns(_ => ++page < 2);
+        var cursors = new Queue<Storage.EventSequences.IEventCursor>([
+            CreateCursor(created, removed),
+            CreateCursor(created, removed),
+            CreateCursor(created, removed),
+            recreationCursor]);
 
         _projection.GetEventTypes().Returns([_createdEventType, _removedEventType, _recreatedEventType]);
-        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>())
-            .Returns(_ => Task.FromResult(tails.Dequeue()));
         _eventSequenceStorage
             .GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(createAndRemoveCursor);
-        _eventSequenceStorage
-            .GetFromSequenceNumber((EventSequenceNumber)3, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(recreateCursor);
+            .Returns(_ => cursors.Dequeue());
         _projection
             .FoldForSingleReadModel(
                 EventStoreNamespaceName.Default,
@@ -74,22 +75,22 @@ public class after_removal_is_cached_and_the_model_is_recreated : given.an_immed
     async Task Because()
     {
         _afterRemoval = await _grain.GetModelInstance();
-        _firstCachedAbsence = await _grain.GetModelInstance();
-        _secondCachedAbsence = await _grain.GetModelInstance();
+        _firstRepeatedAbsence = await _grain.GetModelInstance();
+        _secondRepeatedAbsence = await _grain.GetModelInstance();
         _afterRecreation = await _grain.GetModelInstance();
     }
 
     [Fact] void should_report_the_removal_as_absent() => _afterRemoval.HasReadModel.ShouldBeFalse();
     [Fact] void should_count_the_events_that_produced_the_removal() => _afterRemoval.ProjectedEventsCount.ShouldEqual(2);
     [Fact] void should_remember_the_removal_tail() => _afterRemoval.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)2);
-    [Fact] void should_keep_the_first_cached_read_absent() => _firstCachedAbsence.HasReadModel.ShouldBeFalse();
-    [Fact] void should_not_reprocess_events_for_the_first_cached_read() => _firstCachedAbsence.ProjectedEventsCount.ShouldEqual(0);
-    [Fact] void should_keep_the_second_cached_read_absent() => _secondCachedAbsence.HasReadModel.ShouldBeFalse();
-    [Fact] void should_not_reprocess_events_for_the_second_cached_read() => _secondCachedAbsence.ProjectedEventsCount.ShouldEqual(0);
+    [Fact] void should_keep_the_first_repeated_read_absent() => _firstRepeatedAbsence.HasReadModel.ShouldBeFalse();
+    [Fact] void should_refold_the_events_for_the_first_repeated_read() => _firstRepeatedAbsence.ProjectedEventsCount.ShouldEqual(2);
+    [Fact] void should_keep_the_second_repeated_read_absent() => _secondRepeatedAbsence.HasReadModel.ShouldBeFalse();
+    [Fact] void should_refold_the_events_for_the_second_repeated_read() => _secondRepeatedAbsence.ProjectedEventsCount.ShouldEqual(2);
     [Fact] void should_report_the_recreated_model_as_present() => _afterRecreation.HasReadModel.ShouldBeTrue();
-    [Fact] void should_process_only_the_recreation_event() => _afterRecreation.ProjectedEventsCount.ShouldEqual(1);
+    [Fact] void should_process_the_full_history_including_recreation() => _afterRecreation.ProjectedEventsCount.ShouldEqual(3);
     [Fact] void should_advance_to_the_recreation_tail() => _afterRecreation.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3);
-    [Fact] void should_not_process_events_for_either_cached_read() => _processingCalls.ShouldEqual(2);
+    [Fact] void should_process_every_reads_batches() => _processingCalls.ShouldEqual(5);
     [Fact] void should_recreate_from_an_empty_state() => _recreationInitialState.Model.ShouldBeEmpty();
     [Fact] void should_carry_absence_into_the_recreation_batch() => _recreationInitialState.Exists.ShouldBeFalse();
     [Fact] void should_carry_the_uninitialized_root_into_the_recreation_batch() => _recreationInitialState.IsInitialized.ShouldBeFalse();

@@ -12,16 +12,15 @@ namespace Cratis.Chronicle.Projections.for_ImmediateProjection.when_getting_mode
 public class and_creation_has_no_properties : given.an_immediate_projection
 {
     ProjectionResult _result;
-    ProjectionResult _cached;
+    ProjectionResult _reread;
 
     void Establish()
     {
         var created = new EventType("Created", EventTypeGeneration.First);
         _projection.GetEventTypes().Returns([created]);
-        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns((EventSequenceNumber)1);
-        var cursor = CreateCursor(AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(created, 1));
+        var createdEvent = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(created, 1);
         _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(cursor);
+            .Returns(_ => CreateCursor(createdEvent));
         _projection.FoldForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<SingleReadModelProjectionState>(), Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(new SingleReadModelProjectionState(new ExpandoObject(), true, true));
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
@@ -30,9 +29,10 @@ public class and_creation_has_no_properties : given.an_immediate_projection
     async Task Because()
     {
         _result = await _grain.GetModelInstance();
-        _cached = await _grain.GetModelInstance();
+        _reread = await _grain.GetModelInstance();
     }
 
     [Fact] void should_report_the_empty_instance_as_present() => _result.HasReadModel.ShouldBeTrue();
-    [Fact] void should_keep_the_cached_empty_instance_present() => _cached.HasReadModel.ShouldBeTrue();
+    [Fact] void should_keep_the_empty_instance_present_on_a_second_read() => _reread.HasReadModel.ShouldBeTrue();
+    [Fact] void should_keep_the_last_handled_event_on_a_second_read() => _reread.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)1);
 }

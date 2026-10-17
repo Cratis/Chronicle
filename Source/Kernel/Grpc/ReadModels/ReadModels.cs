@@ -188,7 +188,7 @@ internal sealed class ReadModels(
         // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
         // client. For a projection this is also the only path that reflects joins and custom key resolvers
         // (UsingKey), because ImmediateProjection replays by EventSourceId alone and misses cross-source events.
-        // A session pins a projection to an in-flight state, and an unspecified key ("*") cannot be looked up by
+        // Session reads fold from storage on every call, and an unspecified key ("*") cannot be looked up by
         // key at all, so both of those keep replaying.
         if (!streamScoped && materializedReadModels.IsMaterialized(definition) &&
             string.IsNullOrEmpty(request.SessionId) &&
