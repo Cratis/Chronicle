@@ -54,4 +54,10 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Warning, "Failed retiring projection '{Identifier}' - it remains registered and retirement will be retried on the next full registration")]
     internal static partial void FailedRetiringProjection(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Warning, "Ignoring the registration of projection '{Identifier}' from client version {IncomingVersion}, since it is older than version {StoredVersion} it was last registered with. The stored definition is kept")]
+    internal static partial void IgnoringOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionId identifier, string incomingVersion, string storedVersion);
+
+    [LoggerMessage(LogLevel.Warning, "The full set of projections for owner '{Owner}' registered by client version {IncomingVersion} is older than what is stored - not retiring any projections")]
+    internal static partial void NotRetiringForOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionOwner owner, string incomingVersion);
 }

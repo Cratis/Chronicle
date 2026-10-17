@@ -418,6 +418,12 @@ public interface IObserver : IGrainWithStringKey
     Task<bool> IsPreparingCatchup();
 
     /// <summary>
+    /// Gets whether catch-up is backing off because consecutive catch-up jobs concluded without moving the observer forward.
+    /// </summary>
+    /// <returns>True if catch-up should not be started again yet, false otherwise.</returns>
+    Task<bool> IsCatchUpBackedOff();
+
+    /// <summary>
     /// Check if the observer currently has any failed partitions.
     /// </summary>
     /// <returns>True if there are failed partitions, false otherwise.</returns>

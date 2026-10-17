@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_failing_partition;
 
 public class and_a_quarantined_observers_partition_exhausts_retries : given.a_reactivated_quarantined_observer
 {
-    protected override Observers CreateObserversConfig() => new() { MaxRetryAttempts = 1 };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, MaxRetryAttempts = 1 };
 
     void Establish()
     {

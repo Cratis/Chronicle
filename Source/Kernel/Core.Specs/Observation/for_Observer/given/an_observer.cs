@@ -73,7 +73,7 @@ public class an_observer : Specification
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
 
-    protected virtual Observers CreateObserversConfig() => new();
+    protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
     void AddServices(TestKitSilo silo)
     {

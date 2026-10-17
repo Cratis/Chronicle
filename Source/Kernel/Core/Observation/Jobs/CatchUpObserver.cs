@@ -86,10 +86,18 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    /// <remarks>
+    /// A step that timed out is run again - the callee was too busy, which says nothing about the events - and the
+    /// partition is reported as failed only when the attempts are used up.
+    /// </remarks>
+    protected override bool ShouldRetryStep(JobStepId stepId, JobStepResult result, int attempt) =>
+        TransientTimeouts.ShouldRetry(result, attempt, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -142,6 +150,13 @@ public class CatchUpObserver(
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
         var steps = CreateStepsFor(request, keysToCatchUp);
+        if (steps.Count == 0)
+        {
+            // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
+            using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
+            logger.NoJobStepsPrepared(nameof(CatchUpObserver));
+        }
+
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);
         return steps;
     }

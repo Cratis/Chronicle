@@ -44,4 +44,13 @@ public class RegisterRequest
     /// </summary>
     [ProtoMember(5)]
     public string Registrant { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the software version of the application registering, as a semantic version. The kernel ignores
+    /// a registration that is older than the version a projection was last registered with, so a client that
+    /// reconnects or retries during a rolling deploy cannot overwrite the definitions of a newer one. A missing or
+    /// unparseable version leaves the registration unguarded.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? Version { get; set; }
 }

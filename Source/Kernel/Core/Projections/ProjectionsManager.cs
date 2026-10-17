@@ -13,6 +13,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -103,10 +104,32 @@ public partial class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null)
+    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
-        var definitionList = definitions.ToList();
+        var definitionList = StampWithVersion(definitions, version);
+
+        // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers
+        // must neither replace what a newer version registered, nor retire what a newer version added.
+        var olderThanStored = definitionList.Where(definition => IsOlderThanStored(definition, version)).ToList();
+        if (olderThanStored.Count > 0)
+        {
+            foreach (var definition in olderThanStored)
+            {
+                var stored = State.Projections.First(projection => projection.Identifier == definition.Identifier);
+                logger.IgnoringOlderRegistration(definition.Identifier, version!, stored.Version!);
+                await AddIgnoredRegistrationRecommendation(definition.Identifier, version!, stored.Version!);
+            }
+
+            definitionList = definitionList.Except(olderThanStored).ToList();
+        }
+
+        if (fullSetOwner is not null && IsOlderThanAnyRetirableBy(fullSetOwner.Value, registrant, version))
+        {
+            logger.NotRetiringForOlderRegistration(fullSetOwner.Value, version!);
+            fullSetOwner = null;
+        }
+
         var registrantsChanged = RecordRegistrant(definitionList, registrant);
 
         // Same-version client replicas re-register identical definitions on every startup and reconnect. Handling
@@ -209,6 +232,46 @@ public partial class ProjectionsManager(
         return Task.CompletedTask;
     }
 
+    static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
+        [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
+
+    bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
+        State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));
+
+    /// <summary>
+    /// Checks whether a full set is older than any stored projection it could retire. Another application sharing the
+    /// event store registers its own versions, and those must not stop this application from retiring what it no
+    /// longer registers.
+    /// </summary>
+    /// <param name="owner">The owner of the full set.</param>
+    /// <param name="registrant">The registrant of the full set, if any.</param>
+    /// <param name="version">The version of the full set, if any.</param>
+    /// <returns>True if the full set is older than a projection it could retire.</returns>
+    bool IsOlderThanAnyRetirableBy(ProjectionOwner owner, string? registrant, string? version) =>
+        State.Projections.Any(stored =>
+            stored.Owner == owner &&
+            IsRegisteredBy(stored.Identifier, registrant) &&
+            ProjectionVersions.IsOlder(version, stored.Version));
+
+    async Task AddIgnoredRegistrationRecommendation(ProjectionId identifier, string incomingVersion, string storedVersion)
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        foreach (var @namespace in namespaces)
+        {
+            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
+
+            // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
+            await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
+                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
+                new()
+                {
+                    ProjectionId = identifier,
+                    IncomingVersion = incomingVersion,
+                    StoredVersion = storedVersion
+                });
+        }
+    }
+
     /// <summary>
     /// Records which registrant last registered each of the definitions, so a full set can later retire only what
     /// the same registrant registered. Several applications share one event store, each registering its own full set.
@@ -258,9 +321,11 @@ public partial class ProjectionsManager(
                 existing,
                 definition);
 
-            // Tags do not require evolution, but their metadata still needs to reach the engine and persistent definitions.
+            // Tags and the registering version do not require evolution, but their metadata still needs to reach the
+            // engine and persistent definitions. A registration without a version never counts as a version change.
             if (compareResult != ProjectionDefinitionCompareResult.Same ||
-                !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []))
+                !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []) ||
+                (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version))
             {
                 changed.Add(definition);
             }
@@ -337,6 +402,15 @@ public partial class ProjectionsManager(
         {
             try
             {
+                // Timer passes can yield while a registration replaces the captured definitions.
+                // Registrations themselves must use their incoming definition, not the old stored one.
+                if (!reactivateRetired)
+                {
+                    var current = State.Projections.FirstOrDefault(projection => projection.Identifier == definition.Identifier);
+                    if (current is null) return;
+                    definition = current;
+                }
+
                 if (!readModelDefinitions.TryGetValue(definition.ReadModel, out var readModelDefinition))
                 {
                     logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);

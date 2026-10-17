@@ -244,7 +244,8 @@ public partial class EventStore : IEventStore
             jsonSerializerOptions,
             loggerFactory.CreateLogger<Projections.Projections>())
         {
-            GenerationDelivery = options.Value.EventGenerationDelivery
+            GenerationDelivery = options.Value.EventGenerationDelivery,
+            SoftwareVersion = options.Value.SoftwareVersion
         };
 
         _projections = projections;

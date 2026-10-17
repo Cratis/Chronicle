@@ -32,6 +32,9 @@ internal sealed class ObserversForTesting(IObservers observers) : IObservers
     public Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default) => observers.FastForward(command, context);
 
     /// <inheritdoc/>
+    public Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default) => observers.RetryFailedPartitions(command, context);
+
+    /// <inheritdoc/>
     public Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default) => observers.ClearFailedPartitions(command, context);
 
     /// <inheritdoc/>

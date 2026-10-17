@@ -14,7 +14,7 @@ public class an_observer_quarantined_during_a_probe : an_observer_with_subscript
     protected readonly TaskCompletionSource _probeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly Key _partition = "recovered-partition";
 
-    protected override Observers CreateObserversConfig() => new() { QuarantineOnFailedPartitionCount = 1 };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, QuarantineOnFailedPartitionCount = 1 };
 
     void Establish()
     {

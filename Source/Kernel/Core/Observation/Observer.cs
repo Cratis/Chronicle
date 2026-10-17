@@ -125,8 +125,23 @@ public partial class Observer(
     /// </remarks>
     int _catchUpOwnershipEpoch;
     int _catchupRecoveryAttempts;
+
+    /// <summary>
+    /// Counts consecutive catch-up laps that concluded without moving the observer forward.
+    /// </summary>
+    int _zeroWorkCatchUps;
+
+    /// <summary>
+    /// The moment from which a catch-up that produced no work may be tried again, or the default value when none is backing off.
+    /// </summary>
+    DateTimeOffset _catchUpBackoffUntil;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
+    TimeSpan _writeCoalescingInterval = TimeSpan.Zero;
+    Dictionary<Key, Dictionary<EventTypeId, EventCount>> _pendingHandledCounts = [];
+    IGrainTimer? _coalescedWriteTimer;
+    bool _failureStateWritePending;
+    Dictionary<FailedPartitionId, TimeSpan> _pendingRetryReminders = [];
     int _debouncedProgressWrites;
 
     /// <inheritdoc/>
@@ -180,6 +195,7 @@ public partial class Observer(
 
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
+        _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         await InitializeAlertState();
     }
@@ -250,6 +266,9 @@ public partial class Observer(
 
     /// <inheritdoc/>
     public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);
+
+    /// <inheritdoc/>
+    public Task<bool> IsCatchUpBackedOff() => Task.FromResult(IsBackingOffCatchUp);
 
     /// <inheritdoc/>
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
@@ -428,6 +447,7 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             _eventSequence,
+            storage,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(

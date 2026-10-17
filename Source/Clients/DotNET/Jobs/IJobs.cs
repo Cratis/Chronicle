@@ -12,15 +12,15 @@ public interface IJobs
     /// Stops the <see cref="Job"/> with the specified <paramref name="jobId"/>.
     /// </summary>
     /// <param name="jobId">The job id.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Stop(JobId jobId);
+    /// <returns>The <see cref="JobCommandResult"/> telling whether the job took the stop, and why not when it did not.</returns>
+    Task<JobCommandResult> Stop(JobId jobId);
 
     /// <summary>
     /// Resumes the <see cref="Job"/> with the specified <paramref name="jobId"/>.
     /// </summary>
     /// <param name="jobId">The job id.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Resume(JobId jobId);
+    /// <returns>The <see cref="JobCommandResult"/> telling whether the job was taken forward, and why not when it was not.</returns>
+    Task<JobCommandResult> Resume(JobId jobId);
 
     /// <summary>
     /// Deletes the <see cref="Job"/> with the specified <paramref name="jobId"/>.

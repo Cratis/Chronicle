@@ -27,6 +27,9 @@ internal static partial class ObserverMetrics
     const string EventsSuspectedSkippedName = "chronicle-observer-events-suspected-skipped";
     const string EventsSuspectedSkippedDescription = "Number of live events an observer's position moved past without the observer seeing any delivery path cover them. A suspicion, not proof";
 
+    const string ZeroWorkCatchUpName = "chronicle-observer-zero-work-catch-ups";
+    const string ZeroWorkCatchUpDescription = "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position";
+
     static readonly Lock _failureCountersLock = new();
     static FailureCounters? _failureCounters;
 
@@ -82,6 +85,12 @@ internal static partial class ObserverMetrics
     /// <param name="count">The number of suspected skipped events.</param>
     internal static void EventsSuspectedSkipped(this IMeterScope<Observer> meter, int count) => meter.Increment(_ => _.EventsSuspectedSkipped, count);
 
+    /// <summary>
+    /// Records a catch-up job of the observer that concluded without moving the observer forward.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void ZeroWorkCatchUp(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ZeroWorkCatchUp);
+
     static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int count = 1)
     {
         var counters = GetFailureCounters(meter);
@@ -129,6 +138,8 @@ internal static partial class ObserverMetrics
         public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(PartitionQuarantineClearedName, unit: null, description: PartitionQuarantineClearedDescription);
 
         public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(ObserverQuarantinedName, unit: null, description: ObserverQuarantinedDescription);
+
+        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(ZeroWorkCatchUpName, unit: null, description: ZeroWorkCatchUpDescription);
 
         public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(EventsSuspectedSkippedName, unit: null, description: EventsSuspectedSkippedDescription);
     }

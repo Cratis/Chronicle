@@ -13,7 +13,7 @@ public class a_quarantined_partition : an_observer_with_subscription
     protected const int MaxRetryAttempts = 2;
     protected static readonly EventSequenceNumber LastFailedSequenceNumber = 44UL;
 
-    protected override Observers CreateObserversConfig() => new() { MaxRetryAttempts = MaxRetryAttempts };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, MaxRetryAttempts = MaxRetryAttempts };
 
     void Establish()
     {

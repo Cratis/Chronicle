@@ -33,6 +33,7 @@ public class a_projections_manager_grain : Specification
     protected IProjectionsServiceClient _projectionsServiceClient;
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
+    protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
     protected INamespaces _namespaces;
@@ -93,9 +94,9 @@ public class a_projections_manager_grain : Specification
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => _namespaces);
 
-        var readModelsManager = Substitute.For<IReadModelsManager>();
-        readModelsManager.GetDefinitions().Returns(_ => Task.FromResult(_readModelDefinitions));
-        _silo.AddProbe(_ => readModelsManager);
+        _readModelsManager = Substitute.For<IReadModelsManager>();
+        _readModelsManager.GetDefinitions().Returns(_ => Task.FromResult(_readModelDefinitions));
+        _silo.AddProbe(_ => _readModelsManager);
 
         _projectionGrain = Substitute.For<IProjection>();
         _silo.AddProbe(_ => _projectionGrain);
