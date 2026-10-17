@@ -34,7 +34,15 @@ public interface IJobs
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult<ResumeJobResponse>> ResumeJob(ResumeJobRequest request, CallContext callContext = default);
+    Task<CommandResult> ResumeJob(ResumeJobRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ResumeJobWithResult command.
+    /// </summary>
+    /// <param name = "request">The ResumeJobWithResult request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<ResumeJobWithResultResponse>> ResumeJobWithResult(ResumeJobWithResultRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the StopJob command.
     /// </summary>
@@ -42,7 +50,15 @@ public interface IJobs
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult<StopJobResponse>> StopJob(StopJobRequest request, CallContext callContext = default);
+    Task<CommandResult> StopJob(StopJobRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the StopJobWithResult command.
+    /// </summary>
+    /// <param name = "request">The StopJobWithResult request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<StopJobWithResultResponse>> StopJobWithResult(StopJobWithResultRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the GetJobSteps query.
     /// </summary>
@@ -120,10 +136,35 @@ public class ResumeJobRequest
 }
 
 /// <summary>
-/// Represents the ResumeJobResponse message.
+/// Represents the ResumeJobWithResultRequest message.
 /// </summary>
 [ProtoContract]
-public class ResumeJobResponse
+public class ResumeJobWithResultRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the JobId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid JobId { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the ResumeJobWithResultResponse message.
+/// </summary>
+[ProtoContract]
+public class ResumeJobWithResultResponse
 {
     /// <summary>
     /// Gets or sets the Accepted.
@@ -164,10 +205,35 @@ public class StopJobRequest
 }
 
 /// <summary>
-/// Represents the StopJobResponse message.
+/// Represents the StopJobWithResultRequest message.
 /// </summary>
 [ProtoContract]
-public class StopJobResponse
+public class StopJobWithResultRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the JobId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid JobId { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the StopJobWithResultResponse message.
+/// </summary>
+[ProtoContract]
+public class StopJobWithResultResponse
 {
     /// <summary>
     /// Gets or sets the Accepted.

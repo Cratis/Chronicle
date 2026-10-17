@@ -19,7 +19,7 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<JobCommandResult> Stop(JobId jobId)
     {
-        var response = (await _servicesAccessor.Services.Jobs.StopJob(new()
+        var response = (await _servicesAccessor.Services.Jobs.StopJobWithResult(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -31,7 +31,7 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<JobCommandResult> Resume(JobId jobId)
     {
-        var response = (await _servicesAccessor.Services.Jobs.ResumeJob(new()
+        var response = (await _servicesAccessor.Services.Jobs.ResumeJobWithResult(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,

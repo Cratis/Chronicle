@@ -10,5 +10,7 @@ export * from './JobSummary';
 export * from './ObserveJobs';
 export * from './ResumeJob';
 export * from './ResumeJobOutcome';
+export * from './ResumeJobWithResult';
 export * from './StopJob';
 export * from './StopJobOutcome';
+export * from './StopJobWithResult';

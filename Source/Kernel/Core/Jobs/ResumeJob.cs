@@ -21,7 +21,7 @@ public record ResumeJob(EventStoreName EventStore, EventStoreNamespaceName Names
     /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Resume"/> on the jobs manager grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
-    /// <returns>The <see cref="ResumeJobOutcome"/> telling whether the job was taken forward, and why not when it was not.</returns>
-    public async Task<ResumeJobOutcome> Handle(IGrainFactory grainFactory) =>
-        JobCommandOutcomes.ForResume(await grainFactory.GetJobsManager(EventStore, Namespace).Resume(JobId));
+    /// <returns>Awaitable task.</returns>
+    public Task Handle(IGrainFactory grainFactory) =>
+        grainFactory.GetJobsManager(EventStore, Namespace).Resume(JobId);
 }

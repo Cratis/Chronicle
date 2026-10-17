@@ -3,18 +3,18 @@
 
 import sinon from 'sinon';
 import { Guid } from '@cratis/fundamentals';
-import { JobCommandRefusal, JobSummary, ResumeJob, ResumeJobOutcome, StopJob, StopJobOutcome } from 'Features/Jobs';
+import { JobCommandRefusal, JobSummary, ResumeJobWithResult, ResumeJobOutcome, StopJobWithResult, StopJobOutcome } from 'Features/Jobs';
 import { JobsViewModel } from '../../../JobsViewModel';
 
 class TestableJobsViewModel extends JobsViewModel {
-    stopJob = new StopJob();
-    resumeJob = new ResumeJob();
+    stopJob = new StopJobWithResult();
+    resumeJob = new ResumeJobWithResult();
 
-    protected createStopJob(): StopJob {
+    protected createStopJob(): StopJobWithResult {
         return this.stopJob;
     }
 
-    protected createResumeJob(): ResumeJob {
+    protected createResumeJob(): ResumeJobWithResult {
         return this.resumeJob;
     }
 }

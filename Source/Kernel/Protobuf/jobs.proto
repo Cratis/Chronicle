@@ -14,23 +14,23 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
-message CommandResult_ResumeJobResponse {
+message CommandResult_ResumeJobWithResultResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
-   ResumeJobResponse Response = 7;
+   ResumeJobWithResultResponse Response = 7;
 }
-message CommandResult_StopJobResponse {
+message CommandResult_StopJobWithResultResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
    repeated ValidationResult ValidationResults = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
-   StopJobResponse Response = 7;
+   StopJobWithResultResponse Response = 7;
 }
 message DeleteJobRequest {
    string EventStore = 1;
@@ -139,7 +139,12 @@ message ResumeJobRequest {
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
-message ResumeJobResponse {
+message ResumeJobWithResultRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message ResumeJobWithResultResponse {
    bool Accepted = 1;
    JobCommandRefusal Refusal = 2;
 }
@@ -152,7 +157,12 @@ message StopJobRequest {
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
-message StopJobResponse {
+message StopJobWithResultRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message StopJobWithResultResponse {
    bool Accepted = 1;
    JobCommandRefusal Refusal = 2;
 }
@@ -172,6 +182,8 @@ service Jobs {
    rpc DeleteJob (DeleteJobRequest) returns (CommandResult);
    rpc GetJobSteps (GetJobStepsRequest) returns (QueryResult_IEnumerable_JobStepSummaryResponse);
    rpc ObserveJobs (ObserveJobsRequest) returns (stream QueryResult_IEnumerable_JobSummaryResponse);
-   rpc ResumeJob (ResumeJobRequest) returns (CommandResult_ResumeJobResponse);
-   rpc StopJob (StopJobRequest) returns (CommandResult_StopJobResponse);
+   rpc ResumeJob (ResumeJobRequest) returns (CommandResult);
+   rpc ResumeJobWithResult (ResumeJobWithResultRequest) returns (CommandResult_ResumeJobWithResultResponse);
+   rpc StopJob (StopJobRequest) returns (CommandResult);
+   rpc StopJobWithResult (StopJobWithResultRequest) returns (CommandResult_StopJobWithResultResponse);
 }

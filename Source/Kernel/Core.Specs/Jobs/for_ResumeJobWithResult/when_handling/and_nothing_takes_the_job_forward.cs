@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Jobs.for_JobCommandOutcomes.given;
 
-namespace Cratis.Chronicle.Jobs.for_ResumeJob.when_handling;
+namespace Cratis.Chronicle.Jobs.for_ResumeJobWithResult.when_handling;
 
 public class and_nothing_takes_the_job_forward : a_job_command
 {
@@ -11,7 +11,7 @@ public class and_nothing_takes_the_job_forward : a_job_command
 
     void Establish() => _jobsManager.Resume(_jobId).Returns(false);
 
-    async Task Because() => _result = await new ResumeJob("some-event-store", "some-namespace", _jobId).Handle(_grainFactory);
+    async Task Because() => _result = await new ResumeJobWithResult("some-event-store", "some-namespace", _jobId).Handle(_grainFactory);
 
     [Fact] void should_report_it_was_not_accepted() => _result.Accepted.ShouldBeFalse();
     [Fact] void should_say_it_was_not_resumed() => _result.Refusal.ShouldEqual(JobCommandRefusal.NotResumed);

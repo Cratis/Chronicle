@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { DeleteJob, JobCommandRefusal, JobSummary, ResumeJob, StopJob } from 'Features/Jobs';
+import { DeleteJob, JobCommandRefusal, JobSummary, ResumeJobWithResult, StopJobWithResult } from 'Features/Jobs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Guid } from '@cratis/fundamentals';
 
@@ -70,12 +70,12 @@ export class JobsViewModel {
         this.throwIfRefused('resume', result.response?.accepted, result.response?.refusal);
     }
 
-    protected createStopJob(): StopJob {
-        return new StopJob();
+    protected createStopJob(): StopJobWithResult {
+        return new StopJobWithResult();
     }
 
-    protected createResumeJob(): ResumeJob {
-        return new ResumeJob();
+    protected createResumeJob(): ResumeJobWithResult {
+        return new ResumeJobWithResult();
     }
 
     private throwIfRefused(action: string, accepted: boolean | undefined, refusal: JobCommandRefusal | undefined) {

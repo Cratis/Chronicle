@@ -5,7 +5,7 @@ using Cratis.Chronicle.Jobs.for_JobCommandOutcomes.given;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 
-namespace Cratis.Chronicle.Jobs.for_StopJob.when_handling;
+namespace Cratis.Chronicle.Jobs.for_StopJobWithResult.when_handling;
 
 public class and_the_job_accepts_the_stop : a_job_command
 {
@@ -13,7 +13,7 @@ public class and_the_job_accepts_the_stop : a_job_command
 
     void Establish() => _jobsManager.Stop(_jobId).Returns(Result<StopJobError>.Success());
 
-    async Task Because() => _result = await new StopJob("some-event-store", "some-namespace", _jobId).Handle(_grainFactory);
+    async Task Because() => _result = await new StopJobWithResult("some-event-store", "some-namespace", _jobId).Handle(_grainFactory);
 
     [Fact] void should_report_it_accepted() => _result.Accepted.ShouldBeTrue();
     [Fact] void should_not_give_a_refusal() => _result.Refusal.ShouldEqual(JobCommandRefusal.NotRefused);
