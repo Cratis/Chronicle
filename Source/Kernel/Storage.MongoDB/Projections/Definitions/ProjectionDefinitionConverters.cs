@@ -52,7 +52,8 @@ public static class ProjectionDefinitionConverters
                 kv => (PropertyPath)kv.Key,
                 kv => kv.Value.ToKernel()),
             SubscribesToAllEvents: source.SubscribesToAllEvents,
-            NoAutoMapProperties: source.NoAutoMapProperties.Select(_ => (PropertyPath)_).ToList()
+            NoAutoMapProperties: source.NoAutoMapProperties.Select(_ => (PropertyPath)_).ToList(),
+            Scope: source.Scope
         ) { GenerationDelivery = source.GenerationDelivery, Version = source.Version };
 
     /// <summary>
@@ -97,6 +98,7 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Key.ToString(),
                 kv => kv.Value.ToMongoDB()),
             SubscribesToAllEvents = source.SubscribesToAllEvents,
-            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => (string)_).ToList()
+            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => (string)_).ToList(),
+            Scope = source.Scope
         };
 }
