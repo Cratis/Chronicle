@@ -114,6 +114,11 @@ public class ProjectionDefinition
     public bool SubscribesToAllEvents { get; set; }
 
     /// <summary>
+    /// Gets or sets the scope the projection materializes its read model in.
+    /// </summary>
+    public Concepts.Projections.ProjectionScope Scope { get; set; } = Concepts.Projections.ProjectionScope.Namespaced;
+
+    /// <summary>
     /// Gets or sets the read model property names excluded from auto-mapping even when
     /// <see cref="AutoMap"/> is enabled.
     /// </summary>
@@ -123,4 +128,9 @@ public class ProjectionDefinition
     /// Gets or sets the event generation delivery policy.
     /// </summary>
     public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the software version of the client application that registered the definition.
+    /// </summary>
+    public string? Version { get; set; }
 }

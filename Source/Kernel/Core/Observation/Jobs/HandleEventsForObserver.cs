@@ -66,6 +66,11 @@ public class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
 
+    /// <summary>
+    /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
+    /// </summary>
+    internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -266,19 +271,46 @@ public class HandleEventsForObserver(
                         continue;
                     }
 
-                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents, subscriberTimeout);
+                    var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
+                        () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
+                        TransientRetryDelay,
+                        timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
+                        cancellationToken);
                     if (handleEventsResult.TryGetException(out var handleEventsException))
                     {
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
+                        if (TransientTimeouts.IsTimeout(handleEventsException))
+                        {
+                            // The observer is not told yet: it is the grain that was too busy to answer, and the job runs
+                            // the step again before it reports the partition.
+                            var shortMessage = TransientTimeouts.ShortMessageFor(handleEventsException);
+                            logger.StepTimedOut(shortMessage);
+                            if (!Advanced(await FlushFromWork()))
+                            {
+                                return ClosedResult();
+                            }
+
+                            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                                CreateResult(_lastDurableCheckpoint) with
+                                {
+                                    TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
+                                },
+                                [shortMessage],
+                                string.Empty));
+                        }
+
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         if (!Advanced(await FlushFromWork()))
                         {
                             return ClosedResult();
                         }
 
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), exceptionMessages, exceptionStackTrace));
+                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                            CreateResult(_lastDurableCheckpoint),
+                            TransientTimeouts.ShortenForStep(exceptionMessages),
+                            string.Empty));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
                     {
@@ -305,7 +337,10 @@ public class HandleEventsForObserver(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoEvents();
+                using (logger.BeginObserverKeyScope(currentState.ObserverKey))
+                {
+                    logger.HandledNoEvents();
+                }
             }
             else
             {
@@ -326,6 +361,15 @@ public class HandleEventsForObserver(
         {
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+        }
+        catch (Exception e) when (TransientTimeouts.IsTimeout(e))
+        {
+            var message = TransientTimeouts.ShortMessageFor(e);
+            logger.StepTimedOut(message);
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                CreateResult(_lastDurableCheckpoint),
+                [message],
+                string.Empty));
         }
         catch (Exception e)
         {
@@ -669,7 +713,7 @@ public class HandleEventsForObserver(
                 var okCountsPerEventType = handledEvents
                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                     .CountByEventType();
-                await _observer.ReportHandledEvents(partition, okCountsPerEventType);
+                await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, okCountsPerEventType, logger);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -724,7 +768,7 @@ public class HandleEventsForObserver(
             var failedCountsPerEventType = handledEvents
                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                 .CountByEventType();
-            await _observer.ReportHandledEvents(partition, failedCountsPerEventType);
+            await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, failedCountsPerEventType, logger);
         }
         else
         {

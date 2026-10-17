@@ -145,7 +145,7 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
             return -1;
         }
 
-        return string.CompareOrdinal(PreRelease, other.PreRelease);
+        return ComparePreRelease(PreRelease, other.PreRelease);
     }
 
     /// <inheritdoc/>
@@ -179,5 +179,31 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
         }
 
         return version;
+    }
+
+    static int ComparePreRelease(string left, string right)
+    {
+        var leftIdentifiers = left.Split('.');
+        var rightIdentifiers = right.Split('.');
+        for (var index = 0; index < Math.Min(leftIdentifiers.Length, rightIdentifiers.Length); index++)
+        {
+            var comparison = CompareIdentifier(leftIdentifiers[index], rightIdentifiers[index]);
+            if (comparison != 0) return comparison;
+        }
+
+        return leftIdentifiers.Length.CompareTo(rightIdentifiers.Length);
+    }
+
+    static int CompareIdentifier(string left, string right)
+    {
+        var leftIsNumeric = left.Length > 0 && left.All(char.IsAsciiDigit);
+        var rightIsNumeric = right.Length > 0 && right.All(char.IsAsciiDigit);
+        if (leftIsNumeric != rightIsNumeric) return leftIsNumeric ? -1 : 1;
+
+        // Valid numeric identifiers have no leading zeroes. Comparing lengths first supports
+        // arbitrarily large identifiers without overflowing an integer.
+        if (leftIsNumeric && left.Length != right.Length) return left.Length.CompareTo(right.Length);
+
+        return string.CompareOrdinal(left, right);
     }
 }

@@ -66,6 +66,17 @@ public interface IUnitOfWork : IDisposable
     void UseEffectReceipt(EffectKey key, JsonNode? response = null) => throw new EffectReceiptsNotSupported();
 
     /// <summary>
+    /// Refuses immediate appends in this asynchronous flow without changing read admission.
+    /// The first caller owns completion only if no completion owner or enforced read protection already exists.
+    /// Otherwise the frame is refusal-only and completion stays with the existing owner.
+    /// Later acquisitions cannot complete the unit or end refusal.
+    /// </summary>
+    /// <returns>The refusal lifetime, or a borrowed frame for a nested acquisition. Commit through the existing owner when present.</returns>
+    /// <exception cref="UnitOfWorkImmediateAppendRefusalNotSupported">The implementation cannot enforce append admission.</exception>
+    /// <exception cref="ImmediateAppendRefusalRequiresOwner">Another unit owns the active refusal.</exception>
+    ImmediateAppendRefusal RefuseImmediateAppends() => throw new UnitOfWorkImmediateAppendRefusalNotSupported(GetType());
+
+    /// <summary>
     /// Begins invocation read protection before any event or read dependency is enrolled.
     /// Only the first caller receives the owning lifetime; subsequent leases cannot end enforcement.
     /// </summary>

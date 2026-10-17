@@ -42,7 +42,7 @@ public class ProjectionReplayHandler(
                 observerDetails.Key.EventStore,
                 observerDetails.Key.Namespace,
                 projection.ReadModel.Identifier);
-            await replayManager.ApplyRetentionPolicy(options.Value.ReadModels.ReplayedVersionsToKeep);
+            await replayManager.ApplyRetentionPolicy(await VersionsToKeepFor(observerDetails));
             var replayContexts = namespaceStorage.ReplayContexts;
             return await replayContexts.Establish(new(projection.ReadModel.Identifier, projection.ReadModel.LatestGeneration), projection.ReadModel.ContainerName);
         },
@@ -87,6 +87,14 @@ public class ProjectionReplayHandler(
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
             var replayManager = grainFactory.GetReadModelReplayManager(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection.ReadModel.Identifier);
             await replayManager.Replayed(observerDetails.Key.ObserverId, context);
+
+            // Nothing can revert a kernel-owned read model, so the generation this replay superseded has no use.
+            // Keeping it, as is done for what an application owns, leaves one more collection behind per replay.
+            if (await IsKernelOwned(observerDetails))
+            {
+                await replayManager.ApplyRetentionPolicy(0);
+            }
+
             await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Identifier);
             return Result<ICanHandleReplayForObserver.Error>.Success();
         },
@@ -174,6 +182,16 @@ public class ProjectionReplayHandler(
     }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
+
+    async Task<int> VersionsToKeepFor(ObserverDetails observerDetails) =>
+        await IsKernelOwned(observerDetails) ? 0 : options.Value.ReadModels.ReplayedVersionsToKeep;
+
+    async Task<bool> IsKernelOwned(ObserverDetails observerDetails)
+    {
+        var definitions = storage.GetEventStore(observerDetails.Key.EventStore).Projections;
+        return await definitions.Has(observerDetails.Key.ObserverId.Value) &&
+            (await definitions.Get(observerDetails.Key.ObserverId.Value)).IsKernelOwned;
+    }
 
     async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(
         ObserverDetails observerDetails,

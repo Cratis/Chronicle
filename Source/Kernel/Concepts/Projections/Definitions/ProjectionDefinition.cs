@@ -66,6 +66,15 @@ public record ProjectionDefinition(
     public EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets the software version of the client application that registered the definition, if it identified one.
+    /// </summary>
+    /// <remarks>
+    /// Metadata, not structure: it is ignored when comparing definitions, so a version change alone never evolves
+    /// the projection. It exists so a registration from an older version can be told apart from a newer one.
+    /// </remarks>
+    public string? Version { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the projection is owned by the kernel itself.
     /// </summary>
     /// <remarks>

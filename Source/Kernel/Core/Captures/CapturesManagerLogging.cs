@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Captures;
 /// </summary>
 internal static partial class CapturesManagerLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed ensuring capture subscriptions in namespace '{Namespace}'. Reconciliation will retry")]
+    internal static partial void FailedEnsuringSubscriptionsInNamespace(this ILogger<CapturesManager> logger, Exception exception, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Error, "Capture '{Name}' ({CaptureId}) is not subscribed in namespace '{Namespace}'. Reconciliation will retry")]
+    internal static partial void SubscriptionNotEstablished(this ILogger<CapturesManager> logger, CaptureName name, CaptureId captureId, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Error, "Failed resuming capture '{Name}' ({CaptureId})")]
     internal static partial void FailedResumingCapture(this ILogger<CapturesManager> logger, Exception exception, CaptureName name, CaptureId captureId);
 
