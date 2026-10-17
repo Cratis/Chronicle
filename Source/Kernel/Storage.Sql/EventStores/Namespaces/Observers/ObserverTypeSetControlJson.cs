@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 
@@ -13,11 +12,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 /// </summary>
 internal static class ObserverTypeSetControlJson
 {
-    static readonly JsonSerializerOptions _options = new()
-    {
-        Converters = { new ConceptAsJsonConverterFactory() }
-    };
-
     /// <summary>
     /// Serializes initialized control without writing a JSON value for legacy state.
     /// </summary>
@@ -38,7 +32,7 @@ internal static class ObserverTypeSetControlJson
             control.RetirementResults,
             control.PendingChange);
 
-        return JsonSerializer.Serialize(stored, _options);
+        return JsonSerializer.Serialize(stored, ObserverStateJson.Options);
     }
 
     /// <summary>
@@ -53,7 +47,7 @@ internal static class ObserverTypeSetControlJson
             return null;
         }
 
-        var stored = JsonSerializer.Deserialize<StoredControl>(json, _options)!;
+        var stored = JsonSerializer.Deserialize<StoredControl>(json, ObserverStateJson.Options)!;
 
         return new(
             stored.Revision,

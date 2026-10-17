@@ -21,7 +21,7 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
-            Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization),
+            Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
@@ -86,7 +86,7 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
-            Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization),
+            Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,

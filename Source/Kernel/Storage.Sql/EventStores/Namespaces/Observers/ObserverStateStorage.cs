@@ -85,11 +85,17 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
         else
         {
-            var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
-            if (state.TypeSetControl is null ||
-                (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value))
+            if (state.TypeSetControl is null)
             {
                 entity.TypeSetControl = existing.TypeSetControl;
+            }
+            else
+            {
+                var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
+                if (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value)
+                {
+                    entity.TypeSetControl = existing.TypeSetControl;
+                }
             }
 
             entity.Initialization ??= existing.Initialization;

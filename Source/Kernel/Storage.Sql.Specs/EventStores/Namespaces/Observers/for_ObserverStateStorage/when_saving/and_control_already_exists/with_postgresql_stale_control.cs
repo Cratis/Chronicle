@@ -20,6 +20,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
     static readonly EventTypeId _type = new("event-a");
     string _connectionString;
     ObserverStateStorage _storage;
+    NamespaceDbContext _delayedContext;
     ObserverTypeSetControl _control;
     KernelObserverState _saved;
     Exception _error;
@@ -66,6 +67,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
         _saved = await _storage.Get("observer");
     }
 
+    [Fact] void should_dispose_the_delayed_context_after_the_failed_save() => Catch.Exception(() => _ = _delayedContext.Model).ShouldBeOfExactType<ObjectDisposedException>();
     [Fact] void should_fail_the_in_flight_snapshot() => _error.ShouldBeOfExactType<DbUpdateConcurrencyException>();
     [Fact] void should_preserve_the_newer_control() => _saved.TypeSetControl.Revision.Value.ShouldEqual(7);
     [Fact] void should_preserve_the_rejoined_incarnation() => _saved.TypeSetControl.Members[_type].Incarnation.Value.ShouldEqual(7);
@@ -89,7 +91,13 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
             builder.AddInterceptors(barrier);
         }
 
-        return new(builder.Options);
+        var context = new NamespaceDbContext(builder.Options);
+        if (barrier is not null)
+        {
+            _delayedContext = context;
+        }
+
+        return context;
     }
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);

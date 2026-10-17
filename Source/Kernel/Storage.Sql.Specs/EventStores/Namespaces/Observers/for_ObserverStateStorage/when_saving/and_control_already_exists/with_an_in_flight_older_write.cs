@@ -16,6 +16,7 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
 {
     ObserverTypeSetControl _control;
     ObserverStateStorage _delayedStorage;
+    NamespaceDbContext _delayedContext;
     given.ControlWriteBarrier _barrier;
     Exception _error;
     KernelObserverState _saved;
@@ -27,9 +28,10 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
         _barrier = new();
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connection).AddConceptAsSupport().AddInterceptors(_barrier).Options;
+        _delayedContext = new(options);
         var delayedDatabase = Substitute.For<IDatabase>();
         delayedDatabase.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
-            .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(new(options), () => { })));
+            .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(_delayedContext, () => { })));
         _delayedStorage = new(_eventStore, _namespace, delayedDatabase);
     }
 
@@ -52,4 +54,5 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
 
     [Fact] void should_fail_the_competing_snapshot_instead_of_overwriting_it() => _error.ShouldBeOfExactType<DbUpdateConcurrencyException>();
     [Fact] void should_preserve_the_newer_control() => _saved.TypeSetControl.Revision.Value.ShouldEqual(7);
+    [Fact] void should_dispose_the_delayed_context_after_the_failed_save() => Catch.Exception(() => _ = _delayedContext.Model).ShouldBeOfExactType<ObjectDisposedException>();
 }

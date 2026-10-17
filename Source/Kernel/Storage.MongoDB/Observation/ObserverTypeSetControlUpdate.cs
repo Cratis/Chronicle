@@ -19,13 +19,21 @@ internal static class ObserverTypeSetControlUpdate
     /// <param name="update">The other observer-owned fields to save.</param>
     /// <param name="control">The incoming control.</param>
     /// <returns>A single update pipeline preserving a newer stored control.</returns>
+    /// <exception cref="UnsupportedObserverStateUpdateOperator">The update contains an operator other than $set.</exception>
     internal static UpdateDefinition<ObserverState> Guard(UpdateDefinition<ObserverState> update, ObserverTypeSetControl control)
     {
         var registry = BsonSerializer.SerializerRegistry;
         var args = new RenderArgs<ObserverState>(registry.GetSerializer<ObserverState>(), registry);
         var field = new ExpressionFieldDefinition<ObserverState, ObserverTypeSetControl?>(state => state.TypeSetControl).Render(args).FieldName;
         var revisionField = new ExpressionFieldDefinition<ObserverState, ObserverTypeSetRevision>(state => state.TypeSetControl!.Revision).Render(args).FieldName;
-        var fields = update.Render(args).AsBsonDocument["$set"].AsBsonDocument;
+        var rendered = update.Render(args).AsBsonDocument;
+        var unsupportedOperator = rendered.Names.FirstOrDefault(name => name != "$set");
+        if (unsupportedOperator is not null)
+        {
+            throw new UnsupportedObserverStateUpdateOperator(unsupportedOperator);
+        }
+
+        var fields = rendered["$set"].AsBsonDocument;
 
         // Pipeline values are expressions, unlike ordinary $set values. Literal wrapping
         // preserves strings beginning with '$' and documents containing expression names.
