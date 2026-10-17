@@ -172,6 +172,15 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that client instance {ConnectionId} is no longer connected. Removing it from the fan out targets.")]
     internal static partial void WatchdogClientInstanceDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
+    internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
+    internal static partial void PromotingSupersededClient(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Handing the observer over to the superseded client {ConnectionId} failed. Trying the next registration, or unsubscribing when none is left.")]
+    internal static partial void PromotingSupersededClientFailed(this ILogger<Observer> logger, ConnectionId connectionId, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
     internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
 

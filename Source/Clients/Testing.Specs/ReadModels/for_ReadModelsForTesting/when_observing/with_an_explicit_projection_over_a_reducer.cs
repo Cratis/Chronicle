@@ -37,7 +37,7 @@ public class with_an_explicit_projection_over_a_reducer : Specification
                 _received.TrySetResult();
             },
             error => _received.TrySetException(error));
-        await _received.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _received.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     void Destroy()

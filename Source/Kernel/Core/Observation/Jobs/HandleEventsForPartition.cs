@@ -58,8 +58,6 @@ public class HandleEventsForPartition(
     EventGenerationDelivery _generationDelivery;
     bool _isCollapsingProjection;
 
-    IHandleEventsForPartition _selfGrainReference = null!;
-
     /// <inheritdoc/>
     /// <remarks>
     /// A projection that collapses several event sources onto one read model document is deliberately written out
@@ -73,8 +71,6 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = GetSelfGrainReference();
-
         if (State.IsPrepared)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
@@ -94,6 +90,10 @@ public class HandleEventsForPartition(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// This is the activation-side entry point. The step's own background work never calls it through the grain
+    /// reference; it reaches the activation through TryInvokeOnActivation instead.
+    /// </remarks>
     public async Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginJobStepScope(State);
@@ -106,18 +106,13 @@ public class HandleEventsForPartition(
         }
     }
 
-    /// <summary>
-    /// Gets the self grain reference for this grain instance.
-    /// </summary>
-    /// <returns>The <see cref="IHandleEventsForPartition"/> grain reference.</returns>
-    protected virtual IHandleEventsForPartition GetSelfGrainReference() => this.AsReference<IHandleEventsForPartition>();
-
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
     {
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
         State.EventTypes = request.EventTypes.ToArray();
+        State.ReaderScope = request.ReaderScope;
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -179,10 +174,11 @@ public class HandleEventsForPartition(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
                 currentState.ObserverKey.EventSequenceId);
-            var requestedEventTypes = currentState.EventTypes.ToArray();
-            var eventTypesToRead = requestedEventTypes.Length != 0
-                ? requestedEventTypes
-                : await ResolveFallbackEventTypesToRead(subscription.EventTypes);
+            var scopedEventTypes = ObserverReaderScope
+                .ForRequest(currentState.ReaderScope, currentState.EventTypes)
+                .EventTypesToRead(currentState.EventTypes);
+            var eventTypesToRead = scopedEventTypes?.ToArray()
+                ?? await ResolveFallbackEventTypesToRead(subscription.EventTypes);
             _generationPins = eventTypesToRead.ToArray();
             _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
@@ -242,7 +238,13 @@ public class HandleEventsForPartition(
                     {
                         case ObserverSubscriberState.Ok:
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
-                            await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+                            if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
+                            {
+                                // Nothing was recorded for this batch, so it is neither checkpointed nor counted here: the next
+                                // run resumes from the last persisted checkpoint and counts it when it handles the batch again.
+                                return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
+                            }
+
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
                             var okCountsPerEventType = handledEvents
                                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
@@ -261,7 +263,11 @@ public class HandleEventsForPartition(
                                     ? failedEvent.Context.SequenceNumber
                                     : eventObserverResult.LastSuccessfulObservation.Next();
 
-                                await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+                                if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
+                                {
+                                    return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
+                                }
+
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
                                 var failedCountsPerEventType = handledEvents
                                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
@@ -390,6 +396,27 @@ public class HandleEventsForPartition(
 
         return lastScanned;
     }
+
+    /// <summary>
+    /// Reports progress from the step's background work. The state update and the debounced write run as one
+    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
+    /// </summary>
+    /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
+    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
+    {
+        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
+        if (reported.TryGetError(out var rejection))
+        {
+            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
+            return false;
+        }
+
+        return true;
+    }
+
+    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
+        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,

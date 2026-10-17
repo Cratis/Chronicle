@@ -82,7 +82,10 @@ public class CatchingUpInFlight(
                 logger.StartingInFlightCatchUpForPartition(partition, startFrom);
                 state.CatchingUpPartitions.Add(partition);
                 var startResult = await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-                    new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes));
+                    new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes)
+                    {
+                        ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
+                    });
                 if (startResult?.TryGetResult(out _) is not true)
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;

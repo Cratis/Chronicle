@@ -13,19 +13,16 @@ public class and_a_later_event_is_for_another_source : given.an_immediate_projec
 {
     readonly EventType _eventType = new("ModelCreated", EventTypeGeneration.First);
     ProjectionResult _first;
-    ProjectionResult _cached;
+    ProjectionResult _reread;
     int _processingCalls;
 
     void Establish()
     {
         _projection.GetEventTypes().Returns([_eventType]);
         _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns((EventSequenceNumber)10);
-        var initialCursor = CreateCursor(AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_eventType, 5));
-        var cachedCursor = CreateCursor();
+        var matchingEvent = AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(_eventType, 5);
         _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(initialCursor);
-        _eventSequenceStorage.GetFromSequenceNumber((EventSequenceNumber)6, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(cachedCursor);
+            .Returns(_ => CreateCursor(matchingEvent));
         _projection.FoldForSingleReadModel(EventStoreNamespaceName.Default, Arg.Any<SingleReadModelProjectionState>(), Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(_ =>
             {
@@ -41,15 +38,16 @@ public class and_a_later_event_is_for_another_source : given.an_immediate_projec
     async Task Because()
     {
         _first = await _grain.GetModelInstance();
-        _cached = await _grain.GetModelInstance();
+        _reread = await _grain.GetModelInstance();
     }
 
-    [Fact] void should_report_the_last_event_folded_for_this_source() => _cached.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)5);
-    [Fact] void should_keep_the_instance() => _cached.HasReadModel.ShouldBeTrue();
-    [Fact] void should_not_refold_the_other_sources_events() => _processingCalls.ShouldEqual(1);
+    [Fact] void should_report_the_last_event_folded_for_this_source() => _reread.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)5);
+    [Fact] void should_keep_the_instance() => _reread.HasReadModel.ShouldBeTrue();
+    [Fact] void should_refold_only_the_matching_event_on_each_read() => _processingCalls.ShouldEqual(2);
+    [Fact] void should_count_only_the_matching_event() => _reread.ProjectedEventsCount.ShouldEqual(1);
     [Fact] async Task should_filter_the_log_by_this_source_and_the_projected_event_type() =>
-        await _eventSequenceStorage.Received(1).GetFromSequenceNumber(
-            (EventSequenceNumber)6,
+        await _eventSequenceStorage.Received(2).GetFromSequenceNumber(
+            EventSequenceNumber.First,
             eventSourceId: ReadModelKey,
             eventTypes: Arg.Is<IEnumerable<EventType>>(types => types.Count() == 1 && types.Contains(_eventType)));
 }

@@ -15,6 +15,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Transactions;
@@ -66,7 +67,7 @@ public class EventSequence(
     JsonSerializerOptions jsonSerializerOptions,
     IActivitySource<EventSequence>? activitySource = null,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
-    IEventSources? eventSources = null) : IEventSequence, IEventSequenceWithReadProtection
+    IEventSources? eventSources = null) : IEventSequence, IEventSequenceWithReadProtection, IEventSequenceWithEffectReceipts
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -667,6 +668,23 @@ public class EventSequence(
         return AppendManyCore(events, namedTags, concurrencyScopes: scopes, readProtectionCommit: commit);
     }
 
+    /// <inheritdoc/>
+    Task<AppendManyResult> IEventSequenceWithEffectReceipts.AppendManyWithEffectReceipt(
+        IEnumerable<EventForEventSourceId> events,
+        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        Contracts.Occurrences.EffectReceipt receipt,
+        ReadProtectionCommit? readProtectionCommit)
+    {
+        EffectReceiptSupport.Require(connection);
+        if (readProtectionCommit is not null)
+        {
+            if (readProtectionCommit.Target != new ReadProtectionTarget(eventStoreName, @namespace, eventSequenceId)) throw new ReadDependencyTargetMismatch("trusted receipted commit");
+            ReadProtectionMerge.ValidateTargetsAndLabels(readProtectionCommit.Target, readProtectionCommit.Contributions);
+        }
+
+        return AppendManyForEventSources(events, null, null, scopes, [], readProtectionCommit, receipt);
+    }
+
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
     /// <param name="targetNamespace">The expected namespace.</param>
@@ -1084,7 +1102,8 @@ public class EventSequence(
         IEnumerable<string>? tags,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
         IEnumerable<NamedTag> namedTags,
-        ReadProtectionCommit? readProtectionCommit = null)
+        ReadProtectionCommit? readProtectionCommit = null,
+        Contracts.Occurrences.EffectReceipt? effectReceipt = null)
     {
         concurrencyScopes = concurrencyScopes?.ToDictionary(_ => _.Key, _ => NormalizeConcurrencyScope(_.Value));
         if (readProtectionCommit is not null)
@@ -1148,6 +1167,7 @@ public class EventSequence(
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             Events = eventsToAppend,
+            EffectReceipt = effectReceipt,
             CorrelationId = resolvedCorrelationId,
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract(),
@@ -1185,7 +1205,8 @@ public class EventSequence(
                 Tags = request.Tags,
                 Causation = request.Causation,
                 CausedBy = request.CausedBy,
-                ConcurrencyScopes = request.ConcurrencyScopes
+                ConcurrencyScopes = request.ConcurrencyScopes,
+                EffectReceipt = request.EffectReceipt
             }).EnsureSuccess();
 
         var result = ResolveViolationMessages(response.ToClient()) with
@@ -1195,8 +1216,12 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             EventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).DistinctBy(_ => _.Id).ToArray(),
             AppendedEventTypes = eventsToAppend.Select(_ => _.EventType.ToClient()).ToArray(),
-            Observers = GetObservers()
+            Observers = GetObservers(),
+            EffectReceipt = effectReceipt is null ? null : EffectReceiptSupport.FromAppend(effectReceipt, response)
         };
+
+        // A duplicate did not append this attempt's events. Never notify local observers as if it did.
+        if (response.EffectAlreadyRecorded) return result;
 
         if (eventsList.Count > 0 && _appendedEventsRaised is not null)
         {

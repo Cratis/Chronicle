@@ -32,6 +32,7 @@ public static class ChronicleClientServiceCollectionExtensions
     {
         services.AddEventSerializer();
         services.AddReactorSideEffectHandlers();
+        services.AddChronicleOccurrenceLifecycle();
         services.AddHttpContextAccessor();
 
         services.AddSingleton(sp =>

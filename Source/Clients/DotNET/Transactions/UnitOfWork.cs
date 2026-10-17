@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
@@ -60,6 +62,8 @@ public partial class UnitOfWork(
     EventSequenceId? _eventSequenceId;
     LegacyStagedEvents? _currentLegacyEvents;
     DecisionReadCommitOwner? _commitOwner;
+    EffectKey? _effectKey;
+    Contracts.Occurrences.EffectReceipt? _effectReceipt;
 
     /// <summary>
     /// Initializes a unit of work with compatibility staging behavior.
@@ -96,6 +100,9 @@ public partial class UnitOfWork(
     public bool IsSuccess => _appendManyResult.IsSuccess;
 
     /// <inheritdoc/>
+    public EffectReceiptResult? EffectReceipt { get; private set; }
+
+    /// <inheritdoc/>
     public bool HasEnrolledDecisionReads
     {
         get
@@ -104,6 +111,24 @@ public partial class UnitOfWork(
             {
                 return _hasEnrolledDecisionReads;
             }
+        }
+    }
+
+    /// <inheritdoc/>
+    public void UseEffectReceipt(EffectKey key, JsonNode? response = null)
+    {
+        ReadProtectionGuard.RequireUnit(this);
+        lock (_decisionLock)
+        {
+            ThrowIfMutatedDuringEnrollment();
+            ThrowIfEnrollmentNotificationFailed();
+            ThrowIfUnitOfWorkIsCompleted();
+            if (_completing) throw new UnitOfWorkIsCompleting(correlationId);
+            EffectReceiptSupport.Require(eventStore.Connection);
+            if (_effectKey is not null && _effectKey != key) throw new UnitOfWorkEffectReceiptAlreadySet();
+            var receipt = EffectReceiptSupport.ToContract(key, response);
+            _effectKey = key;
+            _effectReceipt = receipt;
         }
     }
 
@@ -253,7 +278,7 @@ public partial class UnitOfWork(
     /// <inheritdoc/>
     public IEnumerable<DecisionConflict> GetDecisionConflicts() =>
         _appendManyResult.ConcurrencyViolations
-            .SelectMany(_ => _decisionConflicts.TryGetValue(_.EventSourceId, out var conflicts) ? conflicts : [])
+            .SelectMany(violation => _decisionConflicts.TryGetValue(violation.EventSourceId, out var conflicts) ? conflicts.Select(_ => _.CausedBy(violation)) : [])
             .Distinct().ToArray();
 
     /// <summary>Claims exclusive completion ownership for protected units of work.</summary>
@@ -436,7 +461,7 @@ public partial class UnitOfWork(
             scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
                 _concurrencyScopes.Concat(DecisionReadScopes.ForEvents(_decisionScopes, events)).ToDictionary(_ => _.Key, _ => _.Value);
             readProtectionCommit = IsEnforcingReadProtection
-                ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions)
+                ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions) { ValidateReadsWithoutEvents = _effectReceipt is not null }
                 : null;
         }
 
@@ -444,16 +469,23 @@ public partial class UnitOfWork(
         {
             if (readProtectionCommit is not null && events.Length == 0)
             {
-                var plan = ReadProtectionMerge.Apply(readProtectionCommit.Target, readProtectionCommit.Contributions, scopes, false);
+                var plan = ReadProtectionMerge.Apply(readProtectionCommit.Target, readProtectionCommit.Contributions, scopes, false, readProtectionCommit.ValidateReadsWithoutEvents);
                 CaptureAppendConditions(plan.Conditions);
                 if (plan.Scopes.Count == 0) eventSequence = null;
             }
-            if (eventSequence is not null)
+            if (_effectReceipt is not null) EffectReceiptSupport.Require(eventStore.Connection);
+            if (eventSequence is not null && (_effectReceipt is null || events.Length != 0 || scopes.Count != 0 || readProtectionCommit?.Contributions.Count > 0))
             {
                 AppendManyResult result;
                 try
                 {
-                    if (readProtectionCommit is not null)
+                    if (_effectReceipt is not null)
+                    {
+                        result = eventSequence is IEventSequenceWithEffectReceipts receipted
+                            ? await receipted.AppendManyWithEffectReceipt(events, scopes, _effectReceipt, readProtectionCommit)
+                            : throw new EffectReceiptsNotSupported();
+                    }
+                    else if (readProtectionCommit is not null)
                     {
                         result = eventSequence is IEventSequenceWithReadProtection supported
                             ? await supported.AppendMany(events, [], scopes, readProtectionCommit)
@@ -477,10 +509,20 @@ public partial class UnitOfWork(
                     _lastCommittedEventSequenceNumber = result.SequenceNumbers.MaxBy(_ => _.Value);
                 }
                 _appendManyResult = result;
+                if (_effectReceipt is not null)
+                {
+                    EffectReceipt = result.EffectReceipt;
+                    if (result.IsSuccess && EffectReceipt is null) throw new EffectReceiptNotValid("A successful atomic append did not return its receipt.");
+                }
+            }
+            else if (_effectReceipt is not null)
+            {
+                var response = _effectReceipt.Response is null ? null : JsonNode.Parse(_effectReceipt.Response);
+                EffectReceipt = await RecordNoEventsReceipt(response);
             }
             if (IsEnforcingReadProtection && _appendManyResult.IsSuccess) _readProtectionFrameLease!().CommittedSuccessfully();
         }
-        catch (Exception exception) when (protectedCommit)
+        catch (Exception exception) when (protectedCommit || _effectReceipt is not null)
         {
             _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
             throw;
@@ -498,12 +540,23 @@ public partial class UnitOfWork(
         }
     }
 
+    Task<EffectReceiptResult> RecordNoEventsReceipt(JsonNode? response)
+    {
+        if (!IsEnforcingReadProtection) return eventStore.Occurrences.RecordEffectReceipt(_effectKey!, new NoEvents(), response);
+
+        return eventStore.Occurrences is IOccurrencesForUnitOfWork trusted
+            ? trusted.RecordNoEvents(_effectKey!, response)
+            : throw new EffectReceiptsNotSupported();
+    }
+
     void CompleteRollback()
     {
         _isRolledBack = true;
         _stagedEvents.Clear();
         _currentLegacyEvents = null;
         _concurrencyScopes.Clear();
+        _effectKey = null;
+        _effectReceipt = null;
         _requiredEnrollmentScopes.Clear();
         _enrollmentContributors.Clear();
         _appendManyResult = AppendManyResult.Success(CorrelationId.NotSet, []);

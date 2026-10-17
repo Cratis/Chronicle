@@ -55,12 +55,21 @@ public class ReplayObserver(
                         EventSequenceNumber.First,
                         EventSequenceNumber.Max,
                         EventObservationState.Replay,
-                        request.EventTypes))
+                        request.EventTypes)
+                    {
+                        ReaderScope = request.ReaderScope
+                    })
             ];
         }
 
-        var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
+        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
+        var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
+
+        // Legacy key enumeration used the stored definition at preparation time, not the request's types.
+        var readerScope = request.ReaderScope ?? ObserverReaderScope.For(
+            false,
+            (await eventStoreStorage.Observers.Get(request.ObserverKey.ObserverId)).EventTypes);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey, readerScope);
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
@@ -76,7 +85,10 @@ public class ReplayObserver(
                     EventSequenceNumber.First,
                     EventSequenceNumber.Max,
                     EventObservationState.Replay,
-                    request.EventTypes));
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                });
             steps.Add(step);
             if (failedKeys.Contains(key))
             {

@@ -73,7 +73,10 @@ public class ReplayObserverPartition(
                     request.FromSequenceNumber,
                     request.ToSequenceNumber,
                     EventObservationState.Replay,
-                    request.EventTypes))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                })
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

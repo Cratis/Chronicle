@@ -16,6 +16,6 @@ public class and_observer_is_a_projection : given.a_replay_observer_job
 
     [Fact] void should_create_one_step() => _steps.Count.ShouldEqual(1);
     [Fact] void should_use_ordered_observer_step() => _steps[0].Type.ShouldEqual(typeof(IHandleEventsForObserver));
-    [Fact] void should_not_enumerate_partitions() => _keyIndexes.DidNotReceive().GetFor(Arg.Any<ObserverKey>());
+    [Fact] void should_not_enumerate_partitions() => _keyIndexes.DidNotReceive().GetFor(Arg.Any<ObserverKey>(), Arg.Any<ObserverReaderScope>());
     [Fact] void should_request_replay_observation_state() => ((HandleEventsForObserverArguments)_steps[0].Request).EventObservationState.ShouldEqual(EventObservationState.Replay);
 }

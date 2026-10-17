@@ -51,6 +51,7 @@ public class HandleEventsForObserver(
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
+    readonly SemaphoreSlim _flushGate = new(1, 1);
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -59,7 +60,6 @@ public class HandleEventsForObserver(
     EventType[] _generationPins = [];
     EventStoreName _generationEventStore = EventStoreName.NotSet;
 
-    IHandleEventsForObserver _selfGrainReference = null!;
     EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
@@ -69,8 +69,6 @@ public class HandleEventsForObserver(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = GetSelfGrainReference();
-
         if (State.IsPrepared)
         {
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
@@ -92,79 +90,44 @@ public class HandleEventsForObserver(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// This is the activation-side entry point. The step's own background work never calls it through the grain
+    /// reference; it reaches the activation through <see cref="ReportFromWork"/> instead.
+    /// </remarks>
     public async Task<EventSequenceNumber> ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
         using var scope = logger.BeginJobStepScope(State);
-        _lastHandled = lastHandledEventSequenceNumber;
-        if (_durableCheckpoints.Report(CheckpointAfterEveryBatch))
+        if (RecordHandled(lastHandledEventSequenceNumber))
         {
             await FlushCheckpoint();
-        }
-        else if (_checkpointFailure is not null)
-        {
-            throw new ObserverFlushFailed();
         }
 
         return State.LastSuccessfullyHandledEventSequenceNumber;
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// This is the activation-side entry point, used by the flush timer. The step's own background work reaches the
+    /// activation through <see cref="FlushFromWork"/> instead.
+    /// </remarks>
     public async Task<EventSequenceNumber> FlushCheckpoint(bool start = false)
     {
-        if (start)
-        {
-            _windows = null;
-            _checkpointFailure = null;
-            _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
-            _durableCheckpoints.Persisted();
-        }
-
-        if (_checkpointFailure is not null)
-        {
-            throw new ObserverFlushFailed();
-        }
-
+        await _flushGate.WaitAsync();
         try
         {
-            // Capture the handled position before awaiting: later deliveries cannot be covered by this flush.
-            var handled = _lastHandled;
-            var windows = await observerServiceClient.FlushAllFor(
-                new(_subscription.ObserverKey, ObserverType.Projection),
-                State.EventObservationState == EventObservationState.Replay);
-            if (_windows is not null && _windows.Any(previous =>
-                previous.Value.Length > 0 && (!windows.TryGetValue(previous.Key, out var current) || previous.Value.Except(current).Any())))
+            var capture = CaptureFlush(start);
+            var windows = await ConfirmWindows(capture, error =>
             {
-                throw new BulkWindowLost();
-            }
-
-            _windows = windows;
-            if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
-            {
-                // Base timer, status and cancellation writes now see only confirmed durable progress.
-                State.LastSuccessfullyHandledEventSequenceNumber = handled;
-                var writeStateResult = await WriteStateAsync();
-                if (writeStateResult.TryGetException(out var error))
-                {
-                    logger.FailedToPersistSuccessfullyHandledEvent(error, handled);
-                    writeStateResult.RethrowError();
-                }
-            }
-
-            _durableCheckpoints.Persisted();
-            return State.LastSuccessfullyHandledEventSequenceNumber;
+                _checkpointFailure = error;
+                return Task.CompletedTask;
+            });
+            return await CommitFlush(capture, windows);
         }
-        catch (Exception error)
+        finally
         {
-            _checkpointFailure = error;
-            throw;
+            _flushGate.Release();
         }
     }
-
-    /// <summary>
-    /// Gets the self grain reference for this grain instance.
-    /// </summary>
-    /// <returns>The <see cref="IHandleEventsForObserver"/> grain reference.</returns>
-    protected virtual IHandleEventsForObserver GetSelfGrainReference() => this.AsReference<IHandleEventsForObserver>();
 
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForObserverArguments request)
@@ -172,6 +135,7 @@ public class HandleEventsForObserver(
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
         State.EventTypes = request.EventTypes.ToArray();
+        State.ReaderScope = request.ReaderScope;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
         State.SkipFailedPartitions = request.SkipFailedPartitions;
@@ -232,10 +196,11 @@ public class HandleEventsForObserver(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
                 currentState.ObserverKey.EventSequenceId);
-            var requestedEventTypes = currentState.EventTypes.ToArray();
-            var eventTypesToRead = requestedEventTypes.Length != 0
-                ? requestedEventTypes
-                : await ResolveFallbackEventTypesToRead(_subscription.EventTypes);
+            var scopedEventTypes = ObserverReaderScope
+                .ForRequest(currentState.ReaderScope, currentState.EventTypes)
+                .EventTypesToRead(currentState.EventTypes);
+            var eventTypesToRead = scopedEventTypes?.ToArray()
+                ?? await ResolveFallbackEventTypesToRead(_subscription.EventTypes);
             _generationPins = eventTypesToRead.ToArray();
             _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead
@@ -247,7 +212,10 @@ public class HandleEventsForObserver(
                 .ToDictionary(_ => _.Type);
 
             // Baseline every window before dispatch: losing a silo before the first checkpoint must be detectable.
-            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint(start: true);
+            if (!Advanced(await FlushFromWork(start: true)))
+            {
+                return ClosedResult();
+            }
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -305,7 +273,11 @@ public class HandleEventsForObserver(
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
-                        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+                        if (!Advanced(await FlushFromWork()))
+                        {
+                            return ClosedResult();
+                        }
+
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), exceptionMessages, exceptionStackTrace));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -340,7 +312,11 @@ public class HandleEventsForObserver(
                 logger.HandledAllEvents(lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+            if (!Advanced(await FlushFromWork()))
+            {
+                return ClosedResult();
+            }
+
             return JobStepResult.Succeeded(CreateResult(_lastDurableCheckpoint) with
             {
                 LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
@@ -431,6 +407,208 @@ public class HandleEventsForObserver(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
+    /// <summary>
+    /// Records the handled position. Must run on the activation.
+    /// </summary>
+    /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <returns>True when the batch interval is reached and the checkpoint must be flushed.</returns>
+    /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
+    bool RecordHandled(EventSequenceNumber lastHandled)
+    {
+        _lastHandled = lastHandled;
+        if (_durableCheckpoints.Report(CheckpointAfterEveryBatch))
+        {
+            return true;
+        }
+
+        if (_checkpointFailure is not null)
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Captures what a flush needs from the activation. Must run on the activation.
+    /// </summary>
+    /// <param name="start">Whether to establish the window baseline before handling a new range.</param>
+    /// <returns>The <see cref="FlushCapture"/>.</returns>
+    /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
+    FlushCapture CaptureFlush(bool start)
+    {
+        if (start)
+        {
+            _windows = null;
+            _checkpointFailure = null;
+            _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
+            _durableCheckpoints.Persisted();
+        }
+
+        if (_checkpointFailure is not null)
+        {
+            throw new ObserverFlushFailed();
+        }
+
+        // Capture the handled position before awaiting: later deliveries cannot be covered by this flush.
+        return new(
+            _lastHandled,
+            new(_subscription.ObserverKey, ObserverType.Projection),
+            State.EventObservationState == EventObservationState.Replay);
+    }
+
+    /// <summary>
+    /// Confirms the buffered writes on every silo. Touches no activation state, so it can run outside the activation.
+    /// </summary>
+    /// <param name="capture">The <see cref="FlushCapture"/>.</param>
+    /// <param name="onFailure">Retains a failure of the confirmation; awaited before the failure is rethrown.</param>
+    /// <returns>The windows confirmed per silo.</returns>
+    async Task<IReadOnlyDictionary<SiloAddress, Guid[]>> ConfirmWindows(FlushCapture capture, Func<Exception, Task> onFailure)
+    {
+        try
+        {
+            return await observerServiceClient.FlushAllFor(capture.Observer, capture.IsReplay);
+        }
+        catch (Exception error)
+        {
+            await onFailure(error);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Advances the durable checkpoint once the windows are confirmed. Must run on the activation.
+    /// </summary>
+    /// <param name="capture">The <see cref="FlushCapture"/> the windows were confirmed for.</param>
+    /// <param name="windows">The windows confirmed per silo.</param>
+    /// <returns>The last confirmed durable event sequence number.</returns>
+    /// <exception cref="BulkWindowLost">A window confirmed earlier is no longer present on its silo.</exception>
+    async Task<EventSequenceNumber> CommitFlush(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows)
+    {
+        try
+        {
+            if (_windows is not null && _windows.Any(previous =>
+                previous.Value.Length > 0 && (!windows.TryGetValue(previous.Key, out var current) || previous.Value.Except(current).Any())))
+            {
+                throw new BulkWindowLost();
+            }
+
+            _windows = windows;
+            var handled = capture.Handled;
+            if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
+            {
+                // Base timer, status and cancellation writes now see only confirmed durable progress.
+                State.LastSuccessfullyHandledEventSequenceNumber = handled;
+                var writeStateResult = await WriteStateAsync();
+                if (writeStateResult.TryGetException(out var error))
+                {
+                    logger.FailedToPersistSuccessfullyHandledEvent(error, handled);
+                    writeStateResult.RethrowError();
+                }
+            }
+
+            // Progress reported while the flush was in flight is not covered by it and stays pending.
+            if (handled == _lastHandled)
+            {
+                _durableCheckpoints.Persisted();
+            }
+
+            return State.LastSuccessfullyHandledEventSequenceNumber;
+        }
+        catch (Exception error)
+        {
+            _checkpointFailure = error;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Reports progress from the step's background work. Every touch of the activation goes through
+    /// TryInvokeOnActivation.
+    /// </summary>
+    /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <returns>The last confirmed durable event sequence number, or why the step refused a callback.</returns>
+    async Task<Result<EventSequenceNumber, ActivationCallbackRejected>> ReportFromWork(EventSequenceNumber lastHandled)
+    {
+        var recorded = await TryInvokeOnActivation(() =>
+        {
+            using var scope = logger.BeginJobStepScope(State);
+            return Task.FromResult(RecordHandled(lastHandled));
+        });
+        if (recorded.TryGetError(out var rejection))
+        {
+            return rejection;
+        }
+
+        if (recorded.TryGetResult(out var mustFlush) && mustFlush)
+        {
+            return await FlushFromWork();
+        }
+
+        return await TryInvokeOnActivation(() => Task.FromResult(State.LastSuccessfullyHandledEventSequenceNumber));
+    }
+
+    /// <summary>
+    /// Flushes the checkpoint from the step's background work: capture on the activation, confirm the windows
+    /// outside it, then commit on the activation. The remote call never runs under the step's gate, and the commit
+    /// is refused, and so records nothing, when the run was stopped in between.
+    /// </summary>
+    /// <param name="start">Whether to establish the window baseline before handling a new range.</param>
+    /// <returns>The last confirmed durable event sequence number, or why the step refused a callback.</returns>
+    async Task<Result<EventSequenceNumber, ActivationCallbackRejected>> FlushFromWork(bool start = false)
+    {
+        await _flushGate.WaitAsync();
+        try
+        {
+            var captured = await TryInvokeOnActivation(() =>
+            {
+                using var scope = logger.BeginJobStepScope(State);
+                return Task.FromResult(CaptureFlush(start));
+            });
+            if (captured.TryGetError(out var rejection))
+            {
+                return rejection;
+            }
+
+            captured.TryGetResult(out var capture);
+            var windows = await ConfirmWindows(
+                capture,
+                error => TryInvokeOnActivation(() =>
+                {
+                    _checkpointFailure = error;
+                    return Task.CompletedTask;
+                }));
+
+            return await TryInvokeOnActivation(async () =>
+            {
+                using var scope = logger.BeginJobStepScope(State);
+                return await CommitFlush(capture, windows);
+            });
+        }
+        finally
+        {
+            _flushGate.Release();
+        }
+    }
+
+    bool Advanced(Result<EventSequenceNumber, ActivationCallbackRejected> outcome)
+    {
+        if (outcome.TryGetResult(out var durable))
+        {
+            _lastDurableCheckpoint = durable;
+            return true;
+        }
+
+        if (outcome.TryGetError(out var rejection))
+        {
+            logger.CheckpointCallbackRejected(rejection, _lastDurableCheckpoint);
+        }
+
+        return false;
+    }
+
+    JobStepResult ClosedResult() => JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+
     async Task FlushPendingCheckpoint()
     {
         if (!_durableCheckpoints.HasPendingCheckpoint || _checkpointFailure is not null)
@@ -438,14 +616,30 @@ public class HandleEventsForObserver(
             return;
         }
 
+        // A flush is already in flight and covers this progress, or the next tick will.
+        if (!await _flushGate.WaitAsync(0))
+        {
+            return;
+        }
+
         try
         {
-            await FlushCheckpoint();
+            var capture = CaptureFlush(start: false);
+            var windows = await ConfirmWindows(capture, error =>
+            {
+                _checkpointFailure = error;
+                return Task.CompletedTask;
+            });
+            await CommitFlush(capture, windows);
         }
         catch (Exception error)
         {
             // A timer cannot fail PerformStep directly. Retain the failure and reject the next report/final flush.
             logger.FailedToPersistSuccessfullyHandledEvent(error, _lastHandled);
+        }
+        finally
+        {
+            _flushGate.Release();
         }
     }
 
@@ -465,7 +659,13 @@ public class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
-                _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+                if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+                {
+                    // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
+                    // checkpoint, so it handles and counts again every batch since then, including those already counted.
+                    return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
+                }
+
                 var okCountsPerEventType = handledEvents
                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                     .CountByEventType();
@@ -483,7 +683,11 @@ public class HandleEventsForObserver(
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
                 await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
-                _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+                if (!Advanced(await FlushFromWork()))
+                {
+                    return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
+                }
+
                 return (
                     JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(_lastDurableCheckpoint),
@@ -511,7 +715,11 @@ public class HandleEventsForObserver(
                 ? failedEvent.Context.SequenceNumber
                 : eventObserverResult.LastSuccessfulObservation.Next();
 
-            _lastDurableCheckpoint = await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
+            if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+            {
+                return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
+            }
+
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
             var failedCountsPerEventType = handledEvents
                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
@@ -526,7 +734,11 @@ public class HandleEventsForObserver(
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
         await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling);
-        _lastDurableCheckpoint = await _selfGrainReference.FlushCheckpoint();
+        if (!Advanced(await FlushFromWork()))
+        {
+            return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
+        }
+
         return (
             JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                 CreateResult(_lastDurableCheckpoint),
@@ -607,4 +819,6 @@ public class HandleEventsForObserver(
         var eventTypes = subscriptionEventTypes.ToArray();
         return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
     }
+
+    sealed record FlushCapture(EventSequenceNumber Handled, ObserverDetails Observer, bool IsReplay);
 }

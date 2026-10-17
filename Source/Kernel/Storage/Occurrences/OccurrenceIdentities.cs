@@ -36,6 +36,19 @@ public static class OccurrenceIdentities
     /// <returns>The namespace-scoped receipt identity.</returns>
     public static string ForEffect(OccurrenceId occurrence, string effectKey) => $"effect:{Hash(occurrence.Value, effectKey)}";
 
+    /// <summary>
+    /// Derives a lifecycle identity, optionally narrowed to a namespace in a fixed fan-out snapshot.
+    /// </summary>
+    /// <param name="kind">Startup or shutdown.</param>
+    /// <param name="activationId">The host-supplied logical activation.</param>
+    /// <param name="namespace">The namespace, or null for application scope.</param>
+    /// <returns>The lifecycle identity.</returns>
+    public static OccurrenceId ForLifecycle(OccurrenceKind kind, string activationId, string? @namespace = null)
+    {
+        var name = kind.ToString().ToLowerInvariant();
+        return new(@namespace is null ? Hash(name, activationId) : Hash(name, activationId, @namespace));
+    }
+
     static string Hash(params string[] parts)
     {
         var text = new StringBuilder();

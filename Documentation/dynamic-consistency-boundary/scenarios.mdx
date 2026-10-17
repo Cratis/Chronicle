@@ -196,7 +196,7 @@ In a web request, use the request's unit of work: `IDecisionReads.Get<T>` enroll
 
 Three details decide whether the rule holds:
 
-- **Commit before you respond.** The middleware commits after the action returns. By then the response is written, so a conflict cannot change it, and nothing tells the caller. Commit with `IUnitOfWorkCompletionFeature.CommitAsync()` and branch on the result. The middleware does not commit a completed unit again.
+- **Commit before you respond.** The middleware commits after the action returns. By then the response is written, so a conflict cannot change it, and nothing tells the caller. Commit with `IUnitOfWorkCompletionFeature.CommitAsync()` and branch on the result. The middleware does not commit a completed unit again. In .NET, a `DecisionConflict` can be returned as the response body.
 - **Stage with `Transactional.Append`.** A plain `eventLog.Append` is written immediately and takes no part in the unit of work, so the decision reads would guard nothing.
 - **Use `Get` for the unit of work and `GetDetached` otherwise.** `Get` throws without an ambient unit of work.
 

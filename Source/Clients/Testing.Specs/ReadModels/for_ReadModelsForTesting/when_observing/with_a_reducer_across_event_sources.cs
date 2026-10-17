@@ -36,7 +36,7 @@ public class with_a_reducer_across_event_sources : Specification
                 _received.TrySetResult();
             },
             error => _received.TrySetException(error));
-        await _received.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _received.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     void Destroy()

@@ -24,12 +24,14 @@ internal static class ReadProtectionMerge
     /// <param name="contributions">The immutable contributions in acquisition and batch order.</param>
     /// <param name="legacyScopes">Today's resolution for labels without protected reads.</param>
     /// <param name="hasEvents">Whether events will be appended.</param>
+    /// <param name="validateReadsWithoutEvents">Whether a no-event receipt requires validation of acquired reads.</param>
     /// <returns>The atomic append conditions and their descriptions.</returns>
     internal static ReadProtectionPlan Apply(
         ReadProtectionTarget target,
         IReadOnlyList<ReadProtectionContribution> contributions,
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope> legacyScopes,
-        bool hasEvents = true)
+        bool hasEvents = true,
+        bool validateReadsWithoutEvents = false)
     {
         ValidateTargetsAndLabels(target, contributions);
         legacyScopes = legacyScopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => _.Value);
@@ -38,7 +40,7 @@ internal static class ReadProtectionMerge
         foreach (var label in contributions.Select(_ => _.Label).Union(legacyScopes.Keys))
         {
             var items = contributions.Where(_ => _.Label == label).ToArray();
-            if (!hasEvents && !items.Any(_ => _.Kind == ReadProtectionContributionKind.Explicit && _.Intent.HasFlag(ReadProtectionContributionIntent.ValidateOnly))) continue;
+            if (!hasEvents && !validateReadsWithoutEvents && !items.Any(_ => _.Kind == ReadProtectionContributionKind.Explicit && _.Intent.HasFlag(ReadProtectionContributionIntent.ValidateOnly))) continue;
             ResolveLabel(label, items, legacyScopes, scopes, conditions);
         }
         return new(scopes.ToImmutableDictionary(), conditions.ToImmutableArray());

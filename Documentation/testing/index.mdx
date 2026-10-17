@@ -8,7 +8,7 @@ Chronicle provides in-process scenarios for testing event appends and read model
 :::note[Client coverage]
 The clients offer different in-process boundaries:
 
-- **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>` and `ReactorScenario<T>` for C# specs, alongside the separate integration fixtures described below.
+- **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` and `OccurrenceScenario<THandler>` for C# specs, alongside the separate integration fixtures described below.
 - **Kotlin:** `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, but not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/).
 - **Java:** `EventScenario` from `io.cratis.chronicle.testing` covers appends; the read-model examples call reducers directly.
 - **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections, and `ReactorScenario` for reactor side effects. Some .NET-only workflows below have explicit unsupported tabs.
@@ -70,6 +70,14 @@ XUnit integration options are **host-lifetime**, matching `ChronicleOptions`: co
 
 See the [.NET explicit registration reference](../clients/dotnet/explicit-artifacts) for peer conflicts, migration binding and custom-provider limits.
 
+## .NET testing store identity
+
+When code under test distinguishes stores by identity, construct `EventStoreForTesting(serviceProvider, artifacts, options, time, eventStore, @namespace, capabilities: null)` or `Defaults(artifacts, serviceProvider, options, time, eventStore, @namespace)`. The `eventStore` and `@namespace` arguments are `EventStoreName` and `EventStoreNamespaceName`. `EventStoreForTesting` requires a `ScenarioTime`; `Defaults` accepts a null clock.
+
+The resulting store's `Name`, `Namespace`, event log and unit-of-work operations use that identity. Pass those defaults to `ReadModelScenario`, `ReactorScenario` or `OccurrenceScenario` to give the scenario's store the same identity. A reactor scenario supplied with an explicit event store uses that store's identity instead, including in delivered event contexts. `EventScenario` keeps its own identity parameters and does not inherit the defaults' store identity.
+
+Each store instance has isolated in-memory storage, even when identities match. Existing `EventStoreForTesting` and `Defaults` overloads still create their store as `testing` in namespace `default`.
+
 ## Topics
 
 | Guide | Description |
@@ -77,6 +85,7 @@ See the [.NET explicit registration reference](../clients/dotnet/explicit-artifa
 | [Events](events/index.md) | Test event appends and constraint behavior in-process using `EventScenario` |
 | [Read Models](read-models/index.md) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |
 | [Reactors](reactors/index.md) | Test reactor side-effects in-process using `ReactorScenario<TReactor>` |
+| [Occurrences and receipts](../occurrences/testing.mdx) | Drive leased trigger deliveries, retry time and commit-then-drop-reply recovery |
 | [Event append collection](event-append-collection) | Integration testing: capture every appended event in a scoped collector with `IEventAppendCollection` |
 
 ## A specification-shaped example

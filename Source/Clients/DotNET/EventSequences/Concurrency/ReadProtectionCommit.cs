@@ -14,4 +14,10 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 internal sealed record ReadProtectionCommit(
     ReadProtectionTarget Target,
     IReadOnlyList<ReadProtectionContribution> Contributions,
-    Action<IReadOnlyList<AppendCondition>> Resolved);
+    Action<IReadOnlyList<AppendCondition>> Resolved)
+{
+    /// <summary>
+    /// Gets whether a no-event receipt must validate every acquired read before becoming durable.
+    /// </summary>
+    internal bool ValidateReadsWithoutEvents { get; init; }
+}
