@@ -12,7 +12,7 @@ public class and_the_subscription_fails : given.a_captures_manager
     void Establish()
     {
         StartedState(_events);
-        _subscriptions.Subscribe(_eventStore, "new-tenant", Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new TimeoutException());
+        _subscriptions.Recover(_eventStore, "new-tenant", Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new TimeoutException());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _manager.NamespaceAdded("new-tenant"));

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.Concurrency;
@@ -24,6 +25,14 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// </remarks>
     [AlwaysInterleave]
     Task Ensure();
+
+    /// <summary>
+    /// Ensure healthy active projections are subscribed in the given namespace, joining any pending pass for it.
+    /// </summary>
+    /// <param name="namespace">The namespace to reconcile.</param>
+    /// <returns>A task that completes after healthy subscriptions; retired observers are skipped and artifact failures are logged for retry.</returns>
+    [AlwaysInterleave]
+    Task EnsureSubscribedIn(EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Get all the <see cref="ProjectionDefinition">projection definitions</see> available.

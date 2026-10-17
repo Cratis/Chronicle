@@ -34,6 +34,7 @@ public partial class ProjectionsManager
             return;
         }
 
+        ForgetSubscriptionsFor(identifier);
         logger.RetiringProjection(identifier);
         await projectionsService.Unregister(_eventStoreName, identifier);
         await GrainFactory.GetGrain<IProjection>(new ProjectionKey(identifier, _eventStoreName)).Remove();
@@ -104,6 +105,7 @@ public partial class ProjectionsManager
     async Task StopObserverFor(ProjectionDefinition orphan, EventStoreNamespaceName @namespace)
     {
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(orphan.Identifier, _eventStoreName, @namespace, orphan.EventSequenceId));
+        _subscribed.TryRemove((orphan.Identifier, @namespace), out _);
         await observer.Retire();
 
         var jobsManager = GrainFactory.GetJobsManager(_eventStoreName, @namespace);

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -23,6 +24,7 @@ using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -1265,6 +1267,10 @@ public partial class EventSequence(
 
     async Task ReconcilePatternCapture(CancellationToken cancellationToken)
     {
+        // Never await manager subscription here: Observer.Subscribe reads this sequence's tail.
+        // Each manager coalesces pending work per namespace; failures are logged and the next tick retries.
+        _ = ReconcileNamespaceSubscriptions(() => GrainFactory.GetGrain<IProjectionsManager>(_eventSequenceKey.EventStore).EnsureSubscribedIn(_eventSequenceKey.Namespace));
+        _ = ReconcileNamespaceSubscriptions(() => GrainFactory.GetGrain<ICapturesManager>(_eventSequenceKey.EventStore).EnsureSubscribedIn(_eventSequenceKey.Namespace));
         try
         {
             // A persisted Active marker can outlive failed setup and be reloaded by an ordinary retry.
@@ -1275,6 +1281,18 @@ public partial class EventSequence(
         catch (Exception exception)
         {
             logger.FailedReconcilingPatternCapture(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        }
+    }
+
+    async Task ReconcileNamespaceSubscriptions(Func<Task> reconcile)
+    {
+        try
+        {
+            await reconcile();
+        }
+        catch (Exception exception)
+        {
+            logger.FailedReconcilingNamespaceSubscriptions(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
         }
     }
 

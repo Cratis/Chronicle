@@ -7,7 +7,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Captures;
-using Microsoft.Extensions.Logging.Abstractions;
+using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Captures.for_CapturesManager.given;
@@ -18,11 +19,13 @@ public class a_captures_manager : Specification
 
     protected TestKitSilo _silo = new();
     protected CapturesManager _manager;
+    protected ILogger<CapturesManager> _logger;
     protected ICapturesStorage _captures;
     protected ILanguageService _languageService;
     protected ICaptureValidator _validator;
     protected ICaptureEventsSubscriptions _subscriptions;
     protected ICapturer _capturer;
+    protected Observation.IObserver _observer;
     protected Capture _events;
     protected Capture _poll;
     protected CaptureDefinition _eventsDefinition;
@@ -41,6 +44,10 @@ public class a_captures_manager : Specification
         _validator.Validate(Arg.Any<EventStoreName>(), Arg.Any<CaptureDefinition>()).Returns(Task.FromResult<IEnumerable<CaptureValidationMessage>>([]));
         _subscriptions = Substitute.For<ICaptureEventsSubscriptions>();
         _capturer = Substitute.For<ICapturer>();
+        _observer = Substitute.For<Observation.IObserver>();
+        _observer.GetState().Returns(new ObserverState());
+        _logger = Substitute.For<ILogger<CapturesManager>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
 
         _events = new Capture(CaptureId.New(), "Shipments", new CaptureDeclaration("events-declaration"), CaptureStatus.Stopped);
         _poll = new Capture(CaptureId.New(), "Customers", new CaptureDeclaration("poll-declaration"), CaptureStatus.Stopped);
@@ -67,8 +74,9 @@ public class a_captures_manager : Specification
         _silo.AddService(_languageService);
         _silo.AddService(_validator);
         _silo.AddService(_subscriptions);
-        _silo.AddService(NullLogger<CapturesManager>.Instance);
+        _silo.AddService(_logger);
         _silo.AddProbe(_ => _capturer);
+        _silo.AddProbe(_ => _observer);
         _manager = await _silo.CreateGrainAsync<CapturesManager>(_eventStore.Value);
     }
 

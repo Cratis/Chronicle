@@ -50,5 +50,5 @@ public class and_a_subscribe_pass_resumes_after_a_newer_registration : given.a_p
 
     [Fact] void should_keep_the_newer_registered_definition() => _state.Projections.ShouldContainOnly(_newer);
     [Fact] async Task should_never_send_the_captured_stale_definition() => await _projectionGrain.DidNotReceive().SetDefinition(_stored);
-    [Fact] async Task should_send_the_current_definition_from_both_passes() => await _projectionGrain.Received(2).SetDefinition(_newer);
+    [Fact] async Task should_send_the_current_definition_once() => await _projectionGrain.Received(1).SetDefinition(_newer);
 }
