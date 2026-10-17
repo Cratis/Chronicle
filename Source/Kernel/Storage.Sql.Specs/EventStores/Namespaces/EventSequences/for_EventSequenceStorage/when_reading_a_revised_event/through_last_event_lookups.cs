@@ -14,8 +14,8 @@ public class through_last_event_lookups : given.a_storage_with_two_stored_genera
     {
         await ReviseAt(0, 1, "revised", "revision-hash");
         var before = await _storage.TryGetLastEventBefore(_eventType.Id, SourceId, 1);
-        before.Match(option => option, exception => throw exception).TryGetValue(out _lastBefore!).ShouldBeTrue();
-        (await _storage.TryGetLastInstanceOfAny(SourceId, [_eventType.Id])).TryGetValue(out _lastOfAny!).ShouldBeTrue();
+        before.Match(option => option, exception => throw exception).TryGetValue(out _lastBefore).ShouldBeTrue();
+        (await _storage.TryGetLastInstanceOfAny(SourceId, [_eventType.Id])).TryGetValue(out _lastOfAny).ShouldBeTrue();
     }
 
     [Fact] void should_read_the_revised_content_before_a_sequence_number() => ValueOf(_lastBefore).ShouldEqual("revised");
