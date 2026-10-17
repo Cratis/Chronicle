@@ -135,13 +135,19 @@ internal static class ProjectionReadModelProcessor
             projectionDefinition,
             KernelConceptsNs::Projections.ProjectionOwner.Client) with
         {
-            EventSequenceId = eventContexts is null ? ReadModelEvents.SequenceId : new(eventStore.EventLog.Id.Value)
+            EventSequenceId = new(context.InputSequenceId?.Value ?? (eventContexts is null ? ReadModelEvents.SequenceId.Value : eventStore.EventLog.Id.Value))
         };
 
         var eventsList = events.ToList();
 
         // Keep synthetic positions and observer-free folding; prepare migrations through the kernel component.
-        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(eventStore, eventsList, eventContexts, persist: eventContexts is null, seededEvents: seededEvents);
+        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(
+            eventStore,
+            eventsList,
+            eventContexts,
+            persist: eventContexts is null || context.InputSequenceId is not null,
+            seededEvents: seededEvents,
+            inputSequenceId: context.InputSequenceId);
         var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(eventTypes.All.Select(ToKernelEventType));
         var projectionFactory = CreateProjectionFactory(eventStore.TestingStore.Storage);
 

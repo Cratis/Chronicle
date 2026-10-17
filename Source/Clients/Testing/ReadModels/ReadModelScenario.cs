@@ -98,7 +98,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
     /// the events produced no state changes. Accessing this property triggers event processing the first
     /// time it is called after events have been collected via <see cref="CollectEventsFor(EventSourceId, IEnumerable{object})"/> or
-    /// <see cref="ProcessEventsFor"/>.
+    /// <see cref="ProcessEventsFor"/> or <see cref="ProcessAppendedEvents"/>.
     /// When the seeded events materialize more than one instance — for example a multi-source join —
     /// a single result is ambiguous, so this throws <see cref="MultipleInstancesMaterialized"/>; select the
     /// intended instance with <see cref="InstanceForEventSourceId(EventSourceId)"/> or <see cref="Instances"/>.
@@ -127,8 +127,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// projections, such as a join whose join-source event was seeded before the entity under test, to
     /// assert against the intended instance deterministically. Each instance carries only what was
     /// projected onto its own key — seeding a second event source never adds to the first. It is populated
-    /// for projections; reducers are single-instance and expose their result through <see cref="Instance"/>
-    /// only.
+    /// for projections and for reducers fed through <see cref="ProcessAppendedEvents"/>. Reducers fed only
+    /// bare events retain their single-instance behavior.
     /// </remarks>
     public IReadOnlyDictionary<EventSourceId, TReadModel> Instances
     {
@@ -334,6 +334,33 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public Task ProcessEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
     {
         CollectEventsFor(eventSourceId, events);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Feeds appended events through the read model's projection or reducer, preserving their original contexts.
+    /// </summary>
+    /// <param name="events">The appended events, potentially from several event sources.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Events accumulate with previously collected input and are processed when a result is accessed.
+    /// Appended events are sorted by their original sequence numbers. Use distinct sequence numbers.
+    /// Bare events collected through <see cref="ProcessEventsFor"/> or <see cref="Given"/> keep synthetic
+    /// contexts with collection-index sequence numbers. Projections use their existing key resolution;
+    /// reducers fold each event source independently when appended input is present.
+    /// </remarks>
+    public Task ProcessAppendedEvents(IEnumerable<AppendedEvent> events)
+    {
+        _processed = false;
+        foreach (var @event in events)
+        {
+            var context = @event.Context;
+            _collectedEvents.Add(new(context.EventSourceId, @event.Content, context.EventSourceType, context.EventStreamType, context.EventStreamId, context.Tags.Select(tag => tag.Value).ToArray())
+            {
+                Context = context
+            });
+        }
+
         return Task.CompletedTask;
     }
 

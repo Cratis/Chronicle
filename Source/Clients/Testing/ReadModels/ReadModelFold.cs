@@ -65,17 +65,25 @@ internal sealed class ReadModelFold<TReadModel>
     /// Processes input through the selected handler.
     /// </summary>
     /// <param name="events">The routed events.</param>
-    /// <param name="eventContexts">Original contexts when folding the store's event log.</param>
+    /// <param name="eventContexts">Original contexts when folding appended events.</param>
+    /// <param name="inputSequenceId">Optional isolated sequence for appended scenario input and key lookups.</param>
     /// <returns>The primary instance and every keyed instance.</returns>
     /// <exception cref="NoReadModelHandlerFound">No handler exists for the read model.</exception>
     public async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process(
         IEnumerable<ReadModelEvent> events,
-        IReadOnlyList<EventContext>? eventContexts = null)
+        IReadOnlyList<EventContext>? eventContexts = null,
+        EventSequenceId? inputSequenceId = null)
     {
         var eventsList = events.ToList();
+        if (eventContexts is null && eventsList.Exists(input => input.Context is not null))
+        {
+            return await ReadModelAppendedEvents.Process(this, eventsList);
+        }
+
         var context = new ReadModelFoldContext(EventStore, EventTypes, SchemaGenerator, ServiceProvider, ReadModelType)
         {
-            EventContexts = eventContexts
+            EventContexts = eventContexts,
+            InputSequenceId = inputSequenceId
         };
         if (ReducerType is not null)
         {
