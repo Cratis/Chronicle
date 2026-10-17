@@ -79,6 +79,12 @@ public class Projections(
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets the software version of the application, sent with every registration so the kernel can ignore one that
+    /// is older than what it has stored. Left unset, registrations carry no version and are never ignored.
+    /// </summary>
+    internal string? SoftwareVersion { get; init; }
+
+    /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
@@ -243,6 +249,7 @@ public class Projections(
             // batch, and claiming a full set then would make the kernel retire a projection that still exists in
             // the client.
             Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+            Version = SoftwareVersion,
             FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
         Registered?.Invoke();
@@ -456,6 +463,7 @@ public class Projections(
                 Owner = ProjectionOwner.Client,
                 Projections = [registration.Definition],
                 Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+                Version = SoftwareVersion,
                 FullSet = false
             });
             Registered?.Invoke();

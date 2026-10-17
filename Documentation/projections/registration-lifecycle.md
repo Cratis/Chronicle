@@ -27,6 +27,56 @@ performs safe partial work but creates a recommendation for a full replay, while
 recommendation for any replay. Chronicle reports the chosen classification in its logs, and partial and
 full replays use the existing observer job progress shown in the Workbench.
 
+## When an older client registers — the version guard
+
+During a rolling deploy an old pod can reconnect, or retry a registration, after a newer pod has already
+registered. Without a guard the older definitions would overwrite the newer ones, and an older full set
+would retire projections the newer version added.
+
+Every registration carries the client's [`SoftwareVersion`](../configuration/chronicle-options.mdx#softwareversion)
+and Chronicle stores it with each projection definition. When a registration arrives, Chronicle compares
+its version with the stored one by [semantic version](https://semver.org) precedence, ignoring build metadata:
+
+- A projection whose stored version is **greater** than the registration's is left out. The stored definition
+  is kept, a warning is logged, the registrant is not recorded, and the Workbench shows a recommendation —
+  "Projection registration ignored: projection *X* was registered by an older client version" — once per projection and
+  version pair.
+- A full set that is older than **any** stored projection of its owner is treated as a partial registration,
+  so it retires nothing.
+- An **equal**, missing or unparseable version on either side behaves exactly as before: the registration
+  replaces the stored definition.
+- A newer version replaces the stored definition. A version change alone is only metadata: it is stored, but
+  it never triggers a replay.
+
+### Setting the version
+
+The .NET client sends `ChronicleOptions.SoftwareVersion`, which defaults to the entry assembly's informational
+version. An application that never sets a version reports `1.0.0`, which gives every release the same number
+and so no protection; the client logs a warning at startup when it sees that default. Set a real version in
+your build, or override it in configuration:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "SoftwareVersion": "2.4.0"
+    }
+  }
+}
+```
+
+The same override works as the environment variable `Cratis__Chronicle__SoftwareVersion`, or in code through
+`options.SoftwareVersion`. The key sits under the `Cratis:Chronicle` section that `AddCratisChronicle` binds by default.
+
+Pre-release and pull request builds are ordered by semantic version rules, so stamp them with a version that
+sorts where you expect (for example `2.4.0-rc.1`, which is older than `2.4.0`).
+
+### Rolling back
+
+A rollback that redeploys an older image is an older registration, and Chronicle ignores it. Roll back
+by redeploying the previous code **with a higher version**, or set `Cratis:Chronicle:SoftwareVersion` on the
+rolled-back deployment to a version above the one you are leaving. Rolling forward with a fix works the same way.
+
 ## When a registration partially fails
 
 Definitions are isolated from each other: a definition the engine rejects fails *alone*. Every other

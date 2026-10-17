@@ -31,6 +31,7 @@ namespace Cratis.Chronicle;
 /// </summary>
 public class ChronicleClient : IChronicleClient, IDisposable
 {
+    const string DefaultSoftwareVersion = "1.0.0";
     const string VersionMetadataKey = "softwareVersion";
     const string CommitMetadataKey = "softwareCommit";
     const string DotNetClientVersionMetadataKey = ".NET Client Version";
@@ -323,6 +324,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()
     {
+        if (Options.SoftwareVersion == DefaultSoftwareVersion)
+        {
+            _loggerFactory.CreateLogger<ChronicleClient>().SoftwareVersionIsDefault(Options.SoftwareVersion);
+        }
+
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
         {

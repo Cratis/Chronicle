@@ -64,7 +64,8 @@ internal sealed class Projections(
             // A full set can only be attributed to an application when the client identified itself. Without that,
             // several applications sharing the event store would each retire the others' projections.
             var registrant = string.IsNullOrEmpty(request.Registrant) ? null : request.Registrant;
-            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant);
+            var version = string.IsNullOrWhiteSpace(request.Version) ? null : request.Version;
+            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version);
         }
         catch (Exception exception)
         {
