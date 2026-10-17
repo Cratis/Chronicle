@@ -64,7 +64,12 @@ internal static class ReducerReadModelProcessor
                 Tags = @event.Event.GetType().GetTags().Concat(@event.Tags).Distinct(StringComparer.Ordinal).Select(tag => new Tag(tag)).ToArray()
             };
         }).ToArray();
-        var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts, persist: eventContexts is null);
+        var (prepared, _) = await ReadModelEvents.Prepare(
+            eventStore,
+            eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(),
+            contexts,
+            persist: eventContexts is null || context.InputSequenceId is not null,
+            inputSequenceId: context.InputSequenceId);
         var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources, includeTagFilters: true);
         var eventsAndContexts = new List<EventAndContext>();
         foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.MatchesClient(contexts[index])))

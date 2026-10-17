@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Testing.Events;
 
@@ -26,4 +27,9 @@ internal sealed record ReadModelFoldContext(
     /// Gets the original contexts when folding events from the store's log rather than synthetic input.
     /// </summary>
     public IReadOnlyList<EventContext>? EventContexts { get; init; }
+
+    /// <summary>
+    /// Gets the isolated sequence used to store appended scenario input for projection key lookups.
+    /// </summary>
+    public EventSequenceId? InputSequenceId { get; init; }
 }

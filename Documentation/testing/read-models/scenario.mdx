@@ -36,6 +36,21 @@ dotnet add package Cratis.Chronicle.Testing
 
 Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example calls the reducer directly and asserts on what it returns.
 
+## Fold appended events with their original context (.NET)
+
+When rebuilding a read model from events that have already been appended, pass the client's
+`IEnumerable<AppendedEvent>` to `await scenario.ProcessAppendedEvents(events)`. Unlike bare events passed
+through `ProcessEventsFor` or `Given`, these events retain their original sequence numbers, occurrence
+times (including offsets), source and stream metadata, correlation, and causation.
+
+Input accumulates until you access `Instance`, `Instances`, or `InstanceForEventSourceId`. Every rebuild
+sorts the collected events by sequence number. Use distinct sequence numbers; duplicate slots fail
+when preparing the input. Bare events mixed into the same scenario receive synthetic contexts with
+collection-index sequence numbers.
+Projections retain their normal key resolution, including event-property keys, joins, and children.
+Reducers fold each event source independently; use `Instances` or `InstanceForEventSourceId` if more
+than one source materializes. The input is not appended to the scenario's application event log.
+
 ## Seed routed events
 
 In .NET, use `Given.ForEventSource(id).OnStream(eventSourceType, eventStreamType, eventStreamId).Events(...)`

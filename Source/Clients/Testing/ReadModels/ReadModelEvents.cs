@@ -3,9 +3,11 @@
 
 extern alias KernelConcepts;
 extern alias KernelCore;
+extern alias KernelGrpc;
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -33,6 +35,7 @@ internal static class ReadModelEvents
     /// <param name="contexts">Optional original client contexts.</param>
     /// <param name="persist">Whether to persist synthetic input; false uses the existing event log.</param>
     /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
+    /// <param name="inputSequenceId">Optional isolated sequence for appended scenario input.</param>
     /// <returns>The delivered kernel events and their shared storage.</returns>
     /// <exception cref="SyntheticEventAppendFailed">A synthetic position was already occupied.</exception>
     internal static async Task<(KernelEvents::AppendedEvent[] Events, IEventSequenceStorage Storage)> Prepare(
@@ -40,13 +43,15 @@ internal static class ReadModelEvents
         IReadOnlyList<(EventSourceId EventSourceId, object Event)> events,
         IReadOnlyList<EventContext>? contexts = null,
         bool persist = true,
-        IReadOnlyList<ReadModelEvent>? seededEvents = null)
+        IReadOnlyList<ReadModelEvent>? seededEvents = null,
+        EventSequenceId? inputSequenceId = null)
     {
         var root = store.TestingStore;
         var converter = new ExpandoObjectConverter(new TypeFormats());
         var migrations = new KernelSequences::Migrations.EventTypeMigrations(root.Storage, converter);
         var calculator = new KernelSequences::EventHashCalculator();
-        var storage = root.Store.GetNamespace(new(root.Namespace.Value)).GetEventSequence(persist ? SequenceId : new(store.EventLog.Id.Value));
+        var sequenceId = new KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId(inputSequenceId?.Value ?? (persist ? SequenceId.Value : store.EventLog.Id.Value));
+        var storage = root.Store.GetNamespace(new(root.Namespace.Value)).GetEventSequence(sequenceId);
         var storedCount = (await storage.GetCount()).Value;
         var result = new KernelEvents::AppendedEvent[events.Count];
         for (var index = 0; index < events.Count; index++)
@@ -61,7 +66,8 @@ internal static class ReadModelEvents
             var json = JsonNode.Parse(serialized.ToJsonString(), new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
             var content = converter.ToExpandoObject(json, schema.Schema);
             var generations = await migrations.MigrateToAllGenerations(new KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName(root.Name.Value), kernelType, json, content);
-            var context = KernelEvents::EventContext.Empty with
+            var originalContext = contexts is null ? null : KernelGrpc::Cratis.Chronicle.Services.Events.EventContextConverters.ToChronicle(contexts[index].ToContract());
+            var context = (originalContext ?? KernelEvents::EventContext.Empty) with
             {
                 EventType = kernelType,
                 EventSourceId = new(input.EventSourceId.Value),
