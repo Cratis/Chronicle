@@ -39,7 +39,12 @@ public static class ObserverStateConverters
                     a.SequenceNumber.Value,
                     a.Messages,
                     a.StackTrace)),
-                fp.IsResolved)).ToList(),
+                fp.IsResolved)
+            {
+                RecoveryCursor = fp.RecoveryCursor,
+                RecoveryOwner = fp.RecoveryOwner,
+                Hold = fp.Hold
+            }).ToList(),
             FailedPartitionCount = definition.FailedPartitionCount,
             IsReplaying = definition.IsReplaying,
             SubscribesToAllEvents = definition.SubscribesToAllEvents
@@ -69,7 +74,10 @@ public static class ObserverStateConverters
                     Messages = a.Messages,
                     StackTrace = a.StackTrace
                 }),
-                IsResolved = fp.IsResolved
+                IsResolved = fp.IsResolved,
+                RecoveryCursor = fp.RecoveryCursor,
+                RecoveryOwner = fp.RecoveryOwner,
+                Hold = fp.Hold
             }).ToList(),
             state.FailedPartitionCount,
             state.IsReplaying,
