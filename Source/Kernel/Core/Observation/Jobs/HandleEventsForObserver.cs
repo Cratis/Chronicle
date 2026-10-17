@@ -51,6 +51,7 @@ public class HandleEventsForObserver(
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
+    readonly SemaphoreSlim _flushGate = new(1, 1);
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -59,7 +60,6 @@ public class HandleEventsForObserver(
     EventType[] _generationPins = [];
     EventStoreName _generationEventStore = EventStoreName.NotSet;
 
-    readonly SemaphoreSlim _flushGate = new(1, 1);
     EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
@@ -406,6 +406,7 @@ public class HandleEventsForObserver(
     /// </summary>
     /// <param name="lastHandled">The last handled event sequence number.</param>
     /// <returns>True when the batch interval is reached and the checkpoint must be flushed.</returns>
+    /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
     bool RecordHandled(EventSequenceNumber lastHandled)
     {
         _lastHandled = lastHandled;
@@ -427,6 +428,7 @@ public class HandleEventsForObserver(
     /// </summary>
     /// <param name="start">Whether to establish the window baseline before handling a new range.</param>
     /// <returns>The <see cref="FlushCapture"/>.</returns>
+    /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
     FlushCapture CaptureFlush(bool start)
     {
         if (start)
@@ -474,6 +476,7 @@ public class HandleEventsForObserver(
     /// <param name="capture">The <see cref="FlushCapture"/> the windows were confirmed for.</param>
     /// <param name="windows">The windows confirmed per silo.</param>
     /// <returns>The last confirmed durable event sequence number.</returns>
+    /// <exception cref="BulkWindowLost">A window confirmed earlier is no longer present on its silo.</exception>
     async Task<EventSequenceNumber> CommitFlush(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows)
     {
         try
@@ -515,7 +518,7 @@ public class HandleEventsForObserver(
 
     /// <summary>
     /// Reports progress from the step's background work. Every touch of the activation goes through
-    /// <c>TryInvokeOnActivation</c>.
+    /// TryInvokeOnActivation.
     /// </summary>
     /// <param name="lastHandled">The last handled event sequence number.</param>
     /// <returns>The last confirmed durable event sequence number, or why the step refused a callback.</returns>
@@ -563,17 +566,17 @@ public class HandleEventsForObserver(
 
             captured.TryGetResult(out var capture);
             var windows = await ConfirmWindows(
-                capture!,
+                capture,
                 error => _ = TryInvokeOnActivation(() =>
                 {
                     _checkpointFailure = error;
                     return Task.CompletedTask;
                 }));
 
-            return await TryInvokeOnActivation(() =>
+            return await TryInvokeOnActivation(async () =>
             {
                 using var scope = logger.BeginJobStepScope(State);
-                return CommitFlush(capture!, windows);
+                return await CommitFlush(capture, windows);
             });
         }
         finally

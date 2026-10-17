@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 
 /// <summary>
 /// Gives a job step under specification the run its background work has in a silo, so that
-/// <c>TryInvokeOnActivation</c> admits callbacks, runs them on a stand-in activation scheduler, and refuses them
+/// TryInvokeOnActivation admits callbacks, runs them on a stand-in activation scheduler, and refuses them
 /// once the run is closed. The run is internal to Cratis.Orleans, so it is reached by reflection.
 /// </summary>
 public sealed class StepRunForTesting
@@ -40,12 +40,12 @@ public sealed class StepRunForTesting
     /// <summary>
     /// Starts a run for a job step and makes it the ambient run of the calling execution context.
     /// </summary>
-    /// <param name="jobStep">The job step, derived from <c>JobStep&lt;,,&gt;</c>.</param>
+    /// <param name="jobStep">The job step, derived from JobStep with three type arguments.</param>
     /// <returns>The <see cref="StepRunForTesting"/>.</returns>
     public static StepRunForTesting Begin(object jobStep)
     {
         var activation = new ConcurrentExclusiveSchedulerPair().ExclusiveScheduler;
-        var run = Activator.CreateInstance(_runType, 1L, activation)!;
+        var run = Activator.CreateInstance(_runType, 1L, activation, null)!;
         _runType.GetMethod("Started")!.Invoke(run, null);
         _runType.GetMethod("Running")!.Invoke(run, null);
 

@@ -43,8 +43,8 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
     [Fact] void should_not_write_state_before_the_stop() => _writesBeforeTheStop.ShouldEqual(0);
     [Fact] void should_not_commit_the_flush_after_the_stop() => _writesAfterTheFlushCompleted.ShouldEqual(0);
     [Fact] void should_keep_the_last_durable_checkpoint() => _performState.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
-    [Fact] void should_not_count_the_batch_the_next_run_handles_again() =>
-        _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEvents)).ShouldEqual(0);
+    [Fact] void should_report_each_handled_batch_once() =>
+        _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEvents)).ShouldEqual(_handledBatches.Count);
 
     async Task WaitForTheFlush()
     {

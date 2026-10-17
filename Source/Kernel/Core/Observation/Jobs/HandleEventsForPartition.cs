@@ -92,7 +92,7 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     /// <remarks>
     /// This is the activation-side entry point. The step's own background work never calls it through the grain
-    /// reference; it reaches the activation through <c>TryInvokeOnActivation</c> instead.
+    /// reference; it reaches the activation through TryInvokeOnActivation instead.
     /// </remarks>
     public async Task ReportNewSuccessfullyHandledEvent(EventSequenceNumber lastHandledEventSequenceNumber)
     {
@@ -331,27 +331,6 @@ public class HandleEventsForPartition(
         }
     }
 
-    /// <summary>
-    /// Reports progress from the step's background work. The state update and the debounced write run as one
-    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
-    /// </summary>
-    /// <param name="lastHandled">The last handled event sequence number.</param>
-    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
-    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
-    {
-        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
-        if (reported.TryGetError(out var rejection))
-        {
-            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
-            return false;
-        }
-
-        return true;
-    }
-
-    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
-        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
-
     static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
     {
         if (eventObservationState != EventObservationState.None)
@@ -415,6 +394,27 @@ public class HandleEventsForPartition(
 
         return lastScanned;
     }
+
+    /// <summary>
+    /// Reports progress from the step's background work. The state update and the debounced write run as one
+    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
+    /// </summary>
+    /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
+    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
+    {
+        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
+        if (reported.TryGetError(out var rejection))
+        {
+            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
+            return false;
+        }
+
+        return true;
+    }
+
+    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
+        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
