@@ -40,9 +40,11 @@ public static class SubscribeEndpoint
         // The middleware commits after the response is written, which is too late to report a
         // conflict. Commit here, while the response can still change.
         var unitOfWork = await http.Features.Get<IUnitOfWorkCompletionFeature>()!.CommitAsync();
-        if (unitOfWork.GetDecisionConflicts().Any())
+        var conflicts = unitOfWork.GetDecisionConflicts().ToArray();
+        if (conflicts.Length > 0)
         {
-            return Results.Conflict();
+            // A conflict serializes as the read model, the key and the event that changed it.
+            return Results.Conflict(conflicts);
         }
 
         return unitOfWork.IsSuccess ? Results.NoContent() : Results.UnprocessableEntity();

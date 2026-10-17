@@ -52,7 +52,7 @@ An append condition compares the events appended after a position with a filter.
 - **Advisory reads.** A plain read, or a read under an `Advisory` allowance, guards nothing. A `[Unprotected]` read in Arc is the same.
 - **Writers that decide without a guard.** A guard detects a matching event whoever appended it. It protects only the decisions that carry it.
 
-A conflict report names the read model and the key that changed. It does not name the event that changed it.
+A conflict report names the read model and the key that changed. When the kernel reports it, it also names the type and sequence number of the first event that matched the guard after the read, which can belong to another read merged into the same guard.
 
 In a host that uses [read protection](../read-models/read-protection.mdx), the frame belongs to one unit of work and follows one asynchronous flow. Enrollment on another unit inside it is refused with `ReadProtectionUnitMismatch`.
 

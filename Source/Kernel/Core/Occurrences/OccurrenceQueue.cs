@@ -110,6 +110,9 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
     /// <inheritdoc/>
     public Task ReceiveReminder(string reminderName, TickStatus status) => reminderName == WakeReminder ? Wake() : Task.CompletedTask;
 
+    /// <inheritdoc/>
+    public Task Prepare() => EnsureWake();
+
     async Task EnsureWake()
     {
         if (_timer is not null)

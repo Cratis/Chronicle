@@ -15,7 +15,9 @@ public class and_the_listed_definition_disagrees : given.a_decision_reader
 
     async Task Because() => _error = await Record.ExceptionAsync(() => _reader.GetDetached<Model>("source")) as DecisionReadRefused;
 
-    [Fact] void should_refuse_the_mismatch() => _error.Reason.ShouldEqual(DecisionReadRefusalReason.DefinitionMismatch);
+    [Fact] void should_report_the_missing_definition() => _error.Reason.ShouldEqual(DecisionReadRefusalReason.DefinitionMissing);
+    [Fact] void should_name_the_missing_projection() => _error.Message.ShouldContain("projection definition is missing on the kernel");
+    [Fact] void should_recheck_once_before_refusing() => _projectionService.ReceivedCalls().Count().ShouldEqual(2);
     [Fact] void should_not_fold_after_mismatch() => _folds.ShouldEqual(0);
     [Fact] void should_not_query_the_tail() => _sequences.ReceivedCalls().ShouldBeEmpty();
 }

@@ -92,5 +92,10 @@ public enum DecisionReadRefusalReason
     ReadModelRequiresStreamScope = 24,
 
     /// <summary>The supplied stream type or event source type differs from the read model's declaration.</summary>
-    StreamScopeDoesNotMatchReadModel = 25
+    StreamScopeDoesNotMatchReadModel = 25,
+
+    /// <summary>
+    /// The kernel lists no read-model definition or no projection definition for the client's identifiers.
+    /// </summary>
+    DefinitionMissing = 26
 }

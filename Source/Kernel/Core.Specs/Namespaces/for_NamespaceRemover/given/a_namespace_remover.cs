@@ -26,6 +26,9 @@ public class a_namespace_remover : Specification
     protected IObserverDefinitionsStorage _definitions;
     protected IObserverStateStorage _observerStates;
     protected INamespaces _namespaces;
+    protected IReminderTable _reminderTable;
+    protected IObserver _observerWithoutState;
+    protected static readonly ObserverKey _keyWithoutState = new("Some->Other", _eventStore, _namespace, EventSequenceId.Outbox);
     protected IObserver _observer;
     protected NamespaceRemover _remover;
 
@@ -40,6 +43,13 @@ public class a_namespace_remover : Specification
         _observerStates = Substitute.For<IObserverStateStorage>();
         _namespaces = Substitute.For<INamespaces>();
         _observer = Substitute.For<IObserver>();
+        _observerWithoutState = Substitute.For<IObserver>();
+        _reminderTable = Substitute.For<IReminderTable>();
+        _reminderTable.ReadRows(Arg.Any<uint>(), Arg.Any<uint>()).Returns(callInfo => Task.FromResult(callInfo.ArgAt<uint>(0) == 0
+            ? new ReminderTableData([
+                Reminder(_keyWithoutState.ToString()),
+                Reminder(new ObserverKey("Other", _eventStore, "another-namespace", EventSequenceId.Log).ToString())])
+            : new ReminderTableData([])));
 
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(_namespace).Returns(_namespaceStorage);
@@ -55,6 +65,15 @@ public class a_namespace_remover : Specification
         _grainFactory.GetGrain<INamespaces>(_eventStore).Returns(_namespaces);
         _grainFactory.GetGrain<IObserver>(new ObserverKey(_observerId, _eventStore, _namespace, EventSequenceId.Log)).Returns(_observer);
 
-        _remover = new NamespaceRemover(_grainFactory, _storage, NullLogger<NamespaceRemover>.Instance);
+        _grainFactory.GetGrain<IObserver>(_keyWithoutState).Returns(_observerWithoutState);
+
+        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance);
     }
+
+    static ReminderEntry Reminder(string key) => new()
+    {
+        GrainId = GrainId.Create("observer", key),
+        ReminderName = "chronicle-observer:alerts",
+        ETag = "etag"
+    };
 }

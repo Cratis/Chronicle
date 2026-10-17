@@ -42,8 +42,21 @@ public class Defaults
     /// <param name="serviceProvider">Optional service provider for activating artifacts.</param>
     /// <param name="options">Optional Chronicle settings for this run.</param>
     public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options)
+        : this(clientArtifactsProvider, serviceProvider, options, null)
     {
-        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options);
+    }
+
+    /// <summary>
+    /// Initializes per-run services with an explicitly driven occurrence clock.
+    /// </summary>
+    /// <param name="clientArtifactsProvider">The artifacts available to this run.</param>
+    /// <param name="serviceProvider">Optional services for activating artifacts.</param>
+    /// <param name="options">Optional Chronicle settings.</param>
+    /// <param name="time">The occurrence clock; null creates isolated clocks per scenario.</param>
+    public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options, ScenarioTime? time)
+    {
+        ScenarioTime = time;
+        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options, time ?? new ScenarioTime());
         var testingStore = (EventStoreForTesting)EventStore;
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
@@ -87,4 +100,9 @@ public class Defaults
     /// Gets the settings explicitly supplied to this run, or <see langword="null"/> so each scenario resolves its own settings as before.
     /// </summary>
     internal ChronicleOptions? ScenarioOptions { get; }
+
+    /// <summary>
+    /// Gets an explicitly shared scenario clock, if supplied.
+    /// </summary>
+    internal ScenarioTime? ScenarioTime { get; }
 }

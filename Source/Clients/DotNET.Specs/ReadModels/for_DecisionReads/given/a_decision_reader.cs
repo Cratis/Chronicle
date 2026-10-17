@@ -24,6 +24,7 @@ public class a_decision_reader : Specification
 {
     protected IEventStore _store;
     protected IChronicleServicesAccessor _accessor;
+    protected IConnectionLifecycle _lifecycle;
     protected IServices _services;
     protected Contracts.ReadModels.IReadModels _readModels;
     protected Contracts.Sequences.IEventSequences _sequences;
@@ -49,6 +50,8 @@ public class a_decision_reader : Specification
         _store.Name.Returns((EventStoreName)"store");
         _store.Namespace.Returns((EventStoreNamespaceName)"namespace");
         var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _lifecycle = Substitute.For<IConnectionLifecycle>();
+        connection.Lifecycle.Returns(_lifecycle);
         _accessor = (IChronicleServicesAccessor)connection;
         _store.Connection.Returns(connection);
         _services = Substitute.For<IServices>();

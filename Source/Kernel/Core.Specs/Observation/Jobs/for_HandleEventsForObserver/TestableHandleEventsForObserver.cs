@@ -42,20 +42,21 @@ public class TestableHandleEventsForObserver(
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
-    readonly IHandleEventsForObserver _selfReference = Substitute.For<IHandleEventsForObserver>();
-    static readonly AsyncLocal<bool> _onGrainPath = new();
     static readonly AsyncLocal<bool> _guardStateAccess = new();
+    static readonly AsyncLocal<StepRunForTesting?> _stepRun = new();
 
     /// <summary>
-    /// Gets or sets whether persistent state access outside the simulated grain reference is rejected.
+    /// Gets or sets whether persistent state access outside the step's activation callbacks is rejected.
     /// </summary>
     public bool GuardStateAccess { get; set; }
 
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForObserver);
 
-    /// <inheritdoc/>
-    protected override IHandleEventsForObserver GetSelfGrainReference() => _selfReference;
+    /// <summary>
+    /// Gets the run the step performs in, once <see cref="InvokePerformStep"/> has started it.
+    /// </summary>
+    public StepRunForTesting? Run { get; private set; }
 
     /// <summary>
     /// Sets up internal fields for testing, bypassing the full grain preparation flow.
@@ -66,9 +67,6 @@ public class TestableHandleEventsForObserver(
     {
         _observerField.SetValue(this, observer);
         _subscriptionField.SetValue(this, subscription);
-        _selfReference.ReportNewSuccessfullyHandledEvent(Arg.Any<Concepts.Events.EventSequenceNumber>())
-            .Returns(call => OnGrainPath(() => ReportNewSuccessfullyHandledEvent(call.Arg<Concepts.Events.EventSequenceNumber>())));
-        _selfReference.FlushCheckpoint(Arg.Any<bool>()).Returns(call => OnGrainPath(() => FlushCheckpoint(call.Arg<bool>())));
     }
 
     /// <summary>
@@ -80,13 +78,15 @@ public class TestableHandleEventsForObserver(
     public async Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken = default)
     {
         _guardStateAccess.Value = GuardStateAccess;
+        Run = StepRunForTesting.Begin(this);
+        _stepRun.Value = Run;
         return await PerformStep(currentState, cancellationToken);
     }
 
     static IPersistentState<HandleEventsForObserverState> GuardedState(IPersistentState<HandleEventsForObserverState> inner)
     {
         var guarded = Substitute.For<IPersistentState<HandleEventsForObserverState>>();
-        guarded.State.Returns(_ => !_guardStateAccess.Value || _onGrainPath.Value
+        guarded.State.Returns(_ => !_guardStateAccess.Value || _stepRun.Value?.IsOnActivation == true
             ? inner.State
             : throw new given.StateAccessOutsideActivation());
         guarded.Etag.Returns(_ => inner.Etag);
@@ -95,18 +95,5 @@ public class TestableHandleEventsForObserver(
         guarded.ReadStateAsync().Returns(_ => inner.ReadStateAsync());
         guarded.ClearStateAsync().Returns(_ => inner.ClearStateAsync());
         return guarded;
-    }
-
-    async Task<T> OnGrainPath<T>(Func<Task<T>> action)
-    {
-        _onGrainPath.Value = true;
-        try
-        {
-            return await action();
-        }
-        finally
-        {
-            _onGrainPath.Value = false;
-        }
     }
 }

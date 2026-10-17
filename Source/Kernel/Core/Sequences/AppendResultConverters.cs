@@ -39,6 +39,8 @@ internal static class AppendResultConverters
         {
             EventSourceId = violation.EventSourceId,
             ExpectedSequenceNumber = violation.ExpectedSequenceNumber,
-            ActualSequenceNumber = violation.ActualSequenceNumber
+            ActualSequenceNumber = violation.ActualSequenceNumber,
+            ConflictingEventTypeId = violation.ConflictingEventTypeId?.Value,
+            ConflictingSequenceNumber = violation.ConflictingSequenceNumber?.Value
         };
 }

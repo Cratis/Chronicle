@@ -31,4 +31,16 @@ public class ConcurrencyViolation
     /// </summary>
     [ProtoMember(3)]
     public global::System.UInt64 ActualSequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the ConflictingEventTypeId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? ConflictingEventTypeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConflictingSequenceNumber.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::System.UInt64? ConflictingSequenceNumber { get; set; }
 }

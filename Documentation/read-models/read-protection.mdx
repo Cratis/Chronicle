@@ -45,7 +45,7 @@ A unit implementation that does not support this throws `UnitOfWorkReadProtectio
 
 A unit that enforces read protection is completed only by its owner. Claim ownership with `ClaimDecisionReadCommitOwnership()`, then use `CommitAsOwner(owner)` or `RollbackAsOwner(owner)`. Calling `Commit()`, `Rollback()` or `Dispose()` on the unit throws `ProtectedUnitOfWorkRequiresOwner`, so an aggregate-style `Commit()` in application code cannot complete the unit half-guarded. A commit that is already running throws `UnitOfWorkIsCompleting` for a rollback.
 
-A successful commit validates every guard atomically with the append. A changed read is a conflict, not an exception: nothing is appended, and `GetDecisionConflicts()` names the model type and key. Check `GetConcurrencyViolations()` and `GetConstraintViolations()` for the other outcomes.
+A successful commit validates every guard atomically with the append. A changed read is a conflict, not an exception: nothing is appended, and `GetDecisionConflicts()` names the model type, the key and, when the kernel reports it, the first event that changed the read. Check `GetConcurrencyViolations()` and `GetConstraintViolations()` for the other outcomes.
 
 With no staged events, the commit still validates a guard that was supplied for validation only. A guard that exists only because a read was enrolled sends nothing, because no write means nothing to protect.
 
@@ -67,6 +67,12 @@ Chronicle refuses `CompleteStream` inside a protected invocation, even after the
 | `Contributed` | A read that influences the decision and that you enroll yourself | Enroll it with `EnrolContributedRead` before you use the value |
 
 Allowances are not inherited by a reducer that Chronicle runs for a decision read. Code inside the reducer that reads Chronicle meets the guards.
+
+### Nested invocations
+
+A read region follows the asynchronous flow, so a region opened by an outer invocation also covers any invocation it runs. A host that runs a nested invocation under the same frame, such as a command that executes another command, calls `IUnitOfWork.SuspendReadRegions()` when the nested invocation starts and disposes the returned scope when it ends.
+
+While the suspension is open, reads are refused as if no region were open. A region opened inside the suspension applies as usual. Disposing the suspension restores the inherited regions. Suspensions nest, and a suspension never ends read protection or removes an enrolled guard. Calling it from a unit that does not own the active invocation throws `ReadProtectionUnitMismatch`.
 
 ## Acquiring a decision read
 
@@ -170,6 +176,7 @@ If you come from an Arc command, this table maps what you declare there to what 
 | A read the host performs itself and then enrolls | `AllowReads(ReadAllowance.Contributed, reason)`, then `EnrolContributedRead` before the value is used |
 | A read model that cannot be guarded exactly | `DecisionReadRefused` with a typed reason, such as a join, a filtered reducer, a classic reducer with constructor dependencies or a key that is not the event source ID |
 | Events a command returns | Staged in the unit and appended by `CommitAsOwner`. An immediate append is refused with `ImmediateAppendWhileReadsAreProtected` |
+| A nested command does not inherit its caller's read allowances | `SuspendReadRegions()` when the nested command starts, disposed when it ends |
 | A lost race | A conflict in `GetDecisionConflicts()`. Nothing was appended |
 
 The word "advisory" in this API and "unprotected" in Arc mean the same thing: you accept a stale value and nothing guards it. Chronicle keeps `Advisory` because it also has `Contributed`, a read that does guard.

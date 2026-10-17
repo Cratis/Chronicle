@@ -86,4 +86,14 @@ public sealed record Services(
     IApplications Applications,
     IServer Server,
     IConnectionService Connections,
-    IEventSources EventSources) : IServices;
+    IEventSources EventSources) : IServices
+{
+    Occurrences.IOccurrences? _occurrences;
+
+    /// <inheritdoc/>
+    public Occurrences.IOccurrences Occurrences
+    {
+        get => _occurrences ?? throw new NotSupportedException("Occurrences are not supported by this service container.");
+        init => _occurrences = value;
+    }
+}

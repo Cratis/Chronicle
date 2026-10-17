@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
+
 namespace Cratis.Chronicle.Observation.Jobs;
 
 #pragma warning disable SA1600 // Elements should be documented
@@ -56,4 +58,7 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForPartition> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} stopped checkpointing because its run no longer admits callbacks ({Reason}). Progress to event sequence number {EventSequenceNumber} was not recorded; the next run resumes from the last persisted checkpoint")]
+    internal static partial void CheckpointCallbackRejected(this ILogger<HandleEventsForPartition> logger, Key partition, ActivationCallbackRejected reason, EventSequenceNumber eventSequenceNumber);
 }

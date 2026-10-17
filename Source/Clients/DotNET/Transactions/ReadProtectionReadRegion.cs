@@ -29,12 +29,12 @@ internal sealed class ReadProtectionReadRegion : IDisposable
         _current.Value = this;
     }
 
-    ReadProtectionReadRegion()
+    ReadProtectionReadRegion(string reason)
     {
         _frame = ReadProtectionFrame.Current;
         _previous = _current.Value;
         _suspends = true;
-        Reason = "Reducer callback";
+        Reason = reason;
         _current.Value = this;
     }
 
@@ -62,7 +62,16 @@ internal sealed class ReadProtectionReadRegion : IDisposable
 
     /// <summary>Suspends inherited read allowances without removing the enforcement frame.</summary>
     /// <returns>The flow-local suspension to dispose after the callback.</returns>
-    internal static IDisposable Suspend() => new ReadProtectionReadRegion();
+    /// <remarks>
+    /// Kept parameterless and non-public: hosts built against earlier clients bind to it by reflection. New hosts use
+    /// <see cref="IUnitOfWork.SuspendReadRegions"/>.
+    /// </remarks>
+    internal static IDisposable Suspend() => Suspend("Reducer callback");
+
+    /// <summary>Suspends inherited read allowances without removing the enforcement frame.</summary>
+    /// <param name="reason">The reason retained for instrumentation.</param>
+    /// <returns>The flow-local suspension to dispose after the scope.</returns>
+    internal static IDisposable Suspend(string reason) => new ReadProtectionReadRegion(reason);
 
     static bool Has(ReadAllowance allowance)
     {
