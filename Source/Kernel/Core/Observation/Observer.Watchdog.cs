@@ -255,10 +255,11 @@ public partial class Observer
                 return false;
             }
 
+            var now = DateTimeOffset.UtcNow;
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
-                job.IsPreparingOrRunning);
+                job.IsLive(now));
 
             if (!hasRunningReplayJob)
             {
@@ -311,7 +312,7 @@ public partial class Observer
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
-            job.IsPreparingOrRunning &&
+            job.IsLive(DateTimeOffset.UtcNow) &&
             !_concludedCatchUpJobs.Contains(job.Id));
     }
 
