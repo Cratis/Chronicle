@@ -35,5 +35,5 @@ public class with_failed_partition_recovery : given.an_observer_state_storage
     [Fact] void should_keep_the_hold_reason_type_and_start() => _restored.Hold.ShouldEqual(_partition.Hold);
     [Fact] void should_not_add_an_attempt_for_the_hold() => _restored.Attempts.ShouldBeEmpty();
     [Fact] void should_not_change_the_retry_budget() => _restored.AttemptsInCurrentBudget.ShouldEqual(0);
-    [Fact] void should_not_quarantine_the_hold() => _restored.IsQuarantined.ShouldBeFalse();
+    [Fact] void should_keep_quarantine() => _restored.IsQuarantined.ShouldBeFalse();
 }

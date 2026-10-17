@@ -14,6 +14,7 @@ public class when_upgrading_sqlite : Specification, IDisposable
     SqliteConnection _connection;
     NamespaceDbContext _context;
     object _control;
+    object _initialization;
     string _identifier;
 
     async Task Establish()
@@ -35,11 +36,14 @@ public class when_upgrading_sqlite : Specification, IDisposable
         await using var read = _connection.CreateCommand();
         read.CommandText = "SELECT TypeSetControl FROM Observers WHERE Id = 'legacy-observer'";
         _control = await read.ExecuteScalarAsync();
+        read.CommandText = "SELECT Initialization FROM Observers WHERE Id = 'legacy-observer'";
+        _initialization = await read.ExecuteScalarAsync();
         read.CommandText = "SELECT Id FROM Observers";
         _identifier = (string)await read.ExecuteScalarAsync();
     }
 
     [Fact] void should_leave_legacy_control_absent() => _control.ShouldEqual(DBNull.Value);
+    [Fact] void should_leave_legacy_initialization_absent() => _initialization.ShouldEqual(DBNull.Value);
     [Fact] void should_preserve_existing_rows() => _identifier.ShouldEqual("legacy-observer");
 
     public void Dispose()

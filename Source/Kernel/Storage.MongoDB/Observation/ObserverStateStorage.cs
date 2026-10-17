@@ -102,6 +102,11 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             update = update.Set(_ => _.TypeSetControl, document.TypeSetControl);
         }
 
+        if (document.Initialization is not null)
+        {
+            update = update.Set(_ => _.Initialization, document.Initialization);
+        }
+
         await _collection.UpdateOneAsync(
             os => os.Id == state.Identifier,
             update,

@@ -43,7 +43,11 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
         _states.AddOrUpdate(
             state.Identifier,
             (_, incoming) => incoming,
-            (_, existing, incoming) => incoming with { TypeSetControl = incoming.TypeSetControl ?? existing.TypeSetControl },
+            (_, existing, incoming) => incoming with
+            {
+                TypeSetControl = incoming.TypeSetControl ?? existing.TypeSetControl,
+                Initialization = incoming.Initialization ?? existing.Initialization
+            },
             state);
         _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;

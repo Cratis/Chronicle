@@ -28,6 +28,13 @@ public class ObserverState
     public ObserverTypeSetControl? TypeSetControl { get; set; }
 
     /// <summary>
+    /// Gets or sets the initialization state, absent before initialization.
+    /// </summary>
+    [BsonElement("initialization")]
+    [BsonIgnoreIfNull]
+    public ObserverInitialization? Initialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

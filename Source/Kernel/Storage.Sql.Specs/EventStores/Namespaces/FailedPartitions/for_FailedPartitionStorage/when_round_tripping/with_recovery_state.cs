@@ -37,7 +37,7 @@ public class with_recovery_state : given.a_failed_partition_storage
     [Fact] void should_keep_live_and_replay_cursors() => _restored.Select(partition => partition.RecoveryCursor).ShouldEqual(_expected.Select(partition => partition.RecoveryCursor));
     [Fact] void should_keep_each_whole_owner_tuple() => _restored.Select(partition => partition.RecoveryOwner).ShouldEqual(_expected.Select(partition => partition.RecoveryOwner));
     [Fact] void should_keep_each_hold() => _restored.Select(partition => partition.Hold).ShouldEqual(_expected.Select(partition => partition.Hold));
-    [Fact] void should_not_add_attempts_for_holds() => _restored.Select(partition => partition.Attempts.Count()).ShouldEqual([2, 2, 2]);
+    [Fact] void should_keep_attempts() => _restored.Select(partition => partition.Attempts.Count()).ShouldEqual([2, 2, 2]);
     [Fact] void should_keep_retry_budgets() => _restored.Select(partition => partition.AttemptsInCurrentBudget).ShouldEqual([1, 1, 1]);
     [Fact] void should_keep_quarantine() => _restored.All(partition => partition.IsQuarantined).ShouldBeTrue();
     [Fact] void should_keep_the_last_attempt() => _restored.Select(partition => partition.LastAttempt.SequenceNumber.Value).ShouldEqual([50UL, 50UL, 50UL]);

@@ -85,6 +85,14 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
                 .FirstOrDefaultAsync();
         }
 
+        if (state.Initialization is null)
+        {
+            entity.Initialization = await scope.DbContext.Observers
+                .Where(observer => observer.Id == entity.Id)
+                .Select(observer => observer.Initialization)
+                .FirstOrDefaultAsync();
+        }
+
         await scope.DbContext.Observers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -123,6 +131,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         {
             Id = newId,
             TypeSetControl = existing.TypeSetControl,
+            Initialization = existing.Initialization,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,

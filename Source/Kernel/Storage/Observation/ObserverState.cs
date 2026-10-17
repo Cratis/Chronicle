@@ -66,6 +66,11 @@ public record ObserverState(
     public ObserverTypeSetControl? TypeSetControl { get; init; }
 
     /// <summary>
+    /// Gets the observer's initialization state and latest refusal reasons, or null for legacy state.
+    /// </summary>
+    public ObserverInitialization? Initialization { get; init; }
+
+    /// <summary>
     /// Gets the source-owned lifecycle token, replaced on subscription but not activation.
     /// </summary>
     public Guid AlertLifecycleId { get; init; }

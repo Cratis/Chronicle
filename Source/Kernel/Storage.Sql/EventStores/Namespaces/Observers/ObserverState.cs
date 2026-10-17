@@ -24,6 +24,11 @@ public class ObserverState
     public string? TypeSetControl { get; set; }
 
     /// <summary>
+    /// Gets or sets serialized observer initialization and latest refusal reasons, absent on legacy rows.
+    /// </summary>
+    public string? Initialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

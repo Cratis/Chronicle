@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
@@ -20,6 +21,7 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
+            Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
@@ -84,6 +86,7 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
+            Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,

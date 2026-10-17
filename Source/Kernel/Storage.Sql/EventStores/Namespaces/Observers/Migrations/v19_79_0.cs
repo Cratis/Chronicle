@@ -16,26 +16,29 @@ public class v19_79_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        if (ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+        foreach (var name in new[] { "TypeSetControl", "Initialization" })
         {
-            // Native jsonb validates the value itself. Arc's AddJsonColumn generator joins
-            // its auxiliary CHECK and CREATE INDEX without a statement separator.
-            migrationBuilder.AddColumn<string>(
-                name: "TypeSetControl",
-                table: WellKnownTableNames.Observers,
-                type: "jsonb",
-                nullable: true);
-            return;
+            if (ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+            {
+                // Native jsonb validates the value itself. Arc's AddJsonColumn generator joins
+                // its auxiliary CHECK and CREATE INDEX without a statement separator.
+                migrationBuilder.AddColumn<string>(
+                    name: name,
+                    table: WellKnownTableNames.Observers,
+                    type: "jsonb",
+                    nullable: true);
+            }
+            else
+            {
+                migrationBuilder.AddJsonColumn<string>(name: name, table: WellKnownTableNames.Observers);
+                migrationBuilder.Operations.OfType<AddColumnOperation>().Single(column => column.Name == name).IsNullable = true;
+            }
         }
-
-        migrationBuilder.AddJsonColumn<string>(
-            name: "TypeSetControl",
-            table: WellKnownTableNames.Observers);
-        migrationBuilder.Operations.OfType<AddColumnOperation>().Single().IsNullable = true;
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(name: "TypeSetControl", table: WellKnownTableNames.Observers);
+        migrationBuilder.DropColumn(name: "Initialization", table: WellKnownTableNames.Observers);
     }
 }

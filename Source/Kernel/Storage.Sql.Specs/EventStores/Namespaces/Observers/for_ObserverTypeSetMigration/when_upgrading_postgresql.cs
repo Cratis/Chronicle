@@ -16,6 +16,8 @@ public class when_upgrading_postgresql(PostgreSqlFixture fixture) : Specificatio
     NamespaceDbContext _context;
     string _connectionString;
     object _control;
+    object _initialization;
+    string _initializationColumnType;
     string _identifier;
     string _columnType;
 
@@ -40,6 +42,10 @@ public class when_upgrading_postgresql(PostgreSqlFixture fixture) : Specificatio
         await using var read = _context.Database.GetDbConnection().CreateCommand();
         read.CommandText = "SELECT \"TypeSetControl\" FROM \"Observers\" WHERE \"Id\" = 'legacy-observer'";
         _control = await read.ExecuteScalarAsync();
+        read.CommandText = "SELECT \"Initialization\" FROM \"Observers\" WHERE \"Id\" = 'legacy-observer'";
+        _initialization = await read.ExecuteScalarAsync();
+        read.CommandText = "SELECT pg_typeof(\"Initialization\")::text FROM \"Observers\"";
+        _initializationColumnType = (string)await read.ExecuteScalarAsync();
         read.CommandText = "SELECT \"Id\" FROM \"Observers\"";
         _identifier = (string)await read.ExecuteScalarAsync();
         read.CommandText = "SELECT pg_typeof(\"TypeSetControl\")::text FROM \"Observers\"";
@@ -47,6 +53,9 @@ public class when_upgrading_postgresql(PostgreSqlFixture fixture) : Specificatio
     }
 
     [Fact] void should_leave_legacy_control_absent() => _control.ShouldEqual(DBNull.Value);
+    [Fact] void should_leave_legacy_initialization_absent() => _initialization.ShouldEqual(DBNull.Value);
+    [Fact] void should_store_initialization_as_native_json() => _initializationColumnType.ShouldEqual("jsonb");
+    [Fact] void should_bind_initialization_parameters_as_json() => _context.Model.FindEntityType(typeof(ObserverState)).FindProperty(nameof(ObserverState.Initialization)).GetColumnType().ShouldEqual("jsonb");
     [Fact] void should_preserve_existing_rows() => _identifier.ShouldEqual("legacy-observer");
     [Fact] void should_use_native_json_storage() => _columnType.ShouldEqual("jsonb");
     [Fact] void should_bind_control_parameters_as_json() => _context.Model.FindEntityType(typeof(ObserverState)).FindProperty(nameof(ObserverState.TypeSetControl)).GetColumnType().ShouldEqual("jsonb");

@@ -12,7 +12,7 @@ public class when_the_recovery_cursor_changes : Specification
     void Because()
     {
         var previous = new Concepts.Observation.FailedPartition { RecoveryCursor = new(new(50), FailedPartitionRecoveryMode.Replay, new(80)) };
-        var current = new Concepts.Observation.FailedPartition { Id = previous.Id, RecoveryCursor = previous.RecoveryCursor with { Position = new(51) } };
+        var current = new Concepts.Observation.FailedPartition { Id = previous.Id, RecoveryCursor = new(new(51), previous.RecoveryCursor.Mode, previous.RecoveryCursor.ReplayBoundary) };
         _equal = FailedPartitionEqualityComparer.Instance.Equals(previous, current);
     }
 
