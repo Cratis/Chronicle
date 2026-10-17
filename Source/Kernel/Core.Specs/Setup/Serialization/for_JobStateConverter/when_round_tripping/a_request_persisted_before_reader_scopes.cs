@@ -11,8 +11,7 @@ namespace Cratis.Chronicle.Setup.Serialization.for_JobStateConverter.when_round_
 
 /// <summary>
 /// A job persisted by a release before requests carried a reader scope and a revision has neither in its stored
-/// request. It has to load unchanged, with both absent, so that the readers fall back to what the request's event
-/// type list has always meant.
+/// request. It has to load unchanged, with both absent, so that each reader keeps its legacy resolution behavior.
 /// </summary>
 public class a_request_persisted_before_reader_scopes : given.a_converter_for_job_states
 {
@@ -26,7 +25,7 @@ public class a_request_persisted_before_reader_scopes : given.a_converter_for_jo
             Id = JobId.New(),
             Type = _jobType,
             Status = JobStatus.Running,
-            Request = _request with { ReaderScope = Concepts.Observation.ObserverReaderScope.Wildcard, Revision = 1 }
+            Request = _request
         };
 
         var stored = JsonNode.Parse(JsonSerializer.Serialize(state, _options))!.AsObject();
@@ -39,7 +38,8 @@ public class a_request_persisted_before_reader_scopes : given.a_converter_for_jo
         _result = JsonSerializer.Deserialize<JobState>(stored.ToJsonString(), _options)!;
     }
 
-    [Fact] void should_have_stored_a_request_without_the_new_properties() => _storedRequest.Select(_ => _.Key).ShouldNotContain("readerScope");
+    [Fact] void should_have_stored_a_request_without_a_reader_scope() => _storedRequest.Select(_ => _.Key).ShouldNotContain("readerScope");
+    [Fact] void should_have_stored_a_request_without_a_revision() => _storedRequest.Select(_ => _.Key).ShouldNotContain("revision");
     [Fact] void should_load_the_request() => _result.Request.ShouldBeOfExactType<CatchUpObserverRequest>();
     [Fact] void should_keep_the_observer_key() => ((CatchUpObserverRequest)_result.Request).ObserverKey.ShouldEqual(_observerKey);
     [Fact] void should_default_the_reader_scope_to_none() => ((CatchUpObserverRequest)_result.Request).ReaderScope.ShouldBeNull();
