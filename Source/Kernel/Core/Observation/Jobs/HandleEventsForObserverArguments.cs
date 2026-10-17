@@ -23,6 +23,12 @@ public record HandleEventsForObserverArguments(
     EventObservationState EventObservationState,
     IEnumerable<EventType> EventTypes) : IObserverJobRequest
 {
+    /// <inheritdoc/>
+    public ObserverReaderScope? ReaderScope { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? Revision { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether events belonging to a partition the observer has already recorded as failed
     /// are skipped rather than delivered.

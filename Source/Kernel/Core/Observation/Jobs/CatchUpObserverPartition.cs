@@ -58,7 +58,10 @@ public class CatchUpObserverPartition(
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                })
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);

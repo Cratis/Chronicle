@@ -47,4 +47,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the collection of <see cref="EventType"/> to process.
     /// </summary>
     public IEnumerable<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverReaderScope"/> the step reads with. Null for a step persisted before steps carried a scope.
+    /// </summary>
+    public ObserverReaderScope? ReaderScope { get; set; }
 }

@@ -292,7 +292,9 @@ public class an_observer : Specification
                 _.ObserverKey == _observerKey &&
                 _.Key == _partition &&
                 _.FromSequenceNumber == lastHandled.Next() &&
-                _.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
+                _.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes) &&
+                _.ReaderScope != null &&
+                _.ReaderScope.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
 
     protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());

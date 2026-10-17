@@ -112,6 +112,7 @@ public class HandleEventsForPartition(
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
         State.EventTypes = request.EventTypes.ToArray();
+        State.ReaderScope = request.ReaderScope;
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -173,10 +174,11 @@ public class HandleEventsForPartition(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
                 currentState.ObserverKey.EventSequenceId);
-            var requestedEventTypes = currentState.EventTypes.ToArray();
-            var eventTypesToRead = requestedEventTypes.Length != 0
-                ? requestedEventTypes
-                : await ResolveFallbackEventTypesToRead(subscription.EventTypes);
+            var scopedEventTypes = ObserverReaderScope
+                .ForRequest(currentState.ReaderScope, currentState.EventTypes)
+                .EventTypesToRead(currentState.EventTypes);
+            var eventTypesToRead = scopedEventTypes?.ToArray()
+                ?? await ResolveFallbackEventTypesToRead(subscription.EventTypes);
             _generationPins = eventTypesToRead.ToArray();
             _generationEventStore = currentState.ObserverKey.EventStore;
             var nonRedactionEventTypeIds = eventTypesToRead

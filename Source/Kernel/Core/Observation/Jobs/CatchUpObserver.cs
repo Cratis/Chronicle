@@ -119,7 +119,9 @@ public class CatchUpObserver(
         var failedPartitionSet = failedPartitions.ToHashSet();
 
         var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
+        var index = await observerKeyIndexes.GetFor(
+            request.ObserverKey,
+            ObserverReaderScope.ForRequest(request.ReaderScope, request.EventTypes));
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var keysToCatchUp = new List<Key>();
@@ -155,7 +157,8 @@ public class CatchUpObserver(
                         EventObservationState.None,
                         request.EventTypes)
                     {
-                        SkipFailedPartitions = true
+                        SkipFailedPartitions = true,
+                        ReaderScope = request.ReaderScope
                     })
             ];
         }
@@ -169,7 +172,10 @@ public class CatchUpObserver(
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes)))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                }))
             .ToImmutableList();
     }
 }

@@ -84,7 +84,7 @@ public class a_catch_up_observer_job : Specification
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
         _namespaceStorage.ObserverKeyIndexes.Returns(_keyIndexes);
 
-        _keyIndexes.GetFor(Arg.Any<ObserverKey>()).Returns(Task.FromResult(_keyIndex));
+        _keyIndexes.GetFor(Arg.Any<ObserverKey>(), Arg.Any<ObserverReaderScope>()).Returns(Task.FromResult(_keyIndex));
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys());
 
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>())
