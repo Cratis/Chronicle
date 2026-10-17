@@ -47,6 +47,12 @@ public record EventToAppendToStorage(
     public EventSourceName EventSource { get; init; } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets the optional identity and fingerprint persisted atomically by <see cref="IEventPublicationStorage.AppendManyWithIdentities"/>.
+    /// Ordinary append methods do not persist this identity.
+    /// </summary>
+    public EventPublication? Identity { get; init; }
+
+    /// <summary>
     /// Gets the structured named tags to persist with this event.
     /// </summary>
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];

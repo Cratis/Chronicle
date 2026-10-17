@@ -64,6 +64,24 @@ public partial class EventSequenceStorage
         }
     }
 
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>> AppendManyWithIdentities(IEnumerable<EventToAppendToStorage> events) => AppendBatch(events, true);
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<string, StoredEventPublication>> TryGetPublications(IEnumerable<string> identities)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult<IReadOnlyDictionary<string, StoredEventPublication>>(FindPublications(identities));
+        }
+    }
+
+    Dictionary<string, StoredEventPublication> FindPublications(IEnumerable<string> identities) =>
+        identities.Distinct(StringComparer.Ordinal).Where(_publications.ContainsKey).ToDictionary(
+            id => id,
+            id => new StoredEventPublication(_publications[id].Receipt.SequenceNumber, _publications[id].Fingerprint),
+            StringComparer.Ordinal);
+
     Option<EventPublicationReceipt> FindPublication(EventPublication publication)
     {
         if (!_publications.TryGetValue(publication.Id, out var existing))
