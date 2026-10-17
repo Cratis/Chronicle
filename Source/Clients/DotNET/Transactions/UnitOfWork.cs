@@ -117,6 +117,7 @@ public partial class UnitOfWork(
     /// <inheritdoc/>
     public void UseEffectReceipt(EffectKey key, JsonNode? response = null)
     {
+        ImmediateAppendGuard.RequireUnit(this);
         ReadProtectionGuard.RequireUnit(this);
         lock (_decisionLock)
         {
@@ -236,6 +237,7 @@ public partial class UnitOfWork(
     /// <inheritdoc/>
     public void AddDecisionRead(IDecisionRead read)
     {
+        ImmediateAppendGuard.RequireUnit(this);
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
@@ -292,6 +294,7 @@ public partial class UnitOfWork(
             ThrowIfMutatedDuringEnrollment();
             ThrowIfEnrollmentNotificationFailed();
             ThrowIfUnitOfWorkIsCompleted();
+            RequireImmediateAppendOwner(null);
             if (_commitOwner is not null) throw new ProtectedUnitOfWorkRequiresOwner();
             return _commitOwner = new DecisionReadCommitOwner();
         }
@@ -368,6 +371,7 @@ public partial class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
+            if (!IsCompleted) RequireImmediateAppendOwner(null);
             if (IsEnforcingReadProtection && !IsCompleted) throw new ProtectedUnitOfWorkRequiresOwner();
             if (_completing || IsCompleted) return;
             if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
@@ -411,7 +415,7 @@ public partial class UnitOfWork(
         }
     }
 
-    Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner)
+    Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
         using var span = _activitySource.Rollback(correlationId.ToString());
@@ -419,11 +423,12 @@ public partial class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfMutatedDuringEnrollment();
-            if (fromOwner && (_commitOwner is null || !ReferenceEquals(owner, _commitOwner))) throw new ProtectedUnitOfWorkRequiresOwner();
+            RequireImmediateAppendOwner(appendOwner);
+            if (appendOwner is null && fromOwner && (_commitOwner is null || !ReferenceEquals(owner, _commitOwner))) throw new ProtectedUnitOfWorkRequiresOwner();
             ThrowIfUnitOfWorkIsCompleted();
             if (_completing)
             {
-                if (IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
+                if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
                 if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(correlationId);
             }
             if ((IsEnforcingReadProtection || (_commitOwner is not null && _hasEnrolledDecisionReads)) && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
@@ -434,7 +439,7 @@ public partial class UnitOfWork(
         return Task.CompletedTask;
     }
 
-    async Task CommitCore(bool fromOwner)
+    async Task CommitCore(bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
         using var span = _activitySource.Commit(correlationId.ToString());
@@ -449,9 +454,10 @@ public partial class UnitOfWork(
             ThrowIfMutatedDuringEnrollment();
             ThrowIfUnitOfWorkIsCompleted();
             ThrowIfEnrollmentNotificationFailed();
+            RequireImmediateAppendOwner(appendOwner);
             if (_completing) throw new DecisionReadAfterCompletion();
             protectedCommit = IsEnforcingReadProtection || _decisionScopes.Count != 0;
-            if (protectedCommit && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
+            if (protectedCommit && appendOwner is null && (!fromOwner || _commitOwner is null)) throw new ProtectedUnitOfWorkRequiresOwner();
             _completing = true;
 
             // Capture the commit batch under the same lock as enrollment. Compatibility calls can
@@ -491,6 +497,12 @@ public partial class UnitOfWork(
                             ? await supported.AppendMany(events, [], scopes, readProtectionCommit)
                             : throw new EventSequenceReadProtectionNotSupported(eventSequence.GetType());
                     }
+                    else if (_immediateAppendRefusalLease is not null)
+                    {
+                        result = eventSequence is EventSequence native
+                            ? await native.AppendManyForUnitOfWork(events, scopes)
+                            : throw new EventSequenceImmediateAppendRefusalNotSupported(eventSequence.GetType());
+                    }
                     else
                     {
                         result = events.Any(_ => _.NamedTags.Any())
@@ -522,7 +534,7 @@ public partial class UnitOfWork(
             }
             if (IsEnforcingReadProtection && _appendManyResult.IsSuccess) _readProtectionFrameLease!().CommittedSuccessfully();
         }
-        catch (Exception exception) when (protectedCommit || _effectReceipt is not null)
+        catch (Exception exception) when (appendOwner is not null || protectedCommit || _effectReceipt is not null)
         {
             _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
             throw;
@@ -564,12 +576,13 @@ public partial class UnitOfWork(
 
     void ThrowIfStagingAfterCompletion()
     {
+        ImmediateAppendGuard.RequireUnit(this);
         ReadProtectionGuard.RequireUnit(this);
         ThrowIfMutatedDuringEnrollment();
         ThrowIfEnrollmentNotificationFailed();
         if (!_completing && !IsCompleted) return;
 
-        if (IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
+        if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
         {
             throw new UnitOfWorkIsCompleted(correlationId);
         }

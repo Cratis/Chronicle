@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -37,6 +38,7 @@ public static class DecisionReadExtensions
     /// <returns>The append result.</returns>
     /// <exception cref="DecisionReadTargetMismatch">The sequence or a token targets a different log.</exception>
     /// <exception cref="UnprotectedDecisionRead">A read has no guard.</exception>
+    /// <exception cref="ImmediateAppendRefused">Immediate appends are refused in the current flow.</exception>
     /// <exception cref="DecisionReadValidateOnlyNotSupported">The kernel rejected a validate-only append.</exception>
     /// <exception cref="ArgumentException">At least one guard is required.</exception>
     public static async Task<AppendManyResult> AppendMany(
@@ -44,6 +46,7 @@ public static class DecisionReadExtensions
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<IDecisionRead> guardedBy)
     {
+        ImmediateAppendGuard.Append(nameof(AppendMany));
         var reads = guardedBy.ToArray();
         if (sequence.Id != EventSequenceId.Log)
         {
