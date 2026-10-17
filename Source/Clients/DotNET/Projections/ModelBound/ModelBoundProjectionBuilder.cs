@@ -33,7 +33,6 @@ internal class ModelBoundProjectionBuilder(
     readonly IEventTypes _eventTypes = eventTypes;
     readonly string? _currentEventStoreName = currentEventStoreName;
     readonly Dictionary<string, EventType> _eventTypeCache = new();
-    readonly List<(string PropertyName, FromEveryAttribute Attribute)> _fromEveryAttributes = [];
 
     /// <summary>
     /// Builds a projection definition from a type with model-bound projection attributes.
@@ -42,8 +41,6 @@ internal class ModelBoundProjectionBuilder(
     /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
     public ProjectionDefinition Build(Type modelType)
     {
-        _fromEveryAttributes.Clear();
-
         var projectionId = ArtifactIdentity.ModelProjectionIdFor(modelType);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
@@ -92,7 +89,6 @@ internal class ModelBoundProjectionBuilder(
         ProcessClassLevelRemovedWith(modelType, definition);
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
-        BuildFromEveryDefinition(definition);
 
         var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
         definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
@@ -131,6 +127,31 @@ internal class ModelBoundProjectionBuilder(
         ReclassifyForVariant(modelType, definition);
         AddMutualExclusion(definition, siblingVariantTypes);
         return definition;
+    }
+
+    /// <summary>
+    /// Adds an every-event mapping to the definition that owns the annotated member.
+    /// </summary>
+    /// <param name="definition">The owning every-event definition.</param>
+    /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <param name="propertyName">The target property name.</param>
+    /// <param name="attribute">The mapping attribute.</param>
+    internal static void AddFromEveryMapping(FromEveryDefinition definition, INamingPolicy namingPolicy, string propertyName, FromEveryAttribute attribute)
+    {
+        if (!string.IsNullOrEmpty(attribute.ContextProperty))
+        {
+            PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
+            var contextPropertyName = ProjectionPropertyPaths.Resolve(attribute.ContextProperty, namingPolicy, ProjectionPathRole.Source);
+            definition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({contextPropertyName})";
+        }
+        else
+        {
+            definition.Properties[propertyName] = string.IsNullOrEmpty(attribute.Property)
+                ? propertyName
+                : (string)ProjectionPropertyPaths.Resolve(attribute.Property, namingPolicy, ProjectionPathRole.Source);
+        }
+
+        definition.IncludeChildren = true;
     }
 
     /// <summary>
@@ -325,43 +346,6 @@ internal class ModelBoundProjectionBuilder(
         {
             fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
         }
-    }
-
-    void BuildFromEveryDefinition(ProjectionDefinition definition)
-    {
-        if (_fromEveryAttributes.Count == 0)
-        {
-            return;
-        }
-
-        var properties = new Dictionary<string, string>();
-
-        foreach (var (propertyName, attribute) in _fromEveryAttributes)
-        {
-            if (!string.IsNullOrEmpty(attribute.ContextProperty))
-            {
-                // Map from event context property
-                PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
-                var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(attribute.ContextProperty, _namingPolicy, ProjectionPathRole.Source);
-                properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
-            }
-            else if (!string.IsNullOrEmpty(attribute.Property))
-            {
-                // Map from event property
-                properties[propertyName] = ProjectionPropertyPaths.Resolve(attribute.Property, _namingPolicy, ProjectionPathRole.Source);
-            }
-            else
-            {
-                // If neither is specified, map from matching property name on event
-                properties[propertyName] = propertyName;
-            }
-        }
-
-        definition.All = new FromEveryDefinition
-        {
-            Properties = properties,
-            IncludeChildren = true
-        };
     }
 
     void ProcessClassLevelRemovedWith(Type modelType, ProjectionDefinition definition)
@@ -580,13 +564,13 @@ internal class ModelBoundProjectionBuilder(
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
         if (fromEveryAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, fromEveryAttr));
+            AddFromEveryMapping(isRoot ? definition.All : childrenDef!.All, _namingPolicy, propertyName, fromEveryAttr);
         }
 
         var fromAllAttr = parameter.GetCustomAttribute<FromAllAttribute>();
         if (fromAllAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
+            AddFromEveryMapping(isRoot ? definition.All : childrenDef!.All, _namingPolicy, propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty));
             if (isRoot)
             {
                 definition.SubscribesToAllEvents = true;
@@ -760,13 +744,13 @@ internal class ModelBoundProjectionBuilder(
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();
         if (fromEveryAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, fromEveryAttr));
+            AddFromEveryMapping(isRoot ? definition.All : childrenDef!.All, _namingPolicy, propertyName, fromEveryAttr);
         }
 
         var fromAllAttr = property.GetCustomAttribute<FromAllAttribute>();
         if (fromAllAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
+            AddFromEveryMapping(isRoot ? definition.All : childrenDef!.All, _namingPolicy, propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty));
             if (isRoot)
             {
                 definition.SubscribesToAllEvents = true;

@@ -19,6 +19,8 @@ Namespaces are a practical way to implement tenant isolation. Each tenant can ma
 
 If you use Cratis Arc with the Chronicle extension, tenancy is automatically configured for namespaces. See [Arc Chronicle tenancy](/arc/backend/csharp/chronicle/tenancy/) for details.
 
+For the whole picture, from selecting a tenant to deciding which database it lives in, see [Tenancy](../tenancy/index.md).
+
 ## Removing a namespace
 
 Removing a tenant means removing its namespace. Stop every client that uses the namespace, then call `RemoveNamespace` with its name on the event store (`IEventStore.RemoveNamespace` in the .NET client).

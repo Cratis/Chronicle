@@ -68,7 +68,7 @@ public sealed partial class OccurrenceScenario<THandler> : IDisposable
     /// <summary>
     /// Gets the scenario's real client event store.
     /// </summary>
-    public EventStoreForTesting EventStore => _store ??= new EventStoreForTesting(Provider, Catalog(), _defaults.ScenarioOptions, Time);
+    public EventStoreForTesting EventStore => _store ??= new EventStoreForTesting(Provider, Catalog(), _defaults.ScenarioOptions, Time, _defaults.EventStore.Name, _defaults.EventStore.Namespace);
 
     /// <summary>
     /// Gets the explicitly driven clock.

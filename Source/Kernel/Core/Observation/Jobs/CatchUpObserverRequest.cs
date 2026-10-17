@@ -17,4 +17,11 @@ public record CatchUpObserverRequest(
     ObserverKey ObserverKey,
     ObserverType ObserverType,
     EventSequenceNumber FromEventSequenceNumber,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest;
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+{
+    /// <inheritdoc/>
+    public ObserverReaderScope? ReaderScope { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? Revision { get; init; }
+}

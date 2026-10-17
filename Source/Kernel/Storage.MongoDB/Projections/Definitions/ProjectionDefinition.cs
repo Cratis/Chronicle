@@ -123,4 +123,9 @@ public class ProjectionDefinition
     /// Gets or sets the event generation delivery policy.
     /// </summary>
     public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the software version of the client application that registered the definition.
+    /// </summary>
+    public string? Version { get; set; }
 }

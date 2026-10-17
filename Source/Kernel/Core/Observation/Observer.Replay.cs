@@ -230,7 +230,8 @@ public partial class Observer
         }
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
         {
-            ReplaysAllEventTypes = !retainOtherCounts
+            ReplaysAllEventTypes = !retainOtherCounts,
+            ReaderScope = ReaderScope
         });
 
         State.ReplayingPartitions.Add(partition);

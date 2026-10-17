@@ -14,6 +14,12 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
 public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, ObserverType ObserverType, Key Key) : IObserverJobRequest
 {
+    /// <inheritdoc/>
+    public ObserverReaderScope? ReaderScope { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? Revision { get; init; }
+
     /// <summary>
     /// Creates an <see cref="ObserverSubscriberKey"/> from the request.
     /// </summary>
