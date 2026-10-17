@@ -25,7 +25,8 @@ public class an_observer_state_storage : Specification
             Arg.Do<UpdateDefinition<ObserverState>>(update =>
             {
                 var registry = BsonSerializer.SerializerRegistry;
-                _update = update.Render(new RenderArgs<ObserverState>(registry.GetSerializer<ObserverState>(), registry)).AsBsonDocument;
+                var rendered = update.Render(new RenderArgs<ObserverState>(registry.GetSerializer<ObserverState>(), registry));
+                _update = rendered.IsBsonArray ? rendered.AsBsonArray.Single().AsBsonDocument : rendered.AsBsonDocument;
                 _set = _update["$set"].AsBsonDocument;
             }),
             Arg.Any<UpdateOptions>(),

@@ -77,23 +77,28 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
 
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entity = state.ToSql();
-        if (state.TypeSetControl is null)
+        var existing = await scope.DbContext.Observers.AsTracking()
+            .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+        if (existing is null)
         {
-            entity.TypeSetControl = await scope.DbContext.Observers
-                .Where(observer => observer.Id == entity.Id)
-                .Select(observer => observer.TypeSetControl)
-                .FirstOrDefaultAsync();
+            await scope.DbContext.Observers.AddAsync(entity);
+        }
+        else
+        {
+            var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
+            if (state.TypeSetControl is null ||
+                (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value))
+            {
+                entity.TypeSetControl = existing.TypeSetControl;
+            }
+
+            entity.Initialization ??= existing.Initialization;
+
+            // The tracked control is a concurrency token: a competing write after this read
+            // fails the save rather than overwriting a newer revision with this snapshot.
+            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
         }
 
-        if (state.Initialization is null)
-        {
-            entity.Initialization = await scope.DbContext.Observers
-                .Where(observer => observer.Id == entity.Id)
-                .Select(observer => observer.Initialization)
-                .FirstOrDefaultAsync();
-        }
-
-        await scope.DbContext.Observers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 

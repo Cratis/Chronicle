@@ -21,6 +21,7 @@ public class ObserverState
     /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
+    [ConcurrencyCheck]
     public string? TypeSetControl { get; set; }
 
     /// <summary>

@@ -26,6 +26,6 @@ public class with_type_set_control : given.an_observer_state_storage
 
     async Task Because() => await _storage.Save(_state);
 
-    [Fact] void should_set_the_whole_control_atomically() => _set["typeSetControl"].ShouldEqual(_expected);
+    [Fact] void should_set_the_whole_control_atomically() => _set["typeSetControl"]["$cond"][1]["$literal"].ShouldEqual(_expected);
     [Fact] void should_not_set_individual_members() => _set.Names.Any(name => name.StartsWith("typeSetControl.", StringComparison.Ordinal)).ShouldBeFalse();
 }

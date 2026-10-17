@@ -45,7 +45,10 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
             (_, incoming) => incoming,
             (_, existing, incoming) => incoming with
             {
-                TypeSetControl = incoming.TypeSetControl ?? existing.TypeSetControl,
+                TypeSetControl = incoming.TypeSetControl is not null &&
+                    (existing.TypeSetControl is null || incoming.TypeSetControl.Revision.Value >= existing.TypeSetControl.Revision.Value)
+                        ? incoming.TypeSetControl
+                        : existing.TypeSetControl,
                 Initialization = incoming.Initialization ?? existing.Initialization
             },
             state);
