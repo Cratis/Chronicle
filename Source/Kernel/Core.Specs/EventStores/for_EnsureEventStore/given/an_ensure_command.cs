@@ -50,6 +50,7 @@ public class an_ensure_command : Specification
             .Returns(AppendResult.Success(CorrelationId.NotSet, EventSequenceNumber.First));
         silo.AddService(_storage);
         silo.AddService(_projections);
+        silo.AddService(_eventTypes);
         silo.AddProbe<IEventSequence>(_ => _systemSequence);
         _initializer = await silo.CreateGrainAsync<EventStoreInitializer>(_name.Value);
         _grains = Substitute.For<IGrainFactory>();

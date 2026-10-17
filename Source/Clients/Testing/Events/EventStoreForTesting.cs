@@ -62,6 +62,16 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </remarks>
 public class EventStoreForTesting : IEventStore, IDisposable
 {
+    /// <summary>
+    /// The event store name used by constructors without an explicit identity.
+    /// </summary>
+    internal const string DefaultEventStoreName = "testing";
+
+    /// <summary>
+    /// The namespace used by constructors without an explicit identity.
+    /// </summary>
+    internal const string DefaultNamespaceName = "default";
+
     readonly ReadModelsForTesting _readModelsForTesting;
     readonly IEventLog? _scenarioEventLog;
     readonly INamingPolicy _namingPolicy;
@@ -133,6 +143,21 @@ public class EventStoreForTesting : IEventStore, IDisposable
     }
 
     /// <summary>
+    /// Initializes an isolated store with an explicit identity, occurrence time, and optional capability advertisement.
+    /// </summary>
+    /// <param name="serviceProvider">Artifact services.</param>
+    /// <param name="clientArtifactsProvider">Artifacts to discover.</param>
+    /// <param name="options">Client options.</param>
+    /// <param name="time">The occurrence clock.</param>
+    /// <param name="eventStore">The event store name.</param>
+    /// <param name="namespace">The event store namespace.</param>
+    /// <param name="capabilities">Optional capabilities; the default advertises Current.</param>
+    public EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, ScenarioTime time, EventStoreName eventStore, EventStoreNamespaceName @namespace, KernelCapabilitiesForTesting? capabilities = null)
+        : this(serviceProvider, clientArtifactsProvider, options, null, null, time, capabilities, eventStore, @namespace)
+    {
+    }
+
+    /// <summary>
     /// Adopts an event scenario's already seeded storage and selected event log for read-model folding.
     /// </summary>
     /// <param name="serviceProvider">The artifact service provider.</param>
@@ -142,8 +167,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <param name="eventLog">The scenario's selected event log, or null to create one.</param>
     /// <param name="time">Optional occurrence clock.</param>
     /// <param name="capabilities">Optional kernel capabilities.</param>
+    /// <param name="eventStore">Optional event store name; defaults to testing.</param>
+    /// <param name="namespace">Optional namespace; defaults to default.</param>
 #pragma warning disable CA2000 // Dispose objects before losing scope
-    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog, ScenarioTime? time = null, KernelCapabilitiesForTesting? capabilities = null)
+    internal EventStoreForTesting(IServiceProvider? serviceProvider, IClientArtifactsProvider clientArtifactsProvider, ChronicleOptions? options, TestingEventStore? testingStore, IEventLog? eventLog, ScenarioTime? time = null, KernelCapabilitiesForTesting? capabilities = null, EventStoreName? eventStore = null, EventStoreNamespaceName? @namespace = null)
     {
         _scenarioEventLog = eventLog;
         ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
@@ -166,7 +193,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _namingPolicy);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
-        TestingStore = testingStore ?? new TestingEventStore("testing", "default", () => _eventTypes!, time, capabilities);
+        TestingStore = testingStore ?? new TestingEventStore(eventStore ?? new EventStoreName(DefaultEventStoreName), @namespace ?? new EventStoreNamespaceName(DefaultNamespaceName), () => _eventTypes!, time, capabilities);
         Connection = TestingStore.Connection;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
