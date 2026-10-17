@@ -1,11 +1,12 @@
 ---
 id: 0010-observer-event-types-are-the-union-of-registered-definitions
 title: An observer's event types are the union of its registered definitions, events route to a target that handles them, and an unhandled type parks its partition until a handler or an explicit retirement arrives
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-proposed: 2026-10-16
+decided: 2026-10-17
+decider: L0 (woksin's delegation)
 applies-to:
   - Source/Kernel/Core/Observation/**
   - Source/Kernel/Core/EventSequences/AppendedEventsQueue.cs
@@ -35,7 +36,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # An observer's event types are the union of its registered definitions, events route to a target that handles them, and an unhandled type parks its partition until a handler or an explicit retirement arrives
 
-Proposed for Cratis/Chronicle#4955 (events of a type silently skipped across an event-type change) and Cratis/Chronicle#4987 (clients with different event-type sets: last subscriber wins, and the observer stalls when that client disconnects). It settles membership, routing, parking and retirement. How a change to the set is applied without a reader crossing it, and when the cluster may start doing so, is [decision 0011](0011-a-type-set-change-quiesces-the-observer-through-orleans-drain-and-admission.md); the two are proposed together and neither is in force without the other. Open points are under [Open questions](#open-questions).
+Accepted for Cratis/Chronicle#4955 (events of a type silently skipped across an event-type change) and Cratis/Chronicle#4987 (clients with different event-type sets: last subscriber wins, and the observer stalls when that client disconnects). It settles membership, routing, parking and retirement. How a change to the set is applied without a reader crossing it, and when the cluster may start doing so, is [decision 0011](0011-a-type-set-change-quiesces-the-observer-through-orleans-drain-and-admission.md); the two are accepted together and neither is in force without the other. Accepted on 2026-10-17 by L0 on woksin's delegation (Option A: no coexistence with state from before enablement), after six deep review rounds and a final delta check. Open points are under [Open questions](#open-questions).
 
 Paths are relative to `Source/Kernel/Core/Observation/` unless they start with `Source/`, `Integration/` or `Documentation/`. Chronicle line numbers are at `bec5709f8c` (release 19.77.2).
 

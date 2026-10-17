@@ -1,11 +1,12 @@
 ---
 id: 0011-a-type-set-change-quiesces-the-observer-through-orleans-drain-and-admission
 title: A change to an observer's event-type set quiesces the observer through the Cratis.Orleans drain and owner admission, and is enabled per event store only by an operator's initialization on a single-version cluster with no observer jobs from before it
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
-proposed: 2026-10-17
+decided: 2026-10-17
+decider: L0 (woksin's delegation)
 applies-to:
   - Source/Kernel/Core/Observation/**
   - Source/Kernel/Core/EventStores/**
@@ -29,7 +30,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # A change to an observer's event-type set quiesces the observer through the Cratis.Orleans drain and owner admission, and is enabled per event store only by an operator's initialization on a single-version cluster with no observer jobs from before it
 
-Proposed for Cratis/Chronicle#4955 and Cratis/Chronicle#4987 as the mechanism [decision 0010](0010-observer-event-types-are-the-union-of-registered-definitions.md) uses to apply a change to an observer's members; the two are proposed together and neither is in force without the other. It rests on two Cratis.Orleans guarantees: the drain barrier `StopAndDrain` (v1.20.0, which Chronicle runs) and owner admission (Cratis/Orleans#81, stage 2b, released in v1.21.0). Open points are under [Open questions](#open-questions).
+Accepted for Cratis/Chronicle#4955 and Cratis/Chronicle#4987 as the mechanism [decision 0010](0010-observer-event-types-are-the-union-of-registered-definitions.md) uses to apply a change to an observer's members; the two are accepted together and neither is in force without the other. Accepted on 2026-10-17 by L0 on woksin's delegation (Option A: no coexistence with state from before enablement), after six deep review rounds and a final delta check. It rests on two Cratis.Orleans guarantees: the drain barrier `StopAndDrain` (v1.20.0, which Chronicle runs) and owner admission (Cratis/Orleans#81, stage 2b, released in v1.21.0). Open points are under [Open questions](#open-questions).
 
 Paths are relative to `Source/Kernel/Core/Observation/` unless they start with `Source/`, `Integration/` or `Documentation/`; paths marked *Orleans* are in Cratis/Orleans at `v1.20.0`, and those marked *Orleans 1.21* at `v1.21.0`; `Documentation/concepts/jobs.md` there is cited as *jobs.md*. Chronicle line numbers are at `bec5709f8c` (release 19.77.2).
 
