@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.Observation;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
@@ -17,6 +19,13 @@ public class ObserverState
     /// Gets or sets the unique identifier of the observer.
     /// </summary>
     public ObserverId Id { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the type-set control, absent before initialization.
+    /// </summary>
+    [BsonElement("typeSetControl")]
+    [BsonIgnoreIfNull]
+    public ObserverTypeSetControl? TypeSetControl { get; set; }
 
     /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.

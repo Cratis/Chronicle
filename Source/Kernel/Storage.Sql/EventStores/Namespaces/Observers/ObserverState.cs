@@ -19,6 +19,11 @@ public class ObserverState
     public required ObserverId Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the serialized type-set control, or null before initialization.
+    /// </summary>
+    public string? TypeSetControl { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

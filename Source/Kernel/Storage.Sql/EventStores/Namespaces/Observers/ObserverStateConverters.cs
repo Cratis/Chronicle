@@ -19,6 +19,7 @@ public static class ObserverStateConverters
         new()
         {
             Id = definition.Identifier,
+            TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
@@ -74,6 +75,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,

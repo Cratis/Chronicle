@@ -40,7 +40,11 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     /// <inheritdoc/>
     public Task Save(ObserverState state)
     {
-        _states[state.Identifier] = state;
+        _states.AddOrUpdate(
+            state.Identifier,
+            (_, incoming) => incoming,
+            (_, existing, incoming) => incoming with { TypeSetControl = incoming.TypeSetControl ?? existing.TypeSetControl },
+            state);
         _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;
     }

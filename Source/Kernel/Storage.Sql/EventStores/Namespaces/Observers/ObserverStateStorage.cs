@@ -77,6 +77,14 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
 
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entity = state.ToSql();
+        if (state.TypeSetControl is null)
+        {
+            entity.TypeSetControl = await scope.DbContext.Observers
+                .Where(observer => observer.Id == entity.Id)
+                .Select(observer => observer.TypeSetControl)
+                .FirstOrDefaultAsync();
+        }
+
         await scope.DbContext.Observers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -114,6 +122,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var renamed = new ObserverState
         {
             Id = newId,
+            TypeSetControl = existing.TypeSetControl,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,
