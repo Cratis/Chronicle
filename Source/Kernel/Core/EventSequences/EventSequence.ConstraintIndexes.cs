@@ -26,6 +26,7 @@ public partial class EventSequence
     DateTimeOffset? _lastAppendRepairEnded;
     DateTimeOffset _nextConstraintRepairAttempt;
     int _constraintRepairFailures;
+    bool _constraintIndexInitializationPending;
 
     /// <summary>
     /// Gets or sets the clock used for repair cadence and retry deadlines.
@@ -37,6 +38,7 @@ public partial class EventSequence
         ResetConstraintIndexTracking();
 
         var upgrading = State.ConstraintIndexWatermark is null;
+        _constraintIndexInitializationPending = upgrading;
         State.ConstraintIndexWatermark = State.ConstraintIndexWatermark is { } watermark && watermark < State.SequenceNumber ? watermark : State.SequenceNumber;
         _constraintIndexPosition = State.SequenceNumber;
         SynchronizeIndexedDefinitions(State.ConstraintIndexWatermark);
@@ -53,10 +55,11 @@ public partial class EventSequence
         if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
         _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
 
-        // An empty sequence with no indexed constraints has no repair boundary to protect. Let its
-        // first durable append take the best-effort snapshot instead of making activation depend on it.
-        // Existing history, indexed constraints and refusal markers still require the activation barrier.
-        if (staleMarker || (upgrading && (State.SequenceNumber > EventSequenceNumber.First || _indexedDefinitions.Count > 0))) await WriteStateAsync();
+        // Empty, unconstrained sequences may defer initialization until a best-effort append snapshot.
+        // Keep initialization pending until a snapshot succeeds; later indexed constraints must persist
+        // it before appending, even if activation did not yet know about those constraints.
+        var requiresInitializationBarrier = State.SequenceNumber > EventSequenceNumber.First || _indexedDefinitions.Count > 0;
+        if (staleMarker || (upgrading && requiresInitializationBarrier)) await WriteStateAsync();
         UpdateConstraintIndexRepairTimer();
         if (State.ConstraintIndexWatermark < State.SequenceNumber)
         {
@@ -163,6 +166,7 @@ public partial class EventSequence
     {
         await RefreshUncertainAppendTail();
         SynchronizeIndexedDefinitions();
+        if (_constraintIndexInitializationPending && _indexedDefinitions.Count > 0) await WriteStateAsync();
         if ((_pendingConstraintIndexes.Count > 0 || _constraintIndexPosition < State.SequenceNumber) && types.Any(IsGovernedByPendingIndex)) await RepairConstraintIndexesBeforeAppend();
     }
 }

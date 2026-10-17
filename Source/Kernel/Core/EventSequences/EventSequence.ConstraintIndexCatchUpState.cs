@@ -33,6 +33,7 @@ public partial class EventSequence
             }
         }
         await base.WriteStateAsync();
+        _constraintIndexInitializationPending = false;
     }
 
     async Task PersistCatchUpState(CancellationToken token)
