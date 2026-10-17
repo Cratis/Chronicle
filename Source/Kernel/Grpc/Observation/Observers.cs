@@ -223,6 +223,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         grainFactory.GetObserver(command).ClearFailedPartitions();
 
     /// <inheritdoc/>
+    public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
+    {
+        var observer = grainFactory.GetObserver(command);
+        var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
+        await observer.TryRecoverAllFailedPartitions();
+        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
+    }
+
+    /// <inheritdoc/>
     public async Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default)
     {
         var eventSequenceId = string.IsNullOrEmpty(command.EventSequenceId)

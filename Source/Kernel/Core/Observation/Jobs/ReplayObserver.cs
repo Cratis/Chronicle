@@ -34,6 +34,16 @@ public class ReplayObserver(
     internal const int MaximumNotificationAttempts = 5;
 
     /// <summary>
+    /// The number of partition steps a replay keeps active at once.
+    /// </summary>
+    /// <remarks>
+    /// Every step reports its progress to the one observer grain, which answers one call at a time. A step per
+    /// partition started all at once - thousands of them - queued those calls past the response timeout, and every
+    /// timeout made another. The window is what that one grain can serve, not what the silos could run.
+    /// </remarks>
+    internal const int ActiveStepWindow = 16;
+
+    /// <summary>
     /// Gets the notification of the observer that the replay concluded, once the job has concluded.
     /// </summary>
     /// <remarks>
@@ -47,6 +57,9 @@ public class ReplayObserver(
     /// Gets or sets how long to wait before notifying the observer again after it did not take the notification.
     /// </summary>
     internal TimeSpan NotificationRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <inheritdoc/>
+    protected override int? MaxActiveSteps => ActiveStepWindow;
 
     /// <inheritdoc/>
     /// <remarks>
