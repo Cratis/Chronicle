@@ -34,7 +34,9 @@ internal static class ObserverTypeSetControlJson
             control.Revision,
             control.Contract,
             control.Members.ToDictionary(pair => pair.Key.Value, pair => pair.Value),
-            control.Registrations);
+            control.Registrations,
+            control.RetirementResults,
+            control.PendingChange);
 
         return JsonSerializer.Serialize(stored, _options);
     }
@@ -57,12 +59,18 @@ internal static class ObserverTypeSetControlJson
             stored.Revision,
             stored.Contract,
             stored.Members.ToDictionary(pair => new EventTypeId(pair.Key), pair => pair.Value),
-            stored.Registrations);
+            stored.Registrations)
+        {
+            RetirementResults = stored.RetirementResults,
+            PendingChange = stored.PendingChange
+        };
     }
 
     sealed record StoredControl(
         ObserverTypeSetRevision Revision,
         ObserverCompatibilityContract Contract,
         IReadOnlyDictionary<string, ObserverTypeSetMember> Members,
-        IReadOnlyList<ObserverRegistrationIdentity> Registrations);
+        IReadOnlyList<ObserverRegistrationIdentity> Registrations,
+        IReadOnlyList<ObserverEventTypeRetirementResult>? RetirementResults,
+        ObserverTypeSetChange? PendingChange);
 }

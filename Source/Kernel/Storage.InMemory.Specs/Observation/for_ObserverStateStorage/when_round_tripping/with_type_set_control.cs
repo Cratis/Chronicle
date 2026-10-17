@@ -39,6 +39,10 @@ public class with_type_set_control : Specification
     [Fact] void should_keep_the_contract_on_rename() => _renamed.TypeSetControl.Contract.SubscriberType.ShouldEqual("reactor-subscriber");
     [Fact] void should_keep_the_members_on_rename() => _renamed.TypeSetControl.Members[_type].JoinFence.Value.ShouldEqual(42UL);
     [Fact] void should_keep_registration_ids() => _saved.TypeSetControl.Registrations[0].RegistrationId.ShouldEqual(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+    [Fact] void should_not_invent_retirement_results() => _saved.TypeSetControl.RetirementResults.ShouldBeNull();
+    [Fact] void should_not_invent_a_pending_change() => _saved.TypeSetControl.PendingChange.ShouldBeNull();
+    [Fact] void should_not_invent_retirement_results_on_rename() => _renamed.TypeSetControl.RetirementResults.ShouldBeNull();
+    [Fact] void should_not_invent_a_pending_change_on_rename() => _renamed.TypeSetControl.PendingChange.ShouldBeNull();
     [Fact] void should_not_put_generation_pins_on_members() => typeof(ObserverTypeSetMember).GetProperties().Select(property => property.Name).Order().ShouldEqual(["Incarnation", "JoinFence"]);
 
     void Destroy() => _storage.Dispose();

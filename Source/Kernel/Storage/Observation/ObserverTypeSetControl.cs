@@ -16,4 +16,16 @@ public record ObserverTypeSetControl(
     ObserverTypeSetRevision Revision,
     ObserverCompatibilityContract Contract,
     IReadOnlyDictionary<EventTypeId, ObserverTypeSetMember> Members,
-    IReadOnlyList<ObserverRegistrationIdentity> Registrations);
+    IReadOnlyList<ObserverRegistrationIdentity> Registrations)
+{
+    /// <summary>
+    /// Gets the retained final retirement results, absent in control written before retirement support.
+    /// Results are never evicted or reused for a later incarnation.
+    /// </summary>
+    public IReadOnlyList<ObserverEventTypeRetirementResult>? RetirementResults { get; init; }
+
+    /// <summary>
+    /// Gets the pending membership intent, absent when no change is in progress.
+    /// </summary>
+    public ObserverTypeSetChange? PendingChange { get; init; }
+}
