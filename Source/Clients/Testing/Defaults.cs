@@ -54,9 +54,23 @@ public class Defaults
     /// <param name="options">Optional Chronicle settings.</param>
     /// <param name="time">The occurrence clock; null creates isolated clocks per scenario.</param>
     public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options, ScenarioTime? time)
+        : this(clientArtifactsProvider, serviceProvider, options, time, EventStoreForTesting.DefaultEventStoreName, EventStoreForTesting.DefaultNamespaceName)
+    {
+    }
+
+    /// <summary>
+    /// Initializes per-run services with an explicit event store name and namespace.
+    /// </summary>
+    /// <param name="clientArtifactsProvider">The artifacts available to this run.</param>
+    /// <param name="serviceProvider">Optional services for activating artifacts.</param>
+    /// <param name="options">Optional Chronicle settings.</param>
+    /// <param name="time">The occurrence clock; null creates isolated clocks per scenario.</param>
+    /// <param name="eventStore">The event store name.</param>
+    /// <param name="namespace">The event store namespace.</param>
+    public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options, ScenarioTime? time, EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
         ScenarioTime = time;
-        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options, time ?? new ScenarioTime());
+        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options, time ?? new ScenarioTime(), eventStore, @namespace);
         var testingStore = (EventStoreForTesting)EventStore;
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
