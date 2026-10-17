@@ -20,7 +20,7 @@ public class and_one_read_model_definition_is_missing : given.a_projections_mana
         _healthy = CreateDefinition("healthy-projection", "the-read-model") with { SubscribesToAllEvents = true };
         _state.Projections = [CreateDefinition("broken-projection", "missing-read-model"), _healthy];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
-        _observerGrain.IsSubscribed().Returns(_ => _subscribed);
+        _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {

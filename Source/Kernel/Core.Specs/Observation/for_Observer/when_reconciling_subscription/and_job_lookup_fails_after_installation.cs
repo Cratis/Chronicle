@@ -21,6 +21,6 @@ public class and_job_lookup_fails_after_installation : given.an_observer_with_fa
     [Fact] void should_have_installed_the_subscription_before_failure() => _installed.ShouldBeTrue();
     [Fact] void should_not_report_failed_setup_as_established() => _established.ShouldBeFalse();
     [Fact] void should_owe_recovery() => _needsRecovery.ShouldBeTrue();
-    [Fact] async Task should_establish_the_subscription_on_the_next_pass() => (await _observer.IsSubscribed()).ShouldBeTrue();
+    [Fact] async Task should_establish_the_subscription_on_the_next_pass() => (await _observer.IsSubscriptionEstablished()).ShouldBeTrue();
     [Fact] async Task should_observe_after_retry() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
 }

@@ -12,7 +12,7 @@ public class and_the_subscription_was_lost : given.a_captures_manager
     async Task Establish()
     {
         StartedState(_events);
-        _observer.IsSubscribed().Returns(_ => _subscribed);
+        _observer.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _subscriptions.Recover(_eventStore, "tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
         {
             _subscribed = true;

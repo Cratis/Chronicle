@@ -35,7 +35,7 @@ public class and_one_projection_cannot_subscribe : given.a_projections_manager_g
         _healthyObserver.GetState().Returns(new ObserverState());
         _observersByKey[new ObserverKey(_failing.Identifier, EventStore, EventStoreNamespaceName.Default, _failing.EventSequenceId).ToString()] = _failingObserver;
         _observersByKey[new ObserverKey(_healthy.Identifier, EventStore, EventStoreNamespaceName.Default, _healthy.EventSequenceId).ToString()] = _healthyObserver;
-        _healthyObserver.IsSubscribed().Returns(_ => _subscribed);
+        _healthyObserver.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _healthyObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {

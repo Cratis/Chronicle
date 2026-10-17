@@ -24,7 +24,7 @@ public class and_the_cached_subscription_was_lost : given.a_projections_manager_
         await _silo.TimerRegistry.FireAllAsync();
         await _grain.Register([definition]);
         await _observerGrain.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: true);
-        _observerGrain.IsSubscribed().Returns(_ => _subscribed);
+        _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {

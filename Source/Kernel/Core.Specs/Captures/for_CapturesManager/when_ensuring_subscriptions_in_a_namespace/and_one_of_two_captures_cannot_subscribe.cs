@@ -21,7 +21,7 @@ public class and_one_of_two_captures_cannot_subscribe : given.a_captures_manager
         _subscriptions.Recover(_eventStore, "tenant", _healthy).Returns(_ =>
         {
             _healthySubscribed = true;
-            _observer.IsSubscribed().Returns(true);
+            _observer.IsSubscriptionEstablished().Returns(true);
             return Task.CompletedTask;
         });
     }

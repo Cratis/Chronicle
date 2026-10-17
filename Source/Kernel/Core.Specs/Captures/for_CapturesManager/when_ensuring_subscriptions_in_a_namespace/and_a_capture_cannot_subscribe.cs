@@ -17,7 +17,7 @@ public class and_a_capture_cannot_subscribe : given.a_captures_manager
         _subscriptions.Recover(_eventStore, "tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
         {
             if (++_attempts == 1) return Task.FromException(new TimeoutException());
-            _observer.IsSubscribed().Returns(true);
+            _observer.IsSubscriptionEstablished().Returns(true);
             return Task.CompletedTask;
         });
     }

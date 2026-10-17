@@ -15,10 +15,12 @@ public class and_the_observer_is_quarantined : given.a_captures_manager
     {
         StartedState(_events);
         _observer.IsSubscribed().Returns(false);
+        _observer.IsSubscriptionEstablished().Returns(false);
         _observer.GetState().Returns(_quarantined);
         _subscriptions.Subscribe(_eventStore, "tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
         {
             _observer.IsSubscribed().Returns(true);
+            _observer.IsSubscriptionEstablished().Returns(true);
             _observer.GetState().Returns(new ObserverState());
             return Task.CompletedTask;
         });

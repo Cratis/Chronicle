@@ -19,6 +19,6 @@ public class and_wildcard_setup_job_lookup_fails : given.an_observer_with_failin
     [Fact] void should_surface_the_failure() => _error.ShouldBeSame(_failure);
     [Fact] void should_have_installed_the_subscription() => _installed.ShouldBeTrue();
     [Fact] void should_not_report_failed_setup_as_established() => _established.ShouldBeFalse();
-    [Fact] async Task should_establish_the_subscription_on_retry() => (await _observer.IsSubscribed()).ShouldBeTrue();
+    [Fact] async Task should_establish_the_subscription_on_retry() => (await _observer.IsSubscriptionEstablished()).ShouldBeTrue();
     [Fact] async Task should_observe_after_retry() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
 }

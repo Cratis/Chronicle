@@ -55,7 +55,7 @@ public partial class ProjectionsManager
             try
             {
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
-                if (reconcile && await observer.IsSubscribed())
+                if (reconcile && await observer.IsSubscriptionEstablished())
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
                     return;
@@ -122,7 +122,7 @@ public partial class ProjectionsManager
                 await SetProjectionDefinition(definition);
                 await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false, reconcile: reconcile);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
-                if (!await observer.IsSubscribed())
+                if (!await observer.IsSubscriptionEstablished())
                 {
                     if (!IsCurrentActiveDefinition(definition)) return;
 

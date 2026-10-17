@@ -24,7 +24,7 @@ public class and_capture_setup_failed_after_installing_its_subscription : given.
             : Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
         _initialError = await Catch.Exception(SubscribeCapture);
         _initiallySubscribed = (await _captureObserver.GetSubscription()).IsSubscribed;
-        _initiallyEstablished = await _captureObserver.IsSubscribed();
+        _initiallyEstablished = await _captureObserver.IsSubscriptionEstablished();
         _initialRunningState = (await _captureObserver.GetState()).RunningState;
     }
 

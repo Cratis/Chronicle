@@ -17,7 +17,7 @@ public class and_another_pass_is_pending : given.a_captures_manager
         _subscriptions.Recover(_eventStore, "pending-tenant", Arg.Any<CaptureDefinition>()).Returns(_subscription.Task);
         _subscriptions.Recover(_eventStore, "other-tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
         {
-            _observer.IsSubscribed().Returns(true);
+            _observer.IsSubscriptionEstablished().Returns(true);
             return Task.CompletedTask;
         });
     }

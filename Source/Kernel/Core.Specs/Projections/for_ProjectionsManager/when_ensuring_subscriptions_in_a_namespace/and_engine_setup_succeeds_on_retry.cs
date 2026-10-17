@@ -18,7 +18,7 @@ public class and_engine_setup_succeeds_on_retry : given.a_projections_manager_gr
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _projectionsServiceClient.NamespaceAdded(EventStore, EventStoreNamespaceName.Default)
             .Returns(Task.FromException(new TimeoutException("Engine namespace setup failed")), Task.CompletedTask);
-        _observerGrain.IsSubscribed().Returns(_ => _subscribed);
+        _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {

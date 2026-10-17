@@ -42,7 +42,7 @@ public class a_manager_with_blocked_source_resolution : for_CaptureEventsSubscri
 
         var observer = Substitute.For<IObserver>();
         observer.GetState().Returns(new ObserverState());
-        observer.IsSubscribed().Returns(_ => _subscribed);
+        observer.IsSubscriptionEstablished().Returns(_ => _subscribed);
         AnyNeedsRecovery(observer).Returns(true);
         AnyRecover(observer).Returns(_ =>
         {

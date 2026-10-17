@@ -18,6 +18,6 @@ public class and_setup_job_lookup_failed : given.an_observer_with_failing_setup_
     [Fact] void should_surface_the_failure() => _error.ShouldBeSame(_failure);
     [Fact] void should_not_report_failed_setup_as_established() => _established.ShouldBeFalse();
     [Fact] void should_owe_recovery() => _needsRecovery.ShouldBeTrue();
-    [Fact] async Task should_establish_the_subscription_on_retry() => (await _observer.IsSubscribed()).ShouldBeTrue();
+    [Fact] async Task should_establish_the_subscription_on_retry() => (await _observer.IsSubscriptionEstablished()).ShouldBeTrue();
     [Fact] async Task should_observe_after_retry() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
 }

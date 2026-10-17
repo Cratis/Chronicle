@@ -15,6 +15,6 @@ public class and_healthy_catch_up_is_pending : given.an_observer
     }
 
     [Fact] async Task should_have_pending_catch_up() => (await _observer.IsPreparingCatchup()).ShouldBeTrue();
-    [Fact] async Task should_report_the_subscription_as_established() => (await _observer.IsSubscribed()).ShouldBeTrue();
+    [Fact] async Task should_report_the_subscription_as_established() => (await _observer.IsSubscriptionEstablished()).ShouldBeTrue();
     [Fact] async Task should_not_require_setup_recovery() => (await _observer.NeedsSubscriptionRecovery([EventType.Unknown])).ShouldBeFalse();
 }

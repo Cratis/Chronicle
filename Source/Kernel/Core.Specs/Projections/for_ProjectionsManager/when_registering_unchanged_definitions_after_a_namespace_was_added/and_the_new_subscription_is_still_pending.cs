@@ -29,7 +29,7 @@ public class and_the_new_subscription_is_still_pending : given.a_projections_man
         await _silo.TimerRegistry.FireAllAsync();
         _observerGrain.ClearReceivedCalls();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default, new EventStoreNamespaceName("new-tenant")]);
-        _observerGrain.IsSubscribed().Returns(_ => _subscription.Task.IsCompleted);
+        _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscription.Task.IsCompleted);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(
                 ObserverType.Projection,
                 Arg.Any<IEnumerable<Concepts.Events.EventType>>(),

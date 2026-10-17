@@ -243,7 +243,10 @@ public partial class Observer(
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
-    public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed && !_subscriptionSetupFailed);
+    public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
+
+    /// <inheritdoc/>
+    public Task<bool> IsSubscriptionEstablished() => Task.FromResult(_subscription.IsSubscribed && !_subscriptionSetupFailed);
 
     /// <inheritdoc/>
     public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);

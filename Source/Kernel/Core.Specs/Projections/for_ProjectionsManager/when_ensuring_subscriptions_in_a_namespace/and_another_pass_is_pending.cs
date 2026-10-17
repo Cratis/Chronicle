@@ -18,7 +18,7 @@ public class and_another_pass_is_pending : given.a_projections_manager_grain
         await _silo.TimerRegistry.FireAllAsync();
         _state.Projections = [CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true }];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
-        _observerGrain.IsSubscribed().Returns(_ => _subscription.Task.IsCompleted || _otherNamespaceSubscribed);
+        _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscription.Task.IsCompleted || _otherNamespaceSubscribed);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {

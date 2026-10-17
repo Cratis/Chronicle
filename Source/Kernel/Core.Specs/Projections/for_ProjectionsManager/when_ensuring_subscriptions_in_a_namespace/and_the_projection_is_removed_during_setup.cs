@@ -19,7 +19,7 @@ public class and_the_projection_is_removed_during_setup : given.a_projections_ma
         _definition = CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true };
         _state.Projections = [_definition];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
-        _observerGrain.IsSubscribed().Returns(false);
+        _observerGrain.IsSubscriptionEstablished().Returns(false);
         _projectionGrain.SetDefinition(_definition).Returns(_ =>
         {
             _settingDefinition.TrySetResult();

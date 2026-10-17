@@ -24,7 +24,7 @@ public class an_observer_with_failing_setup_jobs : an_observer
     {
         _error = await Catch.Exception(subscribe);
         _installed = (await _observer.GetSubscription()).IsSubscribed;
-        _established = await _observer.IsSubscribed();
+        _established = await _observer.IsSubscriptionEstablished();
         _needsRecovery = await _observer.NeedsSubscriptionRecovery([EventType.Unknown]);
         _failLookup = false;
     }

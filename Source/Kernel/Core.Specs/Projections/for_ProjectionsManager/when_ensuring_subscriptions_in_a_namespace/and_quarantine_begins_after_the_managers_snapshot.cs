@@ -19,7 +19,7 @@ public class and_quarantine_begins_after_the_managers_snapshot : given.a_manager
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(new Observers { QuarantineOnFailedPartitionCount = 1 });
 
         // The manager's earlier subscription probe predates the subscription becoming active.
-        _managedObserver.IsSubscribed().Returns(_ => Task.FromResult(false), _ => _observer.IsSubscribed());
+        _managedObserver.IsSubscriptionEstablished().Returns(_ => Task.FromResult(false), _ => _observer.IsSubscriptionEstablished());
         _managedObserver.GetState().Returns(async _ =>
         {
             var snapshot = await _observer.GetState();

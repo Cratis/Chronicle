@@ -77,14 +77,14 @@ public partial class CapturesManager
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(CaptureObservers.For(definition.Id), _eventStoreName, @namespace, new EventSequenceId(sequence)));
-        if (await observer.IsSubscribed()) return;
+        if (await observer.IsSubscriptionEstablished()) return;
         var state = await observer.GetState();
         if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined) return;
 
         // The caller holds this capture's lifecycle boundary across resolution and subscription.
         // Recovery itself checks observer eligibility inside its serialized request.
         await eventsSubscriptions.Recover(_eventStoreName, @namespace, definition);
-        if (!await observer.IsSubscribed())
+        if (!await observer.IsSubscriptionEstablished())
         {
             state = await observer.GetState();
             if (state.AlertDisposition != AlertDisposition.Retired && state.RunningState != ObserverRunningState.Quarantined)

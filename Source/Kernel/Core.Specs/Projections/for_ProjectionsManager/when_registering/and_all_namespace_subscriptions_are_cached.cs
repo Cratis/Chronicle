@@ -34,7 +34,7 @@ public class and_all_namespace_subscriptions_are_cached : given.a_projections_ma
         await _silo.TimerRegistry.FireAllAsync();
     }
 
-    [Fact] async Task should_not_check_real_observer_state_in_each_namespace() => await _observerGrain.DidNotReceive().IsSubscribed();
+    [Fact] async Task should_not_check_real_observer_state_in_each_namespace() => await _observerGrain.DidNotReceive().IsSubscriptionEstablished();
     [Fact] async Task should_not_reset_the_projection_definition() => await _projectionGrain.DidNotReceiveWithAnyArgs().SetDefinition(default!);
     [Fact] async Task should_not_subscribe_again() => await _observerGrain.DidNotReceive().SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>());
 }

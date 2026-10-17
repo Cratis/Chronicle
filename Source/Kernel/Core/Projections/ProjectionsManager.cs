@@ -471,7 +471,7 @@ public partial class ProjectionsManager(
 
             // Only on success - a pair left out here is one the next registration reconciles. Concurrent
             // because the fan-out subscribes definitions and namespaces in parallel.
-            if (await observer.IsSubscribed())
+            if (await observer.IsSubscriptionEstablished())
             {
                 _subscribed.TryAdd((definition.Identifier, namespaceName), default);
             }

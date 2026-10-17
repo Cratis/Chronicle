@@ -14,7 +14,7 @@ public class and_the_capture_is_deleted_during_observer_checks : given.a_capture
     void Establish()
     {
         StartedState(_events);
-        _observer.IsSubscribed().Returns(_ =>
+        _observer.IsSubscriptionEstablished().Returns(_ =>
         {
             _checking.TrySetResult();
             return _subscriptionCheck.Task;

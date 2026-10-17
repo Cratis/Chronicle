@@ -102,6 +102,7 @@ public class a_projections_manager_grain : Specification
 
         _observerGrain = Substitute.For<Observation.IObserver>();
         _observerGrain.IsSubscribed().Returns(true);
+        _observerGrain.IsSubscriptionEstablished().Returns(true);
         _observerGrain.GetState().Returns(new ObserverState());
         _silo.AddProbe<Observation.IObserver>(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 

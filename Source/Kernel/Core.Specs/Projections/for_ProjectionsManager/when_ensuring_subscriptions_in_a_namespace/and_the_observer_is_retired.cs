@@ -15,7 +15,7 @@ public class and_the_observer_is_retired : given.a_projections_manager_grain
     {
         await _silo.TimerRegistry.FireAllAsync();
         _state.Projections = [CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true }];
-        _observerGrain.IsSubscribed().Returns(false);
+        _observerGrain.IsSubscriptionEstablished().Returns(false);
         _observerGrain.GetState().Returns(new ObserverState { AlertDisposition = AlertDisposition.Retired });
     }
 

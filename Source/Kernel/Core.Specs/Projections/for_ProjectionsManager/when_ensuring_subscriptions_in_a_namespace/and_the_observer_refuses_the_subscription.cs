@@ -15,7 +15,7 @@ public class and_the_observer_refuses_the_subscription : given.a_projections_man
         await _silo.TimerRegistry.FireAllAsync();
         _state.Projections = [CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true }];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
-        _observerGrain.IsSubscribed().Returns(false);
+        _observerGrain.IsSubscriptionEstablished().Returns(false);
     }
 
     async Task Because()

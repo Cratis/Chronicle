@@ -15,11 +15,13 @@ public class and_the_observer_is_quarantined : given.a_projections_manager_grain
         _state.Projections = [CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true }];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _observerGrain.IsSubscribed().Returns(false);
+        _observerGrain.IsSubscriptionEstablished().Returns(false);
         _observerGrain.GetState().Returns(new ObserverState { RunningState = ObserverRunningState.Quarantined });
         _observerGrain.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false)
             .Returns(_ =>
             {
                 _observerGrain.IsSubscribed().Returns(true);
+                _observerGrain.IsSubscriptionEstablished().Returns(true);
                 _observerGrain.GetState().Returns(new ObserverState());
                 return Task.CompletedTask;
             });
