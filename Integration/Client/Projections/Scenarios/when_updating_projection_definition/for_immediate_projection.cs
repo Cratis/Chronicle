@@ -25,14 +25,15 @@ public class for_immediate_projection(context context) : Given<context>(context)
 
         async Task Because()
         {
+            // The client's own registration has to be finished before the projection is read, and so that it cannot
+            // land after the manual one below with the old definition.
+            var outcome = await EventStore.WaitForRegistration(TimeSpanFactory.FromSeconds(30));
+            Assert.True(outcome.IsSuccess, $"Client registration did not succeed: {outcome.Failure}");
+
             // An immediate projection has no observer to wait for; the read model is computed on demand from the events.
             var eventSourceId = Guid.NewGuid().ToString();
             await EventStore.EventLog.Append(eventSourceId, new TestEvent("First Name", "First Description"));
             Result = await EventStore.ReadModels.GetInstanceById<ImmediateReadModel>(eventSourceId);
-
-            // The client's own registration has to be finished, otherwise it can land after the manual one below with the old definition.
-            var outcome = await EventStore.WaitForRegistration(TimeSpanFactory.FromSeconds(30));
-            Assert.True(outcome.IsSuccess, $"Client registration did not succeed: {outcome.Failure}");
 
             ImmediateProjection.MapBothProperties = true;
             await EventStore.Projections.Discover();
