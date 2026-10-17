@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Bson;
@@ -16,8 +17,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 /// <typeparam name="T">The payload type.</typeparam>
 public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
 {
+    static readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
     readonly IMongoCollection<BsonDocument> _rows;
-    readonly Lazy<Task> _index;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverDefinitionChangeRows{T}"/> class.
@@ -25,13 +26,14 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
     /// <param name="database">The namespace database.</param>
     public ObserverDefinitionChangeRows(IEventStoreNamespaceDatabase database)
     {
-        _rows = database.GetCollection<BsonDocument>($"observer-definition-change-{typeof(T).Name}")
-            .WithReadPreference(ReadPreference.Primary).WithReadConcern(ReadConcern.Majority).WithWriteConcern(WriteConcern.WMajority);
-        _index = new(() => _rows.Indexes.CreateManyAsync(
-        [
-            new(new BsonDocument { { "observer", 1 }, { "revision", 1 }, { "_id", 1 } }),
-            new(new BsonDocument { { "observer", 1 }, { "_id", 1 } })
-        ]));
+        var collection = ObserverDefinitionChangeRowFamilies.For<T>() switch
+        {
+            ObserverDefinitionChangeRowFamilies.Progress => WellKnownCollectionNames.ObserverDefinitionChangeProgress,
+            ObserverDefinitionChangeRowFamilies.Continuations => WellKnownCollectionNames.ObserverDefinitionChangeContinuations,
+            ObserverDefinitionChangeRowFamilies.RestartPlans => WellKnownCollectionNames.ObserverDefinitionChangeRestartPlans,
+            _ => WellKnownCollectionNames.ObserverDefinitionChangeInventory
+        };
+        _rows = database.GetCollection<BsonDocument>(collection).WithReadPreference(ReadPreference.Primary);
     }
 
     /// <inheritdoc/>
@@ -45,11 +47,12 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
     public async Task<bool> TryInsert(ObserverDefinitionChangeRow<T> row)
     {
         if (row.Version != 0 || !RowEncoding.IsValid(row)) return false;
-        await _index.Value;
+        await EnsureIndexes();
         var document = Values(row)
             .Add("_id", RowEncoding.Id<T>(row.Key))
             .Add("observer", RowEncoding.Observer(row.Key.Observer))
-            .Add("revision", row.Key.Revision.Value);
+            .Add("revision", row.Key.Revision.Value)
+            .Add("identity", RowEncoding.Identity(row));
         try
         {
             await _rows.InsertOneAsync(document);
@@ -69,6 +72,7 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
         {
             { "_id", RowEncoding.Id<T>(row.Key) },
             { "version", expectedVersion },
+            { "identity", RowEncoding.Identity(row) },
             { "state", new BsonDocument { { "$lt", (int)ObserverDefinitionChangeRowState.Terminal }, { "$lte", (int)row.State } } },
             { "$or", new BsonArray
                 {
@@ -85,13 +89,13 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
     /// <inheritdoc/>
     public async Task<ObserverDefinitionChangePage<T>> ReadPage(ObserverKey observer, ObserverTypeSetRevision? revision, string? after, int limit)
     {
-        if (limit <= 0) return new([], null);
+        limit = RowEncoding.PageLimit(limit);
         var filter = new BsonDocument("observer", RowEncoding.Observer(observer));
         if (revision is not null) filter.Add("revision", revision.Value);
         if (after is not null) filter.Add("_id", new BsonDocument("$gt", after));
-        var documents = await _rows.Find(filter).Sort(new BsonDocument("_id", 1)).Limit(Math.Min(limit, 1000)).ToListAsync();
+        var documents = await _rows.Find(filter).Sort(new BsonDocument("_id", 1)).Limit(limit).ToListAsync();
 
-        return new(documents.Select(document => RowEncoding.Deserialize<T>(document["data"].AsString)).ToArray(), documents.Count == 0 ? null : documents[^1]["_id"].AsString);
+        return new(documents.Select(document => RowEncoding.Deserialize<T>(document["data"].AsString)).ToArray(), documents.Count < limit ? null : documents[^1]["_id"].AsString);
     }
 
     /// <inheritdoc/>
@@ -110,4 +114,9 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
         { "position", Position(row) },
         { "data", RowEncoding.Serialize(row) }
     };
+
+    Task EnsureIndexes() => _rows.EnsureIndexesOnceAsync(
+        _ensuredIndexes,
+        new CreateIndexModel<BsonDocument>(new BsonDocument { { "observer", 1 }, { "revision", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_revision_id" }),
+        new CreateIndexModel<BsonDocument>(new BsonDocument { { "observer", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_id" }));
 }

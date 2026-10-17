@@ -40,14 +40,41 @@ public static class ObserverDefinitionChangeRows
     /// <typeparam name="T">The payload type.</typeparam>
     /// <param name="key">The complete identity.</param>
     /// <returns>The opaque row identity and paging cursor.</returns>
-    public static string Id<T>(ObserverDefinitionChangeRowKey key) => Hash(JsonSerializer.Serialize(new[] { Observer(key.Observer), key.Revision.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), typeof(T).Name, key.Id }));
+    public static string Id<T>(ObserverDefinitionChangeRowKey key) => Hash(JsonSerializer.Serialize(new[] { Observer(key.Observer), key.Revision.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), ObserverDefinitionChangeRowFamilies.For<T>(), key.Id }));
 
     /// <summary>
     /// Encodes the complete observer identity for indexed, case-sensitive isolation.
     /// </summary>
     /// <param name="observer">The observer.</param>
     /// <returns>The fixed-size observer identity.</returns>
-    public static string Observer(ObserverKey observer) => Hash(JsonSerializer.Serialize(observer, _options));
+    public static string Observer(ObserverKey observer) => Hash(JsonSerializer.Serialize(new[]
+    {
+        observer.ObserverId.Value, observer.EventStore.Value, observer.Namespace.Value, observer.EventSequenceId.Value
+    }));
+
+    /// <summary>
+    /// Encodes immutable execution identity for an atomic replacement predicate. Mutable outcomes are excluded.
+    /// </summary>
+    /// <typeparam name="T">The row payload.</typeparam>
+    /// <param name="row">The row.</param>
+    /// <returns>The fixed-size immutable payload identity.</returns>
+    /// <exception cref="UnsupportedObserverDefinitionChangeRowFamily">The payload is not a row family.</exception>
+    public static string Identity<T>(ObserverDefinitionChangeRow<T> row) => Hash(row.Data switch
+    {
+        ObserverProgressRecord progress => JsonSerializer.Serialize(new { progress.JobId, progress.Partition }, _options),
+        ObserverContinuation continuation => JsonSerializer.Serialize(new { continuation.JobId, continuation.Partition }, _options),
+        ObserverRestartPlan plan => JsonSerializer.Serialize(new { plan.JobId, plan.Partition }, _options),
+        ObserverJobInventory job => JsonSerializer.Serialize(new { job.JobId, job.Kind, job.JobType, job.Origin }, _options),
+        _ => throw new UnsupportedObserverDefinitionChangeRowFamily(typeof(T))
+    });
+
+    /// <summary>
+    /// Rejects nonpositive limits and caps each storage page at 1,000 rows.
+    /// </summary>
+    /// <param name="limit">The requested limit.</param>
+    /// <returns>The bounded positive limit.</returns>
+    /// <exception cref="InvalidObserverDefinitionChangePageLimit">The limit is nonpositive.</exception>
+    public static int PageLimit(int limit) => limit > 0 ? Math.Min(limit, 1000) : throw new InvalidObserverDefinitionChangePageLimit(limit);
 
     /// <summary>
     /// Validates row shape without granting permission to write it before initialization.
@@ -60,10 +87,13 @@ public static class ObserverDefinitionChangeRows
         row.Position != EventSequenceNumber.Unavailable &&
         row.Data switch
         {
-            ObserverProgressRecord progress => row.Position is not null && Enum.IsDefined(progress.Outcome) && row.State == ObserverDefinitionChangeRowState.Terminal == (progress.Outcome != ObserverWorkOutcome.Checkpoint),
+            ObserverProgressRecord progress => row.Position is not null && Enum.IsDefined(progress.Outcome) &&
+                row.State == (progress.Outcome == ObserverWorkOutcome.Checkpoint ? ObserverDefinitionChangeRowState.Started : ObserverDefinitionChangeRowState.Terminal),
             ObserverContinuation => row.Position is not null,
             ObserverRestartPlan => true,
-            ObserverJobInventory job => row.State == ObserverDefinitionChangeRowState.Terminal == (job.Outcome is not null) && (job.Outcome is null || job.Outcome.Outcome != ObserverWorkOutcome.Checkpoint),
+            ObserverJobInventory job => (row.Version > 0 || row.State == ObserverDefinitionChangeRowState.Intended) &&
+                Enum.IsDefined(job.Kind) && row.State == ObserverDefinitionChangeRowState.Terminal == (job.Outcome is not null) &&
+                (job.Outcome is null || (Enum.IsDefined(job.Outcome.Outcome) && job.Outcome.Outcome != ObserverWorkOutcome.Checkpoint)),
             _ => false
         };
 

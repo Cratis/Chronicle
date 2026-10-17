@@ -24,11 +24,12 @@ public class v19_79_1 : Migration
             {
                 Id = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
                 Observer = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
+                Identity = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
                 Family = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
                 Revision = table.NumberColumn<long>(migrationBuilder, nullable: false),
                 Version = table.NumberColumn<long>(migrationBuilder, nullable: false),
                 State = table.NumberColumn<int>(migrationBuilder, nullable: false),
-                Position = table.Column<decimal>(type: "decimal(20,0)", nullable: true, precision: 20, scale: 0),
+                Position = table.Column<decimal>(type: ActiveProvider == "Microsoft.EntityFrameworkCore.Sqlite" ? "TEXT" : "decimal(20,0)", nullable: true, precision: 20, scale: 0),
                 Data = ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL"
                     ? table.Column<string>(type: "jsonb", nullable: false)
                     : table.JsonColumn<string>(migrationBuilder)
@@ -37,4 +38,7 @@ public class v19_79_1 : Migration
         migrationBuilder.CreateIndex("IX_ObserverDefinitionChangeRows_Observer_Family_Revision_Id", WellKnownTableNames.ObserverDefinitionChangeRows, ["Observer", "Family", "Revision", "Id"]);
         migrationBuilder.CreateIndex("IX_ObserverDefinitionChangeRows_Observer_Family_Id", WellKnownTableNames.ObserverDefinitionChangeRows, ["Observer", "Family", "Id"]);
     }
+
+    /// <inheritdoc/>
+    protected override void Down(MigrationBuilder migrationBuilder) => migrationBuilder.DropTable(WellKnownTableNames.ObserverDefinitionChangeRows);
 }

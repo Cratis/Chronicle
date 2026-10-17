@@ -27,7 +27,8 @@ public interface IObserverDefinitionChangeRows<T>
 
     /// <summary>
     /// Atomically replaces a nonterminal row at the expected version. The new version must be expected + 1;
-    /// state and a recorded position cannot move backwards. Terminal rows cannot even be rewritten at equal state.
+    /// state and a recorded position cannot move backwards. Changes to JobId, Partition, Kind, JobType or Origin
+    /// are rejected. Terminal rows cannot even be rewritten at equal state.
     /// </summary>
     /// <param name="row">The replacement with the same identity.</param>
     /// <param name="expectedVersion">The version read by the writer.</param>
@@ -41,8 +42,9 @@ public interface IObserverDefinitionChangeRows<T>
     /// <param name="observer">The complete observer identity.</param>
     /// <param name="revision">A revision, or null to harvest all revisions.</param>
     /// <param name="after">The preceding page's cursor, or null for the first page.</param>
-    /// <param name="limit">The requested page size, clamped to 0 through 1,000.</param>
-    /// <returns>The bounded page and continuation cursor.</returns>
+    /// <param name="limit">The positive requested page size, capped at 1,000.</param>
+    /// <returns>The bounded page; Next is null when fewer than the capped limit rows are returned.</returns>
+    /// <exception cref="InvalidObserverDefinitionChangePageLimit">The limit is nonpositive.</exception>
     Task<ObserverDefinitionChangePage<T>> ReadPage(ObserverKey observer, ObserverTypeSetRevision? revision, string? after, int limit);
 
     /// <summary>

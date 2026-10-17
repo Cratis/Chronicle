@@ -43,7 +43,7 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
             var id = RowEncoding.Id<T>(row.Key);
             if (!RowEncoding.IsReplacement(row, expectedVersion) || !_rows.TryGetValue(id, out var json)) return Task.FromResult(false);
             var stored = RowEncoding.Deserialize<T>(json);
-            if (stored.Version != expectedVersion || stored.State == ObserverDefinitionChangeRowState.Terminal || stored.State > row.State ||
+            if (RowEncoding.Identity(stored) != RowEncoding.Identity(row) || stored.Version != expectedVersion || stored.State == ObserverDefinitionChangeRowState.Terminal || stored.State > row.State ||
                 (stored.Position is not null && (row.Position is null || stored.Position.Value > row.Position.Value)))
             {
                 return Task.FromResult(false);
@@ -57,14 +57,15 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
     /// <inheritdoc/>
     public Task<ObserverDefinitionChangePage<T>> ReadPage(ObserverKey observer, ObserverTypeSetRevision? revision, string? after, int limit)
     {
+        limit = RowEncoding.PageLimit(limit);
         lock (_lock)
         {
             var rows = _rows.Where(pair => after is null || string.CompareOrdinal(pair.Key, after) > 0)
                 .Select(pair => (pair.Key, Row: RowEncoding.Deserialize<T>(pair.Value)))
                 .Where(pair => pair.Row.Key.Observer == observer && (revision is null || pair.Row.Key.Revision == revision))
-                .Take(Math.Clamp(limit, 0, 1000)).ToArray();
+                .Take(limit).ToArray();
 
-            return Task.FromResult(new ObserverDefinitionChangePage<T>(rows.Select(pair => pair.Row).ToArray(), rows.Length == 0 ? null : rows[^1].Key));
+            return Task.FromResult(new ObserverDefinitionChangePage<T>(rows.Select(pair => pair.Row).ToArray(), rows.Length < limit ? null : rows[^1].Key));
         }
     }
 

@@ -24,6 +24,11 @@ public class ObserverDefinitionChangeEntry
     public string Family { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the immutable payload identity used by conditional replacements.
+    /// </summary>
+    public string Identity { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the owning revision.
     /// </summary>
     public long Revision { get; set; }

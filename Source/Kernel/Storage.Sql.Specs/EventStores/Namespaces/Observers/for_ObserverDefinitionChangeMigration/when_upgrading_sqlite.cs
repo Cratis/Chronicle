@@ -15,6 +15,7 @@ public class when_upgrading_sqlite : Specification, IDisposable
     NamespaceDbContext _context;
     long _rowCount;
     string _legacy;
+    string _positionType;
 
     async Task Establish()
     {
@@ -37,10 +38,13 @@ public class when_upgrading_sqlite : Specification, IDisposable
         _rowCount = (long)(await read.ExecuteScalarAsync())!;
         read.CommandText = "SELECT Id FROM Observers";
         _legacy = (string)await read.ExecuteScalarAsync();
+        read.CommandText = "SELECT type FROM pragma_table_info('ObserverDefinitionChangeRows') WHERE name = 'Position'";
+        _positionType = (string)await read.ExecuteScalarAsync();
     }
 
     [Fact] void should_create_empty_row_storage() => _rowCount.ShouldEqual(0L);
     [Fact] void should_leave_legacy_observers_unchanged() => _legacy.ShouldEqual("legacy-observer");
+    [Fact] void should_preserve_unsigned_positions_in_text_storage() => _positionType.ShouldEqual("TEXT");
 
     public void Dispose()
     {

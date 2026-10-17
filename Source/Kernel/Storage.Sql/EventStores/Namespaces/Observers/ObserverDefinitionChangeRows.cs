@@ -36,7 +36,8 @@ public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceD
         {
             Id = RowEncoding.Id<T>(row.Key),
             Observer = RowEncoding.Observer(row.Key.Observer),
-            Family = typeof(T).Name,
+            Family = ObserverDefinitionChangeRowFamilies.For<T>(),
+            Identity = RowEncoding.Identity(row),
             Revision = row.Key.Revision.Value,
             Version = row.Version,
             State = (int)row.State,
@@ -63,8 +64,9 @@ public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceD
         var state = (int)row.State;
         decimal? position = row.Position?.Value;
         var data = RowEncoding.Serialize(row);
+        var identity = RowEncoding.Identity(row);
         var changed = await scope.DbContext.Set<ObserverDefinitionChangeEntry>()
-            .Where(entry => entry.Id == id && entry.Version == expectedVersion && entry.State < (int)ObserverDefinitionChangeRowState.Terminal && entry.State <= state &&
+            .Where(entry => entry.Id == id && entry.Identity == identity && entry.Version == expectedVersion && entry.State < (int)ObserverDefinitionChangeRowState.Terminal && entry.State <= state &&
                 (entry.Position == null || (position != null && entry.Position <= position)))
             .ExecuteUpdateAsync(set => set.SetProperty(entry => entry.Version, row.Version)
                 .SetProperty(entry => entry.State, state).SetProperty(entry => entry.Position, position).SetProperty(entry => entry.Data, data));
@@ -75,16 +77,16 @@ public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceD
     /// <inheritdoc/>
     public async Task<ObserverDefinitionChangePage<T>> ReadPage(ObserverKey observer, ObserverTypeSetRevision? revision, string? after, int limit)
     {
-        if (limit <= 0) return new([], null);
+        limit = RowEncoding.PageLimit(limit);
         await using var scope = await open();
         var observerId = RowEncoding.Observer(observer);
-        var family = typeof(T).Name;
+        var family = ObserverDefinitionChangeRowFamilies.For<T>();
         var query = scope.DbContext.Set<ObserverDefinitionChangeEntry>().AsNoTracking().Where(row => row.Observer == observerId && row.Family == family);
         if (revision is not null) query = query.Where(row => row.Revision == revision.Value);
         if (after is not null) query = query.Where(row => row.Id.CompareTo(after) > 0);
-        var entries = await query.OrderBy(row => row.Id).Take(Math.Min(limit, 1000)).ToListAsync();
+        var entries = await query.OrderBy(row => row.Id).Take(limit).ToListAsync();
 
-        return new(entries.Select(entry => RowEncoding.Deserialize<T>(entry.Data)).ToArray(), entries.Count == 0 ? null : entries[^1].Id);
+        return new(entries.Select(entry => RowEncoding.Deserialize<T>(entry.Data)).ToArray(), entries.Count < limit ? null : entries[^1].Id);
     }
 
     /// <inheritdoc/>

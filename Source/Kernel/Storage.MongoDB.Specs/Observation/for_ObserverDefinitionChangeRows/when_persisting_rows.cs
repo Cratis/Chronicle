@@ -1,15 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverDefinitionChangeRows;
 
-[Collection(ReplicaSetMongoDBCollection.Name)]
-public class when_persisting_rows(ReplicaSetMongoDBFixture fixture) : DefinitionChangeRowsContract
+[Collection(MongoDBCollection.Name)]
+public class when_persisting_rows(MongoDBFixture fixture) : DefinitionChangeRowsContract
 {
     IMongoClient _client;
     IMongoDatabase _database;
