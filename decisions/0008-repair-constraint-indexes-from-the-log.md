@@ -26,6 +26,8 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Keep constraint indexes in step with the event log through a per-sequence watermark
 
+> **Note added 2026-10-17:** [Decision 0007](0007-idempotent-keyed-appends.md), cited below, is superseded by [Decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md). For keyed appends, 0012 rules that a key hit marks the gap without folding or enqueuing, and that keyed storage reports a proven non-commit as `EventsNotCommitted`. The text below is unchanged.
+
 Accepted on 2026-10-14 by L0 on woksin's delegation for Cratis/Chronicle#4895, including the background catch-up (item 8) and closing constraints covered only from the upgrade on. This extends [Decision 0005](0005-settle-unique-constraint-claims-in-every-store.md). [Decision 0007](0007-idempotent-keyed-appends.md) (idempotent keyed appends, accepted the same day) defers its constraint gap to #4895; statements below that mention 0007 apply once it is implemented.
 
 ## Context
