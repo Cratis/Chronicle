@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_per
 public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performing_job_step
 {
     readonly TaskCompletionSource<IReadOnlyDictionary<SiloAddress, Guid[]>> _flush = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _flushStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     Catch<JobStepResult> _result;
     int _writesBeforeTheStop;
     int _writesAfterTheFlushCompleted;
@@ -21,16 +22,24 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
     void Establish()
     {
         // The first flush is the baseline taken before any event is dispatched; the second is the one the stop interrupts.
-        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>()).Returns(
-            Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] }),
-            _flush.Task);
+        var flushes = 0;
+        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>()).Returns(_ =>
+        {
+            if (++flushes == 1)
+            {
+                return Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] });
+            }
+
+            _flushStarted.TrySetResult();
+            return _flush.Task;
+        });
         _stateStorageStats.ResetCounts();
     }
 
     async Task Because()
     {
         var performing = _jobStep.InvokePerformStep(_performState);
-        await WaitForTheFlush();
+        await _flushStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         _writesBeforeTheStop = _stateStorageStats.Writes;
 
         _jobStep.Run!.Close();
@@ -43,20 +52,6 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
     [Fact] void should_not_write_state_before_the_stop() => _writesBeforeTheStop.ShouldEqual(0);
     [Fact] void should_not_commit_the_flush_after_the_stop() => _writesAfterTheFlushCompleted.ShouldEqual(0);
     [Fact] void should_keep_the_last_durable_checkpoint() => _performState.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
-    [Fact] void should_report_each_handled_batch_once() =>
+    [Fact] void should_report_each_batch_handled_before_the_stop() =>
         _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEvents)).ShouldEqual(_handledBatches.Count);
-
-    async Task WaitForTheFlush()
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (_observerServiceClient.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserverServiceClient.FlushAllFor)) < 2)
-        {
-            if (DateTime.UtcNow > deadline)
-            {
-                throw new TimeoutException("The step never started flushing the checkpoint");
-            }
-
-            await Task.Delay(10);
-        }
-    }
 }

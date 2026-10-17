@@ -116,7 +116,11 @@ public class HandleEventsForObserver(
         try
         {
             var capture = CaptureFlush(start);
-            var windows = await ConfirmWindows(capture, error => _checkpointFailure = error);
+            var windows = await ConfirmWindows(capture, error =>
+            {
+                _checkpointFailure = error;
+                return Task.CompletedTask;
+            });
             return await CommitFlush(capture, windows);
         }
         finally
@@ -455,9 +459,9 @@ public class HandleEventsForObserver(
     /// Confirms the buffered writes on every silo. Touches no activation state, so it can run outside the activation.
     /// </summary>
     /// <param name="capture">The <see cref="FlushCapture"/>.</param>
-    /// <param name="onFailure">Retains a failure of the confirmation; invoked before the failure is rethrown.</param>
+    /// <param name="onFailure">Retains a failure of the confirmation; awaited before the failure is rethrown.</param>
     /// <returns>The windows confirmed per silo.</returns>
-    async Task<IReadOnlyDictionary<SiloAddress, Guid[]>> ConfirmWindows(FlushCapture capture, Action<Exception> onFailure)
+    async Task<IReadOnlyDictionary<SiloAddress, Guid[]>> ConfirmWindows(FlushCapture capture, Func<Exception, Task> onFailure)
     {
         try
         {
@@ -465,7 +469,7 @@ public class HandleEventsForObserver(
         }
         catch (Exception error)
         {
-            onFailure(error);
+            await onFailure(error);
             throw;
         }
     }
@@ -567,7 +571,7 @@ public class HandleEventsForObserver(
             captured.TryGetResult(out var capture);
             var windows = await ConfirmWindows(
                 capture,
-                error => _ = TryInvokeOnActivation(() =>
+                error => TryInvokeOnActivation(() =>
                 {
                     _checkpointFailure = error;
                     return Task.CompletedTask;
@@ -619,7 +623,11 @@ public class HandleEventsForObserver(
         try
         {
             var capture = CaptureFlush(start: false);
-            var windows = await ConfirmWindows(capture, error => _checkpointFailure = error);
+            var windows = await ConfirmWindows(capture, error =>
+            {
+                _checkpointFailure = error;
+                return Task.CompletedTask;
+            });
             await CommitFlush(capture, windows);
         }
         catch (Exception error)
@@ -651,8 +659,8 @@ public class HandleEventsForObserver(
             case ObserverSubscriberState.Ok:
                 if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
                 {
-                    // Nothing was recorded for this batch, so it is neither checkpointed nor counted here: the next run
-                    // resumes from the last durable checkpoint and counts it when it handles the batch again.
+                    // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
+                    // checkpoint, so it handles and counts again every batch since then, including those already counted.
                     return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 }
 
