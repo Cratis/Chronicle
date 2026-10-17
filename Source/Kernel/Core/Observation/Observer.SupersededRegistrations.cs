@@ -71,8 +71,22 @@ public partial class Observer
 
             // The active client has left, so it must not take part in the subscription that replaces its own.
             _subscription = _subscription with { Targets = [] };
-            await candidate.Resubscribe();
-            return;
+            try
+            {
+                await candidate.Resubscribe();
+            }
+            catch (Exception ex)
+            {
+                // A candidate that cannot take over must not strand the observer: try the next one, then give up.
+                logger.PromotingSupersededClientFailed(candidate.ConnectionId, ex);
+                continue;
+            }
+
+            // A subscription that was not applied (a retired observer, for instance) still points at the departed client.
+            if (_subscription.Targets.Any(target => target.ConnectedClient?.ConnectionId == candidate.ConnectionId))
+            {
+                return;
+            }
         }
 
         await Unsubscribe();

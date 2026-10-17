@@ -178,6 +178,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
     internal static partial void PromotingSupersededClient(this ILogger<Observer> logger, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Warning, "Handing the observer over to the superseded client {ConnectionId} failed. Trying the next registration, or unsubscribing when none is left.")]
+    internal static partial void PromotingSupersededClientFailed(this ILogger<Observer> logger, ConnectionId connectionId, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
     internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
 
