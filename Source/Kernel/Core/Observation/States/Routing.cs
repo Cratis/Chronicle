@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -16,11 +17,13 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
 /// <param name="definitionState"><see cref="IPersistentState{ObserverDefinition}"/> for the observer's definition.</param>
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
+/// <param name="storage"><see cref="IStorage"/> used to find out whether catching up would have any work to do.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Routing(
     ObserverKey observerKey,
     IPersistentState<ObserverDefinition> definitionState,
     IEventSequence eventSequence,
+    IStorage storage,
     ILogger<Routing> logger) : BaseObserverState
 {
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -159,7 +162,7 @@ public class Routing(
             state = state with { NextEventSequenceNumber = _tailEventSequenceNumber.Next() };
             return await EvaluateState(state);
         }
-        if (IsFallingBehind(state))
+        if (IsFallingBehind(state) && await HasCatchUpWork(state))
         {
             logger.CatchingUp();
             await Observer.CatchUp();
@@ -180,6 +183,52 @@ public class Routing(
         }
 
         return state;
+    }
+
+    /// <summary>
+    /// Decides whether a catch-up would have anything to handle.
+    /// </summary>
+    /// <remarks>
+    /// Events of failed partitions are owned by their retry jobs and a catch-up skips them, exactly as
+    /// <see cref="Observing.OnEnter"/> stays quiet while the observer has failed partitions. Treating them as
+    /// falling behind produces a catch-up with zero work that completes without moving the observer, which
+    /// routes again to the same verdict without end. When the key index cannot tell, catch-up is assumed to have work.
+    /// </remarks>
+    /// <param name="state">The current <see cref="ObserverState"/>.</param>
+    /// <returns>True if catching up has events to handle, false otherwise.</returns>
+    async Task<bool> HasCatchUpWork(ObserverState state)
+    {
+        try
+        {
+            if (!await Observer.HasFailedPartitions())
+            {
+                return true;
+            }
+
+            var failedPartitions = (await Observer.GetFailedPartitionKeys()).ToHashSet();
+            var readerScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes);
+            var index = await storage
+                .GetEventStore(observerKey.EventStore)
+                .GetNamespace(observerKey.Namespace)
+                .ObserverKeyIndexes
+                .GetFor(observerKey, readerScope);
+
+            await foreach (var key in index.GetKeys(state.NextEventSequenceNumber))
+            {
+                if (!failedPartitions.Contains(key))
+                {
+                    return true;
+                }
+            }
+
+            logger.OnlyFailedPartitionsBehind();
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.CouldNotDetermineCatchUpWork(ex);
+            return true;
+        }
     }
 
     bool CanFastForward(ObserverState state) =>

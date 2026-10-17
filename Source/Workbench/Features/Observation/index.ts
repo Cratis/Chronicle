@@ -18,4 +18,6 @@ export * from './ObserverInformationForEventType';
 export * from './RemoveObserver';
 export * from './ReplayObserver';
 export * from './ReplayPartition';
+export * from './RetryFailedPartitions';
+export * from './RetryFailedPartitionsResult';
 export * from './RetryPartition';

@@ -14,7 +14,7 @@ public class and_the_retry_delay_is_longer_than_a_minute : given.an_observer
 {
     const string Partition = "Something";
 
-    protected override Observers CreateObserversConfig() => new() { BackoffDelay = 100 };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, BackoffDelay = 100 };
 
     async Task Because() => await _observer.PartitionFailed(Partition, 42UL, ["Something went wrong"], "This is the stack trace");
 

@@ -1,12 +1,13 @@
 ---
 id: 0007-idempotent-keyed-appends
 title: Make keyed appends idempotent in the event sequence, and key reactor side effects by delivery
-status: accepted
+status: superseded
 stage: none
 class: contract
 reversibility: costly
 decided: 2026-10-14
 decider: L0 (woksin's delegation)
+superseded-by: 0012-keyed-appends-travel-on-their-own-rpcs
 applies-to:
   - Source/Kernel/Core/Sequences/**
   - Source/Kernel/Core/EventSequences/**
@@ -41,6 +42,8 @@ applies-to:
 
 <!-- markdownlint-disable-next-line MD025 -->
 # Make keyed appends idempotent in the event sequence, and key reactor side effects by delivery
+
+> **Superseded on 2026-10-17 by [Decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md).** 0012 changes four points (keyed appends use their own RPCs, a key hit marks the constraint gap without other side work, one storage failure shape following decision 0008, and minor release labels) and carries every other part of this record forward unchanged. The text below is preserved as accepted.
 
 Accepted on 2026-10-14 by L0 on woksin's delegation for Cratis/Chronicle#4809, with the rulings recorded under Resolutions.
 

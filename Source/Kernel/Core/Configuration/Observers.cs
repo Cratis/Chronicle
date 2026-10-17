@@ -115,6 +115,21 @@ public class Observers
     public int StatePersistenceBatchInterval { get; init; } = 100;
 
     /// <summary>
+    /// Gets the maximum time in seconds the observer holds back reported handled-event counts and the follow-up writes of partition failures before making them durable.
+    /// </summary>
+    /// <remarks>
+    /// Every handled batch of every job step reports its counts to the single observer grain. Writing them through
+    /// - an increment per partition plus the whole observer state - on each report makes the grain's queue grow
+    /// past the grain call timeout under a replay. Reports are therefore coalesced per partition and event type and
+    /// written together after at most this many seconds, on the watchdog tick and on deactivation. The sums are
+    /// exact; only their freshness is bounded. A partition failure is recorded in the observer's memory and in its
+    /// failed partitions storage straight away, one partition at a time; the observer state write and the retry
+    /// reminder registration, which are the same for every failure of a burst, wait for the same flush instead of
+    /// holding up the observer once per failure. 0 writes everything through. Defaults to 5.
+    /// </remarks>
+    public int WriteCoalescingInterval { get; init; } = 5;
+
+    /// <summary>
     /// Gets the strategy used to fan events out when multiple instances of the same client are
     /// connected. Supported values are "round-robin" (default - a deterministic distribution based
     /// on the partition key, keeping every partition sticky to one instance) and "random".

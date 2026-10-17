@@ -46,6 +46,12 @@ internal static partial class RoutingLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Observer needs to replay. Transitioning to replay state.")]
     internal static partial void NeedsToReplay(this ILogger<Routing> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Every event the observer has not handled belongs to a failed partition, which its retry job owns. Not catching up.")]
+    internal static partial void OnlyFailedPartitionsBehind(this ILogger<Routing> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Could not determine whether catching up would have any work. Assuming it does.")]
+    internal static partial void CouldNotDetermineCatchUpWork(this ILogger<Routing> logger, Exception exception);
 }
 
 internal static class RoutingScopes

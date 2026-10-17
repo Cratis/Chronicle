@@ -43,6 +43,20 @@ public class TestableReplayObserver(
     public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
 
     /// <summary>
+    /// Gets the number of steps the job keeps active at once.
+    /// </summary>
+    public int? MaxActiveStepsForTesting => MaxActiveSteps;
+
+    /// <summary>
+    /// Asks the job whether it runs a step that failed an attempt again.
+    /// </summary>
+    /// <param name="stepId">The step that failed.</param>
+    /// <param name="result">The result of the failed attempt.</param>
+    /// <param name="attempt">The number of the attempt that failed.</param>
+    /// <returns>True if the step is run again.</returns>
+    public bool ShouldRetryStepForTesting(JobStepId stepId, JobStepResult result, int attempt) => ShouldRetryStep(stepId, result, attempt);
+
+    /// <summary>
     /// Invokes replay completion after preparing its test state.
     /// </summary>
     /// <returns>Awaitable task.</returns>
