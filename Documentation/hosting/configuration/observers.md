@@ -154,4 +154,6 @@ is still connected, exactly as if that client had registered again. The hand-ove
 is dropped and when the watchdog finds the client gone. It never ends a quarantine and never reactivates a
 retired observer. When no earlier client remains, the observer unsubscribes.
 
-Serving both sets of event types at the same time is not supported yet.
+Events of types that only the departed client handled are not replayed to the client that takes over; that
+belongs to the planned union of the event types of concurrent clients. Serving both sets of event types at the
+same time is not supported yet.
