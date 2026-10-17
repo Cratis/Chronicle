@@ -78,6 +78,11 @@ public partial class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
+
+    /// <summary>
+    /// Installation precedes job recovery. Until setup returns successfully, managers must retry rather
+    /// than caching the installed subscription as established. Catch-up completion is a separate concern.
+    /// </summary>
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
     bool _recoverSubscriptionAfterQuarantine;
@@ -257,6 +262,9 @@ public partial class Observer(
     public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
 
     /// <inheritdoc/>
+    public Task<bool> IsSubscriptionEstablished() => Task.FromResult(_subscription.IsSubscribed && !_subscriptionSetupFailed);
+
+    /// <inheritdoc/>
     public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);
 
     /// <inheritdoc/>
@@ -404,8 +412,6 @@ public partial class Observer(
     {
         ThrowIfSealed();
         SupersedeRecoveryAfterQuarantine();
-        var owner = GetOwner<TObserverSubscriber>();
-
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
@@ -418,29 +424,18 @@ public partial class Observer(
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
-        observerDefinition.State = observerDefinition.State with
+        _subscriptionSetupFailed = true;
+        try
         {
-            Type = type,
-            Owner = owner,
-            EventTypes = [],
-            IsReplayable = isReplayable
-        };
-        await observerDefinition.WriteStateAsync();
-
-        _subscription = new(
-            _observerId,
-            _observerKey,
-            [],
-            typeof(TObserverSubscriber),
-            siloAddress,
-            subscriberArgs,
-            isReplayable);
-        ForgetSupersededRegistrations();
-
-        State = State with { SubscribesToAllEvents = true };
-        await WriteStateAsync();
-
-        await RecoverAfterSubscribing(leavesQuarantine: true);
+            await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
+            await RecoverAfterSubscribing(leavesQuarantine: true);
+            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
+        }
+        catch
+        {
+            _subscriptionSetupFailed = true;
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -836,19 +831,7 @@ public partial class Observer(
         where TObserverSubscriber : IObserverSubscriber
     {
         eventTypes = eventTypes.ToArray();
-        if (generationDelivery == EventGenerationDelivery.Pinned)
-        {
-            ThrowIfPinsMultipleGenerations(eventTypes);
-
-            var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
-            foreach (var eventType in eventTypes)
-            {
-                if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
-                {
-                    throw new EventTypeGenerationNotRegisteredForObserver(eventType);
-                }
-            }
-        }
+        await ValidateGenerationDelivery(eventTypes, generationDelivery);
 
         if (!automatic)
         {
@@ -914,11 +897,14 @@ public partial class Observer(
                 await LeaveQuarantineForSubscription();
             }
 
+            _subscriptionSetupFailed = true;
             await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
             await RecoverAfterSubscribing(leavesQuarantine);
 
-            // A persisted Active marker alone does not prove setup completed after an entry-write failure.
-            _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
+            // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after
+            // recovery returns means a failed entry write stranded it, and an ordinary retry could not re-enter.
+            // Healthy asynchronous catch-up and deferred routing are separate from that setup failure.
+            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
         }
         catch
         {
@@ -948,9 +934,11 @@ public partial class Observer(
         object? subscriberArgs,
         bool isReplayable,
         ObserverFilters? filters,
-        EventGenerationDelivery generationDelivery)
+        EventGenerationDelivery generationDelivery,
+        bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (reconcile && CannotReconcileSubscription()) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -965,10 +953,58 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
+        if (reconcile && CannotReconcileSubscription()) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+    }
+
+    async Task SetUpAllEventsSubscription<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs,
+        bool isReplayable,
+        bool reconcile = false)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        if (reconcile && CannotReconcileSubscription()) return;
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = GetOwner<TObserverSubscriber>(),
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        if (reconcile && CannotReconcileSubscription()) return;
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+        ForgetSupersededRegistrations();
+
+        State = State with { SubscribesToAllEvents = true };
+        await WriteStateAsync();
+    }
+
+    async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)
+    {
+        if (generationDelivery != EventGenerationDelivery.Pinned) return;
+        ThrowIfPinsMultipleGenerations(eventTypes);
+        var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
+        foreach (var eventType in eventTypes)
+        {
+            if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+            {
+                throw new EventTypeGenerationNotRegisteredForObserver(eventType);
+            }
+        }
     }
 
     void ApplySubscription<TObserverSubscriber>(

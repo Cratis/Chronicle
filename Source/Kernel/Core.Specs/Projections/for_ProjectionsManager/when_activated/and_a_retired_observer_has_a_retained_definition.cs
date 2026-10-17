@@ -18,7 +18,7 @@ public class and_a_retired_observer_has_a_retained_definition : given.a_manager_
         await ReportAlerts();
     }
 
-    [Fact] async Task should_recheck_skipped_subscriptions_on_the_repair_pass() => await _managedObserver.Received(2).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_skip_subscription_for_the_retired_observer() => await _managedObserver.DidNotReceive().Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
     [Fact] async Task should_not_resubscribe_the_observer() => (await _observer.IsSubscribed()).ShouldBeFalse();
     [Fact] void should_keep_retirement_committed() => _stateStorage.State.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
     [Fact] void should_keep_the_retired_lifecycle() => _stateStorage.State.AlertLifecycleId.ShouldEqual(_retiredLifecycle);

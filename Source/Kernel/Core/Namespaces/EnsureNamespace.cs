@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Namespaces;
 
@@ -25,5 +27,8 @@ public record EnsureNamespace(EventStoreName EventStore, EventStoreNamespaceName
     {
         var namespaces = grainFactory.GetGrain<INamespaces>(EventStore);
         await namespaces.Ensure(Namespace);
+        await Task.WhenAll(
+            grainFactory.GetGrain<IProjectionsManager>(EventStore).EnsureSubscribedIn(Namespace),
+            grainFactory.GetGrain<ICapturesManager>(EventStore).EnsureSubscribedIn(Namespace));
     }
 }

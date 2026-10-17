@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Captures.Engine;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Captures;
 
@@ -26,6 +27,14 @@ public interface ICapturesManager : IGrainWithStringKey
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> that was added.</param>
     /// <returns>Awaitable task.</returns>
     Task NamespaceAdded(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Ensure healthy started events captures are subscribed in the given namespace, joining its pending pass.
+    /// </summary>
+    /// <param name="namespace">The namespace to reconcile.</param>
+    /// <returns>A task that completes after healthy subscriptions; retired observers are skipped and artifact failures are logged for retry.</returns>
+    [AlwaysInterleave]
+    Task EnsureSubscribedIn(EventStoreNamespaceName @namespace);
 
     /// <summary>
     /// Start a capture. Once started it captures on its schedule and can not be changed until stopped.
