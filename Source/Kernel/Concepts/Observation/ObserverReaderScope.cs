@@ -51,8 +51,9 @@ public record ObserverReaderScope(bool IsWildcard, IReadOnlyList<EventType> Even
     }
 
     /// <summary>
-    /// Gets the scope a request reads with: the one it carries, or - for a request persisted before requests
-    /// carried a scope - the one its event type list always meant.
+    /// Gets the scope a step or retry request reads with: the one it carries, or - for a request persisted before
+    /// requests carried a scope - the one its event type list always meant. Legacy key enumeration instead resolves
+    /// the stored observer definition at enumeration time.
     /// </summary>
     /// <param name="scope">The scope the request carries, if any.</param>
     /// <param name="requestEventTypes">The event types the request carries.</param>
@@ -65,8 +66,14 @@ public record ObserverReaderScope(bool IsWildcard, IReadOnlyList<EventType> Even
     /// </summary>
     /// <param name="requestedEventTypes">The event types the request asked for, which may be a narrower set than the scope.</param>
     /// <returns>The event types to read, or null when every event type is to be read.</returns>
+    /// <exception cref="EmptyObserverReaderScope">An explicit empty scope cannot open a reader.</exception>
     public IReadOnlyList<EventType>? EventTypesToRead(IEnumerable<EventType>? requestedEventTypes)
     {
+        if (!IsWildcard && EventTypes.Count == 0)
+        {
+            throw new EmptyObserverReaderScope();
+        }
+
         var requested = requestedEventTypes?.ToArray() ?? [];
         if (requested.Length != 0)
         {
