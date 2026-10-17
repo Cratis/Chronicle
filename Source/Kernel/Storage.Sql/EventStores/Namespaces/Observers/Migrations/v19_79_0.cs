@@ -16,6 +16,18 @@ public class v19_79_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        if (ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            // Native jsonb validates the value itself. Arc's AddJsonColumn generator joins
+            // its auxiliary CHECK and CREATE INDEX without a statement separator.
+            migrationBuilder.AddColumn<string>(
+                name: "TypeSetControl",
+                table: WellKnownTableNames.Observers,
+                type: "jsonb",
+                nullable: true);
+            return;
+        }
+
         migrationBuilder.AddJsonColumn<string>(
             name: "TypeSetControl",
             table: WellKnownTableNames.Observers);

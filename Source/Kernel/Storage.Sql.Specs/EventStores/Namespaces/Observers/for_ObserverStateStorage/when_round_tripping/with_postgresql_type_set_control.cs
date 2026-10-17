@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -91,6 +92,10 @@ public class with_postgresql_type_set_control(PostgreSqlFixture fixture) : Speci
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+    NamespaceDbContext CreateContext()
+    {
+        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        return new(builder.Options);
+    }
 }
