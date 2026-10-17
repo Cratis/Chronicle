@@ -82,15 +82,16 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
     }
 
     /// <summary>
-    /// Registers a pre-built read model instance for this event source, making it available through
-    /// <see cref="ReadModelScenario{TReadModel}.ReadModels"/> for <c language="csharp">GetInstanceById</c> calls.
+    /// Seeds this read-model key with an instance before applying collected events, and makes the result
+    /// available through <see cref="ReadModelScenario{TReadModel}.ReadModels"/> for keyed lookups.
     /// </summary>
     /// <remarks>
-    /// Use this when testing production code that calls <c language="csharp">IReadModels.GetInstanceById</c> — seed the
-    /// expected read model state here rather than replaying events through a projection.
+    /// The seed retains its identifier and supplies the starting state for this key's projection or reducer.
+    /// Other keys use the normal initial state. Without a projection or reducer, only keyed lookups are seeded.
     /// </remarks>
     /// <param name="readModel">The read model instance to register for this event source.</param>
     /// <returns>A completed <see cref="Task"/>.</returns>
+    /// <exception cref="ReadModelAlreadySeeded">Thrown when this key was already seeded.</exception>
     public Task ReadModel(TReadModel readModel)
     {
         scenario.CollectReadModelFor(eventSourceId, readModel);
