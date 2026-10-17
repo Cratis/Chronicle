@@ -132,6 +132,11 @@ public partial class Observer(
     DateTimeOffset _catchUpBackoffUntil;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
+    TimeSpan _writeCoalescingInterval = TimeSpan.Zero;
+    Dictionary<Key, Dictionary<EventTypeId, EventCount>> _pendingHandledCounts = [];
+    IGrainTimer? _coalescedWriteTimer;
+    bool _failureStateWritePending;
+    Dictionary<FailedPartitionId, TimeSpan> _pendingRetryReminders = [];
     int _debouncedProgressWrites;
 
     /// <inheritdoc/>
@@ -185,6 +190,7 @@ public partial class Observer(
 
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
+        _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         await InitializeAlertState();
     }

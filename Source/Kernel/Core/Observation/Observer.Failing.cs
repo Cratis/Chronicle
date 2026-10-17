@@ -31,6 +31,7 @@ public partial class Observer
         }
 
         var quarantineObserver = false;
+        TimeSpan? retryDelayToRegister = null;
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -53,8 +54,7 @@ public partial class Observer
                 {
                     if (config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts)
                     {
-                        var retryDelay = GetNextRetryDelay(failure, config);
-                        await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
+                        retryDelayToRegister = GetNextRetryDelay(failure, config);
                     }
                     else
                     {
@@ -65,11 +65,33 @@ public partial class Observer
                 }
             }
 
-            // Fence old reports before the partition write. A crash between the two writes reports whichever
-            // partition level actually committed. Reports alone are coalesced, never these source writes.
             ChangeAlertState();
-            await WriteStateAsync();
-            await failures.WriteStateAsync();
+            if (_writeCoalescingInterval > TimeSpan.Zero)
+            {
+                // Only this partition is written now, and only once: rewriting every failed partition per failure is
+                // what made a burst of failures cost O(n) writes each. The reminder and the observer state, which a
+                // burst of failures has in common, are written together by the flush.
+                await SaveFailedPartition(partition);
+                if (retryDelayToRegister is { } pendingDelay)
+                {
+                    _pendingRetryReminders[failure.Id] = pendingDelay;
+                }
+
+                _failureStateWritePending = true;
+                EnsureCoalescedWriteTimer();
+            }
+            else
+            {
+                if (retryDelayToRegister is { } retryDelay)
+                {
+                    await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
+                }
+
+                // Fence old reports before the partition write. A crash between the two writes reports whichever
+                // partition level actually committed. Reports alone are coalesced, never these source writes.
+                await WriteStateAsync();
+                await failures.WriteStateAsync();
+            }
         }
         finally
         {
@@ -255,6 +277,23 @@ public partial class Observer
     /// </remarks>
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    /// <summary>
+    /// Writes a single failed partition to storage, leaving the others as they are.
+    /// </summary>
+    /// <param name="partition">The partition to write.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task SaveFailedPartition(Key partition)
+    {
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            return;
+        }
+
+        failure.ObserverId = _observerId;
+        var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
+        await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
+    }
 
     async Task RegisterRetryReminder(FailedPartition failure)
     {

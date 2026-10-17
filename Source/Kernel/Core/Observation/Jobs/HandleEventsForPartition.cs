@@ -58,6 +58,11 @@ public class HandleEventsForPartition(
     EventGenerationDelivery _generationDelivery;
     bool _isCollapsingProjection;
 
+    /// <summary>
+    /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
+    /// </summary>
+    internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
     /// <inheritdoc/>
     /// <remarks>
     /// A projection that collapses several event sources onto one read model document is deliberately written out
@@ -218,7 +223,11 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters);
+                var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
+                    () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters),
+                    TransientRetryDelay,
+                    timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
+                    cancellationToken);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -249,7 +258,7 @@ public class HandleEventsForPartition(
                             var okCountsPerEventType = handledEvents
                                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                                 .CountByEventType();
-                            await _observer.ReportHandledEvents(currentState.Partition, okCountsPerEventType);
+                            await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, currentState.Partition, okCountsPerEventType, logger);
                             break;
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -272,7 +281,7 @@ public class HandleEventsForPartition(
                                 var failedCountsPerEventType = handledEvents
                                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                                     .CountByEventType();
-                                await _observer.ReportHandledEvents(currentState.Partition, failedCountsPerEventType);
+                                await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, currentState.Partition, failedCountsPerEventType, logger);
                             }
                             else
                             {
@@ -322,6 +331,14 @@ public class HandleEventsForPartition(
         {
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+        }
+        catch (Exception e) when (TransientTimeouts.IsTimeout(e))
+        {
+            // A grain call timing out is recorded once, briefly, and never escalated to the observer: the observer
+            // is the grain that was too busy to answer.
+            var message = TransientTimeouts.ShortMessageFor(e);
+            logger.StepTimedOut(message);
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), [message], string.Empty));
         }
         catch (Exception e)
         {

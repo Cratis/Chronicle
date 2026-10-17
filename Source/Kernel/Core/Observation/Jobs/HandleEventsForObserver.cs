@@ -66,6 +66,11 @@ public class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
 
+    /// <summary>
+    /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
+    /// </summary>
+    internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -266,7 +271,11 @@ public class HandleEventsForObserver(
                         continue;
                     }
 
-                    var handleEventsResult = await TryHandleEvents(partition, partitionEvents, subscriberTimeout);
+                    var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
+                        () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
+                        TransientRetryDelay,
+                        timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
+                        cancellationToken);
                     if (handleEventsResult.TryGetException(out var handleEventsException))
                     {
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
@@ -329,6 +338,12 @@ public class HandleEventsForObserver(
         {
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+        }
+        catch (Exception e) when (TransientTimeouts.IsTimeout(e))
+        {
+            var message = TransientTimeouts.ShortMessageFor(e);
+            logger.StepTimedOut(message);
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), [message], string.Empty));
         }
         catch (Exception e)
         {
@@ -672,7 +687,7 @@ public class HandleEventsForObserver(
                 var okCountsPerEventType = handledEvents
                     .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                     .CountByEventType();
-                await _observer.ReportHandledEvents(partition, okCountsPerEventType);
+                await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, okCountsPerEventType, logger);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -727,7 +742,7 @@ public class HandleEventsForObserver(
             var failedCountsPerEventType = handledEvents
                 .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
                 .CountByEventType();
-            await _observer.ReportHandledEvents(partition, failedCountsPerEventType);
+            await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, failedCountsPerEventType, logger);
         }
         else
         {
