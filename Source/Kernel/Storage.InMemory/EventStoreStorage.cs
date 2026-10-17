@@ -50,6 +50,7 @@ public sealed class EventStoreStorage(
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new();
+    bool _initialized;
 
     /// <summary>
     /// Initializes a store with an event-types storage factory for in-process composition.
@@ -70,6 +71,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage();
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage();
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -124,6 +128,16 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage();
+
+    /// <inheritdoc/>
+    public Task<bool> IsInitialized() => Task.FromResult(_initialized);
+
+    /// <inheritdoc/>
+    public Task MarkInitialized()
+    {
+        _initialized = true;
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

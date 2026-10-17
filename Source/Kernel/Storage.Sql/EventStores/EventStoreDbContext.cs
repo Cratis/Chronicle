@@ -27,6 +27,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
+    /// Gets or sets the first-time initialization marker.
+    /// </summary>
+    public DbSet<EventStoreInitialization> EventStoreInitialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the event types DbSet.
     /// </summary>
     public DbSet<EventType> EventTypes { get; set; }
@@ -137,7 +142,12 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
 
         base.OnModelCreating(modelBuilder);
         Occurrences.OccurrenceModel.Configure(modelBuilder);
-        modelBuilder.Entity<Occurrences.TriggerDefinitionEntry>(entity =>
+        modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
+        {
+            entity.ToTable("LifecycleFanOutIntents");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        }).Entity<Occurrences.TriggerDefinitionEntry>(entity =>
         {
             entity.ToTable("TriggerDefinitions");
             entity.HasKey(row => row.Id);

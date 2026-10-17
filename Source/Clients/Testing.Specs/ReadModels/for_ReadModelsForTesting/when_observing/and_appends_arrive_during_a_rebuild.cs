@@ -37,11 +37,11 @@ public class and_appends_arrive_during_a_rebuild : given.a_collection
             error => _finalEmission.TrySetException(error));
         await WaitForEmission();
         await _store.EventLog.Append(EventSourceId.New(), new ModuleCreated("Second"));
-        await _snapshotTaken.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _snapshotTaken.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         await _store.EventLog.Append(EventSourceId.New(), new ModuleCreated("Third"));
         await _store.EventLog.Append(EventSourceId.New(), new ModuleCreated("Fourth"));
         _releaseSnapshot.TrySetResult();
-        await _finalEmission.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _finalEmission.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     async Task<IImmutableList<AppendedEvent>> ReadSnapshot()
@@ -50,7 +50,7 @@ public class and_appends_arrive_during_a_rebuild : given.a_collection
         if (Interlocked.Increment(ref _reads) == 2)
         {
             _snapshotTaken.TrySetResult();
-            await _releaseSnapshot.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await _releaseSnapshot.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         }
 
         return snapshot;

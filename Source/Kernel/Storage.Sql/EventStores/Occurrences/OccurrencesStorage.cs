@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Storage.Occurrences;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 
@@ -64,35 +65,35 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
         {
             await EnsureClaimFence(hash);
             await using var scope = await open();
-            var context = scope.DbContext;
-            await using var transaction = await context.Database.BeginTransactionAsync();
-
-            // The shared write serializes claims for different occurrence rows as well as the same row.
-            await context.Set<OccurrenceClaimFence>().Where(row => row.Id == hash).ExecuteUpdateAsync(set => set.SetProperty(row => row.Version, row => row.Version + 1));
-            var rows = await context.Set<OccurrenceEntry>().AsNoTracking()
-                .Where(row => row.Trigger == hash && (row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased)).ToListAsync();
-            var byId = rows.ToDictionary(row => row.Id, StringComparer.Ordinal);
-            var candidates = OccurrenceClaimSelection.Select(rows.Select(row => row.ToOccurrence()).ToArray(), now, max, maxInFlight)
-                .Select(occurrence => byId[StorageIdentity.Hash(occurrence.Id.Value)]).ToArray();
-            var expiry = now.Add(duration).UtcTicks;
-            var ticks = now.UtcTicks;
-            var claimed = new List<Occurrence>();
-            foreach (var row in candidates)
+            return await InRetriableTransaction(scope.DbContext, async (context, transaction) =>
             {
-                if (await TryClaim(context, row, worker, ticks, expiry))
+                // The shared write serializes claims for different occurrence rows as well as the same row.
+                await context.Set<OccurrenceClaimFence>().Where(row => row.Id == hash).ExecuteUpdateAsync(set => set.SetProperty(row => row.Version, row => row.Version + 1));
+                var rows = await context.Set<OccurrenceEntry>().AsNoTracking()
+                    .Where(row => row.Trigger == hash && (row.State == OccurrenceState.Pending || row.State == OccurrenceState.Leased)).ToListAsync();
+                var byId = rows.ToDictionary(row => row.Id, StringComparer.Ordinal);
+                var candidates = OccurrenceClaimSelection.Select(rows.Select(row => row.ToOccurrence()).ToArray(), now, max, maxInFlight)
+                    .Select(occurrence => byId[StorageIdentity.Hash(occurrence.Id.Value)]).ToArray();
+                var expiry = now.Add(duration).UtcTicks;
+                var ticks = now.UtcTicks;
+                var claimed = new List<Occurrence>();
+                foreach (var row in candidates)
                 {
-                    row.State = OccurrenceState.Leased;
-                    row.Epoch++;
-                    row.Attempts++;
-                    row.Owner = worker;
-                    row.Expiry = expiry;
-                    row.NextAttempt = null;
-                    claimed.Add(row.ToOccurrence());
+                    if (await TryClaim(context, row, worker, ticks, expiry))
+                    {
+                        row.State = OccurrenceState.Leased;
+                        row.Epoch++;
+                        row.Attempts++;
+                        row.Owner = worker;
+                        row.Expiry = expiry;
+                        row.NextAttempt = null;
+                        claimed.Add(row.ToOccurrence());
+                    }
                 }
-            }
 
-            await transaction.CommitAsync();
-            return claimed.ToArray();
+                await transaction.CommitAsync();
+                return claimed.ToArray();
+            });
         }
         catch (Exception error) when (StorageWriteConflicts.IsTransactionConflict(error))
         {
@@ -160,6 +161,26 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
         var hash = StorageIdentity.Hash(token.OccurrenceId.Value);
         return context.Set<OccurrenceEntry>().Where(row => row.Id == hash && row.Epoch == token.Epoch && row.State == OccurrenceState.Leased);
     }
+
+    /// <summary>
+    /// Runs a user-initiated transaction as one retriable unit of the context's execution strategy.
+    /// </summary>
+    /// <remarks>
+    /// A retrying strategy, such as the one PostgreSQL connections are configured with, refuses commands in a
+    /// transaction it did not start. Each attempt starts from a clean change tracker because a failed attempt
+    /// has rolled back everything it staged.
+    /// </remarks>
+    /// <param name="context">The context to run the transaction on.</param>
+    /// <param name="work">The transactional work; it commits the transaction itself when it should take effect.</param>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <returns>The result of the attempt that completed.</returns>
+    static Task<TResult> InRetriableTransaction<TResult>(TContext context, Func<TContext, IDbContextTransaction, Task<TResult>> work) =>
+        context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            context.ChangeTracker.Clear();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            return await work(context, transaction);
+        });
 
     async Task EnsureClaimFence(string hash)
     {

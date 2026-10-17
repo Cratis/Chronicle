@@ -38,6 +38,7 @@ using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -73,6 +74,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(eventStoreDatabase.GetCollection<BsonDocument>("lifecycle-fan-out-intents").Database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
@@ -124,6 +128,14 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public async Task<bool> IsInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .CountDocumentsAsync(new BsonDocument("_id", 1)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkInitialized() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true });
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

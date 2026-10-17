@@ -47,6 +47,8 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         ProjectionReadModelTypes = snapshot.Projections.Select(projection => projection.ReadModelType).ToImmutableArray();
         ConstraintTypes = Union(discovered.ConstraintTypes, Nominated(ExplicitArtifactKind.Constraint));
         EventSources = Union(discovered.EventSources, Nominated(ExplicitArtifactKind.EventSource));
+        Triggers = Copy(discovered.Triggers);
+        OccurrenceHandlers = Copy(discovered.OccurrenceHandlers);
         EventTypeMigrators = Union(discovered.EventTypeMigrators, Nominated(ExplicitArtifactKind.Migration));
         ReadModelReactors = Copy(discovered.ReadModelReactors);
         ReactorMiddlewares = Copy(discovered.ReactorMiddlewares);
@@ -128,6 +130,12 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> EventSources { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Triggers { get; }
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> OccurrenceHandlers { get; }
 
     /// <summary>
     /// Gets every explicitly nominated migration, including ones unreachable from discovery's upgrades.

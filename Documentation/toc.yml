@@ -60,6 +60,8 @@
   href: patterns/toc.yml
 - name: Subscriptions
   href: subscriptions/toc.yml
+- name: Occurrences
+  href: occurrences/toc.yml
 - name: Jobs
   href: jobs/toc.yml
 - name: Webhooks

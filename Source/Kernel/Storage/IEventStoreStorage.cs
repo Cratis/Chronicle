@@ -26,6 +26,12 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets the durable lifecycle fan-out intents for this event store.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The provider has not implemented lifecycle intents.</exception>
+    Occurrences.ILifecycleFanOutStorage LifecycleFanOut => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Gets the payload contracts registered for application and lifecycle triggers.
     /// </summary>
     /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented trigger definition storage.</exception>
@@ -122,6 +128,20 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IEventSeedingStorage"/> for global event seeding at the event store level.
     /// </summary>
     IEventSeedingStorage EventSeeding { get; }
+
+    /// <summary>
+    /// Checks whether first-time kernel setup completed. Missing markers in older stores mean uninitialized.
+    /// </summary>
+    /// <returns>Whether initialization completed.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> IsInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Durably records successful first-time kernel setup. Only the store's initializer grain writes this marker.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkInitialized() => throw new EventStoreInitializationNotSupported();
 
     /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.

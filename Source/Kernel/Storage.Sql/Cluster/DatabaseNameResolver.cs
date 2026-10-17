@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Data.Common;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -16,9 +17,10 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// Resolves and caches permanent database bindings after proving candidate ownership.
 /// </summary>
 /// <param name="connectionString">The configured cluster connection.</param>
-internal sealed class DatabaseNameResolver(string connectionString)
+/// <param name="prepareConnection">Optional callback preparing the connections the catalog opens itself, for instance with a resolved identity.</param>
+internal sealed class DatabaseNameResolver(string connectionString, Func<DbConnection, Task>? prepareConnection = null)
 {
-    readonly SqlDatabaseCatalog _catalog = new(connectionString);
+    readonly SqlDatabaseCatalog _catalog = new(connectionString, prepareConnection);
     readonly ConcurrentDictionary<DatabaseIdentity, string> _bindings = new();
 
     /// <summary>

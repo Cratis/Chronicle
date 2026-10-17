@@ -16,13 +16,19 @@ internal static class SqlServerDatabaseCreation
     /// Creates a database with bounded, database-specific logical and physical filenames.
     /// </summary>
     /// <param name="connectionString">The target connection string.</param>
+    /// <param name="prepareConnection">Optional callback preparing the connection before it opens, for instance with a resolved identity.</param>
     /// <returns>The creation operation.</returns>
-    internal static async Task Create(string connectionString)
+    internal static async Task Create(string connectionString, Func<System.Data.Common.DbConnection, Task>? prepareConnection = null)
     {
         var builder = new SqlConnectionStringBuilder(connectionString);
         var database = builder.InitialCatalog;
         builder.InitialCatalog = "master";
         await using var connection = new SqlConnection(builder.ConnectionString);
+        if (prepareConnection is not null)
+        {
+            await prepareConnection(connection);
+        }
+
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =

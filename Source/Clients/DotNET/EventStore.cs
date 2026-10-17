@@ -26,6 +26,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -211,6 +212,9 @@ public partial class EventStore : IEventStore
             GenerationDelivery = options.Value.EventGenerationDelivery
         };
         Reactors = reactors;
+        var occurrences = new Occurrences.Occurrences(this);
+        occurrences.Configure(clientArtifactsProvider, schemaGenerator, jsonSerializerOptions, serviceProvider, artifactActivator, causationManager, identityProvider, loggerFactory.CreateLogger<Occurrences.Occurrences>(), options.Value);
+        Occurrences = occurrences;
 
         var reducerObservers = new ReducerObservers();
 
@@ -319,7 +323,7 @@ public partial class EventStore : IEventStore
 
         if (autoDiscoverAndRegister)
         {
-            Connection.Lifecycle.OnConnected += RegisterAll;
+            Connection.Lifecycle.OnConnected += RegisterAfterConnect;
             Connection.Lifecycle.OnDisconnected += MarkRegistrationAfterDisconnect;
         }
     }
@@ -353,6 +357,9 @@ public partial class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IReactors Reactors { get; }
+
+    /// <inheritdoc/>
+    public IOccurrences Occurrences { get; }
 
     /// <inheritdoc/>
     public IReducers Reducers { get; }
@@ -735,7 +742,8 @@ public partial class EventStore : IEventStore
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register());
+            Projections.Register(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
 
         // Auto-subscribe to any external event stores referenced by observers
         await RegisterExternalEventStoreSubscriptionsAsync();

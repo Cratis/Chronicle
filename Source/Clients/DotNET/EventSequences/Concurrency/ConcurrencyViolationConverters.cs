@@ -19,5 +19,9 @@ internal static class ConcurrencyViolationConverters
         new(
             EventSourceId: violation.EventSourceId,
             ExpectedEventSequenceNumber: (EventSequenceNumber)violation.ExpectedSequenceNumber,
-            ActualEventSequenceNumber: (EventSequenceNumber)violation.ActualSequenceNumber);
+            ActualEventSequenceNumber: (EventSequenceNumber)violation.ActualSequenceNumber)
+        {
+            ConflictingEventTypeId = string.IsNullOrEmpty(violation.ConflictingEventTypeId) ? null : new EventTypeId(violation.ConflictingEventTypeId),
+            ConflictingEventSequenceNumber = violation.ConflictingSequenceNumber is { } conflicting ? new EventSequenceNumber(conflicting) : null
+        };
 }

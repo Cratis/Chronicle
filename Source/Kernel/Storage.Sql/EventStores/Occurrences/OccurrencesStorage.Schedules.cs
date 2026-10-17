@@ -70,50 +70,51 @@ public partial class OccurrencesStorage<TContext>
         try
         {
             await using var scope = await open();
-            var context = scope.DbContext;
-            await using var transaction = await context.Database.BeginTransactionAsync();
-            var id = StorageIdentity.Hash(turn.Observed.Token.Value);
-            var changed = await context.Set<ScheduleCursorEntry>().Where(row => row.Id == id && row.Version == turn.Observed.Version && row.RegisteredRevision == turn.Observed.RegisteredRevision)
-                .ExecuteUpdateAsync(set => set.SetProperty(row => row.LastMaterializedDue, turn.Next.LastMaterializedDue).SetProperty(row => row.AppliedRevision, turn.Next.AppliedRevision).SetProperty(row => row.Version, turn.Next.Version));
-            if (changed != 1)
+            return await InRetriableTransaction(scope.DbContext, async (context, transaction) =>
             {
-                return false;
-            }
-
-            foreach (var occurrence in turn.Occurrences.DistinctBy(occurrence => occurrence.Id))
-            {
-                var occurrenceId = StorageIdentity.Hash(occurrence.Id.Value);
-                if (!await context.Set<OccurrenceEntry>().AnyAsync(row => row.Id == occurrenceId))
+                var id = StorageIdentity.Hash(turn.Observed.Token.Value);
+                var changed = await context.Set<ScheduleCursorEntry>().Where(row => row.Id == id && row.Version == turn.Observed.Version && row.RegisteredRevision == turn.Observed.RegisteredRevision)
+                    .ExecuteUpdateAsync(set => set.SetProperty(row => row.LastMaterializedDue, turn.Next.LastMaterializedDue).SetProperty(row => row.AppliedRevision, turn.Next.AppliedRevision).SetProperty(row => row.Version, turn.Next.Version));
+                if (changed != 1)
                 {
-                    var entry = OccurrenceEntry.From(occurrence);
-                    entry.Schedule = id;
-                    context.Set<OccurrenceEntry>().Add(entry);
+                    return false;
                 }
-            }
 
-            foreach (var range in turn.SkippedRanges.DistinctBy(range => range.Id))
-            {
-                var rangeId = StorageIdentity.Hash(range.Id);
-                if (!await context.Set<SkippedRangeEntry>().AnyAsync(row => row.Id == rangeId))
+                foreach (var occurrence in turn.Occurrences.DistinctBy(occurrence => occurrence.Id))
                 {
-                    context.Set<SkippedRangeEntry>().Add(new SkippedRangeEntry { Id = rangeId, Token = id, Data = JsonSerializer.Serialize(range) });
+                    var occurrenceId = StorageIdentity.Hash(occurrence.Id.Value);
+                    if (!await context.Set<OccurrenceEntry>().AnyAsync(row => row.Id == occurrenceId))
+                    {
+                        var entry = OccurrenceEntry.From(occurrence);
+                        entry.Schedule = id;
+                        context.Set<OccurrenceEntry>().Add(entry);
+                    }
                 }
-            }
 
-            if (turn.DiscardPendingBeforeRevision.HasValue)
-            {
-                var pending = await context.Set<OccurrenceEntry>().AsNoTracking().Where(row => row.State == OccurrenceState.Pending && row.Schedule == id).ToListAsync();
-                foreach (var row in pending.Where(row => row.ToOccurrence().DefinitionRevision < turn.DiscardPendingBeforeRevision))
+                foreach (var range in turn.SkippedRanges.DistinctBy(range => range.Id))
                 {
-                    var epoch = row.Epoch;
-                    await context.Set<OccurrenceEntry>().Where(current => current.Id == row.Id && current.Epoch == epoch && current.State == OccurrenceState.Pending)
-                        .ExecuteUpdateAsync(set => set.SetProperty(current => current.State, OccurrenceState.Skipped));
+                    var rangeId = StorageIdentity.Hash(range.Id);
+                    if (!await context.Set<SkippedRangeEntry>().AnyAsync(row => row.Id == rangeId))
+                    {
+                        context.Set<SkippedRangeEntry>().Add(new SkippedRangeEntry { Id = rangeId, Token = id, Data = JsonSerializer.Serialize(range) });
+                    }
                 }
-            }
 
-            await context.SaveChangesAsync();
-            await transaction.CommitAsync();
-            return true;
+                if (turn.DiscardPendingBeforeRevision.HasValue)
+                {
+                    var pending = await context.Set<OccurrenceEntry>().AsNoTracking().Where(row => row.State == OccurrenceState.Pending && row.Schedule == id).ToListAsync();
+                    foreach (var row in pending.Where(row => row.ToOccurrence().DefinitionRevision < turn.DiscardPendingBeforeRevision))
+                    {
+                        var epoch = row.Epoch;
+                        await context.Set<OccurrenceEntry>().Where(current => current.Id == row.Id && current.Epoch == epoch && current.State == OccurrenceState.Pending)
+                            .ExecuteUpdateAsync(set => set.SetProperty(current => current.State, OccurrenceState.Skipped));
+                    }
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            });
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error) || StorageWriteConflicts.IsTransactionConflict(error))
         {

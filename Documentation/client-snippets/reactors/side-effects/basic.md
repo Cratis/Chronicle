@@ -6,6 +6,9 @@ using Cratis.Chronicle.Reactors;
 public record SideEffectsBookReserved(string Isbn);
 
 [EventType]
+public record SideEffectsStockCheckRequested(string Isbn);
+
+[EventType]
 public record StockDecreased(string Isbn, int Quantity);
 
 public class WarehouseReactor : IReactor
@@ -15,7 +18,7 @@ public class WarehouseReactor : IReactor
         new(@event.Isbn, 1);
 
     [OnceOnly]
-    public async Task<StockDecreased> BookReservedAsync(SideEffectsBookReserved @event, EventContext context)
+    public async Task<StockDecreased> StockCheckRequestedAsync(SideEffectsStockCheckRequested @event, EventContext context)
     {
         var available = await FetchCurrentStockAsync(@event.Isbn);
         return new StockDecreased(@event.Isbn, available);

@@ -73,9 +73,11 @@ public class an_explicit_store : Specification
         _generator = new(new JsonSchemaGenerator(compliance, new DefaultNamingPolicy()));
     }
 
+    protected EventStoreNamespaceName _namespace = "default";
+
     protected EventStore CreateStore() => new(
         "current",
-        "default",
+        _namespace,
         _connection,
         _artifacts,
         new EventTypeMigrators(_artifacts, _provider),

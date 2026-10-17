@@ -122,4 +122,14 @@ public interface IClientArtifactsProvider
     /// Gets all the available event source definition types.
     /// </summary>
     IEnumerable<Type> EventSources => [];
+
+    /// <summary>
+    /// Gets the typed application triggers. Existing providers default to none.
+    /// </summary>
+    IEnumerable<Type> Triggers => [];
+
+    /// <summary>
+    /// Gets the concrete occurrence handler types. Existing providers default to none.
+    /// </summary>
+    IEnumerable<Type> OccurrenceHandlers => [];
 }

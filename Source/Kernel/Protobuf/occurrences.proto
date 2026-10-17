@@ -50,6 +50,15 @@ message CommandResult_RecordEffectReceiptResponse {
    string AuthorizationFailureReason = 6;
    RecordEffectReceiptResponse Response = 7;
 }
+message CommandResult_RecordLifecycleOccurrenceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   RecordLifecycleOccurrenceResponse Response = 7;
+}
 message CommandResult_RecordOccurrenceResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -239,6 +248,17 @@ message RecordEffectReceiptResponse {
    EffectReceiptStatus Status = 1;
    EffectReceiptDetails Receipt = 2;
 }
+message RecordLifecycleOccurrenceRequest {
+   string EventStore = 1;
+   string ActivationId = 2;
+   OccurrenceKind Kind = 3;
+   bool AllNamespaces = 4;
+}
+message RecordLifecycleOccurrenceResponse {
+   string Id = 1;
+   OccurrenceIngressStatus Status = 2;
+   repeated string Namespaces = 3;
+}
 message RecordOccurrenceRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -304,6 +324,7 @@ service Occurrences {
    rpc GetOccurrence (GetOccurrenceRequest) returns (QueryResult_OccurrenceSnapshotResponse);
    rpc ObserveOccurrences (ObserveOccurrencesRequest) returns (stream QueryResult_IEnumerable_OccurrenceSnapshotResponse);
    rpc RecordEffectReceipt (RecordEffectReceiptRequest) returns (CommandResult_RecordEffectReceiptResponse);
+   rpc RecordLifecycleOccurrence (RecordLifecycleOccurrenceRequest) returns (CommandResult_RecordLifecycleOccurrenceResponse);
    rpc RecordOccurrence (RecordOccurrenceRequest) returns (CommandResult_RecordOccurrenceResponse);
    rpc RegisterTriggers (RegisterTriggersRequest) returns (CommandResult_RegisterTriggersResponse);
    rpc RenewOccurrenceLease (RenewOccurrenceLeaseRequest) returns (CommandResult_CompleteOccurrenceResponse);

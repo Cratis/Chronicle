@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
@@ -35,6 +37,11 @@ public interface IUnitOfWork : IDisposable
     bool IsSuccess { get; }
 
     /// <summary>
+    /// Gets the winning receipt after a successful receipted commit.
+    /// </summary>
+    EffectReceiptResult? EffectReceipt => null;
+
+    /// <summary>
     /// Gets a value indicating whether a decision read has ever been successfully enrolled in this unit of work.
     /// </summary>
     /// <remarks>
@@ -47,6 +54,16 @@ public interface IUnitOfWork : IDisposable
     /// Gets whether this unit permanently uses enforced read protection and a strict lifecycle.
     /// </summary>
     bool IsEnforcingReadProtection => false;
+
+    /// <summary>
+    /// Enrolls one effect key in this unit's atomic commit. Re-enrolling the same key replaces its response until completion begins.
+    /// </summary>
+    /// <param name="key">The occurrence effect key.</param>
+    /// <param name="response">Optional plaintext JSON response without personal data.</param>
+    /// <exception cref="EffectReceiptsNotSupported">Atomic receipt support is absent or unknown.</exception>
+    /// <exception cref="EffectReceiptResponseTooLarge">The response exceeds 64 KiB of UTF-8 JSON.</exception>
+    /// <exception cref="UnitOfWorkEffectReceiptAlreadySet">Another key is already enrolled.</exception>
+    void UseEffectReceipt(EffectKey key, JsonNode? response = null) => throw new EffectReceiptsNotSupported();
 
     /// <summary>
     /// Begins invocation read protection before any event or read dependency is enrolled.
@@ -64,6 +81,20 @@ public interface IUnitOfWork : IDisposable
     /// <returns>The flow-local read region.</returns>
     /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support allowances.</exception>
     IDisposable AllowReads(ReadAllowance allowance, string reason) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Suspends the read regions this asynchronous flow inherited, without ending read protection.
+    /// </summary>
+    /// <remarks>
+    /// A read region flows with the asynchronous context, so a region opened by an outer invocation also covers a
+    /// nested invocation it runs. A host that runs nested invocations under the same read protection suspends the
+    /// inherited regions at the start of the nested one: reads are then refused as if no region were open, while
+    /// regions opened inside the suspension apply as usual. Disposing the returned scope restores the inherited
+    /// regions. Suspensions nest.
+    /// </remarks>
+    /// <returns>The suspension, disposed by the host when the nested invocation ends.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support read regions.</exception>
+    IDisposable SuspendReadRegions() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
 
     /// <summary>
     /// Atomically validates target, staged overlap and distinct contributions before enrolling a read.
@@ -184,8 +215,8 @@ public interface IUnitOfWork : IDisposable
     /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
     void AddDecisionRead(IDecisionRead read) => throw new UnitOfWorkDecisionReadsNotSupported(GetType());
 
-    /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
-    /// <returns>Decision conflicts, if any.</returns>
+    /// <summary>Gets the decision conflicts that refused the commit.</summary>
+    /// <returns>Decision conflicts, if any, with the first conflicting event when the kernel reported it.</returns>
     IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
 
     /// <summary>

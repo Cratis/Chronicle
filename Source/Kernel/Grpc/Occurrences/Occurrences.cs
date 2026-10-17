@@ -48,6 +48,13 @@ internal sealed class Occurrences(
             response => ToRecordEffectReceiptResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse>> RecordLifecycleOccurrence(global::Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.Occurrences.LifecycleOccurrenceResult, global::Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Occurrences.RecordLifecycleOccurrence((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.ActivationId, (global::Cratis.Chronicle.Storage.Occurrences.OccurrenceKind)request.Kind, request.AllNamespaces),
+            response => ToRecordLifecycleOccurrenceResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse>> RecordOccurrence(global::Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.Occurrences.OccurrenceIngressResult, global::Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse>(
             commandPipeline,
@@ -120,6 +127,14 @@ internal sealed class Occurrences(
         {
             Status = (global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptStatus)source.Status,
             Receipt = source.Receipt.ToContract()
+        };
+
+    static global::Cratis.Chronicle.Contracts.Occurrences.RecordLifecycleOccurrenceResponse ToRecordLifecycleOccurrenceResponse(global::Cratis.Chronicle.Occurrences.LifecycleOccurrenceResult source) =>
+        new()
+        {
+            Id = source.Id,
+            Status = (global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceIngressStatus)source.Status,
+            Namespaces = source.Namespaces
         };
 
     static global::Cratis.Chronicle.Contracts.Occurrences.RecordOccurrenceResponse ToRecordOccurrenceResponse(global::Cratis.Chronicle.Occurrences.OccurrenceIngressResult source) =>

@@ -50,6 +50,22 @@ public class ChronicleOptions(
     public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
 
     /// <summary>
+    /// Gets or sets the logical lifecycle identity shared by instances of one rollout.
+    /// Required for lifecycle handlers unless ActivationScope is PerProcess.
+    /// </summary>
+    public Occurrences.ActivationId? ActivationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the host supplies a logical activation or explicitly opts into per-process lifecycle.
+    /// </summary>
+    public Occurrences.ActivationScope ActivationScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lifecycle delivery boundary. Application scope is the default.
+    /// </summary>
+    public Occurrences.LifecycleScope LifecycleScope { get; set; }
+
+    /// <summary>
     /// Gets or sets the software version.
     /// Defaults to the version of the entry assembly (your application), extracted from the
     /// AssemblyInformationalVersion or AssemblyVersion attribute.
