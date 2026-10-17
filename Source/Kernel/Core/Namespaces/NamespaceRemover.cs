@@ -23,6 +23,8 @@ public class NamespaceRemover(
     ILogger<NamespaceRemover> logger) : INamespaceRemover
 {
     const string ObserverGrainType = "observer";
+    const int MaxRemovalAttempts = 5;
+    static readonly TimeSpan _removalRetryDelay = TimeSpan.FromSeconds(1);
 
     /// <inheritdoc/>
     public async Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace)
@@ -33,6 +35,11 @@ public class NamespaceRemover(
         }
 
         logger.RemovingNamespace(eventStore, @namespace);
+
+        // The namespace stops being listed first. The subscriptions between event stores re-subscribe the forwarding
+        // observers of every listed namespace once a minute, which would otherwise subscribe an observer again
+        // between it being unsubscribed and removed.
+        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var namespaceStorage = eventStoreStorage.GetNamespace(@namespace);
 
@@ -44,9 +51,7 @@ public class NamespaceRemover(
         {
             foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
             {
-                var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId));
-                await observer.Unsubscribe();
-                await observer.Remove();
+                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
             }
         }
 
@@ -54,14 +59,11 @@ public class NamespaceRemover(
         // pattern observers - are not found above, but they hold reminders all the same. Find them by their reminders.
         foreach (var observerKey in await GetObserversWithReminders(eventStore, @namespace))
         {
-            var observer = grainFactory.GetGrain<IObserver>(observerKey);
-            await observer.Unsubscribe();
-            await observer.Remove();
+            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
         }
 
         await eventStoreStorage.DropNamespace(@namespace);
         await eventStoreStorage.Namespaces.Delete(@namespace);
-        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
 
         logger.RemovedNamespace(eventStore, @namespace);
     }
@@ -83,6 +85,24 @@ public class NamespaceRemover(
         {
             key = ObserverKey.NotSet;
             return false;
+        }
+    }
+
+    static async Task UnsubscribeAndRemove(IObserver observer)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            await observer.Unsubscribe();
+            try
+            {
+                await observer.Remove();
+                return;
+            }
+            catch (ObserverRemovalNotAllowed) when (attempt < MaxRemovalAttempts)
+            {
+                // Subscribed again by a subscription that was already on its way; unsubscribe once more.
+                await Task.Delay(_removalRetryDelay);
+            }
         }
     }
 
