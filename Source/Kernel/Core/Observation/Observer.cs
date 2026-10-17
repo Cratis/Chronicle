@@ -134,6 +134,17 @@ public partial class Observer(
 
     ObserverDefinition Definition => observerDefinition.State;
 
+    /// <summary>
+    /// Gets the <see cref="ObserverReaderScope"/> every job request and key index lookup of this observer carries.
+    /// </summary>
+    /// <remarks>
+    /// For now this is exactly what the observer's definition and subscription mode say it reads. Decision 0010
+    /// section 8 later makes an observer that is not subscribed to all events and has no event types read nothing
+    /// rather than everything; until then it is mapped to <see cref="ObserverReaderScope.Wildcard"/>, which is what
+    /// its readers have always done with an empty type list.
+    /// </remarks>
+    ObserverReaderScope ReaderScope => ObserverReaderScope.For(State.SubscribesToAllEvents, Definition.EventTypes);
+
     FailedPartitions Failures => failures.State;
 
     /// <inheritdoc/>

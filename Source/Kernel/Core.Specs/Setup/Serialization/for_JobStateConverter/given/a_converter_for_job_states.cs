@@ -19,6 +19,7 @@ public class a_converter_for_job_states : Specification
     protected JobType _jobType;
     protected ObserverKey _observerKey;
     protected CatchUpObserverRequest _request;
+    protected IJobTypes _jobTypes;
 
     void Establish()
     {
@@ -30,11 +31,11 @@ public class a_converter_for_job_states : Specification
             EventSequenceId.Log);
         _request = new CatchUpObserverRequest(_observerKey, ObserverType.Reactor, EventSequenceNumber.First, []);
 
-        var jobTypes = Substitute.For<IJobTypes>();
-        jobTypes.GetRequestClrTypeFor(Arg.Any<JobType>())
+        _jobTypes = Substitute.For<IJobTypes>();
+        _jobTypes.GetRequestClrTypeFor(Arg.Any<JobType>())
             .Returns(Result.Success<Type, IJobTypes.GetRequestClrTypeForError>(typeof(CatchUpObserverRequest)));
 
         _options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
-        _options.Converters.Add(new JobStateConverter(jobTypes));
+        _options.Converters.Add(new JobStateConverter(_jobTypes));
     }
 }

@@ -224,7 +224,7 @@ public partial class Observer
             logger,
 
             // Created after the lookup: a job concluding while it is in flight is excluded and has moved the position on.
-            () => new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes),
+            () => new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes) { ReaderScope = ReaderScope },
             requestPredicate: null,
             () =>
             {
@@ -316,7 +316,7 @@ public partial class Observer
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
         Skips.JobStarted(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes));
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();
     }
 
