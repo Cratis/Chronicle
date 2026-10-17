@@ -11,16 +11,32 @@ supersedes: 0007-idempotent-keyed-appends
 applies-to:
   - Source/Kernel/Core/Sequences/**
   - Source/Kernel/Core/EventSequences/**
+  - Source/Kernel/Core/Schemas/IJsonSchemaMetadataValueHandler.cs
+  - Source/Kernel/Core/Compliance/GDPR/PIICompliancePropertyValueHandler.cs
+  - Source/Kernel/Core/ProtectedValues/**
+  - Source/Kernel/Storage/Compliance/**
   - Source/Kernel/Storage/EventSequences/**
+  - Source/Kernel/Storage.InMemory/Compliance/**
   - Source/Kernel/Storage.InMemory/EventSequences/**
+  - Source/Kernel/Storage.MongoDB/Encryption/**
   - Source/Kernel/Storage.MongoDB/EventSequences/**
+  - Source/Kernel/Storage.Sql/EventStores/Namespaces/Encryption/**
   - Source/Kernel/Storage.Sql/EventStores/Namespaces/EventSequences/**
+  - Source/Kernel/Storage.AzureKeyVault/**
+  - Source/Kernel/Storage.Vault/**
   - Source/Kernel/Contracts/**
   - Source/Kernel/Protobuf/**
   - Source/Kernel/Grpc/Clients/ConnectionService.cs
   - Source/Clients/DotNET/EventSequences/**
+  - Source/Clients/DotNET/Reactors/**
+  - Source/Clients/DotNET.CodeAnalysis/Analyzers/ReactorOnceOnlyAnalyzer.cs
+  - Source/Clients/Testing/Reactors/**
+  - Documentation/reactors/**
   - Documentation/events/appending.mdx
   - Documentation/events/appending-many.mdx
+  - Documentation/code-analysis/CHR0022.mdx
+  - Documentation/scenarios/react-to-an-event.mdx
+  - Documentation/tutorial/reacting.mdx
   - Documentation/clients/where-the-clients-differ.md
 ---
 
@@ -50,8 +66,8 @@ The four changes come from the implementation plan for Cratis/Chronicle#4809 (de
 
   Each one also gets a named-tags variant where the existing append has one.
 - An older kernel has no such RPC and answers `Unimplemented`. A client in any language therefore fails closed: the call is refused, and the key is never dropped.
-- The existing `Append`, `AppendWithNamedTags`, `AppendMany` and named-tags RPCs and their messages stay **unchanged**. No idempotency field is added to them, and no existing field number moves.
-- The new RPCs use the result shapes 0007 section 2 defines: `Outcome` or `Outcomes`, `IdempotencyConflicts`, and the error codes in the existing `Errors` field.
+- Every existing append RPC and its request and response messages stay **unchanged**. No idempotency field is added to them, and no existing field number moves.
+- The new RPCs return the results 0007 section 2 defines (`Outcome` or `Outcomes`, `IdempotencyConflicts`, and the error codes) in response messages of their own, with errors in an `Errors` field shaped like the existing one.
 - `KernelCapabilities.IdempotentAppends` is still advertised, so a client can choose before calling. It is no longer what keeps a key from being dropped; the RPC itself does that.
 - The .NET client keeps 0007's API: `AppendOnce`, `AppendManyOnce`, and a key on `EventForEventSourceId`. It sends these calls over the new RPCs. An `EventForEventSourceId` batch in which any event carries a key goes over `AppendManyOnce`. The client's capability check before sending stays as a clearer error than `Unimplemented`.
 - 0007's grain methods (`AppendWithIdempotencyKey`, `AppendManyWithIdempotencyKeys`) and their mixed-version reasoning are unchanged.
@@ -80,7 +96,6 @@ The four changes come from the implementation plan for Cratis/Chronicle#4809 (de
   2. it gives every key that is now durable its outcome;
   3. it retries the keys that are still absent, once;
   4. after a second report it settles again without writing, and fails any key still absent with `IdempotencyKeyUnsettled`.
-- An outcome that remains unknown after storage reports it (0008's `AppendOutcomeUnknown` path) is settled for a keyed append by looking the keys up, not by reading the content back. A key found durable gets its 0007 outcome; a key still absent is reported as `AppendOutcomeUnknown`.
 
 ### 4. Release label
 
