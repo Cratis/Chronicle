@@ -305,7 +305,10 @@ public class HandleEventsForObserver(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoEvents();
+                using (logger.BeginObserverKeyScope(currentState.ObserverKey))
+                {
+                    logger.HandledNoEvents();
+                }
             }
             else
             {

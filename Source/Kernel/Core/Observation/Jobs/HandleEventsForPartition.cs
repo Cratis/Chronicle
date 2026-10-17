@@ -303,7 +303,10 @@ public class HandleEventsForPartition(
 
             if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
             {
-                logger.HandledNoEvents(currentState.Partition);
+                using (logger.BeginObserverKeyScope(currentState.ObserverKey))
+                {
+                    logger.HandledNoEvents(currentState.Partition);
+                }
             }
             else
             {

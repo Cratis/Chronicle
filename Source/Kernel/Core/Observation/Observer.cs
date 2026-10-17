@@ -120,6 +120,16 @@ public partial class Observer(
     /// </remarks>
     int _catchUpOwnershipEpoch;
     int _catchupRecoveryAttempts;
+
+    /// <summary>
+    /// Counts consecutive catch-up laps that concluded without moving the observer forward.
+    /// </summary>
+    int _zeroWorkCatchUps;
+
+    /// <summary>
+    /// The moment from which a catch-up that produced no work may be tried again, or the default value when none is backing off.
+    /// </summary>
+    DateTimeOffset _catchUpBackoffUntil;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     int _statePersistenceBatchInterval = 1;
     int _debouncedProgressWrites;
@@ -242,6 +252,9 @@ public partial class Observer(
 
     /// <inheritdoc/>
     public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);
+
+    /// <inheritdoc/>
+    public Task<bool> IsCatchUpBackedOff() => Task.FromResult(IsBackingOffCatchUp);
 
     /// <inheritdoc/>
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
@@ -433,6 +446,7 @@ public partial class Observer(
             _observerKey,
             observerDefinition,
             _eventSequence,
+            storage,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
