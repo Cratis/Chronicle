@@ -40,6 +40,7 @@ public class a_projections_manager_grain : Specification
     protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
+    protected Storage.IEventStoreStorage _eventStoreStorage;
     protected ProjectionsManagerState _state;
     protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
@@ -78,7 +79,7 @@ public class a_projections_manager_grain : Specification
         _silo.AddService(Substitute.For<ILanguageService>());
 
         var storage = Substitute.For<Storage.IStorage>();
-        var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
+        var eventStoreStorage = _eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns([]);
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
@@ -88,7 +89,9 @@ public class a_projections_manager_grain : Specification
         _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
 
-        _silo.AddService(Substitute.For<ILocalSiloDetails>());
+        var siloDetails = Substitute.For<ILocalSiloDetails>();
+        siloDetails.SiloAddress.Returns(SiloAddress.Zero);
+        _silo.AddService(siloDetails);
 
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);

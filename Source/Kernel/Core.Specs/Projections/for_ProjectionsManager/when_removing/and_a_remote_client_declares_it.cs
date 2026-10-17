@@ -1,0 +1,18 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Observation;
+
+namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_removing;
+
+public class and_a_remote_client_declares_it : given.a_manager_with_an_orphaned_projection
+{
+    ObserverRemovalResult _result;
+
+    void Establish() => _remoteClients.DeclaresProjection(EventStore, _definition.Identifier).Returns(true);
+    async Task Because() => _result = await _grain.Remove(_definition.Identifier);
+
+    [Fact] void should_refuse_removal() => _result.Outcome.ShouldEqual(ObserverRemovalOutcome.ObserverSubscribed);
+    [Fact] async Task should_not_retire_the_observer() => await _observerGrain.DidNotReceive().Retire();
+    [Fact] void should_retain_the_definition() => _state.Projections.ShouldContain(_definition);
+}

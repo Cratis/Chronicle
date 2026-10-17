@@ -65,7 +65,8 @@ internal sealed class Projections(
             // several applications sharing the event store would each retire the others' projections.
             var registrant = string.IsNullOrEmpty(request.Registrant) ? null : request.Registrant;
             var version = string.IsNullOrWhiteSpace(request.Version) ? null : request.Version;
-            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version);
+            Concepts.Clients.ConnectionId? connectionId = string.IsNullOrEmpty(request.ConnectionId) ? null : new(request.ConnectionId);
+            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version, connectionId);
         }
         catch (Exception exception)
         {

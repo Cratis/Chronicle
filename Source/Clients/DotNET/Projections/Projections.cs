@@ -250,6 +250,7 @@ public class Projections(
             // the client.
             Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
             Version = SoftwareVersion,
+            ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
             FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
         Registered?.Invoke();
@@ -464,6 +465,7 @@ public class Projections(
                 Projections = [registration.Definition],
                 Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
                 Version = SoftwareVersion,
+                ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
                 FullSet = false
             });
             Registered?.Invoke();

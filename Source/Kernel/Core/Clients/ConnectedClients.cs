@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="storage">The infrastructure storage for disconnected leases.</param>
 [KeepAlive]
 [ConnectedClientsPlacement]
-public class ConnectedClients(
+public partial class ConnectedClients(
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
     IOptions<ChronicleOptions> options,
@@ -32,7 +32,7 @@ public class ConnectedClients(
     readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
     readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
-    readonly List<ConnectedClient> _clients = [];
+    readonly Dictionary<ConnectionId, ConnectionEntry> _clients = [];
     readonly List<DateTimeOffset> _reservations = [];
     IGrainTimer? _reviseConnectedClientsTimer;
 
@@ -63,8 +63,7 @@ public class ConnectedClients(
     {
         logger.ClientConnected(connectionId);
 
-        _clients.Where(_ => _.ConnectionId == connectionId).ToList().ForEach(_ => _clients.Remove(_));
-        _clients.Add(new()
+        _clients[connectionId] = new(new()
         {
             ConnectionId = connectionId,
             Version = version,
@@ -95,11 +94,7 @@ public class ConnectedClients(
     {
         logger.ClientDisconnected(connectionId, reason);
 
-        var client = _clients.Find(_ => _.ConnectionId == connectionId);
-        if (client is not null)
-        {
-            _clients.Remove(client);
-        }
+        _clients.Remove(connectionId);
 
         meter.ConnectedClients(_clients.Count);
 
@@ -113,10 +108,9 @@ public class ConnectedClients(
     /// <inheritdoc/>
     public Task<bool> OnClientPing(ConnectionId connectionId)
     {
-        var client = _clients.Find(_ => _.ConnectionId == connectionId);
-        if (client is not null)
+        if (_clients.TryGetValue(connectionId, out var entry))
         {
-            client.LastSeen = DateTimeOffset.UtcNow;
+            entry.Client.LastSeen = DateTimeOffset.UtcNow;
             return Task.FromResult(true);
         }
 
@@ -124,7 +118,7 @@ public class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.AsEnumerable());
+    public Task<IEnumerable<ConnectedClient>> GetAllConnectedClients() => Task.FromResult(_clients.Values.Select(entry => entry.Client));
 
     /// <inheritdoc/>
     public Task<int> GetConnectionCount()
@@ -142,13 +136,13 @@ public class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.Exists(_ => _.ConnectionId == connectionId));
+    public Task<bool> IsConnected(ConnectionId connectionId) => Task.FromResult(_clients.ContainsKey(connectionId));
 
     /// <inheritdoc/>
     public Task<ConnectedClient> GetConnectedClient(ConnectionId connectionId)
     {
-        var connectedClient = _clients.Find(_ => _.ConnectionId == connectionId) ?? throw new ClientIsNotConnected(connectionId);
-        return Task.FromResult(connectedClient);
+        var entry = _clients.GetValueOrDefault(connectionId) ?? throw new ClientIsNotConnected(connectionId);
+        return Task.FromResult(entry.Client);
     }
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
@@ -157,7 +151,7 @@ public class ConnectedClients(
 
         if (Debugger.IsAttached) return;
 
-        foreach (var connectedClient in _clients.ToArray())
+        foreach (var connectedClient in _clients.Values.Select(entry => entry.Client).ToArray())
         {
             if (connectedClient.IsRunningWithDebugger) continue;
 
