@@ -34,7 +34,7 @@ public class and_reconnect_arrives_after_publication : given.a_registered_store
             }
         });
         typeof(EventStore).GetField("_registerAllFlight", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(_store, flight);
-        _connection.Lifecycle.OnConnected -= _store.RegisterAll;
+        _connection.Lifecycle.OnConnected -= _store.RegisterAfterConnect;
         _connection.Lifecycle.OnConnected += () =>
         {
             _joined = _store.RegisterAll();

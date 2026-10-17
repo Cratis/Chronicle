@@ -20,7 +20,7 @@ public class and_a_manual_call_joins_an_in_flight_run : given.a_registered_store
     void Establish()
     {
         // This spec drives a manual join after the connection flag changes, without automatic callback scheduling.
-        _connection.Lifecycle.OnConnected -= _store.RegisterAll;
+        _connection.Lifecycle.OnConnected -= _store.RegisterAfterConnect;
         _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _firstReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _secondReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
