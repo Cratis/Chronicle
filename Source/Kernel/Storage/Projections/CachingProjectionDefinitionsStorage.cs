@@ -22,7 +22,8 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// <see cref="Save"/> or <see cref="Delete"/> on one silo does not reach the caches of the others. A definition missing
 /// from this cache is therefore never treated as absent: <see cref="Has"/> and <see cref="Get"/> fall through to the
 /// shared storage on a miss, and <see cref="GetAll"/> always lists the shared storage, refreshing the cache from it and dropping cached definitions it no
-/// longer contains. A cached definition can still be stale when another silo changed or deleted it; the
+/// longer contains. A listing or read that overlaps a local <see cref="Save"/> or <see cref="Delete"/> leaves the cache
+/// untouched, so an older snapshot never overwrites a newer local write. A cached definition can still be stale when another silo changed or deleted it; the
 /// <c language="csharp">Projection</c> grain, single-activation per (event store, projection id) cluster-wide, is the authoritative
 /// writer of its definition.
 /// </para>
@@ -31,20 +32,34 @@ namespace Cratis.Chronicle.Storage.Projections;
 public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsStorage inner) : IProjectionDefinitionsStorage
 {
     readonly ConcurrentDictionary<ProjectionId, ProjectionDefinition> _cache = new();
+    readonly Lock _lock = new();
+    long _mutations;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
+        var mutationsBefore = Interlocked.Read(ref _mutations);
         var definitions = (await inner.GetAll()).ToArray();
-        var identifiers = definitions.Select(definition => definition.Identifier).ToHashSet();
-        foreach (var removed in _cache.Keys.Where(identifier => !identifiers.Contains(identifier)))
-        {
-            _cache.TryRemove(removed, out _);
-        }
 
-        foreach (var definition in definitions)
+        lock (_lock)
         {
-            _cache[definition.Identifier] = definition;
+            // A Save or Delete that completed while the shared storage was being listed is newer than this snapshot.
+            // Leaving the cache alone is safe: entries missing from it are read from the shared storage.
+            if (_mutations != mutationsBefore)
+            {
+                return definitions;
+            }
+
+            var identifiers = definitions.Select(definition => definition.Identifier).ToHashSet();
+            foreach (var removed in _cache.Keys.Where(identifier => !identifiers.Contains(identifier)))
+            {
+                _cache.TryRemove(removed, out _);
+            }
+
+            foreach (var definition in definitions)
+            {
+                _cache[definition.Identifier] = definition;
+            }
         }
 
         return definitions;
@@ -61,8 +76,16 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
             return cached;
         }
 
+        var mutationsBefore = Interlocked.Read(ref _mutations);
         var definition = await inner.Get(id);
-        _cache[id] = definition;
+        lock (_lock)
+        {
+            if (_mutations == mutationsBefore)
+            {
+                _cache[id] = definition;
+            }
+        }
+
         return definition;
     }
 
@@ -70,13 +93,21 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
     public async Task Delete(ProjectionId id)
     {
         await inner.Delete(id);
-        _cache.TryRemove(id, out _);
+        lock (_lock)
+        {
+            Interlocked.Increment(ref _mutations);
+            _cache.TryRemove(id, out _);
+        }
     }
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
         await inner.Save(definition);
-        _cache[definition.Identifier] = definition;
+        lock (_lock)
+        {
+            Interlocked.Increment(ref _mutations);
+            _cache[definition.Identifier] = definition;
+        }
     }
 }
