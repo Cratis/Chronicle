@@ -239,8 +239,15 @@ public partial class ProjectionsManager(
     bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
         State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));
 
-    // Only the projections this full set could retire count: another application sharing the event store registers
-    // its own versions, and those must not stop this application from retiring what it no longer registers.
+    /// <summary>
+    /// Checks whether a full set is older than any stored projection it could retire. Another application sharing the
+    /// event store registers its own versions, and those must not stop this application from retiring what it no
+    /// longer registers.
+    /// </summary>
+    /// <param name="owner">The owner of the full set.</param>
+    /// <param name="registrant">The registrant of the full set, if any.</param>
+    /// <param name="version">The version of the full set, if any.</param>
+    /// <returns>True if the full set is older than a projection it could retire.</returns>
     bool IsOlderThanAnyRetirableBy(ProjectionOwner owner, string? registrant, string? version) =>
         State.Projections.Any(stored =>
             stored.Owner == owner &&
