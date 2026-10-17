@@ -59,6 +59,12 @@ public class Projection(
     /// <inheritdoc/>
     public async Task SetDefinition(ProjectionDefinition definition)
     {
+        if (ProjectionVersions.IsOlder(definition.Version, State.Version))
+        {
+            logger.IgnoringOlderDefinition(definition.Identifier, definition.Version!, State.Version!);
+            return;
+        }
+
         ProjectionGenerationDeliveryValidation.Validate(definition);
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);

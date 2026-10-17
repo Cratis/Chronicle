@@ -251,7 +251,7 @@ public partial class ProjectionsManager(
 
             // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
             await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
-                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Chronicle:SoftwareVersion on the client to roll back deliberately.",
+                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
                 new()
                 {
                     ProjectionId = identifier,
@@ -451,6 +451,15 @@ public partial class ProjectionsManager(
         {
             try
             {
+                // Timer passes can yield while a registration replaces the captured definitions.
+                // Registrations themselves must use their incoming definition, not the old stored one.
+                if (!reactivateRetired)
+                {
+                    var current = State.Projections.FirstOrDefault(projection => projection.Identifier == definition.Identifier);
+                    if (current is null) return;
+                    definition = current;
+                }
+
                 if (!readModelDefinitions.TryGetValue(definition.ReadModel, out var readModelDefinition))
                 {
                     logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);

@@ -31,6 +31,8 @@ public class and_the_incoming_version_is_older : given.a_projections_manager_gra
     [Fact] void should_not_set_the_projection_definition() => _projectionGrain.DidNotReceiveWithAnyArgs().SetDefinition(default!);
     [Fact] void should_not_record_the_registrant() => _state.Registrants.ShouldBeEmpty();
     [Fact] void should_recommend_looking_at_the_ignored_registration() => _recommendationsManager.Received(1).Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
-        Arg.Is<RecommendationDescription>(description => description.Value.Contains("1.0.0") && description.Value.Contains("2.0.0")),
+        Arg.Is<RecommendationDescription>(description => description.Value.Contains("1.0.0") && description.Value.Contains("2.0.0") &&
+            description.Value.Contains("Cratis:Chronicle:SoftwareVersion") && description.Value.Contains("Cratis__Chronicle__SoftwareVersion") &&
+            description.Value.Contains("higher than the stored 2.0.0")),
         Arg.Is<IgnoredProjectionRegistrationRequest>(request => request.ProjectionId == "the-projection" && request.IncomingVersion == "1.0.0" && request.StoredVersion == "2.0.0"));
 }
