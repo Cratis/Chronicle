@@ -27,6 +27,11 @@ public class an_occurrence_storage : Specification, IDisposable
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Gets whether contexts use a retrying execution strategy, as PostgreSQL connections do.
+    /// </summary>
+    protected virtual bool UsesARetryingExecutionStrategy => false;
+
     protected IOccurrencesStorage Recreate() => new OccurrencesStorage<NamespaceDbContext>(Open);
     protected IScheduleStorage RecreateSchedules() => new OccurrencesStorage<NamespaceDbContext>(Open);
 
@@ -61,7 +66,12 @@ public class an_occurrence_storage : Specification, IDisposable
         {
             case "PostgreSQL": builder.UseNpgsql(_connectionString); break;
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
-            default: builder.UseSqlite(_connectionString); break;
+            default:
+                builder.UseSqlite(_connectionString, sqlite =>
+                {
+                    if (UsesARetryingExecutionStrategy) sqlite.ExecutionStrategy(dependencies => new RetryingExecutionStrategy(dependencies));
+                });
+                break;
         }
 
         builder.AddConceptAsSupport();

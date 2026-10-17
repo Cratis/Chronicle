@@ -1,0 +1,37 @@
+# Settle an occurrence effect with a receipt
+
+Use an effect receipt when a delivered occurrence may append events again after a crash or a lost reply. The receipt and its events become durable together. A repeated attempt returns the first recorded outcome and response instead of appending another batch.
+
+## Before you begin
+
+Use the same namespace-bound event store for receipt lookup and the effect's unit of work. The kernel must advertise `effect-receipts`. Enrollment, lookup and receipt-only recording throw `EffectReceiptsNotSupported` when support is absent or unknown; there is no unreceipted fallback.
+
+An effect key identifies one effect within an occurrence. Choose a stable name, such as `reserve-stock`, and obtain the key through `OccurrenceContext.EffectKey(name)`. The key's identity excludes the delivery attempt and lease epoch. Its `Value` is the idempotency key to pass to external endpoints.
+
+## Commit events and their receipt
+
+1. Look up the effect with `eventStore.Occurrences.GetEffectReceipt(key)`. If it exists, use its recorded outcome and response without repeating the effect.
+2. Begin a unit of work and call `UseEffectReceipt(key, response)` before committing. Stage events through the transactional event sequence, not through an immediate append.
+3. Call `UseEffectReceipt` again with the same key if the response becomes available later. The call snapshots its JSON; subsequent mutation of the original object does not change the commit. A different key throws `UnitOfWorkEffectReceiptAlreadySet`.
+4. Commit the unit, using its owning completion capability when protected reads require one. Inspect `IsSuccess` and `EffectReceipt`.
+
+A successful receipted commit exposes `EffectReceiptResult`. `Recorded` means this attempt recorded it. `AlreadyRecorded` means another attempt won; use `Receipt.Response`, not the response this attempt computed. The initial lookup is an optimization: the atomic commit checks again before validating or appending.
+
+A receipt's outcome is `Appended` with the sequence and first and last positions, `NoEvents`, or `Refused` with reasons. Only the unit of work can record an `Appended` outcome.
+
+## Decisions that append no events
+
+Keep the receipt enrolled even when the decision produces no events. With protected reads, the commit sends the scopes and receipt together through a validate-only append. A scope conflict writes no receipt. This applies to both decision reads and contributed read protection.
+
+Without protected reads, the unit records `NoEvents` through the receipt-only operation. To seal a terminal refusal explicitly, call `eventStore.Occurrences.RecordEffectReceipt(key, new Refused(reasons), response)`. The public receipt-only operation is refused inside enforced read protection; it cannot replace a guarded commit.
+
+A failed append pipeline writes no receipt. Classify the failure before deciding whether to record a permanent refusal. Concurrency conflicts, transport failures and handler exceptions must remain retryable rather than being sealed as successful no-event effects.
+
+## Response and recovery limits
+
+- A response is optional opaque JSON, limited to 64 KiB of serialized UTF-8. Oversized responses throw `EffectReceiptResponseTooLarge` before transport.
+- Responses are plaintext and are not crypto-shredded. Store a minimal result without personal data or secrets, not a raw command response.
+- One unit of work carries one receipt into one sequence commit. Nested commands sharing that unit belong to the outer effect; they do not receive independent receipts.
+- An immediate append bypasses the enrolled receipt. It can duplicate events on redelivery.
+- After a lost acknowledgement, look up the receipt before executing again. The stored outcome wins even if the repeated attempt computed different content.
+- A receipt deduplicates Chronicle effects; it does not fence an external system. Exactly-once external effects require that system to honor the effect key.

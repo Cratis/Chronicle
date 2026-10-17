@@ -67,4 +67,10 @@ public class InMemoryClientArtifactsProvider : IClientArtifactsProvider
 
     /// <inheritdoc/>
     public IEnumerable<Type> EventSources { get; set; } = [];
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> Triggers { get; set; } = [];
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> OccurrenceHandlers { get; set; } = [];
 }

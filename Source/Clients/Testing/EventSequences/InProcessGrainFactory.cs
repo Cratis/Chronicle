@@ -20,10 +20,12 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <param name="grain">The kernel <see cref="KernelEventSequences::EventSequence"/> grain to return, if any.</param>
 /// <param name="constraints">The in-process <see cref="KernelConstraints::IConstraints"/> to return, if any.</param>
 /// <param name="sequenceResolver">Resolves a serialized sequence grain by its full key.</param>
+/// <param name="occurrenceResolver">Resolves an occurrence queue by its full key.</param>
 internal sealed class InProcessGrainFactory(
     KernelEventSequences::IEventSequence? grain = null,
     KernelConstraints::IConstraints? constraints = null,
-    Func<string, KernelEventSequences::IEventSequence>? sequenceResolver = null) : IGrainFactory
+    Func<string, KernelEventSequences::IEventSequence>? sequenceResolver = null,
+    Func<string, KernelCore::Cratis.Chronicle.Occurrences.IOccurrenceQueue>? occurrenceResolver = null) : IGrainFactory
 {
     /// <inheritdoc/>
     public TGrainInterface GetGrain<TGrainInterface>(Guid primaryKey, string? grainClassNamePrefix = null)
@@ -42,6 +44,11 @@ internal sealed class InProcessGrainFactory(
         if (typeof(TGrainInterface) == typeof(KernelEventSequences::IEventSequence) && sequenceResolver is not null)
         {
             return (TGrainInterface)sequenceResolver(primaryKey);
+        }
+
+        if (typeof(TGrainInterface) == typeof(KernelCore::Cratis.Chronicle.Occurrences.IOccurrenceQueue) && occurrenceResolver is not null)
+        {
+            return (TGrainInterface)occurrenceResolver(primaryKey);
         }
 
         if (grain is TGrainInterface fromGrain)

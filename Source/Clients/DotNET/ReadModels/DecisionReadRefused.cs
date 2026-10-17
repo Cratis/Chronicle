@@ -6,9 +6,20 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>Thrown before enrollment when a decision read cannot be protected.</summary>
 /// <param name="reason">The refusal reason.</param>
 /// <param name="readModelType">The read model type.</param>
-public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType)
-    : Exception($"Decision read of '{readModelType}' was refused: {reason}. {Explain(reason)}".TrimEnd())
+/// <param name="detail">Optional diagnostic detail without definition values or event content.</param>
+public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType, string? detail)
+    : Exception($"Decision read of '{readModelType}' was refused: {reason}. {Explain(reason)} {detail}".TrimEnd())
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DecisionReadRefused"/> class.
+    /// </summary>
+    /// <param name="reason">The refusal reason.</param>
+    /// <param name="readModelType">The read model type.</param>
+    public DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType)
+        : this(reason, readModelType, null)
+    {
+    }
+
     /// <summary>Gets the refusal reason.</summary>
     public DecisionReadRefusalReason Reason { get; } = reason;
 
@@ -46,7 +57,9 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
         DecisionReadRefusalReason.FoldIncomplete =>
             "The fold did not reach the latest matching event. Try again.",
         DecisionReadRefusalReason.DefinitionMismatch =>
-            "Chronicle has no matching projection definition registered for the read model, or the registered one differs from the client's. Register the current definitions, for example by restarting the client.",
+            "The kernel's listed definition differs from the client's. Check the reported differences and align the client and kernel definitions before retrying.",
+        DecisionReadRefusalReason.DefinitionMissing =>
+            "The kernel has no definition for the read model or its projection. Ensure the client's artifact registration has completed before retrying.",
         DecisionReadRefusalReason.StreamScopeNotSupported =>
             "The reader or kernel does not support stream-scoped decision reads. Use a reader and kernel that acknowledge the requested stream scope.",
         DecisionReadRefusalReason.StreamKeyRequiresStreamScope =>

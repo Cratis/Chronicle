@@ -126,6 +126,11 @@ public class EventScenario(
     public IEventSequence EventSequence => _created.Log;
 
     /// <summary>
+    /// Gets the scenario's explicitly driven occurrence clock. Event append timestamps still use kernel system time.
+    /// </summary>
+    public ScenarioTime Time => _created.Root.Time;
+
+    /// <summary>
     /// Gets the shared store for internal harness specifications.
     /// </summary>
     internal TestingEventStore TestingStore => _created.Root;
@@ -161,7 +166,7 @@ public class EventScenario(
 
     static (IEventLog Log, TestingEventStore Root, Lazy<IReadModels> ReadModels) Create(EventSequenceId sequence, EventStoreName store, EventStoreNamespaceName ns, ICanProvideConstraints? provider, Defaults defaults)
     {
-        var root = new TestingEventStore(store, ns, () => defaults.EventTypes);
+        var root = new TestingEventStore(store, ns, () => defaults.EventTypes, defaults.ScenarioTime);
         var eventSources = new EventSources.EventSources(null, defaults.ClientArtifactsProvider);
         eventSources.Discover().GetAwaiter().GetResult();
         root.Seed(provider, defaults.JsonSchemaGenerator, ((EventStoreForTesting)defaults.EventStore).EventTypeMigrators, eventSources.All).GetAwaiter().GetResult();

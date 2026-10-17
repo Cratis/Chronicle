@@ -53,6 +53,14 @@ public partial class UnitOfWork
     }
 
     /// <inheritdoc/>
+    /// <exception cref="ReadProtectionUnitMismatch">The unit does not own the active invocation.</exception>
+    public IDisposable SuspendReadRegions()
+    {
+        ReadProtectionGuard.RequireUnit(this);
+        return ReadProtectionReadRegion.Suspend("Host suspended inherited read regions");
+    }
+
+    /// <inheritdoc/>
     /// <exception cref="ContributedReadOriginNotValid">The contribution is not explicit or aggregate.</exception>
     public void EnrolContributedRead(ContributedRead contribution)
     {

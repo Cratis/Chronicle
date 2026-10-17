@@ -2,15 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
+using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IStorageConnectionResolution"/>.
 /// </summary>
+/// <remarks>
+/// Marked with <see cref="IgnoreConventionAttribute"/> so convention binding does not register it. It needs the kind of
+/// storage and its options, which only the storage configuration knows, so it is registered by
+/// <see cref="StorageConnectionResolutionServiceCollectionExtensions.AddStorageConnectionResolution"/>. A convention
+/// binding the container cannot construct would otherwise stop the kernel host from starting.
+/// </remarks>
 /// <param name="storage">The kind of storage, one of <see cref="WellKnownConnectionStorage"/>.</param>
 /// <param name="options">The configured <see cref="ConnectionResolutionOptions"/>.</param>
 /// <param name="factory">The <see cref="IConnectionResolverFactory"/> creating the resolver.</param>
+[IgnoreConvention]
 public class StorageConnectionResolution(string storage, ConnectionResolutionOptions options, IConnectionResolverFactory factory) : IStorageConnectionResolution
 {
     readonly Lazy<ICachingConnectionResolver> _resolver = new(() => factory.Create(options));
