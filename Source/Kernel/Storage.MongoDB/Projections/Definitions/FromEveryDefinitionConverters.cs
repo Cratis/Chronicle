@@ -19,7 +19,11 @@ public static class FromEveryDefinitionConverters
     public static KernelDefs.FromEveryDefinition ToKernel(this FromEveryDefinition source) =>
         new(
             source.Properties.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value),
-            source.IncludeChildren);
+            source.IncludeChildren)
+        {
+            AutoMap = source.AutoMap,
+            Key = source.Key
+        };
 
     /// <summary>
     /// Converts a Kernel FromEveryDefinition to a MongoDB FromEveryDefinition.
@@ -30,6 +34,8 @@ public static class FromEveryDefinitionConverters
         new()
         {
             Properties = source.Properties.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
-            IncludeChildren = source.IncludeChildren
+            IncludeChildren = source.IncludeChildren,
+            AutoMap = source.AutoMap,
+            Key = source.Key
         };
 }

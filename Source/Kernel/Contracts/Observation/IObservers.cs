@@ -80,6 +80,19 @@ public interface IObservers
     Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default);
 
     /// <summary>
+    /// Retry every failed partition of an observer through bounded per-partition jobs.
+    /// </summary>
+    /// <param name="command">The retry failed partitions command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="RetryFailedPartitionsResponse"/> telling how many partitions were failed.</returns>
+    /// <remarks>
+    /// Recovery is started a bounded batch of partitions at a time, so retrying many of them never overwhelms the
+    /// observer. Quarantined partitions are not retried.
+    /// </remarks>
+    [Operation]
+    Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default);
+
+    /// <summary>
     /// Remove an observer and everything keyed to it.
     /// </summary>
     /// <param name="command">The remove command.</param>

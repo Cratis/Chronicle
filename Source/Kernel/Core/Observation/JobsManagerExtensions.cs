@@ -125,7 +125,8 @@ public static partial class JobsManagerExtensions
             observerRequest.ObserverKey == request.ObserverKey &&
             requestPredicate(observerRequest) &&
             !(concludedJobs?.Contains(job.Id) ?? false)).ToImmutableList();
-        var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsPreparingOrRunning);
+        var now = DateTimeOffset.UtcNow;
+        var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsLive(now));
         if (alreadyRunningJob is not null)
         {
             logger.FoundRunningJob(alreadyRunningJob.Id);
@@ -169,6 +170,20 @@ public static partial class JobsManagerExtensions
         logger.CouldNotStartJob(error);
         return JobId.NotSet;
     }
+
+    /// <summary>
+    /// Gets whether a job is alive: preparing or running with work still in flight, not merely recorded as running.
+    /// </summary>
+    /// <param name="job">The <see cref="JobState"/> to check.</param>
+    /// <param name="now">The current time.</param>
+    /// <returns>True if the job can still be expected to move on its own.</returns>
+    /// <remarks>
+    /// A persisted status is a claim, not a proof. A job whose every step has concluded, but which has stayed recorded
+    /// as running past <see cref="JobLiveness.StaleAfter"/>, lost the report that would have finished it - a restart, or
+    /// a hung completion. Treating it as running told an operator a replay had started while nothing was created.
+    /// </remarks>
+    internal static bool IsLive(this JobState job, DateTimeOffset now) =>
+        job.IsPreparingOrRunning && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
     /// Gets whether a job with the given status has finished for good - the statuses <see cref="GetUnfinishedJobs"/> never lists.

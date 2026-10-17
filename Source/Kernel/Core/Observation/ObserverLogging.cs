@@ -237,10 +237,25 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
+    internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
+
+    [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
+    internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes
 {
+    internal static IDisposable? BeginObserverKeyScope(this ILogger logger, ObserverKey observerKey) =>
+        logger.BeginScope(new
+        {
+            observerKey.ObserverId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId
+        });
+
     internal static IDisposable? BeginObserverScope(this ILogger<Observer> logger, ObserverId observerId, ObserverKey observerKey) =>
         logger.BeginScope(new
         {

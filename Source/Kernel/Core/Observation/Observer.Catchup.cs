@@ -14,6 +14,12 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    const int MinimumZeroWorkLapsBeforeBackingOff = 2;
+    static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
+    static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
+
+    bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
+
     /// <inheritdoc/>
     public async Task CatchUp()
     {
@@ -68,9 +74,13 @@ public partial class Observer
 
         _isPreparingCatchup = false;
 
-        // Reached only when a brand-new job's steps actually prepared - genuine forward progress, so the
-        // consecutive-stranding count the watchdog uses to decide when to give up resets with it.
-        _catchupRecoveryAttempts = 0;
+        // Reached when a brand-new job's steps prepared. Only a job that has partitions to catch up is forward
+        // progress; one with none is the zero-work lap and must not reset the consecutive-stranding count the
+        // watchdog uses to decide when to give up.
+        if (State.CatchingUpPartitions.Count > 0)
+        {
+            _catchupRecoveryAttempts = 0;
+        }
     }
 
     /// <inheritdoc/>
@@ -166,6 +176,7 @@ public partial class Observer
         // interleaving with this call already sees it.
         RememberConcludedCatchUpJob(jobId);
 
+        var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Clear();
         if (lastScannedEventSequenceNumber.IsActualValue &&
@@ -181,13 +192,66 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
-        _catchupRecoveryAttempts = 0;
+        var settleInObserving = NoteCatchUpLap(madeProgress);
 
         if (IsRetired || _removed) return;
         if (!IsQuarantined)
         {
-            await TransitionTo<Routing>();
+            if (settleInObserving)
+            {
+                await TransitionTo<Observing>();
+            }
+            else
+            {
+                await TransitionTo<Routing>();
+            }
         }
+    }
+
+    /// <summary>
+    /// Gets whether the observer moved past anything it had not already handled or read.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number the concluded job reports.</param>
+    /// <param name="lastScannedEventSequenceNumber">The last scanned event sequence number the concluded job reports.</param>
+    /// <returns>True if the lap made progress.</returns>
+    bool CatchUpMadeProgress(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
+        (lastHandledEventSequenceNumber.IsActualValue &&
+            (!State.LastHandledEventSequenceNumber.IsActualValue || lastHandledEventSequenceNumber > State.LastHandledEventSequenceNumber)) ||
+        (lastScannedEventSequenceNumber.IsActualValue &&
+            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber));
+
+    /// <summary>
+    /// Records the outcome of a concluded catch-up lap.
+    /// </summary>
+    /// <param name="madeProgress">Whether the lap moved the observer forward.</param>
+    /// <returns>True if the observer should settle into observing rather than route again immediately.</returns>
+    /// <remarks>
+    /// A lap that moved nothing reaches the same verdict when routed again, so it neither resets the consecutive
+    /// recovery count nor gets to start the next lap right away: from the second consecutive one the observer settles
+    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed.
+    /// </remarks>
+    bool NoteCatchUpLap(bool madeProgress)
+    {
+        if (madeProgress)
+        {
+            _catchupRecoveryAttempts = 0;
+            _zeroWorkCatchUps = 0;
+            _catchUpBackoffUntil = default;
+            return false;
+        }
+
+        _zeroWorkCatchUps++;
+        _metrics?.ZeroWorkCatchUp();
+        logger.CatchUpProducedNoWork(_zeroWorkCatchUps);
+        if (_zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
+        {
+            return false;
+        }
+
+        var exponent = Math.Min(_zeroWorkCatchUps - MinimumZeroWorkLapsBeforeBackingOff, 10);
+        var backoff = TimeSpan.FromTicks(Math.Min(_catchUpBackoffBase.Ticks << exponent, _catchUpBackoffCap.Ticks));
+        _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
+        return true;
     }
 
     /// <summary>

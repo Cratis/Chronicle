@@ -21,4 +21,14 @@ public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEven
     /// without claiming they were handled.
     /// </remarks>
     public EventSequenceNumber LastScannedEventSequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets the timeout that ended the step, when that is why it failed.
+    /// </summary>
+    /// <remarks>
+    /// A timeout says the callee was too busy to answer, not that the events cannot be handled, so the step does not
+    /// report the partition as failed. The job runs the step again and reports the partition only when it has run out
+    /// of attempts - see <see cref="TransientTimeouts"/>.
+    /// </remarks>
+    public TransientPartitionFailure? TransientFailure { get; init; }
 }
