@@ -67,6 +67,7 @@ public partial class ProjectionsManager(
     /// </summary>
     readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _subscribed = new();
     readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
+    readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
 
@@ -291,8 +292,8 @@ public partial class ProjectionsManager(
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
-        var missingNamespaces = namespaces.Where(namespaceName => activeDefinitions.Any(definition =>
-            !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
+        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
+            activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
         await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
         {
             try
@@ -395,7 +396,7 @@ public partial class ProjectionsManager(
         await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas, reactivateRetired)));
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false)
     {
         if (!definition.IsActive)
         {
@@ -439,6 +440,15 @@ public partial class ProjectionsManager(
         await _subscriptionThrottle.WaitAsync();
         try
         {
+            if (reconcile)
+            {
+                var state = await observer.GetState();
+                if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined) return;
+
+                // Namespace reconciliation interleaves with registration and retirement; do not subscribe a stale snapshot.
+                if (!IsCurrentActiveDefinition(definition)) return;
+            }
+
             await (projection.IsEventSourceKeyed
                 ? SubscribeAs<IProjectionObserverSubscriber>()
                 : SubscribeAs<ICollapsingProjectionObserverSubscriber>());

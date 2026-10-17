@@ -1,16 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 
 using context = Cratis.Chronicle.Kernel.Integration.Projections.for_ProjectionsManager.when_a_namespace_is_created_after_registration.and_the_first_append_creates_it.context;
 using CustomerNamed = Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.given.CustomerNamed;
-using KernelEventSequenceId = Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
-using KernelEventSequenceKey = Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey;
+using KernelEventSequenceNumber = Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ProjectionsManager.when_a_namespace_is_created_after_registration;
 
+/// <summary>
+/// Covers implicit namespace creation end to end, including the namespace-added broadcast and event-log timer.
+/// The timer path independently of the broadcast is pinned by the for_EventSequence unit specifications.
+/// </summary>
+/// <param name="context">The specification context.</param>
 [Collection(given.NamespaceSubscriptionCollection.Name)]
 public class and_the_first_append_creates_it(context context) : Given<context>(context)
 {
@@ -21,12 +24,12 @@ public class and_the_first_append_creates_it(context context) : Given<context>(c
 
         async Task Because()
         {
-            // No client registration or explicit namespace command in this tenant: activating the log
-            // for its first append must arrange subscriptions and let observers catch up from First.
-            var log = _grains.GetGrain<IEventSequence>(new KernelEventSequenceKey(KernelEventSequenceId.Log, _storeName, _newTenant));
-            var append = await log.Append("customer", new CustomerNamed("Later tenant"));
+            // No client registration or explicit namespace command in this tenant: the first append creates it,
+            // and broadcast plus timer reconciliation arrange subscriptions and catch-up from First.
+            var store = await ChronicleClient.GetEventStore(_storeName.Value, _newTenant.Value);
+            var append = await store.EventLog.Append("customer", new CustomerNamed("Later tenant"));
             append.IsSuccess.ShouldBeTrue();
-            HandledFirstEvent = await _observerStorage.WaitForHandled(_observerKey, append.SequenceNumber) == append.SequenceNumber;
+            HandledFirstEvent = await _observerStorage.WaitForHandled(_observerKey, (KernelEventSequenceNumber)append.SequenceNumber.Value) == append.SequenceNumber.Value;
             Subscribed = await _grains.GetGrain<IObserver>(_observerKey).IsSubscribed();
         }
     }

@@ -72,6 +72,8 @@ public partial class CapturesManager
 
         if (string.IsNullOrWhiteSpace(sequence))
         {
+            if (!await IsCaptureStillStarted(definition.Id)) return;
+
             // Let the subscription path report its source-resolution diagnostics.
             await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
             logger.SubscriptionNotEstablished(definition.Name, definition.Id, @namespace);
@@ -80,12 +82,23 @@ public partial class CapturesManager
 
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(CaptureObservers.For(definition.Id), _eventStoreName, @namespace, new EventSequenceId(sequence)));
         if (await observer.IsSubscribed()) return;
-        if ((await observer.GetState()).AlertDisposition == AlertDisposition.Retired) return;
+        var state = await observer.GetState();
+        if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined) return;
+
+        // Stop/Delete can interleave while sequence resolution and observer checks are awaiting.
+        if (!await IsCaptureStillStarted(definition.Id)) return;
 
         await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
-        if (!await observer.IsSubscribed() && (await observer.GetState()).AlertDisposition != AlertDisposition.Retired)
+        if (!await observer.IsSubscribed())
         {
-            logger.SubscriptionNotEstablished(definition.Name, definition.Id, @namespace);
+            state = await observer.GetState();
+            if (state.AlertDisposition != AlertDisposition.Retired && state.RunningState != ObserverRunningState.Quarantined)
+            {
+                logger.SubscriptionNotEstablished(definition.Name, definition.Id, @namespace);
+            }
         }
     }
+
+    async Task<bool> IsCaptureStillStarted(CaptureId identifier) =>
+        await Captures.Has(identifier) && (await Captures.Get(identifier)).Status == CaptureStatus.Started;
 }

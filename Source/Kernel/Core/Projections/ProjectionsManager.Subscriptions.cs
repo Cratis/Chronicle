@@ -62,7 +62,8 @@ public partial class ProjectionsManager
                 }
 
                 _subscribed.TryRemove((definition.Identifier, @namespace), out _);
-                if ((await observer.GetState()).AlertDisposition == AlertDisposition.Retired)
+                var state = await observer.GetState();
+                if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined)
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
                     return;
@@ -76,25 +77,34 @@ public partial class ProjectionsManager
             }
         }));
 
+        if (!missing.IsEmpty || _failedNamespaceSetups.Contains(@namespace))
+        {
+            await EnsureEngineNamespace(@namespace);
+        }
+
         if (!missing.IsEmpty)
         {
             await SubscribeMissingInNamespace(@namespace, missing);
         }
     }
 
-    async Task SubscribeMissingInNamespace(EventStoreNamespaceName @namespace, IEnumerable<ProjectionDefinition> definitions)
+    async Task EnsureEngineNamespace(EventStoreNamespaceName @namespace)
     {
         try
         {
-            // Only missing subscriptions need the engine fan-out; healthy watchdog ticks read observer state only.
+            // Engine setup must be retried even if subscriptions succeeded on the failed pass.
             await projectionsService.NamespaceAdded(_eventStoreName, @namespace);
+            _failedNamespaceSetups.Remove(@namespace);
         }
         catch (Exception exception)
         {
-            // Still attempt every artifact; subsequent namespace triggers retry failed setup.
+            _failedNamespaceSetups.Add(@namespace);
             logger.FailedEnsuringSubscriptionsInNamespace(exception, @namespace);
         }
+    }
 
+    async Task SubscribeMissingInNamespace(EventStoreNamespaceName @namespace, IEnumerable<ProjectionDefinition> definitions)
+    {
         var readModels = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
         var schemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
@@ -102,17 +112,22 @@ public partial class ProjectionsManager
         {
             try
             {
+                if (!IsCurrentActiveDefinition(definition)) return;
+
                 if (!readModels.TryGetValue(definition.ReadModel, out var readModel))
                 {
                     throw new ReadModelNotFound(definition.ReadModel);
                 }
 
                 await SetProjectionDefinition(definition);
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false);
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false, reconcile: true);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscribed())
                 {
-                    if ((await observer.GetState()).AlertDisposition == AlertDisposition.Retired)
+                    if (!IsCurrentActiveDefinition(definition)) return;
+
+                    var state = await observer.GetState();
+                    if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined)
                     {
                         _subscribed.TryAdd((definition.Identifier, @namespace), default);
                         return;
@@ -128,6 +143,8 @@ public partial class ProjectionsManager
             }
         }));
     }
+
+    bool IsCurrentActiveDefinition(ProjectionDefinition definition) => definition.IsActive && State.Projections.Contains(definition);
 
     async Task SetProjectionDefinition(ProjectionDefinition definition)
     {
