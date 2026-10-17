@@ -271,7 +271,16 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         try
         {
-            return await lazyEventStore.Value;
+            var eventStore = await lazyEventStore.Value;
+            if (eventStore is EventStore { IsRetired: true })
+            {
+                // Its namespace was removed while this client was disconnected. Start over with a new one, which
+                // registers - and so creates the namespace - only because it is being used again.
+                _eventStores.TryRemove(new KeyValuePair<EventStoreKey, Lazy<Task<IEventStore>>>(key, lazyEventStore));
+                return await GetEventStore(name, @namespace);
+            }
+
+            return eventStore;
         }
         catch
         {

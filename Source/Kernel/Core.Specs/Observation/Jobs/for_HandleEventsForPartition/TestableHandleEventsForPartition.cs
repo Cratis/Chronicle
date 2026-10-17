@@ -46,12 +46,14 @@ public class TestableHandleEventsForPartition(
     public Type GrainType => typeof(IHandleEventsForPartition);
 
     /// <summary>
+    /// Gets the run the step performs in, once <see cref="InvokePerformStep"/> has started it.
+    /// </summary>
+    public StepRunForTesting? Run { get; private set; }
+
+    /// <summary>
     /// Gets a value indicating whether the step persists its progress checkpoint after every reported batch.
     /// </summary>
     public bool IsCheckpointingAfterEveryBatch => CheckpointAfterEveryBatch;
-
-    /// <inheritdoc/>
-    protected override IHandleEventsForPartition GetSelfGrainReference() => Substitute.For<IHandleEventsForPartition>();
 
     /// <summary>
     /// Sets up internal fields for testing, bypassing the full grain preparation flow.
@@ -72,6 +74,9 @@ public class TestableHandleEventsForPartition(
     /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The result of the step.</returns>
-    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken = default) =>
-        PerformStep(currentState, cancellationToken);
+    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken = default)
+    {
+        Run = StepRunForTesting.Begin(this);
+        return PerformStep(currentState, cancellationToken);
+    }
 }

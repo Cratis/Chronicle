@@ -323,7 +323,7 @@ public partial class EventStore : IEventStore
 
         if (autoDiscoverAndRegister)
         {
-            Connection.Lifecycle.OnConnected += RegisterAll;
+            Connection.Lifecycle.OnConnected += RegisterAfterConnect;
             Connection.Lifecycle.OnDisconnected += MarkRegistrationAfterDisconnect;
         }
     }

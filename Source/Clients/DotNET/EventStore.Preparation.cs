@@ -34,7 +34,7 @@ public partial class EventStore
     /// </summary>
     internal void DetachAutomaticRegistration()
     {
-        Connection.Lifecycle.OnConnected -= RegisterAll;
+        Connection.Lifecycle.OnConnected -= RegisterAfterConnect;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
         if (Occurrences is IDisposable disposable) disposable.Dispose();
     }
