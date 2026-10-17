@@ -46,7 +46,7 @@ public partial class ProjectionsManager
         }
     }
 
-    async Task SubscribeInNamespace(EventStoreNamespaceName @namespace)
+    async Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
     {
         var definitions = State.Projections.Where(definition => definition.IsActive).ToArray();
         var missing = new ConcurrentBag<ProjectionDefinition>();
@@ -55,7 +55,7 @@ public partial class ProjectionsManager
             try
             {
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
-                if (await observer.IsSubscribed())
+                if (reconcile && await observer.IsSubscribed())
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
                     return;
@@ -63,7 +63,7 @@ public partial class ProjectionsManager
 
                 _subscribed.TryRemove((definition.Identifier, @namespace), out _);
                 var state = await observer.GetState();
-                if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined)
+                if (state.AlertDisposition == AlertDisposition.Retired || (reconcile && state.RunningState == ObserverRunningState.Quarantined))
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
                     return;
@@ -84,7 +84,7 @@ public partial class ProjectionsManager
 
         if (!missing.IsEmpty)
         {
-            await SubscribeMissingInNamespace(@namespace, missing);
+            await SubscribeMissingInNamespace(@namespace, missing, reconcile);
         }
     }
 
@@ -103,7 +103,7 @@ public partial class ProjectionsManager
         }
     }
 
-    async Task SubscribeMissingInNamespace(EventStoreNamespaceName @namespace, IEnumerable<ProjectionDefinition> definitions)
+    async Task SubscribeMissingInNamespace(EventStoreNamespaceName @namespace, IEnumerable<ProjectionDefinition> definitions, bool reconcile)
     {
         var readModels = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
@@ -120,7 +120,7 @@ public partial class ProjectionsManager
                 }
 
                 await SetProjectionDefinition(definition);
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false, reconcile: true);
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false, reconcile: reconcile);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscribed())
                 {

@@ -78,6 +78,11 @@ public partial class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     bool _resumingQuarantine;
+
+    /// <summary>
+    /// Installation precedes job recovery. Until setup returns successfully, managers must retry rather
+    /// than caching the installed subscription as established. Catch-up completion is a separate concern.
+    /// </summary>
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
     bool _recoverSubscriptionAfterQuarantine;
@@ -238,7 +243,7 @@ public partial class Observer(
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
 
     /// <inheritdoc/>
-    public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
+    public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed && !_subscriptionSetupFailed);
 
     /// <inheritdoc/>
     public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);
@@ -397,8 +402,18 @@ public partial class Observer(
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
-        await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
-        await RecoverAfterSubscribing(leavesQuarantine: true);
+        _subscriptionSetupFailed = true;
+        try
+        {
+            await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
+            await RecoverAfterSubscribing(leavesQuarantine: true);
+            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
+        }
+        catch
+        {
+            _subscriptionSetupFailed = true;
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -859,11 +874,14 @@ public partial class Observer(
                 await LeaveQuarantineForSubscription();
             }
 
+            _subscriptionSetupFailed = true;
             await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
             await RecoverAfterSubscribing(leavesQuarantine);
 
-            // A persisted Active marker alone does not prove setup completed after an entry-write failure.
-            _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
+            // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after
+            // recovery returns means a failed entry write stranded it, and an ordinary retry could not re-enter.
+            // Healthy asynchronous catch-up and deferred routing are separate from that setup failure.
+            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
         }
         catch
         {

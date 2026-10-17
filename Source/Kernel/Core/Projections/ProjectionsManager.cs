@@ -233,7 +233,13 @@ public partial class ProjectionsManager(
         return changed;
     }
 
-    Task OnNamespaceAdded(NamespaceAdded added) => EnsureSubscribedIn(added.Namespace);
+    /// <summary>
+    /// Startup and namespace notifications are documented fresh subscriptions: unlike watchdog repair,
+    /// they may end quarantine, but never revive a retired observer.
+    /// </summary>
+    /// <param name="added">The <see cref="NamespaceAdded"/> notification.</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnNamespaceAdded(NamespaceAdded added) => SubscribeInNamespace(added.Namespace, reconcile: false);
 
     async Task<IReadOnlyList<ProjectionDefinition>> GetChangedDefinitions(IEnumerable<ProjectionDefinition> definitions)
     {
@@ -281,10 +287,14 @@ public partial class ProjectionsManager(
         return definitions.Where(definition => retired.Contains(definition.Identifier));
     }
 
-    Task SetDefinitionAndSubscribeForAllProjections() => ResubscribeProjectionsThatAreNotSubscribed();
+    async Task SetDefinitionAndSubscribeForAllProjections()
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeInNamespace(namespaceName, reconcile: false)));
+    }
 
     /// <summary>
-    /// Repairs startup and registration subscriptions using the activation-local cache. Only namespace-local
+    /// Repairs registration subscriptions using the activation-local cache. Only namespace-local
     /// triggers check real observer state, so idle tenants do not cause a whole-store observer sweep.
     /// </summary>
     /// <returns>A task representing the subscription repair.</returns>
@@ -445,6 +455,7 @@ public partial class ProjectionsManager(
         await _subscriptionThrottle.WaitAsync();
         try
         {
+            if (!reactivateRetired && !IsCurrentActiveDefinition(definition)) return;
             if (reconcile)
             {
                 var state = await observer.GetState();

@@ -144,11 +144,20 @@ public partial class CapturesManager
         public SemaphoreSlim Gate { get; } = new(1, 1);
         public bool Closed { get; set; }
         public int Closure { get; private set; }
+        public bool RestartRequired { get; set; }
 
-        public void Close()
+        public int Close()
         {
             Closed = true;
-            Closure++;
+            return ++Closure;
+        }
+
+        public void ReopenAfterFailure(int closure)
+        {
+            // A newer Stop/Delete still owns admission even if an earlier teardown failed.
+            if (Closure != closure) return;
+            RestartRequired = true;
+            Closed = false;
         }
     }
 }

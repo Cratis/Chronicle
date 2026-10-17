@@ -105,7 +105,7 @@ public partial class CapturesManager(
     public async Task Stop(CaptureId captureId)
     {
         var lifecycle = GetLifecycle(captureId);
-        lifecycle.Close();
+        var closure = lifecycle.Close();
         await lifecycle.Gate.WaitAsync();
         try
         {
@@ -117,6 +117,11 @@ public partial class CapturesManager(
                 await Captures.Save(capture with { Status = CaptureStatus.Stopped });
             }
         }
+        catch
+        {
+            lifecycle.ReopenAfterFailure(closure);
+            throw;
+        }
         finally
         {
             lifecycle.Gate.Release();
@@ -127,7 +132,7 @@ public partial class CapturesManager(
     public async Task Delete(CaptureId captureId)
     {
         var lifecycle = GetLifecycle(captureId);
-        lifecycle.Close();
+        var closure = lifecycle.Close();
         await lifecycle.Gate.WaitAsync();
         try
         {
@@ -143,6 +148,11 @@ public partial class CapturesManager(
             }
 
             await Captures.Delete(captureId);
+        }
+        catch
+        {
+            lifecycle.ReopenAfterFailure(closure);
+            throw;
         }
         finally
         {
@@ -160,6 +170,20 @@ public partial class CapturesManager(
         var capture = await Captures.Get(captureId);
         if (capture.Status == CaptureStatus.Started)
         {
+            if (lifecycle.Closure != closure) return [];
+            if (lifecycle.Closed || lifecycle.RestartRequired)
+            {
+                // Persisted Started can outlive a partially completed Stop. Re-establish explicitly under
+                // the gate, rather than claiming success from a status whose subscription was torn down.
+                lifecycle.RestartRequired = true;
+                await Run(capture);
+                if (lifecycle.Closure == closure)
+                {
+                    lifecycle.Closed = false;
+                    lifecycle.RestartRequired = false;
+                }
+            }
+
             return [];
         }
 

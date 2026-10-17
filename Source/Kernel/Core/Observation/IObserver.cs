@@ -71,9 +71,9 @@ public interface IObserver : IGrainWithStringKey
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
-    /// Check if the observer has a subscription subscribed.
+    /// Checks whether a subscription is installed and its setup completed successfully.
     /// </summary>
-    /// <returns>True if it has, false if not.</returns>
+    /// <returns>True if setup completed, including while healthy catch-up is pending; false if missing, in progress or failed.</returns>
     [AlwaysInterleave]
     Task<bool> IsSubscribed();
 

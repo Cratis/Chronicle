@@ -17,6 +17,8 @@ public partial class Observer
             return false;
         }
 
+        if (_subscriptionSetupFailed) return true;
+
         var currentState = await GetCurrentState();
         if (currentState is Observing or States.Replay)
         {
@@ -108,7 +110,10 @@ public partial class Observer
             await TransitionTo<Disconnected>();
             if (CannotReconcileSubscription()) return;
             await RecoverAfterSubscribing(leavesQuarantine: false);
-            _subscriptionSetupFailed = await GetCurrentState() is not (Observing or States.Replay);
+
+            // Do not clear a stranded entry merely because recovery returned without throwing.
+            // Healthy catch-up and deferred routing need not have finished for setup to be established.
+            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
         }
         catch
         {
