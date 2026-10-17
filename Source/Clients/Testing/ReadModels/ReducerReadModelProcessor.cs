@@ -32,13 +32,15 @@ internal static class ReducerReadModelProcessor
     /// <param name="events">The events to process.</param>
     /// <param name="context">The storage, artifacts, services and original event contexts for the fold.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
+    /// <param name="eventPositions">Optional collection-wide positions for bare events grouped by key.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
         ReadModelFoldContext context,
-        TReadModel? initialState = null)
+        TReadModel? initialState = null,
+        IReadOnlyList<int>? eventPositions = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -58,7 +60,7 @@ internal static class ReducerReadModelProcessor
                 @event.EventSourceId,
                 @event.EventStreamType,
                 @event.EventStreamId,
-                (EventSequenceNumber)(ulong)index,
+                (EventSequenceNumber)(ulong)(eventPositions?[index] ?? index),
                 CorrelationId.NotSet) with
             {
                 Tags = @event.Event.GetType().GetTags().Concat(@event.Tags).Distinct(StringComparer.Ordinal).Select(tag => new Tag(tag)).ToArray()

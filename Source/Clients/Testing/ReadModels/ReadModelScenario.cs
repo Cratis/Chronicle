@@ -458,6 +458,11 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     void EnsureProcessed()
     {
+        if (_readModelSeeds.Count > 0 && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
+        {
+            return;
+        }
+
         if (_strictFidelity && Substitutions.Count > 0)
         {
             throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
@@ -465,12 +470,6 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
         if (!_processed && (_collectedEvents.Count > 0 || _readModelSeeds.Count > 0))
         {
-            if (_collectedEvents.Count == 0 && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
-            {
-                _processed = true;
-                return;
-            }
-
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
             if (_readModelSeeds.Count > 0) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
             _processed = true;

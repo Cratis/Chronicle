@@ -47,7 +47,7 @@ internal static class SeededReadModelReducer
             {
                 EventContexts = context.EventContexts is null ? null : group.Select(pair => context.EventContexts[pair.Index]).ToArray()
             };
-            var (reduced, _) = await ReducerReadModelProcessor.Process(reducerType, inputs, groupContext, current);
+            var (reduced, _) = await ReducerReadModelProcessor.Process(reducerType, inputs, groupContext, current, group.Select(pair => pair.Index).ToArray());
             if (reduced is null)
             {
                 instances.Remove(group.Key);
