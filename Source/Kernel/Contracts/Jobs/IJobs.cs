@@ -34,7 +34,7 @@ public interface IJobs
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult> ResumeJob(ResumeJobRequest request, CallContext callContext = default);
+    Task<CommandResult<ResumeJobResponse>> ResumeJob(ResumeJobRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the StopJob command.
     /// </summary>
@@ -42,7 +42,7 @@ public interface IJobs
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The command result.</returns>
     [Operation]
-    Task<CommandResult> StopJob(StopJobRequest request, CallContext callContext = default);
+    Task<CommandResult<StopJobResponse>> StopJob(StopJobRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the GetJobSteps query.
     /// </summary>
@@ -120,6 +120,25 @@ public class ResumeJobRequest
 }
 
 /// <summary>
+/// Represents the ResumeJobResponse message.
+/// </summary>
+[ProtoContract]
+public class ResumeJobResponse
+{
+    /// <summary>
+    /// Gets or sets the Accepted.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool Accepted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Refusal.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal Refusal { get; set; }
+}
+
+/// <summary>
 /// Represents the StopJobRequest message.
 /// </summary>
 [ProtoContract]
@@ -142,6 +161,25 @@ public class StopJobRequest
     /// </summary>
     [ProtoMember(3)]
     public Guid JobId { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the StopJobResponse message.
+/// </summary>
+[ProtoContract]
+public class StopJobResponse
+{
+    /// <summary>
+    /// Gets or sets the Accepted.
+    /// </summary>
+    [ProtoMember(1)]
+    public bool Accepted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Refusal.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Jobs.JobCommandRefusal Refusal { get; set; }
 }
 
 /// <summary>

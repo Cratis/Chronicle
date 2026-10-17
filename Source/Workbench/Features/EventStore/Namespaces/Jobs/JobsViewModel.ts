@@ -2,9 +2,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { inject, injectable } from 'tsyringe';
-import { DeleteJob, JobSummary, ResumeJob, StopJob } from 'Features/Jobs';
+import { DeleteJob, JobCommandRefusal, JobSummary, ResumeJob, StopJob } from 'Features/Jobs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Guid } from '@cratis/fundamentals';
+
+const describeRefusal = (refusal: JobCommandRefusal | undefined): string => {
+    switch (refusal) {
+        case JobCommandRefusal.notFound: return 'it could not be found';
+        case JobCommandRefusal.jobIsCompleted: return 'it has already completed';
+        case JobCommandRefusal.jobIsNotRunning: return 'it is not running';
+        case JobCommandRefusal.couldNotPersist: return 'the change could not be saved, so it was left as it was';
+        case JobCommandRefusal.notResumed: return 'nothing took it forward';
+        default: return 'it was refused';
+    }
+};
 
 @injectable()
 export class JobsViewModel {
@@ -33,20 +44,47 @@ export class JobsViewModel {
         this.selectedJobIds = [];
     }
 
+    /**
+     * Asks the selected job to stop. A job that refuses is reported as an error carrying the reason rather
+     * than being shown as stopped.
+     */
     async stop() {
-        const command = new StopJob();
+        const command = this.createStopJob();
         command.eventStore = this._params.eventStore!;
         command.namespace = this._params.namespace!;
         command.jobId = this.selectedJob?.id || Guid.empty;
-        await command.execute();
+        const result = await command.execute();
+        this.throwIfRefused('stop', result.response?.accepted, result.response?.refusal);
     }
 
+    /**
+     * Asks the selected job to resume. A job that nothing took forward is reported as an error carrying the
+     * reason rather than being shown as resumed.
+     */
     async resume() {
-        const command = new ResumeJob();
+        const command = this.createResumeJob();
         command.eventStore = this._params.eventStore!;
         command.namespace = this._params.namespace!;
         command.jobId = this.selectedJob?.id || Guid.empty;
-        await command.execute();
+        const result = await command.execute();
+        this.throwIfRefused('resume', result.response?.accepted, result.response?.refusal);
+    }
+
+    protected createStopJob(): StopJob {
+        return new StopJob();
+    }
+
+    protected createResumeJob(): ResumeJob {
+        return new ResumeJob();
+    }
+
+    private throwIfRefused(action: string, accepted: boolean | undefined, refusal: JobCommandRefusal | undefined) {
+        // A kernel older than the response carries none; the command succeeding is all it can say.
+        if (accepted === undefined || accepted) {
+            return;
+        }
+
+        throw new Error(`The job did not ${action}: ${describeRefusal(refusal)}.`);
     }
 
     /**

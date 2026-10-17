@@ -17,22 +17,28 @@ public class Jobs(IEventStore eventStore) : IJobs
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 
     /// <inheritdoc/>
-    public Task Stop(JobId jobId) =>
-        _servicesAccessor.Services.Jobs.StopJob(new()
+    public async Task<JobCommandResult> Stop(JobId jobId)
+    {
+        var response = (await _servicesAccessor.Services.Jobs.StopJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             JobId = jobId
-        }).EnsureSuccess();
+        })).EnsureSuccess();
+        return new(response.Accepted, (JobCommandRefusal)(int)response.Refusal);
+    }
 
     /// <inheritdoc/>
-    public Task Resume(JobId jobId) =>
-        _servicesAccessor.Services.Jobs.ResumeJob(new()
+    public async Task<JobCommandResult> Resume(JobId jobId)
+    {
+        var response = (await _servicesAccessor.Services.Jobs.ResumeJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             JobId = jobId
-        }).EnsureSuccess();
+        })).EnsureSuccess();
+        return new(response.Accepted, (JobCommandRefusal)(int)response.Refusal);
+    }
 
     /// <inheritdoc/>
     public Task Delete(JobId jobId) =>

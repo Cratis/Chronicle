@@ -14,6 +14,24 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
+message CommandResult_ResumeJobResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   ResumeJobResponse Response = 7;
+}
+message CommandResult_StopJobResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   StopJobResponse Response = 7;
+}
 message DeleteJobRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -23,6 +41,14 @@ message GetJobStepsRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+enum JobCommandRefusal {
+   NotRefused = 0;
+   NotFound = 1;
+   JobIsCompleted = 2;
+   JobIsNotRunning = 3;
+   CouldNotPersist = 4;
+   NotResumed = 5;
 }
 message JobProgress {
    int32 TotalSteps = 1;
@@ -113,6 +139,10 @@ message ResumeJobRequest {
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+message ResumeJobResponse {
+   bool Accepted = 1;
+   JobCommandRefusal Refusal = 2;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
@@ -121,6 +151,10 @@ message StopJobRequest {
    string EventStore = 1;
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+message StopJobResponse {
+   bool Accepted = 1;
+   JobCommandRefusal Refusal = 2;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -138,6 +172,6 @@ service Jobs {
    rpc DeleteJob (DeleteJobRequest) returns (CommandResult);
    rpc GetJobSteps (GetJobStepsRequest) returns (QueryResult_IEnumerable_JobStepSummaryResponse);
    rpc ObserveJobs (ObserveJobsRequest) returns (stream QueryResult_IEnumerable_JobSummaryResponse);
-   rpc ResumeJob (ResumeJobRequest) returns (CommandResult);
-   rpc StopJob (StopJobRequest) returns (CommandResult);
+   rpc ResumeJob (ResumeJobRequest) returns (CommandResult_ResumeJobResponse);
+   rpc StopJob (StopJobRequest) returns (CommandResult_StopJobResponse);
 }

@@ -21,7 +21,7 @@ public record StopJob(EventStoreName EventStore, EventStoreNamespaceName Namespa
     /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Stop"/> on the jobs manager grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
-    /// <returns>Awaitable task.</returns>
-    public Task Handle(IGrainFactory grainFactory) =>
-        grainFactory.GetJobsManager(EventStore, Namespace).Stop(JobId);
+    /// <returns>The <see cref="StopJobOutcome"/> telling whether the job took the stop, and why not when it did not.</returns>
+    public async Task<StopJobOutcome> Handle(IGrainFactory grainFactory) =>
+        JobCommandOutcomes.ForStop(await grainFactory.GetJobsManager(EventStore, Namespace).Stop(JobId));
 }
