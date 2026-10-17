@@ -100,7 +100,10 @@ internal sealed class ChronicleServerStartupTask(
     {
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
 
-        // Apply patches first before anything else starts
+        // Populate the local CLR map before any grain can deserialize system events.
+        await Step("DiscoverAndRegisterSystemEventTypes", () => eventTypes.DiscoverAndRegister(EventStoreName.System));
+
+        // Apply patches before other grains start
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
         await Step(nameof(IPatchManager.ApplyPatches), patchManager.ApplyPatches);
 
@@ -112,7 +115,10 @@ internal sealed class ChronicleServerStartupTask(
         var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
         foreach (var eventStore in allEventStores)
         {
-            await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            if (eventStore != EventStoreName.System)
+            {
+                await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            }
             try
             {
                 await Step("ReconcileLifecycleOccurrences", grainFactory.GetGrain<ILifecycleOccurrences>(eventStore.Value).Ensure);

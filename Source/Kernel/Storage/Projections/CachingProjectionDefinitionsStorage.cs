@@ -25,7 +25,8 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// longer contains. A listing or read that overlaps a local <see cref="Save"/> or <see cref="Delete"/> leaves the cache
 /// untouched, so an older snapshot never overwrites a newer local write. A cached definition can still be stale when another silo changed or deleted it; the
 /// <c language="csharp">Projection</c> grain, single-activation per (event store, projection id) cluster-wide, is the authoritative
-/// writer of its definition.
+/// writer of its definition. Legacy entries are always re-read because their unknown defaults must not hide a
+/// lossless upgrade already committed by another silo.
 /// </para>
 /// </remarks>
 /// <param name="inner">The inner <see cref="IProjectionDefinitionsStorage"/> the cache delegates to.</param>
@@ -71,7 +72,8 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
-        if (_cache.TryGetValue(id, out var cached))
+        // Legacy defaults are not authoritative: another silo may already have upgraded this definition.
+        if (_cache.TryGetValue(id, out var cached) && !cached.HasLegacyStorageFields)
         {
             return cached;
         }

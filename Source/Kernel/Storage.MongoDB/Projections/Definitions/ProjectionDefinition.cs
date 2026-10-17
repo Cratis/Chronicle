@@ -128,4 +128,14 @@ public class ProjectionDefinition
     /// Gets or sets the software version of the client application that registered the definition.
     /// </summary>
     public string? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the scope of the projection.
+    /// </summary>
+    public ProjectionScope Scope { get; set; } = ProjectionScope.Namespaced;
+
+    /// <summary>
+    /// Gets or sets the definition storage format. Zero identifies legacy, lossy definitions.
+    /// </summary>
+    public int StorageFormatVersion { get; set; }
 }

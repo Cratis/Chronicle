@@ -75,6 +75,16 @@ public record ProjectionDefinition(
     public string? Version { get; init; }
 
     /// <summary>
+    /// Gets whether storage predates preservation of <see cref="Scope"/> and every-event keys and AutoMap settings.
+    /// </summary>
+    /// <remarks>
+    /// Storage metadata, not a projection rule. Those fields are unknown in legacy MongoDB definitions,
+    /// including every-event settings in children and nested projections. A fresh registration supplies them
+    /// without evolution; the next lossless save removes this uncertainty.
+    /// </remarks>
+    public bool HasLegacyStorageFields { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the projection is owned by the kernel itself.
     /// </summary>
     /// <remarks>

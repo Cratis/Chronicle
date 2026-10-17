@@ -27,6 +27,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
 {
     protected ProjectionObserverSubscriber _subscriber;
     protected ProjectionDefinition _definition;
+    protected IProjection _projectionGrain;
+    protected IStorage<ProjectionDefinition> _stateStorage;
     protected IProjectionPipelineManager _pipelines;
     protected IProjectionFactory _factory;
     protected EngineProjection _projection;
@@ -39,13 +41,13 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     {
         var silo = new TestKitSilo();
         _definition = CreateDefinition();
-        var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
-        stateStorage.State = _definition;
-        silo.Options.StorageFactory = _ => stateStorage;
+        _stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
+        _stateStorage.State = _definition;
+        silo.Options.StorageFactory = _ => _stateStorage;
 
-        var projectionGrain = Substitute.For<IProjection>();
-        projectionGrain.GetDefinition().Returns(_definition);
-        silo.AddProbe(_ => projectionGrain);
+        _projectionGrain = Substitute.For<IProjection>();
+        _projectionGrain.GetDefinition().Returns(_definition);
+        silo.AddProbe(_ => _projectionGrain);
         silo.AddProbe(_ => Substitute.For<IProjectionChangesetNotifier>());
 
         var readModel = new ReadModelDefinition(

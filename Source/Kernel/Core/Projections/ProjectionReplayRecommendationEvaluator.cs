@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections;
@@ -44,8 +45,9 @@ internal static class ProjectionReplayRecommendationEvaluator
         }
 
         var eventTypesToExclude = addedEventTypes.ToHashSet();
-        var normalizedPreviousDefinition = NormalizeForComparison(previousDefinition);
-        var normalizedCurrentDefinition = NormalizeForComparison(RemoveEventTypes(currentDefinition, eventTypesToExclude));
+        var hasLegacyStorageFields = previousDefinition.HasLegacyStorageFields || currentDefinition.HasLegacyStorageFields;
+        var normalizedPreviousDefinition = ProjectionDefinitionNormalization.ForComparison(previousDefinition, hasLegacyStorageFields);
+        var normalizedCurrentDefinition = ProjectionDefinitionNormalization.ForComparison(RemoveEventTypes(currentDefinition, eventTypesToExclude), hasLegacyStorageFields);
 
         return objectComparer.Compare(normalizedPreviousDefinition, normalizedCurrentDefinition, ObjectComparerMode.Loose, out _)
             ? addedEventTypes
@@ -209,12 +211,4 @@ internal static class ProjectionReplayRecommendationEvaluator
         source
             .Where(_ => !eventTypesToExclude.Contains(_.Key))
             .ToDictionary(_ => _.Key, _ => _.Value);
-
-    static ProjectionDefinition NormalizeForComparison(ProjectionDefinition definition) =>
-        definition with
-        {
-            ReadModel = null!,
-            InitialModelState = null!,
-            LastUpdated = null
-        };
 }

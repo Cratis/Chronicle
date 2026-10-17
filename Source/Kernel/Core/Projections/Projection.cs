@@ -69,6 +69,10 @@ public class Projection(
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);
         var previousDefinition = State;
+
+        // A stale manager or another silo may still hold a legacy snapshot after this grain upgraded.
+        // Never let its unknown defaults replace rules already supplied by a lossless registration.
+        definition = ProjectionDefinitionNormalization.PreserveKnownStorageFields(definition, previousDefinition);
         var compareResult = await projectionDefinitionComparer.Compare(key, previousDefinition, definition);
 
         State = definition;
@@ -94,11 +98,16 @@ public class Projection(
             }
         }
 
+        var storageUpgraded = previousDefinition.HasLegacyStorageFields && !definition.HasLegacyStorageFields;
+        if (compareResult == ProjectionDefinitionCompareResult.Different || storageUpgraded)
+        {
+            _projectionsByNamespace.Clear();
+            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
+        }
+
         if (compareResult == ProjectionDefinitionCompareResult.Different)
         {
             logger.ProjectionHasChanged(key.ProjectionId);
-            _projectionsByNamespace.Clear();
-            await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             await EvolveForAllNamespaces(key, namespaceNames, previousDefinition, definition);
