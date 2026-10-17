@@ -11,6 +11,7 @@ public class with_an_await_continuation : given.a_unit_with_native_sequence
     {
         using var frame = Refuse();
         ClearCalls();
+
         // Forces a real await continuation so the refusal is proven to flow across it (interleave, not a wait).
         await Task.Yield();
         _error = await Catch.Exception(() => _sequence.Append("source", "changed"));
