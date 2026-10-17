@@ -405,6 +405,7 @@ public partial class Observer(
             siloAddress,
             subscriberArgs,
             isReplayable);
+        ForgetSupersededRegistrations();
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
@@ -456,12 +457,13 @@ public partial class Observer(
     {
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetSupersededRegistrations();
         await PauseJobs();
         await TransitionTo<Disconnected>();
     }
 
     /// <inheritdoc/>
-    public Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
+    public async Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
     {
         // Single-threaded grain — the check and the subscription change form an atomic action.
         // If a new client has already replaced the subscription, the old client's
@@ -473,7 +475,8 @@ public partial class Observer(
                 .ToArray();
             if (remaining.Length == _subscription.Targets.Count)
             {
-                return Task.CompletedTask;
+                DropSupersededRegistration(connectionId);
+                return;
             }
 
             if (remaining.Length > 0)
@@ -484,20 +487,22 @@ public partial class Observer(
                     Arguments = remaining[0].ConnectedClient,
                     Targets = remaining
                 };
-                return Task.CompletedTask;
+                return;
             }
 
-            return Unsubscribe();
+            await PromoteSupersededRegistrationOrUnsubscribe();
+            return;
         }
 
         if (_subscription.IsSubscribed &&
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
         {
-            return Task.CompletedTask;
+            DropSupersededRegistration(connectionId);
+            return;
         }
 
-        return Unsubscribe();
+        await Unsubscribe();
     }
 
     /// <inheritdoc/>
@@ -902,6 +907,7 @@ public partial class Observer(
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetSupersededRegistrations();
     }
 
     async Task SetUpSubscription<TObserverSubscriber>(
@@ -945,6 +951,7 @@ public partial class Observer(
     {
         if (subscriberArgs is not ConnectedClient connectedClient)
         {
+            ForgetSupersededRegistrations();
             _subscription = new(
                 _observerId,
                 _observerKey,
@@ -963,6 +970,8 @@ public partial class Observer(
         var target = new ObserverSubscriberTarget(siloAddress, connectedClient);
         if (CanFanOutInto<TObserverSubscriber>(eventTypes, filters, generationDelivery))
         {
+            DropSupersededRegistration(connectedClient.ConnectionId);
+
             // Another instance of the same client is already subscribed with an identical
             // definition - add this instance as a fan-out target instead of replacing the
             // subscription. The stable ordering keeps partition selection deterministic.
@@ -979,6 +988,21 @@ public partial class Observer(
             };
             return;
         }
+
+        // The registrations whose targets this replaces are kept, so the observer can hand over to one of them
+        // when the client that now owns the subscription leaves.
+        SupersedeTargetsOtherThan(connectedClient.ConnectionId);
+        var observerType = observerDefinition.State.Type;
+        _resubscribeTarget = existing => SubscribeToEventTypes<TObserverSubscriber>(
+            observerType,
+            eventTypes,
+            existing.SiloAddress,
+            existing.ConnectedClient,
+            isReplayable,
+            filters,
+            reactivateRetired: false,
+            automatic: true,
+            generationDelivery: generationDelivery);
 
         _subscription = new(
             _observerId,
