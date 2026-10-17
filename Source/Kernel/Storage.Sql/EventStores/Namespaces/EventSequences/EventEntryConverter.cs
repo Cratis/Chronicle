@@ -502,6 +502,41 @@ public static class EventEntryConverter
         string.IsNullOrEmpty(entry.Subject) ? new Subject(entry.EventSourceId.Value) : new Subject(entry.Subject);
 
     /// <summary>
+    /// Get the generation a default read of an event entry delivers. A revised event is read from its
+    /// revision, at the revision's generation, matching the MongoDB and InMemory backends; every other
+    /// event is read at its highest stored generation.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The generation to read.</returns>
+    public static uint GetReadGeneration(EventEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.Content))
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (contentDict is null || contentDict.Count == 0)
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        if (entry.Type != GlobalEventTypes.Redaction
+            && entry.RevisedGeneration is { } revised
+            && contentDict.TryGetValue(revised.ToString(), out var revisedContent)
+            && revisedContent.ValueKind == JsonValueKind.Object)
+        {
+            return revised;
+        }
+
+        var highest = contentDict.Keys
+            .Select(k => uint.TryParse(k, out var g) ? g : 0u)
+            .DefaultIfEmpty(EventTypeGeneration.First.Value)
+            .Max();
+        return highest == 0u ? EventTypeGeneration.First.Value : highest;
+    }
+
+    /// <summary>
     /// Convert an <see cref="EventEntry"/> to an <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="entry">The <see cref="EventEntry"/> to convert.</param>
@@ -517,7 +552,7 @@ public static class EventEntryConverter
         IIdentityStorage identityStorage,
         IReadOnlyCollection<NamedTag>? namedTags = null)
     {
-        var eventType = GetEventType(entry);
+        var eventType = new EventType(entry.Type, new EventTypeGeneration(GetReadGeneration(entry)), false);
         var content = GetContentForGeneration(entry, eventType.Generation);
         var causation = GetCausation(entry);
         var causedBy = GetCausedBy(entry);
