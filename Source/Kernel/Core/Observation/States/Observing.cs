@@ -74,7 +74,7 @@ public class Observing(
         // When partitions are being caught up, the catch-up job handles historical events
         // while the queue subscription handles new events arriving in real time.
         // When there are failed partitions, the retry-failed-partition job handles recovery.
-        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.HasFailedPartitions())
+        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.IsCatchUpBackedOff() && !await Observer.HasFailedPartitions())
         {
             var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
             if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)

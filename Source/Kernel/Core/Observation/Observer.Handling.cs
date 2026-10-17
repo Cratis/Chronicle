@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    const int MaxPendingHandledCountPartitions = 512;
+
     /// <inheritdoc/>
     public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
     {
@@ -26,27 +28,38 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The counts are merged into what is pending for the partition and event type and the call returns, so a burst of
+    /// reports from many job steps does not turn into a burst of storage writes inside this non-reentrant grain. They
+    /// are made durable together by <see cref="FlushPendingHandledCounts"/> after at most
+    /// <see cref="Cratis.Chronicle.Configuration.Observers.WriteCoalescingInterval"/> seconds.
+    /// </remarks>
     public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
         Skips.JobReported(partition);
+        if (IsRetired || _removed || !_observerExists) return;
 
-        // Serialize independent handled-count writes with namespace resource deletion as well as source writes.
-        await _alertMutationLock.WaitAsync();
-        try
+        if (countsPerEventType.Count > 0)
         {
-            if (IsRetired || _removed || !_observerExists) return;
-            if (countsPerEventType.Count > 0)
+            if (!_pendingHandledCounts.TryGetValue(partition, out var pending))
             {
-                await GetObserverHandledCountsStorage().Increment(_observerId, partition, countsPerEventType);
-                State = WithIncrementedRunningTotals(State, countsPerEventType);
+                pending = [];
+                _pendingHandledCounts[partition] = pending;
             }
 
-            await WriteStateAsync();
+            foreach (var (eventTypeId, count) in countsPerEventType)
+            {
+                pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+            }
         }
-        finally
+
+        if (_writeCoalescingInterval <= TimeSpan.Zero || _pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
         {
-            _alertMutationLock.Release();
+            await FlushPendingHandledCounts();
+            return;
         }
+
+        EnsureCoalescedWriteTimer();
     }
 
     /// <inheritdoc/>
@@ -154,6 +167,144 @@ public partial class Observer
             HandledEventCount = newTotal,
             HandledEventCountPerEventType = perEventType
         };
+    }
+
+    /// <summary>
+    /// Makes the handled-event counts reported since the last flush durable, with one state write for all of them.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task FlushPendingHandledCounts()
+    {
+        if (_pendingHandledCounts.Count == 0)
+        {
+            return;
+        }
+
+        // Serialize independent handled-count writes with namespace resource deletion as well as source writes.
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed || !_observerExists)
+            {
+                _pendingHandledCounts.Clear();
+                return;
+            }
+
+            var pending = _pendingHandledCounts;
+            _pendingHandledCounts = [];
+            var written = new HashSet<Key>();
+            try
+            {
+                var countsStorage = GetObserverHandledCountsStorage();
+                foreach (var (partition, counts) in pending)
+                {
+                    await countsStorage.Increment(_observerId, partition, counts);
+                    written.Add(partition);
+                    State = WithIncrementedRunningTotals(State, counts);
+                }
+
+                await WriteStateAsync();
+            }
+            catch
+            {
+                // What was not made durable goes back to be flushed with the next batch, so no count is lost.
+                RestorePendingHandledCounts(pending.Where(_ => !written.Contains(_.Key)));
+                throw;
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    void EnsureCoalescedWriteTimer()
+    {
+        if (_coalescedWriteTimer is not null || (_pendingHandledCounts.Count == 0 && !_failureStateWritePending))
+        {
+            return;
+        }
+
+        _coalescedWriteTimer = this.RegisterGrainTimer(
+            FlushCoalescedWritesFromTimer,
+            new GrainTimerCreationOptions { DueTime = _writeCoalescingInterval, Period = Timeout.InfiniteTimeSpan });
+    }
+
+    /// <summary>
+    /// Registers the retry reminders and writes the observer state for the partition failures recorded since the last flush.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task FlushPendingFailures()
+    {
+        if (!_failureStateWritePending && _pendingRetryReminders.Count == 0)
+        {
+            return;
+        }
+
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            var reminders = _pendingRetryReminders;
+            _pendingRetryReminders = [];
+            _failureStateWritePending = false;
+            if (IsRetired || _removed || !_observerExists)
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (var (failureId, retryDelay) in reminders)
+                {
+                    if (!IsQuarantined && Failures.Partitions.Any(_ => _.Id == failureId && !_.IsQuarantined))
+                    {
+                        await this.RegisterOrUpdateReminder(PartitionReminderName(failureId), retryDelay, GetRetryReminderPeriod(retryDelay));
+                    }
+                }
+
+                await WriteStateAsync();
+            }
+            catch
+            {
+                foreach (var (failureId, retryDelay) in reminders)
+                {
+                    _pendingRetryReminders.TryAdd(failureId, retryDelay);
+                }
+
+                _failureStateWritePending = true;
+                throw;
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    async Task FlushCoalescedWritesFromTimer(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _coalescedWriteTimer?.Dispose();
+        _coalescedWriteTimer = null;
+        await FlushPendingHandledCounts();
+        await FlushPendingFailures();
+    }
+
+    void RestorePendingHandledCounts(IEnumerable<KeyValuePair<Key, Dictionary<EventTypeId, EventCount>>> notWritten)
+    {
+        foreach (var (partition, counts) in notWritten)
+        {
+            if (!_pendingHandledCounts.TryGetValue(partition, out var pending))
+            {
+                _pendingHandledCounts[partition] = counts;
+                continue;
+            }
+
+            foreach (var (eventTypeId, count) in counts)
+            {
+                pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+            }
+        }
     }
 
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events)
@@ -467,6 +618,8 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task FlushDebouncedProgressState()
     {
+        await FlushPendingHandledCounts();
+        await FlushPendingFailures();
         if (_debouncedProgressWrites > 0)
         {
             await WriteStateAsync();

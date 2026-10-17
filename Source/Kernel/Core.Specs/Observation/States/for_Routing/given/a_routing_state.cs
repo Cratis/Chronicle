@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
@@ -27,6 +28,7 @@ public class a_routing_state : Specification
     protected TailEventSequenceNumbers _tailEventSequenceNumbers;
     protected ObserverSubscription _subscription;
     protected ObserverKey _observerKey;
+    protected IStorage _storage;
 
     void Establish()
     {
@@ -37,10 +39,12 @@ public class a_routing_state : Specification
         _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();
         _definitionState.State = ObserverDefinition.Empty;
 
+        _storage = Substitute.For<IStorage>();
         _state = new Routing(
             _observerKey,
             _definitionState,
             _eventSequence,
+            _storage,
             Substitute.For<ILogger<Routing>>());
         _state.SetStateMachine(_stateMachine);
         _storedState = new ObserverState

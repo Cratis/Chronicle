@@ -117,6 +117,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendPrepared));
         ReadProtectionGuard.Append(nameof(AppendPrepared));
         ThrowIfNotOwner(preparedEvent);
         return AppendCore(eventSourceId, preparedEvent.Event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, preparedEvent: preparedEvent);
@@ -135,6 +136,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendPreparedThroughEventSource));
         ReadProtectionGuard.Append(nameof(AppendPreparedThroughEventSource));
         ThrowIfNotOwner(preparedEvent);
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
@@ -205,6 +207,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendThroughEventSource));
         ReadProtectionGuard.Append(nameof(AppendThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendCore(
@@ -235,6 +238,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendManyThroughEventSource));
         ReadProtectionGuard.Append(nameof(AppendManyThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendManyCore(
@@ -280,6 +284,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendMany));
         ReadProtectionGuard.Append(nameof(AppendMany));
         return AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
@@ -298,6 +303,7 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
         ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
         return AppendManyCore(eventSourceId, events, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
@@ -309,6 +315,7 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendMany));
         ReadProtectionGuard.Append(nameof(AppendMany));
         return AppendManyCore(events, [], correlationId, tags, concurrencyScopes);
     }
@@ -321,6 +328,7 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
+        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
         ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
         return AppendManyCore(events, namedTags, correlationId, tags, concurrencyScopes);
     }
@@ -685,6 +693,17 @@ public class EventSequence(
         return AppendManyForEventSources(events, null, null, scopes, [], readProtectionCommit, receipt);
     }
 
+    /// <summary>
+    /// Commits the captured batch without reopening public append admission.
+    /// </summary>
+    /// <param name="events">The unit's captured events.</param>
+    /// <param name="scopes">The unit's captured concurrency scopes.</param>
+    /// <returns>The append result.</returns>
+    internal Task<AppendManyResult> AppendManyForUnitOfWork(
+        IEnumerable<EventForEventSourceId> events,
+        IDictionary<EventSourceId, ConcurrencyScope> scopes) =>
+        AppendManyCore(events, [], concurrencyScopes: scopes);
+
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
     /// <param name="store">The expected event store.</param>
     /// <param name="targetNamespace">The expected namespace.</param>
@@ -762,6 +781,7 @@ public class EventSequence(
         Subject? subject,
         string operation = nameof(Append))
     {
+        ImmediateAppendGuard.Append(operation);
         ReadProtectionGuard.Append(operation);
         return AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }

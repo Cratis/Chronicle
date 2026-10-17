@@ -12,7 +12,7 @@ public class a_cancelled_subscription : given.a_captures_manager
     void Establish()
     {
         StartedState(_events);
-        _subscriptions.Subscribe(_eventStore, Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new OperationCanceledException());
+        _subscriptions.Recover(_eventStore, Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new OperationCanceledException());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _manager.Ensure());

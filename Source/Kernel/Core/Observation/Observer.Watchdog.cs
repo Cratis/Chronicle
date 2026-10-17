@@ -19,6 +19,12 @@ public partial class Observer
     internal int CatchupRecoveryAttempts => _catchupRecoveryAttempts;
 
     /// <summary>
+    /// Sets the consecutive catch-up recovery attempts. This method is for testing purposes only.
+    /// </summary>
+    /// <param name="attempts">The number of attempts.</param>
+    internal void SetCatchupRecoveryAttemptsForTesting(int attempts) => _catchupRecoveryAttempts = attempts;
+
+    /// <summary>
     /// Runs all watchdog checks immediately. This method is for testing purposes only.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -76,10 +82,27 @@ public partial class Observer
     }
 
     async Task<bool> RecoveredBySettlingChecks() =>
-        await CheckDeferredRouting() || await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation();
+        await CheckDeferredRouting() || await CheckCatchUpBackoffElapsed() || await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation();
 
     async Task<bool> IsWaitingForEventLookupRetry() =>
         !IsQuarantined && _subscription.IsSubscribed && await GetCurrentState() is Routing { NextEventLookupFailed: true };
+
+    /// <summary>
+    /// Routes the observer again once the backoff after catch-up jobs that produced no work has elapsed.
+    /// </summary>
+    /// <returns>True if the watchdog acted on the observer, false otherwise.</returns>
+    async Task<bool> CheckCatchUpBackoffElapsed()
+    {
+        if (_catchUpBackoffUntil == default || IsBackingOffCatchUp || IsQuarantined || await GetCurrentState() is not Observing)
+        {
+            return false;
+        }
+
+        _catchUpBackoffUntil = default;
+        logger.CatchUpBackoffElapsed();
+        await TransitionTo<Routing>();
+        return true;
+    }
 
     async Task<bool> CheckDeferredRouting()
     {
@@ -232,10 +255,11 @@ public partial class Observer
                 return false;
             }
 
+            var now = DateTimeOffset.UtcNow;
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
-                job.IsPreparingOrRunning);
+                job.IsLive(now));
 
             if (!hasRunningReplayJob)
             {
@@ -288,7 +312,7 @@ public partial class Observer
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
-            job.IsPreparingOrRunning &&
+            job.IsLive(DateTimeOffset.UtcNow) &&
             !_concludedCatchUpJobs.Contains(job.Id));
     }
 

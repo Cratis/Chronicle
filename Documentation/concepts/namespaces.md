@@ -12,6 +12,17 @@ When not specified, Chronicle will use the **Default** namespace. For how namesp
 > can sign up to use a system. The system being the same for all these companies, or tenants,
 > but all their data segregated from each other.
 
+## Subscription Readiness
+
+The explicit `EnsureNamespace` operation returns once healthy active projections and started events
+captures are subscribed in that namespace. Broken artifacts are logged and retried by the next
+subscription trigger; they do not prevent namespace creation, and retired observers are skipped.
+A very large projection set can exceed the call timeout; retrying joins the running subscription
+pass. A namespace created implicitly by its first append is reconciled on its event log's next
+observer watchdog tick, even if the namespace-added notification was missed. Subscription does not
+mean catch-up is complete: wait for observer completion before querying a read model that must
+include an append.
+
 ## Data Segregation
 
 With Chronicle, all namespace specific data sits in its own database in the underlying

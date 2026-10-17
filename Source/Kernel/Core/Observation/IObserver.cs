@@ -71,11 +71,18 @@ public interface IObserver : IGrainWithStringKey
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
-    /// Check if the observer has a subscription subscribed.
+    /// Checks whether a subscription is installed.
     /// </summary>
-    /// <returns>True if it has, false if not.</returns>
+    /// <returns>True if a subscription is installed, including while its setup is in progress.</returns>
     [AlwaysInterleave]
     Task<bool> IsSubscribed();
+
+    /// <summary>
+    /// Checks whether a subscription is installed and its setup completed successfully.
+    /// </summary>
+    /// <returns>True if setup completed, including while healthy catch-up is pending; false if missing, in progress or failed.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsSubscriptionEstablished();
 
     /// <summary>
     /// Get the event types that the observer is observing.
@@ -190,6 +197,36 @@ public interface IObserver : IGrainWithStringKey
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
+    /// Reconcile a kernel subscription in a serialized request without ending quarantine or resetting live progress.
+    /// </summary>
+    /// <remarks>
+    /// Replaces membership with the exact supplied pins and delivery policy, or preserves wildcard future-type
+    /// coverage. Sealed, retired, quarantined observers and recovery still owed after operator clearance are left
+    /// unchanged. Eligibility is rechecked after awaited setup before installation and recovery.
+    /// This kernel-only operation is not exposed through client contracts.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The exact replacement event types and generation pins.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscribesToAllEvents">Whether to observe all current and future types instead of a fixed set.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReconcileSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        bool subscribesToAllEvents,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility,
         object? subscriberArgs = default,
         bool isReplayable = true,
         ObserverFilters? filters = default)
@@ -379,6 +416,12 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>True if preparing for catch-up, false otherwise.</returns>
     [AlwaysInterleave]
     Task<bool> IsPreparingCatchup();
+
+    /// <summary>
+    /// Gets whether catch-up is backing off because consecutive catch-up jobs concluded without moving the observer forward.
+    /// </summary>
+    /// <returns>True if catch-up should not be started again yet, false otherwise.</returns>
+    Task<bool> IsCatchUpBackedOff();
 
     /// <summary>
     /// Check if the observer currently has any failed partitions.

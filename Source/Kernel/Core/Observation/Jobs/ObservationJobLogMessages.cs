@@ -32,6 +32,9 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Error, "Could not notify observer that replay completed; replay or recovery must be retried")]
     internal static partial void ReplayCompletionNotificationFailed(this ILogger<ReplayObserver> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "{JobName} prepared no job steps, so the job concludes without doing any work")]
+    internal static partial void NoJobStepsPrepared(this ILogger<IJob> logger, string jobName);
+
     [LoggerMessage(LogLevel.Warning, "Recovery of failed partition '{Partition}' handled no events but there are still events from sequence number {FromSequenceNumber} to handle. Keeping the partition failed rather than clearing it without running the handler")]
     internal static partial void NotClearingFailedPartitionWithEventsLeftToHandle(this ILogger<IJob> logger, Key partition, EventSequenceNumber fromSequenceNumber);
 

@@ -13,6 +13,9 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Failed reconciling namespace subscriptions for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
+    internal static partial void FailedReconcilingNamespaceSubscriptions(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Failed reconciling pattern capture for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
     internal static partial void FailedReconcilingPatternCapture(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 

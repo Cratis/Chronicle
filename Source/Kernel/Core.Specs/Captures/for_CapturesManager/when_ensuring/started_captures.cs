@@ -15,6 +15,6 @@ public class started_captures : given.a_captures_manager
 
     async Task Because() => await _manager.Ensure();
 
-    [Fact] void should_subscribe_the_events_capture() => _subscriptions.Received(1).Subscribe(_eventStore, Arg.Is<CaptureDefinition>(_ => _.Id == _events.Id));
+    [Fact] void should_subscribe_the_events_capture() => _subscriptions.Received(1).Recover(_eventStore, Arg.Is<CaptureDefinition>(_ => _.Id == _events.Id));
     [Fact] void should_start_the_poll_capturer() => _capturer.Received(1).Start(Arg.Is<Capture>(_ => _.Id == _poll.Id));
 }

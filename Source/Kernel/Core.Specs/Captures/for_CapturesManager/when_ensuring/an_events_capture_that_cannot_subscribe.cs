@@ -11,7 +11,7 @@ public class an_events_capture_that_cannot_subscribe : given.a_captures_manager
     {
         StartedState(_events);
         StartedState(_poll);
-        _subscriptions.Subscribe(_eventStore, Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new TimeoutException());
+        _subscriptions.Recover(_eventStore, Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new TimeoutException());
     }
 
     async Task Because() => await _manager.Ensure();
