@@ -4,7 +4,7 @@ A multi-tenant platform often decides where each tenant's database lives: which 
 
 Connection resolution lets Chronicle ask instead. Whenever it connects to a database, it describes what it is connecting for: the kind of database, the event store, the namespace, and the purpose. A resolver answers with the parts it decides. Anything it leaves out keeps Chronicle's default.
 
-Nothing changes until you configure it. Without a `connectionResolution` section, `connectionDetails` is used exactly as before.
+Nothing changes until you configure it. For how this fits with selecting tenants and namespaces, see [Tenancy](../../tenancy/index.md). Without a `connectionResolution` section, `connectionDetails` is used exactly as before.
 
 ## What Chronicle asks
 
