@@ -80,18 +80,7 @@ public class CaptureEventsSubscriptions(
         {
             try
             {
-                var observer = GetObserver(eventStore, @namespace, definition.Id, sequence);
-                if (!await observer.NeedsSubscriptionRecovery(eventTypes))
-                {
-                    continue;
-                }
-
-                logger.RecoveringCaptureSubscription(definition.Name, eventStore, @namespace);
-                await observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(
-                    ObserverType.Reactor,
-                    eventTypes,
-                    localSiloDetails.SiloAddress,
-                    isReplayable: false);
+                await RecoverIn(eventStore, @namespace, definition, sequence, eventTypes);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -103,6 +92,13 @@ public class CaptureEventsSubscriptions(
         {
             throw new AggregateException($"The capture '{definition.Name}' could not be recovered in every namespace", failures);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task Recover(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition)
+    {
+        var (sequence, eventTypes) = await Resolve(eventStore, definition);
+        await RecoverIn(eventStore, @namespace, definition, sequence, eventTypes);
     }
 
     /// <inheritdoc/>
@@ -177,6 +173,15 @@ public class CaptureEventsSubscriptions(
         }
 
         return resolved.Sequence;
+    }
+
+    async Task RecoverIn(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition, string sequence, EventType[] eventTypes)
+    {
+        var observer = GetObserver(eventStore, @namespace, definition.Id, sequence);
+        if (!await observer.NeedsSubscriptionRecovery(eventTypes)) return;
+        logger.RecoveringCaptureSubscription(definition.Name, eventStore, @namespace);
+        await observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(
+            ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
     }
 
     async Task SubscribeIn(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition, string sequence, EventType[] eventTypes) =>

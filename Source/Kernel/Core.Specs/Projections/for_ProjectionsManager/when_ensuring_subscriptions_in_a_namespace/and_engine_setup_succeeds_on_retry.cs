@@ -19,7 +19,7 @@ public class and_engine_setup_succeeds_on_retry : given.a_projections_manager_gr
         _projectionsServiceClient.NamespaceAdded(EventStore, EventStoreNamespaceName.Default)
             .Returns(Task.FromException(new TimeoutException("Engine namespace setup failed")), Task.CompletedTask);
         _observerGrain.IsSubscribed().Returns(_ => _subscribed);
-        _observerGrain.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false)
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;
@@ -37,5 +37,5 @@ public class and_engine_setup_succeeds_on_retry : given.a_projections_manager_gr
 
     [Fact] void should_subscribe_even_if_engine_setup_failed() => _subscribedAfterSetupFailed.ShouldBeTrue();
     [Fact] async Task should_retry_engine_setup_despite_the_healthy_subscription() => await _projectionsServiceClient.Received(2).NamespaceAdded(EventStore, EventStoreNamespaceName.Default);
-    [Fact] async Task should_not_repeat_the_successful_subscription() => await _observerGrain.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_not_repeat_the_successful_subscription() => await _observerGrain.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true);
 }

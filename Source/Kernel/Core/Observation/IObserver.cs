@@ -196,6 +196,36 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Reconcile a kernel subscription in a serialized request without ending quarantine or resetting live progress.
+    /// </summary>
+    /// <remarks>
+    /// Replaces membership with the exact supplied pins and delivery policy, or preserves wildcard future-type
+    /// coverage. Sealed, retired, quarantined observers and recovery still owed after operator clearance are left
+    /// unchanged. Eligibility is rechecked after awaited setup before installation and recovery.
+    /// This kernel-only operation is not exposed through client contracts.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The kernel-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The exact replacement event types and generation pins.</param>
+    /// <param name="siloAddress">The subscriber's silo address.</param>
+    /// <param name="subscribesToAllEvents">Whether to observe all current and future types instead of a fixed set.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <param name="subscriberArgs">Optional subscriber arguments.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReconcileSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        bool subscribesToAllEvents,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility,
+        object? subscriberArgs = default,
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Subscribe to all event types in the observer, respecting retirement during automatic recovery.
     /// </summary>
     /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>

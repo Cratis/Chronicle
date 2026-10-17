@@ -19,7 +19,7 @@ public class and_another_pass_is_pending : given.a_projections_manager_grain
         _state.Projections = [CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true }];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _observerGrain.IsSubscribed().Returns(_ => _subscription.Task.IsCompleted || _otherNamespaceSubscribed);
-        _observerGrain.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false)
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 if (++_subscriptionAttempts == 1) return _subscription.Task;
@@ -42,5 +42,5 @@ public class and_another_pass_is_pending : given.a_projections_manager_grain
     [Fact] void should_join_work_already_running_for_the_same_namespace() => _joinedPendingPass.ShouldBeTrue();
     [Fact] void should_not_block_another_namespace() => _otherNamespaceCompleted.ShouldBeTrue();
     [Fact] async Task should_set_the_definition_once_across_namespace_passes() => await _projectionGrain.ReceivedWithAnyArgs(1).SetDefinition(default!);
-    [Fact] async Task should_subscribe_each_distinct_namespace_once() => await _observerGrain.Received(2).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_subscribe_each_distinct_namespace_once() => await _observerGrain.Received(2).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true);
 }

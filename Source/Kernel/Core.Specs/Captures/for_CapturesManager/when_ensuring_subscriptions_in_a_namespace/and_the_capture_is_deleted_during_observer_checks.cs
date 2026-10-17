@@ -9,6 +9,7 @@ public class and_the_capture_is_deleted_during_observer_checks : given.a_capture
 {
     readonly TaskCompletionSource<bool> _subscriptionCheck = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _checking = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    bool _deleteDrained;
 
     void Establish()
     {
@@ -29,11 +30,15 @@ public class and_the_capture_is_deleted_during_observer_checks : given.a_capture
     {
         var pass = _manager.EnsureSubscribedIn("tenant");
         await _checking.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        await _manager.Delete(_events.Id);
+        var delete = _manager.Delete(_events.Id);
+        _deleteDrained = !delete.IsCompleted;
         _subscriptionCheck.TrySetResult(false);
-        await pass.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await Task.WhenAll(pass, delete).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _manager.EnsureSubscribedIn("tenant");
     }
 
     [Fact] async Task should_keep_the_capture_deleted() => (await _captures.Has(_events.Id)).ShouldBeFalse();
-    [Fact] async Task should_not_create_an_orphan_subscription() => await _subscriptions.DidNotReceive().Subscribe(_eventStore, "tenant", Arg.Any<CaptureDefinition>());
+    [Fact] void should_drain_the_in_flight_operation() => _deleteDrained.ShouldBeTrue();
+    [Fact] async Task should_remove_after_the_in_flight_operation() => await _subscriptions.Received(1).Remove(_eventStore, _eventsDefinition);
+    [Fact] async Task should_not_admit_another_subscription_after_delete() => await _subscriptions.Received(1).Recover(_eventStore, "tenant", Arg.Any<CaptureDefinition>());
 }

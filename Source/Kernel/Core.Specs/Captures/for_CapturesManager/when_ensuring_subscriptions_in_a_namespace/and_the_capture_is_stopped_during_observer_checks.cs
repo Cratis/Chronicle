@@ -9,6 +9,7 @@ public class and_the_capture_is_stopped_during_observer_checks : given.a_capture
 {
     readonly TaskCompletionSource<bool> _subscriptionCheck = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _checking = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    bool _stopDrained;
 
     void Establish()
     {
@@ -24,11 +25,15 @@ public class and_the_capture_is_stopped_during_observer_checks : given.a_capture
     {
         var pass = _manager.EnsureSubscribedIn("tenant");
         await _checking.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        await _manager.Stop(_events.Id);
+        var stop = _manager.Stop(_events.Id);
+        _stopDrained = !stop.IsCompleted;
         _subscriptionCheck.TrySetResult(false);
-        await pass.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await Task.WhenAll(pass, stop).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _manager.EnsureSubscribedIn("tenant");
     }
 
     [Fact] async Task should_keep_the_capture_stopped() => (await _captures.Get(_events.Id)).Status.ShouldEqual(CaptureStatus.Stopped);
-    [Fact] async Task should_not_resubscribe_the_stopped_capture() => await _subscriptions.DidNotReceive().Subscribe(_eventStore, "tenant", Arg.Any<CaptureDefinition>());
+    [Fact] void should_drain_the_in_flight_operation() => _stopDrained.ShouldBeTrue();
+    [Fact] async Task should_unsubscribe_after_the_in_flight_operation() => await _subscriptions.Received(1).Unsubscribe(_eventStore, _eventsDefinition);
+    [Fact] async Task should_not_admit_another_subscription_after_stop() => await _subscriptions.Received(1).Recover(_eventStore, "tenant", Arg.Any<CaptureDefinition>());
 }

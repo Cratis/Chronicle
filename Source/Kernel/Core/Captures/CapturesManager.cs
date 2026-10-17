@@ -61,7 +61,7 @@ public partial class CapturesManager(
         {
             try
             {
-                await Run(capture);
+                await RunStartedCapture(capture.Id);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -88,6 +88,70 @@ public partial class CapturesManager(
     /// <inheritdoc/>
     public async Task<IEnumerable<CaptureValidationMessage>> Start(CaptureId captureId)
     {
+        var lifecycle = GetLifecycle(captureId);
+        var closure = lifecycle.Closure;
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            return await StartWhileHeld(captureId, lifecycle, closure);
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Stop(CaptureId captureId)
+    {
+        var lifecycle = GetLifecycle(captureId);
+        lifecycle.Close();
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            if (!await Captures.Has(captureId)) return;
+            var capture = await Captures.Get(captureId);
+            await StopRunning(capture);
+            if (capture.Status != CaptureStatus.Stopped)
+            {
+                await Captures.Save(capture with { Status = CaptureStatus.Stopped });
+            }
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Delete(CaptureId captureId)
+    {
+        var lifecycle = GetLifecycle(captureId);
+        lifecycle.Close();
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            var definition = await Captures.Has(captureId) ? GetEventsDefinition(await Captures.Get(captureId)) : null;
+            if (definition is not null)
+            {
+                // Removes the observers, their offsets and definition and the state kept per namespace too.
+                await eventsSubscriptions.Remove(_eventStoreName, definition);
+            }
+            else
+            {
+                await GetCapturer(captureId).Stop();
+            }
+
+            await Captures.Delete(captureId);
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    async Task<IEnumerable<CaptureValidationMessage>> StartWhileHeld(CaptureId captureId, CaptureLifecycle lifecycle, int closure)
+    {
         if (!await Captures.Has(captureId))
         {
             return [new CaptureValidationMessage("The capture does not exist")];
@@ -110,6 +174,8 @@ public partial class CapturesManager(
             return messagesResolved;
         }
 
+        if (lifecycle.Closure != closure) return [];
+        lifecycle.Closed = false;
         capture = capture with { Status = CaptureStatus.Started };
         if (GetEventsDefinition(capture) is not null)
         {
@@ -125,46 +191,13 @@ public partial class CapturesManager(
         return [];
     }
 
-    /// <inheritdoc/>
-    public async Task Stop(CaptureId captureId)
-    {
-        if (!await Captures.Has(captureId))
-        {
-            return;
-        }
-
-        var capture = await Captures.Get(captureId);
-        await StopRunning(capture);
-        if (capture.Status != CaptureStatus.Stopped)
-        {
-            await Captures.Save(capture with { Status = CaptureStatus.Stopped });
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task Delete(CaptureId captureId)
-    {
-        var definition = await Captures.Has(captureId) ? GetEventsDefinition(await Captures.Get(captureId)) : null;
-        if (definition is not null)
-        {
-            // Removes the observers, their offsets and definition and the state kept per namespace too.
-            await eventsSubscriptions.Remove(_eventStoreName, definition);
-        }
-        else
-        {
-            await GetCapturer(captureId).Stop();
-        }
-
-        await Captures.Delete(captureId);
-    }
-
     async Task Reconcile(CancellationToken cancellationToken)
     {
-        foreach (var (capture, definition) in await GetStartedEventsCaptures())
+        foreach (var (capture, _) in await GetStartedEventsCaptures())
         {
             try
             {
-                await eventsSubscriptions.Recover(_eventStoreName, definition);
+                await RunStartedCapture(capture.Id);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

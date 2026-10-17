@@ -25,5 +25,5 @@ public class and_the_observer_refuses_the_subscription : given.a_projections_man
     }
 
     [Fact] void should_not_fail_namespace_creation() => _exception.ShouldBeNull();
-    [Fact] async Task should_retry_on_the_next_trigger() => await _observerGrain.Received(2).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_retry_on_the_next_trigger() => await _observerGrain.Received(2).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true);
 }

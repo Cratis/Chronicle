@@ -16,5 +16,5 @@ public class and_the_observer_refuses_the_subscription : given.a_captures_manage
     }
 
     [Fact] void should_not_fail_namespace_creation() => _exception.ShouldBeNull();
-    [Fact] async Task should_retry_on_the_next_trigger() => await _subscriptions.Received(2).Subscribe(_eventStore, "tenant", _eventsDefinition);
+    [Fact] async Task should_retry_on_the_next_trigger() => await _subscriptions.Received(2).Recover(_eventStore, "tenant", _eventsDefinition);
 }

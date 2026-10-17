@@ -25,7 +25,7 @@ public class and_the_cached_subscription_was_lost : given.a_projections_manager_
         await _grain.Register([definition]);
         await _observerGrain.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: true);
         _observerGrain.IsSubscribed().Returns(_ => _subscribed);
-        _observerGrain.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false)
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;
@@ -38,8 +38,9 @@ public class and_the_cached_subscription_was_lost : given.a_projections_manager_
     Task Because() => _grain.EnsureSubscribedIn(Concepts.EventStoreNamespaceName.Default);
 
     [Fact] async Task should_repair_the_subscription_despite_the_managers_successful_subscription_cache() =>
-        await _observerGrain.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(
+        await _observerGrain.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
+            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
             Arg.Any<SiloAddress>(),
-            reactivateRetired: false);
+            true);
 }

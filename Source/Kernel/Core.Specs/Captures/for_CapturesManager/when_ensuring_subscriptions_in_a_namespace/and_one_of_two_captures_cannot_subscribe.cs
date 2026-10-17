@@ -17,8 +17,8 @@ public class and_one_of_two_captures_cannot_subscribe : given.a_captures_manager
         _languageService.Compile("poll-declaration").Returns(_healthy);
         StartedState(_events);
         StartedState(_poll);
-        _subscriptions.Subscribe(_eventStore, "tenant", _eventsDefinition).Returns(Task.FromException(new TimeoutException()));
-        _subscriptions.Subscribe(_eventStore, "tenant", _healthy).Returns(_ =>
+        _subscriptions.Recover(_eventStore, "tenant", _eventsDefinition).Returns(Task.FromException(new TimeoutException()));
+        _subscriptions.Recover(_eventStore, "tenant", _healthy).Returns(_ =>
         {
             _healthySubscribed = true;
             _observer.IsSubscribed().Returns(true);
@@ -31,5 +31,5 @@ public class and_one_of_two_captures_cannot_subscribe : given.a_captures_manager
     [Fact] void should_not_fail_the_namespace_pass() => _exception.ShouldBeNull();
     [Fact] void should_log_the_failed_capture() => _logger.ReceivedCalls().Any(call => call.GetArguments().Any(argument => argument is TimeoutException)).ShouldBeTrue();
     [Fact] void should_await_the_healthy_subscription() => _healthySubscribed.ShouldBeTrue();
-    [Fact] async Task should_subscribe_the_healthy_capture() => await _subscriptions.Received(1).Subscribe(_eventStore, "tenant", _healthy);
+    [Fact] async Task should_subscribe_the_healthy_capture() => await _subscriptions.Received(1).Recover(_eventStore, "tenant", _healthy);
 }

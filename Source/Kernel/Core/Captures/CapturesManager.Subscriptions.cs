@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Captures;
 
 public partial class CapturesManager
 {
+    readonly Dictionary<CaptureId, CaptureLifecycle> _captureLifecycles = new();
+
     /// <inheritdoc/>
     public Task EnsureSubscribedIn(EventStoreNamespaceName @namespace)
     {
@@ -49,11 +51,7 @@ public partial class CapturesManager
         {
             try
             {
-                var definition = GetEventsDefinition(capture);
-                if (definition is not null)
-                {
-                    await SubscribeCaptureInNamespace(@namespace, definition);
-                }
+                await RunStartedCapture(capture.Id, @namespace);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -72,10 +70,8 @@ public partial class CapturesManager
 
         if (string.IsNullOrWhiteSpace(sequence))
         {
-            if (!await IsCaptureStillStarted(definition.Id)) return;
-
             // Let the subscription path report its source-resolution diagnostics.
-            await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
+            await eventsSubscriptions.Recover(_eventStoreName, @namespace, definition);
             logger.SubscriptionNotEstablished(definition.Name, definition.Id, @namespace);
             return;
         }
@@ -85,10 +81,9 @@ public partial class CapturesManager
         var state = await observer.GetState();
         if (state.AlertDisposition == AlertDisposition.Retired || state.RunningState == ObserverRunningState.Quarantined) return;
 
-        // Stop/Delete can interleave while sequence resolution and observer checks are awaiting.
-        if (!await IsCaptureStillStarted(definition.Id)) return;
-
-        await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
+        // The caller holds this capture's lifecycle boundary across resolution and subscription.
+        // Recovery itself checks observer eligibility inside its serialized request.
+        await eventsSubscriptions.Recover(_eventStoreName, @namespace, definition);
         if (!await observer.IsSubscribed())
         {
             state = await observer.GetState();
@@ -99,6 +94,61 @@ public partial class CapturesManager
         }
     }
 
-    async Task<bool> IsCaptureStillStarted(CaptureId identifier) =>
-        await Captures.Has(identifier) && (await Captures.Get(identifier)).Status == CaptureStatus.Started;
+    async Task RunStartedCapture(CaptureId identifier, EventStoreNamespaceName? @namespace = null)
+    {
+        var lifecycle = GetLifecycle(identifier);
+        if (lifecycle.Closed) return;
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            if (lifecycle.Closed || !await Captures.Has(identifier)) return;
+            var capture = await Captures.Get(identifier);
+            if (lifecycle.Closed || capture.Status != CaptureStatus.Started) return;
+            var definition = GetEventsDefinition(capture);
+            if (definition is not null)
+            {
+                // Hold admission from fresh eligibility through all source resolution, namespace enumeration,
+                // and observer dispatch. Stop/Delete close admission before awaiting and drain this entire unit.
+                if (@namespace is not null)
+                {
+                    await SubscribeCaptureInNamespace(@namespace, definition);
+                }
+                else
+                {
+                    await eventsSubscriptions.Recover(_eventStoreName, definition);
+                }
+            }
+            else if (@namespace is null)
+            {
+                await Run(capture);
+            }
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    CaptureLifecycle GetLifecycle(CaptureId identifier)
+    {
+        if (!_captureLifecycles.TryGetValue(identifier, out var lifecycle))
+        {
+            _captureLifecycles.Add(identifier, lifecycle = new());
+        }
+
+        return lifecycle;
+    }
+
+    sealed class CaptureLifecycle
+    {
+        public SemaphoreSlim Gate { get; } = new(1, 1);
+        public bool Closed { get; set; }
+        public int Closure { get; private set; }
+
+        public void Close()
+        {
+            Closed = true;
+            Closure++;
+        }
+    }
 }

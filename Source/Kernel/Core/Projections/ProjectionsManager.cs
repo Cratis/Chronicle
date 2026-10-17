@@ -421,6 +421,11 @@ public partial class ProjectionsManager(
         Task SubscribeAs<TSubscriber>()
             where TSubscriber : IObserverSubscriber
         {
+            if (reconcile)
+            {
+                return observer.ReconcileSubscription<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.SubscribesToAllEvents, definition.GenerationDelivery);
+            }
+
             if (definition.SubscribesToAllEvents)
             {
                 return observer.SubscribeToAllEvents<TSubscriber>(ObserverType.Projection, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);

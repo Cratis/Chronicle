@@ -30,10 +30,11 @@ public class and_the_new_subscription_is_still_pending : given.a_projections_man
         _observerGrain.ClearReceivedCalls();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default, new EventStoreNamespaceName("new-tenant")]);
         _observerGrain.IsSubscribed().Returns(_ => _subscription.Task.IsCompleted);
-        _observerGrain.SubscribeToAllEvents<IProjectionObserverSubscriber>(
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(
                 ObserverType.Projection,
+                Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
                 Arg.Any<SiloAddress>(),
-                reactivateRetired: false)
+                true)
             .Returns(_ =>
             {
                 _subscriptionStarted = true;

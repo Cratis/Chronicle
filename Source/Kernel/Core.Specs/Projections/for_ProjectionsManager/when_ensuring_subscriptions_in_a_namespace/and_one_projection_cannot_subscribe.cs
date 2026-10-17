@@ -36,7 +36,7 @@ public class and_one_projection_cannot_subscribe : given.a_projections_manager_g
         _observersByKey[new ObserverKey(_failing.Identifier, EventStore, EventStoreNamespaceName.Default, _failing.EventSequenceId).ToString()] = _failingObserver;
         _observersByKey[new ObserverKey(_healthy.Identifier, EventStore, EventStoreNamespaceName.Default, _healthy.EventSequenceId).ToString()] = _healthyObserver;
         _healthyObserver.IsSubscribed().Returns(_ => _subscribed);
-        _healthyObserver.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: false)
+        _healthyObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;
@@ -59,13 +59,15 @@ public class and_one_projection_cannot_subscribe : given.a_projections_manager_g
     [Fact] async Task should_attempt_the_healthy_definition() => await _projectionGrain.Received(1).SetDefinition(_healthy);
     [Fact] void should_await_the_healthy_subscription() => _subscribed.ShouldBeTrue();
     [Fact] async Task should_still_subscribe_the_healthy_projection() =>
-        await _healthyObserver.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(
+        await _healthyObserver.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
+            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
             Arg.Any<SiloAddress>(),
-            reactivateRetired: false);
+            true);
     [Fact] async Task should_not_subscribe_the_failing_projection() =>
-        await _failingObserver.DidNotReceive().SubscribeToAllEvents<IProjectionObserverSubscriber>(
+        await _failingObserver.DidNotReceive().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
+            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
             Arg.Any<SiloAddress>(),
-            reactivateRetired: false);
+            true);
 }

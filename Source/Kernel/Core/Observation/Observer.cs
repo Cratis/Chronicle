@@ -385,8 +385,6 @@ public partial class Observer(
     {
         ThrowIfSealed();
         SupersedeRecoveryAfterQuarantine();
-        var owner = GetOwner<TObserverSubscriber>();
-
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         logger.Subscribing();
@@ -399,28 +397,7 @@ public partial class Observer(
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
-        observerDefinition.State = observerDefinition.State with
-        {
-            Type = type,
-            Owner = owner,
-            EventTypes = [],
-            IsReplayable = isReplayable
-        };
-        await observerDefinition.WriteStateAsync();
-
-        _subscription = new(
-            _observerId,
-            _observerKey,
-            [],
-            typeof(TObserverSubscriber),
-            siloAddress,
-            subscriberArgs,
-            isReplayable);
-        ForgetSupersededRegistrations();
-
-        State = State with { SubscribesToAllEvents = true };
-        await WriteStateAsync();
-
+        await SetUpAllEventsSubscription<TObserverSubscriber>(type, siloAddress, subscriberArgs, isReplayable);
         await RecoverAfterSubscribing(leavesQuarantine: true);
     }
 
@@ -816,19 +793,7 @@ public partial class Observer(
         where TObserverSubscriber : IObserverSubscriber
     {
         eventTypes = eventTypes.ToArray();
-        if (generationDelivery == EventGenerationDelivery.Pinned)
-        {
-            ThrowIfPinsMultipleGenerations(eventTypes);
-
-            var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
-            foreach (var eventType in eventTypes)
-            {
-                if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
-                {
-                    throw new EventTypeGenerationNotRegisteredForObserver(eventType);
-                }
-            }
-        }
+        await ValidateGenerationDelivery(eventTypes, generationDelivery);
 
         if (!automatic)
         {
@@ -928,9 +893,11 @@ public partial class Observer(
         object? subscriberArgs,
         bool isReplayable,
         ObserverFilters? filters,
-        EventGenerationDelivery generationDelivery)
+        EventGenerationDelivery generationDelivery,
+        bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (reconcile && CannotReconcileSubscription()) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -945,10 +912,58 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
+        if (reconcile && CannotReconcileSubscription()) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+    }
+
+    async Task SetUpAllEventsSubscription<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs,
+        bool isReplayable,
+        bool reconcile = false)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        if (reconcile && CannotReconcileSubscription()) return;
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = GetOwner<TObserverSubscriber>(),
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        if (reconcile && CannotReconcileSubscription()) return;
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+        ForgetSupersededRegistrations();
+
+        State = State with { SubscribesToAllEvents = true };
+        await WriteStateAsync();
+    }
+
+    async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)
+    {
+        if (generationDelivery != EventGenerationDelivery.Pinned) return;
+        ThrowIfPinsMultipleGenerations(eventTypes);
+        var eventTypesStorage = storage.GetEventStore(_observerKey.EventStore).EventTypes;
+        foreach (var eventType in eventTypes)
+        {
+            if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+            {
+                throw new EventTypeGenerationNotRegisteredForObserver(eventType);
+            }
+        }
     }
 
     void ApplySubscription<TObserverSubscriber>(

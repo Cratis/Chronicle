@@ -13,7 +13,7 @@ public class and_the_subscription_was_lost : given.a_captures_manager
     {
         StartedState(_events);
         _observer.IsSubscribed().Returns(_ => _subscribed);
-        _subscriptions.Subscribe(_eventStore, "tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
+        _subscriptions.Recover(_eventStore, "tenant", Arg.Any<CaptureDefinition>()).Returns(_ =>
         {
             _subscribed = true;
             return Task.CompletedTask;
@@ -27,6 +27,6 @@ public class and_the_subscription_was_lost : given.a_captures_manager
     Task Because() => _manager.EnsureSubscribedIn("tenant");
 
     [Fact] void should_restore_the_observers_actual_subscription() => _subscribed.ShouldBeTrue();
-    [Fact] async Task should_subscribe_in_only_the_requested_namespace() => await _subscriptions.Received(1).Subscribe(_eventStore, "tenant", _eventsDefinition);
+    [Fact] async Task should_subscribe_in_only_the_requested_namespace() => await _subscriptions.Received(1).Recover(_eventStore, "tenant", _eventsDefinition);
     [Fact] async Task should_not_resubscribe_every_namespace() => await _subscriptions.DidNotReceive().Subscribe(_eventStore, Arg.Any<CaptureDefinition>());
 }
