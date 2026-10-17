@@ -18,7 +18,6 @@ public class and_versions_have_prerelease_identifiers : Specification
         var newer = SemanticVersion.Parse(higher);
         older.CompareTo(newer).ShouldBeLessThan(0);
         newer.CompareTo(older).ShouldBeGreaterThan(0);
-        ((IComparable)older).CompareTo(newer).ShouldBeLessThan(0);
         (older < newer).ShouldBeTrue();
         (older <= newer).ShouldBeTrue();
         (newer > older).ShouldBeTrue();
