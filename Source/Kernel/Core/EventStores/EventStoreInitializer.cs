@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Storage;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.EventStores;
 /// </summary>
 /// <param name="storage">The storage containing the durable initialization marker.</param>
 /// <param name="kernelProjections">The kernel projections.</param>
-public class EventStoreInitializer(IStorage storage, IKernelProjections kernelProjections) : Grain, IEventStoreInitializer
+/// <param name="eventTypes">The event types, used to register the System event types before the store is announced.</param>
+public class EventStoreInitializer(IStorage storage, IKernelProjections kernelProjections, IEventTypes eventTypes) : Grain, IEventStoreInitializer
 {
     /// <inheritdoc/>
     public async Task Ensure()
@@ -25,6 +27,9 @@ public class EventStoreInitializer(IStorage storage, IKernelProjections kernelPr
         // implicitly created before this fix. This non-reentrant grain serializes concurrent ensures on all silos.
         if (await store.IsInitialized()) return;
 
+        // EventStoreAdded is a System event type. A client can connect before the System event types are registered,
+        // and the append is then refused, so registration is made here (idempotent) rather than assumed.
+        await eventTypes.DiscoverAndRegister(EventStoreName.System);
         await kernelProjections.DiscoverAndRegister(name);
         var result = await GrainFactory.GetSystemEventSequence(EventStoreName.System).Append(name.Value, new EventStoreAdded(name));
         if (!result.IsSuccess)

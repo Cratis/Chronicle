@@ -191,7 +191,7 @@ public partial class Observer
 
             if (_subscription.Targets.Count == 0)
             {
-                await Unsubscribe();
+                await PromoteSupersededRegistrationOrUnsubscribe();
             }
 
             return;
@@ -206,7 +206,7 @@ public partial class Observer
         if (!await connectedClients.IsConnected(connectedClient.ConnectionId))
         {
             logger.WatchdogClientDisconnected(connectedClient.ConnectionId);
-            await Unsubscribe();
+            await PromoteSupersededRegistrationOrUnsubscribe();
         }
     }
 

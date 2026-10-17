@@ -3,11 +3,11 @@
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_updating_projection_definition;
 
-public class ImmediateProjection : IProjectionFor<TestReadModel>
+public class ImmediateProjection : IProjectionFor<ImmediateReadModel>
 {
     public static bool MapBothProperties { get; set; }
 
-    public void Define(IProjectionBuilderFor<TestReadModel> builder)
+    public void Define(IProjectionBuilderFor<ImmediateReadModel> builder)
     {
         builder.Passive().NoAutoMap();
         if (MapBothProperties)
