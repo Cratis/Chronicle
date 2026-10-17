@@ -142,3 +142,16 @@ configured `fanOutStrategy`. If an instance disconnects, it is removed immediate
 partitions are redistributed to the remaining instances - the observer only unsubscribes when the
 last instance is gone.
 
+
+### Concurrent client versions
+
+During a rolling deployment, two versions of an application can be connected at once and register the same
+observer with different event types. The last registration wins: the observer follows the definition of the
+client that registered last, and the earlier client stops receiving events for it.
+
+When the client that won leaves, Chronicle hands the observer over to the most recently superseded client that
+is still connected, exactly as if that client had registered again. The hand-over happens when the connection
+is dropped and when the watchdog finds the client gone. It never ends a quarantine and never reactivates a
+retired observer. When no earlier client remains, the observer unsubscribes.
+
+Serving both sets of event types at the same time is not supported yet.
