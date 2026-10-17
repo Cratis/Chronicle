@@ -52,7 +52,11 @@ public partial class EventSequence
         var staleMarker = State.ConstraintIndexCatchUpBelow is null && State.ConstraintIndexCatchUpRefusing is not null;
         if (staleMarker) State.ConstraintIndexCatchUpRefusing = null;
         _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
-        if (upgrading || staleMarker) await WriteStateAsync();
+
+        // An empty sequence with no indexed constraints has no repair boundary to protect. Let its
+        // first durable append take the best-effort snapshot instead of making activation depend on it.
+        // Existing history, indexed constraints and refusal markers still require the activation barrier.
+        if (staleMarker || (upgrading && (State.SequenceNumber > EventSequenceNumber.First || _indexedDefinitions.Count > 0))) await WriteStateAsync();
         UpdateConstraintIndexRepairTimer();
         if (State.ConstraintIndexWatermark < State.SequenceNumber)
         {
