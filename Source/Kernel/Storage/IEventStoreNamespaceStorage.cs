@@ -62,6 +62,11 @@ public interface IEventStoreNamespaceStorage
     IObserverStateStorage Observers { get; }
 
     /// <summary>
+    /// Gets the independently paged definition-change progress, successor and inventory stores.
+    /// </summary>
+    ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; }
+
+    /// <summary>
     /// Gets the retained alert incident storage for this namespace.
     /// </summary>
     IAlertIncidentsStorage AlertIncidents { get; }

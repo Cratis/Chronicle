@@ -77,6 +77,13 @@ public sealed class EventStoreNamespaceStorage(
     public IObserverStateStorage Observers { get; } = new ObserverStateStorage();
 
     /// <inheritdoc/>
+    public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; } = new(
+        new ObserverDefinitionChangeRows<ObserverProgressRecord>(),
+        new ObserverDefinitionChangeRows<ObserverContinuation>(),
+        new ObserverDefinitionChangeRows<ObserverRestartPlan>(),
+        new ObserverDefinitionChangeRows<ObserverJobInventory>());
+
+    /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage();
 
     /// <inheritdoc/>
