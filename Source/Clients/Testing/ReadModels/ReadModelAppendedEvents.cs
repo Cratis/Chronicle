@@ -27,7 +27,7 @@ internal static class ReadModelAppendedEvents
         var ordered = events.Select((input, index) => input with { Context = input.Context ?? SyntheticContext(fold, input, index) })
             .OrderBy(input => input.Context!.SequenceNumber.Value)
             .ToArray();
-        if (fold.ReducerType is null)
+        if (fold.ReducerType is null || fold.SeededInstances.Count > 0)
         {
             return await ProcessGroup(fold, ordered);
         }

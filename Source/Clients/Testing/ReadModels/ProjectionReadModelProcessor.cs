@@ -106,6 +106,7 @@ internal static class ProjectionReadModelProcessor
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
     /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
+    /// <param name="seededInstances">Optional per-key persisted starting state, including each instance's identifier.</param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
     /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
@@ -121,7 +122,8 @@ internal static class ProjectionReadModelProcessor
         ReadModelFoldContext context,
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
-        IReadOnlyList<ReadModelEvent>? seededEvents = null)
+        IReadOnlyList<ReadModelEvent>? seededEvents = null,
+        IReadOnlyDictionary<EventSourceId, TReadModel>? seededInstances = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -178,6 +180,14 @@ internal static class ProjectionReadModelProcessor
         var explicitInitialStateIsPresent = initialState is not null;
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
+        var seededKeys = new HashSet<object>();
+        foreach (var (key, instance) in seededInstances ?? new Dictionary<EventSourceId, TReadModel>())
+        {
+            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key.Value, ArrayIndexers.NoIndexers));
+            statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
+            inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
+            seededKeys.Add(stateKey);
+        }
 
         // Process events, retrying deferred root and child keys after all seeded events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
@@ -185,6 +195,7 @@ internal static class ProjectionReadModelProcessor
         foreach (var @event in appendedEvents)
         {
             var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, deferredChildren, strictEventSubscription);
+            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             rootKey ??= eventKey;
             if (eventRemoved)
             {
@@ -212,6 +223,8 @@ internal static class ProjectionReadModelProcessor
             {
                 explicitInitialStateIsPresent = false;
             }
+
+            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
         }
 
         // Retry only the deferred child branches. A resolved child can materialize the parent of another
@@ -239,6 +252,8 @@ internal static class ProjectionReadModelProcessor
                 {
                     explicitInitialStateIsPresent = false;
                 }
+
+                PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             }
         }
 
@@ -254,6 +269,10 @@ internal static class ProjectionReadModelProcessor
         // root key — so a multi-source projection (e.g. a join whose join-source event was seeded first)
         // can be asserted against the intended instance via InstanceForEventSourceId.
         var instances = BuildInstancesFromSink<TReadModel>(inMemorySink, readModelType);
+        if (seededKeys.Count > 0 && instances.Count == 1)
+        {
+            return (instances.Values.Single(), instances);
+        }
 
         // An explicit initial state remains materialized through empty changesets until an actual root removal.
         // Otherwise presence comes from the same per-key sink state that backs Instances: deferred, joined, or
@@ -262,7 +281,7 @@ internal static class ProjectionReadModelProcessor
             (rootKey is not null && await inMemorySink.FindOrDefault(rootKey) is not null);
         if (!hasPrimary)
         {
-            return (null, instances);
+            return (seededKeys.Count > 0 ? instances.Values.FirstOrDefault() : null, instances);
         }
 
         var state = rootKey is not null && statesByKey.TryGetValue(inMemorySink.GetKeyValue(rootKey), out var rootState)
@@ -289,6 +308,24 @@ internal static class ProjectionReadModelProcessor
     /// <returns>A sink whose key conversion matches the materialized instances.</returns>
     internal static InMemorySink CreateSink(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
         new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
+
+    static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
+    {
+        var identifier = IdentifierProperty.Find(readModelType);
+        if (identifier is null || seededKeys.Count == 0) return;
+
+        // InMemorySink injects id from the storage key on every write. For an explicitly seeded document,
+        // keep the identifier held by its projected state instead; it need not equal that storage key.
+        var property = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifier.Name);
+        foreach (var key in seededKeys)
+        {
+            if (statesByKey.TryGetValue(key, out var state) && sink.Collection.TryGetValue(key, out var document) &&
+                ((IDictionary<string, object?>)state).TryGetValue(property, out var value))
+            {
+                ((IDictionary<string, object?>)document)[property] = value;
+            }
+        }
+    }
 
     /// <summary>
     /// Deserializes every per-key document held by the in-memory sink into a <typeparamref name="TReadModel"/>,
