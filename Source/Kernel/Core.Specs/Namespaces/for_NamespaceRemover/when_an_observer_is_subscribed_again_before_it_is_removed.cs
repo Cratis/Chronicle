@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Namespaces.for_NamespaceRemover;
 
