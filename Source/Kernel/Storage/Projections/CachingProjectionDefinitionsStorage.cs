@@ -14,58 +14,59 @@ namespace Cratis.Chronicle.Storage.Projections;
 /// <remarks>
 /// <para>
 /// Projection definitions are read repeatedly and change rarely: <c language="csharp">Has</c> and <c language="csharp">Get</c> run on every projection grain
-/// activation and <c language="csharp">GetAll</c> on every projections-manager activation. This cache serves those reads from memory after
-/// the first load, avoiding a backing-store round-trip per call while keeping writes correct through write-through on
-/// <see cref="Save"/> and eviction on <see cref="Delete"/>.
+/// activation. This cache serves those reads from memory once a definition is known, avoiding a backing-store round-trip
+/// per call while keeping writes correct through write-through on <see cref="Save"/> and eviction on <see cref="Delete"/>.
 /// </para>
 /// <para>
-/// <b>Staleness / eventual consistency:</b> within a single silo every read and write routes through this same cached
-/// instance, so local write-through keeps the cache authoritative for that silo. Across a cluster, a <see cref="Save"/> or
-/// <see cref="Delete"/> performed on another silo leaves this silo's cache stale until it is discarded. This is acceptable
-/// because the <c language="csharp">Projection</c> grain is single-activation per (event store, projection id) cluster-wide and is the
-/// authoritative writer holding the definition in grain state — this cache is only a read-accelerator for activation and
-/// listing and is intentionally eventually consistent. Cross-silo invalidation is deliberately out of scope for this cache.
+/// <b>Consistency across silos:</b> every silo has its own instance of this cache over the same shared storage, and a
+/// <see cref="Save"/> or <see cref="Delete"/> on one silo does not reach the caches of the others. A definition missing
+/// from this cache is therefore never treated as absent: <see cref="Has"/> and <see cref="Get"/> fall through to the
+/// shared storage on a miss, and <see cref="GetAll"/> always lists the shared storage, refreshing the cache from it and dropping cached definitions it no
+/// longer contains. A listing or read that overlaps a local <see cref="Save"/> or <see cref="Delete"/> leaves the cache
+/// untouched, so an older snapshot never overwrites a newer local write. A cached definition can still be stale when another silo changed or deleted it; the
+/// <c language="csharp">Projection</c> grain, single-activation per (event store, projection id) cluster-wide, is the authoritative
+/// writer of its definition.
 /// </para>
 /// </remarks>
 /// <param name="inner">The inner <see cref="IProjectionDefinitionsStorage"/> the cache delegates to.</param>
 public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsStorage inner) : IProjectionDefinitionsStorage
 {
     readonly ConcurrentDictionary<ProjectionId, ProjectionDefinition> _cache = new();
-    volatile bool _allLoaded;
+    readonly Lock _lock = new();
+    long _mutations;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
-        if (_allLoaded)
+        var mutationsBefore = Interlocked.Read(ref _mutations);
+        var definitions = (await inner.GetAll()).ToArray();
+
+        lock (_lock)
         {
-            return _cache.Values.ToArray();
+            // A Save or Delete that completed while the shared storage was being listed is newer than this snapshot.
+            // Leaving the cache alone is safe: entries missing from it are read from the shared storage.
+            if (_mutations != mutationsBefore)
+            {
+                return definitions;
+            }
+
+            var identifiers = definitions.Select(definition => definition.Identifier).ToHashSet();
+            foreach (var removed in _cache.Keys.Where(identifier => !identifiers.Contains(identifier)))
+            {
+                _cache.TryRemove(removed, out _);
+            }
+
+            foreach (var definition in definitions)
+            {
+                _cache[definition.Identifier] = definition;
+            }
         }
 
-        var definitions = await inner.GetAll();
-        foreach (var definition in definitions)
-        {
-            _cache[definition.Identifier] = definition;
-        }
-
-        _allLoaded = true;
-        return _cache.Values.ToArray();
+        return definitions;
     }
 
     /// <inheritdoc/>
-    public async Task<bool> Has(ProjectionId id)
-    {
-        if (_cache.ContainsKey(id))
-        {
-            return true;
-        }
-
-        if (_allLoaded)
-        {
-            return false;
-        }
-
-        return await inner.Has(id);
-    }
+    public async Task<bool> Has(ProjectionId id) => _cache.ContainsKey(id) || await inner.Has(id);
 
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
@@ -75,8 +76,16 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
             return cached;
         }
 
+        var mutationsBefore = Interlocked.Read(ref _mutations);
         var definition = await inner.Get(id);
-        _cache[id] = definition;
+        lock (_lock)
+        {
+            if (_mutations == mutationsBefore)
+            {
+                _cache[id] = definition;
+            }
+        }
+
         return definition;
     }
 
@@ -84,13 +93,21 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
     public async Task Delete(ProjectionId id)
     {
         await inner.Delete(id);
-        _cache.TryRemove(id, out _);
+        lock (_lock)
+        {
+            Interlocked.Increment(ref _mutations);
+            _cache.TryRemove(id, out _);
+        }
     }
 
     /// <inheritdoc/>
     public async Task Save(ProjectionDefinition definition)
     {
         await inner.Save(definition);
-        _cache[definition.Identifier] = definition;
+        lock (_lock)
+        {
+            Interlocked.Increment(ref _mutations);
+            _cache[definition.Identifier] = definition;
+        }
     }
 }
