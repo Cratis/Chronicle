@@ -192,6 +192,7 @@ message RegisterRequest {
    repeated ProjectionDefinition Projections = 3;
    bool FullSet = 4;
    string Registrant = 5;
+   string Version = 6;
 }
 message RemovedWithDefinition {
    string Key = 1;

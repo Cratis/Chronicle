@@ -53,7 +53,7 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Value.ToKernel()),
             SubscribesToAllEvents: source.SubscribesToAllEvents,
             NoAutoMapProperties: source.NoAutoMapProperties.Select(_ => (PropertyPath)_).ToList()
-        ) { GenerationDelivery = source.GenerationDelivery };
+        ) { GenerationDelivery = source.GenerationDelivery, Version = source.Version };
 
     /// <summary>
     /// Converts a Kernel ProjectionDefinition to a MongoDB ProjectionDefinition.
@@ -64,6 +64,7 @@ public static class ProjectionDefinitionConverters
         new()
         {
             GenerationDelivery = source.GenerationDelivery,
+            Version = source.Version,
             Owner = source.Owner,
             EventSequenceId = source.EventSequenceId,
             Identifier = source.Identifier,
