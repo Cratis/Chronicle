@@ -53,8 +53,14 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// Optional identity of the application registering. It is recorded per projection, and a full set only retires
     /// projections the same registrant registered - applications sharing an event store never retire each other's.
     /// </param>
+    /// <param name="version">
+    /// Optional software version of the registering application, as a semantic version. It is stored with each
+    /// definition. A definition whose stored version is greater than this one is left out - a registration from an
+    /// older client never overwrites a newer one - and a full set that is older than any stored projection of its owner
+    /// retires nothing. A missing or unparseable version, on either side, leaves registration unguarded.
+    /// </param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null);
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
 
     /// <summary>
     /// Forget a single registered projection.
