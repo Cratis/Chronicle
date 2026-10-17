@@ -127,7 +127,7 @@ public partial class ProjectionsManager(
             definitionList = definitionList.Except(olderThanStored).ToList();
         }
 
-        if (fullSetOwner is not null && IsOlderThanAnyStoredOfOwner(fullSetOwner.Value, version))
+        if (fullSetOwner is not null && IsOlderThanAnyRetirableBy(fullSetOwner.Value, registrant, version))
         {
             logger.NotRetiringForOlderRegistration(fullSetOwner.Value, version!);
             fullSetOwner = null;
@@ -239,8 +239,13 @@ public partial class ProjectionsManager(
     bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
         State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));
 
-    bool IsOlderThanAnyStoredOfOwner(ProjectionOwner owner, string? version) =>
-        State.Projections.Any(stored => stored.Owner == owner && ProjectionVersions.IsOlder(version, stored.Version));
+    // Only the projections this full set could retire count: another application sharing the event store registers
+    // its own versions, and those must not stop this application from retiring what it no longer registers.
+    bool IsOlderThanAnyRetirableBy(ProjectionOwner owner, string? registrant, string? version) =>
+        State.Projections.Any(stored =>
+            stored.Owner == owner &&
+            IsRegisteredBy(stored.Identifier, registrant) &&
+            ProjectionVersions.IsOlder(version, stored.Version));
 
     async Task AddIgnoredRegistrationRecommendation(ProjectionId identifier, string incomingVersion, string storedVersion)
     {
