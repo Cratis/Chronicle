@@ -15,6 +15,9 @@ internal static partial class ProjectionLogging
     [LoggerMessage(LogLevel.Debug, "Setting projection definition and subscribing for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<Projection> logger, ProjectionId identifier);
 
+    [LoggerMessage(LogLevel.Warning, "Ignoring projection '{Identifier}' definition from version {IncomingVersion} because version {StoredVersion} is already stored")]
+    internal static partial void IgnoringOlderDefinition(this ILogger<Projection> logger, ProjectionId identifier, string incomingVersion, string storedVersion);
+
     [LoggerMessage(LogLevel.Debug, "Projection '{Identifier}' is a new projection")]
     internal static partial void ProjectionIsNew(this ILogger<Projection> logger, ProjectionId identifier);
 

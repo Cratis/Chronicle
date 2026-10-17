@@ -162,11 +162,11 @@ A human-readable identifier for the running application. Included in root causat
 
 ### SoftwareVersion
 
-The software version of the entry assembly, extracted from `AssemblyInformationalVersion` or `AssemblyVersion`. Included in root causation to track which build produced an event.
+The software version of the entry assembly, extracted from `AssemblyInformationalVersion` or `AssemblyVersion`. Included in root causation to track which build produced an event, and sent with every projection registration so the kernel can ignore a registration from an older version than the one it has stored. Set it with the `Cratis:Chronicle:SoftwareVersion` configuration key (environment variable `Cratis__Chronicle__SoftwareVersion`). See [the registration lifecycle](../projections/registration-lifecycle.md#when-an-older-client-registers--the-version-guard).
 
 | | |
 |---|---|
-| Type | `string` |
+| Type | `string` (semantic version) |
 | Default | Resolved from the entry assembly at startup |
 
 ### SoftwareCommit
