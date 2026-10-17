@@ -7,7 +7,15 @@ namespace Cratis.Chronicle.Projections.Engine.for_LegacyChildEveryEventMappings.
 
 public class and_property_on_root_and_child : given.a_legacy_definition
 {
-    void Establish() => _schema.Properties["lastValue"] = new JsonSchemaProperty { Type = JsonObjectType.String };
+    void Establish() => _schema = JsonSchema.FromJson("""
+        {"type":"object","properties":{
+          "source":{"type":"string"},
+          "lastValue":{"type":"string"},
+          "children":{"type":"array","items":{"type":"object","properties":{
+            "id":{"type":"string"},"lastValue":{"type":"string"}
+          }}}
+        }}
+        """);
 
     void Because() => _result = LegacyChildEveryEventMappings.Normalize(_definition, _schema);
 

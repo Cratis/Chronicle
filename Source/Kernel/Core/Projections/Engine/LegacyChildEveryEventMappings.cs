@@ -99,8 +99,11 @@ internal static partial class LegacyChildEveryEventMappings
         };
     }
 
-    static JsonSchemaProperty? FindProperty(JsonSchema schema, string name) =>
-        schema.Properties.TryGetValue(name, out var property)
-            ? property
-            : schema.Properties.Values.FirstOrDefault(candidate => candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    static JsonSchemaProperty? FindProperty(JsonSchema schema, string name)
+    {
+        // Flattened properties include members inherited or composed through allOf.
+        var properties = schema.GetFlattenedProperties().ToList();
+        return properties.Find(candidate => candidate.Name.Equals(name, StringComparison.Ordinal)) ??
+            properties.Find(candidate => candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
 }
