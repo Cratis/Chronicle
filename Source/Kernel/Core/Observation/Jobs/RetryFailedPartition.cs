@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -120,7 +121,10 @@ public class RetryFailedPartition(
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                })
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
@@ -144,10 +148,12 @@ public class RetryFailedPartition(
                 .GetNamespace(Request.ObserverKey.Namespace)
                 .GetEventSequence(Request.ObserverKey.EventSequenceId);
 
-            var eventTypes = Request.EventTypes?.ToArray() ?? [];
+            var eventTypes = ObserverReaderScope
+                .ForRequest(Request.ReaderScope, Request.EventTypes)
+                .EventTypesToRead(Request.EventTypes);
             var nextSequenceNumber = await eventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(
                 Request.FromSequenceNumber,
-                eventTypes.Length == 0 ? null : eventTypes,
+                eventTypes,
                 Request.Key);
 
             return nextSequenceNumber.IsActualValue;

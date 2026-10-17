@@ -34,11 +34,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
-/// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="eventTypesStorage">The event store's shared event type storage.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
 {
     readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
 
@@ -82,7 +81,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IBehaviorPatternStorage Patterns { get; } = new Patterns.BehaviorPatternStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes.ObserverKeyIndexes(eventStore, @namespace, database, observerDefinitionsStorage);
+    public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes.ObserverKeyIndexes(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IReplayContexts ReplayContexts { get; } = new ReadModelsReplayContexts(new ReplayContexts.ReplayContextsStorage(eventStore, @namespace, database));

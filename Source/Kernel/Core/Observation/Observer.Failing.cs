@@ -333,7 +333,7 @@ public partial class Observer
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes);
+        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope };
         await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
             request,

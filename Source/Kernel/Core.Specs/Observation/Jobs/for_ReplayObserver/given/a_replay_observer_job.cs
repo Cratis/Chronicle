@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
@@ -67,11 +68,12 @@ public class a_replay_observer_job : Specification
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
+        _eventStoreStorage.Observers.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty);
         _namespaceStorage.Jobs.Returns(_jobStorage);
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
         _namespaceStorage.ObserverKeyIndexes.Returns(_keyIndexes);
 
-        _keyIndexes.GetFor(Arg.Any<ObserverKey>()).Returns(Task.FromResult(_keyIndex));
+        _keyIndexes.GetFor(Arg.Any<ObserverKey>(), Arg.Any<ObserverReaderScope>()).Returns(Task.FromResult(_keyIndex));
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys());
 
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>())

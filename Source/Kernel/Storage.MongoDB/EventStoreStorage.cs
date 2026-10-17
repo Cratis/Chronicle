@@ -150,7 +150,6 @@ public class EventStoreStorage(
             @namespace,
             eventStoreDatabase.GetNamespaceDatabase(@namespace),
             EventTypes,
-            Observers,
             expandoObjectConverter,
             jsonSerializerOptions,
             sinksFactory(@namespace),
