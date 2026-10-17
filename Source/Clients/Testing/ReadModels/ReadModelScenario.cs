@@ -380,7 +380,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     {
         if (_eventStore is null)
         {
-            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions);
+            _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions, testingStore: null, eventLog: null, eventStore: defaults.EventStore.Name, @namespace: defaults.EventStore.Namespace);
             ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
             foreach (var seed in _readModelSeeds)
             {

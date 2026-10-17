@@ -100,7 +100,8 @@ public class ReactorScenario<TReactor> : IDisposable
             throw new InvalidExplicitArtifact(typeof(TReactor), "reactor", "A plain reactor scenario requires explicit registration in its per-run Defaults.");
         }
         _eventTypes = defaults.EventTypes;
-        _occurrences = new(_eventTypes, "testing", "default");
+        var selectedStore = eventStore ?? defaults.EventStore;
+        _occurrences = new(_eventTypes, selectedStore.Name, selectedStore.Namespace);
         _explicitServiceProvider = serviceProvider;
         _sideEffectHandlers = sideEffectHandlers;
         _explicitEventStore = eventStore;
@@ -395,7 +396,7 @@ public class ReactorScenario<TReactor> : IDisposable
         }
         else
         {
-            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider, _defaults.ScenarioOptions);
+            _eventStore = new EventStoreForTesting(serviceProvider, _defaults.ClientArtifactsProvider, _defaults.ScenarioOptions, testingStore: null, eventLog: null, eventStore: _defaults.EventStore.Name, @namespace: _defaults.EventStore.Namespace);
         }
 
         if (_eventStore is EventStoreForTesting inProcessEventStore)

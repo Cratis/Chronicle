@@ -70,6 +70,14 @@ XUnit integration options are **host-lifetime**, matching `ChronicleOptions`: co
 
 See the [.NET explicit registration reference](../clients/dotnet/explicit-artifacts) for peer conflicts, migration binding and custom-provider limits.
 
+## .NET testing store identity
+
+When code under test distinguishes stores by identity, construct `EventStoreForTesting(serviceProvider, artifacts, options, time, eventStore, @namespace, capabilities: null)` or `Defaults(artifacts, serviceProvider, options, time, eventStore, @namespace)`. The `eventStore` and `@namespace` arguments are `EventStoreName` and `EventStoreNamespaceName`. `EventStoreForTesting` requires a `ScenarioTime`; `Defaults` accepts a null clock.
+
+The resulting store's `Name`, `Namespace`, event log and unit-of-work operations use that identity. Pass those defaults to `ReadModelScenario`, `ReactorScenario` or `OccurrenceScenario` to give the scenario's store the same identity. A reactor scenario supplied with an explicit event store uses that store's identity instead, including in delivered event contexts. `EventScenario` keeps its own identity parameters and does not inherit the defaults' store identity.
+
+Each store instance has isolated in-memory storage, even when identities match. Existing `EventStoreForTesting` and `Defaults` overloads still create their store as `testing` in namespace `default`.
+
 ## Topics
 
 | Guide | Description |
