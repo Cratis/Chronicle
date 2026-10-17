@@ -5,6 +5,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_performing;
 
@@ -28,15 +30,24 @@ public class and_the_subscriber_does_not_answer_within_the_timeout : given.a_per
             .Returns(_neverAnswers.Task);
     }
 
-    async Task Because() => await _jobStep.InvokePerformStep(_performState);
+    Catch<JobStepResult> _result;
+
+    async Task Because() => _result = await _jobStep.InvokePerformStep(_performState);
 
     void Destroy() => _neverAnswers.TrySetCanceled();
 
-    [Fact] void should_report_the_partition_as_failed_by_timeout() =>
-        _observer.Received(1).PartitionFailed(
+    [Fact] void should_not_report_the_partition_as_failed_yet() =>
+        _observer.DidNotReceive().PartitionFailed(
             Arg.Any<Key>(),
             Arg.Any<EventSequenceNumber>(),
             Arg.Any<IEnumerable<string>>(),
             Arg.Any<string>(),
-            FailureKind.Timeout);
+            Arg.Any<FailureKind>());
+
+    [Fact] void should_end_the_step_with_the_timeout_for_the_job_to_retry()
+    {
+        _result.TryGetResult(out var stepResult).ShouldBeTrue();
+        TransientTimeouts.TryGetTransientFailure(stepResult, new System.Text.Json.JsonSerializerOptions(), out var failure).ShouldBeTrue();
+        failure.Partition.ShouldEqual(_performState.Partition);
+    }
 }

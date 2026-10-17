@@ -234,6 +234,12 @@ public class HandleEventsForPartition(
                     exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                     exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                     failureKind = handleEventsException.ToFailureKind();
+                    if (failureKind == FailureKind.Timeout)
+                    {
+                        exceptionMessages = [TransientTimeouts.ShortMessageFor(handleEventsException)];
+                        exceptionStackTrace = string.Empty;
+                    }
+
                     lastEventSequenceNumberAttempted = events.Current.First().Context.SequenceNumber;
                 }
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
@@ -303,8 +309,25 @@ public class HandleEventsForPartition(
                 if (failed)
                 {
                     var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
+                    if (failureKind == FailureKind.Timeout)
+                    {
+                        // The observer is not told yet: it is the grain that was too busy to answer, and the job runs the
+                        // step again before it reports the partition.
+                        logger.StepTimedOut(exceptionMessages[0]);
+                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                            CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
+                            {
+                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages)
+                            },
+                            exceptionMessages,
+                            string.Empty));
+                    }
+
                     await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
-                    return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), exceptionMessages, exceptionStackTrace));
+                    return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                        CreateResult(lastSuccessfullyHandledEventSequenceNumber),
+                        TransientTimeouts.ShortenForStep(exceptionMessages),
+                        string.Empty));
                 }
 
                 lastScannedEventSequenceNumber = GetLastScanned(lastScannedEventSequenceNumber, events);
@@ -338,7 +361,16 @@ public class HandleEventsForPartition(
             // is the grain that was too busy to answer.
             var message = TransientTimeouts.ShortMessageFor(e);
             logger.StepTimedOut(message);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), [message], string.Empty));
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
+                {
+                    TransientFailure = new(
+                        currentState.Partition,
+                        lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber,
+                        [message])
+                },
+                [message],
+                string.Empty));
         }
         catch (Exception e)
         {

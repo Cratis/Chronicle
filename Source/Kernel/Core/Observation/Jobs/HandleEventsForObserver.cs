@@ -281,13 +281,36 @@ public class HandleEventsForObserver(
                         var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                         var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
                         lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
+                        if (TransientTimeouts.IsTimeout(handleEventsException))
+                        {
+                            // The observer is not told yet: it is the grain that was too busy to answer, and the job runs
+                            // the step again before it reports the partition.
+                            var shortMessage = TransientTimeouts.ShortMessageFor(handleEventsException);
+                            logger.StepTimedOut(shortMessage);
+                            if (!Advanced(await FlushFromWork()))
+                            {
+                                return ClosedResult();
+                            }
+
+                            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                                CreateResult(_lastDurableCheckpoint) with
+                                {
+                                    TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
+                                },
+                                [shortMessage],
+                                string.Empty));
+                        }
+
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         if (!Advanced(await FlushFromWork()))
                         {
                             return ClosedResult();
                         }
 
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), exceptionMessages, exceptionStackTrace));
+                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                            CreateResult(_lastDurableCheckpoint),
+                            TransientTimeouts.ShortenForStep(exceptionMessages),
+                            string.Empty));
                     }
                     if (handleEventsResult.TryGetResult(out var handledEventsResult))
                     {
@@ -343,7 +366,10 @@ public class HandleEventsForObserver(
         {
             var message = TransientTimeouts.ShortMessageFor(e);
             logger.StepTimedOut(message);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(_lastDurableCheckpoint), [message], string.Empty));
+            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                CreateResult(_lastDurableCheckpoint),
+                [message],
+                string.Empty));
         }
         catch (Exception e)
         {

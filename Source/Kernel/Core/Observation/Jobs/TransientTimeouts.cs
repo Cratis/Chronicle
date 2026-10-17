@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
@@ -22,6 +25,11 @@ internal static class TransientTimeouts
     /// The longest a recorded failure message is allowed to be.
     /// </summary>
     internal const int MaximumMessageLength = 240;
+
+    /// <summary>
+    /// The number of times a step that timed out is run before the partition is reported as failed.
+    /// </summary>
+    internal const int MaximumAttempts = 5;
 
     /// <summary>
     /// Gets the default delay before a handling attempt that timed out is made again.
@@ -45,6 +53,67 @@ internal static class TransientTimeouts
         var message = exception.GetBaseException().Message;
         var firstLine = message.Split('\n', 2)[0].Trim();
         return firstLine.Length <= MaximumMessageLength ? firstLine : $"{firstLine[..MaximumMessageLength]}...";
+    }
+
+    /// <summary>
+    /// Shortens the messages of a failure to the single line a job step records.
+    /// </summary>
+    /// <param name="messages">The messages of the failure, outermost first.</param>
+    /// <returns>The first message cut down to <see cref="MaximumMessageLength"/>.</returns>
+    /// <remarks>
+    /// The full messages and the stack trace are kept where the failure is acted on - the failed partition - so every
+    /// step that fails does not also carry kilobytes of them in the job's storage.
+    /// </remarks>
+    internal static IList<string> ShortenForStep(IEnumerable<string> messages)
+    {
+        var first = messages.FirstOrDefault() ?? string.Empty;
+        var firstLine = first.Split('\n', 2)[0].Trim();
+        return [firstLine.Length <= MaximumMessageLength ? firstLine : $"{firstLine[..MaximumMessageLength]}..."];
+    }
+
+    /// <summary>
+    /// Gets the timeout a failed step ended with.
+    /// </summary>
+    /// <param name="result">The <see cref="JobStepResult"/> of the step.</param>
+    /// <param name="jsonSerializerOptions">The serializer options to read the partial result with.</param>
+    /// <param name="failure">The <see cref="TransientPartitionFailure"/>, when the step ended with one.</param>
+    /// <returns>True if the step failed because it timed out.</returns>
+    internal static bool TryGetTransientFailure(JobStepResult result, JsonSerializerOptions jsonSerializerOptions, [NotNullWhen(true)] out TransientPartitionFailure? failure)
+    {
+        failure = null;
+        if (!result.TryGetError(out var error) || error.Cancelled || !error.HasPartialResult)
+        {
+            return false;
+        }
+
+        result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions);
+        failure = handled?.TransientFailure;
+        return failure is not null;
+    }
+
+    /// <summary>
+    /// Decides whether a step that failed an attempt is run again.
+    /// </summary>
+    /// <param name="result">The <see cref="JobStepResult"/> of the failed attempt.</param>
+    /// <param name="attempt">The number of the attempt that failed, starting at 1.</param>
+    /// <param name="jsonSerializerOptions">The serializer options to read the partial result with.</param>
+    /// <returns>True if the failure was a timeout and attempts are left.</returns>
+    internal static bool ShouldRetry(JobStepResult result, int attempt, JsonSerializerOptions jsonSerializerOptions) =>
+        attempt < MaximumAttempts && TryGetTransientFailure(result, jsonSerializerOptions, out _);
+
+    /// <summary>
+    /// Reports the partition as failed when the step that ended it ran out of attempts to get past a timeout.
+    /// </summary>
+    /// <param name="observer">The <see cref="IObserver"/> that owns the partition.</param>
+    /// <param name="result">The final <see cref="JobStepResult"/> of the step.</param>
+    /// <param name="jsonSerializerOptions">The serializer options to read the partial result with.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task ReportPartitionFailedWhenAttemptsAreExhausted(IObserver observer, JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
+    {
+        if (TryGetTransientFailure(result, jsonSerializerOptions, out var failure))
+        {
+            await observer.PartitionFailed(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout);
+        }
     }
 
     /// <summary>
