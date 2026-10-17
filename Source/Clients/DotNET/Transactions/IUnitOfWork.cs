@@ -83,6 +83,20 @@ public interface IUnitOfWork : IDisposable
     IDisposable AllowReads(ReadAllowance allowance, string reason) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
 
     /// <summary>
+    /// Suspends the read regions this asynchronous flow inherited, without ending read protection.
+    /// </summary>
+    /// <remarks>
+    /// A read region flows with the asynchronous context, so a region opened by an outer invocation also covers a
+    /// nested invocation it runs. A host that runs nested invocations under the same read protection suspends the
+    /// inherited regions at the start of the nested one: reads are then refused as if no region were open, while
+    /// regions opened inside the suspension apply as usual. Disposing the returned scope restores the inherited
+    /// regions. Suspensions nest.
+    /// </remarks>
+    /// <returns>The suspension, disposed by the host when the nested invocation ends.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support read regions.</exception>
+    IDisposable SuspendReadRegions() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
     /// Atomically validates target, staged overlap and distinct contributions before enrolling a read.
     /// </summary>
     /// <param name="contribution">The stream or aggregate dependency.</param>
@@ -201,8 +215,8 @@ public interface IUnitOfWork : IDisposable
     /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
     void AddDecisionRead(IDecisionRead read) => throw new UnitOfWorkDecisionReadsNotSupported(GetType());
 
-    /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
-    /// <returns>Decision conflicts, if any.</returns>
+    /// <summary>Gets the decision conflicts that refused the commit.</summary>
+    /// <returns>Decision conflicts, if any, with the first conflicting event when the kernel reported it.</returns>
     IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
 
     /// <summary>

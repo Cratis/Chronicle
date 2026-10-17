@@ -12,4 +12,6 @@ public class when_removing_a_namespace : given.a_namespace_remover
     [Fact] async Task should_drop_the_data_of_the_namespace() => await _eventStoreStorage.Received(1).DropNamespace(_namespace);
     [Fact] async Task should_delete_the_namespace_record() => await _namespaceRecords.Received(1).Delete(_namespace);
     [Fact] async Task should_forget_the_namespace() => await _namespaces.Received(1).Forget(_namespace);
+    [Fact] async Task should_remove_an_observer_that_only_has_reminders() => await _observerWithoutState.Received(1).Remove();
+    [Fact] async Task should_unsubscribe_an_observer_that_only_has_reminders() => await _observerWithoutState.Received(1).Unsubscribe();
 }
