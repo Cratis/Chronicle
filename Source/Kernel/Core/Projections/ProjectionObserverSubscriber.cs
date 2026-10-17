@@ -296,6 +296,8 @@ public class ProjectionObserverSubscriber(
             oldDefinition.IsActive != newDefinition.IsActive ||
             oldDefinition.IsRewindable != newDefinition.IsRewindable ||
             oldDefinition.GenerationDelivery != newDefinition.GenerationDelivery ||
+            oldDefinition.HasLegacyStorageFields != newDefinition.HasLegacyStorageFields ||
+            oldDefinition.Scope != newDefinition.Scope ||
             oldDefinition.EventSequenceId != newDefinition.EventSequenceId)
         {
             return true;
@@ -309,6 +311,12 @@ public class ProjectionObserverSubscriber(
         // oldDefinition can be a grain's uninitialized State (all reference members null) when this
         // subscriber has never persisted a definition yet - the four dictionaries below are typed
         // non-nullable but are not guaranteed non-null at runtime in that case. (#3934)
+        if (oldDefinition.FromEvery?.Key != newDefinition.FromEvery?.Key ||
+            oldDefinition.FromEvery?.AutoMap != newDefinition.FromEvery?.AutoMap)
+        {
+            return true;
+        }
+
         if ((oldDefinition.From?.Count ?? 0) != (newDefinition.From?.Count ?? 0) ||
             (oldDefinition.Join?.Count ?? 0) != (newDefinition.Join?.Count ?? 0) ||
             (oldDefinition.RemovedWith?.Count ?? 0) != (newDefinition.RemovedWith?.Count ?? 0) ||
@@ -378,7 +386,10 @@ public class ProjectionObserverSubscriber(
                 return true;
             }
 
-            if (oldChild.IdentifiedBy != newChild.IdentifiedBy || HasProjectionRulesChanged(oldChild, newChild))
+            if (oldChild.IdentifiedBy != newChild.IdentifiedBy ||
+                oldChild.All?.Key != newChild.All?.Key ||
+                oldChild.All?.AutoMap != newChild.All?.AutoMap ||
+                HasProjectionRulesChanged(oldChild, newChild))
             {
                 return true;
             }

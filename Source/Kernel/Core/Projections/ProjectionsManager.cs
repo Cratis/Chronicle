@@ -162,10 +162,9 @@ public partial class ProjectionsManager(
                 failures[identifier] = exception;
             }
 
-            // Merge into the state only the definitions that the engine and projection grains fully accepted.
-            // A downstream subscription failure can happen after the engine accepted a definition. Leaving that
-            // definition out makes the next client registration reconcile every layer idempotently without rolling
-            // back observers or triggering additional replay side effects during the failed registration.
+            // Merge fully accepted definitions. Storage upgrades were already retained after SetDefinition:
+            // a later namespace failure must not roll them back to legacy defaults. Other failed definitions
+            // stay out so the next registration reconciles every layer idempotently.
             MergeIntoState(changedDefinitions.Where(definition => !failures.ContainsKey(definition.Identifier)));
             await WriteStateAsync();
         }
@@ -321,9 +320,10 @@ public partial class ProjectionsManager(
                 existing,
                 definition);
 
-            // Tags and the registering version do not require evolution, but their metadata still needs to reach the
-            // engine and persistent definitions. A registration without a version never counts as a version change.
-            if (compareResult != ProjectionDefinitionCompareResult.Same ||
+            // Metadata and a legacy storage refresh must reach the engine and storage without evolution.
+            // A registration without a version never counts as a version change.
+            if ((existing.HasLegacyStorageFields && !definition.HasLegacyStorageFields) ||
+                compareResult != ProjectionDefinitionCompareResult.Same ||
                 !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []) ||
                 (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version))
             {
@@ -471,6 +471,13 @@ public partial class ProjectionsManager(
         ForgetSubscriptionsFor(definition.Identifier);
         logger.SettingDefinition(definition.Identifier);
         await SetProjectionDefinition(definition);
+
+        // SetDefinition has committed the storage upgrade even if a namespace subscription fails next.
+        // Keep timer retries from forwarding the old, lossy snapshot back to the authoritative grain.
+        if (!definition.HasLegacyStorageFields && State.Projections.Any(existing => existing.Identifier == definition.Identifier && existing.HasLegacyStorageFields))
+        {
+            MergeIntoState([definition]);
+        }
 
         if (!definition.IsActive)
         {

@@ -27,8 +27,8 @@ public static class ChildrenDefinitionConverters
             source.RemovedWithJoin.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
             source.FromEventProperty?.ToKernel(),
             AutoMap: source.AutoMap,
-            Nested: source.Nested.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
-            NoAutoMapProperties: [.. source.NoAutoMapProperties.Select(_ => (PropertyPath)_)]);
+            Nested: source.Nested?.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
+            NoAutoMapProperties: source.NoAutoMapProperties?.Select(_ => (PropertyPath)_).ToList());
 
     /// <summary>
     /// Converts a Kernel ChildrenDefinition to a MongoDB ChildrenDefinition.
@@ -48,6 +48,6 @@ public static class ChildrenDefinitionConverters
             FromEventProperty = source.FromEventProperty?.ToMongoDB(),
             AutoMap = source.AutoMap,
             Nested = (source.Nested ?? new Dictionary<PropertyPath, KernelDefs.ChildrenDefinition>()).ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB()),
-            NoAutoMapProperties = [.. (source.NoAutoMapProperties ?? []).Select(_ => _.ToString())]
+            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => _.ToString()).ToList()
         };
 }

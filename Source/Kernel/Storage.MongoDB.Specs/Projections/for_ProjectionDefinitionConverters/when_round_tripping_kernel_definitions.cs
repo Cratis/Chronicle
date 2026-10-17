@@ -1,0 +1,46 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.Projections.Kernel;
+using Cratis.Chronicle.Statistics;
+using Cratis.Chronicle.Storage.Projections;
+using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using static Cratis.Chronicle.Storage.MongoDB.Projections.Definitions.ProjectionDefinitionConverters;
+
+using StoredDefinition = Cratis.Chronicle.Storage.MongoDB.Projections.Definitions.ProjectionDefinition;
+
+namespace Cratis.Chronicle.Storage.MongoDB.Projections.for_ProjectionDefinitionConverters;
+
+public class when_round_tripping_kernel_definitions : Specification
+{
+    readonly List<ProjectionDefinitionCompareResult> _results = [];
+    readonly List<ProjectionScope> _scopes = [];
+
+    async Task Because()
+    {
+        var storage = Substitute.For<IStorage>();
+        var definitions = Substitute.For<IProjectionDefinitionsStorage>();
+        storage.GetEventStore(Arg.Any<EventStoreName>()).Projections.Returns(definitions);
+        definitions.Has(Arg.Any<ProjectionId>()).Returns(true);
+        var comparer = new ProjectionDefinitionComparer(storage, new ObjectComparer(), NullLogger<ProjectionDefinitionComparer>.Instance);
+        foreach (var declaration in KernelProjectionDeclarations.Discover(typeof(EventTypeStatisticsProjection).Assembly.GetTypes()))
+        {
+            foreach (var definition in KernelProjectionDeclarations.Lower(declaration).Projections)
+            {
+                var restored = BsonSerializer.Deserialize<StoredDefinition>(definition.ToMongoDB().ToBsonDocument()).ToKernel();
+                _scopes.Add(restored.Scope);
+                _results.Add(await comparer.Compare(new(definition.Identifier, "test-store"), definition, restored));
+            }
+        }
+    }
+
+    [Fact] void should_exercise_at_least_one_definition() => _results.ShouldNotBeEmpty();
+    [Fact] void should_preserve_the_global_scope() => _scopes.ShouldContain(ProjectionScope.Global);
+    [Fact] void should_compare_every_definition_as_unchanged() => _results.ShouldEachConformTo(result => result == ProjectionDefinitionCompareResult.Same);
+}
