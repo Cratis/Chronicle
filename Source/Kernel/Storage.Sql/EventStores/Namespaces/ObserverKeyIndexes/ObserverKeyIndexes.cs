@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
-using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes;
 
@@ -14,17 +13,12 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-/// <param name="observerStorage">Provider for <see cref="IObserverDefinitionsStorage"/>.</param>
 public class ObserverKeyIndexes(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
-    IDatabase database,
-    IObserverDefinitionsStorage observerStorage) : IObserverKeyIndexes
+    IDatabase database) : IObserverKeyIndexes
 {
     /// <inheritdoc/>
-    public async Task<IObserverKeyIndex> GetFor(ObserverKey observerKey)
-    {
-        var observer = await observerStorage.Get(observerKey.ObserverId);
-        return new EventSourceKeyIndex(eventStore, @namespace, database, observerKey.EventSequenceId, observer.EventTypes);
-    }
+    public Task<IObserverKeyIndex> GetFor(ObserverKey observerKey, ObserverReaderScope scope) =>
+        Task.FromResult<IObserverKeyIndex>(new EventSourceKeyIndex(eventStore, @namespace, database, observerKey.EventSequenceId, scope));
 }

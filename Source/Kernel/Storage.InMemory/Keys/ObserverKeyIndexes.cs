@@ -15,6 +15,10 @@ public sealed class ObserverKeyIndexes : IObserverKeyIndexes
     readonly ConcurrentDictionary<ObserverKey, IObserverKeyIndex> _indexes = new();
 
     /// <inheritdoc/>
-    public Task<IObserverKeyIndex> GetFor(ObserverKey observerKey) =>
+    /// <remarks>
+    /// The in-memory index holds the keys that were added to it and has no events to read, so it enumerates every
+    /// key it holds whichever scope is asked for.
+    /// </remarks>
+    public Task<IObserverKeyIndex> GetFor(ObserverKey observerKey, ObserverReaderScope scope) =>
         Task.FromResult(_indexes.GetOrAdd(observerKey, _ => new ObserverKeyIndex()));
 }

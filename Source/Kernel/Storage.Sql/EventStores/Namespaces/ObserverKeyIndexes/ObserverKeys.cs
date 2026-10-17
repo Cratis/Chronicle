@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes;
@@ -17,16 +18,21 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="eventSequenceId">The event sequence identifier.</param>
 /// <param name="fromEventSequenceNumber">The <see cref="EventSequenceNumber"/> we want to get keys starting from.</param>
-/// <param name="eventTypes">Collection of <see cref="EventType"/> the index is for.</param>
+/// <param name="scope">The <see cref="ObserverReaderScope"/> the index is for.</param>
+/// <remarks>
+/// A wildcard scope has no types to filter by and enumerates no keys on SQL, which is what an empty type list has
+/// always done here; MongoDB enumerates every key for it. Making the two agree is a behavior change and is not made
+/// by introducing the scope.
+/// </remarks>
 public class ObserverKeys(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IDatabase database,
     EventSequenceId eventSequenceId,
     EventSequenceNumber fromEventSequenceNumber,
-    IEnumerable<EventType> eventTypes) : IObserverKeys
+    ObserverReaderScope scope) : IObserverKeys
 {
-    readonly IEnumerable<EventTypeId> _eventTypes = eventTypes.Select(_ => _.Id).ToArray();
+    readonly IEnumerable<EventTypeId> _eventTypes = scope.EventTypes.Select(_ => _.Id).ToArray();
 
     /// <inheritdoc/>
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>

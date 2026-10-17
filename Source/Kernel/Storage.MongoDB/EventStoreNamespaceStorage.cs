@@ -64,7 +64,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-    /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -76,7 +75,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         EventStoreNamespaceName @namespace,
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventTypesStorage eventTypesStorage,
-        IObserverDefinitionsStorage observerDefinitionsStorage,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
@@ -106,7 +104,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ObserverHandledCounts = new ObserverHandledCountsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         Patterns = new BehaviorPatternStorage(eventStoreNamespaceDatabase);
-        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
+        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase);
         Sinks = sinks;
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
