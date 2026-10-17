@@ -26,6 +26,7 @@ public partial class UnitOfWork
     /// <exception cref="ReadProtectionMustBeginBeforeEnrollment">Events or dependencies have already been enrolled.</exception>
     public ReadProtectionFrame EnforceReadProtection()
     {
+        ImmediateAppendGuard.RequireUnit(this);
         ReadProtectionGuard.RequireUnit(this, false);
         lock (_decisionLock)
         {
