@@ -118,10 +118,14 @@ public class CatchUpObserver(
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
 
-        var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(
-            request.ObserverKey,
-            ObserverReaderScope.ForRequest(request.ReaderScope, request.EventTypes));
+        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
+        var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
+
+        // Legacy key enumeration used the stored definition at preparation time, not the request's types.
+        var readerScope = request.ReaderScope ?? ObserverReaderScope.For(
+            false,
+            (await eventStoreStorage.Observers.Get(request.ObserverKey.ObserverId)).EventTypes);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey, readerScope);
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var keysToCatchUp = new List<Key>();
