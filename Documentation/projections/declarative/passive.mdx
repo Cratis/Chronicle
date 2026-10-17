@@ -38,10 +38,9 @@ Events should match the read model structure or use explicit mapping:
 
 When you call `GetInstanceById` on a passive projection:
 
-1. The first read folds relevant events for the specified event source ID in memory.
-2. Chronicle retains the computed state and its last handled sequence number in the immediate-projection activation.
-3. Later reads reuse that state and apply newer events; if no relevant events were appended, the cached result is returned.
-4. The result has no persistent read-model sink. If the activation loses its cache, a later read reconstructs it.
+1. Chronicle folds the relevant events for the specified event source ID in memory, starting from the first event.
+2. The result is returned. Nothing is kept between reads: there is no persistent read-model sink and no cached state.
+3. Every later read folds the history again, so it reflects everything appended up to that read, including redactions, revisions and erased personal data.
 
 By-ID reads select one event source. A cross-source join or custom-key aggregation cannot generally
 reconstruct the same answer as its materialized counterpart this way. See
@@ -59,7 +58,7 @@ Passive projections are ideal for:
 
 ## Performance considerations
 
-- A cold read folds the history; a warm read can apply only the newer events.
-- Passive projections trade persistent storage for read-time processing and cached memory.
-- Plan for cold-read cost even when repeated reads benefit from the kernel's cache.
+- Every read folds the source's history from the start, so read cost grows with the number of relevant events for that source.
+- Passive projections trade persistent storage for read-time processing on every read.
+- A reactor or command that reads a passive model on every event over a long stream repeats that fold each time; keep such histories short, or use a materialized projection when eventual consistency is acceptable.
 - Use bounded, source-local histories when read latency matters.

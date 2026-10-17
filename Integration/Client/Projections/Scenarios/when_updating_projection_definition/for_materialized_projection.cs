@@ -29,6 +29,8 @@ public class for_materialized_projection(context context) : Given<context>(conte
 
         async Task Because()
         {
+            await WaitForClientRegistration();
+
             MaterializedProjection.MapBothProperties = true;
 
             await EventStore.Projections.Discover();

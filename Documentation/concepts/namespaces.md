@@ -5,7 +5,7 @@ Namespaces provide a way to provide segregation of data in the same event store.
 This can typically be used for multi-tenant scenarios were you have multiple
 tenants of your system and you want to provide data segregation between them.
 
-When not specified, Chronicle will use the **Default** namespace.
+When not specified, Chronicle will use the **Default** namespace. For how namespaces fit into tenancy, including choosing where each tenant's database lives, see [Tenancy](../tenancy/index.md).
 
 > Note: A tenant is typically an organization or an organizational unit that uses a system.
 > In cloud terminology it is often linked to Software as a Service offerings were companies
