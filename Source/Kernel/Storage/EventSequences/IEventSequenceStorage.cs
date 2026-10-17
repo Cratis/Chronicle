@@ -319,6 +319,16 @@ public interface IEventSequenceStorage
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Read attempted append slots from committed storage to settle an uncertain outcome.
+    /// </summary>
+    /// <param name="first">First attempted slot, inclusive.</param>
+    /// <param name="last">Last attempted slot, inclusive.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A cursor over committed events in the range.</returns>
+    Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default) =>
+        GetRange(first, last, cancellationToken: cancellationToken);
+
+    /// <summary>
     /// Get a bounded range, narrowed by observer event source and stream types where supported.
     /// </summary>
     /// <param name="start">Start of the range.</param>

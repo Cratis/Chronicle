@@ -2,20 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_many;
 
-public class and_storage_returns_an_incomplete_acknowledgment : given.an_event_sequence
+public class and_storage_returns_an_incomplete_acknowledgment : given.an_append_with_settlement
 {
-    Exception _error;
-
-    void Establish() => _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>())
-        .Returns(Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]));
-
-    async Task Because() => _error = await Cratis.Specifications.Catch.Exception(() => _eventSequence.AppendManyToStorage([ValidatedEvent()], CorrelationId.NotSet, [], []));
-
-    [Fact] void should_not_report_a_successful_batch_with_missing_receipts() => _error.ShouldBeOfExactType<InvalidAppendAcknowledgment>();
-    [Fact] void should_not_update_constraint_indexes() => _constraintIndexSequenceNumbers.ShouldBeEmpty();
+    void Establish() => _incomplete = true;
+    async Task Because() => await AppendBatch();
+    [Fact] void should_not_throw() => _error.ShouldBeNull();
+    [Fact] void should_report_every_number() => _batchResult.SequenceNumbers.ShouldEqual(new EventSequenceNumber[] { 0UL, 1UL });
+    [Fact] void should_read_the_batch_back() => _probes.ShouldEqual(1);
+    [Fact] void should_index_each_event() => _constraintIndexSequenceNumbers.ShouldEqual(new EventSequenceNumber[] { 0UL, 1UL });
 }

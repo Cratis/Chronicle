@@ -96,6 +96,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
         modelBuilder
+            .Entity<EventSequences.EventSequenceState>(entity =>
+            {
+                entity.Property(row => row.ConstraintIndexWatermark).HasPrecision(20, 0);
+                entity.Property(row => row.ConstraintIndexCatchUpBelow).HasPrecision(20, 0);
+            })
             .Entity<ClosedStreamEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ClosedStreams);

@@ -22,7 +22,10 @@ public class ClosesStreamIndexUpdater(ClosesStreamConstraintDefinition definitio
 {
     /// <inheritdoc/>
     /// <exception cref="InvalidClosingStreamScope">A relevant event cannot resolve its exact scope.</exception>
-    public async Task Update(EventSequenceNumber eventSequenceNumber)
+    public Task Update(EventSequenceNumber eventSequenceNumber) => Update(eventSequenceNumber, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken)
     {
         var reopening = definition.ReopenedBy.Contains(context.EventTypeId);
         if (!reopening && !definition.EventTypeIds.Contains(context.EventTypeId)) return;
@@ -30,11 +33,11 @@ public class ClosesStreamIndexUpdater(ClosesStreamConstraintDefinition definitio
 
         if (reopening)
         {
-            await storage.Reopen(definition.Name.Value, scope);
+            await storage.Reopen(definition.Name.Value, scope, cancellationToken);
         }
         else
         {
-            await storage.Close(new(scope, definition.Name.Value, eventSequenceNumber, DateTimeOffset.UtcNow));
+            await storage.Close(new(scope, definition.Name.Value, eventSequenceNumber, DateTimeOffset.UtcNow), cancellationToken);
         }
     }
 }

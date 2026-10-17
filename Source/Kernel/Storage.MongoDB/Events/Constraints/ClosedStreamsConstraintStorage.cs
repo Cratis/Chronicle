@@ -54,26 +54,43 @@ public class ClosedStreamsConstraintStorage(IEventStoreNamespaceDatabase eventSt
     }
 
     /// <inheritdoc/>
-    public async Task Close(ClosedStream closure)
+    public async Task Close(ClosedStream closure, CancellationToken cancellationToken = default)
     {
-        await EnsureIndex();
+        await EnsureIndex(cancellationToken);
         var scope = closure.Scope.Normalized();
         await _collection.ReplaceOneAsync(
             ExactScope(scope) & ForOwner(closure.Owner),
             new ClosedStreamDocument(scope.EventStreamType?.Value, scope.EventStreamId?.Value, scope.EventSourceId?.Value, scope.EventSourceType?.Value, closure.Owner.Value, (int)scope.Dimensions, closure.SequenceNumber.Value, closure.ClosedAt),
-            new ReplaceOptions { IsUpsert = true });
+            new ReplaceOptions { IsUpsert = true },
+            cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope) =>
-        (await _collection.DeleteOneAsync(ExactScope(scope.Normalized()) & ForOwner(owner))).DeletedCount > 0;
+    public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default) =>
+        (await _collection.DeleteOneAsync(ExactScope(scope.Normalized()) & ForOwner(owner), cancellationToken)).DeletedCount > 0;
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner)
+    public async Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
-        using var cursor = await _collection.FindAsync(ForOwner(owner));
+        using var cursor = await _collection.FindAsync(ExactScope(scope.Normalized()) & ForOwner(owner), cancellationToken: cancellationToken);
+        var row = await cursor.FirstOrDefaultAsync(cancellationToken);
+        return row is null ? null : ToClosure(row);
+    }
 
-        return (await cursor.ToListAsync()).Select(ToClosure).ToArray();
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        using var cursor = await _collection.FindAsync(ForOwner(owner) & Builders<ClosedStreamDocument>.Filter.Eq(row => row.SequenceNumber, sequenceNumber.Value), cancellationToken: cancellationToken);
+
+        return (await cursor.ToListAsync(cancellationToken)).Select(ToClosure).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
+    {
+        using var cursor = await _collection.FindAsync(ForOwner(owner), cancellationToken: cancellationToken);
+
+        return (await cursor.ToListAsync(cancellationToken)).Select(ToClosure).ToArray();
     }
 
     /// <inheritdoc/>
@@ -142,13 +159,15 @@ public class ClosedStreamsConstraintStorage(IEventStoreNamespaceDatabase eventSt
             : builder.Eq(row => row.Owner, owner.Value);
     }
 
-    async Task EnsureIndex()
+    async Task EnsureIndex(CancellationToken cancellationToken = default)
     {
         if (_indexEnsured) return;
-        await _collection.Indexes.CreateOneAsync(new CreateIndexModel<ClosedStreamDocument>(
-            Builders<ClosedStreamDocument>.IndexKeys.Ascending(row => row.StreamType).Ascending(row => row.StreamId)
-                .Ascending(row => row.EventSourceId).Ascending(row => row.EventSourceType).Ascending(row => row.Owner),
-            new CreateIndexOptions { Name = "scope_owner" }));
+        await _collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ClosedStreamDocument>(
+                Builders<ClosedStreamDocument>.IndexKeys.Ascending(row => row.StreamType).Ascending(row => row.StreamId)
+                    .Ascending(row => row.EventSourceId).Ascending(row => row.EventSourceType).Ascending(row => row.Owner),
+                new CreateIndexOptions { Name = "scope_owner" }),
+            cancellationToken: cancellationToken);
         _indexEnsured = true;
     }
 }

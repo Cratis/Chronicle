@@ -28,20 +28,41 @@ public class ClosedStreamsConstraintStorage : IClosedStreamsConstraintStorage
         Task.FromResult(_closedStreams.Values.Select(row => row.Scope.Dimensions).Distinct().ToArray().AsEnumerable());
 
     /// <inheritdoc/>
-    public Task Close(ClosedStream closure)
+    public Task Close(ClosedStream closure, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var normalized = closure with { Scope = closure.Scope.Normalized() };
         _closedStreams[(normalized.Owner, normalized.Scope)] = normalized;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope) =>
-        Task.FromResult(_closedStreams.TryRemove((owner, scope.Normalized()), out _));
+    public Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.TryRemove((owner, scope.Normalized()), out _));
+    }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner) =>
-        Task.FromResult(_closedStreams.Values.Where(row => row.Owner == owner).ToArray().AsEnumerable());
+    public Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.TryGetValue((owner, scope.Normalized()), out var closure) ? closure : null);
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.Values.Where(row => row.Owner == owner && row.SequenceNumber == sequenceNumber).ToArray().AsEnumerable());
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_closedStreams.Values.Where(row => row.Owner == owner).ToArray().AsEnumerable());
+    }
 
     /// <inheritdoc/>
     public Task RemoveAllFor(ClosedStreamOwner owner)
