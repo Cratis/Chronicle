@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="captureValidator"><see cref="ICaptureValidator"/> for validating compiled captures.</param>
 /// <param name="eventsSubscriptions"><see cref="ICaptureEventsSubscriptions"/> for running captures that read from an inbox.</param>
 /// <param name="logger">The logger.</param>
-public class CapturesManager(
+public partial class CapturesManager(
     IStorage storage,
     ILanguageService languageService,
     ICaptureValidator captureValidator,
@@ -32,6 +32,7 @@ public class CapturesManager(
     /// </summary>
     internal static readonly TimeSpan ReconcileInterval = TimeSpan.FromMinutes(1);
 
+    readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     ICapturesStorage Captures => storage.GetEventStore(_eventStoreName).Captures;
@@ -74,16 +75,13 @@ public class CapturesManager(
     /// <inheritdoc/>
     public async Task NamespaceAdded(EventStoreNamespaceName @namespace)
     {
-        foreach (var (capture, definition) in await GetStartedEventsCaptures())
+        try
         {
-            try
-            {
-                await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                logger.FailedSubscribingCaptureInNamespace(exception, capture.Name, capture.Id, @namespace);
-            }
+            await EnsureSubscribedIn(@namespace);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.FailedEnsuringSubscriptionsInNamespace(exception, @namespace);
         }
     }
 

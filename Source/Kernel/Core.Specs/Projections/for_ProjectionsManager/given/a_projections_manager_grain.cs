@@ -16,6 +16,8 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -26,11 +28,14 @@ public class a_projections_manager_grain : Specification
     protected const string EventStore = "the-event-store";
 
     protected ProjectionsManager _grain;
+    protected ILogger<ProjectionsManager> _logger;
     protected TestKitSilo _silo;
     protected IProjectionsServiceClient _projectionsServiceClient;
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
     protected Observation.IObserver _observerGrain;
+    protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
+    protected INamespaces _namespaces;
     protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
@@ -42,6 +47,9 @@ public class a_projections_manager_grain : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _logger = Substitute.For<ILogger<ProjectionsManager>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _silo.AddService(_logger);
 
         _definitionComparer = Substitute.For<IProjectionDefinitionComparer>();
         _silo.AddService(_definitionComparer);
@@ -81,9 +89,9 @@ public class a_projections_manager_grain : Specification
 
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
 
-        var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
-        _silo.AddProbe(_ => namespaces);
+        _namespaces = Substitute.For<INamespaces>();
+        _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        _silo.AddProbe(_ => _namespaces);
 
         var readModelsManager = Substitute.For<IReadModelsManager>();
         readModelsManager.GetDefinitions().Returns(_ => Task.FromResult(_readModelDefinitions));
@@ -94,7 +102,8 @@ public class a_projections_manager_grain : Specification
 
         _observerGrain = Substitute.For<Observation.IObserver>();
         _observerGrain.IsSubscribed().Returns(true);
-        _silo.AddProbe(_ => _observerGrain);
+        _observerGrain.GetState().Returns(new ObserverState());
+        _silo.AddProbe<Observation.IObserver>(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
         _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
         _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);

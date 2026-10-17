@@ -13,6 +13,12 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static partial class ProjectionsManagerLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failed ensuring projection subscriptions in namespace '{Namespace}'. Reconciliation will retry")]
+    internal static partial void FailedEnsuringSubscriptionsInNamespace(this ILogger<ProjectionsManager> logger, Exception exception, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Error, "Projection '{Identifier}' is not subscribed in namespace '{Namespace}'. Reconciliation will retry")]
+    internal static partial void SubscriptionNotEstablished(this ILogger<ProjectionsManager> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Debug, "Setting definition for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<ProjectionsManager> logger, ProjectionId identifier);
 
