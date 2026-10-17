@@ -174,6 +174,11 @@ static class NestedDefinitionExtensions
                 constructorParamNames.Add(parameter.Name!);
 
                 var paramPropertyName = (string)ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target);
+                var fromEvery = parameter.GetCustomAttribute<FromEveryAttribute>();
+                if (fromEvery is not null)
+                {
+                    ModelBoundProjectionBuilder.AddFromEveryMapping(nestedDef.All, namingPolicy, paramPropertyName, fromEvery);
+                }
 
                 foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
                 {

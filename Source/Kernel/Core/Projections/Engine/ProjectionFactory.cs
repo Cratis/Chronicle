@@ -75,6 +75,13 @@ public class ProjectionFactory(
             throw new EventGenerationDeliveryNotSupported();
         }
 
+        var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
+        foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
+        {
+            LegacyChildEveryEventMappings.LogMoved(logger, definition.Identifier.Value, property.Path);
+        }
+        definition = normalizedDefinition;
+
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
 
         // Only a join that releases a stored event needs the schema of the generation it was stored at.

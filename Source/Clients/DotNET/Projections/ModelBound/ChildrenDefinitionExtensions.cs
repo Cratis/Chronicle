@@ -213,6 +213,11 @@ static class ChildrenDefinitionExtensions
                 foreach (var parameter in primaryConstructor.GetParameters())
                 {
                     var paramPropertyName = (string)ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target);
+                    var fromEvery = parameter.GetCustomAttribute<FromEveryAttribute>();
+                    if (fromEvery is not null)
+                    {
+                        ModelBoundProjectionBuilder.AddFromEveryMapping(childrenDef.All, namingPolicy, paramPropertyName, fromEvery);
+                    }
 
                     // Process SetFromContext attributes on constructor parameters. The generic event type is honored,
                     // so [SetFromContext<OtherEvent>] binds the context mapping to OtherEvent rather than the child's
