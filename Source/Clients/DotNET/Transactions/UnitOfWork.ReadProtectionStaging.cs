@@ -20,7 +20,7 @@ public partial class UnitOfWork
         var batch = new EventsWithConcurrencyScopes(events, scopes.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(new(_.Key.Value), _.Value)), true);
         EnsureEventSequenceCanBeUsed(sequence);
         foreach (var label in batch.Events.Select(_ => _.EventSourceId).Union(batch.Entries.Select(_ => _.Key))) ValidateEnforcedLabel(label);
-        var enrollments = CreateEnrollments(sequence, batch);
+        var enrollments = CreateEnrollments(sequence, batch, true);
         var resolution = ResolveEnrollmentScopes(sequence, enrollments);
         var pending = CaptureStagedContributions(sequence, resolution.Scopes, origin, batch.Events.Count == 0);
         var staged = batch.Events.Select(_ => _ with { NamedTags = NamedTagConverters.Merge(_.NamedTags, []) }).ToArray();

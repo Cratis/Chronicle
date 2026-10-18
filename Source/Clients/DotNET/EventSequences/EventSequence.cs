@@ -1324,7 +1324,8 @@ public class EventSequence(
         var routingByEvent = events.Select((@event, index) => (Event: @event, Routing: routings[index])).ToList();
         if (readProtectionCommit is not null)
         {
-            var plan = await ReadProtectionRouting.Resolve(readProtectionCommit, routingByEvent, resolvedConcurrencyScopes, strategy);
+            var plan = await ReadProtectionRouting.Resolve(readProtectionCommit, routingByEvent, resolvedConcurrencyScopes, strategy, SupportsConjunctions());
+            RequireConjunctionSupport(plan.Scopes);
             readProtectionCommit.Resolved(plan.Conditions);
             return plan.Scopes;
         }
@@ -1344,10 +1345,12 @@ public class EventSequence(
         return resolvedConcurrencyScopes;
     }
 
+    bool SupportsConjunctions() => connection is IKernelCapabilities capabilities && capabilities.CapabilitiesAreKnown &&
+        capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.ConcurrencyScopeConjunctions);
+
     void RequireConjunctionSupport(IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes)
     {
-        if (connection is IKernelCapabilities capabilities && capabilities.CapabilitiesAreKnown &&
-            capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.ConcurrencyScopeConjunctions))
+        if (SupportsConjunctions())
         {
             return;
         }

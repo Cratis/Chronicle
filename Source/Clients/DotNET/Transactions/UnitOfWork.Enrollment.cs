@@ -49,12 +49,13 @@ public partial class UnitOfWork
     static EventStreamId? Normalize(EventStreamId? value) => value == EventStreamId.Default ? null : value;
     static EventSourceType? Normalize(EventSourceType? value) => value == EventSourceType.Default || value == EventSourceType.Unspecified ? null : value;
 
-    static UnitOfWorkEnrollment[] CreateEnrollments(EventSequenceId sequence, EventsWithConcurrencyScopes batch)
+    static UnitOfWorkEnrollment[] CreateEnrollments(EventSequenceId sequence, EventsWithConcurrencyScopes batch, bool useReadProtectionIdentity = false)
     {
-        var targets = batch.Events.GroupBy(_ => _.EventSourceId).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
-        return targets.Keys.Union(batch.Entries.Select(_ => _.Key)).SelectMany(source =>
+        EventSourceId Label(EventSourceId source) => useReadProtectionIdentity ? new(source.Value) : source;
+        var targets = batch.Events.GroupBy(_ => Label(_.EventSourceId)).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
+        return targets.Keys.Union(batch.Entries.Select(_ => Label(_.Key))).SelectMany(source =>
         {
-            var scopes = batch.Entries.Where(_ => _.Key == source).Select(_ => _.Value).DefaultIfEmpty(ConcurrencyScope.NotSet);
+            var scopes = batch.Entries.Where(_ => Label(_.Key) == source).Select(_ => _.Value).DefaultIfEmpty(ConcurrencyScope.NotSet);
             return scopes.Select(scope => new UnitOfWorkEnrollment(sequence, source, scope, targets.GetValueOrDefault(source, Array.AsReadOnly(Array.Empty<object>()))));
         }).ToArray();
     }

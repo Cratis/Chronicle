@@ -19,13 +19,15 @@ internal static class ReadProtectionRouting
     /// <param name="entries">Resolved entries in batch order.</param>
     /// <param name="scopes">Legacy explicit scopes.</param>
     /// <param name="strategy">The configured strategy.</param>
+    /// <param name="supportsConjunctions">Whether the kernel accepts several predicates on one label.</param>
     /// <returns>The actual append plan.</returns>
     /// <exception cref="ReadProtectionRequiresTheDefaultConcurrencyStrategy">A read label uses a custom strategy.</exception>
     internal static async Task<ReadProtectionPlan> Resolve(
         ReadProtectionCommit commit,
         IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries,
         IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
-        IConcurrencyScopeStrategy strategy)
+        IConcurrencyScopeStrategy strategy,
+        bool supportsConjunctions)
     {
         ReadProtectionMerge.ValidateTargetsAndLabels(commit.Target, commit.Contributions);
         var contributions = commit.Contributions.ToList();
@@ -63,7 +65,7 @@ internal static class ReadProtectionRouting
                 contributions.Add(new(group.Key, declared ? ReadProtectionContributionKind.DeclaredRouting : ReadProtectionContributionKind.DefaultRouting, scope, commit.Target, $"routing of {routing?.EventSource.Value ?? @event.Event.GetType().Name}/{@event.EventStreamType}"));
             }
         }
-        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0, commit.ValidateReadsWithoutEvents);
+        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0, commit.ValidateReadsWithoutEvents, supportsConjunctions);
     }
 
     static async Task<IReadOnlyList<ConcurrencyScope>> ResolveLegacy(EventSourceId source, IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries, IConcurrencyScopeStrategy strategy)

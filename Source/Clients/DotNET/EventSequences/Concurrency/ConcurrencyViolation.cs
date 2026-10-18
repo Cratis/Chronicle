@@ -32,7 +32,7 @@ public record ConcurrencyViolation(EventSourceId EventSourceId, EventSequenceNum
     public EventSequenceNumber? ConflictingEventSequenceNumber { get; init; }
 
     /// <summary>
-    /// Gets the failed scope's zero-based position in the submitted scope list, when reported.
+    /// Gets the failed scope's zero-based position in the request sent by the client, after de-duplication and resolution, when reported.
     /// </summary>
     public uint? ScopeIndex { get; init; }
 

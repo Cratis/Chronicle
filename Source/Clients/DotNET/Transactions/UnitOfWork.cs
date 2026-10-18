@@ -471,8 +471,11 @@ public partial class UnitOfWork(
             if (readProtectionCommit is not null && events.Length == 0)
             {
                 var plan = ReadProtectionMerge.Apply(readProtectionCommit.Target, readProtectionCommit.Contributions, scopes, false, readProtectionCommit.ValidateReadsWithoutEvents);
-                CaptureAppendConditions(plan.Conditions);
-                if (plan.Scopes.Count == 0) eventSequence = null;
+                if (plan.Scopes.Count == 0)
+                {
+                    CaptureAppendConditions(plan.Conditions);
+                    eventSequence = null;
+                }
             }
             if (_effectReceipt is not null) EffectReceiptSupport.Require(eventStore.Connection);
             if (eventSequence is not null && (_effectReceipt is null || events.Length != 0 || scopes.Length != 0 || readProtectionCommit?.Contributions.Count > 0))
@@ -623,6 +626,7 @@ public partial class UnitOfWork(
         }
 
         if (!_concurrencyScopes.TryGetValue(scopeLabel, out var scopes)) _concurrencyScopes[scopeLabel] = scopes = [];
+        if (concurrencyScope != ConcurrencyScope.None && scopes.TrueForAll(_ => _ == ConcurrencyScope.None)) scopes.Clear();
         var index = scopes.FindIndex(_ => DefinitionConcurrencyScopeResolver.SamePredicate(_, concurrencyScope));
         if (index < 0) scopes.Add(concurrencyScope);
         else scopes[index] = concurrencyScope;

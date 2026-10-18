@@ -31,5 +31,5 @@ public class contributions : Specification
 
     protected void Read(EventSequenceNumber boundary) => Add(ReadProtectionContributionKind.ProtectedRead, new(boundary, _label, EventTypes: [_stockReduced]));
 
-    internal ReadProtectionPlan Merge(bool hasEvents = true) => ReadProtectionMerge.Apply(_target, _contributions, _legacy, hasEvents);
+    internal ReadProtectionPlan Merge(bool hasEvents = true, bool supportsConjunctions = true) => ReadProtectionMerge.Apply(_target, _contributions, _legacy, hasEvents, supportsConjunctions: supportsConjunctions);
 }

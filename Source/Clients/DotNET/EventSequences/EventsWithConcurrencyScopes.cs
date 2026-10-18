@@ -28,7 +28,7 @@ public sealed class EventsWithConcurrencyScopes
     /// <param name="events">The events to append, in append order.</param>
     /// <param name="concurrencyScopes">The independently labeled concurrency scopes to pass to the append operation.</param>
     /// <exception cref="ConcurrencyScopeLabelMustBeSpecified">Thrown when an event target or scope label is unspecified, blank, or whitespace.</exception>
-    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">Thrown when the same predicate has conflicting expectations or mixes no guard with a guard.</exception>
+    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">Thrown when the same predicate has conflicting expectations or mixes no guard with a guard, or mixes strategy resolution with an explicit guard.</exception>
     /// <exception cref="ConcurrencyScopeEventSourceIdDoesNotMatchLabel">Thrown when a scope narrows by an event source different from its label.</exception>
     /// <exception cref="IndependentConcurrencyScopeMustBeExplicit">Thrown when an independent non-target label has a scope that cannot be validated explicitly.</exception>
     public EventsWithConcurrencyScopes(
@@ -75,7 +75,8 @@ public sealed class EventsWithConcurrencyScopes
             }
 
             var existing = materializedConcurrencyScopes.Where(_ => Label(_.Key) == Label(eventSourceId)).Select(_ => _.Value).ToArray();
-            if (existing.Any(_ => _ == ConcurrencyScope.None != (materializedConcurrencyScope == ConcurrencyScope.None) ||
+            if (existing.Any(_ => (_ == ConcurrencyScope.NotSet != (materializedConcurrencyScope == ConcurrencyScope.NotSet)) ||
+                _ == ConcurrencyScope.None != (materializedConcurrencyScope == ConcurrencyScope.None) ||
                 (DefinitionConcurrencyScopeResolver.SamePredicate(_, materializedConcurrencyScope) && _.SequenceNumber != materializedConcurrencyScope.SequenceNumber)))
             {
                 throw new DuplicateConcurrencyScopeForEventSourceId(eventSourceId);

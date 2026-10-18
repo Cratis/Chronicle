@@ -8,7 +8,7 @@ using Cratis.Chronicle.Transactions;
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
 /// <summary>
-/// Resolves immutable contributions into one condition per predicate.
+/// Resolves immutable contributions into conditions supported by the target kernel.
 /// </summary>
 internal static class ReadProtectionMerge
 {
@@ -18,20 +18,22 @@ internal static class ReadProtectionMerge
     internal const string ReservedLabelPrefix = "$read-protection/";
 
     /// <summary>
-    /// Builds the atomic plan without broadening different predicates into one scope.
+    /// Builds the atomic plan, retaining conservative read guards on kernels without conjunction support.
     /// </summary>
     /// <param name="target">The unit's target.</param>
     /// <param name="contributions">Captured contributions.</param>
     /// <param name="legacyScopes">Scopes for labels without reads.</param>
     /// <param name="hasEvents">Whether events are staged.</param>
     /// <param name="validateReadsWithoutEvents">Whether a receipt requires read validation.</param>
+    /// <param name="supportsConjunctions">Whether the kernel accepts several predicates on one label.</param>
     /// <returns>The conditions to send and expose.</returns>
     internal static ReadProtectionPlan Apply(
         ReadProtectionTarget target,
         IReadOnlyList<ReadProtectionContribution> contributions,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> legacyScopes,
         bool hasEvents = true,
-        bool validateReadsWithoutEvents = false)
+        bool validateReadsWithoutEvents = false,
+        bool supportsConjunctions = false)
     {
         ValidateTargetsAndLabels(target, contributions);
         var legacy = legacyScopes.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(new(_.Key.Value), _.Value)).ToArray();
@@ -41,7 +43,14 @@ internal static class ReadProtectionMerge
         {
             var items = contributions.Where(_ => _.Label == label).ToArray();
             if (!hasEvents && !validateReadsWithoutEvents && !items.Any(_ => _.Kind == ReadProtectionContributionKind.Explicit && _.Intent.HasFlag(ReadProtectionContributionIntent.ValidateOnly))) continue;
-            foreach (var scope in ResolveLabel(label, items, legacy.Where(_ => _.Key == label).Select(_ => _.Value))) AddCondition(label, scope, items, scopes, conditions);
+            var resolved = ResolveLabel(label, items, legacy.Where(_ => _.Key == label).Select(_ => _.Value)).ToArray();
+            if (supportsConjunctions || !items.Any(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead))
+            {
+                foreach (var scope in resolved) AddCondition(label, scope, items, scopes, conditions);
+                continue;
+            }
+            foreach (var scope in ResolveLegacyReadScopes(resolved, items)) AddCondition(label, scope, items, scopes, conditions);
+            AddLegacyRouting(label, items, scopes, conditions);
         }
         return new(scopes.ToImmutableArray(), conditions.ToImmutableArray());
     }
@@ -129,6 +138,27 @@ internal static class ReadProtectionMerge
         return Coalesce(exact.Count != 0
             ? exact.Select(_ => _.Scope).Concat(declared.Where(_ => _.Scope.EventSourceId is null).Select(_ => _.Scope))
             : reads.Concat(declared).Select(_ => _.Scope));
+    }
+
+    static ConcurrencyScope[] ResolveLegacyReadScopes(IEnumerable<ConcurrencyScope> resolved, IReadOnlyList<ReadProtectionContribution> items)
+    {
+        var sourceScopes = resolved.Where(_ => _.EventSourceId is not null).ToArray();
+        if (items.Any(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate)) return sourceScopes;
+        return [sourceScopes.Aggregate((first, second) => ReadProtectionPredicate.Merge(first, second) with
+        {
+            SequenceNumber = ReadProtectionPredicate.Earliest(first.SequenceNumber, second.SequenceNumber)
+        })];
+    }
+
+    static void AddLegacyRouting(EventSourceId label, IReadOnlyList<ReadProtectionContribution> items, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions)
+    {
+        var routing = items.Where(_ => _.Kind == ReadProtectionContributionKind.DeclaredRouting && _.Scope.EventSourceId is null).ToArray();
+        for (var index = 0; index < routing.Length; index++)
+        {
+            var entry = routing[index];
+            if (routing.Take(index).Any(_ => ReadProtectionPredicate.Same(_.Scope, entry.Scope))) continue;
+            AddCondition(new($"{ReservedLabelPrefix}routing/{label.Value}/{index}"), entry.Scope, [entry], scopes, conditions);
+        }
     }
 
     static List<ConcurrencyScope> Coalesce(IEnumerable<ConcurrencyScope> scopes)
