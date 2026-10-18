@@ -139,13 +139,13 @@ jobs:
           for project in Integration/Client Integration/Kernel Integration/Clustering; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf hot-core-build-output.tar.gz -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -
 
       - name: Upload hot-core build output
         uses: actions/upload-artifact@v4
         with:
           name: hot-core-build-output
-          path: hot-core-build-output.tar.gz
+          path: hot-core-build-output.tar.zst
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
