@@ -41,17 +41,14 @@ public static class ObserverDefinitionChangeRows
     /// <typeparam name="T">The payload type.</typeparam>
     /// <param name="key">The complete identity.</param>
     /// <returns>The opaque row identity and paging cursor.</returns>
-    public static string Id<T>(ObserverDefinitionChangeRowKey key) => Hash(JsonSerializer.Serialize(new[] { Observer(key.Observer), key.Revision.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), ObserverDefinitionChangeRowFamilies.For<T>(), key.Id }));
+    public static string Id<T>(ObserverDefinitionChangeRowKey key) => Hash([Observer(key.Observer), Invariant(key.Revision.Value), ObserverDefinitionChangeRowFamilies.For<T>(), key.Id]);
 
     /// <summary>
     /// Encodes the complete observer identity for indexed, case-sensitive isolation.
     /// </summary>
     /// <param name="observer">The observer.</param>
     /// <returns>The fixed-size observer identity.</returns>
-    public static string Observer(ObserverKey observer) => Hash(JsonSerializer.Serialize(new[]
-    {
-        observer.ObserverId.Value, observer.EventStore.Value, observer.Namespace.Value, observer.EventSequenceId.Value
-    }));
+    public static string Observer(ObserverKey observer) => Hash([observer.ObserverId.Value, observer.EventStore.Value, observer.Namespace.Value, observer.EventSequenceId.Value]);
 
     /// <summary>
     /// Encodes immutable execution identity for an atomic replacement predicate. Mutable outcomes are excluded.
@@ -60,14 +57,14 @@ public static class ObserverDefinitionChangeRows
     /// <param name="row">The row.</param>
     /// <returns>The fixed-size immutable payload identity.</returns>
     /// <exception cref="UnsupportedObserverDefinitionChangeRowFamily">The payload is not a row family.</exception>
-    public static string Identity<T>(ObserverDefinitionChangeRow<T> row) => Hash(JsonSerializer.Serialize<string?[]>(row.Data switch
+    public static string Identity<T>(ObserverDefinitionChangeRow<T> row) => Hash(row.Data switch
     {
         ObserverProgressRecord progress => [progress.JobId.Value.ToString("D"), Partition(progress.Partition)],
         ObserverContinuation continuation => [continuation.JobId.Value.ToString("D"), Partition(continuation.Partition)],
         ObserverRestartPlan plan => [plan.JobId.Value.ToString("D"), Partition(plan.Partition), Invariant(plan.From.Value), Invariant(plan.To.Value), Scope(plan.Scope)],
-        ObserverJobInventory job => [job.JobId.Value.ToString("D"), Invariant((int)job.Kind), job.JobType, job.Origin is null ? null : JsonSerializer.Serialize(new[] { Invariant(job.Origin.IsRestartPlan), job.Origin.Id })],
+        ObserverJobInventory job => [job.JobId.Value.ToString("D"), Invariant((int)job.Kind), job.JobType, job.Origin is null ? null : Encode([Invariant(job.Origin.IsRestartPlan), job.Origin.Id])],
         _ => throw new UnsupportedObserverDefinitionChangeRowFamily(typeof(T))
-    }));
+    });
 
     /// <summary>
     /// Rejects nonpositive limits and caps each storage page at 1,000 rows.
@@ -108,13 +105,26 @@ public static class ObserverDefinitionChangeRows
     public static bool IsReplacement<T>(ObserverDefinitionChangeRow<T> row, long expectedVersion) =>
         expectedVersion >= 0 && expectedVersion < long.MaxValue && row.Version == expectedVersion + 1 && IsValid(row);
 
-    static string? Partition(Key? key) => key is null ? null : JsonSerializer.Serialize(new[] { Invariant(key.Value) }
-        .Concat(key.ArrayIndexers.All.SelectMany(indexer => new[] { indexer.ArrayProperty.ToString(), indexer.IdentifierProperty.ToString(), Invariant(indexer.Identifier) })).ToArray());
+    static string? Partition(Key? key) => key is null ? null : Encode(new[] { Invariant(key.Value) }
+        .Concat(key.ArrayIndexers.All.SelectMany(indexer => new[] { indexer.ArrayProperty.ToString(), indexer.IdentifierProperty.ToString(), Invariant(indexer.Identifier) })));
 
-    static string Scope(ObserverReaderScope scope) => JsonSerializer.Serialize(new[] { Invariant(scope.IsWildcard) }
-        .Concat(scope.EventTypes.SelectMany(type => new[] { type.Id.Value, Invariant(type.Generation.Value), Invariant(type.Tombstone) })).ToArray());
+    static string Scope(ObserverReaderScope scope) => Encode(new[] { Invariant(scope.IsWildcard) }
+        .Concat(scope.EventTypes.SelectMany(type => new[] { type.Id.Value, Invariant(type.Generation.Value), Invariant(type.Tombstone) })));
 
     static string? Invariant(object? value) => value is null ? null : Convert.ToString(value, CultureInfo.InvariantCulture);
 
-    static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    static string Hash(IEnumerable<string?> components) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Encode(components))));
+
+    static string Encode(IEnumerable<string?> components)
+    {
+        var text = new StringBuilder();
+        foreach (var component in components)
+        {
+            // Lengths count raw UTF-8 bytes; -1 distinguishes null from an empty component.
+            var length = component is null ? -1 : Encoding.UTF8.GetByteCount(component);
+            text.Append(length.ToString(CultureInfo.InvariantCulture)).Append(':').Append(component).Append('|');
+        }
+
+        return text.ToString();
+    }
 }

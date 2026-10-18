@@ -48,6 +48,26 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         await SaveControl();
         (await Check()).ShouldBeOfExactType<ObserverKernelBelowDowngradeFloor>();
     }
+    [Fact] public async Task should_refuse_an_initializing_observer_without_a_control_record()
+    {
+        await SaveInitialization(ObserverInitializationState.Initializing);
+        (await Check()).ShouldBeOfExactType<ObserverKernelBelowDowngradeFloor>();
+    }
+    [Fact] public async Task should_refuse_an_initialized_observer_without_a_control_record()
+    {
+        await SaveInitialization(ObserverInitializationState.Initialized);
+        (await Check()).ShouldBeOfExactType<ObserverKernelBelowDowngradeFloor>();
+    }
+    [Fact] public async Task should_allow_the_gate_kernel_to_read_an_initializing_observer()
+    {
+        await SaveInitialization(ObserverInitializationState.Initializing);
+        (await Check(true)).ShouldBeNull();
+    }
+    [Fact] public async Task should_allow_the_gate_kernel_to_read_an_initialized_observer()
+    {
+        await SaveInitialization(ObserverInitializationState.Initialized);
+        (await Check(true)).ShouldBeNull();
+    }
     [Fact] public async Task should_allow_the_gate_kernel_to_read_an_initialized_store()
     {
         await OpenStore().MarkObserversInitialized();
@@ -72,6 +92,12 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         (await OpenStore().AreObserversInitialized()).ShouldBeTrue();
         (await OpenObservers().Get("observer")).TypeSetControl!.Revision.Value.ShouldEqual(1L);
     }
+
+    Task SaveInitialization(ObserverInitializationState state) => OpenObservers().Save(new()
+    {
+        Identifier = "observer",
+        Initialization = new(state, [])
+    });
 
     Task SaveControl() => OpenObservers().Save(new()
     {
