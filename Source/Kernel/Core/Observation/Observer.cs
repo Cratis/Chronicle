@@ -816,6 +816,8 @@ public partial class Observer(
             State = State with { RunningState = ObserverRunningState.Quarantined };
         }
 
+        // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
+        RecordedHandlingState();
         return storageWasReset;
     }
 

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.StateMachines;
 
@@ -37,10 +38,34 @@ public partial class Observer
     }
 
     /// <summary>
+    /// Determines whether the transition hook decided the handled-event totals itself.
+    /// </summary>
+    /// <remarks>
+    /// The totals are the hook's when they differ from the handed snapshot by value, or when the hook started a replay.
+    /// Reference equality is not enough: with zero handed the dictionary is the shared empty singleton, so a replay's
+    /// reset (a zero count and an empty dictionary) is indistinguishable from the hook having left them alone, and counts
+    /// recorded meanwhile would wrongly survive the reset. Starting a replay is the one transition that resets the
+    /// totals, so entering it is what marks them as the hook's even when the reset changed nothing by value.
+    /// </remarks>
+    /// <param name="handed">The state the hook was handed.</param>
+    /// <param name="returned">The state the hook returned.</param>
+    /// <returns>True if the hook owns the totals, false if not.</returns>
+    static bool HookOwnsHandledCounts(ObserverState handed, ObserverState returned) =>
+        (returned.IsReplaying && !handed.IsReplaying) ||
+        returned.HandledEventCount != handed.HandledEventCount ||
+        !HasSameCounts(returned.HandledEventCountPerEventType, handed.HandledEventCountPerEventType);
+
+    static bool HasSameCounts(IReadOnlyDictionary<EventTypeId, EventCount> left, IReadOnlyDictionary<EventTypeId, EventCount> right) =>
+        ReferenceEquals(left, right) ||
+        (left.Count == right.Count && left.All(_ => right.TryGetValue(_.Key, out var count) && count == _.Value));
+
+    /// <summary>
     /// Remembers the state a transition hook is about to be handed.
     /// </summary>
     /// <remarks>
-    /// Called with nothing awaited between this and the hook reading <see cref="ObserverState"/>.
+    /// The hook reads <see cref="ObserverState"/> from the state machine's continuation after <c language="csharp">_alertMutationLock</c>,
+    /// so the snapshot taken here is the one it is handed only while that continuation runs inline; nothing else is awaited
+    /// between this and the hook reading it.
     /// </remarks>
     void BeginTransitionHook()
     {
@@ -82,8 +107,7 @@ public partial class Observer
             returned = returned with { InFlightPartitions = recorded.InFlightPartitions };
         }
 
-        if (returned.HandledEventCount == handed.HandledEventCount &&
-            ReferenceEquals(returned.HandledEventCountPerEventType, handed.HandledEventCountPerEventType))
+        if (!HookOwnsHandledCounts(handed, returned))
         {
             returned = returned with
             {
