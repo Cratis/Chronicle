@@ -65,7 +65,7 @@ Answer `204 No Content` to keep Chronicle's default for a database. Any status o
 
 Chronicle's requests have no `tenant` key, because the kernel has no concept of a tenant. It isolates by namespace, so the namespace is how your endpoint identifies the tenant:
 
-- `scope.namespace` is the namespace name exactly as the client selected it, never a derived database name.
+- `scope.namespace` is the namespace name, never the database name Chronicle derives from it.
 - With [Arc](/arc/backend/csharp/chronicle/tenancy/), the tenant id is used verbatim as the namespace name by default. No tenant, or the `Default` tenant, maps to the `Default` namespace.
 - Without Arc, or with a namespace resolver of your own, the namespace is whatever that [namespace resolver](../../namespaces/aspnetcore.mdx) picks. If it differs from your tenant id, map it back in your endpoint.
 - Combine it with `scope.eventStore` when the same tenant exists in more than one event store, and use `scope.kind` to tell its events (`namespace`) from its read models (`readModels`).
