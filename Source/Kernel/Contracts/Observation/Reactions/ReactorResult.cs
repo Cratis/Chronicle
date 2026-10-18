@@ -38,4 +38,10 @@ public class ReactorResult
     /// </summary>
     [ProtoMember(5)]
     public string ExceptionStackTrace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delivery identifier echoed from the observation message. Zero selects legacy matching.
+    /// </summary>
+    [ProtoMember(6)]
+    public ulong DeliveryId { get; set; }
 }
