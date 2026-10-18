@@ -19,6 +19,11 @@ public interface IAllSetBuilder<TReadModel, TParentBuilder> : IPropertyExpressio
     /// <typeparam name="TProperty">Type of the constant value.</typeparam>
     /// <param name="value">The value to set, or null to clear the property.</param>
     /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// The value is not type-checked against the target read model property, because this builder does not carry the
+    /// property type - <typeparamref name="TProperty"/> is inferred from <paramref name="value"/>. Pass a value whose type
+    /// matches the property; a mismatch is not reported when the projection is defined.
+    /// </remarks>
     TParentBuilder ToValue<TProperty>(TProperty value);
 
     /// <summary>
