@@ -19,17 +19,19 @@ internal static class ReadProtectionRouting
     /// <param name="entries">Resolved entries in batch order.</param>
     /// <param name="scopes">Legacy explicit scopes.</param>
     /// <param name="strategy">The configured strategy.</param>
+    /// <param name="supportsConjunctions">Whether the kernel accepts several predicates on one label.</param>
     /// <returns>The actual append plan.</returns>
     /// <exception cref="ReadProtectionRequiresTheDefaultConcurrencyStrategy">A read label uses a custom strategy.</exception>
     internal static async Task<ReadProtectionPlan> Resolve(
         ReadProtectionCommit commit,
         IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries,
-        IReadOnlyDictionary<EventSourceId, ConcurrencyScope> scopes,
-        IConcurrencyScopeStrategy strategy)
+        IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
+        IConcurrencyScopeStrategy strategy,
+        bool supportsConjunctions)
     {
         ReadProtectionMerge.ValidateTargetsAndLabels(commit.Target, commit.Contributions);
         var contributions = commit.Contributions.ToList();
-        var legacy = scopes.ToDictionary(_ => new EventSourceId(_.Key.Value), _ => _.Value);
+        var legacy = scopes.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(new(_.Key.Value), _.Value)).ToList();
         var readLabels = contributions.Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead).Select(_ => _.Label).ToHashSet();
         var customLabel = entries.FirstOrDefault(_ => readLabels.Contains(new(_.Event.EventSourceId.Value))).Event?.EventSourceId;
         if (customLabel is not null && strategy.GetType() != typeof(OptimisticConcurrencyStrategy)) throw new ReadProtectionRequiresTheDefaultConcurrencyStrategy(customLabel);
@@ -38,9 +40,11 @@ internal static class ReadProtectionRouting
         {
             if (!readLabels.Contains(group.Key))
             {
-                if (!legacy.TryGetValue(group.Key, out var supplied) || supplied == ConcurrencyScope.NotSet)
+                if (!legacy.Exists(_ => _.Key == group.Key && _.Value != ConcurrencyScope.NotSet))
                 {
-                    legacy[group.Key] = await ResolveLegacy(group.Key, group.ToArray(), strategy);
+                    legacy.RemoveAll(_ => _.Key == group.Key);
+                    var resolved = await ResolveLegacy(group.Key, group.ToArray(), strategy);
+                    legacy.AddRange(resolved.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(group.Key, _)));
                 }
                 continue;
             }
@@ -61,10 +65,10 @@ internal static class ReadProtectionRouting
                 contributions.Add(new(group.Key, declared ? ReadProtectionContributionKind.DeclaredRouting : ReadProtectionContributionKind.DefaultRouting, scope, commit.Target, $"routing of {routing?.EventSource.Value ?? @event.Event.GetType().Name}/{@event.EventStreamType}"));
             }
         }
-        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0, commit.ValidateReadsWithoutEvents);
+        return ReadProtectionMerge.Apply(commit.Target, contributions, legacy, entries.Count != 0, commit.ValidateReadsWithoutEvents, supportsConjunctions);
     }
 
-    static async Task<ConcurrencyScope> ResolveLegacy(EventSourceId source, IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries, IConcurrencyScopeStrategy strategy)
+    static async Task<IReadOnlyList<ConcurrencyScope>> ResolveLegacy(EventSourceId source, IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries, IConcurrencyScopeStrategy strategy)
     {
         if (strategy.GetType() != typeof(OptimisticConcurrencyStrategy)) return await DefinitionConcurrencyScopeResolver.Resolve(source, entries, strategy, true);
         using var allowance = new ReadProtectionReadRegion(ReadAllowance.Contributed, "default commit routing");

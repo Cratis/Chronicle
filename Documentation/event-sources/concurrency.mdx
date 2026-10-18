@@ -79,24 +79,23 @@ A [decision read](../read-models/decision-reads.mdx) does the capture-then-read 
 
 ## A batch that needs two guards for one event source id
 
-An `AppendMany` carries one concurrency scope per event source id. If you append events through definitions and pass no scope for an id, Chronicle resolves the guard of every event with that id and compares them by what they check: event source id, event source type, event stream type, event stream id and event types. The expected sequence number is not compared, because it is a point-in-time value.
+An `AppendMany` can require several guards for the same event source id. Every guard must hold against the state before the batch; if one fails, none of the events are appended.
 
-- Events whose guards check the same thing share one scope.
-- An event whose guard checks nothing, for example because it is the first append into its scope, never hides a later event that does have a guard.
-- Events that need different guards cannot be sent together. Chronicle throws `IncompatibleConcurrencyScopesForEventSource` before anything is written, and the exception lists the guards in `Scopes`.
+When you pass no explicit scope for an id, the .NET client resolves every distinct route, including routes without definitions. Equal predicates share the earliest expected position. Different stream ids, stream types, source types or event-type filters retain separate guards; Chronicle does not widen them into a whole-source check. An unchecked entry never hides a later guarded entry.
+
+For explicit guards, pass an ordered `IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>` to `AppendMany(events, correlationId, tags, concurrencyScopes)`. Labels may repeat for different predicates. This also supports writing just one event while guarding several streams. `AppendManyWithNamedTags` accepts the same list after its correlation id and tags parameters.
+
+`EventsWithConcurrencyScopes.Entries` preserves every guard for reactor return values. Its legacy `ConcurrencyScopes` dictionary accessor works only with one scope per label and throws rather than discarding guards when a label repeats. The unit of work retains every enrolled predicate too. Conflicting expected positions for the same explicit predicate are refused; do not mix `ConcurrencyScope.None` with a real guard on the same label.
+
+The connected kernel must advertise `concurrency-scope-conjunctions`. Without it, the .NET client throws `IncompatibleConcurrencyScopesForEventSource` before sending repeated labels. Upgrade the kernel, or deliberately choose one explicit scope that covers the entire decision. Splitting appends does not preserve a decision that needs both guards atomically.
+
+This definition-backed batch keeps separate month guards on a capable kernel; the catch handles an older kernel that cannot enforce them:
 
 <ChronicleClientTabs snippet="event-sources/concurrency/incompatible-batch" variants="csharp" />
 
-This batch throws once both months already hold events, because each month needs its own guard. If neither stream has events and the first-append check is off, neither event has a guard to compare and the batch is sent unguarded.
-
-Chronicle never widens a guard to cover the difference. Choose one:
-
-- Pass one explicit scope for the event source id that suits every event. An explicit scope always wins.
-- Append the events in separate batches.
+If broader conflicts are acceptable, an older kernel can use one explicit scope covering both months:
 
 <ChronicleClientTabs snippet="event-sources/concurrency/batch-fix" variants="csharp" />
-
-Batches that do not use definitions behave as before.
 
 ## History mutations
 

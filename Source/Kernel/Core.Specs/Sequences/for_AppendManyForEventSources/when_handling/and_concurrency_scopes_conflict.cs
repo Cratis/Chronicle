@@ -21,7 +21,7 @@ public class and_concurrency_scopes_conflict : given.an_append_endpoint
         CorrelationId: _correlationId,
         ConcurrencyScopes:
         [
-            new("source", new(0, true, ExpectsNoMatchingEvent: true)),
+            new("source", new(ulong.MaxValue, false)),
             new("source", new(5, true))
         ]);
 

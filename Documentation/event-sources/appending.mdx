@@ -44,7 +44,7 @@ To write events for several event sources in one atomic append, give each `Event
 
 Every event has exactly one event source. The append is all or nothing: if either event fails a constraint or a concurrency check, neither is written. Events in one batch can go through different definitions, and some can skip definitions altogether.
 
-Each event source id in the batch is guarded by one concurrency scope. When events for the same id need different guards, Chronicle refuses the batch. See [Concurrency](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
+An event source id may have several concurrency scopes in one batch. The .NET client keeps one guard per distinct route and requires kernel support for scope conjunctions; older kernels are refused before any guard can be dropped. See [Concurrency](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
 
 ## Other overloads
 

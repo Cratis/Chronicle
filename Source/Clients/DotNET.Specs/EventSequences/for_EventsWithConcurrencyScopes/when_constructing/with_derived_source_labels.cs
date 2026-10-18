@@ -24,13 +24,13 @@ public class with_derived_source_labels : Specification
     }
 
     [Fact]
-    public void should_refuse_duplicate_wire_labels_even_when_the_clr_types_differ()
+    public void should_collapse_identical_wire_guards_even_when_the_clr_types_differ()
     {
-        var error = Catch.Exception(() => _ = new EventsWithConcurrencyScopes(
+        var batch = new EventsWithConcurrencyScopes(
             [new("book", new object())],
             [new("book", ConcurrencyScope.None), new(new SourceId("book"), ConcurrencyScope.None)],
-            true));
-        error.ShouldBeOfExactType<DuplicateConcurrencyScopeForEventSourceId>();
+            true);
+        batch.Entries.Count.ShouldEqual(1);
     }
 
     [Fact]

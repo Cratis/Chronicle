@@ -21,6 +21,14 @@ internal static class ConcurrencyViolationConverters
             ExpectedEventSequenceNumber: (EventSequenceNumber)violation.ExpectedSequenceNumber,
             ActualEventSequenceNumber: (EventSequenceNumber)violation.ActualSequenceNumber)
         {
+            ScopeIndex = violation.ScopeIndex,
+            Scope = violation.Scope is null ? null : new ConcurrencyScope(
+                violation.Scope.ExpectsNoMatchingEvent ? EventSequenceNumber.BeforeFirst : new EventSequenceNumber(violation.Scope.SequenceNumber),
+                violation.Scope.EventSourceId ? new EventSourceId(violation.EventSourceId) : null,
+                violation.Scope.EventStreamType is null ? null : new EventStreamType(violation.Scope.EventStreamType),
+                violation.Scope.EventStreamId is null ? null : new EventStreamId(violation.Scope.EventStreamId),
+                violation.Scope.EventSourceType is null ? null : new EventSourceType(violation.Scope.EventSourceType),
+                violation.Scope.EventTypes?.Select(_ => _.ToClient()).ToArray()),
             ConflictingEventTypeId = string.IsNullOrEmpty(violation.ConflictingEventTypeId) ? null : new EventTypeId(violation.ConflictingEventTypeId),
             ConflictingEventSequenceNumber = violation.ConflictingSequenceNumber is { } conflicting ? new EventSequenceNumber(conflicting) : null
         };

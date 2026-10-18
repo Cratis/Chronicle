@@ -271,6 +271,24 @@ public interface IEventSequence
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
 
     /// <summary>
+    /// Appends a batch atomically, requiring every supplied concurrency predicate to hold.
+    /// </summary>
+    /// <param name="events">The events in append order.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional shared tags.</param>
+    /// <param name="concurrencyScopes">Ordered guards; labels may repeat for different predicates.</param>
+    /// <returns>The atomic batch result.</returns>
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendMany(batch.Events, correlationId, tags, batch.ConcurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value));
+    }
+
+    /// <summary>
     /// Appends an event through a registered event source definition.
     /// </summary>
     /// <param name="eventSource">The type of the <see cref="IEventSource"/> to append through.</param>
@@ -418,6 +436,26 @@ public interface IEventSequence
         }
 
         return AppendMany(materializedEvents, correlationId, tags, concurrencyScopes);
+    }
+
+    /// <summary>
+    /// Appends a batch with named tags and an ordered conjunction of guards.
+    /// </summary>
+    /// <param name="events">The events in append order.</param>
+    /// <param name="namedTags">Shared named tags.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional shared tags.</param>
+    /// <param name="concurrencyScopes">Ordered guards; labels may repeat for different predicates.</param>
+    /// <returns>The atomic batch result.</returns>
+    Task<AppendManyResult> AppendManyWithNamedTags(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendManyWithNamedTags(batch.Events, namedTags, correlationId, tags, batch.ConcurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value));
     }
 
     /// <summary>

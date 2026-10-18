@@ -7,6 +7,6 @@ public class a_legacy_only_batch_for_the_same_id : given.a_definition_backed_bat
 {
     async Task Because() => await Append([new(_sourceId, "one") { EventStreamId = "a" }, new(_sourceId, "two") { EventStreamId = "b" }]);
 
-    [Fact] void should_not_fail() => _exception.ShouldBeNull();
-    [Fact] void should_use_the_default_scope_once() => _request.ConcurrencyScopes.Count().ShouldEqual(1);
+    [Fact] void should_refuse_rather_than_drop_a_guard_on_an_old_kernel() => _exception.ShouldBeOfExactType<Concurrency.IncompatibleConcurrencyScopesForEventSource>();
+    [Fact] void should_not_write_anything() => _request.ShouldBeNull();
 }
