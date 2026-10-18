@@ -11,7 +11,7 @@
 # to that file matched none of the remaining patterns. Benchmarks broke while landing green for the same
 # reason (51590103c).
 # Source/** and the root-level entries except Chronicle.slnx and specs.runsettings must also be covered
-# by both the pull_request and push filters of .github/workflows/client-snippets.yml.
+# by the pull_request filter of .github/workflows/client-snippets.yml.
 #
 # FORMAT: one entry per line. Either a literal repository-relative path, or a directory followed by `/**`.
 # Blank lines and `#` comments are ignored. Every entry is verified to exist in the repository, so the
