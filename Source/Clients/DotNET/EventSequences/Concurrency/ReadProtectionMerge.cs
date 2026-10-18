@@ -49,7 +49,7 @@ internal static class ReadProtectionMerge
                 foreach (var scope in resolved) AddCondition(label, scope, items, scopes, conditions);
                 continue;
             }
-            foreach (var scope in ResolveLegacyReadScopes(resolved, items)) AddCondition(label, scope, items, scopes, conditions);
+            foreach (var scope in ResolveLegacyReadScopes(items)) AddCondition(label, scope, items, scopes, conditions);
             AddLegacyRouting(label, items, scopes, conditions);
         }
         return new(scopes.ToImmutableArray(), conditions.ToImmutableArray());
@@ -140,10 +140,17 @@ internal static class ReadProtectionMerge
             : reads.Concat(declared).Select(_ => _.Scope));
     }
 
-    static ConcurrencyScope[] ResolveLegacyReadScopes(IEnumerable<ConcurrencyScope> resolved, IReadOnlyList<ReadProtectionContribution> items)
+    static ConcurrencyScope[] ResolveLegacyReadScopes(IReadOnlyList<ReadProtectionContribution> items)
     {
-        var sourceScopes = resolved.Where(_ => _.EventSourceId is not null).ToArray();
-        if (items.Any(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate)) return sourceScopes;
+        // Without kernel conjunction support the scopes are chosen by contribution kind, never by whether a scope
+        // names an event source: every exact guard is kept as given (a source-less one is a valid global guard),
+        // and only source-less declared routing is left to its reserved labels.
+        var exact = Distinct(items.Where(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate));
+        if (exact.Count != 0) return [.. exact.Select(_ => _.Scope)];
+        var sourceScopes = Coalesce(items
+            .Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead ||
+                        (_.Kind == ReadProtectionContributionKind.DeclaredRouting && _.Scope.EventSourceId is not null))
+            .Select(_ => _.Scope));
         return [sourceScopes.Aggregate((first, second) => ReadProtectionPredicate.Merge(first, second) with
         {
             SequenceNumber = ReadProtectionPredicate.Earliest(first.SequenceNumber, second.SequenceNumber)
