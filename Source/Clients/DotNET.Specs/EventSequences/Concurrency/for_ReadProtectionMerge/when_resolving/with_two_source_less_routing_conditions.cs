@@ -15,6 +15,6 @@ public class with_two_source_less_routing_conditions : given.contributions
     void Because() => _plan = Merge();
 
     [Fact] void should_keep_both_conditions_separately() => _plan.Scopes.Count.ShouldEqual(3);
-    [Fact] void should_keep_the_first_routing_predicate() => _plan.Scopes["$read-protection/routing/stock/0"].EventStreamType!.Value.ShouldEqual("Numbering");
-    [Fact] void should_keep_the_second_routing_predicate() => _plan.Scopes["$read-protection/routing/stock/1"].EventStreamType!.Value.ShouldEqual("Approval");
+    [Fact] void should_keep_the_first_routing_predicate() => _plan.Scopes[1].Value.EventStreamType!.Value.ShouldEqual("Numbering");
+    [Fact] void should_keep_the_second_routing_predicate() => _plan.Scopes[2].Value.EventStreamType!.Value.ShouldEqual("Approval");
 }

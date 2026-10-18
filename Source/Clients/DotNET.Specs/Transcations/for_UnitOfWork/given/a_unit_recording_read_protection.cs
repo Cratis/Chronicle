@@ -21,7 +21,7 @@ public class a_unit_recording_read_protection : a_unit_of_work
             _concurrencyScopesAppended = call.Arg<IDictionary<EventSourceId, ConcurrencyScope>>();
             return _appendResult;
         });
-        ((IEventSequenceWithReadProtection)_eventSequence).AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>(), Arg.Any<ReadProtectionCommit>()).Returns(_ =>
+        ((IEventSequenceWithReadProtection)_eventSequence).AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), Arg.Any<IEnumerable<NamedTag>>(), Arg.Any<IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>>(), Arg.Any<ReadProtectionCommit>()).Returns(_ =>
         {
             _readProtectionCalled = true;
             return _appendResult;

@@ -16,8 +16,9 @@ public class with_repeated_reads_and_different_stream_ids : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_keep_the_earliest_global_boundary() => _plan.Scopes[_label].SequenceNumber.ShouldEqual((EventSequenceNumber)80u);
-    [Fact] void should_keep_the_common_stream_type() => _plan.Scopes[_label].EventStreamType!.Value.ShouldEqual("Transactions");
-    [Fact] void should_drop_the_different_stream_ids() => _plan.Scopes[_label].EventStreamId.ShouldBeNull();
-    [Fact] void should_union_the_handled_type_ids() => _plan.Scopes[_label].EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id, _stockRemoved.Id);
+    [Fact] void should_keep_each_predicate() => _plan.Scopes.Count.ShouldEqual(2);
+    [Fact] void should_keep_the_earliest_january_boundary() => _plan.Scopes[0].Value.SequenceNumber.ShouldEqual((EventSequenceNumber)100u);
+    [Fact] void should_keep_the_february_boundary() => _plan.Scopes[1].Value.SequenceNumber.ShouldEqual((EventSequenceNumber)80u);
+    [Fact] void should_keep_the_stream_ids() => _plan.Scopes.Select(_ => _.Value.EventStreamId!.Value).ShouldContainOnly("January", "February");
+    [Fact] void should_not_broaden_the_january_type_set() => _plan.Scopes[0].Value.EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id);
 }

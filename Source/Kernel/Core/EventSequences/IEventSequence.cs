@@ -146,6 +146,29 @@ public interface IEventSequence : IGrainWithStringKey
     Task<AppendManyResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes, Occurrences.EffectReceipt effectReceipt);
 
     /// <summary>
+    /// Atomically validates every guard and appends the batch using the conjunction-aware cluster protocol.
+    /// </summary>
+    /// <param name="events">The events.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity.</param>
+    /// <param name="concurrencyScopes">The ordered guards.</param>
+    /// <returns>The append result.</returns>
+    Task<AppendManyResult> AppendManyWithConjunctions(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopeConjunctions concurrencyScopes);
+
+    /// <summary>
+    /// Appends a guarded occurrence effect using the conjunction-aware cluster protocol.
+    /// </summary>
+    /// <param name="events">The events.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity.</param>
+    /// <param name="concurrencyScopes">The ordered guards.</param>
+    /// <param name="effectReceipt">The receipt to commit atomically.</param>
+    /// <returns>The append result.</returns>
+    Task<AppendManyResult> AppendManyWithConjunctionsAndEffectReceipt(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopeConjunctions concurrencyScopes, Occurrences.EffectReceipt effectReceipt);
+
+    /// <summary>
     /// Records an unprotected NoEvents or Refused outcome, first writer wins.
     /// </summary>
     /// <param name="effectReceipt">The occurrence effect and optional response.</param>

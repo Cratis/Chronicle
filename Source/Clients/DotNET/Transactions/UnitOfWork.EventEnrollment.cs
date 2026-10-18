@@ -56,7 +56,7 @@ public partial class UnitOfWork
             var scope = concurrencyScope ?? ConcurrencyScope.NotSet;
             var enrollment = new UnitOfWorkEnrollment(eventSequenceId, eventSourceId, scope, Array.AsReadOnly<object>([@event]));
             var resolution = ResolveEnrollmentScopes(eventSequenceId, [enrollment]);
-            scope = resolution.Scopes[eventSourceId];
+            scope = resolution.Scopes[0].Value;
             var stagedEvent = new EventForEventSourceId(eventSourceId, @event, causation)
             {
                 EventStreamType = eventStreamType ?? EventStreamType.All,

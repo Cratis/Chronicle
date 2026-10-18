@@ -27,4 +27,9 @@ public static class KernelCapabilities
     /// The kernel records and delivers application occurrences under durable fenced leases.
     /// </summary>
     public const string Occurrences = "occurrences";
+
+    /// <summary>
+    /// The kernel validates several ordered guards for the same event source atomically.
+    /// </summary>
+    public const string ConcurrencyScopeConjunctions = "concurrency-scope-conjunctions";
 }

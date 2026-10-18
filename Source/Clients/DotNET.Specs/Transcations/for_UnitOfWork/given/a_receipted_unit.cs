@@ -38,13 +38,13 @@ public class a_receipted_unit : a_unit_of_work
         _eventStore.GetEventSequence(EventSequenceId.Log).Returns(_eventSequence);
         ((IEventSequenceWithEffectReceipts)_eventSequence).AppendManyWithEffectReceipt(
             Arg.Any<IEnumerable<EventForEventSourceId>>(),
-            Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>(),
+            Arg.Any<IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>>(),
             Arg.Any<Contracts.Occurrences.EffectReceipt>(),
             Arg.Any<ReadProtectionCommit>()).Returns(call =>
             {
                 _receiptedAppends++;
                 _eventsAppended = call.Arg<IEnumerable<EventForEventSourceId>>().ToArray();
-                _concurrencyScopesAppended = call.Arg<IDictionary<EventSourceId, ConcurrencyScope>>();
+                _concurrencyScopesAppended = call.Arg<IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>>().ToDictionary(_ => _.Key, _ => _.Value);
                 _sentReceipt = call.Arg<Contracts.Occurrences.EffectReceipt>();
                 _readProtection = call.Arg<ReadProtectionCommit>();
                 return _appendResult with { EffectReceipt = _appendResult.IsSuccess ? _receiptResult : null };
