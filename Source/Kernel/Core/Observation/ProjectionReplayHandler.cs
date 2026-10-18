@@ -115,7 +115,8 @@ public class ProjectionReplayHandler(
 
             if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
             {
-                return Result<ICanHandleReplayForObserver.Error>.Success();
+                logger.ProjectionMissing(observerDetails.Key);
+                return ICanHandleReplayForObserver.Error.Unknown;
             }
 
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
@@ -206,16 +207,12 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.CannotHandle;
             }
 
-            if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
+            if (projection is null)
             {
-                return Result<ICanHandleReplayForObserver.Error>.Success();
+                logger.ProjectionMissing(observerDetails.Key);
+                return ICanHandleReplayForObserver.Error.Unknown;
             }
-
-            // Evict the pipeline cache so that the current projection definition is used when
-            // the pipeline is built. The pipeline manager caches pipelines by projection ID,
-            // but doesn't include the definition version in the key, so it would otherwise
-            // return a stale pipeline built with the old definition.
-            projectionPipelineManager.EvictFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
 
             var getReplayContext = await getContext(projection);
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);

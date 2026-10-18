@@ -43,6 +43,7 @@ public class a_projection_replay_handler : Specification
             ObserverType.Projection);
 
         _projections = Substitute.For<Engine.IProjectionsManager>();
+        _projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(Task.FromResult<Engine.IProjection?>(null));
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();

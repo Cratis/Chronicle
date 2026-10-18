@@ -10,11 +10,12 @@ public class when_checking_existence_after_getting : given.a_caching_projection_
     async Task Establish()
     {
         _inner.Get(_id).Returns(_definition);
+        _inner.Has(_id).Returns(true);
         await _storage.Get(_id);
     }
 
     async Task Because() => _result = await _storage.Has(_id);
 
-    [Fact] void should_not_ask_inner() => _inner.DidNotReceive().Has(_id);
-    [Fact] void should_have_it_in_cache() => _result.ShouldBeTrue();
+    [Fact] void should_check_shared_storage() => _inner.Received(1).Has(_id);
+    [Fact] void should_find_the_shared_definition() => _result.ShouldBeTrue();
 }

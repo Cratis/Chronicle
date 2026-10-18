@@ -23,5 +23,5 @@ public class and_projection_does_not_exist : given.a_projection_replay_handler
     async Task Because() => _result = await _handler.FlushReplayFor(_observerDetails);
 
     [Fact] void should_not_write_anything() => _projectionPipeline.DidNotReceive().EndBulk();
-    [Fact] void should_succeed() => _result.TryGetError(out _).ShouldBeFalse();
+    [Fact] void should_report_the_missing_projection() => _result.TryGetError(out _).ShouldBeTrue();
 }
