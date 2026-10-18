@@ -604,7 +604,7 @@ public class ProjectionFactory(
         var nestedSchema = level.Schema.Properties.TryGetValue(nestedKey.LastSegment.Value, out var schemaProp)
             ? schemaProp.ActualSchema ?? level.Schema
             : level.Schema;
-        var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value)).ToList();
+        var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolveEveryEventPropertyMapper(projection, nestedPropertyPath + p.Key, p.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
 
         // Resolve mappings against the scalar object's schema and its own AutoMap exclusions.
@@ -774,7 +774,7 @@ public class ProjectionFactory(
         // DynamicPropertyPathOnNonDynamicProperty raised) at projection-creation time, regardless of whether the
         // projection has any per-event-type `from` block to piggyback the enumeration on - an `all`-only
         // projection has none.
-        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
+        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolveEveryEventPropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
@@ -948,6 +948,9 @@ public class ProjectionFactory(
         var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
+
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolveEveryEventPropertyMapper(Projection projection, PropertyPath propertyPath, string expression) =>
+        EveryEventPropertyMappers.WhenSourceIsPresent(propertyPath, expression, ResolvePropertyMapper(projection, propertyPath, expression));
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
