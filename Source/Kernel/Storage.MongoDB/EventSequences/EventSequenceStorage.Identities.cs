@@ -17,7 +17,10 @@ public partial class EventSequenceStorage
     public async Task<IReadOnlyDictionary<string, StoredEventPublication>> TryGetPublications(IEnumerable<string> identities)
     {
         var ids = identities.Distinct(StringComparer.Ordinal).ToArray();
-        var documents = await _collection.Find(Builders<Event>.Filter.In(item => item.PublicationId, ids)).ToListAsync().ConfigureAwait(false);
+        var documents = await _collection
+            .WithReadConcern(ReadConcern.Majority)
+            .WithReadPreference(ReadPreference.Primary)
+            .Find(Builders<Event>.Filter.In(item => item.PublicationId, ids)).ToListAsync().ConfigureAwait(false);
         return documents.ToDictionary(item => item.PublicationId!, item => new StoredEventPublication(item.SequenceNumber, item.PublicationFingerprint!), StringComparer.Ordinal);
     }
 

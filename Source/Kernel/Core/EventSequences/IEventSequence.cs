@@ -263,6 +263,18 @@ public interface IEventSequence : IGrainWithStringKey
         ConcurrencyScopes concurrencyScopes);
 
     /// <summary>
+    /// Appends an event once for a durable idempotency key.
+    /// </summary>
+    /// <param name="event">The event to append.</param>
+    /// <param name="idempotencyKey">The key identifying the append intent.</param>
+    /// <param name="correlationId">The attempt's correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity causing the append.</param>
+    /// <param name="concurrencyScope">The concurrency scope, checked only for a new append.</param>
+    /// <returns>The append settlement.</returns>
+    Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope);
+
+    /// <summary>
     /// Revise a specific event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to revise.</param>

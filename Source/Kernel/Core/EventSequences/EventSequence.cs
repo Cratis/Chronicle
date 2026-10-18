@@ -27,6 +27,7 @@ using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventSources;
@@ -63,6 +64,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
+/// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -80,7 +82,8 @@ public partial class EventSequence(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
-    ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
+    IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
@@ -994,7 +997,8 @@ public partial class EventSequence(
         JsonObject content,
         CorrelationId correlationId,
         Subject? subject = null,
-        ConstraintBatchClaims? batchClaims = default)
+        ConstraintBatchClaims? batchClaims = default,
+        List<ProtectedValueUse>? keyUses = null)
     {
         try
         {
@@ -1010,7 +1014,7 @@ public partial class EventSequence(
                 return schemaError;
             }
 
-            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, eventSchema, content, subject);
+            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, eventSchema, content, subject, keyUses);
 
             // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
             // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
@@ -1056,10 +1060,20 @@ public partial class EventSequence(
         return AppendResult.Failed(correlationId, [ex is EventPublicationConflict ? AppendError.EventPublicationConflict : ex.Message]);
     }
 
-    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null, List<ProtectedValueUse>? keyUses = null)
     {
         var complianceIdentifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
-        var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+        JsonObject compliantEvent;
+        if (keyUses is null)
+        {
+            compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+        }
+        else
+        {
+            var reported = await jsonComplianceManagerProvider.ApplyReportingKeys(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+            compliantEvent = reported.Value;
+            keyUses.AddRange(reported.Uses);
+        }
         var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
         return (expandoObject, compliantEvent);
     }
