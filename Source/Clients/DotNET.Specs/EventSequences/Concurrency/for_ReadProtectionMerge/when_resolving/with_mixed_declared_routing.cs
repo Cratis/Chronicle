@@ -14,7 +14,7 @@ public class with_mixed_declared_routing : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_merge_source_narrowed_routing_at_the_read_boundary() => _plan.Scopes[_label].SequenceNumber.ShouldEqual((Events.EventSequenceNumber)100u);
-    [Fact] void should_widen_the_read_types() => _plan.Scopes[_label].EventTypes.ShouldBeEmpty();
-    [Fact] void should_keep_source_less_routing_separately() => _plan.Scopes.Count.ShouldEqual(2);
+    [Fact] void should_keep_the_read_boundary() => _plan.Scopes[0].Value.SequenceNumber.ShouldEqual((Events.EventSequenceNumber)100u);
+    [Fact] void should_preserve_the_read_types() => _plan.Scopes[0].Value.EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id);
+    [Fact] void should_keep_both_routing_predicates_separately() => _plan.Scopes.Count.ShouldEqual(3);
 }

@@ -14,7 +14,7 @@ public class with_covering_explicit_and_source_less_routing : given.contribution
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_keep_the_exact_condition_boundary() => _plan.Scopes[_label].SequenceNumber.ShouldEqual((Events.EventSequenceNumber)90u);
-    [Fact] void should_keep_routing_on_its_own_label() => _plan.Scopes["$read-protection/routing/stock/0"].SequenceNumber.ShouldEqual((Events.EventSequenceNumber)40u);
-    [Fact] void should_keep_routing_source_less() => _plan.Scopes["$read-protection/routing/stock/0"].EventSourceId.ShouldBeNull();
+    [Fact] void should_keep_the_exact_condition_boundary() => _plan.Scopes[0].Value.SequenceNumber.ShouldEqual((Events.EventSequenceNumber)90u);
+    [Fact] void should_keep_the_routing_boundary() => _plan.Scopes[1].Value.SequenceNumber.ShouldEqual((Events.EventSequenceNumber)40u);
+    [Fact] void should_keep_routing_source_less() => _plan.Scopes[1].Value.EventSourceId.ShouldBeNull();
 }

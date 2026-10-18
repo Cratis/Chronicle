@@ -17,10 +17,10 @@ public class with_derived_source_labels : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_have_one_condition_for_the_wire_label() => _plan.Conditions.Count.ShouldEqual(1);
-    [Fact] void should_keep_the_earliest_read_boundary() => _plan.Conditions.Single().After.ShouldEqual((EventSequenceNumber)90UL);
-    [Fact] void should_keep_the_source_narrowing() => _plan.Conditions.Single().EventSourceId.ShouldEqual(_label);
-    [Fact] void should_cover_both_read_event_types() => _plan.Conditions.Single().EventTypes.ShouldContainOnly(_stockReduced, _stockRemoved);
+    [Fact] void should_keep_each_predicate_for_the_wire_label() => _plan.Conditions.Count.ShouldEqual(2);
+    [Fact] void should_keep_each_read_boundary() => _plan.Conditions.Select(_ => _.After).ShouldContainOnly((EventSequenceNumber)100UL, (EventSequenceNumber)90UL);
+    [Fact] void should_keep_the_source_narrowing() => _plan.Conditions.Select(_ => _.EventSourceId).Distinct().ShouldContainOnly(_label);
+    [Fact] void should_keep_both_type_predicates() => _plan.Conditions.SelectMany(_ => _.EventTypes).ShouldContainOnly(_stockReduced, _stockRemoved);
 
     record SourceId(string Value) : EventSourceId(Value);
 }

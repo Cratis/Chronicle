@@ -48,7 +48,7 @@ public partial class UnitOfWork(
     readonly object _decisionLock = new();
     readonly Dictionary<EventSourceId, ConcurrencyScope> _decisionScopes = [];
     readonly Dictionary<EventSourceId, List<DecisionConflict>> _decisionConflicts = [];
-    Dictionary<EventSourceId, ConcurrencyScope> _concurrencyScopes = [];
+    Dictionary<EventSourceId, List<ConcurrencyScope>> _concurrencyScopes = [];
 
     AppendManyResult _appendManyResult = new();
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -193,12 +193,7 @@ public partial class UnitOfWork(
                 _requiredEnrollmentScopes.TryGetValue(pair.Key, out var required)
                     ? new KeyValuePair<EventSourceId, ConcurrencyScope>(pair.Key, MergeRequiredScope(eventSequenceId, pair.Key, pair.Value, required))
                     : pair));
-            var targets = batch.Events.GroupBy(_ => _.EventSourceId).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
-            var enrollments = targets.Keys.Union(batch.ConcurrencyScopes.Keys).Select(source => new UnitOfWorkEnrollment(
-                eventSequenceId,
-                source,
-                suppliedScopes.FirstOrDefault(_ => _.Key == source).Value ?? ConcurrencyScope.NotSet,
-                targets.TryGetValue(source, out var sourceEvents) ? sourceEvents : Array.AsReadOnly(Array.Empty<object>()))).ToArray();
+            var enrollments = CreateEnrollments(eventSequenceId, batch);
             var resolution = ResolveEnrollmentScopes(eventSequenceId, enrollments);
             foreach (var (label, scope) in resolution.Scopes)
             {
@@ -403,9 +398,9 @@ public partial class UnitOfWork(
             ? concurrencyScope
             : concurrencyScope with { EventTypes = concurrencyScope.EventTypes.ToArray() };
 
-    static Dictionary<EventSourceId, ConcurrencyScope> MaterializeConcurrencyScopes(
-        IReadOnlyDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes) =>
-        concurrencyScopes.ToDictionary(_ => _.Key, _ => MaterializeConcurrencyScope(_.Value));
+    static Dictionary<EventSourceId, List<ConcurrencyScope>> MaterializeConcurrencyScopes(
+        IReadOnlyDictionary<EventSourceId, List<ConcurrencyScope>> concurrencyScopes) =>
+        concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value.ConvertAll(MaterializeConcurrencyScope));
 
     static void ThrowIfLabelIsNotSpecified(EventSourceId label)
     {
@@ -444,7 +439,7 @@ public partial class UnitOfWork(
         ReadProtectionGuard.RequireUnit(this);
         using var span = _activitySource.Commit(correlationId.ToString());
 
-        Dictionary<EventSourceId, ConcurrencyScope> scopes;
+        KeyValuePair<EventSourceId, ConcurrencyScope>[] scopes;
         EventForEventSourceId[] events;
         IEventSequence? eventSequence;
         bool protectedCommit;
@@ -464,8 +459,8 @@ public partial class UnitOfWork(
             // still stage after this point, but they must never enter the in-flight append.
             eventSequence = _eventSequence;
             events = eventSequence is null ? [] : GetEventsToCommit();
-            scopes = !protectedCommit ? _concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value) :
-                _concurrencyScopes.Concat(DecisionReadScopes.ForEvents(_decisionScopes, events)).ToDictionary(_ => _.Key, _ => _.Value);
+            var enrolled = _concurrencyScopes.SelectMany(_ => _.Value.Select(scope => new KeyValuePair<EventSourceId, ConcurrencyScope>(_.Key, scope)));
+            scopes = !protectedCommit ? enrolled.ToArray() : enrolled.Concat(DecisionReadScopes.ForEvents(_decisionScopes, events)).ToArray();
             readProtectionCommit = IsEnforcingReadProtection
                 ? new(GetReadProtectionTarget(), Array.AsReadOnly(_readProtectionContributions.ToArray()), CaptureAppendConditions) { ValidateReadsWithoutEvents = _effectReceipt is not null }
                 : null;
@@ -480,7 +475,7 @@ public partial class UnitOfWork(
                 if (plan.Scopes.Count == 0) eventSequence = null;
             }
             if (_effectReceipt is not null) EffectReceiptSupport.Require(eventStore.Connection);
-            if (eventSequence is not null && (_effectReceipt is null || events.Length != 0 || scopes.Count != 0 || readProtectionCommit?.Contributions.Count > 0))
+            if (eventSequence is not null && (_effectReceipt is null || events.Length != 0 || scopes.Length != 0 || readProtectionCommit?.Contributions.Count > 0))
             {
                 AppendManyResult result;
                 try
@@ -503,11 +498,18 @@ public partial class UnitOfWork(
                             ? await native.AppendManyForUnitOfWork(events, scopes)
                             : throw new EventSequenceImmediateAppendRefusalNotSupported(eventSequence.GetType());
                     }
-                    else
+                    else if (scopes.GroupBy(_ => _.Key).Any(_ => _.Count() > 1))
                     {
                         result = events.Any(_ => _.NamedTags.Any())
-                            ? await eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: scopes)
-                            : await eventSequence.AppendMany(events, concurrencyScopes: scopes);
+                            ? await eventSequence.AppendManyWithNamedTags(events, [], null, null, scopes)
+                            : await eventSequence.AppendMany(events, null, null, scopes);
+                    }
+                    else
+                    {
+                        var singleScopes = scopes.ToDictionary(_ => _.Key, _ => _.Value);
+                        result = events.Any(_ => _.NamedTags.Any())
+                            ? await eventSequence.AppendManyWithNamedTags(events, [], concurrencyScopes: singleScopes)
+                            : await eventSequence.AppendMany(events, concurrencyScopes: singleScopes);
                     }
                 }
                 catch (CommandFailed exception) when (
@@ -620,7 +622,10 @@ public partial class UnitOfWork(
             return;
         }
 
-        _concurrencyScopes[scopeLabel] = concurrencyScope;
+        if (!_concurrencyScopes.TryGetValue(scopeLabel, out var scopes)) _concurrencyScopes[scopeLabel] = scopes = [];
+        var index = scopes.FindIndex(_ => DefinitionConcurrencyScopeResolver.SamePredicate(_, concurrencyScope));
+        if (index < 0) scopes.Add(concurrencyScope);
+        else scopes[index] = concurrencyScope;
     }
 
     void EnrollStrictConcurrencyScope(EventSourceId scopeLabel, ConcurrencyScope concurrencyScope)
@@ -630,7 +635,8 @@ public partial class UnitOfWork(
             return;
         }
 
-        _concurrencyScopes.TryAdd(scopeLabel, concurrencyScope);
+        if (!_concurrencyScopes.TryGetValue(scopeLabel, out var scopes)) _concurrencyScopes[scopeLabel] = scopes = [];
+        if (!scopes.Exists(_ => RequiredScopesAreEqual(_, concurrencyScope))) scopes.Add(concurrencyScope);
     }
 
     void EnsureEventSequenceCanBeUsed(EventSequenceId eventSequenceId)
@@ -665,9 +671,9 @@ public partial class UnitOfWork(
         _eventSequenceId = eventSequenceId;
     }
 
-    void ValidateExistingConcurrencyScopesForOrderedBatch(IReadOnlyDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes)
+    void ValidateExistingConcurrencyScopesForOrderedBatch(IReadOnlyDictionary<EventSourceId, List<ConcurrencyScope>> concurrencyScopes)
     {
-        foreach (var (scopeLabel, concurrencyScope) in concurrencyScopes)
+        foreach (var (scopeLabel, concurrencyScope) in concurrencyScopes.SelectMany(_ => _.Value.Select(scope => (_.Key, Scope: scope))))
         {
             if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId.Value != scopeLabel.Value)
             {
@@ -680,7 +686,7 @@ public partial class UnitOfWork(
         EventSequenceId eventSequenceId,
         EventSourceId scopeLabel,
         ConcurrencyScope concurrencyScope,
-        Dictionary<EventSourceId, ConcurrencyScope> enrolledConcurrencyScopes,
+        Dictionary<EventSourceId, List<ConcurrencyScope>> enrolledConcurrencyScopes,
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope>? requiredScopes = null)
     {
         if (concurrencyScope.EventSourceId is not null && concurrencyScope.EventSourceId.Value != scopeLabel.Value)
@@ -693,15 +699,17 @@ public partial class UnitOfWork(
             return;
         }
 
-        if (requiredScopes?.ContainsKey(scopeLabel) == true)
+        foreach (var scope in enrolledScope)
         {
-            MergeRequiredScope(eventSequenceId, scopeLabel, enrolledScope, concurrencyScope);
-            return;
-        }
-
-        if (!ConcurrencyScopesAreSemanticallyEqual(enrolledScope, concurrencyScope))
-        {
-            throw new ConflictingConcurrencyScopesForLabel(scopeLabel, enrolledScope, concurrencyScope);
+            if (requiredScopes?.ContainsKey(scopeLabel) == true)
+            {
+                MergeRequiredScope(eventSequenceId, scopeLabel, scope, concurrencyScope);
+            }
+            else if ((scope == ConcurrencyScope.None != (concurrencyScope == ConcurrencyScope.None)) ||
+                (DefinitionConcurrencyScopeResolver.SamePredicate(scope, concurrencyScope) && !ConcurrencyScopesAreSemanticallyEqual(scope, concurrencyScope)))
+            {
+                throw new ConflictingConcurrencyScopesForLabel(scopeLabel, scope, concurrencyScope);
+            }
         }
     }
 

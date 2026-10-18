@@ -47,7 +47,7 @@ The first append into a scope has nothing to compare with, so the kernel skips t
 
 ## Why did my batch throw `IncompatibleConcurrencyScopesForEventSource`?
 
-Events for one event source id in the batch need different guards, for example two months of one account. Pass one explicit scope for that id or append in separate batches. See [A batch that needs two guards](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
+The batch needs different guards for one event source id, but the connected kernel does not advertise `concurrency-scope-conjunctions`. Upgrade the kernel to keep the guards separate and validate them atomically. A deliberately broader explicit scope is an alternative when it covers the whole decision. See [A batch that needs two guards](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
 
 ## Why does my observer not see events I appended?
 
