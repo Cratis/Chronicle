@@ -116,6 +116,21 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     }
 
     /// <inheritdoc/>
+    public async Task<bool> AreObserversInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventStoreInitialization.AnyAsync(row => row.Id == 2);
+    }
+
+    /// <inheritdoc/>
+    public async Task MarkObserversInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 2 });
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
         => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
 }

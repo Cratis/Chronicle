@@ -40,6 +40,20 @@ Accepted for Cratis/Chronicle#4955 (events of a type silently skipped across an 
 
 Paths are relative to `Source/Kernel/Core/Observation/` unless they start with `Source/`, `Integration/` or `Documentation/`. Chronicle line numbers are at `bec5709f8c` (release 19.77.2).
 
+## 2026-10-17 — clarification: membership identity is not a generation pin
+
+> **Clarification of sections 2, 3, 4 and 6.** L0's pin-shape ruling resolves an ambiguity in the accepted wording, especially section 2's reference to member "pins". It does not introduce a routing policy or change acceptance or implementation stage. The original decision text is preserved below; read those clauses with this clarification.
+
+- **Sections 2 and 3 — durable membership:** each member is keyed by event-type ID and carries its incarnation (join revision) and join fence. A member carries **no generation pins and no historical-generation set**. Concurrent registrations of `A@1` and `A@2` produce one member `A`, not two generation members. A generation or delivery-mode declaration change alone does not add a member, change its incarnation or fence, or advance the membership revision.
+- **Sections 2 and 4 — durable capabilities:** each per-connection registration identity retains its declared types, generation pins and `EventGenerationDelivery` mode. These are connection capabilities, not membership fields; their persistence never proves that a target is connected. Section 4's fixed-capabilities-per-connection rule still applies: changed capabilities on a live connection are rejected, and changing them requires a new connection.
+- **Section 4 — selected-target authority:** target eligibility and generation release use only the selected connected target's own declared types, pins and mode. Neither membership nor another target's capabilities supplies a fallback. Persisted registration identities are not delivery targets without connectivity.
+- **Section 6 — retirement:** retirement removes the member by event-type ID across generations, subject to the existing connected-target checks. It is not a generation-specific removal; later re-declaration creates a new incarnation and fence as already decided.
+
+### Proof obligations for this clarification
+
+- **Slice 2, storage only:** round-trip one member `A` alongside two distinct durable connection registrations for `A@1` and `A@2`, preserving each registration's pins and mode on InMemory, MongoDB and SQL. Assert that the member has no pins or generation-history set, and that storing the distinct capabilities preserves its revision, incarnation and fence. These storage specifications do not prove connectivity, routing or release behavior.
+- **Later routing/runtime slices:** concurrent connected `A@1` and `A@2` targets retain independent eligibility and release behavior while sharing one `A` membership. A generation/mode-only declaration on a new connection leaves membership revision, incarnation and fence unchanged; a changed live-connection declaration is rejected. A selected target never borrows another target's pins or mode, or membership as a fallback; a persisted but disconnected registration is ineligible. Retirement acts on `A` across generations under section 6's checks.
+
 ## Context
 
 ### Who loses events

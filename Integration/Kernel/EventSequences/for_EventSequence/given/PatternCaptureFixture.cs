@@ -22,7 +22,8 @@ public class PatternCaptureFixture : ChronicleInProcessFixture
     /// Signals persisted observer progress without polling or depending on Arc's ambient service provider.
     /// </summary>
     /// <param name="storage">The real storage used by the observer grains.</param>
-    public sealed class SignalingObserverStorage(IStorage storage) : ObserverStateGrainStorageProvider(storage), IDisposable
+    /// <param name="logger">The logger.</param>
+    public sealed class SignalingObserverStorage(IStorage storage, ILogger<ObserverStateGrainStorageProvider> logger) : ObserverStateGrainStorageProvider(storage, logger), IDisposable
     {
         readonly ConcurrentDictionary<ObserverKey, ReplaySubject<EventSequenceNumber>> _positions = new();
 

@@ -37,4 +37,14 @@ public enum ObserverRunningState
     /// Observer is quarantined.
     /// </summary>
     Quarantined = 5,
+
+    /// <summary>
+    /// Observer is quiescing to commit a change to its event-type membership.
+    /// </summary>
+    ChangingDefinition = 6,
+
+    /// <summary>
+    /// Observer is draining legacy work before initialization.
+    /// </summary>
+    Initializing = 7,
 }
