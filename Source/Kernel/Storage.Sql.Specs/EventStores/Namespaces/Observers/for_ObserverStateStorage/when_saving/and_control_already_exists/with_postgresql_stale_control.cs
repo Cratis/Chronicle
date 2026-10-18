@@ -88,7 +88,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
         builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
         if (barrier is not null)
         {
-            builder.AddInterceptors(barrier);
+            builder.AddInterceptors(barrier).EnableServiceProviderCaching(false);
         }
 
         var context = new NamespaceDbContext(builder.Options);
