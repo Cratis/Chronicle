@@ -64,5 +64,10 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         {
             errors.Add($"Projection syntax of type '{node.GetType().Name}' is not supported: {reason}", node.Location.Line, node.Location.Column);
         }
+
+        if (node is EventContextExpressionSyntax eventContext && EventContextPaths.GetResolutionError(eventContext.Path) is { } error)
+        {
+            errors.Add(error, node.Location.Line, node.Location.Column);
+        }
     }
 }

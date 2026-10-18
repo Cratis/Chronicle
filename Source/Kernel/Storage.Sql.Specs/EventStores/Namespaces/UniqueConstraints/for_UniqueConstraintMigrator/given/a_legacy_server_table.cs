@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -41,6 +42,9 @@ public abstract class a_legacy_server_table : Specification
             builder.UseNpgsql(connectionString);
         }
 
+        // The spec project builds more than twenty distinct EF option sets, and EF Core throws for any
+        // new one created after the twentieth; which one that is depends on test order.
+        builder.ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
         _options = builder.Options;
         _context = new(_options, _tableName, _migrator);
         await _context.Database.OpenConnectionAsync();

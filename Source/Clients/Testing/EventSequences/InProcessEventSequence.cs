@@ -132,7 +132,8 @@ internal static class InProcessEventSequence
                 new global::Cratis.Chronicle.Storage.InMemory.InMemoryStorageErrorClassifier(),
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
                 NullLogger<KernelEventSequences::EventSequence>.Instance,
-                NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance);
+                NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance,
+                encryptionKeyStorage: compliance.KeyStorage);
         }
 
         var key = new KernelSequenceConcepts::EventSequenceKey(eventSequenceId, eventStoreName, namespaceName);

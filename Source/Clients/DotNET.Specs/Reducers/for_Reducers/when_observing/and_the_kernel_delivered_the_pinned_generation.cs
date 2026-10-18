@@ -13,6 +13,7 @@ public class and_the_kernel_delivered_the_pinned_generation : given.all_dependen
 {
     Subject<ReduceOperationMessage> _observations;
     readonly TaskCompletionSource<AppendedEvent> _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource<ReducerResult> _result = new(TaskCreationOptions.RunContinuationsAsynchronously);
     AppendedEvent _event;
     System.Diagnostics.ActivitySource _traceSource;
     protected override Observation.EventGenerationDelivery GenerationDelivery => Observation.EventGenerationDelivery.Pinned;
@@ -43,7 +44,17 @@ public class and_the_kernel_delivered_the_pinned_generation : given.all_dependen
         });
         _handlersByModelType[typeof(PersonRegistered)] = handler;
         _observations = new();
-        _services.Reducers.Observe(Arg.Any<IObservable<ReducerMessage>>(), Arg.Any<CallContext>()).Returns(_observations);
+        _services.Reducers.Observe(Arg.Any<IObservable<ReducerMessage>>(), Arg.Any<CallContext>()).Returns(call =>
+        {
+            call.Arg<IObservable<ReducerMessage>>().Subscribe(message =>
+            {
+                if (message.Content.Value is ReducerResult result)
+                {
+                    _result.TrySetResult(result);
+                }
+            });
+            return _observations;
+        });
         _reducers = CreateReducers();
         await _reducers.Register();
     }
@@ -53,6 +64,7 @@ public class and_the_kernel_delivered_the_pinned_generation : given.all_dependen
         _observations.OnNext(new ReduceOperationMessage
         {
             Partition = "person",
+            DeliveryId = 42,
             Events = [new Contracts.Events.AppendedEvent
             {
                 Context = (EventContext.Empty with { EventType = new("person-registered", 2), AppendedGeneration = 1 }).ToContract(),
@@ -61,10 +73,12 @@ public class and_the_kernel_delivered_the_pinned_generation : given.all_dependen
             }]
         });
         _event = await _received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _result.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_use_the_released_content_not_the_protected_generation_map() => ((PersonRegistered)_event.Content).FullName.ShouldEqual("Ada Lovelace");
     [Fact] void should_keep_the_appended_generation() => _event.Context.AppendedGeneration!.Value.ShouldEqual(1U);
+    [Fact] async Task should_echo_the_delivery_id() => (await _result.Task).DeliveryId.ShouldEqual(42UL);
 
     void Destroy()
     {

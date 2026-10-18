@@ -51,6 +51,7 @@ public sealed class EventStoreStorage(
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new();
     bool _initialized;
+    bool _observersInitialized;
 
     /// <summary>
     /// Initializes a store with an event-types storage factory for in-process composition.
@@ -131,6 +132,16 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public Task<bool> IsInitialized() => Task.FromResult(_initialized);
+
+    /// <inheritdoc/>
+    public Task<bool> AreObserversInitialized() => Task.FromResult(_observersInitialized);
+
+    /// <inheritdoc/>
+    public Task MarkObserversInitialized()
+    {
+        _observersInitialized = true;
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task MarkInitialized()

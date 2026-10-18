@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_ObserverStateGrainStorageProvider.given;
 
@@ -16,6 +17,7 @@ public class the_provider : Specification
     protected IEventStoreNamespaceStorage eventStoreNamespaceStorage;
     protected IObserverStateStorage observerStateStorage;
     protected IFailedPartitionsStorage failedPartitionsStorage;
+    protected ILogger<ObserverStateGrainStorageProvider> logger;
 
     void Establish()
     {
@@ -24,7 +26,10 @@ public class the_provider : Specification
         eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         observerStateStorage = Substitute.For<IObserverStateStorage>();
         failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
-        provider = new(storage);
+        logger = Substitute.For<ILogger<ObserverStateGrainStorageProvider>>();
+        logger.IsEnabled(LogLevel.Error).Returns(true);
+        provider = new(storage, logger);
+        eventStoreStorage.AreObserversInitialized().Returns(false);
 
         eventStoreNamespaceStorage.Observers.Returns(observerStateStorage);
         eventStoreNamespaceStorage.FailedPartitions.Returns(failedPartitionsStorage);

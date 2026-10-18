@@ -25,6 +25,13 @@ public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, Pr
     public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
+    public TParentBuilder ToValue<TProperty>(TProperty value)
+    {
+        _expression = ConstantValueExpression.From(value);
+        return parent;
+    }
+
+    /// <inheritdoc/>
     public TParentBuilder ToEventSourceId()
     {
         _expression = new EventSourceIdExpression();

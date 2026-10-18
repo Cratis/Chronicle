@@ -76,6 +76,7 @@ enum FailureKind {
    Handling = 1;
    Timeout = 2;
    FAILURE_KIND_Disconnected = 3;
+   WaitingForHandler = 4;
 }
 message FastForward {
    string EventStore = 1;
