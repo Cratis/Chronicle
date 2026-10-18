@@ -74,6 +74,44 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
+        var document = await collection.Find(_ => _.Id.Identifier == identifier)
+            .SortByDescending(_ => _.Id.Revision)
+            .FirstOrDefaultAsync();
+        return document is null ? null : new(new(document.PublicKey, document.PrivateKey), document.Id.Revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
+        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
+        var id = new EncryptionKeyId(identifier, revision);
+        try
+        {
+            await collection.InsertOneAsync(new EncryptionKeyForIdentifier(id, key.Public, key.Private));
+            return new(key, revision);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            var winner = await collection.Find(_ => _.Id == id).FirstOrDefaultAsync();
+            if (winner is null)
+            {
+                throw;
+            }
+
+            return new(new(winner.PublicKey, winner.PrivateKey), winner.Id.Revision);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

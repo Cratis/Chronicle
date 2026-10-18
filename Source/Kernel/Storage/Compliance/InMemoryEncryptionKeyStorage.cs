@@ -47,6 +47,31 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(LatestPair(eventStore, eventStoreNamespace, identifier));
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        lock (_lock)
+        {
+            if (LatestPair(eventStore, eventStoreNamespace, identifier) is { } existing)
+            {
+                return Task.FromResult(existing);
+            }
+
+            var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
+            _keys[new(eventStore, eventStoreNamespace, identifier, revision)] = key;
+            return Task.FromResult(new EncryptionKeyAtRevision(key, revision));
+        }
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         lock (_lock)
@@ -151,6 +176,13 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
             .Where(kv => kv.Key.EventStore == eventStore && kv.Key.EventStoreNamespace == eventStoreNamespace && kv.Key.Identifier == identifier)
             .OrderByDescending(kv => kv.Key.Revision.Value)
             .Select(kv => (EncryptionKey?)kv.Value)
+            .FirstOrDefault();
+
+    EncryptionKeyAtRevision? LatestPair(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        _keys
+            .Where(kv => kv.Key.EventStore == eventStore && kv.Key.EventStoreNamespace == eventStoreNamespace && kv.Key.Identifier == identifier)
+            .OrderByDescending(kv => kv.Key.Revision.Value)
+            .Select(kv => new EncryptionKeyAtRevision(kv.Value, kv.Key.Revision))
             .FirstOrDefault();
 
     EncryptionKeyRevision GetNextRevision(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
