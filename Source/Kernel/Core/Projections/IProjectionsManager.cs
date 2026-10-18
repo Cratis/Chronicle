@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.Concurrency;
@@ -70,6 +71,14 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// </param>
     /// <returns>Awaitable task.</returns>
     Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+
+    /// <summary>
+    /// Removes an orphaned projection and its observer in every namespace, serialized with registration.
+    /// Kernel-owned definitions and projections declared by a connected client are refused.
+    /// </summary>
+    /// <param name="identifier">The projection identifier.</param>
+    /// <returns>The removal result. Projection refusals are store-wide and have no blocking namespace.</returns>
+    Task<ObserverRemovalResult> Remove(ProjectionId identifier);
 
     /// <summary>
     /// Forget a single registered projection.

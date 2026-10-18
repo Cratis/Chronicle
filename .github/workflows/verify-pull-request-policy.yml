@@ -1,0 +1,30 @@
+name: Verify Pull Request Policy
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled, ready_for_review]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dependabot-labels:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
+    uses: Cratis/Workflows/.github/workflows/normalize-dependabot-labels.yml@main
+    permissions:
+      pull-requests: write
+
+  policy:
+    needs: dependabot-labels
+    if: ${{ !cancelled() }}
+    uses: Cratis/Workflows/.github/workflows/verify-pull-request-policy.yml@main
+    with:
+      runs-on: ${{ vars.RUNNER_GATE || 'ubuntu-latest' }}
+      release-intent: true

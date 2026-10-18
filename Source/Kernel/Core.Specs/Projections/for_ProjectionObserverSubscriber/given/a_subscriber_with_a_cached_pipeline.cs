@@ -31,6 +31,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     protected IStorage<ProjectionDefinition> _stateStorage;
     protected IProjectionPipelineManager _pipelines;
     protected IProjectionFactory _factory;
+    protected Storage.IStorage _storage;
     protected EngineProjection _projection;
     protected IProjectionPipeline _cachedPipeline;
     protected IProjectionPipeline _refreshedPipeline;
@@ -65,9 +66,11 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         readModelGrain.GetDefinition().Returns(readModel);
         silo.AddProbe(_ => readModelGrain);
 
-        var storage = Substitute.For<Storage.IStorage>();
-        storage.GetEventStore(_key.EventStore).EventTypes.GetLatestForAllEventTypes().Returns([]);
-        silo.AddService(storage);
+        _storage = Substitute.For<Storage.IStorage>();
+        _storage.GetEventStore(_key.EventStore).EventTypes.GetLatestForAllEventTypes().Returns([]);
+        _storage.GetEventStore(_key.EventStore).Projections.Has(_key.ObserverId).Returns(true);
+        _storage.GetEventStore(_key.EventStore).Projections.Get(_key.ObserverId).Returns(_definition);
+        silo.AddService(_storage);
         silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _factory = Substitute.For<IProjectionFactory>();
         _projection = Substitute.For<EngineProjection>();

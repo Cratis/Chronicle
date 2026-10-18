@@ -193,6 +193,7 @@ message RegisterRequest {
    bool FullSet = 4;
    string Registrant = 5;
    string Version = 6;
+   string ConnectionId = 7;
 }
 message RemovedWithDefinition {
    string Key = 1;

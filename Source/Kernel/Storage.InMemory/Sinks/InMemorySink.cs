@@ -78,11 +78,19 @@ public class InMemorySink(
     {
         if (key.Value is ExpandoObject expandoKey)
         {
+            // Each part is length-prefixed so that a separator inside a value cannot make two
+            // different composite keys produce the same storage key.
             var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key))
+            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key, StringComparer.Ordinal))
             {
-                if (stringBuilder.Length > 0) stringBuilder.Append('_');
-                stringBuilder.Append(value);
+                if (value is null)
+                {
+                    stringBuilder.Append('~');
+                    continue;
+                }
+
+                var part = value.ToString() ?? string.Empty;
+                stringBuilder.Append(part.Length).Append(':').Append(part);
             }
 
             return stringBuilder.ToString();

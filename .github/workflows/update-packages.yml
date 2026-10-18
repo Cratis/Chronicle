@@ -8,8 +8,5 @@ on:
 jobs:
   update:
     uses: Cratis/Workflows/.github/workflows/update-packages.yml@main
-    with:
-      # Castle.Core is pinned in Directory.Packages.props: 5.2.x breaks NSubstitute class proxies.
-      nuget-package-exclusions: Castle.Core
     secrets:
       PAT_WORKFLOWS: ${{ secrets.PAT_WORKFLOWS }}

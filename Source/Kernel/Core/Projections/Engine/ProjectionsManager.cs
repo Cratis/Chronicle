@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
@@ -18,8 +19,9 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
+/// <param name="grainFactory">The grain factory for authoritative read model definitions.</param>
 [Singleton]
-public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage) : IProjectionsManager
+public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory) : IProjectionsManager
 {
     readonly ConcurrentDictionary<string, RegisteredProjection> _projections = new();
 
@@ -92,6 +94,49 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
 
         projection = null;
         return false;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IProjection?> GetCurrent(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id)
+    {
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        if (!await eventStoreStorage.Projections.Has(id))
+        {
+            Evict(eventStore, id);
+            return null;
+        }
+
+        var definition = await eventStoreStorage.Projections.Get(id);
+        var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
+        if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint)
+        {
+            return current;
+        }
+
+        var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
+        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
+
+        // Every namespace registered for the previous definition is rebuilt from the current one, so refreshing
+        // one namespace never leaves the others without a projection.
+        var rebuilt = new ConcurrentDictionary<EventStoreNamespaceName, IProjection>();
+        rebuilt[@namespace] = projection;
+        if (_projections.TryGetValue(GetKeyFor(eventStore, id), out var previousRegistration) &&
+            ProjectionFactory.DefinitionFingerprintFor(previousRegistration.Definition) != fingerprint)
+        {
+            foreach (var otherNamespace in previousRegistration.Projections.Keys.Where(_ => _ != @namespace))
+            {
+                rebuilt[otherNamespace] = await projectionFactory.Create(eventStore, otherNamespace, definition, readModel, eventTypeSchemas);
+            }
+        }
+
+        var registered = _projections.AddOrUpdate(
+            GetKeyFor(eventStore, id),
+            static (_, state) => new(state.Definition, state.Rebuilt),
+            static (_, previous, state) => ProjectionFactory.DefinitionFingerprintFor(previous.Definition) == state.Fingerprint ? previous : new(state.Definition, state.Rebuilt),
+            (Definition: definition, Fingerprint: fingerprint, Rebuilt: rebuilt));
+        registered.Projections[@namespace] = projection;
+        return projection;
     }
 
     /// <inheritdoc/>

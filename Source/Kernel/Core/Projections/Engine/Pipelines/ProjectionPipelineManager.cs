@@ -37,7 +37,7 @@ public class ProjectionPipelineManager(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
-    readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
+    readonly ConcurrentDictionary<string, CachedPipeline> _pipelines = new();
 
     /// <summary>
     /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
@@ -60,9 +60,9 @@ public class ProjectionPipelineManager(
         EngineProjection projection)
     {
         var key = KeyHelper.Combine(eventStore, @namespace, projection.Identifier);
-        if (_pipelines.TryGetValue(key, out var pipeline))
+        if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
         {
-            return pipeline;
+            return pipeline.Pipeline;
         }
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
@@ -76,6 +76,9 @@ public class ProjectionPipelineManager(
         var sinkStorage = projection.Scope == ProjectionScope.Global
             ? storage.GetEventStore(eventStore).GetNamespace(EventStoreNamespaceName.NotSet)
             : namespaceStorage;
+
+        // Sinks owns the sink cache and its replay/bulk mode. Replacing a pipeline must reuse
+        // that sink rather than begin replay again (which would clear already replayed data).
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
@@ -106,7 +109,8 @@ public class ProjectionPipelineManager(
             replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>());
 
-        return _pipelines[key] = newPipeline;
+        _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
+        return newPipeline;
     }
 
     /// <inheritdoc/>
@@ -115,4 +119,6 @@ public class ProjectionPipelineManager(
 
     /// <inheritdoc/>
     public void Clear() => _pipelines.Clear();
+
+    sealed record CachedPipeline(IProjectionPipeline Pipeline, string Fingerprint);
 }
