@@ -13,6 +13,15 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Settled append key {Key} at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendSettled(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Refused append key {Key} at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendRefused(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Settling append key {Key} again at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendSettlingAgain(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
     [LoggerMessage(LogLevel.Warning, "Failed reconciling namespace subscriptions for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
     internal static partial void FailedReconcilingNamespaceSubscriptions(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 

@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Monads;
 
@@ -46,8 +47,8 @@ internal static class AppendFingerprintComparison
         }
 
         var erased = false;
-        var unverifiable = false;
-        foreach (var part in stored.ProtectedParts)
+        ProtectionKind? unverifiable = null;
+        foreach (var part in stored.ProtectedParts.OrderBy(part => part.Kind))
         {
             var values = groups[part.Kind];
             if (values.Select(value => value.Identifier).Distinct().Count() != 1)
@@ -67,7 +68,7 @@ internal static class AppendFingerprintComparison
             {
                 if (key.Fingerprint != part.KeyReference)
                 {
-                    unverifiable = true;
+                    unverifiable ??= part.Kind;
                 }
                 else if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(AppendFingerprint.ProtectedHash(input.Identity, key, values)),
@@ -82,17 +83,17 @@ internal static class AppendFingerprintComparison
             }
             else
             {
-                unverifiable = true;
+                unverifiable ??= part.Kind;
             }
         }
 
-        var status = (unverifiable, erased) switch
+        var status = (unverifiable.HasValue, erased) switch
         {
             (true, _) => FingerprintComparisonStatus.Unverifiable,
             (false, true) => FingerprintComparisonStatus.VerifiedAfterErasure,
             _ => FingerprintComparisonStatus.Verified
         };
-        return new FingerprintComparisonResult(status, stored.EventType);
+        return new FingerprintComparisonResult(status, stored.EventType, UnverifiableKind: unverifiable);
     }
 
     static bool IsErased(ProtectedFingerprintPart part, EncryptionKeyErasure? erasure) =>

@@ -1,0 +1,16 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Storage.EventSequences;
+using NSubstitute.ExceptionExtensions;
+
+namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key;
+
+public class and_the_commit_result_is_unknown_and_the_identity_is_absent : given.an_event_sequence_with_idempotency_keys
+{
+    void Establish() => _publications.AppendManyWithIdentities(Arg.Any<IEnumerable<EventToAppendToStorage>>()).Throws(new Exception("unknown commit"));
+    async Task Because() => _result = await AppendKeyed();
+    [Fact] void should_not_claim_non_commit() => _result.Result.Errors.ShouldContain(AppendError.AppendOutcomeUnknown);
+    [Fact] async Task should_mark_the_gap_by_spilling() => await _appendedEventsQueues.Received(1).SpillToCatchup();
+    [Fact] async Task should_never_retry_an_unknown_commit() => await _publications.Received(1).AppendManyWithIdentities(Arg.Any<IEnumerable<EventToAppendToStorage>>());
+}
