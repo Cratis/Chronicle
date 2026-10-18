@@ -25,4 +25,14 @@ public record ConcurrencyViolation(
     /// Gets the <see cref="EventSequenceNumber"/> of the first event that matched the scope after the expected sequence number, if it could be read.
     /// </summary>
     public EventSequenceNumber? ConflictingSequenceNumber { get; init; }
+
+    /// <summary>
+    /// Gets the position of the failed guard in the request, or null for single-scope operations.
+    /// </summary>
+    public uint? ScopeIndex { get; init; }
+
+    /// <summary>
+    /// Gets the predicate and expectation which failed.
+    /// </summary>
+    public Sequences.ConcurrencyScope? Scope { get; init; }
 }

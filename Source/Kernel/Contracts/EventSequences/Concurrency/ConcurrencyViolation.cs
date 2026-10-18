@@ -43,4 +43,16 @@ public class ConcurrencyViolation
     /// </summary>
     [ProtoMember(5)]
     public global::System.UInt64? ConflictingSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ScopeIndex.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::System.UInt32? ScopeIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Scope.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? Scope { get; set; }
 }
