@@ -73,6 +73,32 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var revision = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
+        if (revision is null)
+        {
+            return null;
+        }
+
+        var key = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
+        return key is null ? null : new(key, revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
+        await SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        return await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? new(key, revision);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

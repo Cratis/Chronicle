@@ -34,6 +34,11 @@ public interface IProjection
     ProjectionId Identifier { get; }
 
     /// <summary>
+    /// Gets the normalized definition fingerprint used to validate process-local pipelines.
+    /// </summary>
+    string DefinitionFingerprint { get; }
+
+    /// <summary>
     /// Gets the initial state used for each model instance.
     /// </summary>
     ExpandoObject InitialModelState { get; }

@@ -78,6 +78,51 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        var entity = await scope.DbContext.EncryptionKeys
+            .Where(e => e.Identifier == identifier.Value)
+            .OrderByDescending(e => e.Revision)
+            .FirstOrDefaultAsync();
+        return entity is null ? null : new(new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey), entity.Revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, StoredEncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        var revision = (await ErasureIn(scope.DbContext, identifier)).RevisionForNewKey(identifier, key);
+        try
+        {
+            scope.DbContext.EncryptionKeys.Add(new EncryptionKey
+            {
+                Identifier = identifier.Value,
+                Revision = revision.Value,
+                PublicKey = key.Public,
+                PrivateKey = key.Private
+            });
+            await scope.DbContext.SaveChangesAsync();
+            return new(key, revision);
+        }
+        catch (DbUpdateException)
+        {
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
+            if (winner is null)
+            {
+                throw;
+            }
+
+            return new(winner, revision);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

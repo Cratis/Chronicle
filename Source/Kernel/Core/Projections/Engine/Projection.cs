@@ -93,6 +93,9 @@ public class Projection : IProjection, IDisposable
     public ProjectionId Identifier { get; }
 
     /// <inheritdoc/>
+    public string DefinitionFingerprint { get; internal set; } = string.Empty;
+
+    /// <inheritdoc/>
     public ExpandoObject InitialModelState { get; }
 
     /// <inheritdoc/>

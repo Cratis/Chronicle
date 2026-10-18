@@ -53,4 +53,10 @@ public class RegisterRequest
     /// </summary>
     [ProtoMember(6)]
     public string? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the declaring client's current connection identifier, if supported by the client.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? ConnectionId { get; set; }
 }

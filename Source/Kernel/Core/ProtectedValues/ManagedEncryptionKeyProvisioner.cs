@@ -28,8 +28,12 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
 
     /// <inheritdoc/>
     public async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+        => (await EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, identifier)).Key;
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> EnsureKeyWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        if (await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        if (await encryptionKeyStore.TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
             return existing;
         }
@@ -45,7 +49,7 @@ public class ManagedEncryptionKeyProvisioner(IEncryptionKeyStorage encryptionKey
         await gate.WaitAsync();
         try
         {
-            return await encryptionKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, encryption.GenerateKey());
+            return await encryptionKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, encryption.GenerateKey());
         }
         finally
         {

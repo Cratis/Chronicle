@@ -30,6 +30,24 @@ public interface IJsonSchemaMetadataValueHandler
     SchemaMetadataTypeName Type { get; }
 
     /// <summary>
+    /// Locates the key for a value without accessing key storage.
+    /// </summary>
+    /// <param name="identifier">The document identifier.</param>
+    /// <returns>The key location, or null for a handler that cannot report it.</returns>
+    ProtectionKeyLocation? KeyLocationFor(string identifier) => null;
+
+    /// <summary>
+    /// Applies protection and reports the exact key and revision used.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The document identifier.</param>
+    /// <param name="value">The plaintext value.</param>
+    /// <returns>The protected value and, when supported, its key use.</returns>
+    async Task<(JsonNode Value, EncryptionKeyUse? Key)> ApplyReportingKey(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await Apply(eventStore, eventStoreNamespace, identifier, value), null);
+
+    /// <summary>
     /// Apply to the given value.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>

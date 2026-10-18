@@ -20,6 +20,7 @@ public class a_projections_manager : Specification
     protected ProjectionsManager _manager;
     protected IProjectionFactory _projectionFactory;
     protected IStorage _storage;
+    protected IGrainFactory _grainFactory;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
     protected ProjectionDefinition _firstDefinition;
@@ -34,7 +35,8 @@ public class a_projections_manager : Specification
             .Returns(callInfo => Substitute.For<IProjection>());
 
         _storage = Substitute.For<IStorage>();
-        _manager = new ProjectionsManager(_projectionFactory, _storage);
+        _grainFactory = Substitute.For<IGrainFactory>();
+        _manager = new ProjectionsManager(_projectionFactory, _storage, _grainFactory);
         _eventStore = "event-store";
         _namespace = "namespace";
 

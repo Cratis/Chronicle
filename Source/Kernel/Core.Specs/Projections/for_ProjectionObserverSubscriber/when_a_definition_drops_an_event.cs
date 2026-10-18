@@ -30,6 +30,7 @@ public class when_a_definition_drops_an_event : given.a_subscriber_with_a_cached
 
     async Task Because() => _result = await _subscriber.OnNext("the-partition", [_event], new(null));
 
+    [Fact] async Task should_recheck_shared_storage_before_skipping() => await _storage.GetEventStore(_key.EventStore).Projections.Received(1).Get(_key.ObserverId);
     [Fact] void should_not_hand_the_event_to_the_pipeline() => _ = _cachedPipeline.DidNotReceive().Handle(_event);
     [Fact] void should_not_fail_the_partition() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_move_the_observer_past_the_event() => _result.LastSuccessfulObservation.ShouldEqual(_event.Context.SequenceNumber);

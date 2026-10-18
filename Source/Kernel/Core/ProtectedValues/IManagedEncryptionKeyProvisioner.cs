@@ -29,6 +29,15 @@ namespace Cratis.Chronicle.ProtectedValues;
 public interface IManagedEncryptionKeyProvisioner
 {
     /// <summary>
+    /// Ensures a managed key exists and reports the revision from the same read or provisioning operation.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <returns>The existing or newly provisioned key and its revision.</returns>
+    Task<EncryptionKeyAtRevision> EnsureKeyWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
+
+    /// <summary>
     /// Ensure a managed <see cref="EncryptionKey"/> exists for an <see cref="EncryptionKeyIdentifier"/>, provisioning
     /// one if none exists yet.
     /// </summary>

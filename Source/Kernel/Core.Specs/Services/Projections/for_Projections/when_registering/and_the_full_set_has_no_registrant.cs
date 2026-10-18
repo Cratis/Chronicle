@@ -27,7 +27,9 @@ public class and_the_full_set_has_no_registrant : Specification
             Substitute.For<IExpandoObjectConverter>(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
-            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>());
+            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
+            Substitute.For<ILocalSiloDetails>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
     }
 
     async Task Because() => await _service.Register(new RegisterRequest

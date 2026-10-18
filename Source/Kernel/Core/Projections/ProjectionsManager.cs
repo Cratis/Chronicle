@@ -68,6 +68,8 @@ public partial class ProjectionsManager(
     /// </summary>
     readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _subscribed = new();
     readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
+    readonly HashSet<Task> _subscriptionPasses = [];
+    readonly HashSet<ProjectionId> _removingProjections = [];
     readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
@@ -108,6 +110,7 @@ public partial class ProjectionsManager(
     {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = StampWithVersion(definitions, version);
+        _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
 
         // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers
         // must neither replace what a newer version registered, nor retire what a newer version added.

@@ -4,6 +4,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -11,6 +15,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
@@ -24,6 +29,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.DependencyInjection;
+using Cratis.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -64,8 +70,23 @@ public class ProjectionFactory(
         WellKnownExpressions.Subtract
     ];
 
+    static readonly JsonSerializerOptions _fingerprintOptions = new()
+    {
+        Converters =
+        {
+            new ConceptAsJsonConverterFactory(),
+            new PropertyPathJsonConverter(),
+            new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
+            new PropertyExpressionDictionaryConverter(),
+            new FingerprintEventDefinitionsConverter<FromDefinition>(),
+            new FingerprintEventDefinitionsConverter<JoinDefinition>(),
+            new FingerprintEventDefinitionsConverter<RemovedWithDefinition>(),
+            new FingerprintEventDefinitionsConverter<RemovedWithJoinDefinition>()
+        }
+    };
+
     /// <inheritdoc/>
-    public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
+    public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         readModelDefinition.Sink.EnsureReadModelSupported();
         ProjectionGenerationDeliveryValidation.Validate(definition);
@@ -75,6 +96,7 @@ public class ProjectionFactory(
             throw new EventGenerationDeliveryNotSupported();
         }
 
+        var fingerprint = DefinitionFingerprintFor(definition);
         var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
         foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
         {
@@ -86,12 +108,32 @@ public class ProjectionFactory(
 
         // Only a join that releases a stored event needs the schema of the generation it was stored at.
         var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
-        return CreateProjectionFrom(
+        var projection = (Projection)await CreateProjectionFrom(
             eventStore,
             new(eventSequenceStorage, eventTypesStorage, eventTypeSchemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
+        projection.DefinitionFingerprint = fingerprint;
+        return projection;
+    }
+
+    /// <summary>
+    /// Computes a stable fingerprint of pipeline-affecting rules, independent of dictionary ordering and registration metadata.
+    /// </summary>
+    /// <param name="definition">The projection definition.</param>
+    /// <returns>The SHA-256 fingerprint.</returns>
+    internal static string DefinitionFingerprintFor(ProjectionDefinition definition)
+    {
+        // Comparison discards transport metadata. Keep the model identity and initial state here:
+        // unlike replay recommendations, pipeline reuse depends on both of them.
+        var normalized = ProjectionDefinitionNormalization.ForComparison(definition, false) with
+        {
+            ReadModel = definition.ReadModel,
+            InitialModelState = definition.InitialModelState
+        };
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString())));
     }
 
     /// <summary>
@@ -181,6 +223,15 @@ public class ProjectionFactory(
 
         return merged;
     }
+
+    static JsonNode? Canonicalize(JsonNode? node) => node switch
+    {
+        JsonObject obj => new JsonObject(obj.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => KeyValuePair.Create(pair.Key, Canonicalize(pair.Value)))),
+        JsonArray array => new JsonArray(array.Select(Canonicalize).ToArray()),
+        null => null,
+        _ => node.DeepClone()
+    };
 
     /// <summary>
     /// Finds the read model property an event property auto-maps onto. A property flagged with [NoAutoMap] is only
@@ -604,7 +655,7 @@ public class ProjectionFactory(
         var nestedSchema = level.Schema.Properties.TryGetValue(nestedKey.LastSegment.Value, out var schemaProp)
             ? schemaProp.ActualSchema ?? level.Schema
             : level.Schema;
-        var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value)).ToList();
+        var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolveEveryEventPropertyMapper(projection, nestedPropertyPath + p.Key, p.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
 
         // Resolve mappings against the scalar object's schema and its own AutoMap exclusions.
@@ -774,7 +825,7 @@ public class ProjectionFactory(
         // DynamicPropertyPathOnNonDynamicProperty raised) at projection-creation time, regardless of whether the
         // projection has any per-event-type `from` block to piggyback the enumeration on - an `all`-only
         // projection has none.
-        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
+        var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolveEveryEventPropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
@@ -948,6 +999,9 @@ public class ProjectionFactory(
         var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
+
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolveEveryEventPropertyMapper(Projection projection, PropertyPath propertyPath, string expression) =>
+        EveryEventPropertyMappers.WhenSourceIsPresent(propertyPath, expression, ResolvePropertyMapper(projection, propertyPath, expression));
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
     {
@@ -1183,6 +1237,12 @@ public class ProjectionFactory(
         key is not null && key.Value.Length != 0 && keyExpressionResolvers.CanResolve(key);
 
     sealed record ProjectionTarget(ProjectionDefinition Definition, JsonSchema Schema, PropertyPath AccessorPath, PropertyPath IdentifiedBy);
+
+    sealed class FingerprintEventDefinitionsConverter<TDefinition> : DictionaryJsonConverter<EventType, TDefinition>
+    {
+        protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
+        protected override string GetKeyString(EventType key) => key.ToString();
+    }
 
     sealed record SubscriptionContext(
         IEventSequenceStorage EventSequenceStorage,

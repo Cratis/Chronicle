@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -49,6 +51,23 @@ public interface IConnectedClients : IGrainWithStringKey
     /// <param name="connectionId">The <see cref="ConnectionId"/> to check.</param>
     /// <returns>True if connected, false if not.</returns>
     Task<bool> IsConnected(ConnectionId connectionId);
+
+    /// <summary>
+    /// Records projections declared by an existing connection. Unknown connections are ignored.
+    /// </summary>
+    /// <param name="connectionId">The declaring connection.</param>
+    /// <param name="eventStore">The event store containing the projections.</param>
+    /// <param name="projections">The declared projection identifiers.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecordDeclaredProjections(ConnectionId connectionId, EventStoreName eventStore, IEnumerable<ProjectionId> projections);
+
+    /// <summary>
+    /// Checks whether a currently connected client declares a projection.
+    /// </summary>
+    /// <param name="eventStore">The projection's event store.</param>
+    /// <param name="projection">The projection identifier.</param>
+    /// <returns>Whether a connected client declares the projection.</returns>
+    Task<bool> DeclaresProjection(EventStoreName eventStore, ProjectionId projection);
 
     /// <summary>
     /// Gets the <see cref="ConnectedClient"/> from the <see cref="ConnectionId"/>.
