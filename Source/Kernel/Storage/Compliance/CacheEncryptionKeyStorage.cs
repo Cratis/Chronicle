@@ -216,6 +216,9 @@ public class CacheEncryptionKeyStorage(
             if (generation == GenerationFor(scope))
             {
                 CachePair(scope, pair);
+                var cacheKey = new Key(scope, pair.Revision);
+                _keys[cacheKey] = pair.Key;
+                _absentKeys.Remove(cacheKey);
             }
         }
 
