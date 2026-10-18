@@ -5,11 +5,11 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Projections;
 
-namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering;
+namespace Cratis.Chronicle.Services.Projections.for_Projections.when_registering;
 
-public class and_the_connection_is_unknown : given.a_manager_with_an_orphaned_projection
+public class and_the_connection_is_unknown : given.a_registration_with_a_connection
 {
-    async Task Because() => await _grain.Register([_definition], connectionId: ConnectionId.New());
+    async Task Because() => await _service.Register(_request);
 
     [Fact] async Task should_not_invent_a_local_declaration() => await _localClients.DidNotReceive().RecordDeclaredProjections(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>());
     [Fact] async Task should_not_invent_a_remote_declaration() => await _remoteClients.DidNotReceive().RecordDeclaredProjections(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>());

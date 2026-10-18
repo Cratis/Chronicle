@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
@@ -108,11 +106,10 @@ public partial class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, ConnectionId? connectionId = null)
+    public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = StampWithVersion(definitions, version);
-        await ProjectionDeclarations.Record(GrainFactory, localSiloDetails.SiloAddress, connectionId, _eventStoreName, definitionList.Select(definition => definition.Identifier));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
 
         // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers

@@ -35,6 +35,7 @@ public class all_dependencies : Specification
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
     protected const string ReadModelName = "test-read-model";
 
+    protected ILocalSiloDetails _localSiloDetails;
     protected IGrainFactory _grainFactory;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILanguageService _languageService;
@@ -53,6 +54,8 @@ public class all_dependencies : Specification
 
     void Establish()
     {
+        _localSiloDetails = Substitute.For<ILocalSiloDetails>();
+        _localSiloDetails.SiloAddress.Returns(SiloAddress.Zero);
         _grainFactory = Substitute.For<IGrainFactory>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _languageService = Substitute.For<ILanguageService>();
@@ -146,7 +149,9 @@ public class all_dependencies : Specification
             _expandoObjectConverter,
             _languageService,
             services.BuildServiceProvider(),
-            _readModelsCompliance);
+            _readModelsCompliance,
+            _localSiloDetails,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
     }
 
     /// <summary>

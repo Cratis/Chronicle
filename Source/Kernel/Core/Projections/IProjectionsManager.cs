@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -70,9 +69,8 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// older client never overwrites a newer one - and a full set that is older than any stored projection of its owner
     /// retires nothing. A missing or unparseable version, on either side, leaves registration unguarded.
     /// </param>
-    /// <param name="connectionId">The optional connection declaring these projections, used only for live-client tracking.</param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, ConnectionId? connectionId = null);
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
 
     /// <summary>
     /// Removes an orphaned projection and its observer in every namespace, serialized with registration.
