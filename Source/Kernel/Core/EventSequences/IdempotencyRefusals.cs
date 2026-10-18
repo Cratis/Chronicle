@@ -64,5 +64,14 @@ internal static class IdempotencyRefusals
         "IdempotencyFingerprintUnsupported",
         $"Idempotency key '{key.Value}' has a protected boundary that cannot be fingerprinted. Nothing was written.");
 
+    /// <summary>
+    /// Refuses an ambiguous batch before any identity lookup or write.
+    /// </summary>
+    /// <param name="key">The repeated append key.</param>
+    /// <returns>The coded refusal.</returns>
+    internal static AppendError Repeated(IdempotencyKey key) => Describe(
+        "IdempotencyKeyRepeatedInBatch",
+        $"Idempotency key '{key.Value}' occurs more than once in this batch. Nothing was written.");
+
     static AppendError Describe(string code, string sentence) => new($"{code}: {sentence}");
 }

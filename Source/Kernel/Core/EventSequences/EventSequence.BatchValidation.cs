@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Schemas;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -91,10 +92,11 @@ public partial class EventSequence
     async Task<List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>> ValidateBatchEvents(
         IEnumerable<EventToAppend> events,
         CorrelationId correlationId,
-        ConstraintBatchClaims batchClaims)
+        ConstraintBatchClaims batchClaims,
+        List<ProtectedValueUse>?[]? keyUses = null)
     {
         var validated = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
-        foreach (var eventToAppend in events)
+        foreach (var (eventToAppend, index) in events.Select((@event, index) => (@event, index)))
         {
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);
             if (resolvedEventSourceType.TryGetError(out var eventSourceError))
@@ -104,7 +106,7 @@ public partial class EventSequence
             }
 
             var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
-            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
+            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims, keyUses?[index]);
             validated.Add((e, result));
         }
 

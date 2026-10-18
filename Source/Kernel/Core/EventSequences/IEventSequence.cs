@@ -275,6 +275,18 @@ public interface IEventSequence : IGrainWithStringKey
     Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope);
 
     /// <summary>
+    /// Append a batch, settling keyed events against their durable identities and always appending unkeyed events.
+    /// </summary>
+    /// <param name="events">The requested events, in order.</param>
+    /// <param name="idempotencyKeys">One optional key per event, in the same order.</param>
+    /// <param name="correlationId">The attempt's correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity causing the append.</param>
+    /// <param name="concurrencyScopes">The scopes checked for the new remainder only.</param>
+    /// <returns>The batch settlement, with sequence numbers and outcomes in request order on success.</returns>
+    Task<IdempotentAppendManyResult> AppendManyWithIdempotencyKeys(IEnumerable<EventToAppend> events, IReadOnlyList<IdempotencyKey?> idempotencyKeys, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes);
+
+    /// <summary>
     /// Revise a specific event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to revise.</param>
