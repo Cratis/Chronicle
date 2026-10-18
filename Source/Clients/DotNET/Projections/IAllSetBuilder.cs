@@ -14,6 +14,14 @@ namespace Cratis.Chronicle.Projections;
 public interface IAllSetBuilder<TReadModel, TParentBuilder> : IPropertyExpressionBuilder
 {
     /// <summary>
+    /// Map to a constant value for every matching event.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the constant value.</typeparam>
+    /// <param name="value">The value to set, or null to clear the property.</param>
+    /// <returns>Builder continuation.</returns>
+    TParentBuilder ToValue<TProperty>(TProperty value);
+
+    /// <summary>
     /// Map to the event source id on the metadata of the event.
     /// </summary>
     /// <returns>Builder continuation.</returns>

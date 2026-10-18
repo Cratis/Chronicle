@@ -22,6 +22,10 @@ Map the event source id when the read model's primary identifier is not otherwis
 
 <ChronicleClientTabs snippet="projections/declarative/from-every/event-source-id" />
 
+## Constant Values
+
+In .NET, `FromEvery` and `FromAll` both support `.Set(m => m.Status).ToValue("active")` to assign a constant whenever a matching event is processed. Concept values are unwrapped. Enums with an `int` underlying type use their numeric value; other enums use their name. Use `.ToValue<string?>(null)` to clear a nullable property.
+
 ## Child Projection Inclusion
 
 The kernel now honors the child-inclusion flag. In .NET, `FromEvery` includes events handled only by child projections by default, including nested child collections. These mappings update the containing parent using the child's resolved parent key, not a new root keyed by the child identifier. Existing fluent projections therefore start updating parent audit fields on child-only events.
