@@ -8,7 +8,6 @@ using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
 using Cratis.Reflection;
 using Cratis.Strings;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Dynamic;
 
@@ -297,8 +296,7 @@ public static class ExpandoObjectExtensions
         items!.Any((IDictionary<string, object> _) =>
         {
             if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
-            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
-            return itemValue.Equals(convertedKey);
+            return KeyValueEquality.AreEqual(itemValue, key);
         });
 
     /// <summary>
@@ -313,8 +311,7 @@ public static class ExpandoObjectExtensions
         var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
         {
             if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
-            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
-            return itemValue.Equals(convertedKey);
+            return KeyValueEquality.AreEqual(itemValue, key);
         });
         return item is not null ? item as ExpandoObject : null;
     }
