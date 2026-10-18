@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.Migratio
 #pragma warning disable SA1600, SA1402, MA0048
 
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_79_0)}")]
-public class v19_79_0 : Migration
+[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_83_1_0)}")]
+public class v19_83_1_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

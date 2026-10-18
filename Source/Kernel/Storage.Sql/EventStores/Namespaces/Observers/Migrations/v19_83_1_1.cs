@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.Migratio
 /// Adds empty, forward-only definition-change row storage. No legacy observer is initialized or backfilled.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_79_1)}")]
-public class v19_79_1 : Migration
+[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_83_1_1)}")]
+public class v19_83_1_1 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)

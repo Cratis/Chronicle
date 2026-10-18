@@ -13,7 +13,7 @@ public class when_downgrading_sqlite : Specification
 {
     SqliteConnection _connection;
     NamespaceDbContext _context;
-    Migrations.v19_79_1 _migration;
+    Migrations.v19_83_1_1 _migration;
     long _tables;
     string _legacy;
 

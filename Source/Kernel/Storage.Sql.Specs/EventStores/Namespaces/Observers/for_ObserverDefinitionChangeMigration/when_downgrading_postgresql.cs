@@ -14,7 +14,7 @@ public class when_downgrading_postgresql(PostgreSqlFixture fixture) : Specificat
 {
     NamespaceDbContext _context;
     string _connectionString;
-    Migrations.v19_79_1 _migration;
+    Migrations.v19_83_1_1 _migration;
     long _tables;
     string _legacy;
 
