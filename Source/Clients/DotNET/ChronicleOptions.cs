@@ -6,6 +6,8 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
@@ -238,6 +240,16 @@ public class ChronicleOptions(
     /// Snapshot failures never prevent registration, even under Fail.
     /// </summary>
     public ArtifactIdentityDriftPolicy ArtifactIdentityDrift { get; set; } = ArtifactIdentityDriftPolicy.Warn;
+
+    /// <summary>
+    /// Gets or sets how reactors are run, such as how many partitions are handled at the same time.
+    /// </summary>
+    public ReactorOptions Reactors { get; set; } = new ReactorOptions();
+
+    /// <summary>
+    /// Gets or sets how reducers are run, such as how many partitions are handled at the same time.
+    /// </summary>
+    public ReducerOptions Reducers { get; set; } = new ReducerOptions();
 
     /// <summary>
     /// Gets or sets the TLS configuration.

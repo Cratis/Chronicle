@@ -209,7 +209,8 @@ public partial class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory)
         {
-            GenerationDelivery = options.Value.EventGenerationDelivery
+            GenerationDelivery = options.Value.EventGenerationDelivery,
+            MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
         };
         Reactors = reactors;
         var occurrences = new Occurrences.Occurrences(this);
@@ -232,7 +233,8 @@ public partial class EventStore : IEventStore
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reducers.Reducers>())
         {
-            GenerationDelivery = options.Value.EventGenerationDelivery
+            GenerationDelivery = options.Value.EventGenerationDelivery,
+            MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions
         };
 
         var projections = new Projections.Projections(
