@@ -63,6 +63,13 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IObserverStateStorage Observers { get; } = new Observers.ObserverStateStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
+    public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; } = new(
+        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace)),
+        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace)),
+        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace)),
+        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace)));
+
+    /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>

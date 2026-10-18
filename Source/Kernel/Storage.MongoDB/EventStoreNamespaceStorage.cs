@@ -98,6 +98,11 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Jobs = jobsStorage.GetFor(eventStore, @namespace).Jobs;
         JobSteps = jobsStorage.GetFor(eventStore, @namespace).JobSteps;
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
+        ObserverDefinitionChanges = new(
+            new ObserverDefinitionChangeRows<ObserverProgressRecord>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverContinuation>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverRestartPlan>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverJobInventory>(eventStoreNamespaceDatabase));
         AlertIncidents = new Alerts.AlertIncidentsStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
@@ -139,6 +144,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; }
+
+    /// <inheritdoc/>
+    public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; }
 
     /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; }

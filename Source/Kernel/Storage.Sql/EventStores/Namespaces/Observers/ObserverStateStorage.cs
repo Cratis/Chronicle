@@ -77,7 +77,34 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
 
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entity = state.ToSql();
-        await scope.DbContext.Observers.Upsert(entity);
+        var existing = await scope.DbContext.Observers.AsTracking()
+            .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+        if (existing is null)
+        {
+            await scope.DbContext.Observers.AddAsync(entity);
+        }
+        else
+        {
+            if (state.TypeSetControl is null)
+            {
+                entity.TypeSetControl = existing.TypeSetControl;
+            }
+            else
+            {
+                var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
+                if (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value)
+                {
+                    entity.TypeSetControl = existing.TypeSetControl;
+                }
+            }
+
+            entity.Initialization ??= existing.Initialization;
+
+            // The tracked control is a concurrency token: a competing write after this read
+            // fails the save rather than overwriting a newer revision with this snapshot.
+            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
+        }
+
         await scope.DbContext.SaveChangesAsync();
     }
 
@@ -114,6 +141,8 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var renamed = new ObserverState
         {
             Id = newId,
+            TypeSetControl = existing.TypeSetControl,
+            Initialization = existing.Initialization,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,

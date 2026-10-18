@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_subscribing_to_all_events;
 
@@ -12,13 +13,14 @@ public class and_storage_has_no_record : given.an_observer
     public and_storage_has_no_record()
     {
         _silo.Options.StorageFactory = type => type == typeof(ObserverState)
-            ? new given.provider_backed_observer_state_storage(new ObserverStateGrainStorageProvider(_storage), _observerKey)
+            ? new given.provider_backed_observer_state_storage(new ObserverStateGrainStorageProvider(_storage, NullLogger<ObserverStateGrainStorageProvider>.Instance), _observerKey)
             : null!;
     }
 
     void Establish()
     {
         // The activation already knows its identity, but the next read through the real provider finds no record.
+        _eventStoreStorage.AreObserversInitialized().Returns(false);
         _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(ObserverState.Empty);
         _eventStoreNamespaceStorage.Observers.ClearReceivedCalls();
         _appendedEventsQueues.ClearReceivedCalls();
