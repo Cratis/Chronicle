@@ -34,6 +34,8 @@ public static class KeyValueEquality
             }
         }
 
+        if (IsScalar(storedKey) && IsScalar(key)) return false;
+
         try
         {
             // SQL can materialize a composite key as JSON text; other stores use an object.
@@ -47,6 +49,13 @@ public static class KeyValueEquality
             return false;
         }
     }
+
+    static bool IsScalar(object value) => value switch
+    {
+        string text => !text.StartsWith('{'),
+        Guid or DateTime or DateTimeOffset or DateOnly or TimeOnly or TimeSpan or decimal or Enum => true,
+        _ => value.GetType().IsPrimitive
+    };
 
     static JsonElement AsJsonValue(object value) => value is string text && text.StartsWith('{')
         ? JsonSerializer.Deserialize<JsonElement>(text)
