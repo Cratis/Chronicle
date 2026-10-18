@@ -12,24 +12,24 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// The generated mappers take a value and read its properties, so mapping a member that is null is a null
 /// reference. The declaration already says which members those are - it just does not say it in the
 /// <see cref="Type"/>.
+/// Each read creates its own <see cref="NullabilityInfoContext"/>: the context is not thread-safe, and the generators
+/// are called concurrently.
 /// </remarks>
 public static class MemberNullability
 {
-    static readonly NullabilityInfoContext _context = new();
-
     /// <summary>
     /// Determines whether a parameter's value can be absent.
     /// </summary>
     /// <param name="parameter">The parameter to read.</param>
     /// <returns>True when the value can be absent.</returns>
-    public static bool Of(ParameterInfo parameter) => Of(parameter.ParameterType, () => _context.Create(parameter).ReadState);
+    public static bool Of(ParameterInfo parameter) => Of(parameter.ParameterType, () => new NullabilityInfoContext().Create(parameter).ReadState);
 
     /// <summary>
     /// Determines whether a property's value can be absent.
     /// </summary>
     /// <param name="property">The property to read.</param>
     /// <returns>True when the value can be absent.</returns>
-    public static bool Of(PropertyInfo property) => Of(property.PropertyType, () => _context.Create(property).ReadState);
+    public static bool Of(PropertyInfo property) => Of(property.PropertyType, () => new NullabilityInfoContext().Create(property).ReadState);
 
     static bool Of(Type type, Func<NullabilityState> state)
     {

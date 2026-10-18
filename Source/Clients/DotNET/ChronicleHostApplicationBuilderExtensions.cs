@@ -30,6 +30,23 @@ public static class ChronicleHostApplicationBuilderExtensions
         Action<ChronicleClientOptions>? configureOptions = default,
         string? configSection = default,
         Action<IChronicleBuilder>? configure = default)
+        => builder.AddCratisChronicle(configureOptions, configSection, configure, "chronicle");
+
+    /// <summary>
+    /// Configures the Chronicle client using a named connection string as the fallback endpoint.
+    /// </summary>
+    /// <param name="builder"><see cref="IHostApplicationBuilder"/> to configure Chronicle on.</param>
+    /// <param name="configureOptions">Optional callback whose connection string overrides configuration.</param>
+    /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
+    /// <param name="configure">Optional callback for configuring structural dependencies via <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="connectionStringName">Name under <c language="csharp">ConnectionStrings</c>, typically the Aspire resource name.</param>
+    /// <returns>The same <see cref="IHostApplicationBuilder"/> for continuation.</returns>
+    public static IHostApplicationBuilder AddCratisChronicle(
+        this IHostApplicationBuilder builder,
+        Action<ChronicleClientOptions>? configureOptions,
+        string? configSection,
+        Action<IChronicleBuilder>? configure,
+        string connectionStringName)
     {
         ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleHostApplicationBuilderExtensions).Assembly);
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -38,7 +55,7 @@ public static class ChronicleHostApplicationBuilderExtensions
 
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, DefaultClientArtifactsProvider.Default);
 
-        builder.Services.AddChronicleClientOptions(configureOptions, configSectionPath);
+        builder.Services.AddChronicleClientOptions(configureOptions, configSectionPath, connectionStringName);
 
         configure?.Invoke(chronicleBuilder);
 
@@ -50,11 +67,12 @@ public static class ChronicleHostApplicationBuilderExtensions
     static void AddChronicleClientOptions(
         this IServiceCollection services,
         Action<ChronicleClientOptions>? configure,
-        string configSectionPath)
+        string configSectionPath,
+        string connectionStringName)
     {
         services
             .AddOptions<ChronicleClientOptions>()
-            .BindConfiguration(configSectionPath)
+            .WithChronicleConfiguration(configSectionPath, connectionStringName)
             .Configure(options => configure?.Invoke(options))
             .ValidateDataAnnotations()
             .ValidateOnStart();
