@@ -38,6 +38,12 @@ public class v19_83_1_0 : Migration
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        if (ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer")
+        {
+            migrationBuilder.DropCheckConstraint(name: "CK_Observers_TypeSetControl_IsJson", table: WellKnownTableNames.Observers);
+            migrationBuilder.DropCheckConstraint(name: "CK_Observers_Initialization_IsJson", table: WellKnownTableNames.Observers);
+        }
+
         migrationBuilder.DropColumn(name: "TypeSetControl", table: WellKnownTableNames.Observers);
         migrationBuilder.DropColumn(name: "Initialization", table: WellKnownTableNames.Observers);
     }
