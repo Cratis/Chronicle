@@ -45,6 +45,16 @@ public class a_key_store_with_read_after_write_lag : Specification
             return result;
         }
 
+        public Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+            _secondary.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
+
+        public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+        {
+            var result = await _primary.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
+            _pending.Add((eventStore, eventStoreNamespace, identifier, result.Key, result.Revision));
+            return result;
+        }
+
         public Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
             _secondary.HasFor(eventStore, eventStoreNamespace, identifier, revision);
 

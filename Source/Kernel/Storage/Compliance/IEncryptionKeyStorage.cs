@@ -69,6 +69,36 @@ public interface IEncryptionKeyStorage
     }
 
     /// <summary>
+    /// Read the latest key and its revision together, without provisioning a key.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <returns>The latest stored pair, or null if absent.</returns>
+    Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
+
+    /// <summary>
+    /// Get the existing key and revision, or persist a key above any authorized erasure floor.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <param name="key">The candidate key to persist on absence.</param>
+    /// <returns>The existing or newly persisted key and revision.</returns>
+    /// <remarks>Like GetOrAddFor, the default is best-effort; atomic stores override it.</remarks>
+    async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
+        await SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        return await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? new(key, revision);
+    }
+
+    /// <summary>
     /// Check if there is an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>

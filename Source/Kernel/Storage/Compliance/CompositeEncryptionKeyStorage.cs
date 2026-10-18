@@ -123,6 +123,74 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        List<Exception>? failures = null;
+        var missing = new List<IEncryptionKeyStorage>();
+        foreach (var store in _inner)
+        {
+            EncryptionKeyAtRevision? pair;
+            try
+            {
+                pair = await store.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
+            }
+            catch (Exception error)
+            {
+                (failures ??= []).Add(error);
+                _logger.ReadingFromInnerStoreFailed(identifier, error);
+                continue;
+            }
+
+            if (pair is null)
+            {
+                missing.Add(store);
+                continue;
+            }
+
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair.Key))
+            {
+                _logger.ErasedKeySurvivedInAnotherStore(identifier);
+                return null;
+            }
+
+            await Heal(missing, eventStore, eventStoreNamespace, identifier, pair.Key, pair.Revision);
+            return pair;
+        }
+
+        if (failures is not null)
+        {
+            throw new EncryptionKeyStorageUnavailable(identifier, failures);
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
+        var provisioned = await _inner[0].GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, provisioned.Revision, provisioned.Key);
+        foreach (var store in _inner.Skip(1))
+        {
+            try
+            {
+                var mirrored = await store.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, provisioned.Key);
+                if (!mirrored.Key.Public.SequenceEqual(provisioned.Key.Public))
+                {
+                    _logger.InnerStoreHoldsDivergentKey(identifier);
+                }
+            }
+            catch (Exception error)
+            {
+                _logger.MirroringToInnerStoreFailed(identifier, error);
+            }
+        }
+
+        return provisioned;
+    }
+
+    /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
         await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
