@@ -10,6 +10,22 @@ namespace Cratis.Chronicle.Events.Constraints;
 internal static partial class ReindexConstraintsStepLogMessages
 {
     /// <summary>
+    /// Warn that the terminal handoff could not be delivered after its bounded retries.
+    /// </summary>
+    /// <param name="logger">The job-step logger.</param>
+    /// <param name="error">The final delivery failure.</param>
+    [LoggerMessage(LogLevel.Warning, "Constraint index rebuild terminal handoff failed after five attempts. Rebuilding marks may remain until the event sequence activation restarts.")]
+    internal static partial void ConstraintIndexRebuildHandoffFailed(this ILogger<ReindexConstraintsStep> logger, Exception error);
+
+    /// <summary>
+    /// Warn that cancellation could not confirm the conservative terminal handoff.
+    /// </summary>
+    /// <param name="logger">The job-step logger.</param>
+    /// <param name="error">The handoff failure.</param>
+    [LoggerMessage(LogLevel.Warning, "Constraint index rebuild cancellation handoff failed. Its outcome remains unknown; rebuilding marks may remain until the event sequence activation restarts.")]
+    internal static partial void ConstraintIndexRebuildCancellationHandoffFailed(this ILogger<ReindexConstraintsStep> logger, Exception error);
+
+    /// <summary>
     /// Warn that a historical claim was rejected because another event source already holds the value.
     /// </summary>
     /// <param name="logger">The job-step logger.</param>

@@ -18,12 +18,42 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// A redacted property-sourced transition can be reconstructed only from a closure snapshot at the same
 /// sequence number. If none exists, this entire owner's rebuild is skipped without modifying its rows.
 /// Other constraints continue rebuilding. Staging stores only the resulting scopes, not the event history.
-/// A closing-constraint rebuild must not run while appends to the sequence are in flight:
-/// installing the rebuilt index is not serialized with appends.
+/// Commit writes only differences. The event sequence's reindex handoff restores later live
+/// transitions that these writes overwrite; each scope stays old or rebuilt on a partial failure.
 /// </remarks>
 internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintStorage storage, ILogger<ReindexConstraintsStep> logger)
 {
     readonly List<Rebuild> _rebuilds = [];
+
+    /// <summary>
+    /// Resolves the original type of a redacted closing transition.
+    /// </summary>
+    /// <param name="event">The redaction marker.</param>
+    /// <returns>The original event type.</returns>
+    /// <exception cref="RedactedClosingEventTypeUnavailable">The marker lacks its original type.</exception>
+    internal static EventTypeId OriginalType(AppendedEvent @event)
+    {
+        var values = (IDictionary<string, object?>)@event.Content;
+        values.TryGetValue("originalEventType", out var value);
+        var originalType = value?.ToString();
+        if (string.IsNullOrEmpty(originalType)) throw new RedactedClosingEventTypeUnavailable(@event.Context.SequenceNumber);
+
+        return new EventTypeId(originalType);
+    }
+
+    /// <summary>
+    /// Resolves the original occurrence time carried by a redaction marker.
+    /// </summary>
+    /// <param name="event">The redaction marker.</param>
+    /// <returns>The recorded occurrence time, when available.</returns>
+    internal static DateTimeOffset? OriginalOccurred(AppendedEvent @event)
+    {
+        var values = (IDictionary<string, object?>)@event.Content;
+        if (!values.TryGetValue("occurred", out var value)) return null;
+        if (value is DateTimeOffset occurred) return occurred;
+
+        return DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
+    }
 
     /// <summary>
     /// Snapshot every requested owner's current closure facts without changing them.
@@ -83,20 +113,39 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
     }
 
     /// <summary>
-    /// Replace only owners whose full history was reconstructible, leaving skipped owners untouched.
+    /// Write differences only for owners whose full history was reconstructible, leaving skipped owners untouched.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="beforeWrite">Called before issuing a commit write.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Commit(CancellationToken cancellationToken)
+    internal async Task Commit(CancellationToken cancellationToken, Action? beforeWrite = null)
     {
         foreach (var rebuild in _rebuilds.Where(rebuild => !rebuild.Skipped))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await storage.RemoveAllFor(rebuild.Definition.Name.Value);
-            foreach (var closure in rebuild.Pending.Values)
+            var snapshot = rebuild.Snapshot.Values.SelectMany(rows => rows).GroupBy(closure => closure.Scope.Normalized()).ToDictionary(group => group.Key, group => group.ToArray());
+            foreach (var (scope, closure) in rebuild.Pending)
             {
+                // A scope that stays closed is never reopened, not even to remove its duplicate rows:
+                // SQL deletes every row of the normalized scope on Reopen, so a cancel or failure before
+                // the following Close would leave the scope open. Close replaces the retained row and
+                // duplicate closed rows are harmless.
+                if (snapshot.TryGetValue(scope, out var previous) && previous.Length == 1 && previous[0].SequenceNumber == closure.SequenceNumber && previous[0].ClosedAt == closure.ClosedAt) continue;
                 cancellationToken.ThrowIfCancellationRequested();
-                await storage.Close(closure);
+                beforeWrite?.Invoke();
+                await storage.Close(closure, cancellationToken);
+            }
+            foreach (var scope in snapshot.Keys.Where(scope => !rebuild.Pending.ContainsKey(scope)))
+            {
+                // Reopen removes every row of the normalized scope on SQL but one row per call on MongoDB,
+                // so repeat until it reports nothing left to remove.
+                var reopened = true;
+                while (reopened)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    beforeWrite?.Invoke();
+                    reopened = await storage.Reopen(rebuild.Definition.Name.Value, snapshot[scope][0].Scope, cancellationToken);
+                }
             }
         }
     }
@@ -111,25 +160,6 @@ internal sealed class ClosesStreamConstraintReindexer(IClosedStreamsConstraintSt
         {
             rebuild.Pending[closure.Scope.Normalized()] = closure;
         }
-    }
-
-    static EventTypeId OriginalType(AppendedEvent @event)
-    {
-        var values = (IDictionary<string, object?>)@event.Content;
-        values.TryGetValue("originalEventType", out var value);
-        var originalType = value?.ToString();
-        if (string.IsNullOrEmpty(originalType)) throw new RedactedClosingEventTypeUnavailable(@event.Context.SequenceNumber);
-
-        return new EventTypeId(originalType);
-    }
-
-    static DateTimeOffset? OriginalOccurred(AppendedEvent @event)
-    {
-        var values = (IDictionary<string, object?>)@event.Content;
-        if (!values.TryGetValue("occurred", out var value)) return null;
-        if (value is DateTimeOffset occurred) return occurred;
-
-        return DateTimeOffset.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed : null;
     }
 
     sealed class Rebuild(ClosesStreamConstraintDefinition definition, ClosedStream[] snapshot)

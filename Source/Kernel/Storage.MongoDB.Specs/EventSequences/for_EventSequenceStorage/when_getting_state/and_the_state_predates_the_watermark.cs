@@ -1,0 +1,27 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using MongoDB.Bson;
+
+namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStorage.when_getting_state;
+
+[Collection(MongoDBCollection.Name)]
+public class and_the_state_predates_the_watermark(MongoDBFixture fixture) : given.a_state_storage(fixture)
+{
+    Chronicle.Storage.EventSequences.EventSequenceState _result;
+
+    Task Establish() => _stateDocuments.InsertOneAsync(new BsonDocument
+    {
+        { "_id", _eventSequenceId.Value },
+        { "sequenceNumber", 42L },
+        { "tailSequenceNumberPerEventType", new BsonDocument() }
+    });
+
+    async Task Because() => _result = await _storage.GetState();
+
+    [Fact] void should_preserve_the_sequence_number() => _result.SequenceNumber.Value.ShouldEqual(42UL);
+    [Fact] void should_not_invent_a_watermark() => _result.ConstraintIndexWatermark.ShouldBeNull();
+    [Fact] void should_not_invent_a_boundary() => _result.ConstraintIndexCatchUpBelow.ShouldBeNull();
+    [Fact] void should_not_invent_a_refusal() => _result.ConstraintIndexCatchUpRefusing.ShouldBeNull();
+}

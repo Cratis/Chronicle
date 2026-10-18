@@ -23,5 +23,5 @@ public class and_the_closing_constraint_does_not_apply_to_the_sequence : for_Rei
 
     [Fact] void should_complete_without_an_exception() => _result.TryGetException(out _).ShouldBeFalse();
     [Fact] async Task should_not_modify_an_inapplicable_owners_rows() => (await _rows.GetForOwner("closing")).ShouldContainOnly(_existing);
-    [Fact] async Task should_not_clear_the_inapplicable_owner() => await _closures.DidNotReceive().RemoveAllFor(new ClosedStreamOwner("closing"));
+    [Fact] async Task should_not_reopen_the_inapplicable_owner() => await _closures.DidNotReceive().Reopen(new ClosedStreamOwner("closing"), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>());
 }

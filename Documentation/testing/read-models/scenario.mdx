@@ -36,6 +36,21 @@ dotnet add package Cratis.Chronicle.Testing
 
 Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example calls the reducer directly and asserts on what it returns.
 
+## Fold appended events with their original context (.NET)
+
+When rebuilding a read model from events that have already been appended, pass the client's
+`IEnumerable<AppendedEvent>` to `await scenario.ProcessAppendedEvents(events)`. Unlike bare events passed
+through `ProcessEventsFor` or `Given`, these events retain their original sequence numbers, occurrence
+times (including offsets), source and stream metadata, correlation, and causation.
+
+Input accumulates until you access `Instance`, `Instances`, or `InstanceForEventSourceId`. Every rebuild
+sorts the collected events by sequence number. Use distinct sequence numbers; duplicate slots fail
+when preparing the input. Bare events mixed into the same scenario receive synthetic contexts with
+collection-index sequence numbers.
+Projections retain their normal key resolution, including event-property keys, joins, and children.
+Reducers fold each event source independently; use `Instances` or `InstanceForEventSourceId` if more
+than one source materializes. The input is not appended to the scenario's application event log.
+
 ## Seed routed events
 
 In .NET, use `Given.ForEventSource(id).OnStream(eventSourceType, eventStreamType, eventStreamId).Events(...)`
@@ -108,16 +123,30 @@ accept service arguments:
 
 ## Pre-seeding read model instances
 
-In .NET, use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
-production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
-fetches a read model by ID without replaying events through a full projection:
+In .NET, use `Given.ForEventSourceId(id).ReadModel(instance)` when one key already has state before your
+events. The projection starts from that instance exactly as supplied, including its identifier: setters,
+arithmetic and children apply on top of the seeded values. A reducer receives the seed as its current state
+for that key's first event. Other keys start from the constructor's optional initial state or the normal
+empty baseline.
+
+A seeded key appears in `Instances`, `InstanceForEventSourceId`, and (when it is the only instance) `Instance`,
+even without events. The supplied id addresses the **read-model key**, which can differ from an event source
+when you use `UsingKey` or joins. Seeding the same key twice throws `ReadModelAlreadySeeded`.
+
+You can also pass `scenario.ReadModels` to production code that calls `IReadModels.GetInstanceById`:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" />
 
 `scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
-instances and delegates everything else to the real read model implementation. Only what you registered comes
-back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
-instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
+instances, with collected events applied before each lookup. Models without a projection or reducer remain
+lookup-only seeds and do not appear in `Instances`. The rest of the surface delegates to the production
+implementation and needs a running Chronicle: enumerate scenario output through `Instances`, not `GetInstances`.
+
+### Limitation
+
+A seeded parent without its originating events cannot resolve children whose parent key comes from those events.
+Include the originating events for those shapes. Children whose parent key resolves directly, without a
+parent-event lookup, can append onto the seeded parent.
 
 ## Observing read models
 

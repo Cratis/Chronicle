@@ -14,7 +14,7 @@ public class and_redacted_property_sourced_reopening_has_no_snapshot : given.an_
 
     [Fact] void should_not_fail_the_job() => _result.TryGetException(out _).ShouldBeFalse();
     [Fact] async Task should_leave_all_existing_owner_rows_untouched() => (await _rows.GetForOwner("closing")).ShouldContainOnly(_existing);
-    [Fact] async Task should_never_clear_the_skipped_owner() => await _closures.DidNotReceive().RemoveAllFor(new ClosedStreamOwner("closing"));
+    [Fact] async Task should_never_reopen_the_skipped_owner() => await _closures.DidNotReceive().Reopen(new ClosedStreamOwner("closing"), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>());
     [Fact] async Task should_never_write_a_replayed_row_for_the_skipped_owner() => await _closures.DidNotReceive().Close(Arg.Is<ClosedStream>(row => row.Owner.Value == "closing"));
     [Fact] async Task should_rebuild_the_other_constraint() => (await _rows.GetForOwner("other")).Single().Scope.ShouldEqual(new ClosedStreamScope(EventSourceId: "source"));
 }

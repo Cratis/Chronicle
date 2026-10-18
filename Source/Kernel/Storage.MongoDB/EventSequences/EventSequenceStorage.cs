@@ -79,7 +79,10 @@ public partial class EventSequenceStorage(
         var stateForStorage = state.ToMongoDB();
         var update = Builders<EventSequenceState>.Update
             .Set(_ => _.SequenceNumber, stateForStorage.SequenceNumber)
-            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType);
+            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType)
+            .Set(_ => _.ConstraintIndexWatermark, stateForStorage.ConstraintIndexWatermark)
+            .Set(_ => _.ConstraintIndexCatchUpBelow, stateForStorage.ConstraintIndexCatchUpBelow)
+            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing);
 
         await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -233,11 +236,11 @@ public partial class EventSequenceStorage(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags)
     {
-        occurred = StoredTimestamps.Normalize(occurred);
-        causation = causation.Select(StoredTimestamps.Normalize).ToArray();
-
+        var writeIssued = false;
         try
         {
+            occurred = StoredTimestamps.Normalize(occurred);
+            causation = causation.Select(StoredTimestamps.Normalize).ToArray();
             var generationalContent = new Dictionary<string, BsonDocument>();
             foreach (var (generation, expandoContent) in content)
             {
@@ -270,6 +273,7 @@ public partial class EventSequenceStorage(
                 NamedTags = namedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
             };
             var collection = _collection;
+            writeIssued = true;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
             // Return the content for the event type's generation
@@ -324,6 +328,10 @@ public partial class EventSequenceStorage(
             var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
             return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
+        catch (Exception error)
+        {
+            throw ClassifySingleAppendFailure(error, writeIssued);
+        }
     }
 
     /// <inheritdoc/>
@@ -332,18 +340,35 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.Select(@event => @event with
+        EventToAppendToStorage[] eventsArray;
+        try
         {
-            Occurred = StoredTimestamps.Normalize(@event.Occurred),
-            Causation = @event.Causation.Select(StoredTimestamps.Normalize).ToArray()
-        }).ToArray();
+            eventsArray = events.Select(@event => @event with
+            {
+                Occurred = StoredTimestamps.Normalize(@event.Occurred),
+                Causation = @event.Causation.Select(StoredTimestamps.Normalize).ToArray()
+            }).ToArray();
+        }
+        catch (Exception error)
+        {
+            throw new EventsNotCommitted(error);
+        }
         if (eventsArray.Length == 0)
         {
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
         }
 
-        var client = database.Client;
-        using var session = await client.StartSessionAsync().ConfigureAwait(false);
+        IClientSessionHandle session;
+        try
+        {
+            session = await database.Client.StartSessionAsync().ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            throw new EventsNotCommitted(error);
+        }
+        using var sessionLifetime = session;
+        var writeIssued = false;
 
         try
         {
@@ -423,6 +448,7 @@ public partial class EventSequenceStorage(
             }
 
             logger.AppendingInserting(eventsToInsert.Count, eventSequenceId);
+            writeIssued = true;
             await collection.InsertManyAsync(session, eventsToInsert).ConfigureAwait(false);
 
             await session.CommitTransactionAsync().ConfigureAwait(false);
@@ -437,11 +463,24 @@ public partial class EventSequenceStorage(
         {
             return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
         }
-        catch
+        catch (MongoException error) when (error.HasErrorLabel("UnknownTransactionCommitResult"))
         {
-            await session.AbortTransactionAsync().ConfigureAwait(false);
             throw;
         }
+        catch (Exception error)
+        {
+            await AbortReceiptTransaction(session).ConfigureAwait(false);
+            throw ClassifyAppendFailure(error, writeIssued);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default)
+    {
+        var collection = _collection.WithReadConcern(ReadConcern.Majority).WithReadPreference(ReadPreference.Primary);
+        var filter = Builders<Event>.Filter.Gte(e => e.SequenceNumber, first) & Builders<Event>.Filter.Lte(e => e.SequenceNumber, last);
+        var cursor = await collection.Find(filter).SortByAscendingSequenceNumber().ToCursorAsync(cancellationToken).ConfigureAwait(false);
+        return new EventCursor(converter, cursor);
     }
 
     /// <inheritdoc/>
@@ -1138,6 +1177,41 @@ public partial class EventSequenceStorage(
                 .Set(e => e.ContentHashes, new Dictionary<string, string>()));
     }
 
+    /// <summary>
+    /// Preserve uncertain writes; only pre-write failures and aborted transactions prove absence.
+    /// </summary>
+    /// <param name="error">The append failure.</param>
+    /// <param name="writeIssued">Whether the insert was issued.</param>
+    /// <returns>The original error, or proof that the attempted events were not committed.</returns>
+    internal static Exception ClassifyAppendFailure(Exception error, bool writeIssued) =>
+        !writeIssued || (error is MongoException mongo && !mongo.HasErrorLabel("UnknownTransactionCommitResult") && mongo.HasErrorLabel("TransientTransactionError"))
+            ? new EventsNotCommitted(error)
+            : error;
+
+    /// <summary>
+    /// Classifies a single-event append failure independently of transaction settlement.
+    /// </summary>
+    /// <param name="error">The append failure.</param>
+    /// <param name="writeIssued">Whether the insert was issued.</param>
+    /// <returns>The original error or proof that the insert was rejected.</returns>
+    internal static Exception ClassifySingleAppendFailure(Exception error, bool writeIssued)
+    {
+        // MongoDB server error_codes.yml names 121 (DocumentValidationFailure) and 10334 (BSONObjectTooLarge):
+        // https://github.com/mongodb/mongo/blob/r8.0.0/src/mongo/base/error_codes.yml
+        // Legacy size uasserts 17419/17420 reject before updateDocument/insertDocument:
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L750-L753
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L885-L887
+        if (error is MongoWriteException
+            {
+                WriteError: { Category: ServerErrorCategory.Uncategorized, Code: 121 or 10334 or 17419 or 17420 },
+                WriteConcernError: null
+            } write && !write.HasErrorLabel("UnknownTransactionCommitResult"))
+        {
+            return new EventsNotCommitted(error);
+        }
+        return ClassifyAppendFailure(error, writeIssued);
+    }
+
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
     {
         var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
@@ -1218,7 +1292,7 @@ public partial class EventSequenceStorage(
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
     {
-        await session.AbortTransactionAsync().ConfigureAwait(false);
+        await AbortReceiptTransaction(session).ConfigureAwait(false);
         var highest = await _collection.Find(FilterDefinition<Event>.Empty)
                                       .SortByDescendingSequenceNumber()
                                       .Limit(1)

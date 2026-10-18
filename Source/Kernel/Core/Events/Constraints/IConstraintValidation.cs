@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -11,6 +12,11 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 public interface IConstraintValidation
 {
+    /// <summary>
+    /// Gets the definitions whose indexes this validation set maintains.
+    /// </summary>
+    IEnumerable<IConstraintDefinition> IndexedDefinitions { get; }
+
     /// <summary>
     /// Establish a context for a constraint validation.
     /// </summary>

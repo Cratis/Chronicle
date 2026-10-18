@@ -107,6 +107,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.HasIndex(row => new { row.Observer, row.Family, row.Revision, row.Id });
                 entity.HasIndex(row => new { row.Observer, row.Family, row.Id });
             })
+            .Entity<EventSequences.EventSequenceState>(entity =>
+            {
+                entity.Property(row => row.ConstraintIndexWatermark).HasPrecision(20, 0);
+                entity.Property(row => row.ConstraintIndexCatchUpBelow).HasPrecision(20, 0);
+            })
             .Entity<ClosedStreamEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ClosedStreams);

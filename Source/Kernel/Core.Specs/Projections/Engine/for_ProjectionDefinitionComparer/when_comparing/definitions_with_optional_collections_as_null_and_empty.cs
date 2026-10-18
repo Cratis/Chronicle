@@ -11,6 +11,7 @@ public class definitions_with_optional_collections_as_null_and_empty : given.a_p
     ProjectionDefinition _first;
     ProjectionDefinition _second;
     ProjectionDefinitionCompareResult _result;
+    ProjectionDefinitionCompareResult _reverse;
 
     void Establish()
     {
@@ -19,17 +20,24 @@ public class definitions_with_optional_collections_as_null_and_empty : given.a_p
         _first = CreateDefinition() with
         {
             Tags = null,
-            Nested = null
+            Nested = null,
+            NoAutoMapProperties = null
         };
 
         _second = CreateDefinition() with
         {
             Tags = [],
-            Nested = new Dictionary<PropertyPath, ChildrenDefinition>()
+            Nested = new Dictionary<PropertyPath, ChildrenDefinition>(),
+            NoAutoMapProperties = []
         };
     }
 
-    async Task Because() => _result = await _comparer.Compare(_projectionKey, _first, _second);
+    async Task Because()
+    {
+        _result = await _comparer.Compare(_projectionKey, _first, _second);
+        _reverse = await _comparer.Compare(_projectionKey, _second, _first);
+    }
 
     [Fact] void should_be_same() => _result.ShouldEqual(ProjectionDefinitionCompareResult.Same);
+    [Fact] void should_be_symmetric() => _reverse.ShouldEqual(ProjectionDefinitionCompareResult.Same);
 }

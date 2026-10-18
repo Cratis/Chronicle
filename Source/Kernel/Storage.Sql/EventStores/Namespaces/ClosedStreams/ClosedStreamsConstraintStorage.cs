@@ -50,11 +50,11 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     }
 
     /// <inheritdoc/>
-    public async Task Close(ClosedStream closure)
+    public async Task Close(ClosedStream closure, CancellationToken cancellationToken = default)
     {
         var scope = closure.Scope.Normalized();
         await using var context = await database.Namespace(eventStore, @namespace);
-        var row = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).FirstOrDefaultAsync(ExactScope(scope));
+        var row = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).FirstOrDefaultAsync(ExactScope(scope), cancellationToken);
         if (row is null)
         {
             row = new ClosedStreamEntry
@@ -72,25 +72,43 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
 
         row.SequenceNumber = closure.SequenceNumber.Value;
         row.ClosedAt = closure.ClosedAt;
-        await context.DbContext.SaveChangesAsync();
+        await context.DbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope)
+    public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(scope.Normalized())).ToArrayAsync();
+        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(scope.Normalized())).ToArrayAsync(cancellationToken);
         context.DbContext.ClosedStreams.RemoveRange(rows);
-        await context.DbContext.SaveChangesAsync();
+        await context.DbContext.SaveChangesAsync(cancellationToken);
 
         return rows.Length > 0;
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner)
+    public async Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).ToArrayAsync();
+        var row = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).FirstOrDefaultAsync(ExactScope(scope.Normalized()), cancellationToken);
+        return row is null ? null : ToClosure(row);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+    {
+        await using var context = await database.Namespace(eventStore, @namespace);
+        var position = (decimal)sequenceNumber.Value;
+        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value && row.SequenceNumber == position).ToArrayAsync(cancellationToken);
+
+        return rows.Select(ToClosure).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default)
+    {
+        await using var context = await database.Namespace(eventStore, @namespace);
+        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).ToArrayAsync(cancellationToken);
 
         return rows.Select(ToClosure).ToArray();
     }

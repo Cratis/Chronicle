@@ -30,6 +30,17 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError EventPublicationConflict = nameof(EventPublicationConflict);
 
     /// <summary>
+    /// Nothing was stored because a governing constraint index needs repair. Retry unchanged after a delay.
+    /// </summary>
+    public static readonly AppendError ConstraintIndexUnavailable = nameof(ConstraintIndexUnavailable);
+
+    /// <summary>
+    /// The events may or may not be stored. Do not retry blindly: read the event source's events and look
+    /// for the attempt's correlation id; append again only if absent. With keyed appends, retry with the same key.
+    /// </summary>
+    public static readonly AppendError AppendOutcomeUnknown = nameof(AppendOutcomeUnknown);
+
+    /// <summary>
     /// Represents a retryable effect receipt write whose outcome could not be settled by lookup.
     /// </summary>
     public static readonly AppendError EffectReceiptUnsettled = nameof(EffectReceiptUnsettled);

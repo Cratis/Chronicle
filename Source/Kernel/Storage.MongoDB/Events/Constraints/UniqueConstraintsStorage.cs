@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -26,37 +27,62 @@ public class UniqueConstraintsStorage(
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
-    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "")
+    public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
-            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintValueIndex>.Filter.Empty);
+            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintValueIndex>.Filter.Empty, cancellationToken);
         }
         else
         {
-            await GetCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintIndex>.Filter.Empty);
+            await GetCollectionFor(definition.Name, scopeKey).DeleteManyAsync(Builders<UniqueConstraintIndex>.Filter.Empty, cancellationToken);
         }
     }
 
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
+    public async Task<IEnumerable<UniqueConstraintValue>> GetFor(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        if (definition.Mode == UniqueConstraintMode.PerValue)
+        {
+            using var cursor = await GetValuesCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, cancellationToken: cancellationToken);
+            return (await cursor.ToListAsync(cancellationToken)).Select(row => row.Value).ToArray();
+        }
+
+        using var sources = await GetCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, cancellationToken: cancellationToken);
+        return (await sources.ToListAsync(cancellationToken)).Select(row => row.Value).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var values = definition.Mode == UniqueConstraintMode.PerValue
+            ? StreamPerValue(eventSourceId, definition, scopeKey, cancellationToken)
+            : StreamPerEventSource(eventSourceId, definition, scopeKey, cancellationToken);
+        await foreach (var value in values.WithCancellation(cancellationToken))
+        {
+            yield return value;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             var values = GetValuesCollectionFor(definition.Name, scopeKey);
-            await EnsureOwnerIndex(values);
-            using var found = await values.FindAsync(_ => _.Value == value);
-            var entry = await found.FirstOrDefaultAsync();
+            await EnsureOwnerIndex(values, cancellationToken);
+            using var found = await values.FindAsync(_ => _.Value == value, cancellationToken: cancellationToken);
+            var entry = await found.FirstOrDefaultAsync(cancellationToken);
             return entry is null ? (true, EventSequenceNumber.Unavailable) : (entry.EventSourceId == eventSourceId, entry.SequenceNumber);
         }
 
         var collection = GetCollectionFor(definition.Name, scopeKey);
-        await EnsureIndex(collection).ConfigureAwait(false);
+        await EnsureIndex(collection, cancellationToken).ConfigureAwait(false);
 
         // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
         // before it reaches the storage layer, so we can use a simple equality check here.
-        using var result = await collection.FindAsync(_ => _.Value == value);
-        var existing = await result.FirstOrDefaultAsync();
+        using var result = await collection.FindAsync(_ => _.Value == value, cancellationToken: cancellationToken);
+        var existing = await result.FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
         {
             if (existing.EventSourceId == eventSourceId) return (true, existing.SequenceNumber);
@@ -75,18 +101,19 @@ public class UniqueConstraintsStorage(
     /// <param name="sequenceNumber">The claim's sequence number.</param>
     /// <param name="value">The hashed value.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
-    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
+    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode != UniqueConstraintMode.PerValue)
         {
-            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey);
+            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, cancellationToken);
             return;
         }
 
         var collection = GetValuesCollectionFor(definition.Name, scopeKey);
-        await EnsureOwnerIndex(collection);
+        await EnsureOwnerIndex(collection, cancellationToken);
         try
         {
             await collection.UpdateOneAsync(
@@ -95,12 +122,13 @@ public class UniqueConstraintsStorage(
                     .SetOnInsert(_ => _.Value, value)
                     .SetOnInsert(_ => _.EventSourceId, eventSourceId)
                     .SetOnInsert(_ => _.SequenceNumber, sequenceNumber),
-                new UpdateOptions { IsUpsert = true });
+                new UpdateOptions { IsUpsert = true },
+                cancellationToken);
         }
         catch (MongoWriteException error) when (error.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
-            using var found = await collection.FindAsync(_ => _.Value == value);
-            var winner = await found.FirstOrDefaultAsync();
+            using var found = await collection.FindAsync(_ => _.Value == value, cancellationToken: cancellationToken);
+            var winner = await found.FirstOrDefaultAsync(cancellationToken);
             if (winner?.EventSourceId != eventSourceId)
             {
                 throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
@@ -114,16 +142,17 @@ public class UniqueConstraintsStorage(
     /// <param name="eventSourceId">The owner.</param>
     /// <param name="definition">The constraint.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "")
+    public async Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
-            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(_ => _.EventSourceId == eventSourceId);
+            await GetValuesCollectionFor(definition.Name, scopeKey).DeleteManyAsync(_ => _.EventSourceId == eventSourceId, cancellationToken);
         }
         else
         {
-            await GetCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.EventSourceId == eventSourceId);
+            await GetCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.EventSourceId == eventSourceId, cancellationToken);
         }
     }
 
@@ -134,26 +163,52 @@ public class UniqueConstraintsStorage(
     /// <param name="definition">The constraint.</param>
     /// <param name="value">The value to release.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "") =>
-        await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId);
+    public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default) =>
+        await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
-    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique) =>
+    static async IAsyncEnumerable<UniqueConstraintValue> Drain<TRow>(IAsyncCursor<TRow> cursor, Func<TRow, UniqueConstraintValue> value, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using (cursor)
+        {
+            while (await cursor.MoveNextAsync(cancellationToken))
+            {
+                foreach (var row in cursor.Current) yield return value(row);
+            }
+        }
+    }
+
+    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique, CancellationToken cancellationToken) =>
         collection.Indexes.CreateOneAsync(
             new CreateIndexModel<UniqueConstraintIndex>(
                 Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
-                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }));
+                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }),
+            cancellationToken: cancellationToken);
 
-    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey)
+    async IAsyncEnumerable<UniqueConstraintValue> StreamPerValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var cursor = await GetValuesCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintValueIndex> { BatchSize = 100 }, cancellationToken);
+        await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
+    }
+
+    async IAsyncEnumerable<UniqueConstraintValue> StreamPerEventSource(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var cursor = await GetCollectionFor(definition.Name, scopeKey).FindAsync(row => row.EventSourceId == eventSourceId, new FindOptions<UniqueConstraintIndex> { BatchSize = 100 }, cancellationToken);
+        await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
+    }
+
+    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, CancellationToken cancellationToken)
     {
         var collection = GetCollectionFor(name, scopeKey);
-        await EnsureIndex(collection).ConfigureAwait(false);
+        await EnsureIndex(collection, cancellationToken).ConfigureAwait(false);
         try
         {
             await collection.ReplaceOneAsync(
                 u => u.EventSourceId == eventSourceId,
                 new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
-                new ReplaceOptions { IsUpsert = true });
+                new ReplaceOptions { IsUpsert = true },
+                cancellationToken);
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
@@ -166,16 +221,18 @@ public class UniqueConstraintsStorage(
             ? $"{eventSequenceId}+{name}+values+constraint"
             : $"{eventSequenceId}+{name}+{scopeKey}+values+constraint");
 
-    async Task EnsureOwnerIndex(IMongoCollection<UniqueConstraintValueIndex> collection)
+    async Task EnsureOwnerIndex(IMongoCollection<UniqueConstraintValueIndex> collection, CancellationToken cancellationToken = default)
     {
         if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
         {
             return;
         }
 
-        await collection.Indexes.CreateOneAsync(new CreateIndexModel<UniqueConstraintValueIndex>(
-            Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId),
-            new CreateIndexOptions { Name = "owner" }));
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<UniqueConstraintValueIndex>(
+                Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId),
+                new CreateIndexOptions { Name = "owner" }),
+            cancellationToken: cancellationToken);
         _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
     }
 
@@ -187,19 +244,26 @@ public class UniqueConstraintsStorage(
         return eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(collectionName);
     }
 
-    async Task EnsureIndex(IMongoCollection<UniqueConstraintIndex> collection)
+    async Task EnsureIndex(IMongoCollection<UniqueConstraintIndex> collection, CancellationToken cancellationToken = default)
     {
         if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
         {
             return;
         }
 
-        var existing = await collection.GetIndexNamesAsync().ConfigureAwait(false);
+        var existing = new HashSet<string>(StringComparer.Ordinal);
+        using var indexes = await collection.Indexes.ListAsync(cancellationToken).ConfigureAwait(false);
+        await indexes.ForEachAsync(
+            index =>
+            {
+                if (index.TryGetValue("name", out var name)) existing.Add(name.AsString);
+            },
+            cancellationToken).ConfigureAwait(false);
         if (!existing.Contains(ValueIndexName))
         {
             try
             {
-                await CreateValueIndex(collection, unique: true).ConfigureAwait(false);
+                await CreateValueIndex(collection, unique: true, cancellationToken).ConfigureAwait(false);
             }
             catch (MongoCommandException ex) when (ex.Code == 11000 || ex.Message.Contains("E11000", StringComparison.Ordinal))
             {
@@ -207,7 +271,7 @@ public class UniqueConstraintsStorage(
                 // unique index cannot be built. Fall back to a non-unique index so lookups are still fast; the
                 // stored duplicates need to be reconciled before uniqueness can be enforced again.
                 logger.FallingBackToNonUniqueIndex(collection.CollectionNamespace.FullName);
-                await CreateValueIndex(collection, unique: false).ConfigureAwait(false);
+                await CreateValueIndex(collection, unique: false, cancellationToken).ConfigureAwait(false);
             }
         }
 

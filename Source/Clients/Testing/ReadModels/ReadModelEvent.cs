@@ -20,4 +20,10 @@ internal record ReadModelEvent(
     EventSourceType EventSourceType,
     EventStreamType EventStreamType,
     EventStreamId EventStreamId,
-    IReadOnlyList<string> Tags);
+    IReadOnlyList<string> Tags)
+{
+    /// <summary>
+    /// Gets the original context when the input is an appended event.
+    /// </summary>
+    public EventContext? Context { get; init; }
+}

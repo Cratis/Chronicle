@@ -13,8 +13,11 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -145,6 +148,7 @@ public partial class EventSequenceStorage(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags)
     {
+        var writeIssued = false;
         try
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
@@ -189,6 +193,7 @@ public partial class EventSequenceStorage(
 
             scope.DbContext.Events.Add(eventEntry);
             scope.DbContext.NamedTags.AddRange(namedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, sequenceNumber.Value, position, tag)));
+            writeIssued = true;
             await scope.DbContext.SaveChangesAsync();
 
             var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject();
@@ -220,9 +225,14 @@ public partial class EventSequenceStorage(
                 GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
             };
         }
+        catch (DbUpdateException error) when (IsAppendUniqueViolation(error))
+        {
+            return new DuplicateEventSequenceNumber((await GetTailSequenceNumber()).Next());
+        }
         catch (Exception ex)
         {
             logger.FailedToAppendEvent(ex, sequenceNumber, eventSequenceId);
+            if (!writeIssued) throw new EventsNotCommitted(ex);
             throw;
         }
     }
@@ -273,12 +283,21 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.ToArray();
+        EventToAppendToStorage[] eventsArray;
+        try
+        {
+            eventsArray = events.ToArray();
+        }
+        catch (Exception error)
+        {
+            throw new EventsNotCommitted(error);
+        }
         if (eventsArray.Length == 0)
         {
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
         }
 
+        var writeIssued = false;
         try
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
@@ -354,14 +373,35 @@ public partial class EventSequenceStorage(
                 });
             }
 
+            writeIssued = true;
             await scope.DbContext.SaveChangesAsync();
             return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
+        }
+        catch (DbUpdateException error) when (IsAppendUniqueViolation(error))
+        {
+            return new DuplicateEventSequenceNumber((await GetTailSequenceNumber()).Next());
         }
         catch (Exception ex)
         {
             logger.FailedToAppendEvent(ex, EventSequenceNumber.Unavailable, eventSequenceId);
+            if (!writeIssued) throw new EventsNotCommitted(ex);
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        // A fresh scope reads committed rows, never a tracked attempted insert.
+        var firstValue = first.Value;
+        var lastValue = last.Value;
+        var entries = await scope.DbContext.Events.AsNoTracking().Where(e => e.SequenceNumber >= firstValue && e.SequenceNumber <= lastValue)
+            .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+        var events = new List<AppendedEvent>();
+        foreach (var entry in entries) events.Add(await ToAppendedEvent(entry, scope));
+        return new MaterializedEventCursor(events);
     }
 
     /// <inheritdoc/>
@@ -399,6 +439,7 @@ public partial class EventSequenceStorage(
         eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
+        eventEntry.RevisedGeneration = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -470,6 +511,7 @@ public partial class EventSequenceStorage(
             eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
+            eventEntry.RevisedGeneration = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }
@@ -1056,6 +1098,14 @@ public partial class EventSequenceStorage(
             ? new EventSequenceNumber(highestSequenceNumber.Value).Next()
             : EventSequenceNumber.First;
     }
+
+    static bool IsAppendUniqueViolation(DbUpdateException error) => error.InnerException switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 19 && sqlite.SqliteExtendedErrorCode is 1555 or 2067,
+        SqlException sqlServer => sqlServer.Number is 2627 or 2601,
+        _ => false
+    };
 
     EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)
     {

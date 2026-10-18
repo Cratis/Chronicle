@@ -32,13 +32,15 @@ internal static class ReducerReadModelProcessor
     /// <param name="events">The events to process.</param>
     /// <param name="context">The storage, artifacts, services and original event contexts for the fold.</param>
     /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
+    /// <param name="eventPositions">Optional collection-wide positions for bare events grouped by key.</param>
     /// <returns>The reduced read model and the distinct event sources that passed the reducer's filters.</returns>
     /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<(TReadModel? State, IReadOnlyList<EventSourceId> EventSourceIds)> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
         ReadModelFoldContext context,
-        TReadModel? initialState = null)
+        TReadModel? initialState = null,
+        IReadOnlyList<int>? eventPositions = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -58,13 +60,18 @@ internal static class ReducerReadModelProcessor
                 @event.EventSourceId,
                 @event.EventStreamType,
                 @event.EventStreamId,
-                (EventSequenceNumber)(ulong)index,
+                (EventSequenceNumber)(ulong)(eventPositions?[index] ?? index),
                 CorrelationId.NotSet) with
             {
                 Tags = @event.Event.GetType().GetTags().Concat(@event.Tags).Distinct(StringComparer.Ordinal).Select(tag => new Tag(tag)).ToArray()
             };
         }).ToArray();
-        var (prepared, _) = await ReadModelEvents.Prepare(eventStore, eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(), contexts, persist: eventContexts is null);
+        var (prepared, _) = await ReadModelEvents.Prepare(
+            eventStore,
+            eventsList.Select(input => (input.EventSourceId, input.Event)).ToArray(),
+            contexts,
+            persist: eventContexts is null || context.InputSequenceId is not null,
+            inputSequenceId: context.InputSequenceId);
         var filters = new ObserverRouteFilter(reducerType, eventStore.EventSources, includeTagFilters: true);
         var eventsAndContexts = new List<EventAndContext>();
         foreach (var index in Enumerable.Range(0, prepared.Length).Where(index => filters.MatchesClient(contexts[index])))

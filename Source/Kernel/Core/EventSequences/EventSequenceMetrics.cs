@@ -24,6 +24,27 @@ internal static partial class EventSequenceMetrics
 
     [Counter<int>("chronicle-event-sequences-constraint-violations", "Number of constraint violations")]
     internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-update-failures", "Number of failed constraint index attempts")]
+    internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-settled-errors", "Number of constraint index events settled with a deterministic error")]
+    internal static partial void ConstraintIndexSettledWithError(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-poison-events", "Number of constraint event effects settled after five identical non-transient failures")]
+    internal static partial void ConstraintIndexPoisonEvent(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-repairs", "Number of completed constraint index repairs")]
+    internal static partial void ConstraintIndexRepaired(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-constraint-index-refusals", "Number of appends refused for pending constraint indexes")]
+    internal static partial void ConstraintIndexRefused(this IMeterScope<EventSequence> scope);
+
+    [Counter<int>("chronicle-event-sequences-append-outcomes-unknown", "Number of appends whose storage outcome could not be settled")]
+    internal static partial void AppendOutcomeUnknown(this IMeterScope<EventSequence> scope);
+
+    [Gauge<long>("chronicle-event-sequences-constraint-index-lag", "Events not yet covered by confirmed constraint updates")]
+    internal static partial void ConstraintIndexLag(this IMeterScope<EventSequence> scope, long lag);
 }
 
 internal static class EventSequenceMetricsScopes

@@ -58,9 +58,11 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
+/// <param name="storageErrorClassifier">The active provider's transient failure policy.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
+/// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -74,9 +76,11 @@ public partial class EventSequence(
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
+    IStorageErrorClassifier storageErrorClassifier,
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
-    ILogger<ConcurrencyValidator> concurrencyValidatorLogger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
+    ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
@@ -142,6 +146,7 @@ public partial class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+        await InitializeConstraintIndexes();
 
         if (_eventSequenceId == EventSequenceId.Log)
         {
@@ -165,6 +170,12 @@ public partial class EventSequence(
     /// </remarks>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        _constraintIndexRepairTimer?.Dispose();
+        _constraintIndexRepairTimer = null;
+        ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+        _catchUpTracking = false;
+        _catchUpReplay = null;
+        _catchUpExcluded.Clear();
         if (_appendsSinceStateWrite > 0)
         {
             await WriteStateAsync();
@@ -547,7 +558,6 @@ public partial class EventSequence(
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> that caused the append.</param>
     /// <param name="effectReceipt">Optional occurrence effect to commit with the batch.</param>
     /// <returns>The <see cref="AppendManyResult"/> describing the outcome.</returns>
-    /// <exception cref="InvalidAppendAcknowledgment">Storage did not acknowledge every submitted event.</exception>
     /// <remarks>
     /// The sequence numbers are computed against a local running value and only committed to
     /// <see cref="EventSequenceState.SequenceNumber"/> after a successful storage append — mirroring the
@@ -563,6 +573,42 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         Occurrences.EffectReceipt? effectReceipt = null)
+    {
+        var (eventsToAppend, constraintContexts) = await BuildStorageBatch(validatedEvents, correlationId, causation, causedByChain);
+        var appendResult = await AppendBatchToStorage(eventsToAppend, correlationId, effectReceipt);
+        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
+        var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
+
+        var (appendedEventsList, unsettled) = await SettleAppendedBatch(appendResult.AsT0.ToList(), eventsToAppend, correlationId, effectReceipt);
+        if (unsettled is not null) return unsettled;
+
+        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
+        // use this position to distinguish a commit-before-ack from a range already accounted for.
+        if (eventsToAppend.Count > 0)
+        {
+            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
+        }
+
+        if (appendedEventsList.Count > 0)
+        {
+            await CompleteConfirmedAppend(
+                appendedEventsList,
+                constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
+        }
+
+        return new AppendManyResult
+        {
+            CorrelationId = correlationId,
+            SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
+            EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
+        };
+    }
+
+    async Task<(List<EventToAppendToStorage> Events, List<ConstraintValidationContext> ConstraintContexts)> BuildStorageBatch(
+        IReadOnlyList<(EventToAppend Event, ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintContext)> validatedEvents,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain)
     {
         var eventsToAppend = new List<EventToAppendToStorage>();
         var constraintContexts = new List<ConstraintValidationContext>();
@@ -603,6 +649,14 @@ public partial class EventSequence(
             nextSequenceNumber = nextSequenceNumber.Next();
         }
 
+        return (eventsToAppend, constraintContexts);
+    }
+
+    async Task<Result<IEnumerable<AppendedEvent>, AppendManyResult>> AppendBatchToStorage(
+        List<EventToAppendToStorage> eventsToAppend,
+        CorrelationId correlationId,
+        Occurrences.EffectReceipt? effectReceipt)
+    {
         async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendToStorage()
         {
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
@@ -610,74 +664,73 @@ public partial class EventSequence(
                 ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
                 : await EventSequenceStorage.AppendMany(eventsToAppend);
         }
-        var appendResult = effectReceipt is null
-            ? await AppendWithRetries(AppendToStorage, error => RenumberAppendMany(eventsToAppend, error), () => ValidateAppendManyRetry(correlationId))
+        return effectReceipt is null
+            ? await AppendWithRetries<IEnumerable<AppendedEvent>, AppendManyResult>(
+                AppendToStorage,
+                error => RenumberAppendMany(eventsToAppend, error),
+                () => ValidateAppendManyRetry(correlationId),
+                async () => await ReadBackAppend(eventsToAppend),
+                async () =>
+                {
+                    await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+                    return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] };
+                })
             : await AppendEffectToStorage(eventsToAppend, effectReceipt, correlationId);
-        if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
-        var recordedReceipt = effectReceipt is null ? null : await EffectReceiptStorage.GetEffectReceipt(ReceiptId(effectReceipt));
+    }
 
-        List<AppendedEvent> appendedEventsList = new();
-        await appendResult.Match(
-            success =>
-            {
-                appendedEventsList = success.ToList();
-                return Task.CompletedTask;
-            },
-            _ => Task.CompletedTask);
+    async Task<(List<AppendedEvent> Events, AppendManyResult? Failure)> SettleAppendedBatch(
+        List<AppendedEvent> appendedEventsList,
+        List<EventToAppendToStorage> eventsToAppend,
+        CorrelationId correlationId,
+        Occurrences.EffectReceipt? effectReceipt)
+    {
+        if (appendedEventsList.Count == eventsToAppend.Count) return (appendedEventsList, null);
 
-        var appendedCount = appendedEventsList?.Count ?? 0;
-        logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedCount);
-
-        appendedEventsList ??= [];
-        if (appendedEventsList.Count != eventsToAppend.Count)
+        // AppendEffectToStorage reads exactly one event per slot after reconciling its receipt range,
+        // so an incomplete acknowledgment can only come from the ordinary storage append path.
+#if DEBUG
+        Debug.Assert(effectReceipt is null, "Effect receipt settlement returns every event in its durable range.");
+#else
+        if (effectReceipt is not null)
         {
-            throw new InvalidAppendAcknowledgment(eventsToAppend.Count, appendedEventsList.Count);
+            return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.EffectReceiptUnsettled] });
+        }
+#endif
+        var readBack = await ReadBackAppend(eventsToAppend);
+        if (readBack is null)
+        {
+            await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+            return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
         }
 
-        // Commit the next slot only once the durable acknowledgment is complete. Receipt retries
-        // use this position to distinguish a commit-before-ack from a range already accounted for.
-        if (eventsToAppend.Count > 0)
-        {
-            State.SequenceNumber = eventsToAppend[^1].SequenceNumber.Next();
-        }
-
-        foreach (var appendedEvent in appendedEventsList)
-        {
-            State.TailSequenceNumberPerEventType[appendedEvent.Context.EventType.Id] = appendedEvent.Context.SequenceNumber;
-            _metrics?.AppendedEvent(appendedEvent.Context.EventSourceId, appendedEvent.Context.EventType.Id);
-        }
-
-        if (appendedEventsList.Count > 0)
-        {
-            await CompleteDurableAppend(
-                appendedEventsList,
-                constraintContexts.Zip(eventsToAppend, (constraintContext, eventToAppend) => (constraintContext, eventToAppend.SequenceNumber)));
-        }
-
-        return new AppendManyResult
-        {
-            CorrelationId = correlationId,
-            SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
-            EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
-        };
+        return (readBack, null);
     }
 
     async Task<Result<TAppended, TFailure>> AppendWithRetries<TAppended, TFailure>(
         Func<Task<Result<TAppended, DuplicateEventSequenceNumber>>> append,
         Func<DuplicateEventSequenceNumber, Task> renumber,
-        Func<Task<TFailure?>> validateRetry)
-        where TAppended : notnull
+        Func<Task<TFailure?>> validateRetry,
+        Func<Task<TAppended?>> settle,
+        Func<Task<TFailure>> unknown)
+        where TAppended : class
         where TFailure : class
     {
-        var result = await append();
-        while (result.TryGetError(out var duplicateError))
+        while (true)
         {
+            Result<TAppended, DuplicateEventSequenceNumber> result;
+            try
+            {
+                result = await append();
+            }
+            catch (Exception error) when (error is not EventsNotCommitted and not EventPublicationConflict)
+            {
+                var stored = await settle();
+                return stored is null ? await unknown() : Result<TAppended, TFailure>.Success(stored);
+            }
+            if (!result.TryGetError(out var duplicateError)) return Result<TAppended, TFailure>.Success(result.AsT0);
             await renumber(duplicateError);
             if (await validateRetry() is { } failure) return failure;
-            result = await append();
         }
-
-        return Result<TAppended, TFailure>.Success(result.AsT0);
     }
 
     Task RenumberAppendMany(List<EventToAppendToStorage> eventsToAppend, DuplicateEventSequenceNumber error)
@@ -716,6 +769,7 @@ public partial class EventSequence(
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         span?.Activity?.Tag(eventType);
         span?.Activity?.Tag(eventSourceType, eventSourceId);
+        AppendedEvent committed;
         try
         {
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
@@ -729,7 +783,7 @@ public partial class EventSequence(
                 kvp => kvp.Key,
                 kvp => eventHashCalculator.Calculate(eventType.Id, eventSourceId, kvp.Value));
 
-            async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendToStorage()
+            async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> WriteToStorage()
             {
                 var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
                 logger.Appending(
@@ -824,29 +878,39 @@ public partial class EventSequence(
                         subject,
                         namedTags);
             }
-            var appendResult = await AppendWithRetries(AppendToStorage, error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id), () => ValidateAppendRetry(correlationId));
+            EventToAppendToStorage? attempted = null;
+            Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendToStorage()
+            {
+                attempted = new EventToAppendToStorage(State.SequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, CausationForStorage(causation), identity, tags, occurred ?? DateTimeOffset.UtcNow, compliantEvent, contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet, subject)
+                {
+                    GenerationalContent = migratedContent,
+                    ContentHashes = contentHashes
+                };
+                return WriteToStorage();
+            }
+            var appendResult = await AppendWithRetries(
+                AppendToStorage,
+                error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id),
+                () => ValidateAppendRetry(correlationId),
+                async () => (await ReadBackAppend([attempted!]))?.Single(),
+                async () =>
+                {
+                    await MarkAppendOutcomeUnknown(attempted!.SequenceNumber);
+                    return AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]);
+                });
             if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 
-            var appendedSequenceNumber = appendResult.AsT0.Context.SequenceNumber;
-            if (State.SequenceNumber <= appendedSequenceNumber)
-            {
-                State.SequenceNumber = appendedSequenceNumber.Next();
-            }
-            if (!State.TailSequenceNumberPerEventType.TryGetValue(eventType.Id, out var tail) || tail < appendedSequenceNumber)
-            {
-                State.TailSequenceNumberPerEventType[eventType.Id] = appendedSequenceNumber;
-            }
-
-            _metrics?.AppendedEvent(eventSourceId, eventType.Id);
-            var appendedEvents = new[] { (AppendedEvent)appendResult }.ToList();
-            await CompleteDurableAppend(appendedEvents, [(constraintContext, appendedSequenceNumber)]);
-
-            return AppendResult.Success(correlationId, appendedSequenceNumber);
+            committed = appendResult.AsT0;
         }
         catch (Exception ex)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
+
+        var appendedSequenceNumber = committed.Context.SequenceNumber;
+        if (State.SequenceNumber <= appendedSequenceNumber) State.SequenceNumber = appendedSequenceNumber.Next();
+        await CompleteConfirmedAppend([committed], [(constraintContext, appendedSequenceNumber)]);
+        return AppendResult.Success(correlationId, appendedSequenceNumber);
     }
 
     /// <summary>
@@ -868,8 +932,7 @@ public partial class EventSequence(
     }
 
     /// <summary>
-    /// Runs the steps that follow a durable append: snapshotting the sequence state, handing the events to the
-    /// appended-events queues for live delivery, and persisting the constraint indexes the events feed.
+    /// Hands durable events to live delivery, updates their constraint indexes, then snapshots the resulting watermark.
     /// </summary>
     /// <param name="appendedEvents">The <see cref="AppendedEvent">events</see> that are already durable in the log.</param>
     /// <param name="constraintUpdates">The <see cref="ConstraintValidationContext"/> of each appended event, paired with the <see cref="EventSequenceNumber"/> it got.</param>
@@ -891,15 +954,6 @@ public partial class EventSequence(
     {
         try
         {
-            await PersistStateAfterAppends(appendedEvents.Count);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
-        }
-
-        try
-        {
             await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
         }
         catch (Exception ex)
@@ -908,16 +962,14 @@ public partial class EventSequence(
             await SpillAppendedEventsQueuesToCatchup();
         }
 
-        foreach (var (context, sequenceNumber) in constraintUpdates)
+        await UpdateConstraintIndexes(constraintUpdates);
+        try
         {
-            try
-            {
-                await context.Update(sequenceNumber);
-            }
-            catch (Exception ex)
-            {
-                logger.FailedUpdatingConstraintIndex(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, ex);
-            }
+            await PersistStateAfterAppends(appendedEvents.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
         }
     }
 
@@ -989,6 +1041,7 @@ public partial class EventSequence(
         EventStreamId eventStreamId,
         CorrelationId correlationId)
     {
+        if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
         _metrics?.FailedAppending(eventSourceId, eventType.Id);
         logger.ErrorAppending(
             _eventSequenceKey.EventStore,
@@ -1025,6 +1078,12 @@ public partial class EventSequence(
         {
             _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
             _closedStreamsChanged = false;
+        }
+
+        if (IsGovernedByPendingIndex(eventType.Id))
+        {
+            _metrics?.ConstraintIndexRefused();
+            return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
         }
 
         var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
@@ -1099,6 +1158,7 @@ public partial class EventSequence(
             eventSourceId,
             State.SequenceNumber);
         _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        if (nextAvailableSequenceNumber > State.SequenceNumber) MarkConstraintIndexGap(State.SequenceNumber);
         State.SequenceNumber = nextAvailableSequenceNumber;
         return Task.CompletedTask;
     }

@@ -48,7 +48,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<ReadModelEvent> _collectedEvents = [];
-    readonly List<Action<EventStoreForTesting>> _readModelSeeds = [];
+    readonly Dictionary<EventSourceId, TReadModel> _readModelSeeds = [];
     IServiceProvider? _resolvedServiceProvider;
     IClientArtifactsActivator? _artifactsActivator;
     EventStoreForTesting? _eventStore;
@@ -95,10 +95,9 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// Gets the current projected read model instance.
     /// </summary>
     /// <remarks>
-    /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
-    /// the events produced no state changes. Accessing this property triggers event processing the first
+    /// This property returns <see langword="null"/> if no instance was seeded and the events produced no state changes. Accessing this property triggers event processing the first
     /// time it is called after events have been collected via <see cref="CollectEventsFor(EventSourceId, IEnumerable{object})"/> or
-    /// <see cref="ProcessEventsFor"/>.
+    /// <see cref="ProcessEventsFor"/> or <see cref="ProcessAppendedEvents"/>.
     /// When the seeded events materialize more than one instance — for example a multi-source join —
     /// a single result is ambiguous, so this throws <see cref="MultipleInstancesMaterialized"/>; select the
     /// intended instance with <see cref="InstanceForEventSourceId(EventSourceId)"/> or <see cref="Instances"/>.
@@ -127,8 +126,9 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// projections, such as a join whose join-source event was seeded before the entity under test, to
     /// assert against the intended instance deterministically. Each instance carries only what was
     /// projected onto its own key — seeding a second event source never adds to the first. It is populated
-    /// for projections; reducers are single-instance and expose their result through <see cref="Instance"/>
-    /// only.
+    /// for projections and for reducers fed through <see cref="ProcessAppendedEvents"/>. Reducers fed only
+    /// bare events retain their single-instance behavior unless per-key read model instances were seeded.
+    /// A seeded projection or reducer instance is included even when no event addresses its key.
     /// </remarks>
     public IReadOnlyDictionary<EventSourceId, TReadModel> Instances
     {
@@ -189,7 +189,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public IReadOnlyList<ReadModelSubstitution> Substitutions => _substitutions ??= DetectSubstitutions();
 
     /// <summary>
-    /// Gets an <see cref="IReadModels"/> instance that returns pre-seeded read model instances for this scenario.
+    /// Gets an <see cref="IReadModels"/> instance that returns this scenario's seeded and folded read model instances.
     /// </summary>
     /// <remarks>
     /// Pass this to production code that depends on <see cref="IReadModels"/> to have
@@ -288,20 +288,21 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 
     /// <summary>
-    /// Registers a pre-built read model instance for a specific event source, making it available via
-    /// <see cref="ReadModels"/> for calls to <c language="csharp">GetInstanceById</c>.
+    /// Seeds the fold for a specific read-model key and makes it available via <see cref="ReadModels"/>.
+    /// Models without a projection or reducer are registered for keyed lookups only.
     /// </summary>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
+    /// <exception cref="ReadModelAlreadySeeded">Thrown when this key was already seeded.</exception>
     public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel)
     {
-        if (_eventStore is not null)
+        if (!_readModelSeeds.TryAdd(eventSourceId, readModel))
         {
-            _eventStore.RegisterReadModelInstance(eventSourceId, readModel);
-            return;
+            throw new ReadModelAlreadySeeded(typeof(TReadModel), eventSourceId);
         }
 
-        _readModelSeeds.Add(store => store.RegisterReadModelInstance(eventSourceId, readModel));
+        _processed = false;
+        _eventStore?.RegisterReadModelInstance(eventSourceId, readModel);
     }
 
     /// <summary>
@@ -334,6 +335,33 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public Task ProcessEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
     {
         CollectEventsFor(eventSourceId, events);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Feeds appended events through the read model's projection or reducer, preserving their original contexts.
+    /// </summary>
+    /// <param name="events">The appended events, potentially from several event sources.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Events accumulate with previously collected input and are processed when a result is accessed.
+    /// Appended events are sorted by their original sequence numbers. Use distinct sequence numbers.
+    /// Bare events collected through <see cref="ProcessEventsFor"/> or <see cref="Given"/> keep synthetic
+    /// contexts with collection-index sequence numbers. Projections use their existing key resolution;
+    /// reducers fold each event source independently when appended input is present.
+    /// </remarks>
+    public Task ProcessAppendedEvents(IEnumerable<AppendedEvent> events)
+    {
+        _processed = false;
+        foreach (var @event in events)
+        {
+            var context = @event.Context;
+            _collectedEvents.Add(new(context.EventSourceId, @event.Content, context.EventSourceType, context.EventStreamType, context.EventStreamId, context.Tags.Select(tag => tag.Value).ToArray())
+            {
+                Context = context
+            });
+        }
+
         return Task.CompletedTask;
     }
 
@@ -382,9 +410,13 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         {
             _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions, testingStore: null, eventLog: null, eventStore: defaults.EventStore.Name, @namespace: defaults.EventStore.Namespace);
             ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
-            foreach (var seed in _readModelSeeds)
+            ((ReadModelsForTesting)_eventStore.ReadModels).BeforeInstanceRead = () =>
             {
-                seed(_eventStore);
+                if (_readModelSeeds.Count > 0) EnsureProcessed();
+            };
+            foreach (var (key, seed) in _readModelSeeds)
+            {
+                _eventStore.RegisterReadModelInstance(key, seed);
             }
         }
 
@@ -431,9 +463,15 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
         }
 
-        if (!_processed && _collectedEvents.Count > 0)
+        if (_readModelSeeds.Count > 0 && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
+        {
+            return;
+        }
+
+        if (!_processed && (_collectedEvents.Count > 0 || _readModelSeeds.Count > 0))
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
+            if (_readModelSeeds.Count > 0) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
             _processed = true;
         }
     }
@@ -450,6 +488,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             ReducerType = reducerType,
             ProjectionDefinition = reducerType is null ? ProjectionDefinition() : null,
             InitialState = _initialState,
+            SeededInstances = _readModelSeeds,
             StrictEventSubscription = _strictEventSubscription
         };
         return fold.Process(events);
