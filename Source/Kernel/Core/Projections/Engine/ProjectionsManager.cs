@@ -116,11 +116,25 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
+
+        // Every namespace registered for the previous definition is rebuilt from the current one, so refreshing
+        // one namespace never leaves the others without a projection.
+        var rebuilt = new ConcurrentDictionary<EventStoreNamespaceName, IProjection>();
+        rebuilt[@namespace] = projection;
+        if (_projections.TryGetValue(GetKeyFor(eventStore, id), out var previousRegistration) &&
+            ProjectionFactory.DefinitionFingerprintFor(previousRegistration.Definition) != fingerprint)
+        {
+            foreach (var otherNamespace in previousRegistration.Projections.Keys.Where(_ => _ != @namespace))
+            {
+                rebuilt[otherNamespace] = await projectionFactory.Create(eventStore, otherNamespace, definition, readModel, eventTypeSchemas);
+            }
+        }
+
         var registered = _projections.AddOrUpdate(
             GetKeyFor(eventStore, id),
-            static (_, state) => new(state.Definition, new()),
-            static (_, previous, state) => ProjectionFactory.DefinitionFingerprintFor(previous.Definition) == state.Fingerprint ? previous : new(state.Definition, new()),
-            (Definition: definition, Fingerprint: fingerprint));
+            static (_, state) => new(state.Definition, state.Rebuilt),
+            static (_, previous, state) => ProjectionFactory.DefinitionFingerprintFor(previous.Definition) == state.Fingerprint ? previous : new(state.Definition, state.Rebuilt),
+            (Definition: definition, Fingerprint: fingerprint, Rebuilt: rebuilt));
         registered.Projections[@namespace] = projection;
         return projection;
     }
