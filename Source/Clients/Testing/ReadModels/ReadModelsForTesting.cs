@@ -67,6 +67,11 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// </summary>
     public IMaterializedReadModels Materialized => inner.Materialized;
 
+    /// <summary>
+    /// Gets or sets the scenario callback that refreshes collected input before a keyed read.
+    /// </summary>
+    internal Action? BeforeInstanceRead { get; set; }
+
     /// <inheritdoc/>
     public Task Register() => inner.Register();
 
@@ -95,6 +100,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         ReadProtectionGuard.Read(nameof(GetInstanceById));
         EventStreamReadModel.RequireStreamScope(readModelType);
+        BeforeInstanceRead?.Invoke();
         var identifier = readModelType.GetReadModelIdentifier();
         if (_instances.TryGetValue((identifier, key.Value), out var instance)) return instance;
         if (!_foldReads) return null!;
@@ -229,6 +235,26 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     {
         var identifier = typeof(TReadModel).GetReadModelIdentifier();
         _instances[(identifier, eventSourceId.Value)] = instance;
+    }
+
+    /// <summary>
+    /// Replaces a scenario's keyed lookup state with the complete fold, including removals.
+    /// </summary>
+    /// <typeparam name="TReadModel">The folded read model type.</typeparam>
+    /// <param name="instances">The materialized instances.</param>
+    internal void ReplaceInstances<TReadModel>(IReadOnlyDictionary<EventSourceId, TReadModel> instances)
+        where TReadModel : class
+    {
+        var identifier = typeof(TReadModel).GetReadModelIdentifier().Value;
+        foreach (var key in _instances.Keys.Where(key => key.Identifier == identifier).ToArray())
+        {
+            _instances.Remove(key);
+        }
+
+        foreach (var (key, instance) in instances)
+        {
+            RegisterInstance(key, instance);
+        }
     }
 
     static bool IsPassive(Type readModelType, EventStoreForTesting store)
