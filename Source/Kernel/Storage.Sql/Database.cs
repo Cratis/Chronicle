@@ -46,8 +46,6 @@ namespace Cratis.Chronicle.Storage.Sql;
 [IgnoreConvention]
 public partial class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
 {
-    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
-
 #if DEVELOPMENT
     /// <summary>
     /// Tables that survive <see cref="Wipe"/> for shared-database backends (PostgreSQL / Microsoft
@@ -78,6 +76,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
         SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
 
+    readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
@@ -86,7 +85,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ReadModelDbContext>> _readModelOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, string Key), long> _migratedKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, Type Context, string Table), long> _ensuredTableGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredDatabaseKeys = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredSchemaKeys = new();
 
@@ -238,6 +238,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         // migrations. SQLite tests delete the database file between test classes; without
         // this the in-process silo would skip migration and then query non-existent tables.
         _migratedKeys.Clear();
+        _ensuredTableGenerations.Clear();
 
         // And clear the "database exists" cache so the next request after a Wipe re-checks
         // (the SQLite path deletes files; the PG/MsSql path truncates tables but leaves the
@@ -284,9 +285,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             await WipeAllMsSqlDatabases(connectionDetails, boundDatabases);
         }
 
-        // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
-        // populates the cache concurrently with the wipe is overwritten by a final empty cache.
-        ClearTableMigrationCache(string.Empty);
+        // SQLite invalidates its caches under each target's migration lock during the wipe.
+        if (!isSqlite)
+        {
+            ClearTableMigrationCache(string.Empty);
+        }
 
         serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
@@ -321,41 +324,6 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     static string PreservedNamesForSql() =>
         string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
 
-    static async Task WipeAllSqliteDatabases(string clusterConnectionString)
-    {
-        var clusterPath = ExtractSqliteDataSource(clusterConnectionString);
-        if (string.IsNullOrEmpty(clusterPath))
-        {
-            return;
-        }
-
-        var directory = Path.GetDirectoryName(clusterPath);
-        if (string.IsNullOrEmpty(directory))
-        {
-            directory = ".";
-        }
-
-        var baseName = Path.GetFileNameWithoutExtension(clusterPath);
-        var extension = Path.GetExtension(clusterPath);
-
-        // Enumerate every SQLite database file in the cluster directory whose name starts
-        // with the cluster basename. Sidecar files (-wal, -shm, -journal) are filtered out
-        // — they aren't database files themselves and SQLite manages them as part of the
-        // main file's lifecycle.
-        var pattern = string.IsNullOrEmpty(extension) ? $"{baseName}*" : $"{baseName}*{extension}";
-        foreach (var file in Directory.GetFiles(directory, pattern))
-        {
-            if (file.EndsWith("-wal", StringComparison.Ordinal)
-                || file.EndsWith("-shm", StringComparison.Ordinal)
-                || file.EndsWith("-journal", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            await DropAllSqliteTables(file);
-        }
-    }
-
     static async Task DropAllSqliteTables(string filePath)
     {
         if (!File.Exists(filePath))
@@ -375,10 +343,13 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             return;
         }
 
+        // Schema and history must disappear together, even if a DROP fails halfway through.
+        await using var transaction = (SqliteTransaction)await conn.BeginTransactionAsync();
         var tables = new List<string>();
         await using (var listCmd = conn.CreateCommand())
         {
-            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+            listCmd.Transaction = transaction;
+            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name = '__EFMigrationsHistory'";
             await using var reader = await listCmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -389,11 +360,14 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         foreach (var table in tables)
         {
             await using var dropCmd = conn.CreateCommand();
+            dropCmd.Transaction = transaction;
 #pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
-            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table}\"";
+            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
         }
+
+        await transaction.CommitAsync();
     }
 
     static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)

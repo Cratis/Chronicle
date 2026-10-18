@@ -669,6 +669,7 @@ public partial class Reducers : IReducers
         var result = new ReducerResult
         {
             Partition = operation.Partition,
+            DeliveryId = operation.DeliveryId,
             ReadModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,

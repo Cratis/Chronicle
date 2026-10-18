@@ -28,4 +28,10 @@ public class EventsToObserve
     /// </summary>
     [ProtoMember(3)]
     public ReplayState ReplayState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stream-local delivery identifier to echo in the result. Zero identifies a legacy delivery.
+    /// </summary>
+    [ProtoMember(4)]
+    public ulong DeliveryId { get; set; }
 }
