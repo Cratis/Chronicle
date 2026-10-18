@@ -49,6 +49,12 @@ public class an_append_endpoint : Specification
                 call.ArgAt<Concepts.Events.EventType>(4),
                 call.ArgAt<IEnumerable<Tag>>(9),
                 call.ArgAt<JsonObject>(5))]);
+        _eventSequence.AppendMany(
+            Arg.Any<IEnumerable<EventSequences.EventToAppend>>(),
+            Arg.Any<CorrelationId>(),
+            Arg.Any<IEnumerable<Concepts.Auditing.Causation>>(),
+            Arg.Any<Concepts.Identities.Identity>(),
+            Arg.Any<ConcurrencyScopes>()).Returns(Task.FromResult(new AppendManyResult()));
         _eventSequence.When(_ => _.AppendMany(
             Arg.Any<IEnumerable<EventSequences.EventToAppend>>(),
             Arg.Any<CorrelationId>(),

@@ -41,6 +41,17 @@ internal static class AppendResultConverters
             ExpectedSequenceNumber = violation.ExpectedSequenceNumber,
             ActualSequenceNumber = violation.ActualSequenceNumber,
             ConflictingEventTypeId = violation.ConflictingEventTypeId?.Value,
-            ConflictingSequenceNumber = violation.ConflictingSequenceNumber?.Value
+            ConflictingSequenceNumber = violation.ConflictingSequenceNumber?.Value,
+            ScopeIndex = violation.ScopeIndex,
+            Scope = violation.Scope is { } scope ? new()
+            {
+                SequenceNumber = scope.SequenceNumber,
+                EventSourceId = scope.EventSourceId,
+                EventStreamType = scope.EventStreamType,
+                EventStreamId = scope.EventStreamId,
+                EventSourceType = scope.EventSourceType,
+                EventTypes = scope.EventTypes?.Select(_ => new Contracts.Sequences.EventType { Id = _.Id, Generation = _.Generation, Tombstone = _.Tombstone }).ToList(),
+                ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent
+            } : null
         };
 }

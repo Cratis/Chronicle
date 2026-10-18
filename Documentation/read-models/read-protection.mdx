@@ -108,7 +108,7 @@ The `ConcurrencyScopeOrigin` of the contribution is `Explicit` or `Aggregate`. A
 
 ## Append conditions
 
-At commit, Chronicle merges every enrolled read, explicit scope and routing rule into the conditions the kernel checks with the append. `IUnitOfWork.GetAppendConditions()` returns the conditions of the last commit as `AppendCondition` values. Use it in tests and diagnostics to see exactly what a commit guarded.
+At commit, Chronicle retains one condition per distinct enrolled predicate, with the earliest position for repeated reads of that predicate. Different streams and event-type filters keep independent conditions, even on the same source label; they are not broadened into one guard. The kernel must advertise `concurrency-scope-conjunctions` when a label has several conditions. `IUnitOfWork.GetAppendConditions()` returns the conditions of the last commit as `AppendCondition` values. Use it in tests and diagnostics to see exactly what a commit guarded.
 
 | `AppendCondition` member | Meaning |
 |---|---|
@@ -121,7 +121,7 @@ At commit, Chronicle merges every enrolled read, explicit scope and routing rule
 
 `AppendConditionOrigin` is `ProtectedRead`, `Explicit`, `Aggregate`, `DeclaredRouting` or `DefaultRouting`.
 
-If the commit also carries an explicit scope, it must cover every read on that label and capture its boundary no later than the read did. Otherwise the commit is refused with `ExplicitScopeDoesNotCoverReads`. A declared-routing condition that the explicit scope does not cover throws `DeclaredRoutingNotCoveredByExplicitScope`. Scope labels starting with `$read-protection/` are reserved (`ReservedConcurrencyScopeLabel`). Custom concurrency strategies are not supported with read protection (`ReadProtectionRequiresTheDefaultConcurrencyStrategy`).
+If the commit also carries explicit scopes, each read on that label must be covered by at least one explicit scope whose boundary was captured no later than the read. Otherwise the commit is refused with `ExplicitScopeDoesNotCoverReads`. A declared-routing condition that the explicit scope does not cover throws `DeclaredRoutingNotCoveredByExplicitScope`. Scope labels starting with `$read-protection/` are reserved (`ReservedConcurrencyScopeLabel`). Custom concurrency strategies are not supported with read protection (`ReadProtectionRequiresTheDefaultConcurrencyStrategy`).
 
 ## Guarded entry points
 
@@ -150,7 +150,8 @@ Every public immediate append on an event sequence is refused regardless of allo
 | `ProtectedUnitOfWorkRequiresOwner` | `Commit`, `Rollback` or `Dispose` by a caller that is not the owner |
 | `UnitOfWorkIsCompleted` | Staging after the commit began or after rollback |
 | `DecisionReadRefused` | The model cannot be guarded exactly. See [Decision reads](decision-reads.mdx) |
-| `ReadAndAggregateOnSameSource`, `ConflictingContributionsOnLabel`, `ConflictingExplicitScopes`, `SourceLessReadNotSupported` | The enrolled dependencies cannot be merged into one exact guard |
+| `ReadAndAggregateOnSameSource`, `SourceLessReadNotSupported` | The dependency combination is unsupported |
+| `ConflictingContributionsOnLabel`, `ConflictingExplicitScopes` | Explicit expectations contradict each other for one predicate, or mix no guard with a guard |
 | `ExplicitScopeDoesNotCoverReads`, `DeclaredRoutingNotCoveredByExplicitScope` | An explicit scope is narrower than what was read or declared |
 
 Each message names the fix. Chronicle refuses rather than guard something it cannot compute exactly.

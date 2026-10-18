@@ -15,6 +15,6 @@ public class with_distinct_aggregate_handled_types : given.a_trusted_commit
         return Task.CompletedTask;
     });
 
-    [Fact] void should_refuse_two_undeclared_aggregate_predicates_without_overwriting() => _error.ShouldBeOfExactType<ConflictingContributionsOnLabel>();
+    [Fact] void should_accept_both_aggregate_predicates() => _error.ShouldBeNull();
     [Fact] void should_not_append() => _request.ShouldBeNull();
 }

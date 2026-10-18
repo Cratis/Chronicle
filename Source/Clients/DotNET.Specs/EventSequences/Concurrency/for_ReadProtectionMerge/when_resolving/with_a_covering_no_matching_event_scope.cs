@@ -15,5 +15,5 @@ public class with_a_covering_no_matching_event_scope : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_keep_the_negative_condition() => _plan.Scopes[_label].ExpectsNoMatchingEvent.ShouldBeTrue();
+    [Fact] void should_keep_the_negative_condition() => _plan.Scopes.Single().Value.ExpectsNoMatchingEvent.ShouldBeTrue();
 }

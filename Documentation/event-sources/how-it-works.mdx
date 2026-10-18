@@ -71,7 +71,7 @@ flowchart TD
 
 The tail is read with the same narrowing the scope carries. That is what keeps the client's position and the kernel's check answering the same question. When nothing matches the narrowing yet, there is no tail: the scope carries no expectation and the kernel skips it unless the first-append check is turned on.
 
-For an `AppendMany` the client resolves a scope for every event source id in the batch. When an id has several events through definitions, it resolves each, drops guards that check nothing, and keeps one scope if all remaining guards check the same thing. Otherwise it throws `IncompatibleConcurrencyScopesForEventSource` before the request is sent. A scope you pass for an id takes precedence and is not recomputed.
+For an `AppendMany` the .NET client resolves every distinct route for each event source id, including routes without definitions. Equal predicates share the earliest expected position; different predicates remain separate atomic conditions. An explicit scope list for an id takes precedence and is not recomputed. Repeated labels require the kernel's `concurrency-scope-conjunctions` capability; without it, `IncompatibleConcurrencyScopesForEventSource` is thrown before the request is sent.
 
 The kernel checks every scope against the state before the batch and writes nothing if one is violated. Event sources that are only read, not appended to, can carry a scope too: that is how a [decision read](../read-models/decision-reads.mdx) guards a key.
 

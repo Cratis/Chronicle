@@ -23,6 +23,16 @@ public partial class EventSequence
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes,
         Occurrences.EffectReceipt? effectReceipt = null)
+        => await AppendManyValidated(events, correlationId, causation, causedBy, new ConcurrencyScopeConjunctions(concurrencyScopes.Scopes.Select(_ => (_.Key, _.Value, (uint?)null))), effectReceipt, concurrencyScopes);
+
+    async Task<AppendManyResult> AppendManyValidated(
+        IEnumerable<EventToAppend> events,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        ConcurrencyScopeConjunctions concurrencyScopes,
+        Occurrences.EffectReceipt? effectReceipt = null,
+        ConcurrencyScopes? legacyScopes = null)
     {
         using var span = activitySource.AppendMany();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -60,8 +70,8 @@ public partial class EventSequence
                 };
             }
 
-            using var concurrencyCheck = BeginConcurrencyValidation(concurrencyScopes);
-            var concurrencyViolations = await ConcurrencyValidator.Validate(concurrencyScopes);
+            using var concurrencyCheck = legacyScopes is null ? BeginConcurrencyValidation(concurrencyScopes) : BeginConcurrencyValidation(legacyScopes);
+            var concurrencyViolations = legacyScopes is null ? await ConcurrencyValidator.Validate(concurrencyScopes) : await ConcurrencyValidator.Validate(legacyScopes);
             if (concurrencyViolations.Any())
             {
                 return AppendManyResult.Failed(correlationId, concurrencyViolations).ReportingConcurrencyCheck(concurrencyScopes.ShouldAllBeValidated);
