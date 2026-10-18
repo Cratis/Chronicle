@@ -22,7 +22,9 @@ using Cratis.Chronicle.Seeding;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle;
 
@@ -297,7 +299,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
-        var eventStores = await _servicesAccessor.Services.EventStores.AllEventStores().EnsureSuccess();
+        var eventStores = await (await _servicesAccessor.GetServices(cancellationToken)).EventStores.AllEventStores(new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
         return eventStores.Select(_ => (EventStoreName)_.Name).ToArray();
     }
 

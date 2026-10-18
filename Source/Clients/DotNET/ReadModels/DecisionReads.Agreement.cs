@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -87,7 +88,9 @@ public sealed partial class DecisionReads
 
     async Task CheckAgreement(Type type, ProjectionDefinition client, EventType[] types)
     {
-        var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
+        // The agreement is shared between readers, so no single reader's token may cancel the connect it waits for;
+        // each reader observes its own token when it awaits the agreement.
+        var services = await ((IChronicleServicesAccessor)_eventStore.Connection).GetServices(CancellationToken.None);
         var context = CallContext.Default;
         var readModels = await services.ReadModels.GetDefinitions(new() { EventStore = _eventStore.Name }, context);
         var matches = readModels.ReadModels.Where(_ => _.Type.Identifier == type.GetReadModelIdentifier()).ToArray();

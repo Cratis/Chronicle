@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Occurrences;
@@ -61,7 +62,8 @@ public partial class Occurrences
             Kind = startup ? Contracts.Storage.Occurrences.OccurrenceKind.Startup : Contracts.Storage.Occurrences.OccurrenceKind.Shutdown,
             AllNamespaces = _options.LifecycleScope == LifecycleScope.AllNamespaces
         };
-        var result = await ((IChronicleServicesAccessor)eventStore.Connection).Services.Occurrences.RecordLifecycleOccurrence(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        var services = await ((IChronicleServicesAccessor)eventStore.Connection).GetServices(cancellationToken);
+        var result = await services.Occurrences.RecordLifecycleOccurrence(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
         if (result.Status is not (OccurrenceIngressStatus.Recorded or OccurrenceIngressStatus.AlreadyRecorded))
         {
             throw new TriggerNotValid($"Lifecycle recording was refused: {result.Status}.");
@@ -80,7 +82,8 @@ public partial class Occurrences
             ApplicationScope = scope.ApplicationScope,
             Trigger = "shutdown"
         };
-        await ((IChronicleServicesAccessor)eventStore.Connection).Services.Occurrences.ObserveOccurrences(request, new CallContext(new CallOptions(cancellationToken: cancellationToken)))
+        var services = await ((IChronicleServicesAccessor)eventStore.Connection).GetServices(cancellationToken);
+        await services.Occurrences.ObserveOccurrences(request, new CallContext(new CallOptions(cancellationToken: cancellationToken)))
             .Select(result => result.EnsureSuccess())
             .FirstAsync(items => items.Any(item => item.Id == id && item.State == OccurrenceState.Completed))
             .ToTask(cancellationToken);

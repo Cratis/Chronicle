@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -11,11 +10,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_getting_metadat
 
 public class and_the_token_is_cancelled_while_connecting : given.all_dependencies
 {
-    const int CancelAfterMilliseconds = 50;
-
+    readonly TaskCompletionSource<IServices> _connect = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    IChronicleServicesAccessor _accessor;
     EventSequence _eventSequence;
+    bool _completedBeforeCancellation;
     Exception _error;
-    TimeSpan _elapsed;
 
     void Establish()
     {
@@ -23,10 +22,11 @@ public class and_the_token_is_cancelled_while_connecting : given.all_dependencie
             [typeof(IChronicleConnection), typeof(IChronicleServicesAccessor), typeof(IGetServicesAsynchronously), typeof(IKernelCapabilities)],
             []);
         ((IKernelCapabilities)connection).CapabilitiesAreKnown.Returns(true);
+        _accessor = (IChronicleServicesAccessor)connection;
 #pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
         ((IGetServicesAsynchronously)connection)
             .GetServices(Arg.Any<CancellationToken>())
-            .Returns(call => NeverConnects(call.Arg<CancellationToken>()));
+            .Returns(call => new ValueTask<IServices>(_connect.Task.WaitAsync(call.Arg<CancellationToken>())));
 #pragma warning restore CA2012
 
         _eventSequence = new(
@@ -45,21 +45,16 @@ public class and_the_token_is_cancelled_while_connecting : given.all_dependencie
             JsonSerializerOptions.Default);
     }
 
-    static async ValueTask<IServices> NeverConnects(CancellationToken cancellationToken)
-    {
-        await Task.Delay(Timeout.Infinite, cancellationToken);
-        return null!;
-    }
-
     async Task Because()
     {
-        using var cancellation = new CancellationTokenSource(CancelAfterMilliseconds);
-        var stopwatch = Stopwatch.StartNew();
-        _error = await Catch.Exception(() => _eventSequence.GetMetadataAt([(EventSequenceNumber)42UL], cancellation.Token));
-        stopwatch.Stop();
-        _elapsed = stopwatch.Elapsed;
+        using var cancellation = new CancellationTokenSource();
+        var metadata = _eventSequence.GetMetadataAt([(EventSequenceNumber)42UL], cancellation.Token);
+        _completedBeforeCancellation = metadata.IsCompleted;
+        await cancellation.CancelAsync();
+        _error = await Catch.Exception(() => metadata);
     }
 
+    [Fact] void should_return_control_while_the_connection_is_pending() => _completedBeforeCancellation.ShouldBeFalse();
     [Fact] void should_observe_the_token() => _error.ShouldBeAssignableFrom<OperationCanceledException>();
-    [Fact] void should_cancel_promptly() => _elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
+    [Fact] void should_not_connect_synchronously() => _ = _accessor.DidNotReceive().Services;
 }

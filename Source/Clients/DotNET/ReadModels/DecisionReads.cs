@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -183,7 +184,7 @@ public sealed partial class DecisionReads : IDecisionReads
             static (model, state) => state.Self.CreateAgreement(model, state.Definition, state.Types),
             (Self: this, Definition: definition, Types: types));
         await agreement.Value.WaitAsync(cancellationToken);
-        var services = ((IChronicleServicesAccessor)_eventStore.Connection).Services;
+        var services = await ((IChronicleServicesAccessor)_eventStore.Connection).GetServices(cancellationToken);
         var callContext = new CallContext(new CallOptions(cancellationToken: cancellationToken));
         var source = streamScope?.EventSourceId ?? (EventSourceId)key;
         for (var attempt = 0; attempt != 3; ++attempt)
@@ -329,7 +330,8 @@ public sealed partial class DecisionReads : IDecisionReads
     {
         try
         {
-            await ((IChronicleServicesAccessor)_eventStore.Connection).Services.ReadModels.DehydrateSession(
+            var services = await ((IChronicleServicesAccessor)_eventStore.Connection).GetServices(cancellationToken);
+            await services.ReadModels.DehydrateSession(
                 new()
                 {
                     EventStore = _eventStore.Name,
