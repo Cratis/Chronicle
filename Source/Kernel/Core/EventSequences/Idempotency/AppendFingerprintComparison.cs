@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Monads;
@@ -67,7 +69,9 @@ internal static class AppendFingerprintComparison
                 {
                     unverifiable = true;
                 }
-                else if (AppendFingerprint.ProtectedHash(input.Identity, key, values) != part.Hash)
+                else if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.ASCII.GetBytes(AppendFingerprint.ProtectedHash(input.Identity, key, values)),
+                    Encoding.ASCII.GetBytes(part.Hash)))
                 {
                     return new FingerprintComparisonResult(FingerprintComparisonStatus.Conflict, stored.EventType, FingerprintConflictReason.Content);
                 }
