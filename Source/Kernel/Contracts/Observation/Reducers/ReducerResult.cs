@@ -44,4 +44,10 @@ public class ReducerResult
     /// </summary>
     [ProtoMember(6)]
     public string? ReadModelState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delivery identifier echoed from the reduce operation. Zero selects legacy matching.
+    /// </summary>
+    [ProtoMember(7)]
+    public ulong DeliveryId { get; set; }
 }

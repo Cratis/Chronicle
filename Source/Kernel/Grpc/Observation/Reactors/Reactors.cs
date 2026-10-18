@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -15,7 +13,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Collections;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -50,7 +47,7 @@ internal sealed class Reactors(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
-        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
+        var pendingDeliveries = new PendingDeliveries<ObserverSubscriberResult>();
         IReactor clientObserver = null!;
 
         var messagesSubscription = messages.Subscribe(message =>
@@ -82,10 +79,9 @@ internal sealed class Reactors(
                         result.ExceptionMessages,
                         result.ExceptionStackTrace);
 
-                    if (reactorResultTcs.TryGetValue(result.Partition, out var tcs))
+                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
                     {
-                        tcs.SetResult(subscriberResult);
-                        reactorResultTcs.TryRemove(result.Partition, out _);
+                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
                     }
 
                     break;
@@ -130,9 +126,9 @@ internal sealed class Reactors(
                     registration.Namespace,
                     (partition, events, tcs) =>
                     {
-                        reactorResultTcs[partition] = tcs;
+                        var deliveryId = pendingDeliveries.Add(partition, tcs);
                         var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
+                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve, DeliveryId = deliveryId });
                     });
 
                 reactorMediator.SubscribeReplayNotifications(
@@ -173,7 +169,7 @@ internal sealed class Reactors(
             {
                 messagesSubscription.Dispose();
                 reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
-                reactorResultTcs.Values.ForEach(_ => _.TrySetResult(ObserverSubscriberResult.Disconnected()));
+                pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
                 if (clientObserver is not null)
                 {
                     await clientObserver.Unsubscribe();
@@ -187,6 +183,7 @@ internal sealed class Reactors(
         register = context.CancellationToken.Register(() =>
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
+            pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
             observableObserver?.OnCompleted();
             reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();

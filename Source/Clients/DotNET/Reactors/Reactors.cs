@@ -858,6 +858,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             var result = new ReactorResult
             {
                 Partition = events.Partition,
+                DeliveryId = events.DeliveryId,
                 State = state,
                 LastSuccessfulObservation = lastSuccessfullyObservedEvent,
                 ExceptionMessages = exceptionMessages.ToList(),
