@@ -52,6 +52,26 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        Task.FromResult(KeysFor(eventStore, eventStoreNamespace, identifier)
+            .OrderByDescending(_ => _.Key.Revision.Value)
+            .Select(_ => new EncryptionKeyAtRevision(_.Value, _.Key.Revision))
+            .FirstOrDefault());
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var revision = ErasureFor(eventStore, eventStoreNamespace, identifier).RevisionForNewKey(identifier, key);
+        var added = _keys.GetOrAdd(new Key(eventStore, eventStoreNamespace, identifier, revision), key);
+        return new(added, revision);
+    }
+
+    /// <inheritdoc/>
     public Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

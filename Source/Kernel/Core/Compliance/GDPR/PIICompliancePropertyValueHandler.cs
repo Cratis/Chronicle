@@ -46,15 +46,22 @@ public class PIICompliancePropertyValueHandler(
 
     /// <inheritdoc/>
     /// <exception cref="PIIIdentifierIsReserved">The identifier is reserved for confidentiality keys.</exception>
-    public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await ApplyReportingKey(eventStore, eventStoreNamespace, identifier, value)).Value;
+
+    /// <inheritdoc/>
+    public ProtectionKeyLocation KeyLocationFor(string identifier) => new(ProtectionKind.Pii, identifier);
+
+    /// <inheritdoc/>
+    public async Task<(JsonNode Value, EncryptionKeyUse? Key)> ApplyReportingKey(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
         if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier))
         {
             throw new PIIIdentifierIsReserved(identifier);
         }
 
-        var key = await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
-        return ProtectedValueCodec.Encrypt(encryption, key, value);
+        var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, identifier);
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value), new(ProtectionKind.Pii, identifier, pair.Key, pair.Revision));
     }
 
     /// <inheritdoc/>

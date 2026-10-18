@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Dynamic;
-using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -32,6 +31,8 @@ public class ResolveFutures(
     IObjectComparer objectComparer,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
+    readonly HashSet<ProjectionFutureId> _failedFutures = [];
+
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
@@ -50,6 +51,7 @@ public class ResolveFutures(
         // Attempt to resolve any pending futures now that we've processed a new event
         var futures = await projectionFutures.GetFutures();
 
+        _failedFutures.IntersectWith(futures.Select(future => future.Id));
         if (!futures.Any())
         {
             futuresTracker.HasPending = false;
@@ -91,7 +93,7 @@ public class ResolveFutures(
                     var childProjection = FindChildProjectionByPath(projection, future.ChildPath);
                     if (childProjection is null)
                     {
-                        logger.FailedToResolveFuture(new InvalidOperationException($"Could not find child projection for path '{future.ChildPath}'"), future.Id, future.ProjectionId);
+                        LogFailure(new InvalidOperationException($"Could not find child projection for path '{future.ChildPath}'"), future);
                         continue;
                     }
 
@@ -179,6 +181,7 @@ public class ResolveFutures(
                     childProjection.OnNext(futureContext);
 
                     await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
+                    _failedFutures.Remove(future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                     if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
@@ -188,7 +191,7 @@ public class ResolveFutures(
                 }
                 catch (Exception ex)
                 {
-                    logger.FailedToResolveFuture(ex, future.Id, future.ProjectionId);
+                    LogFailure(ex, future);
                 }
             }
         }
@@ -287,7 +290,7 @@ public class ResolveFutures(
             // parent key comes from its event source names the child in the root collection.
             // Neither may resolve against a child-created placeholder before the root's FROM.
             if (!IsRootInitialized(currentState, changeset)) return false;
-            if (KeysMatch(rootKey, parentKey)) return true;
+            if (KeyValueEquality.AreEqual(rootKey, parentKey)) return true;
 
             var directCollection = AsExpandoCollection(childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers));
             return directCollection?.ToList().Contains(parentIdentifiedByProperty, parentKey) == true;
@@ -323,45 +326,6 @@ public class ResolveFutures(
         }
 
         return ((IDictionary<string, object?>)state).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is true;
-    }
-
-    static bool KeysMatch(object rootKey, object parentKey)
-    {
-        if (Equals(rootKey, parentKey)) return true;
-
-        // Futures and resolved keys can be independently materialized composite objects;
-        // SQL can also supply the same composite key as JSON text.
-        if (rootKey is string rootText && rootText.StartsWith('{'))
-        {
-            return MatchesJson(rootText, parentKey);
-        }
-        if (parentKey is string parentText && parentText.StartsWith('{'))
-        {
-            return MatchesJson(parentText, rootKey);
-        }
-
-        return JsonElement.DeepEquals(JsonSerializer.SerializeToElement(rootKey), JsonSerializer.SerializeToElement(parentKey)) ||
-            (rootKey is not ExpandoObject && parentKey is not ExpandoObject &&
-             string.Equals(rootKey.ToString(), parentKey.ToString(), StringComparison.Ordinal));
-    }
-
-    static bool MatchesJson(string json, object other)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (other is string otherJson && otherJson.StartsWith('{'))
-            {
-                using var otherDocument = JsonDocument.Parse(otherJson);
-                return JsonElement.DeepEquals(document.RootElement, otherDocument.RootElement);
-            }
-
-            return JsonElement.DeepEquals(document.RootElement, JsonSerializer.SerializeToElement(other));
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
     }
 
     /// <summary>
@@ -477,6 +441,18 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    void LogFailure(Exception exception, ProjectionFuture future)
+    {
+        if (_failedFutures.Add(future.Id))
+        {
+            logger.FailedToResolveFuture(exception, future.Id, future.ProjectionId);
+        }
+        else
+        {
+            logger.FutureStillUnresolved(exception, future.Id, future.ProjectionId);
+        }
+    }
 
     async Task QueueFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave, HashSet<ProjectionFutureId> queuedFutures)
     {

@@ -32,5 +32,6 @@ public class a_property_handler : Specification
         // Stubbed under the fixed, no-per-document-component identity the handler builds internally - the whole
         // point of the namespace scope is that no subject/identifier participates in the key lookup at all.
         _keyStore.TryGetFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(Task.FromResult<EncryptionKey?>(_key));
+        _keyStore.TryGetLatestFor(EventStore, EventStoreNamespace, KeyIdentifier).Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
     }
 }

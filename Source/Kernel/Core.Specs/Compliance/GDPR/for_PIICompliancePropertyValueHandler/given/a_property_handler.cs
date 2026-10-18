@@ -26,5 +26,6 @@ public class a_property_handler : Specification
         _provisioner = new ManagedEncryptionKeyProvisioner(_keyStore, _encryption);
         _handler = new(_provisioner, _keyStore, _encryption);
         _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult<EncryptionKey?>(_key));
+        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
     }
 }

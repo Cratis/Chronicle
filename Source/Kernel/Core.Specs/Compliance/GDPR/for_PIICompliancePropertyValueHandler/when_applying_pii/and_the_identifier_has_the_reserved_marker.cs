@@ -24,5 +24,5 @@ public class and_the_identifier_has_the_reserved_marker : given.a_property_handl
         JsonValue.Create("personal value")));
 
     [Fact] void should_reject_any_reserved_prefix_not_only_known_key_identifiers() => _exception.ShouldBeOfExactType<PIIIdentifierIsReserved>();
-    [Fact] async Task should_not_provision_a_key() => await _provisioner.DidNotReceive().EnsureKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>());
+    [Fact] async Task should_not_provision_a_key() => await _provisioner.DidNotReceive().EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>());
 }
