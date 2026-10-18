@@ -20,5 +20,5 @@ internal static class ConstraintViolationConverters
             (ConstraintType)violation.ConstraintType,
             violation.ConstraintName,
             violation.Message,
-            new(violation.Details));
+            new(violation.Details ?? new Dictionary<string, string>()));
 }

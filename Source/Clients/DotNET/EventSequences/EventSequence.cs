@@ -883,7 +883,8 @@ public class EventSequence(
             EventTypes = [eventType],
             Observers = GetObservers()
         };
-        if (_appendedEventsRaised is not null)
+        var handler = _appendedEventsRaised;
+        if (handler is not null)
         {
             var context = EventContext.From(
                 eventStoreName,
@@ -903,7 +904,7 @@ public class EventSequence(
                 Subject = subject ?? new Subject(eventSourceId.Value),
                 EventSource = routing?.EventSource ?? EventSourceName.NotSet
             };
-            _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
+            NotifyAppendedEvents(handler, [new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
 
         return result;
@@ -1243,7 +1244,8 @@ public class EventSequence(
         // A duplicate did not append this attempt's events. Never notify local observers as if it did.
         if (response.EffectAlreadyRecorded) return result;
 
-        if (eventsList.Count > 0 && _appendedEventsRaised is not null)
+        var handler = _appendedEventsRaised;
+        if (eventsList.Count > 0 && handler is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
             var allResults = new List<AppendedEventWithResult>(eventsList.Count);
@@ -1279,7 +1281,7 @@ public class EventSequence(
                 allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result, evtType)));
             }
 
-            _appendedEventsRaised(allResults);
+            NotifyAppendedEvents(handler, allResults);
         }
 
         return result;
@@ -1352,7 +1354,8 @@ public class EventSequence(
         DateTimeOffset? occurred,
         IReadOnlyList<NamedTag> namedTags)
     {
-        if (events.Count == 0 || _appendedEventsRaised is null) return;
+        var handler = _appendedEventsRaised;
+        if (events.Count == 0 || handler is null) return;
 
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
@@ -1386,6 +1389,18 @@ public class EventSequence(
             results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result, evtType)));
         }
 
-        _appendedEventsRaised(results);
+        NotifyAppendedEvents(handler, results);
+    }
+
+    void NotifyAppendedEvents(Action<IEnumerable<AppendedEventWithResult>> handler, IEnumerable<AppendedEventWithResult> events)
+    {
+        try
+        {
+            handler(events);
+        }
+        catch (Exception exception)
+        {
+            _logger.AppendNotificationFailed(exception, eventSequenceId);
+        }
     }
 }
