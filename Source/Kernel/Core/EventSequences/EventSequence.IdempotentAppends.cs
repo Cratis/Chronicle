@@ -202,10 +202,19 @@ public partial class EventSequence
     {
         var all = violations.ToArray();
         await SettleKeys(requests, correlationId);
-        foreach (var request in requests.Where(request => request.Result is null))
+        var absent = requests.Where(request => request.Result is null).ToArray();
+        if (absent.Length == 0) return;
+        var sources = absent.Select(request => request.Event.EventSourceId).ToHashSet();
+        var remaining = all.Where(violation => sources.Contains(violation.EventSourceId)).ToArray();
+
+        // Settlement overrides a hit's losing check, but it does not commit the absent remainder.
+        var failure = remaining.Length > 0
+            ? AppendResult.Failed(correlationId, remaining[0])
+            : AppendResult.Failed(correlationId, [new AppendError("The batch was not appended because its concurrency check failed before the idempotency keys were settled. Nothing was written. Retry the append.")]);
+        foreach (var request in absent)
         {
-            request.ConcurrencyViolations = all;
-            request.Result = new(AppendResult.Failed(correlationId, all[0]).ReportingConcurrencyCheck(checkedScopes));
+            request.ConcurrencyViolations = remaining;
+            request.Result = new(failure.ReportingConcurrencyCheck(checkedScopes));
         }
     }
 

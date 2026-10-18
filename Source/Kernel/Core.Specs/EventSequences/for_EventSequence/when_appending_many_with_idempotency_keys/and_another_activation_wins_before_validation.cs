@@ -21,6 +21,7 @@ public class and_another_activation_wins_before_validation : given.an_idempotent
     async Task Because() => _batchResult = await AppendBatch();
     [Fact] void should_settle_every_key_as_done() => _batchResult.IsSuccess.ShouldBeTrue();
     [Fact] void should_not_report_the_losing_check() => _batchResult.Result.ConcurrencyCheckPerformed.ShouldBeFalse();
+    [Fact] void should_not_report_the_losing_violations() => _batchResult.Result.ConcurrencyViolations.ShouldBeEmpty();
     [Fact] void should_report_only_hits() => _batchResult.Outcomes.All(outcome => outcome == AppendOutcome.AlreadyAppended).ShouldBeTrue();
     [Fact] async Task should_not_write() => await ShouldNotWrite();
 }
