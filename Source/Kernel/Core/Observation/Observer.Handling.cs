@@ -201,6 +201,7 @@ public partial class Observer
                     await countsStorage.Increment(_observerId, partition, counts);
                     written.Add(partition);
                     State = WithIncrementedRunningTotals(State, counts);
+                    RecordedHandlingState();
                 }
 
                 await WriteStateAsync();
@@ -384,6 +385,7 @@ public partial class Observer
             // on the reloaded observer state and drives partition catch-up on the next activation.
             var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
             State = State with { InFlightPartitions = inFlightPartitions };
+            RecordedHandlingState();
             await WriteStateAsync();
 
             using (new WriteSuspension(this))
@@ -463,6 +465,7 @@ public partial class Observer
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
                         handledCountsPerEventType = handledEvents.CountByEventType();
                         State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
+                        RecordedHandlingState();
                     }
                 }
                 catch (Exception ex)
@@ -483,6 +486,7 @@ public partial class Observer
                 var remainingInFlight = new HashSet<Key>(State.InFlightPartitions);
                 remainingInFlight.Remove(partition);
                 State = State with { InFlightPartitions = remainingInFlight };
+                RecordedHandlingState();
 
                 if (failed)
                 {
