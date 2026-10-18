@@ -12,7 +12,7 @@ public class when_the_named_connection_string_is_empty : given.a_host_builder
 
     void Because()
     {
-        _builder.AddCratisChronicle();
+        _builder.AddCratisChronicle(default);
         ResolveOptions();
     }
 

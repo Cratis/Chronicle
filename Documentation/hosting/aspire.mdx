@@ -125,7 +125,7 @@ Pass the Chronicle resource as a connection string reference to your application
 
 `WithReference(chronicle)` supplies `ConnectionStrings__<resource name>` to the application, exposed by .NET configuration as `ConnectionStrings:<resource name>`. In the application, call `builder.AddCratisChronicle()` and configure your event store as usual. Both the generic-host and ASP.NET Core entry points read `ConnectionStrings:chronicle` by default, so Aspire's assigned host and port replace the localhost endpoint.
 
-If you give the Chronicle resource another name, pass that same name in the application's call: `builder.AddCratisChronicle(connectionStringName: "events")` reads `ConnectionStrings:events`. This name selects the connection string, not the event store.
+If you give the Chronicle resource another name, pass that same name in the application's call: `builder.AddCratisChronicle(configureOptions: null, configSection: null, configure: null, connectionStringName: "events")` reads `ConnectionStrings:events`. Supply the preceding arguments explicitly in this overload; use `null` for defaults. This name selects the connection string, not the event store.
 
 Connection strings take precedence in this order, highest first:
 
@@ -134,7 +134,7 @@ Connection strings take precedence in this order, highest first:
 3. `ConnectionStrings:<connectionStringName>` (`chronicle` by default).
 4. The existing development default: localhost on port 35000 with development client credentials.
 
-Other Chronicle settings continue to bind from `Cratis:Chronicle` (or your custom section). A missing or blank named connection string leaves the development default unchanged.
+Other Chronicle settings continue to bind from `Cratis:Chronicle` (or your custom section). The named fallback is parsed only after the section and callback have configured the options, and only if neither supplied a connection string. An explicit choice of the development connection string also takes precedence. A missing or blank named connection string leaves the development default unchanged.
 
 The connection string exposed by `ChronicleResource` uses the `chronicle://host:port` format and points to the gRPC endpoint (container port 35000, with the host port assigned by Aspire). A URL without credentials still uses Chronicle's existing client-credentials flow with the development client credentials; it does not disable authentication. For a production kernel, configure the required credentials explicitly rather than relying on the development defaults.
 

@@ -11,7 +11,7 @@ public class when_using_a_custom_connection_string_name : given.a_host_builder
 
     void Because()
     {
-        _builder.AddCratisChronicle(connectionStringName: "events");
+        _builder.AddCratisChronicle(configureOptions: null, configSection: null, configure: null, connectionStringName: "events");
         ResolveOptions();
     }
 

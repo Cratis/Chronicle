@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -13,7 +15,7 @@ namespace Cratis.Chronicle;
 internal static class ChronicleOptionsConfiguration
 {
     /// <summary>
-    /// Applies the named connection string before binding explicit Chronicle settings.
+    /// Binds Chronicle settings and applies the named fallback after explicit configuration.
     /// </summary>
     /// <typeparam name="TOptions">The Chronicle options type.</typeparam>
     /// <param name="builder">The options builder to configure.</param>
@@ -25,15 +27,30 @@ internal static class ChronicleOptionsConfiguration
         string configSectionPath,
         string connectionStringName)
         where TOptions : ChronicleOptions
-        => builder
-            .Configure<IConfiguration>((options, configuration) =>
+    {
+        var unconfiguredConnectionStrings = new ConditionalWeakTable<TOptions, ChronicleConnectionString>();
+        return builder
+            .Configure(options =>
             {
-                var explicitConnectionString = configuration[$"{configSectionPath}:{nameof(ChronicleOptions.ConnectionString)}"];
-                var connectionString = configuration.GetConnectionString(connectionStringName);
-                if (explicitConnectionString is null && !string.IsNullOrWhiteSpace(connectionString))
+                if (ReferenceEquals(options.ConnectionString, ChronicleConnectionString.Development))
                 {
-                    options.ConnectionString = new(connectionString);
+                    // A distinct default lets an explicit assignment of Development win as well.
+                    var connectionString = new ChronicleConnectionString(options.ConnectionString.ToString());
+                    unconfiguredConnectionStrings.Add(options, connectionString);
+                    options.ConnectionString = connectionString;
                 }
             })
-            .BindConfiguration(configSectionPath);
+            .BindConfiguration(configSectionPath)
+            .PostConfigure<IConfiguration>((options, configuration) =>
+            {
+                if (unconfiguredConnectionStrings.TryGetValue(options, out var unconfiguredConnectionString) &&
+                    ReferenceEquals(options.ConnectionString, unconfiguredConnectionString))
+                {
+                    var connectionString = configuration.GetConnectionString(connectionStringName);
+                    options.ConnectionString = string.IsNullOrWhiteSpace(connectionString)
+                        ? ChronicleConnectionString.Development
+                        : new(connectionString);
+                }
+            });
+    }
 }
