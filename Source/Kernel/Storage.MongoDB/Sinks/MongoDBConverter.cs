@@ -83,6 +83,26 @@ public class MongoDBConverter(
         return new(property, arrayFilters);
     }
 
+    // MongoDB compares embedded _id documents field order included, so parts are always written in
+    // schema order. Parts unknown to the schema follow, sorted ordinally, to stay deterministic.
+    static BsonDocument InCanonicalOrder(BsonDocument document, JsonSchema keySchema)
+    {
+        var order = keySchema.GetFlattenedProperties()
+            .Select((property, index) => (Name: property.Name.ToMongoDBPropertyName(), Index: index))
+            .GroupBy(_ => _.Name)
+            .ToDictionary(_ => _.Key, _ => _.First().Index);
+
+        var ordered = new BsonDocument();
+        foreach (var element in document.Elements
+            .OrderBy(_ => order.GetValueOrDefault(_.Name, int.MaxValue))
+            .ThenBy(_ => _.Name, StringComparer.Ordinal))
+        {
+            ordered[element.Name] = element.Value;
+        }
+
+        return ordered;
+    }
+
     /// <inheritdoc/>
     public BsonValue ToBsonValue(Key key)
     {
@@ -94,8 +114,9 @@ public class MongoDBConverter(
             return new BsonString(key.Value?.ToString() ?? string.Empty);
         }
 
-        var bsonValue = key.Value is ExpandoObject ?
-            expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
+        var keySchema = key.Value is ExpandoObject ? schema.GetSchemaForPropertyPath(idPropertyName) : null;
+        var bsonValue = key.Value is ExpandoObject composite ?
+            InCanonicalOrder(expandoObjectConverter.ToBsonDocument(composite, keySchema!), keySchema!) :
             ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
