@@ -105,7 +105,7 @@ public partial class UnitOfWork
                 ((_eventSequenceId is not null && _eventSequenceId != sequence) || _legacyEventSequenceIds.Any(_ => _ != sequence)))
             {
                 var (source, required) = requirements.First();
-                throw new ConflictingEnrollmentScope(source, scopes.FirstOrDefault(_ => _.Key == source).Value ?? ConcurrencyScope.NotSet, required, sequence);
+                throw new ConflictingEnrollmentScope(source, scopes.Find(_ => _.Key == source).Value ?? ConcurrencyScope.NotSet, required, sequence);
             }
             return new(enrollments, contributors, scopes, requirements);
         }
