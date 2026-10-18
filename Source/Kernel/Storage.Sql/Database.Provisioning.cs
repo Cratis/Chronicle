@@ -42,26 +42,30 @@ public partial class Database
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
-    async Task EnsureMigratedOnce(string key, SqlTarget target, DbContext context)
+    Task EnsureMigratedOnce(string key, SqlTarget target, DbContext context) => MigrateWithLock(context, target, key);
+
+    void RefreshMigrationCaches(DatabaseMigrationLock migrationLock)
     {
-        if (_migratedKeys.ContainsKey(key))
+        if (_migrationGenerations.GetValueOrDefault(migrationLock) == migrationLock.Generation)
         {
             return;
         }
 
-        await MigrateWithLock(context, target);
-        _migratedKeys.TryAdd(key, true);
+        // Another Database instance may have reset this file. Its local cache clear cannot invalidate ours.
+        ClearTableMigrationCache(string.Empty);
+        _migrationGenerations[migrationLock] = migrationLock.Generation;
     }
 
     /// <summary>
-    /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions
+    /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per physical target to prevent concurrent migration race conditions
     /// when multiple grains access the same database simultaneously.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
-    /// <param name="target">The <see cref="SqlTarget"/> the context connects to; its connection string is the lock key.</param>
+    /// <param name="target">The <see cref="SqlTarget"/> the context connects to.</param>
+    /// <param name="key">The migration cache key for this context.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="DatabaseMigrationIncomplete">A duplicate object left migrations pending.</exception>
-    async Task MigrateWithLock(DbContext context, SqlTarget target)
+    async Task MigrateWithLock(DbContext context, SqlTarget target, string key)
     {
         // For SQLite the file is created automatically when EF Core opens a connection
         // to a non-existent path. PostgreSQL and SQL Server require the database to
@@ -71,25 +75,36 @@ public partial class Database
         // namespace lives in its own database that the kernel creates on first access.
         await EnsureDatabaseExists(context, target);
 
-        var migrationLock = _migrationLocks.GetOrAdd(target.ConnectionString, _ => new SemaphoreSlim(1, 1));
-        await migrationLock.WaitAsync();
+        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+        await migrationLock.Semaphore.WaitAsync();
         try
         {
-            await context.Database.MigrateAsync();
-        }
-        catch (Exception ex) when (IsAlreadyExistsException(ex))
-        {
-            var pending = (await context.Database.GetPendingMigrationsAsync()).FirstOrDefault();
-            if (pending is not null)
+            RefreshMigrationCaches(migrationLock);
+            if (_migratedKeys.ContainsKey(key))
             {
-                throw new DatabaseMigrationIncomplete(context.Database.GetDbConnection().Database, pending, ex);
+                return;
             }
 
-            // Only a complete migration history proves the concurrent migration succeeded.
+            try
+            {
+                await context.Database.MigrateAsync();
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                var pending = (await context.Database.GetPendingMigrationsAsync()).FirstOrDefault();
+                if (pending is not null)
+                {
+                    throw new DatabaseMigrationIncomplete(context.Database.GetDbConnection().Database, pending, ex);
+                }
+
+                // Only a complete migration history proves the concurrent migration succeeded.
+            }
+
+            _migratedKeys.TryAdd(key, true);
         }
         finally
         {
-            migrationLock.Release();
+            migrationLock.Semaphore.Release();
         }
     }
 
@@ -125,7 +140,7 @@ public partial class Database
     async Task CreateDatabaseIfMissing(DbContext context, SqlTarget target, DatabaseType databaseType)
     {
         var connectionString = target.ConnectionString;
-        var migrationLock = _migrationLocks.GetOrAdd(connectionString, _ => new SemaphoreSlim(1, 1));
+        var migrationLock = DatabaseMigrationLock.For(connectionString).Semaphore;
         await migrationLock.WaitAsync();
         try
         {
@@ -243,6 +258,28 @@ public partial class Database
         }
     }
 
+    async Task EnsureTableMigrated<TDbContext>(TDbContext context, SqlTarget target)
+        where TDbContext : DbContext, ITableDbContext
+    {
+        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
+        {
+            await context.EnsureTableExists();
+            return;
+        }
+
+        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+        await migrationLock.Semaphore.WaitAsync();
+        try
+        {
+            RefreshMigrationCaches(migrationLock);
+            await context.EnsureTableExists();
+        }
+        finally
+        {
+            migrationLock.Semaphore.Release();
+        }
+    }
+
     async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
@@ -271,7 +308,7 @@ public partial class Database
                 // which already caches "already migrated" inside the migrator implementation, so we
                 // only need to call it once per request — the migrator itself will fast-path on
                 // subsequent calls without a DB roundtrip.
-                await context.EnsureTableExists();
+                await EnsureTableMigrated(context, target);
             });
 #pragma warning restore CA2000
 
@@ -297,7 +334,7 @@ public partial class Database
                 // pair), matching the MongoDB layout. PostgreSQL / SQL Server require the database to
                 // exist before any connection succeeds; SQLite creates the file on first connection.
                 await EnsureDatabaseExists(context, target);
-                await context.EnsureTableExists();
+                await EnsureTableMigrated(context, target);
             },
             purpose);
 #pragma warning restore CA2000
