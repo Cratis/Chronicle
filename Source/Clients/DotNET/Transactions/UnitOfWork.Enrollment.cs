@@ -49,10 +49,21 @@ public partial class UnitOfWork
     static EventStreamId? Normalize(EventStreamId? value) => value == EventStreamId.Default ? null : value;
     static EventSourceType? Normalize(EventSourceType? value) => value == EventSourceType.Default || value == EventSourceType.Unspecified ? null : value;
 
+    static UnitOfWorkEnrollment[] CreateEnrollments(EventSequenceId sequence, EventsWithConcurrencyScopes batch, bool useReadProtectionIdentity = false)
+    {
+        EventSourceId Label(EventSourceId source) => useReadProtectionIdentity ? new(source.Value) : source;
+        var targets = batch.Events.GroupBy(_ => Label(_.EventSourceId)).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
+        return targets.Keys.Union(batch.Entries.Select(_ => Label(_.Key))).SelectMany(source =>
+        {
+            var scopes = batch.Entries.Where(_ => Label(_.Key) == source).Select(_ => _.Value).DefaultIfEmpty(ConcurrencyScope.NotSet);
+            return scopes.Select(scope => new UnitOfWorkEnrollment(sequence, source, scope, targets.GetValueOrDefault(source, Array.AsReadOnly(Array.Empty<object>()))));
+        }).ToArray();
+    }
+
     EnrollmentResolution ResolveEnrollmentScopes(EventSequenceId sequence, IReadOnlyList<UnitOfWorkEnrollment> enrollments)
     {
         var contributors = _enrollmentContributors.ToArray();
-        var scopes = new Dictionary<EventSourceId, ConcurrencyScope>();
+        var scopes = new List<KeyValuePair<EventSourceId, ConcurrencyScope>>();
         var requirements = new Dictionary<EventSourceId, ConcurrencyScope>(_requiredEnrollmentScopes);
         _runningEnrollmentContributors = true;
         try
@@ -78,20 +89,23 @@ public partial class UnitOfWork
                 }
                 if (required != ConcurrencyScope.NotSet)
                 {
-                    if (_concurrencyScopes.TryGetValue(source, out var existing)) MergeRequiredScope(sequence, source, existing, required);
+                    if (_concurrencyScopes.TryGetValue(source, out var existing))
+                    {
+                        foreach (var scope in existing) MergeRequiredScope(sequence, source, scope, required);
+                    }
                     requirements[source] = required;
                 }
                 if (!IsEnforcingReadProtection && effective != ConcurrencyScope.NotSet && _decisionScopes.ContainsKey(new(source.Value)))
                 {
                     throw new DecisionReadConflictsWithConcurrencyScope(source);
                 }
-                scopes[source] = effective;
+                scopes.Add(new(source, effective));
             }
             if (requirements.Count != 0 &&
                 ((_eventSequenceId is not null && _eventSequenceId != sequence) || _legacyEventSequenceIds.Any(_ => _ != sequence)))
             {
                 var (source, required) = requirements.First();
-                throw new ConflictingEnrollmentScope(source, scopes.GetValueOrDefault(source, ConcurrencyScope.NotSet), required, sequence);
+                throw new ConflictingEnrollmentScope(source, scopes.Find(_ => _.Key == source).Value ?? ConcurrencyScope.NotSet, required, sequence);
             }
             return new(enrollments, contributors, scopes, requirements);
         }
@@ -107,11 +121,13 @@ public partial class UnitOfWork
         _runningEnrollmentContributors = true;
         try
         {
-            foreach (var enrollment in resolution.Enrollments.Where(_ => _.Events.Count != 0))
+            for (var index = 0; index < resolution.Enrollments.Count; index++)
             {
+                var enrollment = resolution.Enrollments[index];
+                if (enrollment.Events.Count == 0) continue;
                 foreach (var registration in resolution.Contributors)
                 {
-                    registration.Contributor.Enrolled(enrollment, resolution.Scopes[enrollment.EventSourceId]);
+                    registration.Contributor.Enrolled(enrollment, resolution.Scopes[index].Value);
                 }
             }
         }
@@ -140,7 +156,7 @@ public partial class UnitOfWork
     sealed record EnrollmentResolution(
         IReadOnlyList<UnitOfWorkEnrollment> Enrollments,
         IReadOnlyList<EnrollmentRegistration> Contributors,
-        IReadOnlyDictionary<EventSourceId, ConcurrencyScope> Scopes,
+        IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>> Scopes,
         IReadOnlyDictionary<EventSourceId, ConcurrencyScope> Requirements);
 
     sealed class EnrollmentRegistration(UnitOfWork unit, IUnitOfWorkEnrollmentContributor contributor) : IDisposable

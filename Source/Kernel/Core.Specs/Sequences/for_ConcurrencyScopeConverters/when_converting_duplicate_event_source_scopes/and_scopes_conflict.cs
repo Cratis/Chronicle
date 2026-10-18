@@ -10,12 +10,12 @@ namespace Cratis.Chronicle.Sequences.for_ConcurrencyScopeConverters.when_convert
 public class and_scopes_conflict : Specification
 {
     EventSourceConcurrencyScope[] _scopes;
-    Result<ConcurrencyScopes, AppendError> _result;
+    Result<ConcurrencyScopeConjunctions, AppendError> _result;
     Exception? _error;
 
     void Establish() => _scopes =
     [
-        new("source", new(0, true, ExpectsNoMatchingEvent: true)),
+        new("source", new(ulong.MaxValue, false)),
         new("source", new(5, true))
     ];
 

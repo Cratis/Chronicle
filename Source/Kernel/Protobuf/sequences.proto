@@ -267,6 +267,8 @@ message ConcurrencyViolation {
    uint64 ActualSequenceNumber = 3;
    string ConflictingEventTypeId = 4;
    uint64 ConflictingSequenceNumber = 5;
+   uint32 ScopeIndex = 6;
+   ConcurrencyScope Scope = 7;
 }
 enum ConstraintType {
    CONSTRAINT_TYPE_Unknown = 0;

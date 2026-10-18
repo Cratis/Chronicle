@@ -11,7 +11,7 @@ public class with_distinct_aggregates_without_reads : given.contributions
         Add(ReadProtectionContributionKind.Aggregate, new(90, _label, EventTypes: [_stockRemoved]), "removal aggregate");
     }
 
-    void Because() => _error = Catch.Exception(() => Merge());
+    void Because() => _plan = Merge();
 
-    [Fact] void should_never_overwrite_a_distinct_contribution() => _error.ShouldBeOfExactType<Transactions.ConflictingContributionsOnLabel>();
+    [Fact] void should_keep_every_distinct_contribution() => _plan.Scopes.Count.ShouldEqual(2);
 }

@@ -31,4 +31,11 @@ public interface IConcurrencyValidator
     /// <param name="scopes">The <see cref="ConcurrencyScopes"/>.</param>
     /// <returns>Collection of <see cref="ConcurrencyViolation"/>.</returns>
     ValueTask<IEnumerable<ConcurrencyViolation>> Validate(ConcurrencyScopes scopes);
+
+    /// <summary>
+    /// Validates every ordered guard, including repeated event source identifiers.
+    /// </summary>
+    /// <param name="scopes">The conjunction of guards.</param>
+    /// <returns>All failed guards with their request positions.</returns>
+    ValueTask<IEnumerable<ConcurrencyViolation>> Validate(ConcurrencyScopeConjunctions scopes);
 }

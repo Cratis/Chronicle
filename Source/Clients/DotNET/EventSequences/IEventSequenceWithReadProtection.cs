@@ -23,6 +23,6 @@ internal interface IEventSequenceWithReadProtection
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<NamedTag> namedTags,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
         ReadProtectionCommit commit) => throw new EventSequenceReadProtectionNotSupported(GetType());
 }

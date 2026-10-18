@@ -100,9 +100,7 @@ public partial class UnitOfWork
         var aggregate = onLabel.FirstOrDefault(_ => _.Kind == ReadProtectionContributionKind.Aggregate);
         if (read is not null && aggregate is not null) throw new ReadAndAggregateOnSameSource(contribution.Label, read.Description, aggregate.Description);
         var exact = ReadProtectionMerge.Distinct(onLabel.Where(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate));
-        if (exact.Count <= 1) return;
-        if (read is not null) throw new ConflictingExplicitScopes(contribution.Label, exact[0].Description, exact[1].Description);
-        throw new ConflictingContributionsOnLabel(contribution.Label, exact[0].Description, exact[1].Description);
+        ReadProtectionMerge.ValidateExact(contribution.Label, exact, read is not null);
     }
 
     void CaptureAppendConditions(IReadOnlyList<AppendCondition> conditions)

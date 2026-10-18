@@ -23,7 +23,7 @@ public partial class EventSequence
     /// <remarks>
     /// Appends do not interleave on this grain; the disposable restores scopes even after a failed append.
     /// </remarks>
-    ConcurrencyScopes? _concurrencyScopesForRetry;
+    Func<ValueTask<IEnumerable<ConcurrencyViolation>>>? _concurrencyValidationForRetry;
 
     async Task<AppendResult> AppendValidated(
         EventSourceType eventSourceType,
@@ -123,15 +123,19 @@ public partial class EventSequence
     IDisposable BeginConcurrencyValidation(EventSourceId eventSourceId, ConcurrencyScope scope) =>
         BeginConcurrencyValidation(new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope> { [eventSourceId] = scope }));
 
-    IDisposable BeginConcurrencyValidation(ConcurrencyScopes scopes)
+    IDisposable BeginConcurrencyValidation(ConcurrencyScopes scopes) => BeginConcurrencyValidation(() => ConcurrencyValidator.Validate(scopes));
+
+    IDisposable BeginConcurrencyValidation(ConcurrencyScopeConjunctions scopes) => BeginConcurrencyValidation(() => ConcurrencyValidator.Validate(scopes));
+
+    IDisposable BeginConcurrencyValidation(Func<ValueTask<IEnumerable<ConcurrencyViolation>>> validate)
     {
-        var previousScopes = _concurrencyScopesForRetry;
-        _concurrencyScopesForRetry = scopes;
-        return Disposable.Create(() => _concurrencyScopesForRetry = previousScopes);
+        var previous = _concurrencyValidationForRetry;
+        _concurrencyValidationForRetry = validate;
+        return Disposable.Create(() => _concurrencyValidationForRetry = previous);
     }
 
     async Task<IEnumerable<ConcurrencyViolation>> ValidateRetryConcurrency() =>
-        _concurrencyScopesForRetry is { } scopes ? await ConcurrencyValidator.Validate(scopes) : [];
+        _concurrencyValidationForRetry is { } validate ? await validate() : [];
 
     async Task<AppendResult?> ValidateAppendRetry(CorrelationId correlationId)
     {

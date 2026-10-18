@@ -30,4 +30,14 @@ public record ConcurrencyViolation(EventSourceId EventSourceId, EventSequenceNum
     /// the kernel is older than this client or could not read the event.
     /// </remarks>
     public EventSequenceNumber? ConflictingEventSequenceNumber { get; init; }
+
+    /// <summary>
+    /// Gets the failed scope's zero-based position in the request sent by the client, after de-duplication and resolution, when reported.
+    /// </summary>
+    public uint? ScopeIndex { get; init; }
+
+    /// <summary>
+    /// Gets the predicate and expected boundary that failed, when reported.
+    /// </summary>
+    public ConcurrencyScope? Scope { get; init; }
 }

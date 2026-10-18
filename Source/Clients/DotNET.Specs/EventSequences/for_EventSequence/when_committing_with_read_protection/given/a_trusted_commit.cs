@@ -25,6 +25,7 @@ public class a_trusted_commit : for_EventSequence.given.all_dependencies
 
     void Establish()
     {
+        ((Connections.IKernelCapabilities)_connection).Capabilities.Returns([Contracts.Clients.KernelCapabilities.ConcurrencyScopeConjunctions]);
         _changed = new("changed", EventTypeGeneration.First);
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_changed);

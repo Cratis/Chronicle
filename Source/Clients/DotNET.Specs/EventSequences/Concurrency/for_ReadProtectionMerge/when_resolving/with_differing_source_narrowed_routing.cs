@@ -16,7 +16,7 @@ public class with_differing_source_narrowed_routing : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_keep_the_read_boundary_instead_of_the_filtered_tails() => _plan.Scopes[_label].SequenceNumber.ShouldEqual((EventSequenceNumber)100u);
-    [Fact] void should_merge_instead_of_refusing_differing_routing_predicates() => _plan.Scopes.Count.ShouldEqual(1);
-    [Fact] void should_coarsen_the_guard_to_any_type() => _plan.Scopes[_label].EventTypes.ShouldBeEmpty();
+    [Fact] void should_keep_the_read_boundary() => _plan.Scopes[0].Value.SequenceNumber.ShouldEqual((EventSequenceNumber)100u);
+    [Fact] void should_keep_all_predicates() => _plan.Scopes.Count.ShouldEqual(3);
+    [Fact] void should_preserve_the_read_types() => _plan.Scopes[0].Value.EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id);
 }
