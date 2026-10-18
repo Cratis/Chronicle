@@ -48,7 +48,21 @@ public partial class ProjectionsManager
 
     async Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
     {
-        var definitions = State.Projections.Where(definition => definition.IsActive).ToArray();
+        var pass = SubscribeInNamespaceCore(@namespace, reconcile);
+        _subscriptionPasses.Add(pass);
+        try
+        {
+            await pass;
+        }
+        finally
+        {
+            _subscriptionPasses.Remove(pass);
+        }
+    }
+
+    async Task SubscribeInNamespaceCore(EventStoreNamespaceName @namespace, bool reconcile)
+    {
+        var definitions = State.Projections.Where(IsCurrentActiveDefinition).ToArray();
         var missing = new ConcurrentBag<ProjectionDefinition>();
         await Task.WhenAll(definitions.Select(async definition =>
         {
@@ -144,7 +158,8 @@ public partial class ProjectionsManager
         }));
     }
 
-    bool IsCurrentActiveDefinition(ProjectionDefinition definition) => definition.IsActive && State.Projections.Contains(definition);
+    bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
+        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition);
 
     async Task SetProjectionDefinition(ProjectionDefinition definition)
     {

@@ -25,7 +25,9 @@ public class and_registration_fails : Specification
             Substitute.For<IExpandoObjectConverter>(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
-            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>());
+            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
+            Substitute.For<ILocalSiloDetails>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _service.Register(new RegisterRequest
