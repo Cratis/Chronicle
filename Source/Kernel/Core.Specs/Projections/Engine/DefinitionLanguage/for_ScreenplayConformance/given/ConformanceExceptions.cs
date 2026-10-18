@@ -25,7 +25,6 @@ public static class ConformanceExceptions
         ["mapping-dynamic-key"] = new(ConformanceDirection.ScreenplayRejects, "The semantic model has no dictionary-keyed target, so a dynamic dictionary key is not admitted (PLAY0268)"),
         ["sequence"] = new(ConformanceDirection.ScreenplayRejects, "Which event sequence a projection observes is a realization concern, not portable behavior (PLAY0268)"),
         ["parent-outside-children"] = new(ConformanceDirection.ScreenplayRejects, "Chronicle never reads a parent key outside 'children'; the semantic model reports it instead of binding and ignoring it (PLAY0268)"),
-        ["context-not-a-member"] = new(ConformanceDirection.ScreenplayRejects, "The semantic model admits only the scalar paths of Chronicle's event context (PLAY0273); Chronicle receives only a Screenplay warning for an unknown member and compiles it"),
         ["context-on-behalf-of"] = new(ConformanceDirection.ScreenplayRejects, "'onBehalfOf' is optional and Chronicle does not read a missing one as null, so the semantic model admits no event-context path through it (PLAY0273)"),
 
         // The semantic model binds the construct; Chronicle rejects it on purpose.
@@ -41,6 +40,7 @@ public static class ConformanceExceptions
         ["all-and-every"] = new(ConformanceDirection.BothReject, "One 'every' or 'all' per level: ProjectionValidator and the semantic model (PLAY0268) both reject a second one"),
         ["removal-root-clear-with"] = new(ConformanceDirection.BothReject, "The Screenplay parser accepts 'clear with' only inside 'nested' (PLAY0071), so neither side binds it"),
         ["context-unknown-path"] = new(ConformanceDirection.BothReject, "An event-context path below a collection is a Screenplay parser error (PLAY0297) that both sides report"),
+        ["context-not-a-member"] = new(ConformanceDirection.BothReject, "Chronicle promotes Screenplay's unknown event-context member warning (PLAY0295) to an error; the semantic model rejects it as well (PLAY0273)"),
 
         // The two sides disagree, and it is not known to be intentional.
         ["joins-event-no-automap"] = new(ConformanceDirection.Disagreement, "Screenplay-side fix pending (reported to the Screenplay lane) - the semantic model ignores 'automap'/'no automap' on a joined event (warning PLAY0380 says Chronicle drops it), but the visitor keeps it on JoinDefinition.AutoMap and ProjectionFactory.GetMergedJoinProperties honors it"),

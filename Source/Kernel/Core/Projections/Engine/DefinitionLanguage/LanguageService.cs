@@ -35,6 +35,16 @@ public class LanguageService(
     /// </remarks>
     internal const string MissingDirectivesDiagnosticCode = "PLAY0057";
 
+    /// <summary>
+    /// The Screenplay warning reported when an event-context path starts with a member Chronicle's event context does not have.
+    /// </summary>
+    internal const string UnknownEventContextMemberDiagnosticCode = "PLAY0295";
+
+    /// <summary>
+    /// The Screenplay warning reported when an event-context path continues into a member the previous value does not have.
+    /// </summary>
+    internal const string UnknownEventContextPathDiagnosticCode = "PLAY0296";
+
     readonly ScreenplayCompiler _compiler = new();
 
     /// <inheritdoc/>
@@ -117,12 +127,16 @@ public class LanguageService(
     {
         var errors = diagnostics
             .Where(diagnostic =>
-                diagnostic.Severity == DiagnosticSeverity.Error &&
+                (diagnostic.Severity == DiagnosticSeverity.Error || IsUnresolvableEventContextPath(diagnostic)) &&
                 !(ignoreMissingDirectives && diagnostic.Code == MissingDirectivesDiagnosticCode))
             .Select(diagnostic => new CompilerError(diagnostic.Message, diagnostic.Location.Line, diagnostic.Location.Column));
 
         return new CompilerErrors(errors);
     }
+
+    static bool IsUnresolvableEventContextPath(Diagnostic diagnostic) =>
+        string.Equals(diagnostic.Code, UnknownEventContextMemberDiagnosticCode, StringComparison.Ordinal) ||
+        string.Equals(diagnostic.Code, UnknownEventContextPathDiagnosticCode, StringComparison.Ordinal);
 
     IProjectionCodeGenerator GeneratorFor(ProjectionCodeLanguage language, ProjectionCodeStyle style)
     {
