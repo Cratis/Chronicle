@@ -86,7 +86,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ReadModelDbContext>> _readModelOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, string Key), long> _migratedKeys = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, Type Context, string Table, string Columns), long> _ensuredTableGenerations = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, Type Context, string Table), long> _ensuredTableGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredDatabaseKeys = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredSchemaKeys = new();
 

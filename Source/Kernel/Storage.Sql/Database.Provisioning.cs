@@ -275,10 +275,11 @@ public partial class Database
 
         var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
 
-        // Read-model columns can evolve without a reset; a new shape must still reach the migrator.
-        var columns = context is ReadModelDbContext readModel ? string.Join('|', readModel.Columns.Select(column => column.Name)) : string.Empty;
-        var key = (migrationLock, typeof(TDbContext), context.TableName, columns);
-        if (_ensuredTableGenerations.TryGetValue(key, out var generation) && generation == migrationLock.Generation)
+        // Replay can rename or drop read-model tables without a reset. Always let their
+        // migrator check existence; only stable table contexts may use the generation cache.
+        var cacheTable = context is not ReadModelDbContext;
+        var key = (migrationLock, typeof(TDbContext), context.TableName);
+        if (cacheTable && _ensuredTableGenerations.TryGetValue(key, out var generation) && generation == migrationLock.Generation)
         {
             return;
         }
@@ -287,13 +288,16 @@ public partial class Database
         try
         {
             RefreshMigrationCaches(migrationLock);
-            if (_ensuredTableGenerations.TryGetValue(key, out generation) && generation == migrationLock.Generation)
+            if (cacheTable && _ensuredTableGenerations.TryGetValue(key, out generation) && generation == migrationLock.Generation)
             {
                 return;
             }
 
             await context.EnsureTableExists();
-            _ensuredTableGenerations[key] = migrationLock.Generation;
+            if (cacheTable)
+            {
+                _ensuredTableGenerations[key] = migrationLock.Generation;
+            }
         }
         finally
         {

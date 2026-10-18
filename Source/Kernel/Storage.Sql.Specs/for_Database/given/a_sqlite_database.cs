@@ -21,6 +21,7 @@ public class a_sqlite_database : Specification
 {
     protected static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
     protected readonly IEventSequenceMigrator _eventSequenceMigrator = Substitute.For<IEventSequenceMigrator>();
+    protected readonly IReadModelMigrator _readModelMigrator = Substitute.For<IReadModelMigrator>();
     protected Database _database;
     protected string _connectionString;
     protected string _directory;
@@ -44,7 +45,7 @@ public class a_sqlite_database : Specification
             await connection.OpenAsync();
         }
 
-        _services = new ServiceCollection().BuildServiceProvider();
+        _services = new ServiceCollection().AddSingleton(_readModelMigrator).BuildServiceProvider();
         _database = CreateDatabase();
     }
 
@@ -53,7 +54,7 @@ public class a_sqlite_database : Specification
         Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _connectionString } }),
         _eventSequenceMigrator,
         Substitute.For<IUniqueConstraintMigrator>(),
-        Substitute.For<IReadModelMigrator>());
+        _readModelMigrator);
 
     protected NamespaceDbContext Context(string? connectionString = null, params IInterceptor[] interceptors) => new(
         new DbContextOptionsBuilder<NamespaceDbContext>()
