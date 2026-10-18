@@ -95,7 +95,7 @@ public class with_postgresql_type_set_control(PostgreSqlFixture fixture) : Speci
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         return new(builder.Options);
     }
 }

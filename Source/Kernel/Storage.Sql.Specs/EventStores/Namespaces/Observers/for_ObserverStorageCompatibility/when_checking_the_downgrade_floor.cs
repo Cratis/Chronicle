@@ -23,8 +23,8 @@ public class when_checking_the_downgrade_floor : ObserverStorageCompatibilityCon
         _namespaceConnection = new SqliteConnection("DataSource=:memory:");
         await _storeConnection.OpenAsync();
         await _namespaceConnection.OpenAsync();
-        var storeOptions = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_storeConnection).AddConceptAsSupport().Options;
-        var namespaceOptions = new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_namespaceConnection).AddConceptAsSupport().Options;
+        var storeOptions = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_storeConnection).AddConceptAsSupport().EnableServiceProviderCaching(false).Options;
+        var namespaceOptions = new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_namespaceConnection).AddConceptAsSupport().EnableServiceProviderCaching(false).Options;
         await using (var context = new EventStoreDbContext(storeOptions))
         {
             await context.Database.MigrateAsync();

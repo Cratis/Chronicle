@@ -21,7 +21,7 @@ public class when_upgrading_sqlite : Specification, IDisposable
     {
         _connection = new("DataSource=:memory:");
         await _connection.OpenAsync();
-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options);
+        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE Observers (Id TEXT NOT NULL PRIMARY KEY)");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO Observers (Id) VALUES ('legacy-observer')");
     }

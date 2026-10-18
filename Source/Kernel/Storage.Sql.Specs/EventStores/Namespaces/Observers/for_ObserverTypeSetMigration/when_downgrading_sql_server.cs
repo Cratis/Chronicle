@@ -30,7 +30,7 @@ public class when_downgrading_sql_server(SqlServerFixture fixture) : Specificati
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
 
         // Match Database.BuildOptions so Arc's SQL generator creates the JSON CHECK constraints.
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         _context = new(builder.Options);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE [Observers] ([Id] nvarchar(255) NOT NULL PRIMARY KEY, [LastHandledEventSequenceNumber] bigint NOT NULL)");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO [Observers] ([Id], [LastHandledEventSequenceNumber]) VALUES ('legacy-observer', 42)");

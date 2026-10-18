@@ -44,7 +44,7 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         return new(builder.Options);
     }
 }

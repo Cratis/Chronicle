@@ -85,10 +85,10 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
     NamespaceDbContext CreateContext(given.ControlWriteBarrier? barrier = null)
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         if (barrier is not null)
         {
-            builder.AddInterceptors(barrier).EnableServiceProviderCaching(false);
+            builder.AddInterceptors(barrier);
         }
 
         var context = new NamespaceDbContext(builder.Options);

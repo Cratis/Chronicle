@@ -24,5 +24,5 @@ public class when_persisting_postgresql_rows(PostgreSqlFixture fixture) : Defini
 
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
 }

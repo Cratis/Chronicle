@@ -21,7 +21,7 @@ public class when_downgrading_postgresql(PostgreSqlFixture fixture) : Specificat
     async Task Establish()
     {
         _connectionString = await fixture.CreateDatabase();
-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE \"Observers\" (\"Id\" TEXT NOT NULL PRIMARY KEY)");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO \"Observers\" (\"Id\") VALUES ('legacy-observer')");
         _migration = new() { ActiveProvider = _context.Database.ProviderName };

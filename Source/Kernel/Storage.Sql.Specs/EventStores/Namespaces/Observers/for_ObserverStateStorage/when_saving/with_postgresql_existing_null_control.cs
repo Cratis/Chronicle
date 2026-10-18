@@ -50,7 +50,7 @@ public class with_postgresql_existing_null_control(PostgreSqlFixture fixture) : 
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         return new(builder.Options);
     }
 }

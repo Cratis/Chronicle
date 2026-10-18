@@ -75,7 +75,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
         return new(builder.Options);
     }
 }

@@ -30,5 +30,5 @@ public class when_persisting_rows : DefinitionChangeRowsContract, IDisposable
 
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().Options);
+    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
 }

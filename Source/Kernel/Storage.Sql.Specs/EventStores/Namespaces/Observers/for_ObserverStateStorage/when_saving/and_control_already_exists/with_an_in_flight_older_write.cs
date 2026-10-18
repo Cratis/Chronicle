@@ -27,8 +27,7 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
         await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
         _barrier = new();
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
-            .UseSqlite(_connection).AddConceptAsSupport().AddInterceptors(_barrier)
-            .EnableServiceProviderCaching(false).Options;
+            .UseSqlite(_connection).AddConceptAsSupport().EnableServiceProviderCaching(false).AddInterceptors(_barrier).Options;
         _delayedContext = new(options);
         var delayedDatabase = Substitute.For<IDatabase>();
         delayedDatabase.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
