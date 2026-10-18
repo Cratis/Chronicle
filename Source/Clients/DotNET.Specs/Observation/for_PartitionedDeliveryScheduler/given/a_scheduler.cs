@@ -25,6 +25,8 @@ public class a_scheduler : Specification
 
     protected void Stop() => _scheduler.Stop();
 
+    protected Task Drain() => _scheduler.Drain();
+
     protected Task Started(string name) => StartedFor(name).Task.WaitAsync(_deadline);
 
     protected void Release(string name) => GateFor(name).TrySetResult();

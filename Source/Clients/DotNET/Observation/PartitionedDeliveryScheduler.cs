@@ -97,6 +97,35 @@ internal sealed class PartitionedDeliveryScheduler : IDisposable
     /// </summary>
     public void Stop() => _stopped = true;
 
+    /// <summary>
+    /// Waits for all work that is scheduled or running to finish. Failures are not rethrown: draining never throws.
+    /// </summary>
+    /// <returns>A task that completes when everything scheduled so far has finished.</returns>
+    public async Task Drain()
+    {
+        Task[] pending;
+        lock (_lock)
+        {
+            pending = [.. _tails.Values.Append(_barrier)];
+        }
+
+        foreach (var task in pending)
+        {
+            await task.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+    }
+
+    /// <summary>
+    /// Stops the scheduler, waits for running work to finish and releases its resources.
+    /// </summary>
+    /// <returns>A task that completes when the scheduler has drained and been disposed.</returns>
+    public async Task DrainAndDispose()
+    {
+        Stop();
+        await Drain();
+        Dispose();
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {

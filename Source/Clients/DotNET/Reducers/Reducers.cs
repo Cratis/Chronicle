@@ -532,6 +532,7 @@ public partial class Reducers : IReducers
                     if (handler.CancellationToken.IsCancellationRequested)
                     {
                         _logger.ReducerStreamCancelled(handler.Id, ex);
+                        _ = scheduler.DrainAndDispose();
                         return;
                     }
 
@@ -550,6 +551,7 @@ public partial class Reducers : IReducers
                             // The kernel lost this client's registration: reconnect the whole client, which
                             // re-registers every reducer with a fresh connection id.
                             _logger.ReducerStreamLostConnection(handler.Id, ex);
+                            _ = scheduler.DrainAndDispose();
                             _eventStore.Connection.RequestReconnect();
                             return;
                         default:
@@ -561,6 +563,7 @@ public partial class Reducers : IReducers
                     {
                         try
                         {
+                            await scheduler.DrainAndDispose();
                             await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
                             _logger.ReconnectingReducer(handler.Id);
                             RegisterReducer(handler);

@@ -611,6 +611,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             {
                 try
                 {
+                    await scheduler.DrainAndDispose();
                     await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
@@ -646,6 +647,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                         messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
                         return;
                     }
 
@@ -665,6 +667,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     {
                         _logger.ReactorStreamLostConnection(handler.Id, ex);
                         messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
                         _eventStore.Connection.RequestReconnect();
                         return;
                     }

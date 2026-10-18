@@ -34,6 +34,9 @@ public class ChronicleOptions(
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5)
 {
+    ReactorOptions _reactors = new();
+    ReducerOptions _reducers = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
@@ -244,12 +247,28 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets or sets how reactors are run, such as how many partitions are handled at the same time.
     /// </summary>
-    public ReactorOptions Reactors { get; set; } = new ReactorOptions();
+    public ReactorOptions Reactors
+    {
+        get => _reactors;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _reactors = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets how reducers are run, such as how many partitions are handled at the same time.
     /// </summary>
-    public ReducerOptions Reducers { get; set; } = new ReducerOptions();
+    public ReducerOptions Reducers
+    {
+        get => _reducers;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _reducers = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the TLS configuration.
