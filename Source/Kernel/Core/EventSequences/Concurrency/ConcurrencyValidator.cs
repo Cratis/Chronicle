@@ -66,6 +66,26 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
         return violations.ToArray();
     }
 
+    /// <inheritdoc/>
+    public async ValueTask<IEnumerable<ConcurrencyViolation>> Validate(ConcurrencyScopeConjunctions scopes)
+    {
+        var violations = new List<ConcurrencyViolation>();
+        foreach (var (eventSourceId, scope, index) in scopes.Entries)
+        {
+            var result = await Validate(eventSourceId, scope);
+            if (result.TryGetValue(out var violation))
+            {
+                violations.Add(violation with
+                {
+                    ScopeIndex = index,
+                    Scope = Sequences.ConcurrencyScopeConverters.ToApi(scope)
+                });
+            }
+        }
+
+        return violations;
+    }
+
     /// <summary>
     /// Adds the first event that matched the scope after the expected sequence number to a violation.
     /// </summary>

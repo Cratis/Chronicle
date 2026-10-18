@@ -93,6 +93,10 @@ When appending multiple events, you can specify different concurrency scopes for
 
 <ChronicleClientTabs snippet="events/concurrency/append-many" />
 
+In .NET, the ordered-scope overload `AppendMany(events, correlationId, tags, concurrencyScopes)` also accepts several `KeyValuePair<EventSourceId, ConcurrencyScope>` entries with the same label and different predicates. Use this for a decision that reads several streams of one source, even if it appends only one event. Every predicate must hold; none is replaced by another. The kernel must advertise `concurrency-scope-conjunctions`, or the client refuses before sending the batch. A unit of work and an `EventsWithConcurrencyScopes` reactor result preserve the same conjunction. Use the result's `Entries` property rather than its single-scope-per-label dictionary accessor.
+
+A reported violation includes `ScopeIndex`, the zero-based position in the submitted scope list, and `Scope`, the failed predicate and expected position. Either may be absent with older kernels or single-scope RPCs.
+
 Every scope in the batch is checked once, against the state of the event store *before* the batch. A scope never sees events that the same batch is about to write, so two events for one event source do not trip over each other. The batch is also all-or-nothing: if any scope reports a violation, Chronicle appends none of the events and returns every violation it found.
 
 ## Event Source Operations with Concurrency

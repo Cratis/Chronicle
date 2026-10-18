@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// </summary>
 /// <param name="Scopes">The conditions to send.</param>
 /// <param name="Conditions">The descriptions exposed by the unit of work.</param>
-internal record ReadProtectionPlan(IReadOnlyDictionary<EventSourceId, ConcurrencyScope> Scopes, IReadOnlyList<AppendCondition> Conditions);
+internal record ReadProtectionPlan(IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>> Scopes, IReadOnlyList<AppendCondition> Conditions);

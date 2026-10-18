@@ -10,19 +10,8 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// Resolves the concurrency scope of one event source id in a batch appended through event source definitions.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The append protocol carries one scope per event source id, so every guard the batch needs for that id has to be
-/// the same guard. Every entry is resolved through the strategy, and the guards that actually check something are
-/// compared by their predicate: source id, source type, stream type, stream id and the set of event types. The
-/// expected sequence number is not part of the predicate, because it is read at a point in time and differs
-/// between reads of the same predicate; the first guard that checks something is kept, which is the conservative one.
-/// </para>
-/// <para>
-/// An entry whose strategy result checks nothing (<see cref="ConcurrencyScope.None"/>, an unresolved scope, or one
-/// that is incomplete and so validated against nothing) needs no guard and never hides a later entry that does.
-/// Two entries needing different guards cannot be represented, so <see cref="IncompatibleConcurrencyScopesForEventSource"/>
-/// is thrown rather than dropping one of them.
-/// </para>
+/// Every distinct routing predicate is resolved. Equal predicates retain the earliest expected boundary;
+/// unchecked entries never hide a later guard. The transport checks kernel conjunction support before sending.
 /// </remarks>
 internal static class DefinitionConcurrencyScopeResolver
 {
@@ -33,20 +22,17 @@ internal static class DefinitionConcurrencyScopeResolver
     /// <param name="entries">The events with their routing, in batch order.</param>
     /// <param name="strategy">The <see cref="IConcurrencyScopeStrategy"/> to resolve each entry with.</param>
     /// <param name="honorDeclaredConcurrency">Whether Enforce metadata supplies deferred dimensions.</param>
-    /// <returns>The <see cref="ConcurrencyScope"/> to send for the event source id.</returns>
-    /// <exception cref="IncompatibleConcurrencyScopesForEventSource">The entries require different guards.</exception>
-    public static async Task<ConcurrencyScope> Resolve(
+    /// <returns>The scopes to send for the event source id.</returns>
+    public static async Task<IReadOnlyList<ConcurrencyScope>> Resolve(
         EventSourceId eventSourceId,
         IReadOnlyList<(EventForEventSourceId Event, ResolvedEventRouting? Routing)> entries,
         IConcurrencyScopeStrategy strategy,
         bool honorDeclaredConcurrency = false)
     {
-        // Legacy-only batches keep the long-standing behavior of using the first event.
-        var relevant = entries.Any(_ => _.Routing is not null || (honorDeclaredConcurrency && _.Event.DeclaredConcurrency is not null)) ? entries : [entries[0]];
         var resolved = new List<ConcurrencyScope>();
         var cache = new Dictionary<object, ConcurrencyScope>();
 
-        foreach (var (@event, routing) in relevant)
+        foreach (var (@event, routing) in entries)
         {
             var dimensions = honorDeclaredConcurrency ? @event.DeclaredConcurrency ?? routing?.Dimensions : routing?.Dimensions;
             var key = (dimensions, @event.EventStreamType, @event.EventStreamId, @event.EventSourceType);
@@ -65,30 +51,39 @@ internal static class DefinitionConcurrencyScopeResolver
         var guards = resolved.Where(ChecksSomething).ToList();
         if (guards.Count == 0)
         {
-            return resolved.Find(_ => _ != ConcurrencyScope.NotSet) ?? resolved[0];
+            return [resolved.Find(_ => _ != ConcurrencyScope.NotSet) ?? resolved[0]];
         }
 
         var distinct = new List<ConcurrencyScope>();
         guards.ForEach(guard =>
         {
-            if (!distinct.Exists(_ => SamePredicate(_, guard)))
+            var index = distinct.FindIndex(_ => SamePredicate(_, guard));
+            if (index < 0)
             {
                 distinct.Add(guard);
             }
+            else
+            {
+                distinct[index] = distinct[index] with { SequenceNumber = ReadProtectionPredicate.Earliest(distinct[index].SequenceNumber, guard.SequenceNumber) };
+            }
         });
 
-        return distinct.Count > 1
-            ? throw new IncompatibleConcurrencyScopesForEventSource(eventSourceId, distinct)
-            : guards[0];
+        return distinct;
     }
 
-    static bool ChecksSomething(ConcurrencyScope scope) =>
-        scope != ConcurrencyScope.NotSet && scope != ConcurrencyScope.None && (scope.SequenceNumber.IsActualValue || scope.SequenceNumber.IsBeforeFirst);
-
-    static bool SamePredicate(ConcurrencyScope left, ConcurrencyScope right) =>
+    /// <summary>
+    /// Compares the narrowing independently of its expected boundary.
+    /// </summary>
+    /// <param name="left">The first scope.</param>
+    /// <param name="right">The second scope.</param>
+    /// <returns>Whether both scopes guard the same predicate.</returns>
+    internal static bool SamePredicate(ConcurrencyScope left, ConcurrencyScope right) =>
         left.EventSourceId?.Value == right.EventSourceId?.Value &&
         left.EventSourceType == right.EventSourceType &&
         left.EventStreamType == right.EventStreamType &&
         left.EventStreamId == right.EventStreamId &&
         (left.EventTypes ?? []).ToHashSet().SetEquals(right.EventTypes ?? []);
+
+    static bool ChecksSomething(ConcurrencyScope scope) =>
+        scope != ConcurrencyScope.NotSet && scope != ConcurrencyScope.None && (scope.SequenceNumber.IsActualValue || scope.SequenceNumber.IsBeforeFirst);
 }

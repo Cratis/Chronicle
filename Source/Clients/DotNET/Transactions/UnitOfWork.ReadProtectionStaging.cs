@@ -19,9 +19,8 @@ public partial class UnitOfWork
     {
         var batch = new EventsWithConcurrencyScopes(events, scopes.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(new(_.Key.Value), _.Value)), true);
         EnsureEventSequenceCanBeUsed(sequence);
-        foreach (var label in batch.Events.Select(_ => _.EventSourceId).Union(batch.ConcurrencyScopes.Keys)) ValidateEnforcedLabel(label);
-        var targets = batch.Events.GroupBy(_ => new EventSourceId(_.EventSourceId.Value)).ToDictionary(_ => _.Key, _ => Array.AsReadOnly(_.Select(e => e.Event).ToArray()));
-        var enrollments = targets.Keys.Union(batch.ConcurrencyScopes.Keys).Select(label => new UnitOfWorkEnrollment(sequence, label, batch.ConcurrencyScopes.GetValueOrDefault(label, ConcurrencyScope.NotSet), targets.GetValueOrDefault(label, Array.AsReadOnly(Array.Empty<object>())))).ToArray();
+        foreach (var label in batch.Events.Select(_ => _.EventSourceId).Union(batch.Entries.Select(_ => _.Key))) ValidateEnforcedLabel(label);
+        var enrollments = CreateEnrollments(sequence, batch, true);
         var resolution = ResolveEnrollmentScopes(sequence, enrollments);
         var pending = CaptureStagedContributions(sequence, resolution.Scopes, origin, batch.Events.Count == 0);
         var staged = batch.Events.Select(_ => _ with { NamedTags = NamedTagConverters.Merge(_.NamedTags, []) }).ToArray();
@@ -34,7 +33,7 @@ public partial class UnitOfWork
         CompleteEnrollment(resolution);
     }
 
-    List<ReadProtectionContribution> CaptureStagedContributions(EventSequenceId sequence, IReadOnlyDictionary<EventSourceId, ConcurrencyScope> scopes, ConcurrencyScopeOrigin origin, bool validateOnly)
+    List<ReadProtectionContribution> CaptureStagedContributions(EventSequenceId sequence, IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, ConcurrencyScopeOrigin origin, bool validateOnly)
     {
         var pending = new List<ReadProtectionContribution>();
         foreach (var (label, scope) in scopes.Where(_ => _.Value != ConcurrencyScope.NotSet))

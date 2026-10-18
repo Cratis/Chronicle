@@ -334,6 +334,33 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        ImmediateAppendGuard.Append(nameof(AppendMany));
+        ReadProtectionGuard.Append(nameof(AppendMany));
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendManyCore(batch.Events, [], correlationId, tags, batch.Entries);
+    }
+
+    /// <inheritdoc/>
+    public Task<AppendManyResult> AppendManyWithNamedTags(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
+        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendManyCore(batch.Events, namedTags, correlationId, tags, batch.Entries);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasEventsFor(EventSourceId eventSourceId)
     {
         ReadProtectionGuard.Read(nameof(HasEventsFor));
@@ -664,7 +691,7 @@ public class EventSequence(
     Task<AppendManyResult> IEventSequenceWithReadProtection.AppendMany(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<NamedTag> namedTags,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
         ReadProtectionCommit commit)
     {
         if (commit.Target != new ReadProtectionTarget(eventStoreName, @namespace, eventSequenceId)) throw new ReadDependencyTargetMismatch("trusted commit");
@@ -679,7 +706,7 @@ public class EventSequence(
     /// <inheritdoc/>
     Task<AppendManyResult> IEventSequenceWithEffectReceipts.AppendManyWithEffectReceipt(
         IEnumerable<EventForEventSourceId> events,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
         Contracts.Occurrences.EffectReceipt receipt,
         ReadProtectionCommit? readProtectionCommit)
     {
@@ -701,7 +728,7 @@ public class EventSequence(
     /// <returns>The append result.</returns>
     internal Task<AppendManyResult> AppendManyForUnitOfWork(
         IEnumerable<EventForEventSourceId> events,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes) =>
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes) =>
         AppendManyCore(events, [], concurrencyScopes: scopes);
 
     /// <summary>Checks whether this is the event log for the exact decision-read target.</summary>
@@ -1054,7 +1081,7 @@ public class EventSequence(
         IEnumerable<NamedTag> namedTags,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>? concurrencyScopes = default,
         ReadProtectionCommit? readProtectionCommit = null)
     {
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
@@ -1121,12 +1148,12 @@ public class EventSequence(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId,
         IEnumerable<string>? tags,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>? concurrencyScopes,
         IEnumerable<NamedTag> namedTags,
         ReadProtectionCommit? readProtectionCommit = null,
         Contracts.Occurrences.EffectReceipt? effectReceipt = null)
     {
-        concurrencyScopes = concurrencyScopes?.ToDictionary(_ => _.Key, _ => NormalizeConcurrencyScope(_.Value));
+        concurrencyScopes = concurrencyScopes?.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(_.Key, NormalizeConcurrencyScope(_.Value))).ToArray();
         if (readProtectionCommit is not null)
         {
             readProtectionCommit = readProtectionCommit with
@@ -1180,6 +1207,7 @@ public class EventSequence(
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, routings, concurrencyScopes, readProtectionCommit);
+        RequireConjunctionSupport(resolvedConcurrencyScopes);
         var identity = identityProvider.GetCurrent();
 
         var request = new Contracts.Sequences.AppendManyForEventSourcesRequest
@@ -1287,37 +1315,49 @@ public class EventSequence(
         return result;
     }
 
-    async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
+    async Task<IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>>> ResolveConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
         List<ResolvedEventRouting?> routings,
-        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>? concurrencyScopes,
         ReadProtectionCommit? readProtectionCommit = null)
     {
-        var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
+        var resolvedConcurrencyScopes = concurrencyScopes?.ToList() ?? [];
         var strategy = concurrencyScopeStrategies.GetFor(this);
         var routingByEvent = events.Select((@event, index) => (Event: @event, Routing: routings[index])).ToList();
         if (readProtectionCommit is not null)
         {
-            var plan = await ReadProtectionRouting.Resolve(readProtectionCommit, routingByEvent, resolvedConcurrencyScopes, strategy);
+            var plan = await ReadProtectionRouting.Resolve(readProtectionCommit, routingByEvent, resolvedConcurrencyScopes, strategy, SupportsConjunctions());
+            RequireConjunctionSupport(plan.Scopes);
             readProtectionCommit.Resolved(plan.Conditions);
-            return plan.Scopes.ToDictionary(_ => _.Key, _ => _.Value);
+            return plan.Scopes;
         }
 
         foreach (var eventsForEventSource in routingByEvent.GroupBy(_ => _.Event.EventSourceId))
         {
-            if (resolvedConcurrencyScopes.TryGetValue(eventsForEventSource.Key, out var concurrencyScope) &&
-                concurrencyScope != ConcurrencyScope.NotSet)
+            if (resolvedConcurrencyScopes.Exists(_ => _.Key == eventsForEventSource.Key && _.Value != ConcurrencyScope.NotSet))
             {
                 continue;
             }
 
-            resolvedConcurrencyScopes[eventsForEventSource.Key] = await DefinitionConcurrencyScopeResolver.Resolve(
-                eventsForEventSource.Key,
-                eventsForEventSource.ToList(),
-                strategy);
+            resolvedConcurrencyScopes.RemoveAll(_ => _.Key == eventsForEventSource.Key);
+            var resolved = await DefinitionConcurrencyScopeResolver.Resolve(eventsForEventSource.Key, eventsForEventSource.ToList(), strategy);
+            resolvedConcurrencyScopes.AddRange(resolved.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(eventsForEventSource.Key, _)));
         }
 
         return resolvedConcurrencyScopes;
+    }
+
+    bool SupportsConjunctions() => connection is IKernelCapabilities capabilities && capabilities.CapabilitiesAreKnown &&
+        capabilities.Capabilities.Contains(Contracts.Clients.KernelCapabilities.ConcurrencyScopeConjunctions);
+
+    void RequireConjunctionSupport(IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes)
+    {
+        if (SupportsConjunctions())
+        {
+            return;
+        }
+        var repeated = scopes.GroupBy(_ => _.Key.Value).FirstOrDefault(_ => _.Count() > 1);
+        if (repeated is not null) throw new IncompatibleConcurrencyScopesForEventSource(repeated.First().Key, repeated.Select(_ => _.Value).ToArray());
     }
 
     async Task<ConcurrencyScope> GetScopeFor(

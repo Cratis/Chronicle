@@ -17,5 +17,5 @@ public class with_changed_caller_type_collections : given.contributions
 
     void Because() => _plan = Merge();
 
-    [Fact] void should_retain_the_types_captured_at_acquisition() => _plan.Scopes[_label].EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id);
+    [Fact] void should_retain_the_types_captured_at_acquisition() => _plan.Scopes.Single().Value.EventTypes!.Select(_ => _.Id).ShouldContainOnly(_stockReduced.Id);
 }

@@ -21,7 +21,7 @@ internal interface IEventSequenceWithEffectReceipts
     /// <returns>The append result and winning receipt.</returns>
     Task<AppendManyResult> AppendManyWithEffectReceipt(
         IEnumerable<EventForEventSourceId> events,
-        IDictionary<EventSourceId, ConcurrencyScope> scopes,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes,
         Contracts.Occurrences.EffectReceipt receipt,
         ReadProtectionCommit? readProtectionCommit);
 }

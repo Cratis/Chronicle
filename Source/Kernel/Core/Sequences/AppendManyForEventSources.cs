@@ -105,8 +105,40 @@ public record AppendManyForEventSources(
             });
         }
 
-        return EffectReceipt is null
-            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes.AsT0)
-            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, scopes.AsT0, EffectReceipt);
+        var conjunctions = scopes.AsT0;
+        if (conjunctions.HasRepeatedIds)
+        {
+            return EffectReceipt is null
+                ? eventSequence.AppendManyWithConjunctions(events, correlationId, causationChain, identity, conjunctions)
+                : eventSequence.AppendManyWithConjunctionsAndEffectReceipt(events, correlationId, causationChain, identity, conjunctions, EffectReceipt);
+        }
+
+        var legacyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(conjunctions.Entries.ToDictionary(_ => _.EventSourceId, _ => _.Scope));
+        var append = EffectReceipt is null
+            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, legacyScopes)
+            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, legacyScopes, EffectReceipt);
+        return WithScopePositions(append, conjunctions);
+    }
+
+    static async Task<AppendManyResult> WithScopePositions(Task<AppendManyResult> append, Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions scopes)
+    {
+        var result = await append;
+        if (!result.HasConcurrencyViolations) return result;
+
+        return new AppendManyResult
+        {
+            CorrelationId = result.CorrelationId,
+            SequenceNumbers = result.SequenceNumbers,
+            ConstraintViolations = result.ConstraintViolations,
+            Errors = result.Errors,
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed,
+            EffectReceipt = result.EffectReceipt,
+            EffectAlreadyRecorded = result.EffectAlreadyRecorded,
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(violation =>
+            {
+                var entry = scopes.Entries.Single(_ => _.EventSourceId == violation.EventSourceId);
+                return violation with { ScopeIndex = entry.ScopeIndex, Scope = entry.Scope.ToApi() };
+            }).ToArray()
+        };
     }
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_committing_with_read_protection;
@@ -20,6 +19,6 @@ public class with_different_declared_routes_without_reads : given.a_trusted_comm
         await Commit();
     });
 
-    [Fact] void should_keep_the_legacy_resolver_refusal_without_reads() => _error.ShouldBeOfExactType<IncompatibleConcurrencyScopesForEventSource>();
-    [Fact] void should_not_append() => _request.ShouldBeNull();
+    [Fact] void should_accept_each_predicate() => _error.ShouldBeNull();
+    [Fact] void should_send_both_guards() => _request.ConcurrencyScopes.Count().ShouldEqual(2);
 }

@@ -40,6 +40,7 @@ public class and_the_client_sent_the_servers_own_descriptor_set : Specification
         DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
     });
 
+    [Fact] void should_advertise_conjunction_support() => _result.Capabilities.ShouldContain(KernelCapabilities.ConcurrencyScopeConjunctions);
     [Fact] void should_report_compatible() => _result.IsCompatible.ShouldBeTrue();
     [Fact] void should_report_nothing() => _result.Incompatibilities.ShouldBeEmpty();
     [Fact] void should_report_the_running_server_version() => _result.ServerVersion.ShouldEqual(ServerVersion.Version);

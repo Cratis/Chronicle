@@ -57,27 +57,39 @@ internal static class ConcurrencyScopeConverters
 
     /// <summary>
     /// Converts a collection of <see cref="EventSourceConcurrencyScope"/> to a
-    /// <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScopes"/>.
+    /// <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions"/>.
     /// </summary>
     /// <param name="scopes">The scopes to convert.</param>
-    /// <returns>The converted scopes, or an append error if one event source carries conflicting scopes.</returns>
-    public static Result<Concepts.EventSequences.Concurrency.ConcurrencyScopes, AppendError> ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes)
+    /// <returns>The ordered guards, or an append error if one source mixes no-check and guarded scopes.</returns>
+    public static Result<Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions, AppendError> ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes)
     {
-        var converted = new Dictionary<Concepts.Events.EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>();
-        foreach (var eventSourceScope in scopes.Where(scope => !string.IsNullOrWhiteSpace(scope.EventSourceId) && scope.Scope is not null))
+        var converted = new List<(Concepts.Events.EventSourceId EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope Scope, uint? ScopeIndex)>();
+        foreach (var (eventSourceScope, index) in scopes.Select((scope, index) => (scope, index)).Where(_ => !string.IsNullOrWhiteSpace(_.scope.EventSourceId) && _.scope.Scope is not null))
         {
             var eventSourceId = new Concepts.Events.EventSourceId(eventSourceScope.EventSourceId);
             var scope = eventSourceScope.Scope.ToChronicle();
-            if (converted.TryGetValue(eventSourceId, out var existing) && !AreEqual(existing, scope))
+            var existing = converted.Where(_ => _.EventSourceId == eventSourceId).ToArray();
+            var isNone = IsNoCheck(scope);
+            if (existing.Any(_ => IsNoCheck(_.Scope) != isNone))
             {
                 return new AppendError($"Conflicting concurrency scopes for event source '{eventSourceId}'.");
             }
 
-            converted[eventSourceId] = scope;
+            if (!existing.Any(_ => AreEqual(_.Scope, scope))) converted.Add((eventSourceId, scope, (uint)index));
         }
 
-        return new Concepts.EventSequences.Concurrency.ConcurrencyScopes(converted);
+        return new Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions(converted);
     }
+
+    /// <summary>
+    /// Converts a validated predicate to its API shape without exposing internal sequence-number sentinels.
+    /// </summary>
+    /// <param name="scope">The predicate.</param>
+    /// <returns>The predicate and explicit absence expectation.</returns>
+    internal static ConcurrencyScope ToApi(this Concepts.EventSequences.Concurrency.ConcurrencyScope scope) =>
+        new(scope.ExpectsNoMatchingEvent ? Concepts.Events.EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value, scope.EventSourceId, scope.EventStreamType?.Value, scope.EventStreamId?.Value, scope.EventSourceType?.Value, scope.EventTypes?.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)), scope.ExpectsNoMatchingEvent);
+
+    static bool IsNoCheck(Concepts.EventSequences.Concurrency.ConcurrencyScope scope) => scope == Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
 
     static bool AreEqual(Concepts.EventSequences.Concurrency.ConcurrencyScope first, Concepts.EventSequences.Concurrency.ConcurrencyScope second) =>
         first with { EventTypes = null } == second with { EventTypes = null } &&
