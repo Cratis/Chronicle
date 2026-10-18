@@ -67,6 +67,8 @@ public partial class Sink : ISink
     readonly IReadOnlyList<ProjectedColumn> _columns;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
+    readonly ReadModelDefinition _readModel;
+    readonly ICompositeKeyReplayRecommender? _compositeKeyReplayRecommender;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -98,6 +100,7 @@ public partial class Sink : ISink
     /// <param name="expandoObjectConverter">The schema-aware converter.</param>
     /// <param name="replayingTables">The shared replay routing state.</param>
     /// <param name="logger">The logger for replay recovery diagnostics.</param>
+    /// <param name="compositeKeyReplayRecommender">Optional <see cref="ICompositeKeyReplayRecommender"/> raising a replay recommendation for read models holding legacy composite keys.</param>
     public Sink(
         Concepts.EventStoreName eventStoreName,
         Concepts.EventStoreNamespaceName @namespace,
@@ -105,9 +108,12 @@ public partial class Sink : ISink
         IDatabase database,
         IExpandoObjectConverter expandoObjectConverter,
         ReplayingTables replayingTables,
-        ILogger<Sink> logger)
+        ILogger<Sink> logger,
+        ICompositeKeyReplayRecommender? compositeKeyReplayRecommender = null)
     {
         _logger = logger;
+        _readModel = readModel;
+        _compositeKeyReplayRecommender = compositeKeyReplayRecommender;
         _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
@@ -143,8 +149,8 @@ public partial class Sink : ISink
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
+        var id = await ResolveStoredId(scope, key);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeExpando(entity);
     }
@@ -172,8 +178,8 @@ public partial class Sink : ISink
         EventSequenceNumber eventSequenceNumber,
         SinkWriteMode mode)
     {
-        var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
+        var id = await ResolveStoredId(scope, key);
 
         if (changeset.HasBeenRemoved())
         {
@@ -191,7 +197,7 @@ public partial class Sink : ISink
             return _noFailedPartitions;
         }
 
-        var entry = await GetOrAttachEntity(scope, id, key);
+        var entry = await GetOrAttachEntity(scope, GetIdString(key), key);
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
@@ -200,7 +206,7 @@ public partial class Sink : ISink
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(GetIdString(key), nonJoinedChanges, eventSequenceNumber));
 
         return _noFailedPartitions;
     }
@@ -601,6 +607,13 @@ public partial class Sink : ISink
             return scope.DbContext.Entries.Entry(existing);
         }
 
+        if (await RenameLegacyEntity(scope, id, key) is { } renamed)
+        {
+            return renamed;
+        }
+
+        await RecommendReplayForLegacyRows(scope, key);
+
         var fresh = new DynamicReadModelEntity();
         SeedDefaults(fresh);
         var keyColumn = _columns.FirstOrDefault(c => c.IsKey);
@@ -647,11 +660,16 @@ public partial class Sink : ISink
                 continue;
             }
 
-            dict[column.Name] = ToJsonNode(column, value);
+            dict[column.Name] = column.IsKey && IsCompositeKeyColumn(column) && value is string encodedKey && CompositeKeyEncoding.TryDecode(encodedKey, out var keyParts)
+                ? keyParts
+                : ToJsonNode(column, value);
         }
 
         return dict;
     }
+
+    bool IsCompositeKeyColumn(ProjectedColumn column) =>
+        _schema.Properties.TryGetValue(column.Name, out var property) && property.Type.HasFlag(JsonObjectType.Object) && string.IsNullOrEmpty(property.Format);
 
     static JsonNode? ToJsonNode(ProjectedColumn column, object value)
     {
@@ -764,19 +782,6 @@ public partial class Sink : ISink
         return _uniqueViolations.Any(violation =>
             inner.EndsWith(violation.ExceptionSuffix, StringComparison.Ordinal) &&
             violation.MessageFragments.Any(fragment => message.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    static string GetIdString(Key key)
-    {
-        if (key.Value is ExpandoObject expandoKey)
-        {
-            var parts = expandoKey
-                .OrderBy(kv => kv.Key)
-                .Select(kv => kv.Value?.ToString() ?? string.Empty);
-            return string.Join('_', parts);
-        }
-
-        return key.Value?.ToString() ?? string.Empty;
     }
 
     sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);

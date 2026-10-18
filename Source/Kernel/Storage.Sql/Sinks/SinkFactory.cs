@@ -35,6 +35,6 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     {
         var database = serviceProvider.GetRequiredService<IDatabase>();
         var replayingTables = serviceProvider.GetRequiredService<ReplayingTables>();
-        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>());
+        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>(), serviceProvider.GetService<ICompositeKeyReplayRecommender>());
     }
 }

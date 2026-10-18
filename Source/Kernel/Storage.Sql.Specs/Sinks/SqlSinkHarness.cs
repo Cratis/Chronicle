@@ -49,6 +49,11 @@ public class SqlSinkHarness : ISqlSinkHarness
     public string ConnectionString { get; init; }
 
     /// <summary>
+    /// Gets the recommender handed to the sinks the harness creates, for specs that observe replay recommendations.
+    /// </summary>
+    public ICompositeKeyReplayRecommender? CompositeKeyReplayRecommender { get; init; }
+
+    /// <summary>
     /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
@@ -84,7 +89,9 @@ public class SqlSinkHarness : ISqlSinkHarness
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()),
-            _replayingTables);
+            _replayingTables,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<SqlSink>.Instance,
+            CompositeKeyReplayRecommender);
     }
 
     /// <summary>
@@ -105,6 +112,27 @@ public class SqlSinkHarness : ISqlSinkHarness
     {
         await using var context = await CreateContext(_definition!.ContainerName.Value);
         return await context.Entries.AsNoTracking().ToArrayAsync();
+    }
+
+    /// <summary>
+    /// Stores a row directly under an id, the way a sink of an earlier version stored a composite key.
+    /// </summary>
+    /// <param name="id">The id to store the row under.</param>
+    /// <param name="name">The value of the name column.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task StoreRowUnderId(string id, string name)
+    {
+        await using var context = await CreateContext(_definition!.ContainerName.Value);
+        var row = new DynamicReadModelEntity();
+        foreach (var column in _columns.Where(column => !column.IsNullable))
+        {
+            row[column.Name] = column.ClrType.IsValueType ? Activator.CreateInstance(column.ClrType) : null;
+        }
+
+        row[_columns.First(column => column.IsKey).Name] = id;
+        row["name"] = name;
+        context.Entries.Add(row);
+        await context.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
