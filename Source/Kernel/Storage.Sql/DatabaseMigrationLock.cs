@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal sealed class DatabaseMigrationLock
 {
     static readonly ConcurrentDictionary<string, DatabaseMigrationLock> _locks = new(StringComparer.Ordinal);
+    long _generation;
 
     /// <summary>
     /// Gets the semaphore shared by migrations and resets of this target.
@@ -20,9 +21,13 @@ internal sealed class DatabaseMigrationLock
     internal SemaphoreSlim Semaphore { get; } = new(1, 1);
 
     /// <summary>
-    /// Gets or sets the reset generation, read and advanced only while holding <see cref="Semaphore"/>.
+    /// Gets or sets the reset generation, advanced only while holding <see cref="Semaphore"/>.
     /// </summary>
-    internal long Generation { get; set; }
+    internal long Generation
+    {
+        get => Volatile.Read(ref _generation);
+        set => Volatile.Write(ref _generation, value);
+    }
 
     /// <summary>
     /// Gets the lock for the physical target, independent of SQLite connection-string spelling.

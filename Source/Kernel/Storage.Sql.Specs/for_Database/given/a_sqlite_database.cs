@@ -27,6 +27,13 @@ public class a_sqlite_database : Specification
     readonly List<Task> _operations = [];
     ServiceProvider _services;
 
+    protected static SemaphoreSlim MigrationSemaphore(string connectionString)
+    {
+        var lockType = typeof(Database).Assembly.GetType("Cratis.Chronicle.Storage.Sql.DatabaseMigrationLock")!;
+        var migrationLock = lockType.GetMethod("For", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, [connectionString]);
+        return (SemaphoreSlim)lockType.GetProperty("Semaphore", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(migrationLock)!;
+    }
+
     async Task Establish()
     {
         _directory = Path.Combine(Path.GetTempPath(), $"chronicle-migration-{Guid.NewGuid():N}");

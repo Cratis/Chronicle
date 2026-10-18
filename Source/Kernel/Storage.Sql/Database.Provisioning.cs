@@ -76,11 +76,17 @@ public partial class Database
         await EnsureDatabaseExists(context, target);
 
         var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+        var cacheKey = (migrationLock, key);
+        if (_migratedKeys.TryGetValue(cacheKey, out var generation) && generation == migrationLock.Generation)
+        {
+            return;
+        }
+
         await migrationLock.Semaphore.WaitAsync();
         try
         {
             RefreshMigrationCaches(migrationLock);
-            if (_migratedKeys.ContainsKey(key))
+            if (_migratedKeys.TryGetValue(cacheKey, out generation) && generation == migrationLock.Generation)
             {
                 return;
             }
@@ -100,7 +106,7 @@ public partial class Database
                 // Only a complete migration history proves the concurrent migration succeeded.
             }
 
-            _migratedKeys.TryAdd(key, true);
+            _migratedKeys[cacheKey] = migrationLock.Generation;
         }
         finally
         {
@@ -268,11 +274,26 @@ public partial class Database
         }
 
         var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+
+        // Read-model columns can evolve without a reset; a new shape must still reach the migrator.
+        var columns = context is ReadModelDbContext readModel ? string.Join('|', readModel.Columns.Select(column => column.Name)) : string.Empty;
+        var key = (migrationLock, typeof(TDbContext), context.TableName, columns);
+        if (_ensuredTableGenerations.TryGetValue(key, out var generation) && generation == migrationLock.Generation)
+        {
+            return;
+        }
+
         await migrationLock.Semaphore.WaitAsync();
         try
         {
             RefreshMigrationCaches(migrationLock);
+            if (_ensuredTableGenerations.TryGetValue(key, out generation) && generation == migrationLock.Generation)
+            {
+                return;
+            }
+
             await context.EnsureTableExists();
+            _ensuredTableGenerations[key] = migrationLock.Generation;
         }
         finally
         {
@@ -304,10 +325,8 @@ public partial class Database
                 // database that is not there. Provision it the same way GetOrCreateReadModelDbContext does.
                 await EnsureDatabaseExists(context, target);
 
-                // Per-table migration is handled by the table-specific migrator (EnsureTableExists)
-                // which already caches "already migrated" inside the migrator implementation, so we
-                // only need to call it once per request — the migrator itself will fast-path on
-                // subsequent calls without a DB roundtrip.
+                // SQLite skips already-ensured tables in the current reset generation without
+                // taking the file lock; other providers retain their table migrator's own cache.
                 await EnsureTableMigrated(context, target);
             });
 #pragma warning restore CA2000

@@ -85,7 +85,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ReadModelDbContext>> _readModelOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, string Key), long> _migratedKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, Type Context, string Table, string Columns), long> _ensuredTableGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredDatabaseKeys = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredSchemaKeys = new();
 
@@ -237,6 +238,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         // migrations. SQLite tests delete the database file between test classes; without
         // this the in-process silo would skip migration and then query non-existent tables.
         _migratedKeys.Clear();
+        _ensuredTableGenerations.Clear();
 
         // And clear the "database exists" cache so the next request after a Wipe re-checks
         // (the SQLite path deletes files; the PG/MsSql path truncates tables but leaves the

@@ -44,9 +44,11 @@ public partial class Database
             await migrationLock.Semaphore.WaitAsync();
             try
             {
-                await DropAllSqliteTables(file);
+                // Invalidate lock-free readers before changing the schema, not after the drop.
                 migrationLock.Generation++;
+                await DropAllSqliteTables(file);
                 ClearTableMigrationCache(string.Empty);
+                _migrationGenerations[migrationLock] = migrationLock.Generation;
             }
             finally
             {
