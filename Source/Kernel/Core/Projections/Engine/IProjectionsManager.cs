@@ -45,6 +45,15 @@ public interface IProjectionsManager
     bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection);
 
     /// <summary>
+    /// Gets a projection validated against the shared stored definition, rebuilding stale or missing entries.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="id">The projection identifier.</param>
+    /// <returns>The current projection, or null if no definition exists.</returns>
+    Task<IProjection?> GetCurrent(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id);
+
+    /// <summary>
     /// Evict any projection for a specific projection identifier.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>

@@ -29,12 +29,7 @@ public class and_the_final_flush_fails : Specification
         _observerDetails = new(new("observer", "store", "namespace", EventSequenceId.Log), ObserverType.Projection);
         var projection = Substitute.For<Engine.IProjection>();
         var projections = Substitute.For<Engine.IProjectionsManager>();
-        projections.TryGet(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId, out _)
-            .Returns(info =>
-            {
-                info[3] = projection;
-                return true;
-            });
+        projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(projection);
         _pipeline = Substitute.For<IProjectionPipeline>();
         _pipeline.EndBulk().Returns(Task.FromResult<IEnumerable<SinkFailedPartition>>([new(_partition, _sequenceNumber)]));
         var pipelines = Substitute.For<IProjectionPipelineManager>();

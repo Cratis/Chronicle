@@ -29,7 +29,8 @@ public partial class ProjectionsManager
     /// <inheritdoc/>
     public async Task Forget(ProjectionId identifier)
     {
-        if (State.Projections.All(projection => projection.Identifier != identifier))
+        if (State.Projections.All(projection => projection.Identifier != identifier) &&
+            !await storage.GetEventStore(_eventStoreName).Projections.Has(identifier))
         {
             return;
         }

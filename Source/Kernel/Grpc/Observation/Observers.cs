@@ -246,7 +246,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         return new RemoveObserverResponse
         {
             Outcome = (ObserverRemovalOutcome)(int)result.Outcome,
-            BlockingNamespace = result.Outcome == Concepts.Observation.ObserverRemovalOutcome.Removed ? string.Empty : result.BlockingNamespace.Value
+            BlockingNamespace = result.Outcome == Concepts.Observation.ObserverRemovalOutcome.Removed || result.BlockingNamespace == Concepts.EventStoreNamespaceName.NotSet
+                ? string.Empty
+                : result.BlockingNamespace.Value
         };
     }
 

@@ -197,7 +197,9 @@ internal sealed class TestingServices : IServices
                 new ExpandoObjectConverter(new TypeFormats()),
                 null!,
                 null!,
-                null!));
+                null!,
+                null!,
+                NullLogger<KernelProjectionsService>.Instance));
 
         _webhooks = new(() =>
             new KernelWebhooksService(
