@@ -235,31 +235,8 @@ public partial class EventSequenceStorage(
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(
         IEnumerable<EventToAppendToStorage> events)
     {
-        var (eventsToAppend, causedByPerEvent) = await SnapshotBatch(events);
-        var appended = new List<AppendedEvent>();
-
-        lock (_lock)
-        {
-            if (FindDuplicateSequenceNumber(eventsToAppend) is { } duplicate)
-            {
-                return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Failed(duplicate);
-            }
-
-            var (stored, metadata) = BuildBatch(eventsToAppend, causedByPerEvent, appended);
-
-            // Publish only after the entire batch, its acknowledgments and metadata have been built.
-            for (var index = 0; index < eventsToAppend.Length; index++)
-            {
-                var e = eventsToAppend[index];
-                _originalCausedByChains[e.SequenceNumber] = (IdentityId[])e.CausedByChain;
-                _metadata[e.SequenceNumber] = metadata[index];
-                _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
-                _generationHashes[e.SequenceNumber] = (Dictionary<EventTypeGeneration, EventHash>)e.ContentHashes;
-            }
-            _events.AddRange(stored);
-        }
-
-        return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended);
+        var result = await AppendBatch(events, false);
+        return result.TryGetResult(out var appended) ? Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended) : result.AsT1.AsT0;
     }
 
     /// <inheritdoc/>
