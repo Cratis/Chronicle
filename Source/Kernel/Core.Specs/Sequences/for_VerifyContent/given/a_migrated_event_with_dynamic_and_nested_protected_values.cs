@@ -30,7 +30,7 @@ public class a_migrated_event_with_dynamic_and_nested_protected_values : a_store
         var keys = Substitute.For<IEncryptionKeyStorage>();
         keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
-        provisioner.EnsureKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
         _first = await JsonSchema.FromJsonAsync("""
             {"type":"object","properties":{"contacts":{"type":"object","additionalProperties":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}},

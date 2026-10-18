@@ -25,5 +25,5 @@ public class when_applying : given.a_property_handler
 
     [Fact] void should_return_encrypted_string() => _result.ToString().ShouldEqual(Convert.ToBase64String(_encryptedBytes));
     [Fact] async Task should_have_looked_up_the_key_under_the_disjoint_identity() =>
-        await _keyStore.Received(1).TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier);
+        await _keyStore.Received(1).TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier);
 }

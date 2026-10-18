@@ -43,6 +43,46 @@ public class JsonSchemaMetadataManager(
     }
 
     /// <inheritdoc/>
+    public async Task<(JsonObject Value, IReadOnlyList<ProtectedValueUse> Uses)> ApplyReportingKeys(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        var result = (JsonObject)json.DeepClone();
+        var uses = new List<ProtectedValueUse>();
+        if (!schema.HasSchemaMetadata())
+        {
+            return (result, uses);
+        }
+
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, handlers, subject, value) =>
+        {
+            ProtectionLocation(path, handlers, subject);
+            var plaintext = value.DeepClone();
+            var applied = await handlers[0].ApplyReportingKey(eventStore, eventStoreNamespace, subject, value);
+            var key = applied.Key ?? throw new ProtectedBoundaryUnsupported(path);
+            uses.Add(new(path, key.Kind, plaintext, key));
+            return applied.Value;
+        });
+        return (result, uses.OrderBy(_ => _.Path, StringComparer.Ordinal).ToArray());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<ProtectedValueLocation>> LocateProtectedValues(JsonSchema schema, string identifier, JsonObject json)
+    {
+        var locations = new List<ProtectedValueLocation>();
+        if (!schema.HasSchemaMetadata())
+        {
+            return locations;
+        }
+
+        await HandleActionFor(schema, identifier, (JsonObject)json.DeepClone(), SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: (path, handlers, subject, value) =>
+        {
+            var location = ProtectionLocation(path, handlers, subject);
+            locations.Add(new(path, location.Kind, location.Identifier, value.DeepClone()));
+            return Task.FromResult(value);
+        });
+        return locations.OrderBy(_ => _.Path, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<JsonObject> ApplyToReadModel(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
         if (!schema.HasSchemaMetadata())
@@ -188,6 +228,16 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
+    static ProtectionKeyLocation ProtectionLocation(string path, IJsonSchemaMetadataValueHandler[] handlers, string identifier)
+    {
+        if (handlers.Length != 1 || handlers[0].KeyLocationFor(identifier) is not { } location)
+        {
+            throw new ProtectedBoundaryUnsupported(path);
+        }
+
+        return location;
+    }
+
     static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
         propertySchema = propertySchema.ActualTypeSchema;
@@ -258,6 +308,10 @@ public class JsonSchemaMetadataManager(
         }
     }
 
+    IJsonSchemaMetadataValueHandler[] RegisteredHandlers((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata) =>
+        metadata.Where(_ => _propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType)))
+            .Select(_ => _propertyValueHandlers[(_.Category, _.Metadata.metadataType)]).ToArray();
+
     async Task<JsonObject?> TryTransformForComparison(JsonSchema schema, JsonObject json, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
     {
         var result = (JsonObject)json.DeepClone();
@@ -302,7 +356,8 @@ public class JsonSchemaMetadataManager(
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path = "",
         bool strictRelease = false,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
+        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
     {
         var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
         foreach (var (property, value) in json.ToArray())
@@ -322,6 +377,12 @@ public class JsonSchemaMetadataManager(
                 if (comparisonTransform is not null)
                 {
                     ValidateComparisonBoundary(propertySchema, propertyMetadata);
+                }
+
+                if (boundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
+                {
+                    json[property] = await boundaryTransform(propertyPath, handlers, identifier, value);
+                    continue;
                 }
 
                 var handlerApplied = false;
@@ -370,14 +431,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
                 }
             }
         }
@@ -391,7 +452,8 @@ public class JsonSchemaMetadataManager(
         Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> action,
         string path,
         bool strictRelease = false,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null)
+        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
+        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -414,13 +476,23 @@ public class JsonSchemaMetadataManager(
                 // Declared object members have historically been protected individually, including
                 // projection child writes. Only arrays and objects without declared properties need
                 // whole-element protection; preserve the persisted member-level representation.
-                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform);
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
                 continue;
             }
 
             if (comparisonTransform is not null)
             {
                 ValidateComparisonBoundary(itemSchema, itemMetadata);
+            }
+
+            if (boundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
+            {
+                var transformed = await boundaryTransform(elementPath, handlers, identifier, element);
+                if (!ReferenceEquals(transformed, element))
+                {
+                    array[i] = transformed;
+                }
+                continue;
             }
 
             var handlerApplied = false;
@@ -462,11 +534,11 @@ public class JsonSchemaMetadataManager(
             // descend into the detached original or decrypt members that were not separately encrypted.
             if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
             {
-                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform);
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
             }
             else if (!handlerApplied && element is JsonArray elementArray)
             {
-                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform);
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
             }
         }
     }

@@ -21,5 +21,5 @@ public class when_applying_values_for_two_different_documents : given.a_property
     }
 
     [Fact] async Task should_have_looked_up_the_same_key_for_both_documents() =>
-        await _keyStore.Received(2).TryGetFor(EventStore, EventStoreNamespace, KeyIdentifier);
+        await _keyStore.Received(2).TryGetLatestFor(EventStore, EventStoreNamespace, KeyIdentifier);
 }
