@@ -21,6 +21,9 @@ internal static partial class ResolveFuturesLogging
     [LoggerMessage(LogLevel.Warning, "Failed to resolve future {FutureId} for projection {ProjectionId}")]
     internal static partial void FailedToResolveFuture(this ILogger<ResolveFutures> logger, Exception exception, ProjectionFutureId futureId, ProjectionId projectionId);
 
+    [LoggerMessage(LogLevel.Debug, "Future {FutureId} for projection {ProjectionId} is still unresolved")]
+    internal static partial void FutureStillUnresolved(this ILogger<ResolveFutures> logger, Exception exception, ProjectionFutureId futureId, ProjectionId projectionId);
+
     [LoggerMessage(LogLevel.Debug, "Checking if parent exists in current state for future {FutureId}")]
     internal static partial void CheckingParentInCurrentState(this ILogger<ResolveFutures> logger, ProjectionFutureId futureId);
 

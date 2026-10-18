@@ -26,12 +26,18 @@ public class a_pii_value_encrypted_per_subject : Specification
         _keyStore = Substitute.For<IEncryptionKeyStorage>();
 
         // Every subject has its own encryption key, so the same plaintext encrypts to different ciphertext.
-        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, FirstSubject).Returns(Task.FromResult<EncryptionKey?>(_encryption.GenerateKey()));
-        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, SecondSubject).Returns(Task.FromResult<EncryptionKey?>(_encryption.GenerateKey()));
+        StoreKeyFor(FirstSubject, _encryption.GenerateKey());
+        StoreKeyFor(SecondSubject, _encryption.GenerateKey());
 
         _handler = new(new ManagedEncryptionKeyProvisioner(_keyStore, _encryption), _keyStore, _encryption);
     }
 
     protected static string HashOf(string value) =>
         new List<UniqueConstraintPropertyAndValue> { new(Property, value) }.GetValue();
+
+    void StoreKeyFor(string subject, EncryptionKey key)
+    {
+        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, subject).Returns(Task.FromResult<EncryptionKey?>(key));
+        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, subject).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
+    }
 }

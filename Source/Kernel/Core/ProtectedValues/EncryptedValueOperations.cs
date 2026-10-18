@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.ProtectedValues;
@@ -20,23 +21,43 @@ static class EncryptedValueOperations
     /// <summary>
     /// Encrypt a value under the given key identity, provisioning the key on first use.
     /// </summary>
-    /// <param name="provisioner"><see cref="IManagedEncryptionKeyProvisioner"/> used to provision the key.</param>
-    /// <param name="encryption"><see cref="IEncryption"/> for performing the encryption.</param>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> to provision the key under.</param>
-    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> to provision the key under.</param>
-    /// <param name="keyIdentifier">The <see cref="EncryptionKeyIdentifier"/> to provision and encrypt under.</param>
-    /// <param name="value">The <see cref="JsonNode"/> to encrypt.</param>
-    /// <returns>The encrypted <see cref="JsonNode"/>.</returns>
+    /// <param name="provisioner">The managed key provisioner.</param>
+    /// <param name="encryption">The encryption implementation.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="keyIdentifier">The key identifier.</param>
+    /// <param name="value">The plaintext value.</param>
+    /// <returns>The encrypted value.</returns>
     public static async Task<JsonNode> Apply(
         IManagedEncryptionKeyProvisioner provisioner,
         IEncryption encryption,
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier keyIdentifier,
-        JsonNode value)
+        JsonNode value) => ProtectedValueCodec.Encrypt(encryption, await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, keyIdentifier), value);
+
+    /// <summary>
+    /// Encrypt a value under the given key identity, reporting its key and revision.
+    /// </summary>
+    /// <param name="provisioner"><see cref="IManagedEncryptionKeyProvisioner"/> used to provision the key.</param>
+    /// <param name="encryption"><see cref="IEncryption"/> for performing the encryption.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to provision the key under.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> to provision the key under.</param>
+    /// <param name="keyIdentifier">The <see cref="EncryptionKeyIdentifier"/> to provision and encrypt under.</param>
+    /// <param name="value">The <see cref="JsonNode"/> to encrypt.</param>
+    /// <param name="kind">The protection kind.</param>
+    /// <returns>The encrypted value and the exact key used.</returns>
+    public static async Task<(JsonNode Value, EncryptionKeyUse? Key)> Apply(
+        IManagedEncryptionKeyProvisioner provisioner,
+        IEncryption encryption,
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier keyIdentifier,
+        JsonNode value,
+        ProtectionKind kind)
     {
-        var key = await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, keyIdentifier);
-        return ProtectedValueCodec.Encrypt(encryption, key, value);
+        var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, keyIdentifier);
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value), new(kind, keyIdentifier, pair.Key, pair.Revision));
     }
 
     /// <summary>

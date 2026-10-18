@@ -32,5 +32,6 @@ public class a_property_handler : Specification
         // handler would use is deliberately left unstubbed, so a spec that accidentally looks it up under the
         // bare subject fails loudly instead of silently passing against the wrong key.
         _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier).Returns(Task.FromResult<EncryptionKey?>(_key));
+        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier).Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
     }
 }

@@ -26,7 +26,7 @@ public class real_pii_protection : Specification
         var keys = Substitute.For<IEncryptionKeyStorage>();
         keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
-        provisioner.EnsureKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var handler = new PIICompliancePropertyValueHandler(provisioner, keys, encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }
