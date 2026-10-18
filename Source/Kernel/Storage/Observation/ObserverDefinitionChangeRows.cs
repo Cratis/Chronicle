@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -59,14 +60,14 @@ public static class ObserverDefinitionChangeRows
     /// <param name="row">The row.</param>
     /// <returns>The fixed-size immutable payload identity.</returns>
     /// <exception cref="UnsupportedObserverDefinitionChangeRowFamily">The payload is not a row family.</exception>
-    public static string Identity<T>(ObserverDefinitionChangeRow<T> row) => Hash(row.Data switch
+    public static string Identity<T>(ObserverDefinitionChangeRow<T> row) => Hash(JsonSerializer.Serialize<string?[]>(row.Data switch
     {
-        ObserverProgressRecord progress => JsonSerializer.Serialize(new { progress.JobId, progress.Partition }, _options),
-        ObserverContinuation continuation => JsonSerializer.Serialize(new { continuation.JobId, continuation.Partition }, _options),
-        ObserverRestartPlan plan => JsonSerializer.Serialize(new { plan.JobId, plan.Partition }, _options),
-        ObserverJobInventory job => JsonSerializer.Serialize(new { job.JobId, job.Kind, job.JobType, job.Origin }, _options),
+        ObserverProgressRecord progress => [progress.JobId.Value.ToString("D"), Partition(progress.Partition)],
+        ObserverContinuation continuation => [continuation.JobId.Value.ToString("D"), Partition(continuation.Partition)],
+        ObserverRestartPlan plan => [plan.JobId.Value.ToString("D"), Partition(plan.Partition), Invariant(plan.From.Value), Invariant(plan.To.Value), Scope(plan.Scope)],
+        ObserverJobInventory job => [job.JobId.Value.ToString("D"), Invariant((int)job.Kind), job.JobType, job.Origin is null ? null : JsonSerializer.Serialize(new[] { Invariant(job.Origin.IsRestartPlan), job.Origin.Id })],
         _ => throw new UnsupportedObserverDefinitionChangeRowFamily(typeof(T))
-    });
+    }));
 
     /// <summary>
     /// Rejects nonpositive limits and caps each storage page at 1,000 rows.
@@ -106,6 +107,14 @@ public static class ObserverDefinitionChangeRows
     /// <returns>Whether the replacement can be attempted.</returns>
     public static bool IsReplacement<T>(ObserverDefinitionChangeRow<T> row, long expectedVersion) =>
         expectedVersion >= 0 && expectedVersion < long.MaxValue && row.Version == expectedVersion + 1 && IsValid(row);
+
+    static string? Partition(Key? key) => key is null ? null : JsonSerializer.Serialize(new[] { Invariant(key.Value) }
+        .Concat(key.ArrayIndexers.All.SelectMany(indexer => new[] { indexer.ArrayProperty.ToString(), indexer.IdentifierProperty.ToString(), Invariant(indexer.Identifier) })).ToArray());
+
+    static string Scope(ObserverReaderScope scope) => JsonSerializer.Serialize(new[] { Invariant(scope.IsWildcard) }
+        .Concat(scope.EventTypes.SelectMany(type => new[] { type.Id.Value, Invariant(type.Generation.Value), Invariant(type.Tombstone) })).ToArray());
+
+    static string? Invariant(object? value) => value is null ? null : Convert.ToString(value, CultureInfo.InvariantCulture);
 
     static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }

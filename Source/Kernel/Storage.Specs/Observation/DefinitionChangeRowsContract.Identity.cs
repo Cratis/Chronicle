@@ -11,6 +11,10 @@ public abstract partial class DefinitionChangeRowsContract
     [Fact] public async Task should_reject_a_changed_continuation_partition() => await RejectIdentityChange(Continuation(), Continuation().Data with { Partition = "other" });
     [Fact] public async Task should_reject_a_changed_plan_job() => await RejectIdentityChange(Plan(), Plan().Data with { JobId = Guid.NewGuid() });
     [Fact] public async Task should_reject_a_changed_plan_partition() => await RejectIdentityChange(Plan(), Plan().Data with { Partition = null });
+    [Fact] public async Task should_reject_a_changed_plan_lower_bound() => await RejectIdentityChange(Plan(), Plan().Data with { From = new(2) });
+    [Fact] public async Task should_reject_a_changed_plan_upper_bound() => await RejectIdentityChange(Plan(), Plan().Data with { To = new(101) });
+    [Fact] public async Task should_reject_a_changed_plan_scope() => await RejectIdentityChange(Plan(), Plan().Data with { Scope = Concepts.Observation.ObserverReaderScope.Wildcard });
+    [Fact] public async Task should_reject_a_changed_plan_scope_generation() => await RejectIdentityChange(Plan(), Plan().Data with { Scope = Concepts.Observation.ObserverReaderScope.Explicit([new("event-a", new(3))]) });
     [Fact] public async Task should_reject_a_changed_inventory_job() => await RejectIdentityChange(Inventory(), Inventory().Data with { JobId = Guid.NewGuid() });
     [Fact] public async Task should_reject_a_changed_inventory_kind() => await RejectIdentityChange(Inventory(), Inventory().Data with { Kind = ObserverDefinitionChangeJobKind.Replay });
     [Fact] public async Task should_reject_a_changed_inventory_job_type() => await RejectIdentityChange(Inventory(), Inventory().Data with { JobType = "ReplayObserver" });

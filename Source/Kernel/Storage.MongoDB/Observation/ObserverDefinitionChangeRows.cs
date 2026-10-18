@@ -33,7 +33,10 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
             ObserverDefinitionChangeRowFamilies.RestartPlans => WellKnownCollectionNames.ObserverDefinitionChangeRestartPlans,
             _ => WellKnownCollectionNames.ObserverDefinitionChangeInventory
         };
-        _rows = database.GetCollection<BsonDocument>(collection).WithReadPreference(ReadPreference.Primary);
+        _rows = database.GetCollection<BsonDocument>(collection)
+            .WithReadPreference(ReadPreference.Primary)
+            .WithReadConcern(ReadConcern.Majority)
+            .WithWriteConcern(WriteConcern.WMajority);
     }
 
     /// <inheritdoc/>

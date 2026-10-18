@@ -19,6 +19,13 @@ public abstract partial class DefinitionChangeRowsContract
         page.Next.ShouldBeNull();
     }
     [Fact] public async Task should_reject_zero_page_limits() => (await Catch.Exception(async () => await OpenRows<ObserverContinuation>().ReadPage(_observer, null, null, 0))).ShouldBeOfExactType<InvalidObserverDefinitionChangePageLimit>();
+    [Fact] public async Task should_return_a_faulted_task_for_an_invalid_limit()
+    {
+        Task<ObserverDefinitionChangePage<ObserverContinuation>> task = null!;
+        void ReadPage() => task = OpenRows<ObserverContinuation>().ReadPage(_observer, null, null, 0);
+        Catch.Exception(ReadPage).ShouldBeNull();
+        (await Catch.Exception(async () => await task)).ShouldBeOfExactType<InvalidObserverDefinitionChangePageLimit>();
+    }
     [Fact] public async Task should_reject_negative_page_limits() => (await Catch.Exception(async () => await OpenRows<ObserverContinuation>().ReadPage(_observer, null, null, -1))).ShouldBeOfExactType<InvalidObserverDefinitionChangePageLimit>();
     [Fact] public async Task should_cap_each_page_at_one_thousand_rows()
     {

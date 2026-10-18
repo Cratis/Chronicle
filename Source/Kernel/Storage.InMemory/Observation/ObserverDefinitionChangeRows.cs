@@ -57,6 +57,7 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
     /// <inheritdoc/>
     public Task<ObserverDefinitionChangePage<T>> ReadPage(ObserverKey observer, ObserverTypeSetRevision? revision, string? after, int limit)
     {
+        if (limit <= 0) return Task.FromException<ObserverDefinitionChangePage<T>>(new InvalidObserverDefinitionChangePageLimit(limit));
         limit = RowEncoding.PageLimit(limit);
         lock (_lock)
         {
