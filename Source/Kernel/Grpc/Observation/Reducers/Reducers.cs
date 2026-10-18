@@ -1,14 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -22,7 +20,6 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
-using Cratis.Collections;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -57,7 +54,7 @@ internal sealed class Reducers(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
-        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
+        var pendingDeliveries = new PendingDeliveries<ReducerSubscriberResult>();
         IReducer? clientObserver = null;
 
         // The read model definition will be populated once the reducer is registered.
@@ -129,10 +126,9 @@ internal sealed class Reducers(
                             result.ExceptionStackTrace),
                         modelResult);
 
-                    if (reducerResultTcs.TryGetValue(result.Partition, out var tcs))
+                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
                     {
-                        tcs.SetResult(subscriberResult);
-                        reducerResultTcs.TryRemove(result.Partition, out _);
+                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
                     }
 
                     break;
@@ -178,11 +174,12 @@ internal sealed class Reducers(
                         registration.Namespace,
                         (reduceOperation, tcs) =>
                         {
-                            reducerResultTcs[reduceOperation.Partition] = tcs;
+                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
                             var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
                             var message = new ReduceOperationMessage()
                             {
                                 Partition = reduceOperation.Partition.Value.ToString()!,
+                                DeliveryId = deliveryId,
                                 InitialState = initialState,
                                 Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
                             };
@@ -237,7 +234,7 @@ internal sealed class Reducers(
                 {
                     messagesSubscription.Dispose();
                     reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
-                    reducerResultTcs.Values.ForEach(_ => _.TrySetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
+                    pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
                     if (clientObserver is not null)
                     {
                         await clientObserver.Unsubscribe();
@@ -251,6 +248,7 @@ internal sealed class Reducers(
         register = context.CancellationToken.Register(() =>
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
+            pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
             observableObserver?.OnCompleted();
             reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();

@@ -411,12 +411,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
     ReactorRegistration CreateRegistrationFor(Type reactorType)
     {
+        var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers);
+        ObserverHasOnlyGenerationHandlers.ThrowIfEmpty(reactorType, eventTypes);
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
         var handler = CreateHandler(
             ResolveId(reactorType),
             reactorType,
             reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers),
-            ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers));
+            eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
         return new(
@@ -858,6 +860,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             var result = new ReactorResult
             {
                 Partition = events.Partition,
+                DeliveryId = events.DeliveryId,
                 State = state,
                 LastSuccessfulObservation = lastSuccessfullyObservedEvent,
                 ExceptionMessages = exceptionMessages.ToList(),
