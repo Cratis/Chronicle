@@ -89,9 +89,11 @@ public class ProjectionCatchupHandler(
                 return ICanHandleCatchupForObserver.Error.CannotHandle;
             }
 
-            if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
+            if (projection is null)
             {
-                return Result<ICanHandleCatchupForObserver.Error>.Success();
+                logger.ProjectionMissing(observerDetails.Key);
+                return ICanHandleCatchupForObserver.Error.Unknown;
             }
 
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);

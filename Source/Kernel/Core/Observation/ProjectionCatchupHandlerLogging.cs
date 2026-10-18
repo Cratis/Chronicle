@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 internal static partial class ProjectionCatchupHandlerLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Projection definition for observer {Key} is missing; catchup cannot proceed")]
+    internal static partial void ProjectionMissing(this ILogger<ProjectionCatchupHandler> logger, ObserverKey key);
+
     [LoggerMessage(LogLevel.Error, "Failed to handle catchup for observer {ObserverId} of type {Type}")]
     internal static partial void Failed(this ILogger<ProjectionCatchupHandler> logger, Exception ex, ObserverId observerId, ObserverType type);
 }

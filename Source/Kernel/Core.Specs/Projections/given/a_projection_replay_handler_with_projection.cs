@@ -32,6 +32,7 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, new JsonSchema() } },
             []);
         _projection.ReadModel.Returns(_readModel);
+        _projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(_projection);
         _readModelDefinitions.Get(_readModelType.Identifier).Returns(Task.FromResult(_readModel));
 
         _projections.TryGet(

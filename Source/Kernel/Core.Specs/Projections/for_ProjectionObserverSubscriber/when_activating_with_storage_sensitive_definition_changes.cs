@@ -56,9 +56,8 @@ public class when_activating_with_storage_sensitive_definition_changes : given.a
 
         await _subscriber.OnActivateAsync(CancellationToken.None);
 
-        _stateStorage.State.ShouldBeSame(current);
-        _returnedPipeline.ShouldEqual(_refreshedPipeline);
-        _pipelines.Received(1).EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
+        _stateStorage.State.ShouldBeSame(previous);
+        await _stateStorage.DidNotReceive().WriteStateAsync();
         _factory.ReceivedCalls().Select(call => call.GetArguments()[2]).ShouldContain(current);
     }
 
