@@ -3,11 +3,11 @@
 
 namespace Cratis.Chronicle.Projections.Engine.for_StateValues;
 
-public class when_copying_a_primitive : Specification
+public class when_copying_null : Specification
 {
     object? _result;
 
-    void Because() => _result = StateValues.Copy("value");
+    void Because() => _result = StateValues.Copy(null);
 
-    [Fact] void should_return_the_value() => _result.ShouldEqual("value");
+    [Fact] void should_return_null() => _result.ShouldBeNull();
 }

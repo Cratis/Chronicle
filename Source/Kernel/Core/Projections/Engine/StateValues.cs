@@ -26,7 +26,7 @@ internal static class StateValues
     /// Get a copy of a value that shares no mutable instance with the original.
     /// </summary>
     /// <param name="value">Value to copy.</param>
-    /// <returns>The value itself when it is immutable, otherwise a deep copy.</returns>
+    /// <returns>A deep copy of an <see cref="ExpandoObject"/> or a collection; values that are neither <see cref="ExpandoObject"/> nor collections are returned as-is.</returns>
     [return: NotNullIfNotNull(nameof(value))]
     public static object? Copy(object? value) => value switch
     {
