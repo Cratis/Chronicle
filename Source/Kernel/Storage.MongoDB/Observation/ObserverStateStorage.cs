@@ -97,6 +97,16 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.HandledEventCount, document.HandledEventCount)
             .Set(_ => _.HandledEventCountPerEventType, document.HandledEventCountPerEventType);
 
+        if (document.Initialization is not null)
+        {
+            update = update.Set(_ => _.Initialization, document.Initialization);
+        }
+
+        if (document.TypeSetControl is not null)
+        {
+            update = ObserverTypeSetControlUpdate.Guard(update, document.TypeSetControl);
+        }
+
         await _collection.UpdateOneAsync(
             os => os.Id == state.Identifier,
             update,

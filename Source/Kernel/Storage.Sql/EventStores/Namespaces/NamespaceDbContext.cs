@@ -94,8 +94,19 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
-
         modelBuilder
+            .Entity<Observers.ObserverDefinitionChangeEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ObserverDefinitionChangeRows);
+                entity.HasKey(row => row.Id);
+                entity.Property(row => row.Id).HasMaxLength(64);
+                entity.Property(row => row.Observer).HasMaxLength(64);
+                entity.Property(row => row.Family).HasMaxLength(64);
+                entity.Property(row => row.Identity).HasMaxLength(64);
+                entity.Property(row => row.Position).HasPrecision(20, 0);
+                entity.HasIndex(row => new { row.Observer, row.Family, row.Revision, row.Id });
+                entity.HasIndex(row => new { row.Observer, row.Family, row.Id });
+            })
             .Entity<EventSequences.EventSequenceState>(entity =>
             {
                 entity.Property(row => row.ConstraintIndexWatermark).HasPrecision(20, 0);

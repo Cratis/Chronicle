@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Engine.Expressions;
@@ -105,43 +104,7 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
-        if (value is null)
-        {
-            _expression = NullExpression.Instance;
-            return _parent;
-        }
-
-        object actualValue = value!;
-
-        if (actualValue.IsConcept())
-        {
-            actualValue = actualValue.GetConceptValue();
-        }
-
-        if (actualValue.GetType().IsEnum)
-        {
-            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
-            if (underlyingType == typeof(int))
-            {
-                actualValue = Convert.ChangeType(actualValue, underlyingType);
-            }
-            else
-            {
-                actualValue = actualValue.ToString()!;
-            }
-        }
-
-        var invariantString = actualValue switch
-        {
-            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
-            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
-            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => actualValue.ToString()!
-        };
-
-        _expression = new ValueExpression(invariantString);
+        _expression = ConstantValueExpression.From(value);
         return _parent;
     }
 

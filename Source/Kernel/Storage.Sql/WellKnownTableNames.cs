@@ -44,6 +44,11 @@ public static class WellKnownTableNames
     public const string Observers = "Observers";
 
     /// <summary>
+    /// The table holding independently paged definition-change rows and terminal inventory.
+    /// </summary>
+    public const string ObserverDefinitionChangeRows = "ObserverDefinitionChangeRows";
+
+    /// <summary>
     /// The table that holds event sequences.
     /// </summary>
     public const string EventSequences = "EventSequences";

@@ -138,6 +138,14 @@ public class EventStoreStorage(
         .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true });
 
     /// <inheritdoc/>
+    public async Task<bool> AreObserversInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .CountDocumentsAsync(new BsonDocument("_id", 2)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkObserversInitialized() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true });
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var instance))
