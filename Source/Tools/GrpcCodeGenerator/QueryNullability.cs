@@ -13,11 +13,11 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// contract does not just lose documentation - it makes the generated implementation map an absent read model as
 /// though it were present, which is a null reference at the first property read. Both generators consult this so
 /// the contract and the code that fills it agree on whether nothing is a possible answer.
+/// Each read creates its own <see cref="NullabilityInfoContext"/>: the context is not thread-safe, and the generators
+/// are called concurrently.
 /// </remarks>
 public static class QueryNullability
 {
-    static readonly NullabilityInfoContext _context = new();
-
     static readonly string[] _wrappers =
     [
         "Task`1",
@@ -38,7 +38,7 @@ public static class QueryNullability
     {
         try
         {
-            var info = _context.Create(method.ReturnParameter);
+            var info = new NullabilityInfoContext().Create(method.ReturnParameter);
             while (info.GenericTypeArguments.Length == 1 && _wrappers.Contains(info.Type.Name, StringComparer.Ordinal))
             {
                 info = info.GenericTypeArguments[0];
