@@ -85,6 +85,12 @@ public class Projections(
     internal string? SoftwareVersion { get; init; }
 
     /// <summary>
+    /// Gets the identifier of the current connection, sent with every registration so the kernel knows which live
+    /// connection declares the projections. It is optional: a registration without it still succeeds.
+    /// </summary>
+    internal string? CurrentConnectionId => eventStore.Connection?.Lifecycle?.ConnectionId?.ToString();
+
+    /// <summary>
     /// Gets all the <see cref="ProjectionDefinition">projection definitions</see>.
     /// </summary>
     internal IImmutableList<ProjectionDefinition> Definitions { get; private set; } = ImmutableList<ProjectionDefinition>.Empty;
@@ -250,7 +256,7 @@ public class Projections(
             // the client.
             Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
             Version = SoftwareVersion,
-            ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
+            ConnectionId = CurrentConnectionId,
             FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
         });
         Registered?.Invoke();
@@ -465,7 +471,7 @@ public class Projections(
                 Projections = [registration.Definition],
                 Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
                 Version = SoftwareVersion,
-                ConnectionId = eventStore.Connection.Lifecycle.ConnectionId,
+                ConnectionId = CurrentConnectionId,
                 FullSet = false
             });
             Registered?.Invoke();
