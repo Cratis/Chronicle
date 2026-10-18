@@ -482,13 +482,13 @@ public partial class EventStore : IEventStore
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
         ReadProtectionGuard.Read(nameof(GetNamespaces));
-        var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
+        var namespaces = await (await _servicesAccessor.GetServices(cancellationToken)).Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
         return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task RemoveNamespace(EventStoreNamespaceName @namespace, CancellationToken cancellationToken = default) =>
-        await _servicesAccessor.Services.Namespaces.RemoveNamespace(new RemoveNamespaceRequest { EventStore = _eventStoreName, Namespace = @namespace.Value }).EnsureSuccess();
+        await (await _servicesAccessor.GetServices(cancellationToken)).Namespaces.RemoveNamespace(new RemoveNamespaceRequest { EventStore = _eventStoreName, Namespace = @namespace.Value }).EnsureSuccess();
 
     async Task RegisterAllCore()
     {

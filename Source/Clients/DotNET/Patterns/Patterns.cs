@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Patterns;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Queries;
 using Grpc.Core;
@@ -25,7 +26,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         int maximumResults = 0,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.MatchingPatterns(
+        var patterns = await (await _servicesAccessor.GetServices(cancellationToken)).Patterns.MatchingPatterns(
             new()
             {
                 EventStore = eventStore.Name,
@@ -52,7 +53,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         int maximumResults = 0,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.UsualActions(
+        var patterns = await (await _servicesAccessor.GetServices(cancellationToken)).Patterns.UsualActions(
             new()
             {
                 EventStore = eventStore.Name,
@@ -93,7 +94,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
         PatternGroupingKey groupingKey,
         CancellationToken cancellationToken = default)
     {
-        var patterns = await _servicesAccessor.Services.Patterns.PatternsForScope(
+        var patterns = await (await _servicesAccessor.GetServices(cancellationToken)).Patterns.PatternsForScope(
             new()
             {
                 EventStore = eventStore.Name,
@@ -108,7 +109,7 @@ public class Patterns(IEventStore eventStore) : IPatterns
     /// <inheritdoc/>
     public async Task<IEnumerable<PatternGroupingKey>> GetScopes(CancellationToken cancellationToken = default)
     {
-        var scopes = await _servicesAccessor.Services.Patterns.AllPatternScopes(
+        var scopes = await (await _servicesAccessor.GetServices(cancellationToken)).Patterns.AllPatternScopes(
             new()
             {
                 EventStore = eventStore.Name,
