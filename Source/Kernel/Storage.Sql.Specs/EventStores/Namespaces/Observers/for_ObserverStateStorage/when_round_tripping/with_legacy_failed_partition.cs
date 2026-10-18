@@ -37,6 +37,8 @@ public class with_legacy_failed_partition : given.an_observer_state_storage
     [Fact] void should_not_invent_a_hold() => _restored.Hold.ShouldBeNull();
     [Fact] void should_interpret_the_last_attempt_as_live() => _restored.EffectiveRecoveryCursor.ShouldEqual(new(new(42), FailedPartitionRecoveryMode.Live, null));
     [Fact] void should_keep_the_retry_budget() => _restored.AttemptsInCurrentBudget.ShouldEqual(1);
+    [Fact] void should_default_to_not_quarantined() => _restored.IsQuarantined.ShouldBeFalse();
+    [Fact] void should_default_to_no_attempts_before_a_budget_reset() => _restored.AttemptsBeforeBudgetReset.ShouldEqual(0);
     [Fact] void should_not_write_recovery_state() => _savedJson.Contains("Recovery", StringComparison.OrdinalIgnoreCase).ShouldBeFalse();
     [Fact] void should_not_write_a_hold() => _savedJson.Contains("Hold", StringComparison.OrdinalIgnoreCase).ShouldBeFalse();
 }

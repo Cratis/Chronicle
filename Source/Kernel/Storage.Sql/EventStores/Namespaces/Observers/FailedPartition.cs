@@ -22,6 +22,16 @@ public record FailedPartition(
     bool IsResolved)
 {
     /// <summary>
+    /// Gets whether the partition is quarantined.
+    /// </summary>
+    public bool IsQuarantined { get; init; }
+
+    /// <summary>
+    /// Gets the number of attempts made before the retry budget was last reset.
+    /// </summary>
+    public int AttemptsBeforeBudgetReset { get; init; }
+
+    /// <summary>
     /// Gets the initialized recovery cursor, absent on legacy rows.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

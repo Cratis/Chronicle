@@ -43,6 +43,8 @@ public static class ObserverStateConverters
                     a.StackTrace)),
                 fp.IsResolved)
             {
+                IsQuarantined = fp.IsQuarantined,
+                AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
                 Hold = fp.Hold
@@ -77,6 +79,8 @@ public static class ObserverStateConverters
                     StackTrace = a.StackTrace
                 }),
                 IsResolved = fp.IsResolved,
+                IsQuarantined = fp.IsQuarantined,
+                AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
                 Hold = fp.Hold

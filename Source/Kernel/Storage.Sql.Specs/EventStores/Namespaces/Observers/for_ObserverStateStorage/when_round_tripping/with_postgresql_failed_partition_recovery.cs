@@ -38,10 +38,16 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
         {
             ObserverId = "observer",
             Partition = "partition",
+            IsQuarantined = true,
+            AttemptsBeforeBudgetReset = 1,
             RecoveryCursor = new(new(51), FailedPartitionRecoveryMode.Replay, new(80)),
             RecoveryOwner = new(Guid.NewGuid(), Guid.NewGuid(), 3, FailedPartitionRecoveryState.Resuming, 7),
             Hold = new(FailedPartitionHoldReason.WaitingForHandler, new("event-a"), new(2026, 10, 17, 12, 0, 0, TimeSpan.Zero)),
-            Attempts = [new() { SequenceNumber = new(50), Kind = FailureKind.Handling }]
+            Attempts =
+            [
+                new() { SequenceNumber = new(49), Kind = FailureKind.Handling },
+                new() { SequenceNumber = new(50), Kind = FailureKind.Handling }
+            ]
         };
     }
 
@@ -58,9 +64,11 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
     [Fact] void should_keep_the_exact_cursor_and_replay_boundary() => _restored.RecoveryCursor.ShouldEqual(_partition.RecoveryCursor);
     [Fact] void should_keep_the_whole_recovery_owner() => _restored.RecoveryOwner.ShouldEqual(_partition.RecoveryOwner);
     [Fact] void should_keep_the_hold_reason_type_and_start() => _restored.Hold.ShouldEqual(_partition.Hold);
-    [Fact] void should_keep_attempts() => _restored.Attempts.Count().ShouldEqual(1);
+    [Fact] void should_keep_attempts() => _restored.Attempts.Count().ShouldEqual(2);
     [Fact] void should_keep_the_last_attempt() => _restored.LastAttempt.SequenceNumber.Value.ShouldEqual(50UL);
-    [Fact] void should_keep_quarantine() => _restored.IsQuarantined.ShouldBeFalse();
+    [Fact] void should_keep_the_attempts_before_the_budget_reset() => _restored.AttemptsBeforeBudgetReset.ShouldEqual(1);
+    [Fact] void should_keep_the_current_retry_budget() => _restored.AttemptsInCurrentBudget.ShouldEqual(1);
+    [Fact] void should_keep_quarantine() => _restored.IsQuarantined.ShouldBeTrue();
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
