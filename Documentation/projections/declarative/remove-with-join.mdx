@@ -1,3 +1,6 @@
+---
+description: Use RemovedWithJoin<>() in a Chronicle child projection to remove child items when events from other streams show related data was removed.
+---
 # Projection with RemoveWithJoin
 
 The `RemovedWithJoin<>()` method allows you to remove child items from collections when events from other streams indicate that related data should be removed. This is particularly useful in scenarios where the removal event occurs on a different stream than the one that originally added the child.

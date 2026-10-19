@@ -1,3 +1,6 @@
+---
+description: Remove root read models and child items in a model-bound Chronicle projection with RemovedWith and RemovedWithJoin attributes.
+---
 # Removing Read Models
 
 Model-bound projections remove root read models with `RemovedWith` and child items with `RemovedWith` or `RemovedWithJoin`. Root-level `RemovedWithJoin` is not yet supported: the engine ignores it and logs a warning. Do not rely on it to remove root instances.
