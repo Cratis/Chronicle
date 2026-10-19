@@ -3,7 +3,9 @@
 
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -12,21 +14,36 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents an implementation of <see cref="IOAuthClient"/>.
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
+/// <param name="policy">The target policy.</param>
 [Singleton]
-public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
+public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPolicy policy) : IOAuthClient
 {
+    /// <summary>
+    /// The dedicated OAuth client, sharing webhook target validation and redirect protection.
+    /// </summary>
+    public const string HttpClientName = "webhook-oauth";
+
     /// <inheritdoc/>
-    public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization)
+    public Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization) => AcquireToken(authorization, null);
+
+    /// <inheritdoc/>
+    public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, EventStoreName? eventStore)
     {
-        using var httpClient = httpClientFactory.CreateClient();
+        using var httpClient = httpClientFactory.CreateClient(HttpClientName);
         var authority = authorization.Authority.Value.TrimEnd('/');
         var discoveryEndpoint = $"{authority}/.well-known/openid-configuration";
 
-        var configuration = await httpClient.GetFromJsonAsync<OpenIdConfiguration>(discoveryEndpoint);
+        await Validate(discoveryEndpoint, eventStore);
+        using var discoveryRequest = CreateRequest(HttpMethod.Get, discoveryEndpoint, eventStore);
+        using var discoveryResponse = await httpClient.SendAsync(discoveryRequest);
+        EnsureSuccess(discoveryResponse);
+        var configuration = await discoveryResponse.Content.ReadFromJsonAsync<OpenIdConfiguration>();
         if (configuration is null || string.IsNullOrWhiteSpace(configuration.TokenEndpoint))
         {
             return AccessTokenInfo.Empty;
         }
+
+        await Validate(configuration.TokenEndpoint, eventStore);
 
         var request = new Dictionary<string, string>
         {
@@ -35,9 +52,10 @@ public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
             ["client_secret"] = authorization.ClientSecret.Value
         };
 
-        using var content = new FormUrlEncodedContent(request);
-        var response = await httpClient.PostAsync(configuration.TokenEndpoint, content);
-        response.EnsureSuccessStatusCode();
+        using var tokenRequest = CreateRequest(HttpMethod.Post, configuration.TokenEndpoint, eventStore);
+        tokenRequest.Content = new FormUrlEncodedContent(request);
+        using var response = await httpClient.SendAsync(tokenRequest);
+        EnsureSuccess(response);
 
         var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
         if (tokenResponse is null || string.IsNullOrEmpty(tokenResponse.AccessToken))
@@ -47,6 +65,29 @@ public class OAuthClient(IHttpClientFactory httpClientFactory) : IOAuthClient
 
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
         return new AccessTokenInfo(tokenResponse.AccessToken, expiresAt);
+    }
+
+    static HttpRequestMessage CreateRequest(HttpMethod method, string url, EventStoreName? eventStore)
+    {
+        var request = new HttpRequestMessage(method, url);
+        if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
+        return request;
+    }
+
+    static void EnsureSuccess(HttpResponseMessage response)
+    {
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            throw new WebhookTargetRejected($"OAuth redirects are not allowed (HTTP {(int)response.StatusCode}).");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    async Task Validate(string url, EventStoreName? eventStore)
+    {
+        var result = await policy.Evaluate(url, eventStore);
+        if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
     }
 
     record OpenIdConfiguration(
