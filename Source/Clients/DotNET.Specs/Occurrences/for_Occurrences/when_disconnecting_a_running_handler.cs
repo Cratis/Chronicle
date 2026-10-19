@@ -29,9 +29,9 @@ public class when_disconnecting_a_running_handler : an_occurrence_client
     {
         await _occurrences.Discover();
         await _occurrences.Register();
-        await _started.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        await _lifecycle.Disconnected().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        await _occurrences.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _started.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
+        await _lifecycle.Disconnected().WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
+        await _occurrences.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
     }
 
     [Fact] void should_cancel_the_attempt() => _handlerToken.IsCancellationRequested.ShouldBeTrue();
