@@ -20,7 +20,7 @@ public class and_the_store_hangs_for_a_batch_of_1000_events : given.an_event_seq
     {
         _eventSequence.ConstraintIndexTimeProvider = _clock;
         _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>()).Returns(call => _log.AppendMany(call.Arg<IEnumerable<EventToAppendToStorage>>()));
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 _attempts++;

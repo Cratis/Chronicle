@@ -16,7 +16,7 @@ public class and_an_attempt_is_abandoned : given.a_replay
         Event(0, "first", "Claimed", "first");
         Event(1, "second", "Claimed", "second");
         _hung = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _unique.Configure().Save("first", _definition, 0, Hash("first"), string.Empty, Arg.Any<CancellationToken>()).Returns(_hung.Task);
+        _unique.Configure().Save("first", _definition, 0, Hash("first"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>()).Returns(_hung.Task);
         Start();
     }
 
@@ -24,7 +24,7 @@ public class and_an_attempt_is_abandoned : given.a_replay
     {
         _result = await _replay.Continue();
         _laterWritesBeforeResuming = _writes.Count;
-        _unique.Configure().Save("first", _definition, 0, Hash("first"), string.Empty, Arg.Any<CancellationToken>()).Returns(_ => _claims.Save("first", _definition, 0, Hash("first")));
+        _unique.Configure().Save("first", _definition, 0, Hash("first"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>()).Returns(_ => _claims.Save("first", _definition, 0, Hash("first")));
         _resumed = await _replay.Continue();
     }
 

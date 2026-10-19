@@ -49,7 +49,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]) { Mode = UniqueMode };
         _closingDefinition = new("closing", [_eventType.Id], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
         var unique = _unique = Substitute.For<IUniqueConstraintsStorage>();
-        unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 _claimWrites++;

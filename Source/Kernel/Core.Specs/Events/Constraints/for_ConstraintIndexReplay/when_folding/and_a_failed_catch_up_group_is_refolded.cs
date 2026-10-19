@@ -18,7 +18,7 @@ public class and_a_failed_catch_up_group_is_refolded : given.a_replay
         await _claims.Save("old", _definition, 0, Hash("value"));
         Event(0, "old", "Removed");
         Event(1, "new", "Claimed", "value");
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new InvalidOperationException("unavailable")));
         _replay = new(_sequence, _unique, _closed, _content, Microsoft.Extensions.Logging.Abstractions.NullLogger<ConstraintIndexReplay>.Instance, [new(_definition, EventSequenceNumber.First)], 2)
         {

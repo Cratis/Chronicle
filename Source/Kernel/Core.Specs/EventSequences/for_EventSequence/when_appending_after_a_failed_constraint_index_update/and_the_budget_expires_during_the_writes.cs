@@ -22,7 +22,7 @@ public class and_the_budget_expires_during_the_writes : given.an_event_sequence_
         await Seed(0);
         await Seed(1, _second, email: "other@example.com");
         _eventSequence.ConstraintIndexTimeProvider = _clock;
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 if (call.ArgAt<EventSourceId>(0) == _second && ++_secondWrites == 1)
