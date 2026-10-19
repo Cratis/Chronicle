@@ -45,7 +45,10 @@ public class ProjectionCatchupHandler(
         {
             var failedPartitions = (await pipeline.EndBulk()).ToArray();
             await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
-            return failedPartitions.Length > 0
+
+            // An ordinary write failure is recorded and retried from the event that failed, so catch-up still completes.
+            // Only a final flush whose outcome is unknown fails it: writes before the failure may have been lost.
+            return failedPartitions.Any(partition => partition.OutcomeUnknown)
                 ? ICanHandleCatchupForObserver.Error.Unknown
                 : Result<ICanHandleCatchupForObserver.Error>.Success();
         });

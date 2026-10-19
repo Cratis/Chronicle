@@ -30,4 +30,7 @@ internal static partial class SinkLogging
 
     [LoggerMessage(LogLevel.Warning, "The final flush of the replay of read model '{ReadModel}' failed; the sink leaves replay mode without promoting the rebuilt collection")]
     internal static partial void AbandoningReplayAfterFailedFlush(this ILogger<Sink> logger, ReadModelIdentifier readModel);
+
+    [LoggerMessage(LogLevel.Error, "Leaving the replay of read model '{ReadModel}' flushed what it held back with {FailedPartitionCount} failed partitions, {UnknownOutcomeCount} of them with an unknown outcome; nothing records them for retry")]
+    internal static partial void LeavingReplayWithFailedPartitions(this ILogger<Sink> logger, ReadModelIdentifier readModel, int failedPartitionCount, int unknownOutcomeCount);
 }

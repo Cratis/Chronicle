@@ -33,6 +33,7 @@ public class and_the_final_flush_throws : given.a_sink_with_gated_bulk_writes
 
     [Fact] void should_report_every_partition_of_the_batch() => _failures.Select(failure => failure.EventSourceId).ShouldContainOnly([_firstKey, _secondKey]);
     [Fact] void should_report_the_earliest_event_of_each_partition() => _failures.Select(failure => failure.EventSequenceNumber.Value).ShouldContainOnly([1UL, 2UL]);
+    [Fact] void should_mark_every_outcome_as_unknown() => _failures.ShouldEachConformTo(failure => failure.OutcomeUnknown);
     [Fact] void should_not_send_the_failed_batch_again() => _batches.Count.ShouldEqual(1);
     [Fact] void should_write_later_changes_directly() => WrittenValuesFor(_firstKey).ShouldEqual([2]);
 }

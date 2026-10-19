@@ -624,7 +624,8 @@ public class Sink(
                 .GroupBy(metadata => metadata.EventSourceId)
                 .Select(partition => new FailedPartition(partition.Key, partition.MinBy(metadata => metadata.SequenceNumber.Value).SequenceNumber)
                 {
-                    Reason = "MongoDB bulk write outcome unknown (shutdown deadline)"
+                    Reason = "MongoDB bulk write outcome unknown (shutdown deadline)",
+                    OutcomeUnknown = true
                 }).ToArray();
         }
 
@@ -774,7 +775,11 @@ public class Sink(
         // Whatever is still held back belongs to a replay that has been promoted without it. Writing it to the replay
         // collection would lose it, so it goes to the read model's own collection once replay mode is left.
         collections.AbandonReplay();
-        await EndBulk();
+        var failedPartitions = (await EndBulk()).ToArray();
+        if (failedPartitions.Length > 0)
+        {
+            logger.LeavingReplayWithFailedPartitions(readModel.Identifier, failedPartitions.Length, failedPartitions.Count(partition => partition.OutcomeUnknown));
+        }
     }
 
     /// <inheritdoc/>
@@ -1217,7 +1222,8 @@ public class Sink(
         var failures = batch.Metadata.Values.GroupBy(metadata => metadata.EventSourceId)
             .Select(partition => new FailedPartition(partition.Key, partition.MinBy(metadata => metadata.SequenceNumber.Value).SequenceNumber)
             {
-                Reason = $"MongoDB bulk write outcome unknown ({error.GetType().Name})"
+                Reason = $"MongoDB bulk write outcome unknown ({error.GetType().Name})",
+                OutcomeUnknown = true
             }).ToArray();
         return new(failures, error);
     }
