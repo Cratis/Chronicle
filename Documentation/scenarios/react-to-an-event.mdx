@@ -37,7 +37,7 @@ The common "translation" pattern — react to one slice's event by recording a n
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/return-event" />
 
-`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next. In C# the returned events are appended with idempotency keys, see [Duplicate protection](../reactors/side-effects#duplicate-protection-for-returned-events); the in-process testing package appends them unkeyed.
+`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next. In C# the returned events are appended with idempotency keys, see [Duplicate protection](../reactors/side-effects#duplicate-protection-for-returned-events); a `ReactorScenario` records returned events by default, and with the real side-effect handlers the in-process testing package appends them with keys too.
 
 When you want to inspect the outcome yourself, append explicitly and handle the `AppendResult` — and **throw if it failed**, so the partition pauses instead of the fact being silently lost:
 
