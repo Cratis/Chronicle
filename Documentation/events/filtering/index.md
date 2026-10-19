@@ -1,3 +1,6 @@
+---
+description: Filter Chronicle reducers and reactors by the event source type, event stream type or tags appended with an event, before they handle it.
+---
 # Filter observers by appended event metadata
 
 Chronicle can filter reducers and reactors before they handle an appended event. You do this by putting filter attributes on the observer and appending matching metadata with the event.

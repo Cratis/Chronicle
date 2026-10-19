@@ -1,3 +1,6 @@
+---
+description: FromAll subscribes a model-bound Chronicle projection to every event type in the sequence to create or update read models for any event source.
+---
 # From All
 
 `FromAll` subscribes to **every event type in the event sequence**, including types not declared by the projection. It can create or update read-model instances for any event source, keyed by the event source id unless another key is configured. The declaration language's `all` block has the same scope. If you only want the projection's own handled event types, use [From Every Event](./from-every) instead.

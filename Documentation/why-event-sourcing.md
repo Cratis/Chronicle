@@ -1,3 +1,6 @@
+---
+description: Event sourcing optimizes for understanding change by storing what happened and why, and Cratis treats it as the default architecture for information systems.
+---
 # Why Event Sourcing
 
 Event sourcing optimizes for understanding change, not just storing the latest value. Instead of asking "what does the row look like now?", you ask "what happened, in what order, and why?"

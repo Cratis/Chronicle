@@ -1,3 +1,6 @@
+---
+description: Turn Chronicle Server capabilities such as the API, Workbench and OAuth authority on or off with feature toggles.
+---
 # Features
 
 Feature toggles enable or disable specific Chronicle Server capabilities.

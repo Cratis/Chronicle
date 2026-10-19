@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle Server with a chronicle.json file or environment variables, which take precedence and suit containerized deployments.
+---
 # Configuration
 
 Chronicle Server can be configured using a `chronicle.json` file or environment variables. Environment variables take precedence over file-based configuration, which is useful for containerized deployments.

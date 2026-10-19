@@ -1,3 +1,6 @@
+---
+description: Use ClearWith in a model-bound Chronicle projection to declare the event that empties a nullable read model member without replacing its value.
+---
 # Clearing Values
 
 Some facts take a value away without putting anything in its place. A note is deleted, a due date is dropped, a shift is released. `ClearWith` declares which event does that, and the projection writes the member back to `null` every time the event is observed — including when the read model is rebuilt from the beginning of the stream.

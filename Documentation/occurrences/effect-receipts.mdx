@@ -1,3 +1,6 @@
+---
+description: Settle a Chronicle occurrence effect with a receipt so a redelivered occurrence does not append its events twice after a crash or lost reply.
+---
 # Settle an occurrence effect with a receipt
 
 Use an effect receipt when a delivered occurrence may append events again after a crash or a lost reply. The receipt and its events become durable together. A repeated attempt returns the first recorded outcome and response instead of appending another batch.

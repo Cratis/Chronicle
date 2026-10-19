@@ -1,3 +1,6 @@
+---
+description: Use ConstantKey on [FromEvent] in a model-bound Chronicle projection so all events of a type accumulate into one read model instance.
+---
 # Constant Keys
 
 A constant key fixes the read model key to a literal string value, so all events of a given type accumulate into a **single** read model instance regardless of which event source they come from.

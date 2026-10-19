@@ -1,3 +1,6 @@
+---
+description: Limit parallel job steps in Chronicle Server with the MaxParallelSteps option to prevent excessive CPU usage.
+---
 # Job Throttling
 
 Chronicle Server's job system can be configured to limit the number of parallel job steps to prevent excessive CPU usage.

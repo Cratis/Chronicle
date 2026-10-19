@@ -1,3 +1,6 @@
+---
+description: Chronicle connection strings capture the host, port, authentication and TLS options a client needs to reach the server in one portable value.
+---
 # Connection Strings
 
 Connection strings define how clients connect to the Chronicle server. They capture the host, port, authentication, and TLS options in a single, portable value.

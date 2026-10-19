@@ -1,3 +1,6 @@
+---
+description: Chronicle namespaces segregate data within a single event store, for example per tenant in a multi-tenant system, and determine database names.
+---
 # Namespaces
 
 Chronicle has been designed with the concept of namespaces from the ground up.

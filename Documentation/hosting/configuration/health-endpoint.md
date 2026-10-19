@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle's health check endpoint, served on the main port by default or on an optional dedicated port for orchestrator probes.
+---
 # Health Endpoint
 
 By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. The main port uses TLS by default, multiplexing HTTP/2 and HTTP/1.1 via ALPN. In development that TLS certificate is self-signed and generated automatically. If `tls.enabled=false`, the main port instead serves cleartext HTTP/2 only; probes on it must support HTTP/2.

@@ -1,3 +1,6 @@
+---
+description: Populate a single nullable child object on a read model with Nested() in a declarative Chronicle projection, and clear it with ClearWith.
+---
 # Projection with a Nested Object
 
 Projections can populate a single nullable child object on a read model using the `Nested()` method. Unlike [children collections](children), which manage an array of items identified by a key, `Nested()` targets a scalar nullable property that is set from an event and cleared (set to null) by another event.

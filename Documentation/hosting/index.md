@@ -1,3 +1,6 @@
+---
+description: Hosting Chronicle means running the Chronicle Kernel as a standalone server process from its Docker image, locally, in CI or in production.
+---
 # Hosting
 
 Hosting Chronicle means running the **Chronicle Kernel** as a standalone server process. The Kernel is the heart of the system — it manages the event store, processes projections, coordinates observers, and exposes the API that client applications connect to. All event-sourced state flows through it, so the Kernel must be running before any client can append or query events.

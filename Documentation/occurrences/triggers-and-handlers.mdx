@@ -1,3 +1,6 @@
+---
+description: Record a typed application trigger in Chronicle so background work survives a client restart and is delivered at least once under a lease.
+---
 # Deliver an application trigger durably
 
 Record a typed application trigger when background work must survive a client restart. Chronicle stores an occurrence outside the event log and delivers it at least once under a renewable lease. Triggers do not create domain events or appear in projections.

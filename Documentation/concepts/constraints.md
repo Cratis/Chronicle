@@ -1,3 +1,6 @@
+---
+description: Chronicle constraints are rules enforced at the database level that allow or reject an event on append, such as a unique value across keys.
+---
 # Constraints
 
 To keep integrity within typically an [event source](./event-source.md) when appending events to an [event sequence](./event-sequence.md),

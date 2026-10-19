@@ -1,6 +1,6 @@
 ---
 title: Test coverage statistics
-description: Track Chronicle test coverage metrics over time.
+description: Test coverage statistics for the Chronicle project, with the key coverage metrics tracked over time in an embedded report.
 ---
 
 <!-- markdownlint-disable MD033 -->
