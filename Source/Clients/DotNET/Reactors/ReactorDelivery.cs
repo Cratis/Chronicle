@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Globalization;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
@@ -46,6 +47,14 @@ public record ReactorDelivery(
     static readonly ConcurrentDictionary<(Type ReactorType, string EventStore), EventSequenceId> _eventSequenceIdCache = new();
 
     /// <summary>
+    /// Gets the effect epoch of the reactor, taken from <see cref="ReactorAttribute.EffectEpoch"/>.
+    /// </summary>
+    /// <remarks>
+    /// The epoch is not part of <see cref="Id"/>. It only separates the idempotency keys derived for the reactor's effects.
+    /// </remarks>
+    public uint EffectEpoch { get; init; }
+
+    /// <summary>
     /// Gets the stable identity of this delivery.
     /// </summary>
     /// <remarks>
@@ -83,8 +92,41 @@ public record ReactorDelivery(
             eventContext.EventSourceId,
             eventContext.SequenceNumber);
 
+    /// <summary>
+    /// Derives the <see cref="IdempotencyKey"/> for a named effect of this delivery, for use with
+    /// <see cref="IEventSequence.AppendOnce"/> or on an <see cref="EventForEventSourceId"/> the handler builds itself.
+    /// </summary>
+    /// <param name="effect">The name of the effect. Must not be empty.</param>
+    /// <returns>The same key for every delivery of the same event to the same reactor partition and effect epoch.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="effect"/> is null or empty.</exception>
+    public IdempotencyKey IdempotencyKeyFor(string effect)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(effect);
+        return DeriveKey("named", effect);
+    }
+
+    /// <summary>
+    /// Derives the key for the event at a position in the value a built-in side-effect handler returned.
+    /// </summary>
+    /// <param name="index">The zero-based position of the event.</param>
+    /// <returns>The derived key.</returns>
+    internal IdempotencyKey ReturnedEffectKey(int index) =>
+        DeriveKey("returned", index.ToString(CultureInfo.InvariantCulture));
+
     static EventSequenceId GetEventSequenceIdFor(Type reactorType, EventStoreName eventStore) =>
         _eventSequenceIdCache.GetOrAdd(
             (reactorType, eventStore.Value),
             static key => key.ReactorType.GetEventSequenceId(key.EventStore));
+
+    IdempotencyKey DeriveKey(string kind, string effect) =>
+        new(IdempotencyKeyHashing.Hash(
+            Reactor.Value,
+            EventStore.Value,
+            Namespace.Value,
+            EventSequence.Value,
+            Partition.Value,
+            SequenceNumber.Value.ToString(CultureInfo.InvariantCulture),
+            EffectEpoch.ToString(CultureInfo.InvariantCulture),
+            kind,
+            effect));
 }
