@@ -173,7 +173,7 @@ def check_contract(
 
 
 def main():
-    """Checks the build contract and its central-file subset for both snippet triggers."""
+    """Checks the build contract and its central-file subset for the snippet pull request trigger."""
     root = sys.argv[1] if len(sys.argv) > 1 else "."
     required = read_contract(root)
     failures = check_contract(root, required)
@@ -183,12 +183,13 @@ def main():
     snippet_required = [entry for entry in required if entry == "Source/**" or (
         "/" not in entry and entry not in ("Chronicle.slnx", "specs.runsettings")
     )]
-    for trigger in ("pull_request", "push"):
-        failures += check_contract(
-            root, snippet_required, SNIPPET_WORKFLOW, trigger, "snippet verification",
-            consequence="A change confined to it would skip Client Snippet Verification.",
-            remediation=f"Add a pattern that covers it to both the pull_request and push triggers in {SNIPPET_WORKFLOW}, or exclude the entry from the snippet subset in main() with a reason.",
-        )
+    # Snippets are verified on the pull request only: main accepts merged pull requests, so a push run
+    # would re-verify a commit its pull request already verified.
+    failures += check_contract(
+        root, snippet_required, SNIPPET_WORKFLOW, "pull_request", "snippet verification",
+        consequence="A change confined to it would skip Client Snippet Verification.",
+        remediation=f"Add a pattern that covers it to the pull_request trigger in {SNIPPET_WORKFLOW}, or exclude the entry from the snippet subset in main() with a reason.",
+    )
 
     return 1 if failures else 0
 

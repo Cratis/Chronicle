@@ -220,6 +220,7 @@ public partial class Observer
             ? partitionCounts.Where(_ => eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
             : partitionCounts.ToDictionary();
         State = WithSubtractedPartitionHandledEventCounts(State, replayedPartitionCounts);
+        RecordedHandlingState();
         await handledCountsStorage.RemoveFor(_observerId, partition);
         var retainedPartitionCounts = retainOtherCounts
             ? partitionCounts.Where(_ => !eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()

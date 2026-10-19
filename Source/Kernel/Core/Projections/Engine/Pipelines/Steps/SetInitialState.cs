@@ -94,7 +94,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
 
             foreach (var property in missing)
             {
-                initialStateAsDictionary[property.Key] = property.Value;
+                initialStateAsDictionary[property.Key] = StateValues.Copy(property.Value);
             }
 
             // The sink only stores what the changeset records, so the values filled in for a placeholder have to be
@@ -109,7 +109,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
                 var keyPropertyName = GetKeyPropertyName(projection);
                 var recorded = missing
                     .Where(kvp => !childrenRoots.Contains(kvp.Key) && !string.Equals(kvp.Key, keyPropertyName, StringComparison.OrdinalIgnoreCase))
-                    .Select(_ => new PropertyDifference(new PropertyPath(_.Key), null, _.Value))
+                    .Select(_ => new PropertyDifference(new PropertyPath(_.Key), null, StateValues.Copy(_.Value)))
                     .ToArray();
                 if (recorded.Length > 0)
                 {

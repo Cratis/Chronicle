@@ -273,7 +273,7 @@ public static class ProjectionEventContextExtensions
             var value = valueProvider(_.Event);
             if (!value.GetType().IsAPrimitiveType())
             {
-                value = value.AsExpandoObject();
+                value = value is ExpandoObject content ? content.Clone() : value.AsExpandoObject();
             }
 
             _.Changeset.AddChild(childrenProperty, value);

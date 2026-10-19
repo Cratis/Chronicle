@@ -112,13 +112,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -193,13 +189,13 @@ jobs:
           for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-release.tar.gz -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
 
       - name: Upload Release build output
         uses: actions/upload-artifact@v4
         with:
           name: build-output-release
-          path: build-output-release.tar.gz
+          path: build-output-release.tar.zst
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
@@ -231,13 +227,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -262,13 +254,13 @@ jobs:
           for project in Integration/Client Integration/Kernel Integration/Clustering; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-development.tar.gz -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
 
       - name: Upload DEVELOPMENT build output
         uses: actions/upload-artifact@v4
         with:
           name: build-output-development
-          path: build-output-development.tar.gz
+          path: build-output-development.tar.zst
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
@@ -295,7 +287,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Run tests with coverage
         # Integration tests are executed by .github/workflows/integration.yml.
@@ -357,7 +349,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -416,7 +408,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -555,7 +547,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Build benchmarks the way BenchmarkDotNet does
         run: |
