@@ -363,6 +363,11 @@ public class HandleEventsForObserver(
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+        }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
             var message = TransientTimeouts.ShortMessageFor(e);

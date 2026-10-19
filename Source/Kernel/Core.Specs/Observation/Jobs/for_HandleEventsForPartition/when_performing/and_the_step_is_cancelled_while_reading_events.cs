@@ -19,16 +19,18 @@ public class and_the_step_is_cancelled_while_reading_events : given.a_performing
     readonly CancellationTokenSource _cancellation = new();
     Catch<JobStepResult> _result;
 
-    void Establish()
-    {
-        _cancellation.Cancel();
+    void Establish() =>
         _eventTypesStorage
             .GetFor(Arg.Any<IEnumerable<EventType>>())
-            .Returns(Task.FromException<IEnumerable<EventTypeSchema>>(new OperationCanceledException(_cancellation.Token)));
-    }
+            .Returns(async _ =>
+            {
+                await _cancellation.CancelAsync();
+                throw new OperationCanceledException(_cancellation.Token);
+            });
 
     async Task Because() => _result = await _jobStep.InvokePerformStep(_performState, _cancellation.Token);
 
+    [Fact] void should_have_started_reading_events() => _eventTypesStorage.Received().GetFor(Arg.Any<IEnumerable<EventType>>());
     [Fact] void should_end_the_step_as_cancelled() => _result.Match(result => result.TryGetError(out var error) && error.Cancelled, _ => false).ShouldBeTrue();
 
     [Fact]
