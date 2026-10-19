@@ -49,7 +49,7 @@ internal static class ReadProtectionMerge
                 foreach (var scope in resolved) AddCondition(label, scope, items, scopes, conditions);
                 continue;
             }
-            foreach (var scope in ResolveLegacyReadScopes(items)) AddCondition(label, scope, items, scopes, conditions);
+            AddLegacyReadConditions(label, items, scopes, conditions);
             AddLegacyRouting(label, items, scopes, conditions);
         }
         return new(scopes.ToImmutableArray(), conditions.ToImmutableArray());
@@ -140,21 +140,31 @@ internal static class ReadProtectionMerge
             : reads.Concat(declared).Select(_ => _.Scope));
     }
 
-    static ConcurrencyScope[] ResolveLegacyReadScopes(IReadOnlyList<ReadProtectionContribution> items)
+    static void AddLegacyReadConditions(EventSourceId label, IReadOnlyList<ReadProtectionContribution> items, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions)
     {
         // Without kernel conjunction support the scopes are chosen by contribution kind, never by whether a scope
         // names an event source: every exact guard is kept as given (a source-less one is a valid global guard),
         // and only source-less declared routing is left to its reserved labels.
         var exact = Distinct(items.Where(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate));
-        if (exact.Count != 0) return [.. exact.Select(_ => _.Scope)];
-        var sourceScopes = Coalesce(items
-            .Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead ||
-                        (_.Kind == ReadProtectionContributionKind.DeclaredRouting && _.Scope.EventSourceId is not null))
-            .Select(_ => _.Scope));
-        return [sourceScopes.Aggregate((first, second) => ReadProtectionPredicate.Merge(first, second) with
+        if (exact.Count != 0)
+        {
+            foreach (var scope in exact.Select(_ => _.Scope)) AddCondition(label, scope, items, scopes, conditions);
+            return;
+        }
+
+        // The reads and the source-narrowed declared routing share one widened guard. Its boundary is the earliest
+        // read boundary: routing is resolved at commit, after every read, so its filtered tail is never later than the
+        // global tail at that point and no routing match exists between that tail and the read boundary. Keeping the
+        // read boundary therefore still guards every routing append after the tail, while an earlier filtered tail
+        // would make historical events of the widened predicate conflict.
+        var reads = items.Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead).ToArray();
+        var routing = items.Where(_ => _.Kind == ReadProtectionContributionKind.DeclaredRouting && _.Scope.EventSourceId is not null).ToArray();
+        var readScope = Coalesce(reads.Select(_ => _.Scope)).Aggregate((first, second) => ReadProtectionPredicate.Merge(first, second) with
         {
             SequenceNumber = ReadProtectionPredicate.Earliest(first.SequenceNumber, second.SequenceNumber)
-        })];
+        });
+        var guard = routing.Select(_ => _.Scope).Aggregate(readScope, ReadProtectionPredicate.Merge);
+        Describe(label, guard, [.. reads, .. routing], scopes, conditions);
     }
 
     static void AddLegacyRouting(EventSourceId label, IReadOnlyList<ReadProtectionContribution> items, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions)
@@ -180,9 +190,11 @@ internal static class ReadProtectionMerge
         return result;
     }
 
-    static void AddCondition(EventSourceId label, ConcurrencyScope scope, IEnumerable<ReadProtectionContribution> contributions, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions)
+    static void AddCondition(EventSourceId label, ConcurrencyScope scope, IEnumerable<ReadProtectionContribution> contributions, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions) =>
+        Describe(label, scope, contributions.Where(_ => ReadProtectionPredicate.Same(scope, _.Scope) || (ReadProtectionPredicate.Covers(scope, _.Scope) && ReadProtectionPredicate.CoversBoundary(scope, _.Scope))).ToArray(), scopes, conditions);
+
+    static void Describe(EventSourceId label, ConcurrencyScope scope, IReadOnlyList<ReadProtectionContribution> items, List<KeyValuePair<EventSourceId, ConcurrencyScope>> scopes, List<AppendCondition> conditions)
     {
-        var items = contributions.Where(_ => ReadProtectionPredicate.Same(scope, _.Scope) || (ReadProtectionPredicate.Covers(scope, _.Scope) && ReadProtectionPredicate.CoversBoundary(scope, _.Scope))).ToArray();
         scopes.Add(new(label, scope));
         var origins = items.Select(_ => _.Kind switch
         {
