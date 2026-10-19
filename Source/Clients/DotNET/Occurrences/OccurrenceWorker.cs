@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Threading.Channels;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Occurrences;
@@ -59,7 +60,7 @@ internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger
 
     async Task Observe(CancellationToken cancellationToken)
     {
-        var service = ((IChronicleServicesAccessor)eventStore.Connection).Services.Occurrences;
+        var service = (await ((IChronicleServicesAccessor)eventStore.Connection).GetServices(cancellationToken)).Occurrences;
         var wake = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
         var observation = new ObserveOccurrencesRequest
         {

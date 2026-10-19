@@ -405,7 +405,7 @@ public class EventSequence(
         IEnumerable<Contracts.Sequences.EventMetadataResponse> result;
         try
         {
-            result = await _servicesAccessor.Services.Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+            result = await (await _servicesAccessor.GetServices(cancellationToken)).Sequences.MetadataAt(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
         }
         catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
         {

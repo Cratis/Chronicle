@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Chronicle.Events;
@@ -30,7 +31,7 @@ public partial class Reducers
         ReducerDecisionReadAdmission.ValidateKey(key, model);
         var handler = GetHandlerForReadModelType(model);
         var call = new CallContext(new CallOptions(cancellationToken: cancellationToken));
-        var services = _servicesAccessor.Services.Sequences;
+        var services = (await _servicesAccessor.GetServices(cancellationToken)).Sequences;
         for (var attempt = 0; attempt != 3; ++attempt)
         {
             cancellationToken.ThrowIfCancellationRequested();

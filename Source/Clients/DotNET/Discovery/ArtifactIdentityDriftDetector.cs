@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Observation;
@@ -72,7 +73,7 @@ internal class ArtifactIdentityDriftDetector(
     {
         try
         {
-            var information = await servicesAccessor.Services.Observers.GetObserverInformation(
+            var information = await (await servicesAccessor.GetServices(cancellationToken)).Observers.GetObserverInformation(
                 new GetObserverInformationRequest
                 {
                     EventStore = eventStore,

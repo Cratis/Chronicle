@@ -395,6 +395,21 @@ public class when_reading_reducers : given.a_decision_reader
     }
 
     [Fact]
+    public async Task should_observe_the_token_while_connecting()
+    {
+        NeverConnect();
+        using var cancellation = new CancellationTokenSource();
+        var read = _reader.GetDetached<Counter>("source", cancellation.Token);
+        var completedBeforeCancellation = read.IsCompleted;
+        await cancellation.CancelAsync();
+        var error = await Record.ExceptionAsync(() => read);
+        completedBeforeCancellation.ShouldBeFalse();
+        error.ShouldBeAssignableFrom<OperationCanceledException>();
+        _ = _accessor.DidNotReceive().Services;
+        _fetches.ShouldEqual(0);
+    }
+
+    [Fact]
     public async Task should_refuse_stream_narrowing_instead_of_changing_the_reducer_value()
     {
         var error = await Record.ExceptionAsync(() => _reader.GetDetached<Counter>("source", "stream", "one"));
