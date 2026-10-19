@@ -116,6 +116,10 @@ Role-based placement is applied by custom Orleans placement directors - one for 
 > [!NOTE]
 > A placement director only sees the role configuration of the silo it runs on. It can keep a grain off the local silo when the local role is disabled, but it does not currently guarantee that a grain is never placed on a *remote* silo whose role is disabled. Role-based isolation is therefore best-effort today - treat the role settings as a scheduling hint rather than a hard cluster-wide guarantee, and run homogeneous nodes (all roles enabled, the default) when every node must accept every grain.
 
+## Deploying a single node
+
+With localhost clustering, which is the only option with SQL storage today, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`.
+
 ## Architecture
 
 Chronicle uses custom Orleans placement strategies for role-based placement:
