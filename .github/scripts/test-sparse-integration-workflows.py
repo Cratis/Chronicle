@@ -126,6 +126,19 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                     if step.get("name") == "Assert the hot-core contract is intact")
         self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
 
+    def test_pull_request_integration_waits_for_passing_specs(self):
+        jobs = self.build["jobs"]
+        for job_id in ("integration", "integration-api", "mongodb"):
+            with self.subTest(job=job_id):
+                job = jobs[job_id]
+                self.assertIn("specs", job["needs"])
+                self.assertIn("!cancelled()", job["if"])
+                self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
+                self.assertIn("(github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))",
+                              job["if"])
+        self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
+        self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
+
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
         self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(coverage["needs"]))
