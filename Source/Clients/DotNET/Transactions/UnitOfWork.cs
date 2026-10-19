@@ -51,6 +51,7 @@ public partial class UnitOfWork(
     Dictionary<EventSourceId, List<ConcurrencyScope>> _concurrencyScopes = [];
 
     AppendManyResult _appendManyResult = new();
+    Exception? _commitException;
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted = onCompleted;
     bool _isCommitted;
@@ -383,6 +384,12 @@ public partial class UnitOfWork(
     /// <returns><see langword="true"/> if the unit was rolled back; otherwise <see langword="false"/>.</returns>
     internal bool WasRolledBack() => _isRolledBack;
 
+    /// <summary>
+    /// Gets the exception thrown by the terminal commit, if any.
+    /// </summary>
+    /// <returns>The commit exception, or <see langword="null"/> if the commit did not throw.</returns>
+    internal Exception? GetCommitException() => _commitException;
+
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
     {
         if (first.SequenceNumber != second.SequenceNumber ||
@@ -545,9 +552,13 @@ public partial class UnitOfWork(
             }
             if (IsEnforcingReadProtection && _appendManyResult.IsSuccess) _readProtectionFrameLease!().CommittedSuccessfully();
         }
-        catch (Exception exception) when (appendOwner is not null || protectedCommit || _effectReceipt is not null)
+        catch (Exception exception)
         {
-            _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            _commitException = exception;
+            if (appendOwner is not null || protectedCommit || _effectReceipt is not null)
+            {
+                _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            }
             throw;
         }
         finally

@@ -33,8 +33,12 @@ internal static class UnitOfWorkCompletionResults
     /// <summary>Builds the result of a unit that was completed outside the completion feature.</summary>
     /// <param name="unitOfWork">The already completed unit.</param>
     /// <returns>The result.</returns>
-    internal static UnitOfWorkCompletionResult FromCompleted(IUnitOfWork unitOfWork) =>
-        unitOfWork is UnitOfWork { } concrete && concrete.WasRolledBack() ? FromRollback(unitOfWork) : FromCommit(unitOfWork);
+    internal static UnitOfWorkCompletionResult FromCompleted(IUnitOfWork unitOfWork) => unitOfWork switch
+    {
+        UnitOfWork concrete when concrete.WasRolledBack() => FromRollback(unitOfWork),
+        UnitOfWork concrete when concrete.GetCommitException() is { } exception => FromUnknown(unitOfWork, exception),
+        _ => FromCommit(unitOfWork)
+    };
 
     static UnitOfWorkCompletionResult Empty(IUnitOfWork unitOfWork, UnitOfWorkCompletionOutcome outcome, Exception? exception) => new(
         outcome,
