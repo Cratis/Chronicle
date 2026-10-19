@@ -117,6 +117,92 @@ Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Endpoint=htt
 Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Headers__X-Api-Key=from-your-secret-store
 ```
 
+## Authenticate the resolver
+
+The standard image can authenticate calls to your HTTP resolver with a static bearer token, OAuth client credentials, or Microsoft Entra ID. Configure the `http` object under `storage.connectionResolution.connection` (or `identity` when that slot uses HTTP). This authenticates **Chronicle to the resolver**, independently of how Chronicle authenticates to SQL or MongoDB. Without authentication settings, existing behavior is unchanged.
+
+Supply tokens and client secrets from your deployment's secret store, not checked-in configuration. Use HTTPS for the resolver and token endpoints. See [Arc's resolver authentication](https://www.cratis.io/arc/backend/csharp/tenancy/connection-resolution/#authenticate-to-the-endpoint) for the authentication options.
+
+### Static bearer token
+
+Set the header directly in the `http` object:
+
+```json
+{
+  "endpoint": "https://platform-mgmt.example/internal/connections",
+  "headers": { "Authorization": "Bearer <token-from-your-secret-store>" }
+}
+```
+
+The equivalent environment variable, alongside the resolver and endpoint settings above:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Headers__Authorization='Bearer <token-from-your-secret-store>'
+```
+
+### OAuth client credentials
+
+Configure the `http` object to obtain and refresh bearer tokens:
+
+```json
+{
+  "endpoint": "https://platform-mgmt.example/internal/connections",
+  "authentication": {
+    "type": "ClientCredentials",
+    "tokenEndpoint": "https://login.example/oauth2/token",
+    "clientId": "chronicle",
+    "clientSecret": "<from-your-secret-store>",
+    "scope": "connections"
+  }
+}
+```
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=ClientCredentials
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__TokenEndpoint=https://login.example/oauth2/token
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId=chronicle
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientSecret='<from-your-secret-store>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=connections
+```
+
+### Microsoft Entra ID
+
+For a user-assigned managed identity, configure the `http` object with its client id and the resolver API's scope:
+
+```json
+{
+  "endpoint": "https://platform-mgmt.example/internal/connections",
+  "authentication": {
+    "type": "AzureCredential",
+    "credential": "ManagedIdentity",
+    "clientId": "<resolver-identity-client-id>",
+    "scope": "api://platform-mgmt/.default"
+  }
+}
+```
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=AzureCredential
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Credential=ManagedIdentity
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId='<resolver-identity-client-id>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=api://platform-mgmt/.default
+```
+
+`ManagedIdentity` is the default credential; omit `clientId` for a system-assigned identity. Set `credential` to `WorkloadIdentity` for Kubernetes workload identity, or `Default` for the Azure SDK's default credential chain (including developer credentials locally). `clientId` selects the user-assigned managed identity or workload identity application, not the SQL database identity.
+
+For workload identity, change `"credential": "WorkloadIdentity"` in the JSON above, or set:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Credential=WorkloadIdentity
+AZURE_CLIENT_ID='<workload-identity-application-client-id>'
+AZURE_TENANT_ID='<entra-tenant-id>'
+AZURE_FEDERATED_TOKEN_FILE=/var/run/secrets/azure/tokens/azure-identity-token
+```
+
+Provide the Azure SDK environment variables and mounted federated token through your workload identity setup. Set the resolver's `clientId` to the workload identity application's client id.
+
+Do not combine `authentication.type` other than `None` with an `Authorization` header: both try to supply the bearer token and the resolver rejects that configuration. Tokens are cached and refreshed before expiry; the default `authentication.refreshMargin` is five minutes.
+
 ## Place tenants by convention
 
 When placement follows a naming rule, you do not need an endpoint:
