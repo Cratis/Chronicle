@@ -23,7 +23,7 @@ public class and_another_activation_wins_the_race : given.an_idempotent_batch
     async Task Because() => _batchResult = await AppendBatch();
     [Fact] void should_succeed() => _batchResult.IsSuccess.ShouldBeTrue();
     [Fact] void should_preserve_the_removed_middle_request() => _batchResult.Result.SequenceNumbers.ShouldEqual([4, 3, 5]);
-    [Fact] void should_merge_settled_and_new_outcomes() => _batchResult.Outcomes.ShouldEqual([AppendOutcome.Appended, AppendOutcome.AlreadyAppended, AppendOutcome.Appended]);
+    [Fact] void should_merge_settled_and_new_outcomes() => _batchResult.Outcomes.ShouldEqual([AppendOutcome.Committed, AppendOutcome.AlreadyAppended, AppendOutcome.Committed]);
     [Fact] void should_retry_only_the_absent_remainder() => _written.Count.ShouldEqual(2);
     [Fact] void should_attempt_storage_twice() => _attempts.ShouldEqual(2);
 }

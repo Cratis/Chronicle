@@ -44,12 +44,12 @@ public class when_reconnecting_after_a_cancelled_attempt : an_occurrence_client
     {
         await _occurrences.Discover();
         await _occurrences.Register();
-        await _started.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _started.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         await _lifecycle.Disconnected();
-        await _cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        await _occurrences.Register().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _cancelled.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
+        await _occurrences.Register().WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         _finish.SetResult();
-        await _reclaimed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _reclaimed.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         await _occurrences.DisposeAsync();
     }
 

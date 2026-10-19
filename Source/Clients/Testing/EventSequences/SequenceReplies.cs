@@ -59,6 +59,18 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     }
 
     /// <inheritdoc/>
+    public Task<CommandResult<AppendOnceResponse>> AppendOnce(AppendOnceRequest request, CallContext callContext = default) => inner.AppendOnce(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<CommandResult<AppendOnceResponse>> AppendOnceWithNamedTags(AppendOnceWithNamedTagsRequest request, CallContext callContext = default) => inner.AppendOnceWithNamedTags(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<CommandResult<AppendManyOnceResponse>> AppendManyOnce(AppendManyOnceRequest request, CallContext callContext = default) => inner.AppendManyOnce(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<CommandResult<AppendManyOnceResponse>> AppendManyOnceWithNamedTags(AppendManyOnceWithNamedTagsRequest request, CallContext callContext = default) => inner.AppendManyOnceWithNamedTags(request, callContext);
+
+    /// <inheritdoc/>
     public Task<CommandResult<CompleteStreamResponse>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default) => inner.CompleteStream(request, callContext);
 
     /// <inheritdoc/>
