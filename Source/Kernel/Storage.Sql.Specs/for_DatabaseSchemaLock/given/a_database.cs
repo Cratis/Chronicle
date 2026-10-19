@@ -17,8 +17,7 @@ public abstract class a_database : Specification
 
     internal SchemaLockDbContext NewContext()
     {
-        // Like the other specs here, keep EF from caching an internal service provider per spec, which past twenty fails every later context.
-        var context = new SchemaLockDbContext(Configure(new DbContextOptionsBuilder<SchemaLockDbContext>()).EnableServiceProviderCaching(false).Options);
+        var context = new SchemaLockDbContext(Configure(new DbContextOptionsBuilder<SchemaLockDbContext>()).Options);
         _contexts.Add(context);
         return context;
     }
