@@ -24,7 +24,7 @@ public class a_legacy_sqlite_table : Specification
             new TableMigrator<UniqueConstraintDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintDbContext>>>()),
             new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
             _logger);
-        _context = new(new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).Options, TableName, _migrator);
+        _context = new(new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).WithoutServiceProviderCaching().Options, TableName, _migrator);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE legacy_claims (EventSourceId TEXT PRIMARY KEY, Value TEXT NOT NULL, SequenceNumber INTEGER NOT NULL); CREATE INDEX IX_legacy_claims_Value ON legacy_claims (Value)");
     }
 

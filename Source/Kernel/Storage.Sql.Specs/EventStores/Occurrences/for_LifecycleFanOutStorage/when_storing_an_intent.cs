@@ -44,7 +44,7 @@ public class when_storing_an_intent : LifecycleFanOutContract, IDisposable
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return new(builder.Options);
     }
 }
