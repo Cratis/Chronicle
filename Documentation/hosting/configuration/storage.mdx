@@ -72,6 +72,10 @@ For environment-variable configuration, use `Cratis__Chronicle__Storage__Databas
 }
 ```
 
+### Passwordless Azure authentication
+
+On Azure SQL, use a Microsoft Entra ID mode in the connection string instead of a password, for example `Authentication=Active Directory Managed Identity;User Id=<client-id>`. On Azure Database for PostgreSQL, have a [connection resolver](storage-connection-resolution.md) return an Entra access token as the identity. The supported modes, and what not to combine with a resolved token, are in [Microsoft Entra ID authentication](storage-connection-resolution.md#microsoft-entra-id-authentication).
+
 ## SQL database names
 
 PostgreSQL and SQL Server isolate event stores, namespaces and projected read models in separate databases. The configured cluster database supplies the prefix:
