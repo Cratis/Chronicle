@@ -39,8 +39,8 @@ public partial class Observer
     /// reports from many job steps does not turn into a burst of storage writes inside this non-reentrant grain. They
     /// are made durable together by <see cref="FlushPendingHandledCounts"/> after at most
     /// <see cref="Cratis.Chronicle.Configuration.Observers.WriteCoalescingInterval"/> seconds, or sooner once
-    /// <see cref="MaxPendingHandledCountPartitions"/> partitions are pending. The call interleaves, so it never waits
-    /// for the flush; only when write coalescing is turned off does it make the counts durable before returning.
+    /// <see cref="MaxPendingHandledCountPartitions"/> partitions are pending. The call never waits for the flush; only
+    /// when write coalescing is turned off does it make the counts durable before returning.
     /// A report a step sends again after a timeout is recognized by <see cref="HandledEventsReportDeduplication"/>
     /// and not taken twice.
     /// </remarks>

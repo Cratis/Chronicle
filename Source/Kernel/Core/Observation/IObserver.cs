@@ -65,13 +65,14 @@ public interface IObserver : IGrainWithStringKey
     /// decrypted events across the grain boundary a second time when the observer only reads their type ids.
     /// </para>
     /// <para>
-    /// The call interleaves with the observer's other work: it only merges the counts in memory, so a catch-up over many
-    /// partitions does not queue one call per step behind the observer's other turns past the response timeout.
+    /// With write coalescing on, the call only merges the counts in memory, so a catch-up over many partitions does not
+    /// queue one storage write per step behind the observer's other turns past the response timeout. It does not
+    /// interleave: with write coalescing turned off it writes through, and that write must not overlap another turn's
+    /// state changes.
     /// A report is identified by <paramref name="reportedBy"/>, <paramref name="partition"/> and <paramref name="handledUpTo"/>, so a step can send it
     /// again after a timeout without the counts being taken twice.
     /// </para>
     /// </remarks>
-    [AlwaysInterleave]
     Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo);
 
     /// <summary>

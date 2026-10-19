@@ -349,6 +349,11 @@ public class HandleEventsForPartition(
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+        }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
             // A grain call timing out is recorded once, briefly, and never escalated to the observer: the observer
