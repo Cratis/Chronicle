@@ -19,6 +19,8 @@ public class and_it_reports_this_and_another_partition : given.a_subscriber_whos
 
     protected override IReadOnlyCollection<FailedPartition> FailedPartitions => [_own, _other];
 
+    async Task Because() => await Deliver();
+
     [Fact] void should_fail() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_record_the_other_partition_as_failed() =>
         _observer.Received(1).PartitionFailed(_other.EventSourceId, _other.EventSequenceNumber, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Handling);

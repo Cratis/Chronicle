@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ReducerObserverSubsc
 /// </summary>
 public class and_it_reports_only_another_partition : given.a_subscriber_whose_sink_write_fails
 {
+    async Task Because() => await Deliver();
+
     [Fact] void should_keep_this_partitions_result() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_record_the_other_partition_as_failed() =>
         _observer.Received(1).PartitionFailed(_other.EventSourceId, _other.EventSequenceNumber, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Handling);

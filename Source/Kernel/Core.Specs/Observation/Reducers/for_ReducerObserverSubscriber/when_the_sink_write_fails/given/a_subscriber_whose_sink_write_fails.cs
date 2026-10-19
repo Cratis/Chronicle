@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Sinks;
+using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ReducerObserverSubscriber.when_the_sink_write_fails.given;
 
@@ -18,7 +19,7 @@ public class a_subscriber_whose_sink_write_fails : for_ReducerObserverSubscriber
     void Establish()
     {
         _observer = Substitute.For<IObserver>();
-        _silo.AddProbe<IObserver>(_ => _observer);
+        _silo.AddProbe(_ => _observer);
 
         // The client reduces the batch, then the sink reports the failures - as the reducer pipeline does.
         _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
@@ -28,7 +29,7 @@ public class a_subscriber_whose_sink_write_fails : for_ReducerObserverSubscriber
         });
     }
 
-    async Task Because() => _result = await _subscriber.OnNext(
+    protected async Task Deliver() => _result = await _subscriber.OnNext(
         Partition,
         [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(new EventType("the-event", 1), 42UL)],
         new ObserverSubscriberContext(new Cratis.Chronicle.Concepts.Clients.ConnectedClient()));
