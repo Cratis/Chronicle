@@ -45,6 +45,8 @@
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
         <PackageReference Include="Snappier" />
+        <!-- ExcludeAssets does not flow from Storage.Sql: exclude the unused native MSAL runtime from the server output here too. -->
+        <PackageReference Include="Microsoft.Identity.Client.NativeInterop" ExcludeAssets="native" />
     </ItemGroup>
 
     <ItemGroup>
