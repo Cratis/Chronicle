@@ -15,7 +15,7 @@ public static class SpecDbContextOptions
     /// </summary>
     /// <remarks>
     /// The specs build far more than twenty distinct option sets in one process, and EF Core throws
-    /// <c>ManyServiceProvidersCreatedWarning</c> for any created after the twentieth, which makes the
+    /// <see cref="Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning"/> for any created after the twentieth, which makes the
     /// failing spec depend on test order. Every spec harness goes through this helper.
     /// </remarks>
     /// <typeparam name="TBuilder">The type of options builder.</typeparam>

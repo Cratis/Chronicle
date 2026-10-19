@@ -30,7 +30,7 @@ public class a_read_only_probe : Specification
 
         _context = new DbContext(new DbContextOptionsBuilder()
             .UseSqlite($"Data Source={_path};Mode=ReadOnly;Pooling=False")
-            .AddConceptAsSupport().WithoutServiceProviderCaching()
+            .AddConceptAsSupport()
             .AddInterceptors(SqlitePragmaConnectionInterceptor.Instance)
             .Options);
     }
@@ -39,7 +39,7 @@ public class a_read_only_probe : Specification
     {
         using var context = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite("Data Source=:memory:")
-            .AddConceptAsSupport().WithoutServiceProviderCaching()
+            .AddConceptAsSupport()
             .Options);
         return ReferenceEquals(_context.GetService<IModelSource>(), context.GetService<IModelSource>());
     }
