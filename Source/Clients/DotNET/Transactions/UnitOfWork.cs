@@ -182,6 +182,8 @@ public partial class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
+            events = events.ToArray();
+            if (events.Any(_ => _.IdempotencyKey is not null)) throw new IdempotentAppendsNotSupported("in a unit of work");
             if (IsEnforcingReadProtection)
             {
                 AddEnforcedEvents(eventSequenceId, events, concurrencyScopes, origin);
