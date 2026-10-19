@@ -1,3 +1,6 @@
+---
+description: Guidance for designing Chronicle events as past-tense, single-purpose, immutable domain events with cohesive properties and no nullable values.
+---
 # Event
 
 Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).

@@ -1,3 +1,6 @@
+---
+description: Configure how many replay-generated read model versions Chronicle Server keeps when projections are replayed.
+---
 # Read Models
 
 Read model configuration controls how many replay-generated read model versions Chronicle keeps when projections are replayed.

@@ -1,6 +1,6 @@
 ---
 title: Understanding event evolution
-description: Events are immutable — so what happens when you need to rename or split a field a year from now? How Chronicle's generations translate old events instead of editing them.
+description: Chronicle event generations translate old immutable events into the current shape, so you can rename or split a field without editing history.
 ---
 
 Here's the question that makes immutability sound like a trap: **"Events are immutable — so what happens when I need to rename or split a field a year from now?"** You can't go back and edit history. If you wrote `Name` two years ago and now want `FirstName` and `LastName`, you can't rewrite two years of events.

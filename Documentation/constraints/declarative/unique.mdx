@@ -1,3 +1,6 @@
+---
+description: Use builder.Unique(...) in an IConstraint so Chronicle enforces that a property value is unique across one or more event types.
+---
 # Unique property constraint
 
 Use `builder.Unique(...)` inside an `IConstraint` implementation to enforce that a property value is unique across one or more event types. The constraint fires if any tracked event would introduce a duplicate value.
