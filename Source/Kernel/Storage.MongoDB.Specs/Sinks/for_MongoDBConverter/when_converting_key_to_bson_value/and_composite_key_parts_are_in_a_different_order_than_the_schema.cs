@@ -9,22 +9,20 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_key_to_bson_value;
 
 public class and_composite_key_parts_are_in_a_different_order_than_the_schema : a_mongodb_converter
 {
+    record CompositeKey(string First, string Second);
+
+    record ModelWithCompositeKey(CompositeKey Id, string Name);
+
     BsonValue _result;
 
     void Establish()
     {
-        var keySchema = new JsonSchema { Type = JsonObjectType.Object };
-        keySchema.Properties["first"] = new JsonSchemaProperty { Type = JsonObjectType.String };
-        keySchema.Properties["second"] = new JsonSchemaProperty { Type = JsonObjectType.String };
-
-        var schema = new JsonSchema { Type = JsonObjectType.Object };
-        schema.Properties["id"] = new JsonSchemaProperty { Type = JsonObjectType.Object, Reference = keySchema };
+        var schema = JsonSchema.FromType<ModelWithCompositeKey>();
 
         _model = new ReadModelDefinition(
             "composite-model",

@@ -83,26 +83,6 @@ public class MongoDBConverter(
         return new(property, arrayFilters);
     }
 
-    // MongoDB compares embedded _id documents field order included, so parts are always written in
-    // schema order. Parts unknown to the schema follow, sorted ordinally, to stay deterministic.
-    static BsonDocument InCanonicalOrder(BsonDocument document, JsonSchema keySchema)
-    {
-        var order = keySchema.GetFlattenedProperties()
-            .Select((property, index) => (Name: property.Name.ToMongoDBPropertyName(), Index: index))
-            .GroupBy(_ => _.Name)
-            .ToDictionary(_ => _.Key, _ => _.First().Index);
-
-        var ordered = new BsonDocument();
-        foreach (var element in document.Elements
-            .OrderBy(_ => order.GetValueOrDefault(_.Name, int.MaxValue))
-            .ThenBy(_ => _.Name, StringComparer.Ordinal))
-        {
-            ordered[element.Name] = element.Value;
-        }
-
-        return ordered;
-    }
-
     /// <inheritdoc/>
     public BsonValue ToBsonValue(Key key)
     {
@@ -218,6 +198,31 @@ public class MongoDBConverter(
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         return value == BsonNull.Value ? BsonNull.Value : value;
+    }
+
+    /// <summary>
+    /// MongoDB compares embedded _id documents field order included, so parts are always written in
+    /// schema order. Parts unknown to the schema follow, sorted ordinally, to stay deterministic.
+    /// </summary>
+    /// <param name="document">The key document.</param>
+    /// <param name="keySchema">The schema of the key.</param>
+    /// <returns>The document with parts in canonical order.</returns>
+    static BsonDocument InCanonicalOrder(BsonDocument document, JsonSchema keySchema)
+    {
+        var order = keySchema.GetFlattenedProperties()
+            .Select((property, index) => (Name: property.Name.ToMongoDBPropertyName(), Index: index))
+            .GroupBy(_ => _.Name)
+            .ToDictionary(_ => _.Key, _ => _.First().Index);
+
+        var ordered = new BsonDocument();
+        foreach (var element in document.Elements
+            .OrderBy(_ => order.GetValueOrDefault(_.Name, int.MaxValue))
+            .ThenBy(_ => _.Name, StringComparer.Ordinal))
+        {
+            ordered[element.Name] = element.Value;
+        }
+
+        return ordered;
     }
 
     BsonValue ToBsonValueForArrayIndexer(object? input, PropertyPath property)
