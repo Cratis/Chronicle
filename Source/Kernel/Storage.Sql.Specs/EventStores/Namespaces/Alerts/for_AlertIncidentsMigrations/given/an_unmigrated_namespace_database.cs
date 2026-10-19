@@ -36,6 +36,6 @@ public class an_unmigrated_namespace_database : Specification, IDisposable
 
     protected NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
         .UseSqlite(_connectionString)
-        .AddConceptAsSupport()
+        .AddConceptAsSupport().WithoutServiceProviderCaching()
         .Options);
 }

@@ -45,7 +45,7 @@ public class SqlAlertIncidentsHarness : IAlertIncidentsStorageHarness
     /// </summary>
     /// <returns>The namespace context.</returns>
     protected virtual NamespaceDbContext Context() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseSqlite(_connectionString).AddConceptAsSupport().Options);
+        .UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
 
     /// <summary>
     /// Creates an isolated provider database.

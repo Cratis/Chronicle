@@ -59,7 +59,7 @@ public class a_sqlite_database : Specification
     protected NamespaceDbContext Context(string? connectionString = null, params IInterceptor[] interceptors) => new(
         new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(connectionString ?? _connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(interceptors)
             .Options);
 

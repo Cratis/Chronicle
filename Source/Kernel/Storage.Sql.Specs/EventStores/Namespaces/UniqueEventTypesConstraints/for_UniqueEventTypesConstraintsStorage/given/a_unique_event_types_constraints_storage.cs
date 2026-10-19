@@ -120,7 +120,7 @@ public class a_unique_event_types_constraints_storage : Specification
     {
         var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new EventSequenceDbContext(options, $"{EventSequenceId.Log}_events", Substitute.For<IEventSequenceMigrator>());
