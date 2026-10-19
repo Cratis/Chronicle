@@ -26,9 +26,14 @@ public abstract class two_contexts_creating_the_marker_table<THarness> : Sinks.f
         await using var second = OpenInspectionContext(ConnectionStringFor(false));
         var firstMigrator = CreateMigrator(true);
         var secondMigrator = CreateMigrator(false);
-        _error = await Catch.Exception(() => Task.WhenAll(
+        await using var lockHolder = OpenInspectionContext();
+
+        // Kernels that do not take the database schema lock, such as older versions during a rolling deploy, can
+        // still race the creation. Running both inside a schema change that already holds the lock means neither
+        // waits for it, so the race the duplicate-table recovery exists for still happens.
+        _error = await Catch.Exception(() => DatabaseSchemaLock.Run(lockHolder, () => Task.WhenAll(
             firstMigrator.EnsureReplayPromotions(first),
-            secondMigrator.EnsureReplayPromotions(second)));
+            secondMigrator.EnsureReplayPromotions(second))));
         if (_error is null)
         {
             await using var inspection = OpenInspectionContext();
