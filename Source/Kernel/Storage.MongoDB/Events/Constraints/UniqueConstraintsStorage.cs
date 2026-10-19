@@ -118,18 +118,20 @@ public class UniqueConstraintsStorage(
 
         var collection = GetValuesCollectionFor(definition.Name, scopeKey);
         await EnsureOwnerIndex(collection, cancellationToken);
+        var claim = Builders<UniqueConstraintValueIndex>.Update
+            .SetOnInsert(_ => _.Value, value)
+            .SetOnInsert(_ => _.EventSourceId, eventSourceId)
+            .SetOnInsert(_ => _.SequenceNumber, sequenceNumber);
+        var recordSubject = subject is null
+            ? Builders<UniqueConstraintValueIndex>.Update.Unset(_ => _.Subject)
+            : Builders<UniqueConstraintValueIndex>.Update.Set(_ => _.Subject, subject.Value);
+        var update = Builders<UniqueConstraintValueIndex>.Update.Combine(claim, recordSubject);
+
         try
         {
             await collection.UpdateOneAsync(
                 _ => _.Value == value && _.EventSourceId == eventSourceId,
-                Builders<UniqueConstraintValueIndex>.Update.Combine(
-                    Builders<UniqueConstraintValueIndex>.Update
-                        .SetOnInsert(_ => _.Value, value)
-                        .SetOnInsert(_ => _.EventSourceId, eventSourceId)
-                        .SetOnInsert(_ => _.SequenceNumber, sequenceNumber),
-                    subject is null
-                        ? Builders<UniqueConstraintValueIndex>.Update.Unset(_ => _.Subject)
-                        : Builders<UniqueConstraintValueIndex>.Update.Set(_ => _.Subject, subject.Value)),
+                update,
                 new UpdateOptions { IsUpsert = true },
                 cancellationToken);
         }
