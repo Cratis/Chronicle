@@ -102,7 +102,11 @@ public class OAuthHttpMessageHandler(HttpClient client, OAuthAuthorization autho
                 request.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
         }
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        if (!string.IsNullOrEmpty(token.AccessToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        }
+
         return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 }

@@ -147,13 +147,17 @@ public sealed class WebhookRegistrar(
     /// <param name="authority">The authority to acquire the token from.</param>
     /// <param name="clientId">The client identifier to authenticate with.</param>
     /// <param name="clientSecret">The client secret to authenticate with.</param>
+    /// <param name="scope">The optional scope to request, empty for none.</param>
     /// <returns>The <see cref="WebhookTestResult"/> of the attempt.</returns>
-    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret)
+    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret, string scope)
     {
         var authorization = new OAuthAuthorization(
             new Authority(authority),
             new ClientId(clientId),
-            new ClientSecret(clientSecret));
+            new ClientSecret(clientSecret))
+        {
+            Scope = scope ?? string.Empty
+        };
 
         try
         {
