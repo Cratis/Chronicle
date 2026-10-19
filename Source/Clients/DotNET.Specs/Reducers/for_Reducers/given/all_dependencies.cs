@@ -37,6 +37,8 @@ public class all_dependencies : Specification
 
     protected virtual Observation.EventGenerationDelivery GenerationDelivery => Observation.EventGenerationDelivery.Compatibility;
 
+    protected virtual int MaxConcurrentPartitions => Observation.PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
+
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
@@ -88,7 +90,8 @@ public class all_dependencies : Specification
             _activitySource,
             _logger)
         {
-            GenerationDelivery = GenerationDelivery
+            GenerationDelivery = GenerationDelivery,
+            MaxConcurrentPartitions = MaxConcurrentPartitions
         };
 
         // Use reflection to set the private handler fields

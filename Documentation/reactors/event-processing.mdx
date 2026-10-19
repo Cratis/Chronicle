@@ -65,6 +65,12 @@ The resolved key applies to every read model parameter across all of the reactor
 
 Events are delivered per event source and in sequence order. Each reactor method is called for the specific event source that produced the event.
 
+## Concurrency Across Partitions (.NET client)
+
+Within one partition the .NET client runs batches strictly in arrival order. Different partitions of the same reactor can now be handled **at the same time**, up to a bound. Handlers for different event sources can therefore overlap, so shared state that is not thread-safe (for example a singleton service) must be safe for concurrent use. There is no ordering across partitions. Replay begin and end notifications wait for work in flight, and partition replay notifications run in order with that partition's events. Results are still reported to the Kernel one at a time.
+
+The bound is `Reactors.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reactors) and defaults to the processor count, at most 8. Set it to `1` to restore the previous behavior of handling one batch at a time.
+
 ## Error Handling
 
 If a reactor method throws an exception, the failing event source partition is marked as failed and processing for that partition is paused. Once the underlying issue is resolved, processing resumes from the last successful event.

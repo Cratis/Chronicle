@@ -173,4 +173,8 @@ Copy a collection before mutating it — a previously-returned state instance ma
 7. **Name methods clearly** - Use descriptive method names that match event types
 8. **Test thoroughly** - Unit test with various event sequences and edge cases
 
+## Concurrency Across Partitions (.NET client)
 
+Within one partition the .NET client runs batches strictly in arrival order. Different partitions of the same reducer can now be reduced **at the same time**, up to a bound, so reducer code and any services it uses must be safe for concurrent use, and there is no ordering across partitions. Replay begin and end notifications wait for work in flight. Results are still reported to the Kernel one at a time.
+
+The bound is `Reducers.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reducers) and defaults to the processor count, at most 8. Set it to `1` to restore the previous behavior of handling one batch at a time.
