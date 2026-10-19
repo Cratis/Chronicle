@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Monads;
@@ -21,7 +22,7 @@ public class and_the_step_is_cancelled_while_reading_events : given.a_performing
     void Establish() =>
         _eventTypesStorage
             .GetFor(Arg.Any<IEnumerable<EventType>>())
-            .Returns(async _ =>
+            .Returns(async Task<IEnumerable<EventTypeSchema>> (_) =>
             {
                 await _cancellation.CancelAsync();
                 throw new OperationCanceledException(_cancellation.Token);
