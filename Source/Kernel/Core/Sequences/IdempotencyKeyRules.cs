@@ -12,13 +12,15 @@ namespace Cratis.Chronicle.Sequences;
 internal static class IdempotencyKeyRules
 {
     /// <summary>
-    /// Requires an idempotency key, when present, to fit the supported length.
+    /// Requires an idempotency key, when present, to hold something other than whitespace and to fit the supported length.
     /// </summary>
     /// <typeparam name="T">The type being validated.</typeparam>
     /// <param name="rule">The rule builder.</param>
     /// <returns>The rule builder options.</returns>
     public static IRuleBuilderOptions<T, string?> ValidIdempotencyKey<T>(this IRuleBuilder<T, string?> rule) =>
-        rule.Must(key => key is null || key.Length <= IdempotencyKey.MaxLength)
+        rule.Must(key => string.IsNullOrEmpty(key) || !string.IsNullOrWhiteSpace(key))
+            .WithMessage("Idempotency key must not be only whitespace.")
+            .Must(key => key is null || key.Length <= IdempotencyKey.MaxLength)
             .WithMessage($"Idempotency key must not exceed {IdempotencyKey.MaxLength} characters.");
 
     /// <summary>

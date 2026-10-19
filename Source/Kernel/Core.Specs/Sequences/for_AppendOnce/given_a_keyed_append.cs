@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Sequences.for_AppendOnce;
