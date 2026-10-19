@@ -138,7 +138,8 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             .Entity<ObserverHandledCounts.ObserverHandledCountEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ObserverHandledCounts);
-                entity.HasKey(e => new { e.ObserverId, e.Partition, e.EventTypeId });
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.ObserverId, e.Partition, e.EventTypeId }).IsUnique();
             })
             .Entity<Patterns.BehaviorPattern>(entity =>
             {

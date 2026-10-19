@@ -11,9 +11,15 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverHandledCou
 public class ObserverHandledCountEntry
 {
     /// <summary>
+    /// Gets or sets the unique identifier of the entry.
+    /// </summary>
+    [Key]
+    public Guid Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the observer.
     /// </summary>
-    [MaxLength(100)]
+    [MaxLength(200)]
     public string ObserverId { get; set; } = string.Empty;
 
     /// <summary>
@@ -25,7 +31,7 @@ public class ObserverHandledCountEntry
     /// <summary>
     /// Gets or sets the identifier of the event type.
     /// </summary>
-    [MaxLength(100)]
+    [MaxLength(200)]
     public string EventTypeId { get; set; } = string.Empty;
 
     /// <summary>
