@@ -3,14 +3,13 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.EventSequences;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
 /// Derives the idempotency keys built-in side-effect handlers put on the events a reactor returns.
 /// </summary>
-internal static partial class ReactorEffectKeys
+internal static class ReactorEffectKeys
 {
     static readonly ConcurrentDictionary<ReactorId, byte> _reportedUnkeyed = new();
 
@@ -60,14 +59,11 @@ internal static partial class ReactorEffectKeys
         return result;
     }
 
-    [LoggerMessage(LogLevel.Warning, "Reactor '{ReactorId}' returned events that are appended without idempotency keys because the connected Chronicle kernel does not advertise idempotent appends. A recovered partition or a replay appends them again. Upgrade the kernel to make them idempotent")]
-    static partial void LogUnkeyed(ILogger logger, ReactorId reactorId);
-
     static void ReportUnkeyed(ReactorContext reactorContext)
     {
         if (reactorContext.Logger is { } logger && _reportedUnkeyed.TryAdd(reactorContext.Delivery!.Reactor, 0))
         {
-            LogUnkeyed(logger, reactorContext.Delivery.Reactor);
+            logger.UnkeyedReturnedEvents(reactorContext.Delivery.Reactor);
         }
     }
 }

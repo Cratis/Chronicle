@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
@@ -73,7 +74,10 @@ public record ReactorDelivery(
     public static ReactorDelivery For(object reactor, EventContext eventContext)
     {
         var reactorType = reactor.GetType();
-        return For(reactorType.GetReactorId(), GetEventSequenceIdFor(reactorType, eventContext.EventStore), eventContext);
+        return For(reactorType.GetReactorId(), GetEventSequenceIdFor(reactorType, eventContext.EventStore), eventContext) with
+        {
+            EffectEpoch = reactorType.GetCustomAttribute<ReactorAttribute>()?.EffectEpoch ?? 0
+        };
     }
 
     /// <summary>
