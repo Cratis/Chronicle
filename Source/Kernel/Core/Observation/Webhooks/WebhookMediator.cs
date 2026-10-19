@@ -20,15 +20,22 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions) : IWebhookMediator
 {
     /// <inheritdoc/>
-    public async Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null)
+    public async Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeout is { } duration && duration > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(duration);
+        }
+
         try
         {
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
             using var response = await httpClient.PostAsJsonAsync(
                 string.Empty,
                 new EventsToObserve(partition.ToString(), events.ToArray()),
-                jsonSerializerOptions);
+                jsonSerializerOptions,
+                deadline.Token);
             if (!response.IsSuccessStatusCode)
             {
                 return Catch.Failed(new WebhookDeliveryFailed(webhookTarget.Url, response.StatusCode, response.ReasonPhrase));

@@ -21,6 +21,7 @@ public interface IWebhookMediator
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
     /// <param name="accessToken">Optional access token to use for authorization.</param>
     /// <param name="timeout">The optional timeout.</param>
+    /// <param name="cancellationToken">Cancellation of the entire delivery, including the resilience pipeline.</param>
     /// <returns>A <see cref="Task{T}"/> of <see cref="Catch"/>.</returns>
-    Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null);
+    Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default);
 }

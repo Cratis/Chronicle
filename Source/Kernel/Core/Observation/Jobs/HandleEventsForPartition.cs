@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -223,11 +224,19 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
-                    () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters),
-                    TransientRetryDelay,
-                    timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
-                    cancellationToken);
+                var handleEventsResult = _subscriber is IWebhookObserverSubscriber
+                    ? await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken)
+                    : await TransientTimeouts.RetryOnceOnTimeout(
+                        () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken),
+                        TransientRetryDelay,
+                        timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
+                        cancellationToken);
+                if (_subscriber is IWebhookObserverSubscriber && cancellationToken.IsCancellationRequested)
+                {
+                    LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+                }
+
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -514,7 +523,8 @@ public class HandleEventsForPartition(
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
         HashSet<EventTypeId> nonRedactionEventTypeIds,
-        ObserverFilters? filters)
+        ObserverFilters? filters,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -524,7 +534,8 @@ public class HandleEventsForPartition(
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
-                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext);
+                var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
+                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
                 return (result, decryptedEvents);
             }
 
@@ -551,7 +562,11 @@ public class HandleEventsForPartition(
     }
 
     ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition) =>
-        subscription.GetSubscriberKeyFor(partition, subscriberSelector.Select(subscription, partition).SiloAddress);
+        subscription.GetSubscriberKeyFor(
+            partition,
+            typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+                ? SiloAddress.Zero
+                : subscriberSelector.Select(subscription, partition).SiloAddress);
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);

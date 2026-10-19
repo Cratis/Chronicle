@@ -47,7 +47,14 @@ public class WebhookObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public Task Drain() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        OnNext(partition, events, context, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context, CancellationToken cancellationToken)
     {
         try
         {
@@ -61,7 +68,7 @@ public class WebhookObserverSubscriber(
         await EnsureAuthorized();
 
         var accessToken = _accessTokenInfo.IsExpired ? null : _accessTokenInfo.AccessToken;
-        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, accessToken);
+        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, accessToken, cancellationToken: cancellationToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)

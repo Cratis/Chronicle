@@ -15,6 +15,8 @@ If no event types are configured, the webhook forwards the event types the clien
 A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient failures (`5xx`, `408`, `429`, timeouts and connection errors) are first retried by Chronicle's HTTP client up to three times with exponential backoff, and a circuit breaker can fail calls fast while an endpoint keeps failing. When the batch still fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
+The observer's subscriber timeout cancels the webhook HTTP operation, including any retry delay, and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
+
 ## Pin the generation your endpoint understands
 
 To keep an endpoint on the event shape it knows, opt in per webhook with the .NET
