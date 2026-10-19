@@ -4,7 +4,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
@@ -112,6 +112,11 @@ public partial class Reducers : IReducers
     /// Gets the generation delivery policy supplied by the event store.
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets how many partitions of one reducer are handled at the same time.
+    /// </summary>
+    internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
     /// <inheritdoc/>
     public Task Discover()
@@ -495,28 +500,39 @@ public partial class Reducers : IReducers
         };
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        var messages = new BehaviorSubject<ReducerMessage>(new(new(registration)));
+        var messages = new SerializedMessages<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages, handler.CancellationToken);
+        #pragma warning disable CA2000 // Dispose objects before losing scope
+        var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve
-            .Select(events => Observable.FromAsync(async () =>
+            .Select(events =>
             {
-                await ObserverMethod(messages, handler, events);
-                _logger.EventHandlingCompleted(handler.Id);
-            }))
-            .Concat()
+                async Task Deliver()
+                {
+                    await ObserverMethod(messages, handler, events);
+                    _logger.EventHandlingCompleted(handler.Id);
+                }
+
+                var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
+                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+            })
+            .Merge()
             .Subscribe(
                 _ => { },
                 ex =>
                 {
+                    scheduler.Stop();
                     messages.Dispose();
 
                     if (handler.CancellationToken.IsCancellationRequested)
                     {
                         _logger.ReducerStreamCancelled(handler.Id, ex);
+                        _ = scheduler.DrainAndDispose();
                         return;
                     }
 
@@ -535,6 +551,7 @@ public partial class Reducers : IReducers
                             // The kernel lost this client's registration: reconnect the whole client, which
                             // re-registers every reducer with a fresh connection id.
                             _logger.ReducerStreamLostConnection(handler.Id, ex);
+                            _ = scheduler.DrainAndDispose();
                             _eventStore.Connection.RequestReconnect();
                             return;
                         default:
@@ -546,6 +563,7 @@ public partial class Reducers : IReducers
                     {
                         try
                         {
+                            await scheduler.DrainAndDispose();
                             await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
                             _logger.ReconnectingReducer(handler.Id);
                             RegisterReducer(handler);
@@ -588,7 +606,7 @@ public partial class Reducers : IReducers
         }
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
+    async Task ObserverMethod(SerializedMessages<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
     {
         if (operation.ReplayState != ReplayState.None)
         {
@@ -677,7 +695,7 @@ public partial class Reducers : IReducers
             ExceptionMessages = exceptionMessages.ToList(),
             ExceptionStackTrace = exceptionStackTrace
         };
-        messages.OnNext(new(new(result)));
+        messages.Publish(new(new(result)));
     }
 
     async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)

@@ -3,7 +3,7 @@
 
 using System.Collections.Frozen;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
@@ -119,6 +119,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// Gets the generation delivery policy supplied by the event store.
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets how many partitions of one reactor are handled at the same time.
+    /// </summary>
+    internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
     /// <summary>
     /// Gets the current discovered and runtime reactor handlers.
@@ -581,10 +586,13 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         };
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        var messages = new BehaviorSubject<ReactorMessage>(new(new(request)));
+        var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var cancellationToken = handler.CancellationToken;
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, cancellationToken);
+        #pragma warning disable CA2000 // Dispose objects before losing scope
+        var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -603,6 +611,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             {
                 try
                 {
+                    await scheduler.DrainAndDispose();
                     await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
@@ -616,21 +625,29 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
-            .Select(events => Observable.FromAsync(async () =>
+            .Select(events =>
             {
-                await ObserverMethod(messages, registration, events, cancellationToken);
-                _logger.EventHandlingCompleted(handler.Id);
-            }))
-            .Concat()
+                async Task Deliver()
+                {
+                    await ObserverMethod(messages, registration, events, cancellationToken);
+                    _logger.EventHandlingCompleted(handler.Id);
+                }
+
+                var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
+                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+            })
+            .Merge()
             .Subscribe(
                 _ => { },
                 ex =>
                 {
+                    scheduler.Stop();
                     var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
                     if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                         messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
                         return;
                     }
 
@@ -650,6 +667,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     {
                         _logger.ReactorStreamLostConnection(handler.Id, ex);
                         messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
                         _eventStore.Connection.RequestReconnect();
                         return;
                     }
@@ -661,13 +679,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 },
                 () =>
                 {
+                    scheduler.Stop();
                     _logger.RegisteringReactorStreamCompleted(handler.Id);
                     messages.Dispose();
                     ScheduleReconnect();
                 });
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
+    async Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
         if (events.ReplayState != ReplayState.None)
@@ -867,7 +886,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 ExceptionStackTrace = exceptionStackTrace
             };
 
-            messages.OnNext(new(new(result)));
+            messages.Publish(new(new(result)));
         }
     }
 

@@ -653,11 +653,14 @@ public partial class Observer(
         {
             _alertMutationLock.Release();
         }
+
+        BeginTransitionHook();
     }
 
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
+        KeepWhatWasRecordedDuringTransitionHook();
         if (SettlesOwedRecovery(state))
         {
             // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
@@ -813,6 +816,8 @@ public partial class Observer(
             State = State with { RunningState = ObserverRunningState.Quarantined };
         }
 
+        // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
+        RecordedHandlingState();
         return storageWasReset;
     }
 

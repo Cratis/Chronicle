@@ -41,9 +41,11 @@ using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Cratis.Types;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle;
 
@@ -209,7 +211,8 @@ public partial class EventStore : IEventStore
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory)
         {
-            GenerationDelivery = options.Value.EventGenerationDelivery
+            GenerationDelivery = options.Value.EventGenerationDelivery,
+            MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
         };
         Reactors = reactors;
         var occurrences = new Occurrences.Occurrences(this);
@@ -232,7 +235,8 @@ public partial class EventStore : IEventStore
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reducers.Reducers>())
         {
-            GenerationDelivery = options.Value.EventGenerationDelivery
+            GenerationDelivery = options.Value.EventGenerationDelivery,
+            MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions
         };
 
         var projections = new Projections.Projections(
@@ -482,13 +486,13 @@ public partial class EventStore : IEventStore
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
         ReadProtectionGuard.Read(nameof(GetNamespaces));
-        var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).EnsureSuccess();
+        var namespaces = await (await _servicesAccessor.GetServices(cancellationToken)).Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
         return namespaces.Select(_ => (EventStoreNamespaceName)_.Name).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task RemoveNamespace(EventStoreNamespaceName @namespace, CancellationToken cancellationToken = default) =>
-        await _servicesAccessor.Services.Namespaces.RemoveNamespace(new RemoveNamespaceRequest { EventStore = _eventStoreName, Namespace = @namespace.Value }).EnsureSuccess();
+        await (await _servicesAccessor.GetServices(cancellationToken)).Namespaces.RemoveNamespace(new RemoveNamespaceRequest { EventStore = _eventStoreName, Namespace = @namespace.Value }, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
 
     async Task RegisterAllCore()
     {

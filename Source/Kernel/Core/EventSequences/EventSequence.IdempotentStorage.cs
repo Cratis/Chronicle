@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -10,11 +11,14 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
-    async Task StoreKeyedBatch(List<KeyedAppend> requests, List<EventToAppendToStorage> batch, List<ConstraintValidationContext> contexts, CorrelationId correlationId, bool concurrencyChecked)
+    async Task StoreKeyedBatch(List<KeyedAppend> requests, List<EventToAppendToStorage> batch, List<ConstraintValidationContext> contexts, CorrelationId correlationId, ConcurrencyScopes scopes)
     {
         var retriedNonCommit = false;
         while (batch.Count > 0)
         {
+            var remainingScopes = RemainingScopes(requests, scopes);
+            var concurrencyChecked = remainingScopes.ShouldAllBeValidated;
+            using var concurrencyCheck = BeginConcurrencyValidation(remainingScopes);
             Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure> result;
             try
             {
@@ -48,14 +52,7 @@ public partial class EventSequence
                 HandleAppendedDuplicateEventForMany(batch, failure.AsT0.NextAvailableSequenceNumber);
                 if (await ValidateAppendManyRetry(correlationId) is { } violation)
                 {
-                    await SettleFailedKeys(requests, correlationId, new AppendResult
-                    {
-                        CorrelationId = correlationId,
-                        ConstraintViolations = violation.ConstraintViolations,
-                        ConcurrencyViolation = violation.ConcurrencyViolations.FirstOrDefault(),
-                        Errors = violation.Errors,
-                        ConcurrencyCheckPerformed = concurrencyChecked
-                    });
+                    await SettleConcurrencyFailure(requests, correlationId, violation.ConcurrencyViolations, concurrencyChecked);
                     return;
                 }
                 continue;
@@ -72,7 +69,11 @@ public partial class EventSequence
             if (retriedNonCommit)
             {
                 foreach (var request in requests.Where(request => request.Result is null))
-                    request.Result = new(AppendResult.Failed(correlationId, [IdempotencyRefusals.Unsettled(request.Key)]));
+                {
+                    request.Result = new(AppendResult.Failed(correlationId, [request.Key is { } key
+                        ? IdempotencyRefusals.Unsettled(key)
+                        : new AppendError("The batch could not be committed after one retry. Nothing was written. Retry the append.")]));
+                }
                 return;
             }
             retriedNonCommit = true;
@@ -91,14 +92,11 @@ public partial class EventSequence
                 batch[index] = batch[index] with { SequenceNumber = number };
                 number = number.Next();
             }
+            remainingScopes = RemainingScopes(requests, scopes);
+            using var remainderCheck = BeginConcurrencyValidation(remainingScopes);
             if (await ValidateAppendManyRetry(correlationId) is { } retryViolation)
             {
-                await SettleFailedKeys(requests, correlationId, new AppendResult
-                {
-                    CorrelationId = correlationId,
-                    ConcurrencyViolation = retryViolation.ConcurrencyViolations.FirstOrDefault(),
-                    ConcurrencyCheckPerformed = concurrencyChecked
-                });
+                await SettleConcurrencyFailure(requests, correlationId, retryViolation.ConcurrencyViolations, remainingScopes.ShouldAllBeValidated);
                 return;
             }
         }
@@ -139,7 +137,7 @@ public partial class EventSequence
         for (var index = 0; index < requests.Count; index++)
         {
             requests[index].Result = new(AppendResult.Success(correlationId, batch[index].SequenceNumber).ReportingConcurrencyCheck(concurrencyChecked));
-            logger.KeyedAppendSettled(requests[index].Key, batch[index].SequenceNumber);
+            if (requests[index].Key is { } key) logger.KeyedAppendSettled(key, batch[index].SequenceNumber);
         }
     }
 }

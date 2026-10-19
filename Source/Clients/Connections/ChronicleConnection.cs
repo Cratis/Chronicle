@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -173,6 +173,18 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             ConnectIfNotConnected();
             return _services;
         }
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IServices> GetServices(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Lifecycle.IsConnected)
+        {
+            await Connect().WaitAsync(cancellationToken);
+        }
+
+        return _services;
     }
 
     /// <inheritdoc/>

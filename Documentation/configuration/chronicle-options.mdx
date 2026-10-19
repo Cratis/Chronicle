@@ -216,6 +216,32 @@ In `appsettings.json`:
 { "Cratis": { "Chronicle": { "RegistrationRetry": { "MaxAttempts": 10, "MaximumDelay": "00:01:00" } } } }
 ```
 
+### Reactors
+
+How the .NET client runs reactors.
+
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `MaxConcurrentPartitions` | `int` | processor count, at most `8` | How many partitions of one reactor are handled at the same time. Batches for one partition always run in order. `1` handles one batch at a time, as before. Must be at least `1` |
+
+Handlers for different partitions can run at the same time, so shared non-thread-safe services are at risk.
+
+```json
+{ "Cratis": { "Chronicle": { "Reactors": { "MaxConcurrentPartitions": 4 } } } }
+```
+
+### Reducers
+
+How the .NET client runs reducers.
+
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `MaxConcurrentPartitions` | `int` | processor count, at most `8` | How many partitions of one reducer are handled at the same time. Batches for one partition always run in order. `1` handles one batch at a time, as before. Must be at least `1` |
+
+```json
+{ "Cratis": { "Chronicle": { "Reducers": { "MaxConcurrentPartitions": 4 } } } }
+```
+
 ### ArtifactIdentityDrift
 
 Controls the .NET client's check for likely artifact renames or moves before each foreground registration run. Background retries retain its findings without repeating snapshots or drift logs.

@@ -24,6 +24,7 @@ public class a_decision_reader : Specification
 {
     protected IEventStore _store;
     protected IChronicleServicesAccessor _accessor;
+    protected IGetServicesAsynchronously _asyncAccessor;
     protected IConnectionLifecycle _lifecycle;
     protected IServices _services;
     protected Contracts.ReadModels.IReadModels _readModels;
@@ -49,13 +50,19 @@ public class a_decision_reader : Specification
         _store = Substitute.For<IEventStore>();
         _store.Name.Returns((EventStoreName)"store");
         _store.Namespace.Returns((EventStoreNamespaceName)"namespace");
-        var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        var connection = (IChronicleConnection)Substitute.For(
+            [typeof(IChronicleConnection), typeof(IChronicleServicesAccessor), typeof(IGetServicesAsynchronously)],
+            []);
         _lifecycle = Substitute.For<IConnectionLifecycle>();
         connection.Lifecycle.Returns(_lifecycle);
         _accessor = (IChronicleServicesAccessor)connection;
         _store.Connection.Returns(connection);
         _services = Substitute.For<IServices>();
         _accessor.Services.Returns(_services);
+        _asyncAccessor = (IGetServicesAsynchronously)connection;
+#pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
+        _asyncAccessor.GetServices(Arg.Any<CancellationToken>()).Returns(_ => ValueTask.FromResult(_services));
+#pragma warning restore CA2012
         _readModels = Substitute.For<Contracts.ReadModels.IReadModels>();
         _sequences = Substitute.For<Contracts.Sequences.IEventSequences>();
         _projectionService = Substitute.For<Contracts.Projections.IProjections>();
@@ -108,6 +115,18 @@ public class a_decision_reader : Specification
                 return new GetInstanceByKeyResponse { LastHandledEventSequenceNumber = _last, ReadModel = _json };
             });
         _readModels.DehydrateSession(Arg.Any<Contracts.ReadModels.DehydrateSessionRequest>(), Arg.Any<CallContext>()).Returns(Task.CompletedTask);
+    }
+
+    /// <summary>
+    /// Leaves the connection unable to connect: getting services stays pending until the caller's token is cancelled.
+    /// </summary>
+    protected void NeverConnect()
+    {
+        var connect = new TaskCompletionSource<IServices>(TaskCreationOptions.RunContinuationsAsynchronously);
+#pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
+        _asyncAccessor.GetServices(Arg.Any<CancellationToken>())
+            .Returns(call => new ValueTask<IServices>(connect.Task.WaitAsync(call.Arg<CancellationToken>())));
+#pragma warning restore CA2012
     }
 
     protected void SetDefinitions(params ProjectionDefinition[] definitions) =>
