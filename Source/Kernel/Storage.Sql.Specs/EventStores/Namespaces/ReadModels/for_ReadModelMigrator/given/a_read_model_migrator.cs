@@ -57,7 +57,7 @@ public class a_read_model_migrator : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, tableName, columns, _migrator);

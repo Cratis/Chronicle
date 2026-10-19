@@ -83,7 +83,7 @@ public class and_children_have_nested_identities : Specification
     }
 
     ReadModelDbContext CreateContext() => new(
-        new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options,
+        new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
         Container,
         _columns,
         Substitute.For<IReadModelMigrator>());

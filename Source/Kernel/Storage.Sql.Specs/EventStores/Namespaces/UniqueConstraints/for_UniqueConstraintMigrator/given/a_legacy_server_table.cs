@@ -42,9 +42,7 @@ public abstract class a_legacy_server_table : Specification
             builder.UseNpgsql(connectionString);
         }
 
-        // The spec project builds more than twenty distinct EF option sets, and EF Core throws for any
-        // new one created after the twentieth; which one that is depends on test order.
-        builder.ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
+        builder.WithoutServiceProviderCaching();
         _options = builder.Options;
         _context = new(_options, _tableName, _migrator);
         await _context.Database.OpenConnectionAsync();

@@ -60,5 +60,5 @@ public class when_migrating_a_legacy_postgresql_row(PostgreSqlFixture fixture) :
     [Fact] void should_read_unavailable_sequence_number() => _rows.Single().SequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
 
     NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
 }
