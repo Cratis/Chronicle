@@ -34,10 +34,13 @@ public class and_a_failed_store_is_detached_while_retrying_in_the_background : g
         await _retry.WaitAsync(TimeSpan.FromSeconds(10));
 
         SetField("_backgroundRegistrationRetryTask", null!);
+
+        // The substitutes record every call they received, and a recorded argument would keep the store alive.
+        _eventStore.Seeding.ClearReceivedCalls();
+        _servicesAccessor.ClearReceivedCalls();
         _eventStoreReference = new WeakReference(_eventStore);
         _eventStore = null!;
         _retry = null!;
-        ForceCollection();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -48,5 +51,10 @@ public class and_a_failed_store_is_detached_while_retrying_in_the_background : g
         GC.Collect();
     }
 
-    [Fact] void should_release_the_event_store() => _eventStoreReference.IsAlive.ShouldBeFalse();
+    [Fact]
+    void should_release_the_event_store()
+    {
+        ForceCollection();
+        _eventStoreReference.IsAlive.ShouldBeFalse();
+    }
 }
