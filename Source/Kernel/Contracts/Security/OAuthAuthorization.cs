@@ -26,4 +26,10 @@ public class OAuthAuthorization
     /// </summary>
     [ProtoMember(3)]
     public string ClientSecret { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional OAuth scope.
+    /// </summary>
+    [ProtoMember(4)]
+    public string Scope { get; set; } = string.Empty;
 }
