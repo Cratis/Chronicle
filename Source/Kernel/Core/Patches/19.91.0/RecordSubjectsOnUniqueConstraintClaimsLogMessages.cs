@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -17,11 +18,11 @@ internal static partial class RecordSubjectsOnUniqueConstraintClaimsLogMessages
     [LoggerMessage(LogLevel.Debug, "Found {Count} unique constraint(s) covering personal data for event store {EventStore}")]
     internal static partial void FoundUniqueConstraints(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, int count);
 
-    [LoggerMessage(LogLevel.Debug, "Rebuilding constraint indexes for event store {EventStore}, namespace {Namespace}")]
-    internal static partial void RebuildingConstraintIndexes(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+    [LoggerMessage(LogLevel.Debug, "Rebuilding constraint indexes for event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}")]
+    internal static partial void RebuildingConstraintIndexes(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
 
-    [LoggerMessage(LogLevel.Warning, "Failed to start constraint index rebuild for event store {EventStore}, namespace {Namespace}: {Error}")]
-    internal static partial void FailedRebuildingConstraintIndexes(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, string error);
+    [LoggerMessage(LogLevel.Warning, "Failed to start constraint index rebuild for event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}: {Error}")]
+    internal static partial void FailedRebuildingConstraintIndexes(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, string error);
 
     [LoggerMessage(LogLevel.Debug, "Completed RecordSubjectsOnUniqueConstraintClaims patch")]
     internal static partial void PatchCompleted(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger);

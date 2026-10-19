@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
@@ -20,7 +21,7 @@ namespace Cratis.Chronicle.Patches;
 /// </summary>
 /// <remarks>
 /// Claims written before unique-index entries carried their subject hold none, so erasing a subject cannot find them.
-/// Rebuilding each unique constraint that covers a personal-data property, in any generation of its event types, from the event log re-derives each claim with its subject, and skips the values
+/// Rebuilding each unique constraint that covers a personal-data property, in any generation of its event types, from every event sequence it applies to re-derives each claim with its subject, and skips the values
 /// of subjects that are already erased, so those values become claimable again. While a constraint rebuilds, governed
 /// appends to it are refused.
 /// </remarks>
@@ -51,22 +52,30 @@ public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFact
 
             logger.FoundUniqueConstraints(eventStore, uniqueConstraintDefinitions.Length);
 
-            var changes = uniqueConstraintDefinitions
-                .Select(_ => new ConstraintDefinitionChange(_.Name, true, [ConstraintChangeType.IndexedPropertiesChanged]))
-                .ToArray();
-
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             var namespaceNames = await namespaces.GetAll();
 
             foreach (var namespaceName in namespaceNames)
             {
-                logger.RebuildingConstraintIndexes(eventStore, namespaceName);
-
+                var eventSequences = await grainFactory.GetEventSequences(eventStore, namespaceName).GetEventSequences();
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-                var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(EventSequenceId.Log, changes));
-                if (result.TryGetError(out var error))
+                foreach (var eventSequenceId in eventSequences.Append(EventSequenceId.Log).Distinct())
                 {
-                    logger.FailedRebuildingConstraintIndexes(eventStore, namespaceName, error.ToString());
+                    var changes = uniqueConstraintDefinitions
+                        .Where(_ => _.AppliesTo(eventSequenceId))
+                        .Select(_ => new ConstraintDefinitionChange(_.Name, true, [ConstraintChangeType.IndexedPropertiesChanged]))
+                        .ToArray();
+                    if (changes.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    logger.RebuildingConstraintIndexes(eventStore, namespaceName, eventSequenceId);
+                    var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(eventSequenceId, changes));
+                    if (result.TryGetError(out var error))
+                    {
+                        logger.FailedRebuildingConstraintIndexes(eventStore, namespaceName, eventSequenceId, error.ToString());
+                    }
                 }
             }
         }

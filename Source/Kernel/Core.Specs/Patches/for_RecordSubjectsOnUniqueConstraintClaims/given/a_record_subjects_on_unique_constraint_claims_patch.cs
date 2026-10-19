@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patches;
 using Cratis.Chronicle.Storage;
@@ -22,6 +24,7 @@ public class a_record_subjects_on_unique_constraint_claims_patch : Specification
     protected IEventTypesStorage _eventTypesStorage;
     protected INamespaces _namespaces;
     protected IJobsManager _jobsManager;
+    protected IEventSequences _eventSequences;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
 
@@ -37,6 +40,7 @@ public class a_record_subjects_on_unique_constraint_claims_patch : Specification
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _namespaces = Substitute.For<INamespaces>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _eventSequences = Substitute.For<IEventSequences>();
 
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
@@ -45,6 +49,9 @@ public class a_record_subjects_on_unique_constraint_claims_patch : Specification
 
         _grainFactory.GetGrain<INamespaces>(_eventStore).Returns(_namespaces);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
+
+        _grainFactory.GetGrain<IEventSequences>(0, new EventSequencesKey(_eventStore, _namespace)).Returns(_eventSequences);
+        _eventSequences.GetEventSequences().Returns(Task.FromResult<IEnumerable<EventSequenceId>>([EventSequenceId.Log]));
 
         _grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_eventStore, _namespace)).Returns(_jobsManager);
 
