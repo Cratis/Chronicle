@@ -17,6 +17,8 @@ Chronicle discovers it by convention — no registration.
 
 A reactor may run more than once for the same event (replay, recovery, redeploy). Make the side effect idempotent — record that it happened and skip if it already did. For a side effect that must never run again during a replay — a welcome email, a payment call — mark the handler (or the whole class) with `[OnceOnly]` and Chronicle excludes it from replays. See [OnceOnly](../reactors/once-only).
 
+In C#, events a handler *returns* are already protected on redelivery: Chronicle keys them from the delivery, so recovery and catch-up do not append them twice. External side effects (an email, a payment call) are not protected that way and still need a receipt under the [delivery identity](../reactors/delivery-identity). If you change what a handler returns and want replays to append the new shape, raise the reactor's [effect epoch](../reactors/delivery-identity#when-to-bump-the-effect-epoch).
+
 ## Need state? Pick the right consistency
 
 Reach for the event first — it carries the truth of what happened, and `context.EventSourceId` tells you what it happened *to*. But some reactions genuinely need more state. Say the notification should include the book's title — that lives in the read model, not the event.
@@ -35,7 +37,7 @@ The common "translation" pattern — react to one slice's event by recording a n
 
 <ChronicleClientTabs snippet="scenarios/react-to-an-event/return-event" />
 
-`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next.
+`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next. In C# the returned events are appended with idempotency keys, see [Duplicate protection](../reactors/side-effects#duplicate-protection-for-returned-events); the in-process testing package appends them unkeyed.
 
 When you want to inspect the outcome yourself, append explicitly and handle the `AppendResult` — and **throw if it failed**, so the partition pauses instead of the fact being silently lost:
 

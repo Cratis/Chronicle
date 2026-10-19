@@ -67,6 +67,17 @@ A scope entry with `ConcurrencyScope.NotSet`, or a missing entry for an event so
 
 The event list preserves the order you supplied to the append operation. That does not impose a global processing order on observers: events targeting different source partitions can be observed independently. The scope dictionary also holds one scope per `EventSourceId` key; it cannot represent multiple independent scopes under the same key.
 
+## Duplicate protection for returned events
+
+In C#, the built-in result handlers append each returned event with an [idempotency key](../events/appending) that Chronicle derives from the [delivery identity](delivery-identity), the reactor's effect epoch and the event's position in the returned value. When the same delivery comes back, the kernel recognizes the keys and does not append the events a second time. This covers redelivery after a failed partition recovers, catch-up and replay: a returned event lands once per delivery.
+
+What this does not cover is anything outside the event log. A payment call, an email or a webhook made inside the handler still runs again on every redelivery. Guard those with a receipt keyed by `ReactorDelivery`, as described in [Delivery identity](delivery-identity#keys-for-returned-events).
+
+- **A key you set yourself is kept.** If an `EventForEventSourceId` already carries an `IdempotencyKey`, Chronicle leaves it alone and keys only the events that have none. Use `delivery.IdempotencyKeyFor("name")` to derive a stable key for a named effect.
+- **Older kernels append unkeyed.** Against a kernel that does not advertise idempotent appends, returned events are appended without keys and Chronicle logs one warning per reactor. A key you set yourself on such a kernel throws `IdempotentAppendsNotSupported`, because silently dropping it would remove the protection you asked for.
+- **The in-process testing package takes the unkeyed path.** `Cratis.Chronicle.Testing` does not advertise the capability, so scenarios append returned events without keys.
+- **Changed output is refused, not overwritten.** If the handler returns something different for a delivery that was already appended, the kernel reports a conflict and the partition fails. The failure message names the remedy: raise the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) or mark the handler [`[OnceOnly]`](once-only).
+
 ## Reactor-Level Metadata Resolution
 
 Set metadata once on the reactor type so every returned event inherits it automatically.
