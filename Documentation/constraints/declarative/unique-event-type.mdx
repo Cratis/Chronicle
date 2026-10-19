@@ -1,3 +1,6 @@
+---
+description: Use builder.Unique<TEventType>() in an IConstraint so Chronicle allows only one event of that type per event source identifier.
+---
 # Unique event type constraint
 
 Use `builder.Unique<TEventType>()` inside an `IConstraint` implementation to enforce that **only one event of a specific type** can be appended per event source identifier. Use this when the event itself is a unique fact — for example, initializing a project can only happen once per project.

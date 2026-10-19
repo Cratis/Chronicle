@@ -1,6 +1,6 @@
 ---
 title: Understanding constraints
-description: How Chronicle enforces uniqueness without a unique index — rules you declare on the event with [Unique] or in a dedicated IConstraint class, checked in the kernel before anything is committed.
+description: How Chronicle enforces uniqueness without a unique index, with [Unique] or an IConstraint class checked in the kernel before anything commits.
 ---
 
 One question stops a lot of teams at the door of event sourcing, and it's a good one: **"If state is derived from events, how do I stop two users registering the same email?"** There's no table to put a `UNIQUE` index on.

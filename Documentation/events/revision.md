@@ -1,3 +1,6 @@
+---
+description: Chronicle event revision corrects an incorrectly appended event by recording a new version, preserving the immutable audit trail instead of deleting.
+---
 # Event Revision
 
 Event revision lets you correct the content of a previously appended event when you discover it contained incorrect data. Rather than modifying the immutable event log, revision records a new version of the event's content alongside the original, preserving the full audit trail while making the corrected data available to all consumers.
