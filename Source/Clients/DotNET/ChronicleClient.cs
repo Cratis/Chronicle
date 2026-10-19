@@ -241,6 +241,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         foreach (var eventStore in CreatedEventStores())
         {
+            // Disposing the connection raises no disconnect, so the background registration retry must be stopped here.
+            (eventStore as EventStore)?.StopBackgroundRegistrationRetry();
             eventStore.ReadModelReactors.Dispose();
             if (eventStore.Occurrences is IDisposable occurrences) occurrences.Dispose();
         }

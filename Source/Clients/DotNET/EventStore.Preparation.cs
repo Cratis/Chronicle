@@ -35,11 +35,24 @@ public partial class EventStore
     /// </summary>
     internal void DetachAutomaticRegistration()
     {
-        _isRegistrationDetached = true;
-        Volatile.Read(ref _backgroundRegistrationRetryCancellation)?.Cancel();
+        StopBackgroundRegistrationRetry();
         Connection.Lifecycle.OnConnected -= RegisterAfterConnect;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
         if (Occurrences is IDisposable disposable) disposable.Dispose();
+    }
+
+    /// <summary>
+    /// Stops the background registration retry, now and for any loop started later. Used when the store is detached
+    /// and when the owning client is disposed, which does not raise a disconnect that would end the loop.
+    /// </summary>
+    internal void StopBackgroundRegistrationRetry()
+    {
+        // Under the same lock as the loop's start, so one of the two always observes the other.
+        lock (BackgroundRegistrationRetrySync)
+        {
+            _isRegistrationDetached = true;
+            _backgroundRegistrationRetryCancellation?.Cancel();
+        }
     }
 
     void PublishLocalPreparationFailure(Exception failure)
