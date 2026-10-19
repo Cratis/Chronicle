@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+extern alias KernelCore;
 
+using AppendOutcome = KernelCore::Cratis.Chronicle.EventSequences.AppendOutcome;
 using context = Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key.and_two_appends_race_for_the_key.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key;

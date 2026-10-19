@@ -13,6 +13,15 @@
         <ProjectReference Include="../Clustering/Clustering.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+        <!-- Also exposed under the explicit KernelCore alias (alongside the default "global" alias
+             most of this project already relies on) because Cratis.Chronicle.Core and the
+             Cratis.Chronicle client (pulled in via AspNetCore.csproj) both declare
+             EventSequences.AppendOutcome / IdempotencyConflictReason; files that need the kernel's
+             own version disambiguate with "extern alias KernelCore;". -->
+        <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
+            <Aliases>KernelCore,global</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />

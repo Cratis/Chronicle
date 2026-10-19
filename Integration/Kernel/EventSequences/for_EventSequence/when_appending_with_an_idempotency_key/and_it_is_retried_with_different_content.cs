@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+extern alias KernelCore;
 
 using context = Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key.and_it_is_retried_with_different_content.context;
+using IdempotencyConflictReason = KernelCore::Cratis.Chronicle.EventSequences.IdempotencyConflictReason;
 
 namespace Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key;
 
