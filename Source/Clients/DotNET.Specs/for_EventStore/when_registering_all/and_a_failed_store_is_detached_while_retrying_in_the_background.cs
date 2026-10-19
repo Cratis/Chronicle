@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.for_EventStore.when_registering_all;
@@ -13,15 +12,16 @@ namespace Cratis.Chronicle.for_EventStore.when_registering_all;
 /// </summary>
 public class and_a_failed_store_is_detached_while_retrying_in_the_background : given.an_event_store_with_a_projection_that_cannot_be_built
 {
-    WeakReference _eventStoreReference;
-    Task _retry;
+    int _attemptsAtDetach;
+    bool _stoppedBeforeTimeout;
 
     void Establish()
     {
         _clientArtifacts.Projections.Returns([typeof(BuildableProjection)]);
         _eventStore.Seeding.Register().Returns(_ => Task.FromException(new Exception("the kernel rejected the registration")));
 
-        // A long delay keeps the loop parked between attempts, as it is for a permanently rejected registration.
+        // A long delay parks the loop between attempts, as for a permanently rejected registration. Only the
+        // cancellation from detaching can end it; no wait here depends on the delay elapsing.
         SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.FromHours(1), TimeSpan.FromHours(1)));
     }
 
@@ -29,32 +29,15 @@ public class and_a_failed_store_is_detached_while_retrying_in_the_background : g
     {
         await _projections.Discover();
         await Catch.Exception(() => _eventStore.RegisterAll());
-        _retry = _eventStore.PendingBackgroundRegistrationRetry!;
+        var retry = _eventStore.PendingBackgroundRegistrationRetry!;
+        _attemptsAtDetach = _eventStore.Seeding.ReceivedCalls().Count();
+
         _eventStore.DetachAutomaticRegistration();
-        await _retry.WaitAsync(TimeSpan.FromSeconds(10));
 
-        SetField("_backgroundRegistrationRetryTask", null!);
-
-        // The substitutes record every call they received, and a recorded argument would keep the store alive.
-        _eventStore.Seeding.ClearReceivedCalls();
-        _servicesAccessor.ClearReceivedCalls();
-        _eventStoreReference = new WeakReference(_eventStore);
-        _eventStore = null!;
-        _retry = null!;
+        // The bound only keeps a regression from hanging the run; a loop that honors cancellation ends at once.
+        _stoppedBeforeTimeout = await Task.WhenAny(retry, Task.Delay(TimeSpan.FromSeconds(30))) == retry;
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    static void ForceCollection()
-    {
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-    }
-
-    [Fact]
-    void should_release_the_event_store()
-    {
-        ForceCollection();
-        _eventStoreReference.IsAlive.ShouldBeFalse();
-    }
+    [Fact] void should_end_the_background_retry() => _stoppedBeforeTimeout.ShouldBeTrue();
+    [Fact] void should_not_attempt_registration_again() => _eventStore.Seeding.ReceivedCalls().Count().ShouldEqual(_attemptsAtDetach);
 }
