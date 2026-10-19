@@ -25,13 +25,14 @@ public class an_idempotent_append : all_dependencies
     protected Contracts.Sequences.AppendManyOnceResponse _batchResponse;
     protected int _notifications;
     protected bool _capabilityAdvertised = true;
+    protected bool _capabilitiesKnown = true;
     IDisposable _subscription;
 
     void Establish()
     {
         _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
         ((IChronicleServicesAccessor)_connection).Services.Returns(services);
-        ((IKernelCapabilities)_connection).CapabilitiesAreKnown.Returns(true);
+        ((IKernelCapabilities)_connection).CapabilitiesAreKnown.Returns(_ => _capabilitiesKnown);
         ((IKernelCapabilities)_connection).Capabilities.Returns(_ => _capabilityAdvertised ? [KernelCapabilities.IdempotentAppends] : []);
         _eventSequence = new("store", "namespace", EventSequenceId.Log, _connection, _eventTypes, _constraints, _eventSerializer, _correlationIdAccessor, _concurrencyScopeStrategies, _causationManager, _unitOfWorkManager, _identityProvider, JsonSerializerOptions.Default);
         _eventTypes.HasFor(typeof(string)).Returns(true);
@@ -66,7 +67,7 @@ public class an_idempotent_append : all_dependencies
             _batchTaggedRequest = call.Arg<Contracts.Sequences.AppendManyOnceWithNamedTagsRequest>();
             return CommandResult<Contracts.Sequences.AppendManyOnceResponse>.Success(Guid.NewGuid(), _batchResponse);
         });
-        _subscription = _eventSequence.AppendOperations.Subscribe(_ => _notifications++);
+        _subscription = _eventSequence.AppendOperations.Subscribe(_ => _notifications += _.Count());
     }
 
     void Destroy() => _subscription.Dispose();

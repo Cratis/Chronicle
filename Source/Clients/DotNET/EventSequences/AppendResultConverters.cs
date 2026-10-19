@@ -109,17 +109,17 @@ internal static class AppendResultConverters
     /// </summary>
     /// <param name="conflict">The contract conflict.</param>
     /// <returns>The client conflict.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">The kernel returned a conflict reason this client does not know.</exception>
     public static IdempotencyKeyConflict ToClient(this Contracts.Sequences.IdempotencyKeyConflict conflict)
     {
+        // The kernel has already committed by now, so nothing here may throw: an unknown reason is unverifiable
+        // and the key is carried exactly as received.
         var reason = conflict.Reason switch
         {
             Contracts.EventSequences.IdempotencyConflictReason.Content => IdempotencyConflictReason.Content,
             Contracts.EventSequences.IdempotencyConflictReason.Generation => IdempotencyConflictReason.Generation,
-            Contracts.EventSequences.IdempotencyConflictReason.Unverifiable => IdempotencyConflictReason.Unverifiable,
-            _ => throw new ArgumentOutOfRangeException(nameof(conflict), conflict.Reason, "The kernel returned an unknown conflict reason.")
+            _ => IdempotencyConflictReason.Unverifiable
         };
         var storedEventType = new EventType(conflict.StoredEventTypeId, conflict.StoredEventTypeGeneration);
-        return new(new IdempotencyKey(conflict.Key), conflict.ExistingSequenceNumber, storedEventType, conflict.RequestedGeneration, reason);
+        return new(IdempotencyKey.AsReceived(conflict.Key), conflict.ExistingSequenceNumber, storedEventType, conflict.RequestedGeneration, reason);
     }
 }

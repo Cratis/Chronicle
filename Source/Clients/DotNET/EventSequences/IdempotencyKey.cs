@@ -27,12 +27,24 @@ public record IdempotencyKey : ConceptAs<string>
     {
     }
 
+    IdempotencyKey(string value, bool received)
+        : base(received ? value : throw new IdempotencyKeyNotValid())
+    {
+    }
+
     /// <summary>
     /// Derives the key for one event of a batch, so a batch keyed once is keyed per event.
     /// </summary>
     /// <param name="index">The zero-based position of the event in the batch.</param>
     /// <returns>A derived key of 64 characters.</returns>
     public IdempotencyKey ForIndex(int index) => new(IdempotencyKeyHashing.Hash(Value, "batch", index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+    /// <summary>
+    /// Carries a key exactly as the kernel reported it, without validating. Used only when reading results, which must never throw.
+    /// </summary>
+    /// <param name="value">The key as received.</param>
+    /// <returns>The key.</returns>
+    internal static IdempotencyKey AsReceived(string value) => new(value, true);
 
     static bool IsValid(string? value) => !string.IsNullOrEmpty(value) && value.Length <= MaximumLength;
 }

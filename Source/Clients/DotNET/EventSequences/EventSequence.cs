@@ -1113,6 +1113,7 @@ public class EventSequence(
         var resolvedEventSourceType = ResolveEventSourceType(eventSourceType);
         var eventsList = events.ToList();
         var resolvedNamedTags = NamedTagConverters.Merge([], namedTags);
+        if (idempotencyKey is not null) IdempotentAppendSupport.Require(connection);
 
         if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
         {
@@ -1129,7 +1130,6 @@ public class EventSequence(
 
         // The legacy single-source batch contract cannot carry routing metadata. Use the existing
         // multi-source contract for explicit routes, retaining the batch-wide union of tags and scope.
-        if (idempotencyKey is not null) IdempotentAppendSupport.Require(connection);
         if (idempotencyKey is not null || routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
         {
             return await AppendManyForEventSources(
@@ -1309,6 +1309,13 @@ public class EventSequence(
         ReadProtectionCommit? readProtectionCommit = null,
         Contracts.Occurrences.EffectReceipt? effectReceipt = null)
     {
+        events = events.ToList();
+        if (events.Any(_ => _.IdempotencyKey is not null))
+        {
+            if (effectReceipt is not null) throw new IdempotentAppendsNotSupported("with effect receipts");
+            IdempotentAppendSupport.Require(connection);
+        }
+
         concurrencyScopes = concurrencyScopes?.Select(_ => new KeyValuePair<EventSourceId, ConcurrencyScope>(_.Key, NormalizeConcurrencyScope(_.Value))).ToArray();
         if (readProtectionCommit is not null)
         {
@@ -1386,8 +1393,6 @@ public class EventSequence(
         };
         var keys = eventsList.Select(_ => _.IdempotencyKey).ToArray();
         var hasKeys = keys.Any(_ => _ is not null);
-        if (hasKeys && effectReceipt is not null) throw new IdempotentAppendsNotSupported("with effect receipts");
-        if (hasKeys) IdempotentAppendSupport.Require(connection);
 
         Contracts.Sequences.AppendManyResponse? response = null;
         AppendManyResult clientResult;
