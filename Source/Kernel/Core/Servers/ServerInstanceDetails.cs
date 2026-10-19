@@ -28,7 +28,7 @@ public record ServerInstanceDetails(
     /// </summary>
     /// <param name="servers">The <see cref="ServerInstancesQuery"/> holding the cluster view.</param>
     /// <returns>A collection of <see cref="ServerInstanceDetails"/>.</returns>
-    internal static async Task<IEnumerable<ServerInstanceDetails>> GetServerInstances(ServerInstancesQuery servers) =>
+    public static async Task<IEnumerable<ServerInstanceDetails>> GetServerInstances(ServerInstancesQuery servers) =>
         await servers.GetAll();
 
     /// <summary>
@@ -36,6 +36,6 @@ public record ServerInstanceDetails(
     /// </summary>
     /// <param name="servers">The <see cref="ServerInstancesQuery"/> holding the cluster view.</param>
     /// <returns>An observable subject emitting collections of <see cref="ServerInstanceDetails"/>.</returns>
-    internal static ISubject<IEnumerable<ServerInstanceDetails>> AllServerInstances(ServerInstancesQuery servers) =>
+    public static ISubject<IEnumerable<ServerInstanceDetails>> AllServerInstances(ServerInstancesQuery servers) =>
         servers.InvokeAndWrapWithSubject(servers.ObserveAll);
 }

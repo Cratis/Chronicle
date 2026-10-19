@@ -29,7 +29,7 @@ public record AlertIncidentLookup(
     /// <param name="readiness">Sampled materialization health.</param>
     /// <param name="namespace">Optional affected namespace.</param>
     /// <returns>The scoped lookup with its sampled health.</returns>
-    internal static async Task<AlertIncidentLookup> GetOpenIncident(
+    public static async Task<AlertIncidentLookup> GetOpenIncident(
         EventStoreName eventStore,
         IncidentId incidentId,
         IStorage storage,
