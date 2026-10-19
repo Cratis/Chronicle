@@ -124,10 +124,38 @@ Console.WriteLine($"Registered {services.Count} services.");
 return 0;
 PROGRAM
 
+# A pinned dependency that was published minutes ago may not be served by nuget.org yet (NU1101/NU1102).
+# Wait for that exact version to appear, for up to 20 minutes, and run once more; any other failure, or a
+# version that never appears, still fails.
+run_consumer() {
+    local project="$1" log="$2"
+    if dotnet run --project "$project" > "$log" 2>&1; then
+        return 0
+    fi
+    local missing package version
+    missing=$(grep -oE "Unable to find package [A-Za-z0-9_.-]+ with version \(>= [0-9][0-9A-Za-z.+-]*\)" "$log" | head -1 || true)
+    [ -n "$missing" ] || return 1
+    package=$(echo "$missing" | awk '{print $5}')
+    version=$(echo "$missing" | sed -E 's/.*\(>= ([^)]*)\)/\1/')
+    echo "$package $version is not on nuget.org yet; waiting up to 20 minutes for it to be served..."
+    local lower deadline
+    lower=$(echo "$package" | tr '[:upper:]' '[:lower:]')
+    deadline=$(( $(date +%s) + 1200 ))
+    until curl -fsS "https://api.nuget.org/v3-flatcontainer/$lower/index.json" | grep -q "\"$version\""; do
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            echo "::error::$package $version did not appear on nuget.org within 20 minutes."
+            return 1
+        fi
+        sleep 30
+    done
+    echo "$package $version is on nuget.org; running the consumer again."
+    dotnet run --project "$project" -p:RestoreNoCache=true > "$log" 2>&1
+}
+
 # Exercise the actual packaged scenario entry points without any direct Arc reference. Merely restoring
 # the package or resolving the testing assembly does not catch missing kernel runtime dependencies.
 echo "Starting Chronicle $CHRONICLE_VERSION testing scenarios with only the Testing package referenced..."
-if dotnet run --project "$WORK_DIR/TestingOnly/Consumer.csproj" > "$WORK_DIR/TestingOnly/run.log" 2>&1; then
+if run_consumer "$WORK_DIR/TestingOnly/Consumer.csproj" "$WORK_DIR/TestingOnly/run.log"; then
     tail -1 "$WORK_DIR/TestingOnly/run.log"
 else
     echo "::error::Chronicle $CHRONICLE_VERSION testing scenarios failed with only the Testing package referenced."
@@ -138,7 +166,7 @@ fi
 
 for consumer in Testing XUnitIntegration; do
     echo "Installing Chronicle $CHRONICLE_VERSION ($consumer) beside the current Arc packages and starting it..."
-    if dotnet run --project "$WORK_DIR/$consumer/Consumer.csproj" > "$WORK_DIR/$consumer/run.log" 2>&1; then
+    if run_consumer "$WORK_DIR/$consumer/Consumer.csproj" "$WORK_DIR/$consumer/run.log"; then
         tail -1 "$WORK_DIR/$consumer/run.log"
         echo "Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages start together."
     else
