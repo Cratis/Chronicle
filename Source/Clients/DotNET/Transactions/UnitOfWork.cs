@@ -377,6 +377,12 @@ public partial class UnitOfWork(
         _onCompleted(this);
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the unit was completed by rolling it back rather than committing it.
+    /// </summary>
+    /// <returns><see langword="true"/> if the unit was rolled back; otherwise <see langword="false"/>.</returns>
+    internal bool WasRolledBack() => _isRolledBack;
+
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
     {
         if (first.SequenceNumber != second.SequenceNumber ||

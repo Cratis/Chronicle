@@ -48,8 +48,12 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
     /// <inheritdoc/>
     public async Task<IUnitOfWork> CommitAsync()
     {
-        if (IsClaimed) throw new UnitOfWorkCompletionAlreadyClaimed(unitOfWork.CorrelationId);
-        var (result, created) = await CommitCore();
+        // The claim is re-checked inside the serialized work so a claim taken while an earlier completion step runs is honored.
+        var (result, created) = await Serialize(async () =>
+        {
+            if (IsClaimed) throw new UnitOfWorkCompletionAlreadyClaimed(unitOfWork.CorrelationId);
+            return await CommitUnserialized();
+        });
 
         // The early-commit contract is to throw a technical failure to the caller that triggered it; a repeat call does not rethrow.
         if (created && result.Outcome == UnitOfWorkCompletionOutcome.Unknown && result.Exception is not null)
@@ -82,7 +86,7 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
         UnitOfWorkEnrollmentNotificationFailed or
         ProtectedUnitOfWorkEventsAfterCompletion;
 
-    async Task<UnitOfWorkCompletionResult> CommitResult() => (await CommitCore()).Result;
+    async Task<UnitOfWorkCompletionResult> CommitResult() => (await Serialize(CommitUnserialized)).Result;
 
     Task<T> Serialize<T>(Func<Task<T>> work)
     {
@@ -94,9 +98,10 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
         }
     }
 
-    Task<(UnitOfWorkCompletionResult Result, bool Created)> CommitCore() => Serialize(async () =>
+    async Task<(UnitOfWorkCompletionResult Result, bool Created)> CommitUnserialized()
     {
         if (_result is not null) return (_result, false);
+        if (unitOfWork.IsCompleted) return (_result = UnitOfWorkCompletionResults.FromCompleted(unitOfWork), false);
         try
         {
             if (owner is not null)
@@ -113,21 +118,19 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
         {
             return (_result = UnitOfWorkCompletionResults.FromUnknown(unitOfWork, ex), true);
         }
-    });
+    }
 
     Task<UnitOfWorkCompletionResult> RollbackResult() => Serialize(async () =>
     {
         if (_result is not null) return _result;
-        if (!unitOfWork.IsCompleted)
+        if (unitOfWork.IsCompleted) return _result = UnitOfWorkCompletionResults.FromCompleted(unitOfWork);
+        if (owner is not null)
         {
-            if (owner is not null)
-            {
-                await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
-            }
-            else
-            {
-                await unitOfWork.Rollback();
-            }
+            await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+        }
+        else
+        {
+            await unitOfWork.Rollback();
         }
         return _result = UnitOfWorkCompletionResults.FromRollback(unitOfWork);
     });

@@ -30,6 +30,12 @@ internal static class UnitOfWorkCompletionResults
     /// <returns>The result.</returns>
     internal static UnitOfWorkCompletionResult FromRollback(IUnitOfWork unitOfWork) => Empty(unitOfWork, UnitOfWorkCompletionOutcome.RolledBack, null);
 
+    /// <summary>Builds the result of a unit that was completed outside the completion feature.</summary>
+    /// <param name="unitOfWork">The already completed unit.</param>
+    /// <returns>The result.</returns>
+    internal static UnitOfWorkCompletionResult FromCompleted(IUnitOfWork unitOfWork) =>
+        unitOfWork is UnitOfWork { } concrete && concrete.WasRolledBack() ? FromRollback(unitOfWork) : FromCommit(unitOfWork);
+
     static UnitOfWorkCompletionResult Empty(IUnitOfWork unitOfWork, UnitOfWorkCompletionOutcome outcome, Exception? exception) => new(
         outcome,
         unitOfWork.CorrelationId,

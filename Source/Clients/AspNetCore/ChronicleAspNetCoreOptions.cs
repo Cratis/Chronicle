@@ -34,5 +34,5 @@ public class ChronicleAspNetCoreOptions : Cratis.Chronicle.ChronicleClientOption
     /// <summary>
     /// Gets the settings for the request unit of work.
     /// </summary>
-    public UnitOfWorkOptions UnitOfWork { get; } = new();
+    public ChronicleUnitOfWorkOptions UnitOfWork { get; } = new();
 }

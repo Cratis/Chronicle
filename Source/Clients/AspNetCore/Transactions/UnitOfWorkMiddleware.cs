@@ -118,6 +118,12 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
     async Task EnsureClaimCompleted(IUnitOfWorkCompletionClaim claim)
     {
         if (claim.Result is not null) return;
+        if (claim.UnitOfWork.IsCompleted)
+        {
+            // The owner completed the unit directly, not through the claim. Record the outcome; nothing is rolled back.
+            await claim.Commit();
+            return;
+        }
 
         // The claim owner never completed the unit. Never commit behind its back.
         logger.ClaimedButNotCompleted(claim.UnitOfWork.CorrelationId);
@@ -149,6 +155,7 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         };
         var problem = new ProblemDetails { Status = status, Title = title };
         problem.Extensions["correlationId"] = unitOfWork.CorrelationId.ToString();
+        context.Response.Clear();
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/problem+json";
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));

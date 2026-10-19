@@ -6,7 +6,7 @@ namespace Microsoft.AspNetCore.Builder;
 /// <summary>
 /// Represents the settings for the ASP.NET Core request unit of work.
 /// </summary>
-public class UnitOfWorkOptions
+public class ChronicleUnitOfWorkOptions
 {
     /// <summary>
     /// Gets or sets a value indicating whether the middleware reports a failed commit as problem details (409 for
