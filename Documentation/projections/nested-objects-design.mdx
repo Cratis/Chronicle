@@ -1,3 +1,6 @@
+---
+description: Design reference for nested projection objects in Chronicle, which populate, update and clear a single nullable child object from events.
+---
 # Nested Projection Objects — Design
 
 This page is the cross-cutting design reference for **nested projection objects** — the ability to populate, update, and clear a single nullable child object on a read model from events. It is an explanation-style page that ties together every layer affected by the feature: the [Projection Declaration Language (PDL)](/screenplay/projections/nested) syntax, the [declarative .NET client](declarative/nested), the [model-bound .NET client](model-bound/nested), the projection definition object model, the projection engine, the PDL compiler and code generator, and the Monaco language definition for the Workbench projection editor.

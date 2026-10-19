@@ -1,3 +1,6 @@
+---
+description: Let Chronicle ask a resolver where each tenant's database lives, instead of one connectionDetails, for multi-tenant storage placement.
+---
 # Storage Connection Resolution
 
 A multi-tenant platform often decides where each tenant's database lives: which server, which database, which schema, and which identity is allowed in. With a single `connectionDetails`, Chronicle cannot follow that. It derives a database name for every event store and namespace, connects with one credential, and creates whatever is missing.
@@ -143,6 +146,30 @@ The cluster database is always `connectionDetails`: Chronicle resolves only its 
 - **SQL Server**: SQL Server places unqualified tables in the default schema of the database user. Chronicle creates the schema when `createIfMissing` allows, then verifies that the user Chronicle migrates as has it as its default schema. If not, it fails with `DefaultSchemaMismatch`. Set the default schema with `ALTER USER [user] WITH DEFAULT_SCHEMA = [chronicle]` for every user Chronicle connects as.
 - **SQLite and MongoDB** have no schemas and ignore it.
 
+## Microsoft Entra ID authentication
+
+On SQL Server, the kernel supports every Microsoft Entra ID mode of the `Authentication` keyword in a connection string, whether it is in `connectionDetails` or returned by a resolver:
+
+| Mode | Notes |
+| --- | --- |
+| `Active Directory Managed Identity` | A system-assigned identity needs no `User Id`. For a user-assigned identity, set `User Id=<client-id>` |
+| `Active Directory Default` | Tries the environment, workload identity, managed identity and developer tools in turn |
+| `Active Directory Workload Identity` | For Kubernetes (AKS) pods. Provide the `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_FEDERATED_TOKEN_FILE` environment variables, which the workload identity webhook injects |
+| `Active Directory Service Principal` | `User Id=<client-id>` and `Password=<client-secret>` |
+
+Do not combine an `identity.accessToken` returned by a resolver with `Authentication=`, `Password` or `Integrated Security` in `connectionDetails` or in the resolved `connectionString`. SqlClient rejects a connection that has both a token and a credential. Pick one way per connection: either the connection string carries the authentication mode, or the resolver returns the token on an otherwise credential-free connection string.
+
+For Azure Database for PostgreSQL, a resolver returns the Entra token as `identity.accessToken`, and Chronicle uses it as the password:
+
+```json
+{
+  "identity": { "userName": "chronicle-runtime@example.com", "accessToken": "<entra-access-token>" },
+  "expiresAt": "2026-10-15T12:00:00Z"
+}
+```
+
+Request the token for the `https://ossrdbms-aad.database.windows.net/.default` scope and set `expiresAt` before it expires, so Chronicle asks again.
+
 ## Credentials and caching
 
 Caching, expiry and credential handling follow [Arc's rules](/arc/backend/csharp/tenancy/connection-resolution/#caching-and-credentials), with the cache keyed by kind, event store, namespace and purpose. Chronicle adds the following:
@@ -152,6 +179,7 @@ Caching, expiry and credential handling follow [Arc's rules](/arc/backend/csharp
 
 ## Limits
 
-- The health checks and, on MongoDB, Orleans membership, reminders and the jobs storage connect with `connectionDetails`. Give it an identity that works on its own, for example passwordless Entra authentication in the connection string.
+- On SQL Server and PostgreSQL, the health check connects to the cluster database through the same resolution as the storage, with the identity resolved for the cluster.
+- On MongoDB, the health check, Orleans membership, reminders and the jobs storage connect with `connectionDetails`. Give it an identity that works on its own.
 - On SQL, the jobs storage of a namespace migrates its own tables with the `Runtime` resolution.
 - Changing a resolution for an existing database moves Chronicle to the new location. It does not move data.

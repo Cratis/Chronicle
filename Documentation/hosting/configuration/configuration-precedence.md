@@ -1,3 +1,6 @@
+---
+description: The order in which Chronicle Server resolves configuration sources, so environment variables can override chronicle.json values per environment.
+---
 # Configuration Precedence
 
 Configuration values are resolved in the following order, with later sources overriding earlier ones:

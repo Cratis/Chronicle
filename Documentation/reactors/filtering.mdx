@@ -1,3 +1,6 @@
+---
+description: Restrict which events a Chronicle reactor receives by placing tag, event source type and event stream type filter attributes on the reactor class.
+---
 # Filter reactors by appended event metadata
 
 A reactor observes all events that match its handler method signatures by default. You can restrict which events a reactor receives by placing filter attributes on the reactor class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reactor.

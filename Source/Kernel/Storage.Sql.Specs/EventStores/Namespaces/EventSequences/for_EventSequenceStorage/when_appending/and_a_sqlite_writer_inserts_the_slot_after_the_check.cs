@@ -17,7 +17,7 @@ public class and_a_sqlite_writer_inserts_the_slot_after_the_check : given.a_stor
     void Establish()
     {
         var builder = new DbContextOptionsBuilder<EventSequenceDbContext>().UseSqlite(_connectionString);
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         void CompetingWrite()
         {
             SeedEvent(4UL);

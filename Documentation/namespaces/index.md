@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Namespaces
+description: Chronicle namespaces provide logical segregation inside one event store, isolating events, projections, reducers and read models per tenant.
 ---
 # Namespaces
 

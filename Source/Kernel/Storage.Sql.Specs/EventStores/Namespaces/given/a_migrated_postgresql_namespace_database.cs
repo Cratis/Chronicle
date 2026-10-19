@@ -40,7 +40,7 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseNpgsql(_connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new NamespaceDbContext(options);

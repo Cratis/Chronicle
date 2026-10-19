@@ -1,3 +1,6 @@
+---
+description: Configure how the Chronicle kernel serves the Workbench, including a base path when a reverse proxy mounts it under a prefix.
+---
 # Workbench
 
 The kernel serves the Workbench on the main port, at the root of the host. That is all it needs when you reach Chronicle directly, or through a proxy that gives it a host of its own. When a reverse proxy routes by path instead — one shared host, one path per instance — the root-absolute scripts, styles and API calls of the page point at the wrong place and the page stays blank. The `workbench.basePath` setting fixes that.

@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Testing.ReadModels
+description: Test Chronicle projections and reducers in-process with ReadModelScenario<TReadModel>, with no Chronicle server or database required.
 ---
 # Testing Read Models
 

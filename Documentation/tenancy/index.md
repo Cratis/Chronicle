@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Tenancy
+description: Serve several customers from one Chronicle installation by separating the decisions of isolation, authorization and placement across Chronicle and Arc.
 ---
 # Tenancy
 

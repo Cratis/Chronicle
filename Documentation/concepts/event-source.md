@@ -1,6 +1,6 @@
 ---
 title: Event source
-description: What an event source is, how the event source id, the event source type, event streams and event source definitions relate, and which of them take part in concurrency.
+description: What a Chronicle event source is, how event source id, type, streams and definitions relate, and which of them take part in concurrency.
 ---
 
 An event source is one entity or process in your domain: a person, an account, an order, a transfer. All the state changes of that entity are events, and the **event source id** (`EventSourceId`) is what binds them together. It is comparable to the primary key of a row in a database.

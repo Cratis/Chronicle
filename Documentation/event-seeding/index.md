@@ -1,3 +1,6 @@
+---
+description: Event seeding is a Chronicle Server capability that provides a predefined set of events when the event store connects, for baseline, test and demo data.
+---
 # Event Seeding
 
 Event seeding is a Chronicle Server capability that lets you provide a predefined set of events when the event store connects. It is useful when you need your deployment to include baseline data that the system depends on, or when you want developers to start from a known state with ready-to-use test data.

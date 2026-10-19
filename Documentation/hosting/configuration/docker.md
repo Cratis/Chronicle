@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle in Docker with a mounted chronicle.json file or environment variables, and what the production image still requires.
+---
 # Docker Configuration
 
 When running Chronicle in Docker, you can configure it using either mounted configuration files or environment variables.
