@@ -105,7 +105,11 @@ internal class ReadModelReleaser(
         {
             if (!schema.HasSubjectIndependentSecurityMetadata())
             {
-                logger.NoSubjectForRelease(typeof(TReadModel).Name);
+                if (SubjectScopedValuePresence.HasValue(schema, instance, jsonSerializerOptions))
+                {
+                    logger.NoSubjectForRelease(typeof(TReadModel).Name);
+                }
+
                 return instance;
             }
 
