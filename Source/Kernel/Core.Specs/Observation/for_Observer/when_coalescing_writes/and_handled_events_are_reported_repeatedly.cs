@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_coalescing_writes;
 
@@ -16,11 +17,13 @@ public class and_handled_events_are_reported_repeatedly : given.an_observer_coal
     Key _otherPartition;
     int _writesBeforeFlush;
     int _incrementsBeforeFlush;
+    JobStepId _step;
 
     void Establish()
     {
         _partition = new Key("partition", ArrayIndexers.NoIndexers);
         _otherPartition = new Key("other", ArrayIndexers.NoIndexers);
+        _step = JobStepId.New();
         _storageStats.ResetCounts();
         _observerHandledCountsStorage.ClearReceivedCalls();
     }
@@ -29,10 +32,10 @@ public class and_handled_events_are_reported_repeatedly : given.an_observer_coal
     {
         for (var i = 0; i < 10; i++)
         {
-            await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [TypeA] = 2UL, [TypeB] = 1UL });
+            await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [TypeA] = 2UL, [TypeB] = 1UL }, _step, (ulong)i);
         }
 
-        await _observer.ReportHandledEvents(_otherPartition, new Dictionary<EventTypeId, EventCount> { [TypeA] = 5UL });
+        await _observer.ReportHandledEvents(_otherPartition, new Dictionary<EventTypeId, EventCount> { [TypeA] = 5UL }, _step, 0UL);
 
         _writesBeforeFlush = _storageStats.Writes;
         _incrementsBeforeFlush = _observerHandledCountsStorage.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(_observerHandledCountsStorage.Increment));
