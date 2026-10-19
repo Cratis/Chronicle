@@ -17,7 +17,7 @@ public class when_removing_an_entry : given.an_in_flight_events_storage
     async Task Because()
     {
         await _storage.Remove("observer", "partition", 5UL);
-        _remaining = (await FreshStorage().GetFor("observer")).Select(_ => _.EventSequenceNumber.Value).OrderBy(_ => _).ToArray();
+        _remaining = (await FreshStorage().GetFor("observer")).Select(_ => _.EventSequenceNumber.Value).Order().ToArray();
     }
 
     [Fact] void should_remove_only_the_matching_entry() => _remaining.ShouldEqual([5UL, 6UL]);

@@ -20,8 +20,8 @@ public class when_removing_up_to_a_sequence_number : given.an_in_flight_events_s
     {
         await _storage.RemoveUpTo("observer", "partition", 10UL);
         _remaining = (await FreshStorage().GetFor("observer"))
-            .Select(_ => (_.Partition.ToString(), _.EventSequenceNumber.Value))
-            .OrderBy(_ => _.Item1).ThenBy(_ => _.Item2).ToArray();
+            .Select(_ => (Partition: _.Partition.ToString(), Number: _.EventSequenceNumber.Value))
+            .OrderBy(_ => _.Partition, StringComparer.Ordinal).ThenBy(_ => _.Number).ToArray();
     }
 
     [Fact] void should_remove_inclusive_of_the_sequence_number_in_the_partition() => _remaining.ShouldEqual([("other-partition", 4UL), ("partition", 11UL)]);
