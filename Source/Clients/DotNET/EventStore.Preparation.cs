@@ -30,10 +30,13 @@ public partial class EventStore
     internal void ThrowIfArtifactPreparationReentered() => _preparation?.ThrowIfReentered();
 
     /// <summary>
-    /// Detaches a failed store's constructor-installed callback before cache eviction.
+    /// Detaches a failed store's constructor-installed callback before cache eviction, and stops its background
+    /// registration retry so the abandoned store is not kept reachable by that loop.
     /// </summary>
     internal void DetachAutomaticRegistration()
     {
+        _isRegistrationDetached = true;
+        Volatile.Read(ref _backgroundRegistrationRetryCancellation)?.Cancel();
         Connection.Lifecycle.OnConnected -= RegisterAfterConnect;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
         if (Occurrences is IDisposable disposable) disposable.Dispose();
