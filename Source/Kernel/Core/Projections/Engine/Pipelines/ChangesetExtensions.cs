@@ -89,7 +89,7 @@ public static class ChangesetExtensions
 
         var newProperties = safeCopy
             .Where(_ => !existingProperties.Exists(property => property == _.Key))
-            .Select(_ => new PropertyDifference(_.Key, null, _.Value)).ToArray();
+            .Select(_ => new PropertyDifference(_.Key, null, StateValues.Copy(_.Value))).ToArray();
 
         if (newProperties.Length != 0)
         {

@@ -31,7 +31,7 @@ public static class PropertyMappers
             var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
             var property = resolvedProperty.LastSegment.Value;
             var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
-            var newValue = actualTarget[property] = eventValueProvider(@event);
+            var newValue = actualTarget[property] = StateValues.Copy(eventValueProvider(@event));
             return new(resolvedProperty, originalValue, newValue, arrayIndexers);
         };
     }
