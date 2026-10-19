@@ -311,8 +311,11 @@ jobs:
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    if: (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]'
-    needs: [dotnet-build, dotnet-build-development]
+    # On a pull request the matrix fans out only after the ordinary specs passed in this same run
+    # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
+    # independent of specs, so a failing spec does not hide integration results there.
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && needs.dotnet-build-development.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
+    needs: [dotnet-build, dotnet-build-development, specs]
     permissions:
       contents: read
       packages: read
@@ -327,10 +330,11 @@ jobs:
       all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
 
   integration-api:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -386,10 +390,11 @@ jobs:
           retention-days: 1
 
   mongodb:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
