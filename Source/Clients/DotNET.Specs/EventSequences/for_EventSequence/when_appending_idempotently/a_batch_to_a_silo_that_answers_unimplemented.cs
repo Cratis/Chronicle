@@ -15,4 +15,6 @@ public class a_batch_to_a_silo_that_answers_unimplemented : given.an_idempotent_
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.AppendManyOnce("source", ["one"], _key));
 
     [Fact] void should_refuse_instead_of_appending_unkeyed() => _error.ShouldBeOfExactType<IdempotentAppendsNotSupported>();
+    [Fact] void should_not_fall_back_to_an_unkeyed_batch() => _sequences.DidNotReceive().AppendMany(Arg.Any<Contracts.Sequences.AppendManyRequest>(), Arg.Any<CallContext>());
+    [Fact] void should_not_fall_back_to_an_unkeyed_batch_for_event_sources() => _sequences.DidNotReceive().AppendManyForEventSources(Arg.Any<Contracts.Sequences.AppendManyForEventSourcesRequest>(), Arg.Any<CallContext>());
 }
