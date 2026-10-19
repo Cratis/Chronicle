@@ -139,7 +139,7 @@ internal sealed class ConnectionService(
         {
             ServerVersion = ServerVersion.Version,
             ServerProtocolVersion = Contracts.ProtocolVersion.Current,
-            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.ConcurrencyScopeConjunctions]
+            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.IdempotentAppends]
         };
 
         try

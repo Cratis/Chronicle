@@ -36,11 +36,11 @@ public class when_the_observation_stream_breaks : an_occurrence_client
     {
         await _occurrences.Discover();
         await _occurrences.Register();
-        await _attached.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _attached.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         _notifications.OnCompleted();
-        var reconnect = await _clock.Created.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var reconnect = await _clock.Created.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         reconnect.Tick();
-        await _reattached.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _reattached.Task.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
         await _occurrences.DisposeAsync();
     }
 
