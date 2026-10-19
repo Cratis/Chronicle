@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
 
@@ -31,11 +32,13 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         try
         {
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
-            using var response = await httpClient.PostAsJsonAsync(
-                string.Empty,
-                new EventsToObserve(partition.ToString(), events.ToArray()),
-                jsonSerializerOptions,
-                deadline.Token);
+            var batch = events.ToArray();
+            using var request = new HttpRequestMessage(HttpMethod.Post, string.Empty)
+            {
+                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
+            };
+            if (batch.Length > 0) request.Options.Set(WebhookRequestOptions.EventStore, batch[0].Context.EventStore);
+            using var response = await httpClient.SendAsync(request, deadline.Token);
             if (!response.IsSuccessStatusCode)
             {
                 return Catch.Failed(new WebhookDeliveryFailed(webhookTarget.Url, response.StatusCode, response.ReasonPhrase));

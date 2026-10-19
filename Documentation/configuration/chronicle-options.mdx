@@ -350,3 +350,26 @@ The HTTP request header used to resolve the event store namespace on a per-reque
 ```json
 { "Cratis": { "Chronicle": { "NamespaceHttpHeader": "x-my-tenant" } } }
 ```
+
+## Webhooks (Kernel only)
+
+The Kernel's `Cratis.Chronicle.Configuration.ChronicleOptions.Webhooks` is separate from the client
+options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`, or under
+`Cratis:Chronicle:Webhooks` in application configuration. Environment variable equivalents use
+`Cratis__Chronicle__Webhooks__` followed by the key.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `Validation` | `Warn` | Log violations during rollout; `Enforce` rejects them. Enforce is planned as the next major release's default. |
+| `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
+| `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
+| `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
+| `TestTimeoutSeconds` | `30` | Timeout for the registration reachability probe. |
+
+For example, `Cratis__Chronicle__Webhooks__Validation=Enforce` enables blocking, and
+`Cratis__Chronicle__Webhooks__AllowedHosts__0=hooks.example.com` approves one host. OAuth authorities
+and discovered token endpoint hosts must also be approved. Cloud metadata addresses need explicit
+approval even in Warn. Redirects are rejected in both modes.
+
+See [Webhook target validation](../webhooks#target-validation) for rollout, Docker/tunnel examples,
+DNS/address restrictions, and the distinction between warnings and blocking.

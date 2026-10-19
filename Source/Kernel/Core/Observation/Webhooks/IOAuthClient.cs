@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Security;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -16,4 +17,12 @@ public interface IOAuthClient
     /// <param name="authorization">The OAuth authorization configuration.</param>
     /// <returns>A <see cref="Task{T}"/> with the access token information.</returns>
     Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization);
+
+    /// <summary>
+    /// Acquires a token using the event store's target policy.
+    /// </summary>
+    /// <param name="authorization">The OAuth authorization configuration.</param>
+    /// <param name="eventStore">The event store, or null for global policy.</param>
+    /// <returns>The access token information.</returns>
+    Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, EventStoreName? eventStore) => AcquireToken(authorization);
 }
