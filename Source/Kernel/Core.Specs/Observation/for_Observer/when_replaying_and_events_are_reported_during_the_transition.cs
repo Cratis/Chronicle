@@ -43,7 +43,7 @@ public class when_replaying_and_events_are_reported_during_the_transition : give
         var replaying = _observer.Replay();
         await _resetStarted.Task;
 
-        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [_eventTypeId] = 100UL });
+        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [_eventTypeId] = 100UL }, JobStepId.New(), 1UL);
 
         _resetRelease.SetResult();
         await replaying;

@@ -320,7 +320,8 @@ public class HandleEventsForObserver(
                             partition,
                             eventObserverResult,
                             handledEvents,
-                            lastSuccessfullyHandledEventSequenceNumber);
+                            lastSuccessfullyHandledEventSequenceNumber,
+                            cancellationToken);
                         lastSuccessfullyHandledEventSequenceNumber = newLastSuccessfullyHandledEventSequenceNumber;
                         if (result is not null)
                         {
@@ -692,7 +693,8 @@ public class HandleEventsForObserver(
         Key partition,
         ObserverSubscriberResult eventObserverResult,
         AppendedEvent[] handledEvents,
-        EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber)
+        EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber,
+        CancellationToken cancellationToken)
     {
         var handledCount = EventCount.Zero;
         if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
@@ -706,14 +708,12 @@ public class HandleEventsForObserver(
                 if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
                 {
                     // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
-                    // checkpoint, so it handles and counts again every batch since then, including those already counted.
+                    // checkpoint, so it handles every batch since then again; the observer recognizes the reports it
+                    // already took while it still remembers this step.
                     return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 }
 
-                var okCountsPerEventType = handledEvents
-                    .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
-                    .CountByEventType();
-                await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, okCountsPerEventType, logger);
+                await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -722,7 +722,8 @@ public class HandleEventsForObserver(
                     eventObserverResult,
                     handledEvents,
                     handledCount,
-                    lastSuccessfullyHandledEventSequenceNumber);
+                    lastSuccessfullyHandledEventSequenceNumber,
+                    cancellationToken);
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
@@ -743,13 +744,27 @@ public class HandleEventsForObserver(
         }
     }
 
+    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
+    {
+        var counts = handledEvents
+            .Where(e => e.Context.SequenceNumber <= handledUpTo)
+            .CountByEventType();
+        return TransientTimeouts.ReportHandledEventsWithoutFailing(
+            _observer,
+            new(partition, counts, JobStepId, handledUpTo),
+            TransientRetryDelay,
+            logger,
+            cancellationToken);
+    }
+
     async Task<(JobStepResult Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleFailedSubscriberResult(
         HandleEventsForObserverState currentState,
         Key partition,
         ObserverSubscriberResult eventObserverResult,
         AppendedEvent[] handledEvents,
         EventCount handledCount,
-        EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber)
+        EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber,
+        CancellationToken cancellationToken)
     {
         var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
         if (eventObserverResult.HandledAnyEvents)
@@ -765,10 +780,7 @@ public class HandleEventsForObserver(
             }
 
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-            var failedCountsPerEventType = handledEvents
-                .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
-                .CountByEventType();
-            await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, partition, failedCountsPerEventType, logger);
+            await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
         }
         else
         {

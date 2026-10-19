@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_reporting_handled_events;
 
@@ -27,7 +28,7 @@ public class and_the_observer_is_routing : given.an_observer_with_subscription_f
     {
         var routing = _observer.TransitionTo<Routing>();
 
-        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 100UL });
+        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 100UL }, JobStepId.New(), 1UL);
 
         _tail.SetResult(EventSequenceNumber.Unavailable);
         await routing;
