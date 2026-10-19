@@ -48,4 +48,5 @@ public class and_the_final_batch_has_a_driver_failure : given.a_sink_with_gated_
     [Fact] void should_report_all_affected_partitions() => _failures.Select(failure => failure.EventSourceId).ShouldContainOnly(_firstKey, _secondKey);
     [Fact] void should_keep_the_earliest_unconfirmed_sequence_number() => _failures.Single(failure => failure.EventSourceId == _firstKey).EventSequenceNumber.Value.ShouldEqual(12UL);
     [Fact] void should_describe_each_outcome_as_unknown() => _failures.ShouldEachConformTo(failure => failure.Reason.Contains("outcome unknown", StringComparison.Ordinal));
+    [Fact] void should_mark_each_outcome_as_unknown() => _failures.ShouldEachConformTo(failure => failure.OutcomeUnknown);
 }

@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_
 public class and_a_threshold_flush_throws : for_Sink.given.a_sink_with_gated_bulk_writes
 {
     FailedPartition[] _waiterFailures;
+    FailedPartition[] _thresholdFailures = [];
     Exception? _thresholdFailure;
     bool _waitedForBatch;
 
@@ -28,11 +29,12 @@ public class and_a_threshold_flush_throws : for_Sink.given.a_sink_with_gated_bul
         var immediate = ((ISink)_sink).ApplyChangesImmediately(_secondKey, Changes(1), 1000UL, SinkWriteMode.Always);
         _waitedForBatch = !immediate.IsCompleted;
         _releaseFirstFlush.SetResult();
-        _thresholdFailure = await Catch.Exception(async () => await threshold);
+        _thresholdFailure = await Catch.Exception(async () => _thresholdFailures = (await threshold).ToArray());
         _waiterFailures = (await immediate).ToArray();
     }
 
     [Fact] void should_wait_for_the_in_flight_batch() => _waitedForBatch.ShouldBeTrue();
-    [Fact] void should_report_the_unknown_outcome_exactly_once() => (_waiterFailures.Length + (_thresholdFailure is not null ? 1 : 0)).ShouldEqual(1);
+    [Fact] void should_not_throw_to_the_writer_that_filled_the_batch() => _thresholdFailure.ShouldBeNull();
+    [Fact] void should_report_the_unknown_outcome_exactly_once() => (_waiterFailures.Length + _thresholdFailures.Length).ShouldEqual(1);
     [Fact] void should_write_the_independent_future_after_the_batch_finished() => _directWrites.Count.ShouldEqual(1);
 }
