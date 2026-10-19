@@ -3,7 +3,6 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.for_DbUpdateExceptionExtensions.when_classifying_a_failed_write;
 
