@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reactor delivery {DeliveryId} for partition {Partition}")]
+    internal static partial void UnknownDeliveryResult(this ILogger<Reactors> logger, ulong deliveryId, string partition);
+
     [LoggerMessage(LogLevel.Debug, "Reactor observe method invoked")]
     internal static partial void Observe(this ILogger<Reactors> logger);
 

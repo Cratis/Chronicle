@@ -21,8 +21,7 @@ public class when_resolving_with_custom_claim_type : Specification
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
 
-        ClaimsPrincipal.ClaimsPrincipalSelector = () => principal;
-        _resolver = new ClaimsBasedNamespaceResolver("custom_claim");
+        _resolver = new ClaimsBasedNamespaceResolver(() => principal, "custom_claim");
     }
 
     void Because() => _result = _resolver.Resolve();

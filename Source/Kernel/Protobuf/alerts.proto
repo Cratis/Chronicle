@@ -64,6 +64,7 @@ enum FailureKind {
    Handling = 1;
    Timeout = 2;
    Disconnected = 3;
+   WaitingForHandler = 4;
 }
 message GetOpenIncidentCountsRequest {
    string EventStore = 1;

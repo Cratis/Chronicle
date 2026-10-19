@@ -14,11 +14,11 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// Core declaring a member as optional while the contract declares it required is not a formatting difference: it makes
 /// every mapping from that member a nullable-assignment warning, which is the generated code being told it is
 /// wrong about something Core already knows.
+/// Each read creates its own <see cref="NullabilityInfoContext"/>: the context is not thread-safe, and the generators
+/// are called concurrently.
 /// </remarks>
 public static class NullableAnnotations
 {
-    static readonly NullabilityInfoContext _context = new();
-
     /// <summary>
     /// Annotates a rendered type name with the nullability a parameter declares.
     /// </summary>
@@ -26,7 +26,7 @@ public static class NullableAnnotations
     /// <param name="parameter">The parameter the name was rendered from.</param>
     /// <returns>The annotated type name.</returns>
     public static string For(string typeName, ParameterInfo parameter) =>
-        Annotate(typeName, parameter.ParameterType, () => _context.Create(parameter).ReadState);
+        Annotate(typeName, parameter.ParameterType, () => new NullabilityInfoContext().Create(parameter).ReadState);
 
     /// <summary>
     /// Determines whether a parameter's own declared reference type is nullable.
@@ -46,7 +46,7 @@ public static class NullableAnnotations
 
         try
         {
-            return _context.Create(parameter).ReadState == NullabilityState.Nullable;
+            return new NullabilityInfoContext().Create(parameter).ReadState == NullabilityState.Nullable;
         }
         catch (Exception ex)
         {
@@ -62,7 +62,7 @@ public static class NullableAnnotations
     /// <param name="property">The property the name was rendered from.</param>
     /// <returns>The annotated type name.</returns>
     public static string For(string typeName, PropertyInfo property) =>
-        Annotate(typeName, property.PropertyType, () => _context.Create(property).ReadState);
+        Annotate(typeName, property.PropertyType, () => new NullabilityInfoContext().Create(property).ReadState);
 
     static string Annotate(string typeName, Type type, Func<NullabilityState> state)
     {

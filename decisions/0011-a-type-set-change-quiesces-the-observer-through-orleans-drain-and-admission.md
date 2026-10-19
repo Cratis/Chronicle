@@ -34,6 +34,16 @@ Accepted for Cratis/Chronicle#4955 and Cratis/Chronicle#4987 as the mechanism [d
 
 Paths are relative to `Source/Kernel/Core/Observation/` unless they start with `Source/`, `Integration/` or `Documentation/`; paths marked *Orleans* are in Cratis/Orleans at `v1.20.0`, and those marked *Orleans 1.21* at `v1.21.0`; `Documentation/concepts/jobs.md` there is cited as *jobs.md*. Chronicle line numbers are at `bec5709f8c` (release 19.77.2).
 
+## 2026-10-17 — clarification: initialization separates members from capabilities
+
+> **Clarification of section 9, "What an observer initializes from" and "Delivery".** L0's pin-shape ruling resolves the member/capability wording ambiguity shared with decision 0010, sections 2, 3, 4 and 6. It is not a new routing policy. The original decision text and its acceptance and implementation-stage metadata are preserved below.
+
+Initialization derives members from the **event-type IDs** of the namespace observer's currently applied registration, not from the shared definition or a generation-history set. Initial members have **no pins and no fences**. Declared types, generation pins and `EventGenerationDelivery` mode remain capabilities of each durable per-connection registration identity, and storing an identity never proves connectivity. Subsequent generation/mode-only declarations do not change membership revision, incarnation or fence; fixed capabilities per live connection still apply (decision 0010, section 4).
+
+Schema additions remain **additive and nullable**, with **no new writes before initialization**. This clarification does not adopt union membership for projections or captures, or expand decision 0010's scope.
+
+**Proof obligations:** slice 2's storage specifications round-trip one member `A` with independent `A@1` and `A@2` connection capabilities without member pins or generation history, preserve absent legacy fields, and leave initialization and routing unreachable. Later enablement specifications prove initialization from the IDs of the currently applied namespace registration with no fences, preserving registration pins and mode. Later runtime specifications prove concurrent-generation eligibility and selected-target-only release with no membership, other-target or disconnected-registration fallback, and no revision/incarnation/fence change for generation/mode-only declarations. Storage round trips alone are not evidence for those runtime guarantees.
+
 ## Context
 
 A reader that runs across a membership change cannot be proven harmless against this code. The event sequence grain advances its in-memory tail after the storage commit (`Source/Kernel/Core/EventSequences/EventSequence.cs:206, 827-831`), so an old reader can pass an event the join position is computed below; old callbacks clear catch-up markers and transition state, not just positions; resumed jobs keep their old type set (`JobsManagerExtensions.cs:124-152`). Decision 0010 therefore needs the reader removed before a change, not reasoned about. The code it has to be removed from:

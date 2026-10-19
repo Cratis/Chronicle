@@ -25,7 +25,10 @@ public class with_only_historical_declared_routing_events(context context) : Giv
     }
 
     [Fact] void should_have_a_filtered_tail_far_below_the_read_boundary() => Context.RoutingTail.Value.ShouldEqual(0UL);
-    [Fact] void should_keep_the_global_read_boundary_instead_of_the_filtered_tail() => Context.Unit.GetAppendConditions().Single().After.Value.ShouldEqual(100UL);
+    // A kernel without conjunction support gets one merged guard; one with it gets the read guard plus a routing guard
+    // narrowed to the declared stream. Either way the read guard keeps the global read boundary.
+    [Fact] void should_keep_the_global_read_boundary_instead_of_the_filtered_tail() => Context.Unit.GetAppendConditions().Single(_ => _.Reads.Count > 0).After.Value.ShouldEqual(100UL);
+    [Fact] void should_narrow_any_separate_routing_guard_to_the_declared_stream() => Context.Unit.GetAppendConditions().Where(_ => _.Reads.Count == 0).ShouldEachConformTo(_ => _.EventStreamType == "numbering");
     [Fact] void should_not_conflict_on_historical_events() => Context.Unit.IsSuccess.ShouldBeTrue();
     [Fact] void should_store_the_planned_event() => Context.Count.ShouldEqual(3);
 }

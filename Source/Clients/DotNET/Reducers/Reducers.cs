@@ -384,6 +384,7 @@ public partial class Reducers : IReducers
         // Preserve classic metadata validation order; self inference instead needs its selected static event set.
         var sequence = descriptor.IsSelfReducing ? null : reducerType.GetEventSequenceId(_eventTypes, _eventStore.Name, readModelType);
         var invoker = ReducerInvokerSelector.Create(descriptor, _eventTypes, _artifactActivator, _namingPolicy.GetReadModelName(readModelType));
+        ObserverHasOnlyGenerationHandlers.ThrowIfEmpty(reducerType, invoker.EventTypes);
         sequence ??= Registrations.RegisteredObserverMetadata.SequenceFor(reducerType, reducerType.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId, _eventTypes, _eventStore.Name, () => invoker.EventTypes);
         var handler = new ReducerHandler(
             _eventStore,
@@ -669,6 +670,7 @@ public partial class Reducers : IReducers
         var result = new ReducerResult
         {
             Partition = operation.Partition,
+            DeliveryId = operation.DeliveryId,
             ReadModelState = modelState,
             State = state,
             LastSuccessfulObservation = lastSuccessfullyObservedEvent,

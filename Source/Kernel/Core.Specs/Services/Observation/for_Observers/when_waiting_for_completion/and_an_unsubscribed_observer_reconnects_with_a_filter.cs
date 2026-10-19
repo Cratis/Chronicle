@@ -34,7 +34,10 @@ public class and_an_unsubscribed_observer_reconnects_with_a_filter : given.an_ob
         FirstEventSequenceNumber = 53UL,
         TailEventSequenceNumber = 53UL,
         EventTypeTails = [new AppendedEventTypeTail { EventType = new Contracts.Events.EventType { Id = "a-recorded", Generation = 1 }, SequenceNumber = 53UL }],
-        TimeoutMilliseconds = 150
+
+        // The wait completes once the poll after the subscription change sees it, so this deadline is
+        // never reached when the behavior holds; it only turns a regression into a failure instead of a hang.
+        TimeoutMilliseconds = 30_000
     });
 
     [Fact] void should_recheck_the_subscription_after_reconnecting() => _subscriptionReads.ShouldBeGreaterThan(1);

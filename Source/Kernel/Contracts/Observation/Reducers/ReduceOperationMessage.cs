@@ -34,4 +34,10 @@ public class ReduceOperationMessage
     /// </summary>
     [ProtoMember(4)]
     public ReplayState ReplayState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stream-local delivery identifier to echo in the result. Zero identifies a legacy delivery.
+    /// </summary>
+    [ProtoMember(5)]
+    public ulong DeliveryId { get; set; }
 }

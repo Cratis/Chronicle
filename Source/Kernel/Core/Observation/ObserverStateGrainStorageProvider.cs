@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Observation;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="logger">The logger.</param>
+public class ObserverStateGrainStorageProvider(IStorage storage, ILogger<ObserverStateGrainStorageProvider> logger) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -24,12 +26,23 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
-        var eventStoreNamespace = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace);
+        var eventStore = storage.GetEventStore(observerKey.EventStore);
+        var eventStoreNamespace = eventStore.GetNamespace(observerKey.Namespace);
         var observers = eventStoreNamespace.Observers;
         var failedPartitionsStorage = eventStoreNamespace.FailedPartitions;
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
         var actualFailedPartitions = failedPartitions.Partitions.ToArray();
         var storedState = await observers.Get(observerKey.ObserverId);
+        try
+        {
+            await eventStore.EnsureObserverCompatibility(observerKey.ObserverId, storedState);
+        }
+        catch (ObserverKernelBelowDowngradeFloor exception)
+        {
+            logger.KernelBelowDowngradeFloor(exception, observerKey);
+            throw;
+        }
+
         var recordExists = IsStoredRecord(storedState);
         actualGrainState.RecordExists = recordExists;
 

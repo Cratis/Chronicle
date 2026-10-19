@@ -64,6 +64,7 @@ message EventsToObserve {
    string Partition = 1;
    repeated AppendedEvent Events = 2;
    ReplayState ReplayState = 3;
+   uint64 DeliveryId = 4;
 }
 message HasReactorRequest {
    string EventStore = 1;
@@ -118,6 +119,7 @@ message ReactorResult {
    uint64 LastSuccessfulObservation = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
+   uint64 DeliveryId = 6;
 }
 message RegisterReactor {
    string ConnectionId = 1;
