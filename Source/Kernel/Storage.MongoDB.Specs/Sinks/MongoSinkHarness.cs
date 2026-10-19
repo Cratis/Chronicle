@@ -40,6 +40,11 @@ public class MongoSinkHarness : ISinkHarness
     /// </remarks>
     public string? ConnectionString { get; set; }
 
+    /// <summary>
+    /// Gets or sets the action the sink calls to recommend a replay for documents holding a composite key in another part order.
+    /// </summary>
+    public Func<Task>? RecommendReplayForLegacyCompositeKeys { get; set; }
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
@@ -56,7 +61,7 @@ public class MongoSinkHarness : ISinkHarness
 
         var changeStreams = new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance);
 
-        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, changeStreams);
+        return new Sink(definition, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, changeStreams, NullLogger<Sink>.Instance, RecommendReplayForLegacyCompositeKeys);
     }
 
     /// <inheritdoc/>

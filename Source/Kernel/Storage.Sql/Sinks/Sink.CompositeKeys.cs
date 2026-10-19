@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
@@ -15,37 +16,13 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public partial class Sink
 {
-    const string EncodedKeyPrefix = "{";
+    /// <summary>
+    /// The length of the key column, which must match the one the ReadModelMigrator creates.
+    /// </summary>
+    const int KeyColumnLength = 200;
 
     bool _legacyReplayRecommended;
-
-    /// <summary>
-    /// Finds an instance by key for a reader that needs the true answer, refusing when the answer cannot be known.
-    /// </summary>
-    /// <param name="key">The <see cref="Key"/> to find.</param>
-    /// <returns>The instance, or null if there is none.</returns>
-    /// <exception cref="LegacyCompositeKeyRequiresReplay">The key is ambiguous in the legacy format and the read model still has legacy rows.</exception>
-    public async Task<ExpandoObject?> FindForRead(Key key)
-    {
-        var found = await FindOrDefault(key);
-        if (found is not null || !IsAmbiguousComposite(key))
-        {
-            return found;
-        }
-
-        await using var scope = await OpenActiveScope();
-        if (await HasLegacyRows(scope))
-        {
-            throw new LegacyCompositeKeyRequiresReplay(_readModelIdentifier, GetIdString(key));
-        }
-
-        return null;
-    }
-
-    static string GetIdString(Key key) =>
-        key.Value is ExpandoObject composite
-            ? CompositeKeyEncoding.Encode(composite)
-            : key.Value?.ToString() ?? string.Empty;
+    string? _tableWithoutLegacyRows;
 
     static bool IsComposite(Key key) => key.Value is ExpandoObject;
 
@@ -71,6 +48,48 @@ public partial class Sink
         return parts.Any(part => string.IsNullOrEmpty(part) || part.Contains('_')) ? null : string.Join('_', parts);
     }
 
+    static CompositeKeyPartKind KindOf(JsonObjectType type) => type switch
+    {
+        _ when type.HasFlag(JsonObjectType.Integer) => CompositeKeyPartKind.WholeNumber,
+        _ when type.HasFlag(JsonObjectType.Number) => CompositeKeyPartKind.Number,
+        _ when type.HasFlag(JsonObjectType.Boolean) => CompositeKeyPartKind.Boolean,
+        _ => CompositeKeyPartKind.Text
+    };
+
+    /// <summary>
+    /// Refuses a read that cannot be answered truthfully: an ambiguous composite key that missed, while the read model still has legacy rows.
+    /// </summary>
+    /// <param name="scope">The scope to look for legacy rows in.</param>
+    /// <param name="key">The <see cref="Key"/> that was not found.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="LegacyCompositeKeyRequiresReplay">The key is ambiguous in the legacy format and the read model still has legacy rows.</exception>
+    async Task RefuseWhenLegacyRowsMayHoldTheKey(DbContextScope<ReadModelDbContext> scope, Key key)
+    {
+        if (!IsAmbiguousComposite(key) || !await HasLegacyRows(scope))
+        {
+            return;
+        }
+
+        await RecommendReplayOnce();
+        throw new LegacyCompositeKeyRequiresReplay(_readModelIdentifier, GetIdString(key));
+    }
+
+    string GetIdString(Key key)
+    {
+        if (key.Value is not ExpandoObject composite)
+        {
+            return key.Value?.ToString() ?? string.Empty;
+        }
+
+        var id = CompositeKeyEncoding.Encode(composite);
+        if (id.Length > KeyColumnLength)
+        {
+            throw new CompositeKeyTooLong(_readModelIdentifier, id.Length, KeyColumnLength);
+        }
+
+        return id;
+    }
+
     async Task<string> ResolveStoredId(DbContextScope<ReadModelDbContext> scope, Key key)
     {
         var id = GetIdString(key);
@@ -90,8 +109,21 @@ public partial class Sink
             return false;
         }
 
+        var table = ActiveTableName;
+        if (_tableWithoutLegacyRows == table)
+        {
+            return false;
+        }
+
         var name = keyColumn.Name;
-        return await scope.DbContext.Entries.AnyAsync(e => !((string)e[name]!).StartsWith(EncodedKeyPrefix));
+        const string prefix = CompositeKeyEncoding.Prefix;
+        var hasLegacyRows = await scope.DbContext.Entries.AnyAsync(e => !((string)e[name]!).StartsWith(prefix));
+        if (!hasLegacyRows)
+        {
+            _tableWithoutLegacyRows = table;
+        }
+
+        return hasLegacyRows;
     }
 
     /// <summary>
@@ -128,7 +160,17 @@ public partial class Sink
 
     async Task RecommendReplayForLegacyRows(DbContextScope<ReadModelDbContext> scope, Key key)
     {
-        if (_legacyReplayRecommended || !IsAmbiguousComposite(key) || _compositeKeyReplayRecommender is null || !await HasLegacyRows(scope))
+        if (_legacyReplayRecommended || !IsAmbiguousComposite(key) || !await HasLegacyRows(scope))
+        {
+            return;
+        }
+
+        await RecommendReplayOnce();
+    }
+
+    async Task RecommendReplayOnce()
+    {
+        if (_legacyReplayRecommended || _compositeKeyReplayRecommender is null)
         {
             return;
         }
@@ -136,4 +178,9 @@ public partial class Sink
         _legacyReplayRecommended = true;
         await _compositeKeyReplayRecommender.Recommend(_eventStoreName, _namespace, _readModel);
     }
+
+    Dictionary<string, CompositeKeyPartKind> GetKeyPartKinds(ProjectedColumn column) =>
+        _schema.Properties.TryGetValue(column.Name, out var property)
+            ? property.ActualSchema.Properties.ToDictionary(part => part.Key, part => KindOf(part.Value.ActualSchema.Type))
+            : new Dictionary<string, CompositeKeyPartKind>();
 }

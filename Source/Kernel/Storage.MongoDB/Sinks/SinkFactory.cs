@@ -63,6 +63,12 @@ public class SinkFactory(
             mongoDBChangesetConverter,
             expandoObjectConverter,
             serviceProvider.GetRequiredService<IReadModelChangeStreams>(),
-            serviceProvider.GetRequiredService<ILogger<Sink>>());
+            serviceProvider.GetRequiredService<ILogger<Sink>>(),
+            RecommenderFor(eventStore, @namespace, readModel));
     }
+
+    Func<Task>? RecommenderFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
+        serviceProvider.GetService<ICompositeKeyReplayRecommender>() is { } recommender
+            ? () => recommender.Recommend(eventStore, @namespace, readModel)
+            : null;
 }

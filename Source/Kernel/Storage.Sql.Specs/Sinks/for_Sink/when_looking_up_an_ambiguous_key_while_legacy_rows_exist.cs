@@ -12,8 +12,9 @@ public class when_looking_up_an_ambiguous_key_while_legacy_rows_exist : given.a_
     async Task Because()
     {
         await _harness.StoreRowUnderId("a_b_c", "legacy");
-        _error = await Catch.Exception(async () => await _sink.FindForRead(KeyOf("a_b", "c")));
+        _error = await Catch.Exception(async () => await _sink.FindOrDefault(KeyOf("a_b", "c")));
     }
 
     [Fact] void should_refuse_the_read() => _error.ShouldBeOfExactType<LegacyCompositeKeyRequiresReplay>();
+    [Fact] void should_recommend_a_replay() => _recommender.Received(1).Recommend(Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(), Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(), Arg.Any<Cratis.Chronicle.Concepts.ReadModels.ReadModelDefinition>());
 }

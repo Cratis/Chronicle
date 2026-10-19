@@ -14,7 +14,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_conve
 
 public class and_composite_key_parts_are_in_a_different_order_than_the_schema : a_mongodb_converter
 {
-    record CompositeKey(string First, string Second);
+    /// <summary>Declared so the schema order (second, first) differs from the ordinal order (first, second).</summary>
+    /// <param name="Second">Second.</param>
+    /// <param name="First">First.</param>
+    record CompositeKey(string Second, string First);
 
     record ModelWithCompositeKey(CompositeKey Id, string Name);
 
@@ -36,14 +39,14 @@ public class and_composite_key_parts_are_in_a_different_order_than_the_schema : 
             new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, schema } },
             []);
 
-        // The projection mapping order is the reverse of the schema order.
+        // The projection mapping order is the ordinal order, which is the reverse of the schema order.
         _expandoObjectConverter.ToBsonDocument(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
-            .Returns(new BsonDocument { { "second", "b" }, { "first", "a" } });
+            .Returns(new BsonDocument { { "first", "a" }, { "second", "b" } });
 
         _converter = new(_expandoObjectConverter, _typeFormats, _model, _logger);
     }
 
     void Because() => _result = _converter.ToBsonValue(new Key(new ExpandoObject(), ArrayIndexers.NoIndexers));
 
-    [Fact] void should_write_parts_in_schema_order() => _result.AsBsonDocument.Names.ShouldEqual(["first", "second"]);
+    [Fact] void should_write_parts_in_schema_order() => _result.AsBsonDocument.Names.ShouldEqual(["second", "first"]);
 }

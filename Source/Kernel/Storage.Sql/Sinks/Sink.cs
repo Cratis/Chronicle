@@ -152,7 +152,13 @@ public partial class Sink : ISink
         await using var scope = await OpenActiveScope();
         var id = await ResolveStoredId(scope, key);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
-        return entity is null ? null : MaterializeExpando(entity);
+        if (entity is null)
+        {
+            await RefuseWhenLegacyRowsMayHoldTheKey(scope, key);
+            return null;
+        }
+
+        return MaterializeExpando(entity);
     }
 
     /// <inheritdoc/>
@@ -660,7 +666,7 @@ public partial class Sink : ISink
                 continue;
             }
 
-            dict[column.Name] = column.IsKey && IsCompositeKeyColumn(column) && value is string encodedKey && CompositeKeyEncoding.TryDecode(encodedKey, out var keyParts)
+            dict[column.Name] = column.IsKey && IsCompositeKeyColumn(column) && value is string encodedKey && CompositeKeyEncoding.TryDecode(encodedKey, GetKeyPartKinds(column), out var keyParts)
                 ? keyParts
                 : ToJsonNode(column, value);
         }

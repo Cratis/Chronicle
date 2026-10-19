@@ -37,6 +37,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+/// <param name="recommendReplayForLegacyCompositeKeys">Optional action raising a replay recommendation for a read model holding documents whose composite <c language="csharp">_id</c> was written in another part order.</param>
 public class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
@@ -44,7 +45,8 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
-    ILogger<Sink> logger) : ISink, IDisposable
+    ILogger<Sink> logger,
+    Func<Task>? recommendReplayForLegacyCompositeKeys = null) : ISink, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
@@ -111,6 +113,7 @@ public class Sink(
     /// that a queued delete has logically discarded.
     /// </remarks>
     readonly ConcurrentDictionary<string, long> _bulkPendingDeletes = new();
+    bool _legacyCompositeKeyReplayRecommended;
     long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
@@ -151,7 +154,34 @@ public class Sink(
             return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
         }
 
+        await RecommendReplayWhenStoredInAnotherPartOrder(collection, key);
         return default;
+    }
+
+    /// <summary>
+    /// MongoDB compares an embedded <c language="csharp">_id</c> with its part order included. Documents written before parts were put in
+    /// schema order may hold the same key in another order; they are not migrated, so a replay is recommended instead.
+    /// </summary>
+    /// <param name="collection">The collection that missed the key.</param>
+    /// <param name="key">The key that was not found.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task RecommendReplayWhenStoredInAnotherPartOrder(IMongoCollection<BsonDocument> collection, Key key)
+    {
+        if (_legacyCompositeKeyReplayRecommended || recommendReplayForLegacyCompositeKeys is null || key.Value is not ExpandoObject || converter.ToBsonValue(key) is not BsonDocument canonical || canonical.ElementCount < 2)
+        {
+            return;
+        }
+
+        // Equality on each part is insensitive to the order of the parts, so this matches the key in any order.
+        var filters = canonical.Elements.Select(part => Builders<BsonDocument>.Filter.Eq($"_id.{part.Name}", part.Value)).ToList();
+        filters.Add(Builders<BsonDocument>.Filter.Ne("_id", canonical));
+        if (!await collection.Find(Builders<BsonDocument>.Filter.And(filters)).Limit(1).AnyAsync())
+        {
+            return;
+        }
+
+        _legacyCompositeKeyReplayRecommended = true;
+        await recommendReplayForLegacyCompositeKeys();
     }
 
     bool TryAnswerFromBulk(Key key, out ExpandoObject? answer)

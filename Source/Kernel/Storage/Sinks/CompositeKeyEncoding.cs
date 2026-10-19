@@ -1,159 +1,181 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
-/// Encodes a composite read model key as a single canonical string for sinks that store a key in one column.
+/// Encodes a composite read model key as a single compact string for sinks that store a key in one column.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The encoding is a JSON object whose parts are ordered by name using ordinal comparison. Each value is written by its
-/// type using invariant formatting: numbers as JSON numbers (decimals without trailing zeros), Guids in the <c language="csharp">D</c>
-/// format, dates and times in the round-trip <c language="csharp">O</c> format, a <see cref="TimeSpan"/> in the constant <c language="csharp">c</c> format,
-/// an enum as its underlying number and a concept as the value it holds. A missing value stays JSON <see langword="null"/>, so it is
-/// distinct from an empty string, and every string is quoted, so a value cannot contain a separator of another part.
+/// The encoding is the <see cref="Prefix"/> marker followed by the parts ordered by name using ordinal comparison. Part names are
+/// not written - the key schema of the read model names them. Each part is <c language="csharp">&lt;length&gt;:&lt;value&gt;</c>, where the
+/// length is the number of characters of the value, or a single <c language="csharp">-</c> for a missing value. A value is formatted by its type using
+/// invariant formatting: numbers without trailing zeros, Guids in the <c language="csharp">D</c> format, dates and times in the round-trip
+/// <c language="csharp">O</c> format, a <see cref="TimeSpan"/> in the constant <c language="csharp">c</c> format, an enum as its
+/// underlying number and a concept as the value it holds.
 /// </para>
 /// <para>
-/// The same parts therefore always produce the same string, whatever order the projection mapped them in and whatever
-/// culture the kernel runs under, and different parts never produce the same string. The string can be parsed back into
-/// the key's parts with <see cref="TryDecode"/>.
+/// Because every value carries its length, no value can be mistaken for part of another, a missing value is distinct from an empty
+/// string, and the same parts always produce the same string whatever order the projection mapped them in and whatever culture the
+/// kernel runs under. The string can be parsed back into the parts with <see cref="TryDecode"/> given the key schema.
 /// </para>
 /// </remarks>
 public static class CompositeKeyEncoding
 {
-    static readonly JsonWriterOptions _writerOptions = new()
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        Indented = false
-    };
+    /// <summary>
+    /// The marker an encoded key starts with. The legacy underscore-joined ids never started with it.
+    /// </summary>
+    public const string Prefix = "~k1:";
+
+    const string NullToken = "-";
 
     /// <summary>
     /// Encodes the parts of a composite key.
     /// </summary>
     /// <param name="parts">The parts of the key, by name.</param>
-    /// <returns>The canonical string for the key.</returns>
+    /// <returns>The encoded string for the key.</returns>
     public static string Encode(IDictionary<string, object?> parts)
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        using (var writer = new Utf8JsonWriter(buffer, _writerOptions))
-        {
-            WriteObject(writer, parts);
-        }
-
-        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+        var builder = new StringBuilder(Prefix);
+        AppendParts(builder, parts);
+        return builder.ToString();
     }
+
+    /// <summary>
+    /// Determines whether an id was produced by <see cref="Encode"/>.
+    /// </summary>
+    /// <param name="id">The stored id.</param>
+    /// <returns>True if the id is an encoded composite key, false if not.</returns>
+    public static bool IsEncoded(string? id) => id?.StartsWith(Prefix, StringComparison.Ordinal) == true;
 
     /// <summary>
     /// Tries to parse a string produced by <see cref="Encode"/> back into the parts of the key.
     /// </summary>
     /// <param name="encoded">The string to parse.</param>
-    /// <param name="parts">The parts of the key as a <see cref="JsonObject"/>, when <paramref name="encoded"/> is an encoded composite key.</param>
-    /// <returns>True if <paramref name="encoded"/> is an encoded composite key, false if not.</returns>
-    public static bool TryDecode(string? encoded, [NotNullWhen(true)] out JsonObject? parts)
+    /// <param name="partKinds">The kind of every part of the key by name, from the key schema of the read model.</param>
+    /// <param name="parts">The parts of the key, when <paramref name="encoded"/> is an encoded composite key of those parts.</param>
+    /// <returns>True if <paramref name="encoded"/> is an encoded composite key of the given parts, false if not.</returns>
+    public static bool TryDecode(string? encoded, IReadOnlyDictionary<string, CompositeKeyPartKind> partKinds, [NotNullWhen(true)] out JsonObject? parts)
     {
         parts = null;
-        if (string.IsNullOrEmpty(encoded) || !encoded.StartsWith('{'))
+        if (!IsEncoded(encoded))
         {
             return false;
         }
 
-        try
+        var result = new JsonObject();
+        var position = Prefix.Length;
+        foreach (var (name, kind) in partKinds.OrderBy(_ => _.Key, StringComparer.Ordinal))
         {
-            parts = JsonNode.Parse(encoded) as JsonObject;
+            if (!TryReadPart(encoded!, ref position, out var value))
+            {
+                return false;
+            }
+
+            result[name] = value is null ? null : ToNode(value, kind);
         }
-        catch (JsonException)
+
+        if (position != encoded!.Length)
         {
-            // Not every string starting with a brace is an encoded key - a legacy key part can start with one.
             return false;
         }
 
-        return parts is not null;
+        parts = result;
+        return true;
     }
 
-    static void WriteObject(Utf8JsonWriter writer, IDictionary<string, object?> parts)
+    static bool TryReadPart(string encoded, ref int position, out string? value)
     {
-        writer.WriteStartObject();
-        foreach (var (name, value) in parts.OrderBy(_ => _.Key, StringComparer.Ordinal))
+        value = null;
+        if (position >= encoded.Length)
         {
-            writer.WritePropertyName(name);
-            WriteValue(writer, value);
+            return false;
         }
 
-        writer.WriteEndObject();
+        if (encoded[position] == NullToken[0])
+        {
+            position++;
+            return true;
+        }
+
+        var separator = encoded.IndexOf(':', position);
+        if (separator < 0 || !int.TryParse(encoded.AsSpan(position, separator - position), NumberStyles.None, CultureInfo.InvariantCulture, out var length) || separator + 1 + length > encoded.Length)
+        {
+            return false;
+        }
+
+        value = encoded.Substring(separator + 1, length);
+        position = separator + 1 + length;
+        return true;
     }
 
-    static void WriteValue(Utf8JsonWriter writer, object? value)
+    static JsonValue ToNode(string value, CompositeKeyPartKind kind)
+    {
+        switch (kind)
+        {
+            case CompositeKeyPartKind.WholeNumber when long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer):
+                return JsonValue.Create(integer);
+            case CompositeKeyPartKind.WholeNumber when ulong.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unsigned):
+                return JsonValue.Create(unsigned);
+            case CompositeKeyPartKind.Number when decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number):
+                return JsonValue.Create(number);
+            case CompositeKeyPartKind.Number when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var floating):
+                return JsonValue.Create(floating);
+            case CompositeKeyPartKind.Boolean when bool.TryParse(value, out var boolean):
+                return JsonValue.Create(boolean);
+            default:
+                return JsonValue.Create(value);
+        }
+    }
+
+    static void AppendParts(StringBuilder builder, IDictionary<string, object?> parts)
+    {
+        foreach (var (_, value) in parts.OrderBy(_ => _.Key, StringComparer.Ordinal))
+        {
+            var text = FormatValue(value);
+            if (text is null)
+            {
+                builder.Append(NullToken[0]);
+            }
+            else
+            {
+                builder.Append(text.Length.ToString(CultureInfo.InvariantCulture)).Append(':').Append(text);
+            }
+        }
+    }
+
+    static string? FormatValue(object? value)
     {
         if (value?.IsConcept() == true)
         {
             value = value.GetConceptValue();
         }
 
-        switch (value)
+        return value switch
         {
-            case null:
-                writer.WriteNullValue();
-                break;
-            case string text:
-                writer.WriteStringValue(text);
-                break;
-            case bool boolean:
-                writer.WriteBooleanValue(boolean);
-                break;
-            case Enum enumValue:
-                writer.WriteNumberValue(Convert.ToDecimal(enumValue, CultureInfo.InvariantCulture));
-                break;
-            case IDictionary<string, object?> nested:
-                WriteObject(writer, nested);
-                break;
-            default:
-                WriteScalar(writer, value);
-                break;
-        }
+            null => null,
+            string text => text,
+            bool boolean => boolean ? "true" : "false",
+            Enum enumValue => Convert.ToDecimal(enumValue, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
+            IDictionary<string, object?> nested => EncodeNested(nested),
+            decimal number => (number / 1.000000000000000000000000000000000m).ToString(CultureInfo.InvariantCulture),
+            double number => number.ToString("R", CultureInfo.InvariantCulture),
+            float number => number.ToString("R", CultureInfo.InvariantCulture),
+            _ => FormatAsText(value)
+        };
     }
 
-    static void WriteScalar(Utf8JsonWriter writer, object value)
+    static string EncodeNested(IDictionary<string, object?> nested)
     {
-        switch (value)
-        {
-            case int or short or sbyte or byte or ushort:
-                writer.WriteNumberValue(Convert.ToInt64(value, CultureInfo.InvariantCulture));
-                break;
-            case uint unsigned:
-                writer.WriteNumberValue(unsigned);
-                break;
-            case long signed:
-                writer.WriteNumberValue(signed);
-                break;
-            case ulong unsigned:
-                writer.WriteNumberValue(unsigned);
-                break;
-            case decimal number:
-                // Dividing by one with a large scale drops the trailing zeros, so 1.0 and 1.00 address the same key.
-                writer.WriteNumberValue(number / 1.000000000000000000000000000000000m);
-                break;
-            case double number when double.IsFinite(number):
-                writer.WriteNumberValue(number);
-                break;
-            case float number when float.IsFinite(number):
-                writer.WriteNumberValue(number);
-                break;
-            case double or float:
-                writer.WriteStringValue(Convert.ToString(value, CultureInfo.InvariantCulture));
-                break;
-            default:
-                writer.WriteStringValue(FormatAsText(value));
-                break;
-        }
+        var builder = new StringBuilder();
+        AppendParts(builder, nested);
+        return builder.ToString();
     }
 
     static string FormatAsText(object value) => value switch
