@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -25,6 +27,7 @@ public class UniqueConstraintMigrator(
     /// </summary>
     internal const int SubjectMaxLength = 200;
 
+    const int MaxIdentifierLength = 63;
     const string SubjectColumn = nameof(UniqueConstraintIndexEntry.Subject);
 
     static readonly ConcurrentDictionary<string, bool> _indexMigrations = new();
@@ -76,6 +79,23 @@ public class UniqueConstraintMigrator(
     }
 
     /// <summary>
+    /// Gets the name of the index on the subject column, kept within PostgreSQL's identifier limit.
+    /// </summary>
+    /// <param name="tableName">The claim table.</param>
+    /// <returns>The index name.</returns>
+    internal static string SubjectIndexName(string tableName)
+    {
+        var name = "IX_" + tableName + "_" + SubjectColumn;
+        if (name.Length <= MaxIdentifierLength) return name;
+
+        // PostgreSQL truncates longer identifiers, which would collide with the table's other indexes, so keep a
+        // hash of the full name where the truncation cannot remove it.
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..8];
+        var suffix = "_" + hash + "_" + SubjectColumn;
+        return name[..(MaxIdentifierLength - suffix.Length)] + suffix;
+    }
+
+    /// <summary>
     /// Adds the nullable subject column and its index to a table created before claims recorded their subject.
     /// </summary>
     /// <remarks>
@@ -94,7 +114,7 @@ public class UniqueConstraintMigrator(
 
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
         migrationBuilder.AddColumn<string>(name: SubjectColumn, table: tableName, maxLength: SubjectMaxLength, nullable: true);
-        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         try
         {
             await migrator.ExecuteMigrationOperations(context, migrationBuilder);
@@ -120,7 +140,7 @@ public class UniqueConstraintMigrator(
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, _ => _.Value));
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
-        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
@@ -141,7 +161,7 @@ public class UniqueConstraintMigrator(
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
-        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 }

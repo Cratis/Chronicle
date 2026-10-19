@@ -48,7 +48,7 @@ public class UniqueConstraintValuesDbContext(DbContextOptions<UniqueConstraintVa
             entity.Property(_ => _.SequenceNumber).IsRequired();
             entity.HasIndex(_ => _.EventSourceId);
             entity.Property(_ => _.Subject).HasMaxLength(UniqueConstraintMigrator.SubjectMaxLength);
-            entity.HasIndex(_ => _.Subject);
+            entity.HasIndex(_ => _.Subject).HasDatabaseName(UniqueConstraintMigrator.SubjectIndexName(tableName));
         });
     }
 }
