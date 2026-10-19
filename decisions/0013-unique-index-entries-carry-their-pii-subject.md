@@ -11,6 +11,7 @@ applies-to:
   - Source/Kernel/Core/Events/Constraints/**
   - Source/Kernel/Core/EventSequences/**
   - Source/Kernel/Core/Compliance/GDPR/PIIManager.cs
+  - Source/Kernel/Core/Patches/19.91.0/**
   - Source/Kernel/Storage/Events/Constraints/**
   - Source/Kernel/Storage.InMemory/Events/Constraints/**
   - Source/Kernel/Storage.MongoDB/Events/Constraints/**
@@ -50,9 +51,13 @@ and the event store cannot be queried by subject.
    nullable `Subject` column, with an index, to both table shapes. Existing tables gain the column through the
    table migrator's upgrade path, which only adds the column if it is missing. The in-memory store keeps the
    subject with each value.
-5. **Entries written before this release have no subject.** How they are backfilled is decided separately, because
-   a full reindex also frees values held by subjects who were already erased, which changes behavior for existing
-   data (see Consequences).
+5. **Entries written before this release are backfilled by a full reindex.** Patch `19.91.0`
+   (`RecordSubjectsOnUniqueConstraintClaims`) starts the 0008 reindex job for every unique constraint in every
+   namespace of every event store, which re-derives each entry from the event log with its subject. Decided by the
+   decider on 2026-10-19, with both of its visible effects accepted and stated in the release note:
+   - values held by subjects erased **before** this release become claimable again, because the reindex skips
+     erased subjects' events;
+   - governed appends to a constraint are refused while that constraint rebuilds (the 0008 pending-index state).
 6. **Release:** minor.
 
 ## Options considered
@@ -68,7 +73,9 @@ and the event store cannot be queried by subject.
 ## Consequences
 
 - An erased subject's values become available again as soon as the erasure succeeds. This is intended.
-- Entries written before this release are not freed by erasure until a backfill gives them a subject.
+- Entries written before this release gain their subject when the `19.91.0` backfill reindex completes; until it
+  does, erasure cannot find them. Values of subjects erased before this release become claimable again then.
+- While the backfill rebuilds a constraint, governed appends to it are refused.
 - An append that obtained the subject's key before the erasure fence, and writes its index entry after the
   erasure's delete, leaves an entry behind. Re-running the erasure removes it.
 - The unsalted hash still confirms guesses against entries that have not been erased. Replacing it with a keyed
@@ -77,4 +84,5 @@ and the event store cannot be queried by subject.
 ## Verification
 
 Specs in every storage provider cover recording the subject only for personal data, and deleting by subject while
-keeping other subjects' entries. A `PIIManager` spec covers the erasure failing closed when the delete fails.
+keeping other subjects' entries. A `PIIManager` spec covers the erasure failing closed when the delete fails. A
+patch spec covers the backfill reindexing every unique constraint.
