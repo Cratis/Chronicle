@@ -28,7 +28,7 @@ public class and_a_live_abandoned_write_is_applied_on_retry : given.an_event_seq
         _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
-                if (++_attempts != 1) return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5));
+                if (++_attempts != 1) return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<Subject?>(5), call.ArgAt<CancellationToken>(6));
                 _value = call.ArgAt<UniqueConstraintValue>(3);
                 _clock.Advance(TimeSpan.FromSeconds(1));
                 return _lateWrite.Task;
