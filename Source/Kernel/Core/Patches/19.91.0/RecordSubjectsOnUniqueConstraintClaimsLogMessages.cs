@@ -14,7 +14,7 @@ internal static partial class RecordSubjectsOnUniqueConstraintClaimsLogMessages
     [LoggerMessage(LogLevel.Debug, "Starting RecordSubjectsOnUniqueConstraintClaims patch - rebuilding unique constraint indexes to record the subject of each claim")]
     internal static partial void StartingPatch(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger);
 
-    [LoggerMessage(LogLevel.Debug, "Found {Count} unique constraint(s) for event store {EventStore}")]
+    [LoggerMessage(LogLevel.Debug, "Found {Count} unique constraint(s) covering personal data for event store {EventStore}")]
     internal static partial void FoundUniqueConstraints(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, EventStoreName eventStore, int count);
 
     [LoggerMessage(LogLevel.Debug, "Rebuilding constraint indexes for event store {EventStore}, namespace {Namespace}")]

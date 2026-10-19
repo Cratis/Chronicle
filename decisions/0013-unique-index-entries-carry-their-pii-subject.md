@@ -51,9 +51,11 @@ and the event store cannot be queried by subject.
    nullable `Subject` column, with an index, to both table shapes. Existing tables gain the column through the
    table migrator's upgrade path, which only adds the column if it is missing. The in-memory store keeps the
    subject with each value.
-5. **Entries written before this release are backfilled by a full reindex.** Patch `19.91.0`
-   (`RecordSubjectsOnUniqueConstraintClaims`) starts the 0008 reindex job for every unique constraint in every
-   namespace of every event store, which re-derives each entry from the event log with its subject. Decided by the
+5. **Entries written before this release are backfilled by a reindex.** Patch `19.91.0`
+   (`RecordSubjectsOnUniqueConstraintClaims`) starts the 0008 reindex job, in every namespace of every event store,
+   for each unique constraint that covers a personal-data property in any generation of its event types. It
+   re-derives each entry from the event log with its subject. Constraints without personal data are left alone; the
+   keyed-hash step reindexes every unique constraint later. Decided by the
    decider on 2026-10-19, with both of its visible effects accepted and stated in the release note:
    - values held by subjects erased **before** this release become claimable again, because the reindex skips
      erased subjects' events;
@@ -85,4 +87,4 @@ and the event store cannot be queried by subject.
 
 Specs in every storage provider cover recording the subject only for personal data, and deleting by subject while
 keeping other subjects' entries. A `PIIManager` spec covers the erasure failing closed when the delete fails. A
-patch spec covers the backfill reindexing every unique constraint.
+patch spec covers the backfill reindexing only the unique constraints that cover personal data.
