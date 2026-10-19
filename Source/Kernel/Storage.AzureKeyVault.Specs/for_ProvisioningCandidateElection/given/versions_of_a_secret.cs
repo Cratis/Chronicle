@@ -25,7 +25,7 @@ public class versions_of_a_secret : Specification
         _secretClient = Substitute.For<SecretClient>();
         _secretClient.GetPropertiesOfSecretVersionsAsync(SecretName, Arg.Any<CancellationToken>())
             .Returns(_ => AsyncPageable<SecretProperties>.FromPages([Page<SecretProperties>.FromValues(_versions, null, Substitute.For<Response>())]));
-        _secretClient.GetSecretAsync(SecretName, Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _secretClient.GetSecretAsync(SecretName, Arg.Any<string>(), Arg.Any<SecretContentType?>(), Arg.Any<CancellationToken>())
             .Returns(call => Response.FromValue(
                 SecretModelFactory.KeyVaultSecret(SecretModelFactory.SecretProperties(name: SecretName, version: call.ArgAt<string>(1)), call.ArgAt<string>(1)),
                 Substitute.For<Response>()));
