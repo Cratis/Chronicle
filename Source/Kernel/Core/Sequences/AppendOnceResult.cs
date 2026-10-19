@@ -26,7 +26,7 @@ public class AppendOnceResult
     /// <summary>
     /// Gets how the keyed append settled.
     /// </summary>
-    public AppendOutcome Outcome { get; init; } = AppendOutcome.Appended;
+    public AppendOutcome Outcome { get; init; } = AppendOutcome.Committed;
 
     /// <summary>
     /// Gets a value indicating whether the append succeeded.
