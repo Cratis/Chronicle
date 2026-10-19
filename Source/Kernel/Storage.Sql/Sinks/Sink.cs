@@ -203,7 +203,7 @@ public partial class Sink : ISink
             return _noFailedPartitions;
         }
 
-        var entry = await GetOrAttachEntity(scope, GetIdString(key), key);
+        var entry = await GetOrAttachEntity(scope, GetWriteId(key, id), key);
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
@@ -212,7 +212,7 @@ public partial class Sink : ISink
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(GetIdString(key), nonJoinedChanges, eventSequenceNumber));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(GetWriteId(key, id), nonJoinedChanges, eventSequenceNumber));
 
         return _noFailedPartitions;
     }

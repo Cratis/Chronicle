@@ -114,6 +114,7 @@ public class Sink(
     /// </remarks>
     readonly ConcurrentDictionary<string, long> _bulkPendingDeletes = new();
     bool _legacyCompositeKeyReplayRecommended;
+    bool _collectionHasNoLegacyKeyOrder;
     long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
@@ -169,6 +170,24 @@ public class Sink(
     {
         if (_legacyCompositeKeyReplayRecommended || recommendReplayForLegacyCompositeKeys is null || key.Value is not ExpandoObject || converter.ToBsonValue(key) is not BsonDocument canonical || canonical.ElementCount < 2)
         {
+            return;
+        }
+
+        // Decided once per sink: a collection without a composite _id in another part order never needs the per-key probe.
+        if (_collectionHasNoLegacyKeyOrder)
+        {
+            return;
+        }
+
+        var schemaOrder = new BsonArray(canonical.Names);
+        var storedInAnotherOrder = new BsonDocument("$expr", new BsonDocument("$and", new BsonArray
+        {
+            new BsonDocument("$eq", new BsonArray { new BsonDocument("$type", "$_id"), "object" }),
+            new BsonDocument("$ne", new BsonArray { new BsonDocument("$map", new BsonDocument { { "input", new BsonDocument("$objectToArray", "$_id") }, { "in", "$$this.k" } }), schemaOrder })
+        }));
+        if (!await collection.Find(storedInAnotherOrder).Limit(1).AnyAsync())
+        {
+            _collectionHasNoLegacyKeyOrder = true;
             return;
         }
 

@@ -90,10 +90,26 @@ public partial class Sink
         return id;
     }
 
+    /// <summary>
+    /// Gets the id to write a key under: its canonical id, or the id of the legacy row it was resolved to when the canonical id does not fit the key column.
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="resolvedId">The id <see cref="ResolveStoredId"/> resolved.</param>
+    /// <returns>The id to write under.</returns>
+    string GetWriteId(Key key, string resolvedId) =>
+        key.Value is ExpandoObject composite && CompositeKeyEncoding.Encode(composite).Length > KeyColumnLength ? resolvedId : GetIdString(key);
+
     async Task<string> ResolveStoredId(DbContextScope<ReadModelDbContext> scope, Key key)
     {
+        var legacyId = GetLegacyIdString(key);
+        if (key.Value is ExpandoObject composite && CompositeKeyEncoding.Encode(composite).Length > KeyColumnLength)
+        {
+            // No row can be stored under an id that does not fit, but a legacy row with a shorter id may be.
+            return legacyId is not null && await scope.DbContext.Entries.AnyAsync(BuildIdPredicate(legacyId)) ? legacyId : GetIdString(key);
+        }
+
         var id = GetIdString(key);
-        if (GetLegacyIdString(key) is not { } legacyId || await scope.DbContext.Entries.AnyAsync(BuildIdPredicate(id)))
+        if (legacyId is null || await scope.DbContext.Entries.AnyAsync(BuildIdPredicate(id)))
         {
             return id;
         }
