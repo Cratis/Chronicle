@@ -1,3 +1,6 @@
+---
+description: Let Chronicle ask a resolver where each tenant's database lives, instead of one connectionDetails, for multi-tenant storage placement.
+---
 # Storage Connection Resolution
 
 A multi-tenant platform often decides where each tenant's database lives: which server, which database, which schema, and which identity is allowed in. With a single `connectionDetails`, Chronicle cannot follow that. It derives a database name for every event store and namespace, connects with one credential, and creates whatever is missing.

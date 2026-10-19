@@ -1,3 +1,6 @@
+---
+description: How Chronicle's ProtoGenerator tool extracts .proto files from its code-first C# gRPC contracts so clients in other languages can use them.
+---
 # Protobuf Extraction from C# Contracts
 
 This document explains how to extract `.proto` files from C# gRPC service definitions using the ProtoGenerator tool.

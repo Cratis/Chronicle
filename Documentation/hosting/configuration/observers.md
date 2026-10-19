@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle observer retry behavior, timeouts, watchdog monitoring and fan-out, and how definition changes are evolved.
+---
 # Observers
 
 Observer configuration controls retry behavior, timeouts, watchdog monitoring, and how events fan out to scaled-out client instances.

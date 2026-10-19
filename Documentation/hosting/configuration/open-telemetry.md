@@ -1,3 +1,6 @@
+---
+description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+---
 # Open Telemetry
 
 Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.

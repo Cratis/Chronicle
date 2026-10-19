@@ -1,3 +1,6 @@
+---
+description: Set any Chronicle Server option with environment variables using the Cratis__Chronicle__ prefix and double underscores for nested sections.
+---
 # Environment Variables
 
 All configuration options can be set using environment variables with the prefix `Cratis__Chronicle__`. Use double underscores (`__`) to represent nested configuration sections.

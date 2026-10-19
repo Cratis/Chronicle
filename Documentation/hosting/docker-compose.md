@@ -1,3 +1,6 @@
+---
+description: Run Chronicle with MongoDB and optional telemetry services using Docker Compose for more control than the development image offers.
+---
 # Running with Docker Compose
 
 Using the development image of Chronicle is convenient for getting started quickly. For more control over the runtime environment, you can run Chronicle with MongoDB and other services such as telemetry collectors.
