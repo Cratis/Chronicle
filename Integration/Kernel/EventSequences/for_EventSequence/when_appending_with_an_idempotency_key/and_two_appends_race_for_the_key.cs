@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
+// The kernel's AppendOutcome and IdempotencyConflictReason share their full names with the .NET client's types,
+// and this project references both assemblies, so the outcome is compared by name.
 
 using context = Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key.and_two_appends_race_for_the_key.context;
 
@@ -20,8 +21,8 @@ public class and_two_appends_race_for_the_key(context context) : Given<context>(
     }
 
     [Fact] void should_settle_both_attempts() => Context.Racing.All(result => result.IsSuccess).ShouldBeTrue();
-    [Fact] void should_append_exactly_once() => Context.Racing.Count(result => result.Outcome == AppendOutcome.Committed).ShouldEqual(1);
-    [Fact] void should_settle_the_other_attempt_as_already_appended() => Context.Racing.Count(result => result.Outcome == AppendOutcome.AlreadyAppended).ShouldEqual(1);
+    [Fact] void should_append_exactly_once() => Context.Racing.Count(result => result.Outcome.ToString() == "Committed").ShouldEqual(1);
+    [Fact] void should_settle_the_other_attempt_as_already_appended() => Context.Racing.Count(result => result.Outcome.ToString() == "AlreadyAppended").ShouldEqual(1);
     [Fact] void should_return_the_same_sequence_number() => Context.Racing[0].Result.SequenceNumber.ShouldEqual(Context.Racing[1].Result.SequenceNumber);
     [Fact] void should_store_one_event() => Context.Count.ShouldEqual(1UL);
 }

@@ -48,6 +48,10 @@ Inspect the result for kernel constraint and concurrency rejections. This does n
 
 Sources: [.NET results](https://github.com/Cratis/Chronicle/tree/main/Source/Clients/DotNET/EventSequences), [JVM result](https://github.com/Cratis/Chronicle.Kotlin/blob/main/Source/src/main/kotlin/io/cratis/chronicle/eventSequences/AppendResult.kt), [TypeScript result](https://github.com/Cratis/Chronicle.TypeScript/blob/main/Source/eventSequences/AppendResult.ts), [Elixir result](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/event_sequences/append_result.ex), [Elixir result conversion](https://github.com/Cratis/Chronicle.Elixir/blob/main/Source/chronicle/lib/chronicle/event_sequences/append_response.ex).
 
+### Keyed appends
+
+Only the .NET client has a keyed append API: `AppendOnce`, `AppendManyOnce`, and `IdempotencyKey`. See [Appending](../events/appending#appending-once). The Kotlin, TypeScript, and Elixir clients generate the kernel's keyed RPCs from the shared contracts, but they expose no keyed append method yet. A caller in those clients cannot make an append idempotent through the client API.
+
 ## Compliance and PII
 
 ### Resolving the subject on append
