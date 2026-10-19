@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Transactions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using NSubstitute.Core;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
@@ -31,6 +31,8 @@ internal sealed class UnitOfWorkHarness
     internal UnitOfWorkHarness(AppendManyResult? result = null)
     {
         var store = Substitute.For<IEventStore>();
+        store.Name.Returns((EventStoreName)"store");
+        store.Namespace.Returns((EventStoreNamespaceName)"namespace");
         store.GetEventSequence(EventSequenceId.Log).Returns(Sequence);
         Unit = new UnitOfWork(CorrelationId, _ => { }, store);
         Manager.Begin(CorrelationId).Returns(Unit);

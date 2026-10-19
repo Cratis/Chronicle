@@ -3,11 +3,7 @@
 
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Transactions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions.for_UnitOfWorkCompletionClaim;
 

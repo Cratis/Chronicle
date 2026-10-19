@@ -1,11 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
-using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Chronicle.Events.Constraints;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
@@ -24,7 +19,7 @@ internal static class UnitOfWorkCompletionResults
         [.. unitOfWork.GetConstraintViolations()],
         [.. unitOfWork.GetAppendErrors()]);
 
-    /// <summary>Builds the result of a commit that failed technically; <c>IsSuccess</c> is not trusted.</summary>
+    /// <summary>Builds the result of a commit that failed technically; <c language="csharp">IsSuccess</c> is not trusted.</summary>
     /// <param name="unitOfWork">The unit.</param>
     /// <param name="exception">The failure.</param>
     /// <returns>The result.</returns>
@@ -38,9 +33,9 @@ internal static class UnitOfWorkCompletionResults
     static UnitOfWorkCompletionResult Empty(IUnitOfWork unitOfWork, UnitOfWorkCompletionOutcome outcome, Exception? exception) => new(
         outcome,
         unitOfWork.CorrelationId,
-        ImmutableList<ConcurrencyViolation>.Empty,
-        ImmutableList<DecisionConflict>.Empty,
-        ImmutableList<ConstraintViolation>.Empty,
-        ImmutableList<AppendError>.Empty,
+        [],
+        [],
+        [],
+        [],
         exception);
 }

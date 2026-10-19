@@ -13,19 +13,19 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// <param name="owner">The middleware's owner capability, if supported.</param>
 internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, DecisionReadCommitOwner? owner) : IUnitOfWorkCompletionFeature, IUnitOfWorkCompletionOwnershipFeature
 {
-    readonly SemaphoreSlim _completion = new(1, 1);
     readonly object _claimLock = new();
+    Task _completionTail = Task.CompletedTask;
     UnitOfWorkCompletionClaim? _claim;
     UnitOfWorkCompletionResult? _result;
+
+    /// <inheritdoc/>
+    public bool IsClaimed => _claim is not null;
 
     /// <summary>Gets the claim, if the unit has been claimed.</summary>
     internal IUnitOfWorkCompletionClaim? CurrentClaim => _claim;
 
     /// <summary>Gets a value indicating whether the feature itself completed the unit.</summary>
     internal bool HasCompleted => _result is not null;
-
-    /// <inheritdoc/>
-    public bool IsClaimed => _claim is not null;
 
     /// <inheritdoc/>
     public IUnitOfWorkCompletionClaim Claim() => TryClaim(out var claim) ? claim : throw new UnitOfWorkCompletionAlreadyClaimed(unitOfWork.CorrelationId);
@@ -59,60 +59,17 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
         return unitOfWork;
     }
 
-    async Task<UnitOfWorkCompletionResult> CommitResult() => (await CommitCore()).Result;
-
-    async Task<(UnitOfWorkCompletionResult Result, bool Created)> CommitCore()
+    static async Task<T> RunAfter<T>(Task previous, Func<Task<T>> work)
     {
-        await _completion.WaitAsync();
         try
         {
-            if (_result is not null) return (_result, false);
-            try
-            {
-                if (owner is not null)
-                {
-                    await ((UnitOfWork)unitOfWork).CommitAsOwner(owner);
-                }
-                else
-                {
-                    await unitOfWork.Commit();
-                }
-                return (_result = UnitOfWorkCompletionResults.FromCommit(unitOfWork), true);
-            }
-            catch (Exception ex) when (!IsLifecycleMisuse(ex))
-            {
-                return (_result = UnitOfWorkCompletionResults.FromUnknown(unitOfWork, ex), true);
-            }
+            await previous;
         }
-        finally
+        catch
         {
-            _completion.Release();
+            // The previous completion step reports its own failure to its caller.
         }
-    }
-
-    async Task<UnitOfWorkCompletionResult> RollbackResult()
-    {
-        await _completion.WaitAsync();
-        try
-        {
-            if (_result is not null) return _result;
-            if (!unitOfWork.IsCompleted)
-            {
-                if (owner is not null)
-                {
-                    await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
-                }
-                else
-                {
-                    await unitOfWork.Rollback();
-                }
-            }
-            return _result = UnitOfWorkCompletionResults.FromRollback(unitOfWork);
-        }
-        finally
-        {
-            _completion.Release();
-        }
+        return await work();
     }
 
     static bool IsLifecycleMisuse(Exception exception) => exception is
@@ -124,4 +81,54 @@ internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, Decisi
         UnitOfWorkMutatedDuringEnrollment or
         UnitOfWorkEnrollmentNotificationFailed or
         ProtectedUnitOfWorkEventsAfterCompletion;
+
+    async Task<UnitOfWorkCompletionResult> CommitResult() => (await CommitCore()).Result;
+
+    Task<T> Serialize<T>(Func<Task<T>> work)
+    {
+        lock (_claimLock)
+        {
+            var task = RunAfter(_completionTail, work);
+            _completionTail = task;
+            return task;
+        }
+    }
+
+    Task<(UnitOfWorkCompletionResult Result, bool Created)> CommitCore() => Serialize(async () =>
+    {
+        if (_result is not null) return (_result, false);
+        try
+        {
+            if (owner is not null)
+            {
+                await ((UnitOfWork)unitOfWork).CommitAsOwner(owner);
+            }
+            else
+            {
+                await unitOfWork.Commit();
+            }
+            return (_result = UnitOfWorkCompletionResults.FromCommit(unitOfWork), true);
+        }
+        catch (Exception ex) when (!IsLifecycleMisuse(ex))
+        {
+            return (_result = UnitOfWorkCompletionResults.FromUnknown(unitOfWork, ex), true);
+        }
+    });
+
+    Task<UnitOfWorkCompletionResult> RollbackResult() => Serialize(async () =>
+    {
+        if (_result is not null) return _result;
+        if (!unitOfWork.IsCompleted)
+        {
+            if (owner is not null)
+            {
+                await ((UnitOfWork)unitOfWork).RollbackAsOwner(owner);
+            }
+            else
+            {
+                await unitOfWork.Rollback();
+            }
+        }
+        return _result = UnitOfWorkCompletionResults.FromRollback(unitOfWork);
+    });
 }
