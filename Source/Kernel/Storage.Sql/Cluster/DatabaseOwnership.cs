@@ -112,5 +112,7 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
 
     static bool IsNamespaceTable(string[] columns) =>
         _eventColumns.All(column => columns.Contains(column, StringComparer.Ordinal)) ||
-        (columns.Length == 3 && _constraintColumns.All(column => columns.Contains(column, StringComparer.Ordinal)));
+        (columns.Length is 3 or 4 &&
+            _constraintColumns.All(column => columns.Contains(column, StringComparer.Ordinal)) &&
+            columns.All(column => _constraintColumns.Contains(column, StringComparer.Ordinal) || column == "Subject"));
 }

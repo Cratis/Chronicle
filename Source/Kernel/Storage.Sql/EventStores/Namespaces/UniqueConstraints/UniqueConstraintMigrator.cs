@@ -20,6 +20,13 @@ public class UniqueConstraintMigrator(
     ITableMigrator<UniqueConstraintValuesDbContext> valuesTableMigrator,
     ILogger<UniqueConstraintMigrator> logger) : IUniqueConstraintMigrator
 {
+    /// <summary>
+    /// The maximum length of the subject column, kept within every provider's index key limit.
+    /// </summary>
+    internal const int SubjectMaxLength = 200;
+
+    const string SubjectColumn = nameof(UniqueConstraintIndexEntry.Subject);
+
     static readonly ConcurrentDictionary<string, bool> _indexMigrations = new();
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
@@ -41,7 +48,7 @@ public class UniqueConstraintMigrator(
                 return;
             }
 
-            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
+            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, (ctx, name) => AddSubjectColumn(tableMigrator, ctx, name));
             await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
 
             // A duplicate fallback stays cached until the next process start (or an explicit reset).
@@ -55,7 +62,7 @@ public class UniqueConstraintMigrator(
 
     /// <inheritdoc/>
     public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) =>
-        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable);
+        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, (ctx, name) => AddSubjectColumn(valuesTableMigrator, ctx, name));
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
@@ -68,6 +75,37 @@ public class UniqueConstraintMigrator(
         }
     }
 
+    /// <summary>
+    /// Adds the nullable subject column and its index to a table created before claims recorded their subject.
+    /// </summary>
+    /// <remarks>
+    /// Every row the table already holds keeps a null subject, which erasure leaves alone, so adding it changes no existing claim.
+    /// Another kernel can add the column first, so a failure that leaves the column in place is success.
+    /// </remarks>
+    /// <typeparam name="TContext">The type of context.</typeparam>
+    /// <param name="migrator">The table migrator.</param>
+    /// <param name="context">The context connected to the namespace database.</param>
+    /// <param name="tableName">The table to upgrade.</param>
+    /// <returns>Awaitable task.</returns>
+    static async Task AddSubjectColumn<TContext>(ITableMigrator<TContext> migrator, TContext context, string tableName)
+        where TContext : DbContext
+    {
+        if (await migrator.ColumnExists(context, tableName, SubjectColumn)) return;
+
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.AddColumn<string>(name: SubjectColumn, table: tableName, maxLength: SubjectMaxLength, nullable: true);
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
+        try
+        {
+            await migrator.ExecuteMigrationOperations(context, migrationBuilder);
+        }
+        catch (Exception)
+        {
+            // Lost the race to another kernel when the column now exists.
+            if (!await migrator.ColumnExists(context, tableName, SubjectColumn)) throw;
+        }
+    }
+
     async Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName)
     {
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
@@ -77,10 +115,12 @@ public class UniqueConstraintMigrator(
             {
                 Value = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
+                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, _ => _.Value));
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
         await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
@@ -96,10 +136,12 @@ public class UniqueConstraintMigrator(
                 Value = context.Database.IsSqlServer()
                     ? table.StringColumn(migrationBuilder, maxLength: 200, nullable: false)
                     : table.StringColumn(migrationBuilder, nullable: false),
-                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
+                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + SubjectColumn, table: tableName, column: SubjectColumn);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 }

@@ -96,6 +96,16 @@ public record ConstraintValidationContext
     public ConstraintBatchClaims? BatchClaims { get; }
 
     /// <summary>
+    /// Gets the <see cref="Concepts.Events.Subject"/> the event's personal data belongs to, if known.
+    /// </summary>
+    public Subject? Subject { get; init; }
+
+    /// <summary>
+    /// Gets the top-level properties of the event that carry personal data according to its schema.
+    /// </summary>
+    public IReadOnlyCollection<string> PersonalProperties { get; init; } = [];
+
+    /// <summary>
     /// Perform validation on a <see cref="EventToValidateForConstraints"/>.
     /// </summary>
     /// <returns><see cref="ConstraintValidationResult"/> holding the result of validation.</returns>
