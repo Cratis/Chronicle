@@ -15,6 +15,21 @@ If no event types are configured, the webhook forwards the event types the clien
 A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient failures (`5xx`, `408`, `429`, timeouts and connection errors) are first retried by Chronicle's HTTP client up to three times with exponential backoff, and a circuit breaker can fail calls fast while an endpoint keeps failing. When the batch still fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
+## OAuth client credentials
+
+The .NET webhook builder supports `WithOAuth(authority, clientId, clientSecret, scope)`;
+`scope` is optional and defaults to an empty string. The Workbench's OAuth form also accepts
+an optional scope. For Microsoft Entra client credentials, request the resource's
+`api://<application-id>/.default` scope. An empty scope is omitted from the token request.
+Existing registrations without scope continue to work unchanged; re-registering OAuth
+credentials without scope clears a previously configured scope.
+
+The kernel shares tokens for the same token endpoint, client, scope, and credentials,
+and refreshes shortly before expiry. Tokens without an expiry are not cached. Authorization
+is applied on each HTTP send, including sends from long-lived external-service clients.
+A `401` invalidates the rejected token and retries the same request once with a fresh token;
+other responses do not trigger an OAuth retry. Receivers should remain idempotent.
+
 ## Pin the generation your endpoint understands
 
 To keep an endpoint on the event shape it knows, opt in per webhook with the .NET
