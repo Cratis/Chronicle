@@ -22,7 +22,14 @@ public class two_concurrent_changes(a_database database)
             firstStarted.SetResult();
             await releaseFirst.Task;
         }));
-        await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // A first change that fails before it starts surfaces its own error rather than a timeout.
+        await Task.WhenAny(firstStarted.Task, first).WaitAsync(TimeSpan.FromSeconds(30));
+        if (first.IsCompleted)
+        {
+            await first;
+        }
+
         HeldElsewhereDuringFirst = await database.IsHeldElsewhere();
 
         var second = Task.Run(() => DatabaseSchemaLock.Run(database.NewContext(), () =>
