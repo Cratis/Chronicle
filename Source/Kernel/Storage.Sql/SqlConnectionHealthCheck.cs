@@ -26,7 +26,7 @@ internal sealed class SqlConnectionHealthCheck(string connectionDetails, Func<Db
         try
         {
             await using var connection = CreateConnection();
-            await prepareConnection(connection);
+            await prepareConnection(connection).WaitAsync(cancellationToken);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1;";
