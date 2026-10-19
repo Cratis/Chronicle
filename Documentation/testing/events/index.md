@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Testing.Events
+description: Test Chronicle event-appending behavior entirely in-process with EventScenario, with no server, database or network required.
 ---
 # Testing Events
 

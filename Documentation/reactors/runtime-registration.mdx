@@ -1,3 +1,6 @@
+---
+description: Register an in-process Chronicle reactor at runtime with a stable ID for bridges and plugin hosts that discover subscriptions from configuration.
+---
 # Register a Reactor at Runtime
 
 When a bridge or plugin host discovers its event subscriptions from configuration, it need not create a reactor class for each subscription. Register an in-process reactor with a stable ID, one or more event types (including their generations), and an asynchronous handler:
