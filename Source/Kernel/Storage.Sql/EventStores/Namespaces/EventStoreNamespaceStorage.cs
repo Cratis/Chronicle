@@ -76,10 +76,10 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace);
+    public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCounts.ObserverHandledCountsStorage(eventStore, @namespace);
+    public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCounts.ObserverHandledCountsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
