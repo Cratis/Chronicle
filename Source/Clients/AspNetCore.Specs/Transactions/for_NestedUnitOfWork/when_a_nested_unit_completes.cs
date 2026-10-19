@@ -28,7 +28,6 @@ public class when_a_nested_unit_completes : Specification
 
     [Fact] void should_make_the_nested_unit_current_while_it_runs() => _currentAfterBegin.ShouldBeTrue();
 
-    // Documents today's behavior reported to Arc: completion clears Current and does not restore the request unit.
-    [Fact] void should_not_restore_the_request_unit_as_current() => _requestIsCurrentAfterCompletion.ShouldBeFalse();
-    [Fact] void should_leave_no_current_unit() => _hasCurrentAfterCompletion.ShouldBeFalse();
+    [Fact] void should_restore_the_request_unit_as_current() => _requestIsCurrentAfterCompletion.ShouldBeTrue();
+    [Fact] void should_still_have_a_current_unit() => _hasCurrentAfterCompletion.ShouldBeTrue();
 }

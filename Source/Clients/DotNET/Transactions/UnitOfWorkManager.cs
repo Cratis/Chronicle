@@ -22,7 +22,7 @@ public class UnitOfWorkManager(
     UnitOfWorkLifecyclePolicy lifecyclePolicy,
     ILogger<UnitOfWork>? logger = null) : IUnitOfWorkManager
 {
-    static readonly AsyncLocal<IUnitOfWork> _current = new();
+    static readonly AsyncLocal<CurrentFrame?> _current = new();
     readonly ConcurrentDictionary<CorrelationId, IUnitOfWork> _unitsOfWork = new();
 
     /// <summary>
@@ -36,10 +36,10 @@ public class UnitOfWorkManager(
     }
 
     /// <inheritdoc/>
-    public IUnitOfWork Current => _current.Value ?? throw new NoUnitOfWorkHasBeenStarted();
+    public IUnitOfWork Current => OpenFrame()?.UnitOfWork ?? throw new NoUnitOfWorkHasBeenStarted();
 
     /// <inheritdoc/>
-    public bool HasCurrent => _current.Value is not null;
+    public bool HasCurrent => OpenFrame() is not null;
 
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
@@ -57,7 +57,7 @@ public class UnitOfWorkManager(
             logger);
         ImmediateAppendGuard.RequireUnit(unitOfWork);
         ReadProtectionGuard.RequireUnit(unitOfWork);
-        _current.Value = unitOfWork;
+        _current.Value = new CurrentFrame(unitOfWork, OpenFrame());
         _unitsOfWork[correlationId] = unitOfWork;
         return unitOfWork;
     }
@@ -67,20 +67,27 @@ public class UnitOfWorkManager(
     {
         ImmediateAppendGuard.RequireUnit(unitOfWork);
         ReadProtectionGuard.RequireUnit(unitOfWork);
-        _current.Value = unitOfWork;
+        _current.Value = new CurrentFrame(unitOfWork, OpenFrame());
         _unitsOfWork[unitOfWork.CorrelationId] = unitOfWork;
         unitOfWork.OnCompleted(UnitOfWorkCompleted);
     }
 
-    void UnitOfWorkCompleted(IUnitOfWork unitOfWork)
+    /// <summary>
+    /// Gets the nearest still-open unit: a completed unit is skipped so the unit that was current when it began
+    /// becomes current again, in the flow that began it, without relying on the completion callback's flow.
+    /// </summary>
+    /// <returns>The nearest open frame, if any.</returns>
+    static CurrentFrame? OpenFrame()
     {
-        _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
-
-        // Only clear Current when the completing unit is the current one - clearing unconditionally
-        // would wipe a different unit that became current while this one was still live.
-        if (ReferenceEquals(_current.Value, unitOfWork))
+        var frame = _current.Value;
+        while (frame?.UnitOfWork.IsCompleted == true)
         {
-            _current.Value = null!;
+            frame = frame.Previous;
         }
+        return frame;
     }
+
+    void UnitOfWorkCompleted(IUnitOfWork unitOfWork) => _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
+
+    sealed record CurrentFrame(IUnitOfWork UnitOfWork, CurrentFrame? Previous);
 }
