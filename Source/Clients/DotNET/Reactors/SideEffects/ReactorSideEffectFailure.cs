@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 
@@ -71,11 +72,22 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
     /// <param name="appendResult">The failed <see cref="IAppendResult"/> (e.g. <see cref="AppendResult"/> or <see cref="AppendManyResult"/>).</param>
     /// <param name="targetEventSourceIds">The <see cref="EventSourceId"/> the failed side-effect events were being appended to.</param>
     /// <returns>A <see cref="ReactorSideEffectFailure"/> containing the append failure details.</returns>
-    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult, IEnumerable<EventSourceId> targetEventSourceIds)
+    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult, IEnumerable<EventSourceId> targetEventSourceIds) =>
+        FromAppendResult(appendResult, targetEventSourceIds, null);
+
+    /// <summary>
+    /// Creates a <see cref="ReactorSideEffectFailure"/> from a failed append operation, adding the reactor remedy when
+    /// a keyed event was refused because the reactor produced different output for a delivery that was already appended.
+    /// </summary>
+    /// <param name="appendResult">The failed <see cref="IAppendResult"/> (e.g. <see cref="AppendResult"/> or <see cref="AppendManyResult"/>).</param>
+    /// <param name="targetEventSourceIds">The <see cref="EventSourceId"/> the failed side-effect events were being appended to.</param>
+    /// <param name="reactorContext">The <see cref="ReactorContext"/> of the delivery, or <see langword="null"/> to add no remedy.</param>
+    /// <returns>A <see cref="ReactorSideEffectFailure"/> containing the append failure details.</returns>
+    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult, IEnumerable<EventSourceId> targetEventSourceIds, ReactorContext? reactorContext)
     {
         var constraintViolations = appendResult.ConstraintViolations.Select(cv =>
             new ReactorConstraintViolation(cv.EventTypeId, cv.Message));
-        var errors = appendResult.Errors.Select(e => e.Value);
+        var errors = appendResult.Errors.Select(e => e.Value).Concat(RemedyFor(appendResult, reactorContext)).ToList();
 
         var failure = new AppendFailure(
             constraintViolations,
@@ -84,5 +96,27 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
             targetEventSourceIds.Distinct().ToList());
 
         return new([failure]);
+    }
+
+    static IEnumerable<string> RemedyFor(IAppendResult appendResult, ReactorContext? reactorContext)
+    {
+        var conflicts = appendResult switch
+        {
+            AppendResult single => single.IdempotencyConflicts,
+            AppendManyResult many => many.IdempotencyConflicts,
+            _ => []
+        };
+
+        if (reactorContext?.Delivery is not { } delivery ||
+            !conflicts.Any(_ => _.Reason is IdempotencyConflictReason.Content or IdempotencyConflictReason.Generation))
+        {
+            yield break;
+        }
+
+        var eventSequence = reactorContext.Reactor.GetType().GetCustomAttribute<ReactorAttribute>()?.EventSequenceId;
+        var eventSequenceArgument = eventSequence is null ? string.Empty : $", \"{eventSequence}\"";
+        yield return $"Reactor '{delivery.Reactor}' produced different output for a delivery whose effects are already appended. " +
+            $"To append the delivery's output again under a new key space, raise the reactor's effect epoch with [Reactor(\"{delivery.Reactor}\"{eventSequenceArgument}, effectEpoch: {delivery.EffectEpoch + 1})], " +
+            "keeping its id and event sequence unchanged, and recover the partition; to keep replays from running the handler again, mark it [OnceOnly].";
     }
 }
