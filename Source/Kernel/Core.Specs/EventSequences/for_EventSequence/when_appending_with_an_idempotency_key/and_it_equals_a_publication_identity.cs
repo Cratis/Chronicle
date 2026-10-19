@@ -9,7 +9,7 @@ public class and_it_equals_a_publication_identity : given.an_event_sequence_with
 {
     void Establish() => _durable["one"] = new(EventSequenceNumber.First, "publication-fingerprint");
     async Task Because() => _result = await AppendKeyed();
-    [Fact] void should_keep_the_identity_domains_separate() => _result.Outcome.ShouldEqual(AppendOutcome.Appended);
+    [Fact] void should_keep_the_identity_domains_separate() => _result.Outcome.ShouldEqual(AppendOutcome.Committed);
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_write_the_prefixed_identity() => _written.Single().Identity!.Id.ShouldEqual("append-key:one");
 }

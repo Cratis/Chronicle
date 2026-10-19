@@ -17,6 +17,6 @@ public class and_storage_reports_events_not_committed : given.an_event_sequence_
     });
     async Task Because() => _result = await AppendKeyed();
     [Fact] void should_retry_once() => _writes.ShouldEqual(2);
-    [Fact] void should_append() => _result.Outcome.ShouldEqual(AppendOutcome.Appended);
+    [Fact] void should_append() => _result.Outcome.ShouldEqual(AppendOutcome.Committed);
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
 }

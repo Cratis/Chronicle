@@ -54,4 +54,20 @@ internal static class AppendResultConverters
                 ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent
             } : null
         };
+
+    /// <summary>
+    /// Converts an <see cref="IdempotencyKeyConflict"/> to its <see cref="Contracts.Sequences.IdempotencyKeyConflict"/> representation.
+    /// </summary>
+    /// <param name="conflict">The <see cref="IdempotencyKeyConflict"/> to convert.</param>
+    /// <returns>The converted <see cref="Contracts.Sequences.IdempotencyKeyConflict"/>.</returns>
+    public static Contracts.Sequences.IdempotencyKeyConflict ToContract(this IdempotencyKeyConflict conflict) =>
+        new()
+        {
+            Key = conflict.Key,
+            ExistingSequenceNumber = conflict.ExistingSequenceNumber,
+            StoredEventTypeId = conflict.StoredEventTypeId,
+            StoredEventTypeGeneration = conflict.StoredEventTypeGeneration,
+            RequestedGeneration = conflict.RequestedGeneration,
+            Reason = (Contracts.EventSequences.IdempotencyConflictReason)conflict.Reason
+        };
 }

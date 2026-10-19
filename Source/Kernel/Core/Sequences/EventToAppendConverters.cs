@@ -62,4 +62,20 @@ internal static class EventToAppendConverters
             @event.Subject,
             @event.Causation?.ToApi(),
             @event.EventSource);
+
+    /// <summary>
+    /// Converts a keyed event source event from the generated contract.
+    /// </summary>
+    /// <param name="event">The contract event.</param>
+    /// <returns>The converted event.</returns>
+    public static KeyedEventForEventSourceId ToApi(this Contracts.Sequences.KeyedEventForEventSourceId @event) =>
+        new(@event.Event.ToApi(), @event.IdempotencyKey);
+
+    /// <summary>
+    /// Converts a keyed named-tag event source event from the generated contract.
+    /// </summary>
+    /// <param name="event">The contract event.</param>
+    /// <returns>The converted event.</returns>
+    public static KeyedEventForEventSourceIdWithNamedTags ToApi(this Contracts.Sequences.KeyedEventForEventSourceIdWithNamedTags @event) =>
+        new(@event.Event.ToApi(), @event.IdempotencyKey);
 }
