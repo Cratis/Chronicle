@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// <param name="tableName">The name of the table (read model container name).</param>
 /// <param name="columns">The columns derived from the read model's schema.</param>
 /// <param name="migrator">The <see cref="IReadModelMigrator"/> for managing table migrations.</param>
-public class ReadModelDbContext(
+public partial class ReadModelDbContext(
     DbContextOptions<ReadModelDbContext> options,
     string tableName,
     IReadOnlyList<ProjectedColumn> columns,
@@ -50,13 +50,11 @@ public class ReadModelDbContext(
         value => DecimalColumnValues.ForSqlServer(value),
         value => DecimalColumnValues.FromSqlServer(value));
 
-    static readonly ValueConverter<decimal, double> _sqliteDecimalConverter = new(
-        value => (double)value,
-        value => FromSqliteDecimal(value));
-
     static readonly ValueConverter<Guid, string> _sqliteGuidConverter = new(
         v => v.ToString("D"),
         v => Guid.Parse(v));
+
+    readonly DbContextOptions _mappingOptions = options;
 
     /// <summary>
     /// Gets the JSON serializer options used to round-trip JSON column values.
@@ -86,6 +84,7 @@ public class ReadModelDbContext(
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
+        await PrepareColumnMappings();
         await migrator.EnsureTableMigrated(tableName, this);
     }
 
@@ -152,11 +151,12 @@ public class ReadModelDbContext(
                     {
                         DatabaseType.PostgreSql => "NUMERIC",
                         DatabaseType.SqlServer => "DECIMAL(38,18)",
-                        _ => "NUMERIC"
+                        _ => TextDecimalColumns.Contains(column.Name) ? "TEXT" : "NUMERIC"
                     });
                     if (databaseType == DatabaseType.Sqlite)
                     {
-                        propertyBuilder.HasConversion(_sqliteDecimalConverter);
+                        if (TextDecimalColumns.Contains(column.Name)) propertyBuilder.HasConversion(_sqliteTextDecimalConverter);
+                        else propertyBuilder.HasConversion(_sqliteDecimalConverter);
                     }
                     if (databaseType == DatabaseType.SqlServer)
                     {
@@ -181,13 +181,6 @@ public class ReadModelDbContext(
                 entity.HasKey(keyColumn.Name).HasName(PrimaryKeyNames.For(databaseType, tableName));
             }
         });
-    }
-
-    static decimal FromSqliteDecimal(double value)
-    {
-        if (value >= (double)decimal.MaxValue) return decimal.MaxValue;
-        if (value <= (double)decimal.MinValue) return decimal.MinValue;
-        return (decimal)value;
     }
 
     static string GetJsonColumnType(DatabaseType databaseType) => databaseType switch
