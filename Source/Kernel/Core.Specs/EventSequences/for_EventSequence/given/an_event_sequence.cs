@@ -132,7 +132,9 @@ public class an_event_sequence : Specification
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(callInfo => new ConstraintValidationContext(
                 [_recordingValidator],
                 callInfo.ArgAt<EventSourceId>(0),

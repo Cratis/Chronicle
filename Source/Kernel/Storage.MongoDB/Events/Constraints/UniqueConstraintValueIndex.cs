@@ -12,4 +12,5 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <param name="Value">The retained hashed value.</param>
 /// <param name="EventSourceId">The owning event source.</param>
 /// <param name="SequenceNumber">The sequence number of the claim.</param>
-public record UniqueConstraintValueIndex(UniqueConstraintValue Value, EventSourceId EventSourceId, EventSequenceNumber SequenceNumber);
+/// <param name="Subject">The subject whose personal data the value derives from, or null.</param>
+public record UniqueConstraintValueIndex(UniqueConstraintValue Value, EventSourceId EventSourceId, EventSequenceNumber SequenceNumber, string? Subject = null);

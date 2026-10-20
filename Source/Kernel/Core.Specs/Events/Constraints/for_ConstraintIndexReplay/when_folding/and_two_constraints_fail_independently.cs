@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using NSubstitute.Extensions;
@@ -13,7 +14,7 @@ public class and_two_constraints_fail_independently : given.a_replay
     {
         Event(0, "source", "Claimed", "value");
         Event(1, "source", "Closed");
-        _unique.Configure().Save("source", _definition, 0, Hash("value"), string.Empty, Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("claim failed")));
+        _unique.Configure().Save("source", _definition, 0, Hash("value"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("claim failed")));
         _closureStorage = Substitute.For<IClosedStreamsConstraintStorage>();
         _closureStorage.Close(Arg.Any<ClosedStream>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new TimeoutException("closure failed")));
         Start();
