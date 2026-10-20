@@ -23,6 +23,7 @@ using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
 using Orleans.Streams;
@@ -73,10 +74,15 @@ public class an_observer : Specification
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
 
+    protected virtual Observers CreateWebhookRetryConfig() => _observersConfig;
+
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
     void AddServices(TestKitSilo silo)
     {
+        var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
+        options.CurrentValue.Returns(new ChronicleOptions { Webhooks = new() { Retry = CreateWebhookRetryConfig() } });
+        silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
         silo.AddService(_eventCompliance);

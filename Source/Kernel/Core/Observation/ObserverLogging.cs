@@ -44,6 +44,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Webhook partition {Partition} attempt {Attempt} failed: RetryBackoff until {Deadline}")]
     internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, Key partition, int attempt, DateTimeOffset deadline);
 
+    [LoggerMessage(LogLevel.Warning, "Webhook partition {Partition} parked after exhausting its retry budget of {Budget}")]
+    internal static partial void WebhookRetryBudgetExhausted(this ILogger<Observer> logger, Key partition, TimeSpan budget);
+
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 

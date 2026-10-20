@@ -41,7 +41,7 @@ public partial class Observer
         try
         {
             if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
-            var config = await configurationProvider.GetFor(_observerKey);
+            var config = await GetRetryConfiguration();
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
             logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
@@ -72,7 +72,8 @@ public partial class Observer
                 }
                 else if (!quarantineObserver)
                 {
-                    if (config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts)
+                    if ((config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts) &&
+                        (!webhook || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero))
                     {
                         retryDelayToRegister = webhook ? SetWebhookRetryBackoff(failure, config, sequenceNumber) : GetNextRetryDelay(failure, config);
                     }
@@ -326,13 +327,64 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
+    Task<Observers> GetRetryConfiguration() =>
+        typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+            ? Task.FromResult(optionsMonitor.CurrentValue.Webhooks.Retry)
+            : configurationProvider.GetFor(_observerKey);
+
+    TimeSpan GetRemainingRetryBudget(FailedPartition failure, Observers config) =>
+        config.RetryBudget <= TimeSpan.Zero
+            ? TimeSpan.MaxValue
+            : config.RetryBudget - (DateTimeOffset.UtcNow - failure.Attempts.Skip(failure.AttemptsBeforeBudgetReset).First().Occurred);
+
+    async Task<bool> ParkExpiredWebhookRetry(FailedPartition failure, Observers config)
+    {
+        if (!typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) ||
+            failure.AttemptsInCurrentBudget == 0 || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        bool quarantineObserver;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            failures.State.Quarantine(failure.Partition);
+            failure.Deferral = null;
+            _metrics?.PartitionQuarantined();
+            quarantineObserver = ShouldQuarantineObserver(config);
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+        logger.WebhookRetryBudgetExhausted(failure.Partition, config.RetryBudget);
+        await RemoveReminder(failure);
+        if (quarantineObserver)
+        {
+            await TransitionTo<QuarantinedObserver>();
+        }
+
+        return true;
+    }
+
     TimeSpan SetWebhookRetryBackoff(FailedPartition failure, Observers config, EventSequenceNumber sequenceNumber)
     {
         var now = DateTimeOffset.UtcNow;
         var maximum = TimeSpan.FromSeconds(Math.Max(1, config.MaximumBackoffDelay));
-        var basis = Math.Min(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget), maximum.TotalSeconds);
+        var schedule = config.BackoffScheduleSeconds.Count > 0 ? config.BackoffScheduleSeconds : Configuration.Webhooks.DefaultBackoffScheduleSeconds;
+        double basis = schedule[Math.Clamp(failure.AttemptsInCurrentBudget - 1, 0, schedule.Count - 1)];
+        basis = Math.Min(basis, maximum.TotalSeconds);
         var jitter = 0.8 + (Random.Shared.NextDouble() * 0.4);
         var delay = TimeSpan.FromSeconds(Math.Clamp(basis * jitter, 0.001, maximum.TotalSeconds));
+        var remaining = GetRemainingRetryBudget(failure, config);
+        if (delay > remaining)
+        {
+            delay = remaining > TimeSpan.Zero ? remaining : TimeSpan.FromMilliseconds(1);
+        }
         failure.Deferral = new(Guid.NewGuid(), PartitionDeferralReason.RetryBackoff, now, now + delay, sequenceNumber);
         logger.WebhookRetryScheduled(failure.Partition, failure.AttemptsInCurrentBudget, failure.Deferral.Until);
         return delay;
@@ -363,7 +415,7 @@ public partial class Observer
             return;
         }
 
-        var config = await configurationProvider.GetFor(_observerKey);
+        var config = await GetRetryConfiguration();
         var retryDelay = GetNextRetryDelay(failure, config);
         await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
     }
@@ -438,7 +490,13 @@ public partial class Observer
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (!await IsDeferralDue(failedPartition)) return;
+        if (failedPartition.IsQuarantined ||
+            await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
+            !await IsDeferralDue(failedPartition))
+        {
+            return;
+        }
+
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
         var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
@@ -454,7 +512,7 @@ public partial class Observer
     /// <param name="config">The <see cref="Observers"/> configuration holding the thresholds.</param>
     /// <returns>True when the observer should be quarantined, false if not.</returns>
     /// <remarks>
-    /// A partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
+    /// For non-webhook observers, a partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
     /// and needs an operator to undo, which is the right answer for an observer that is wrong and the wrong answer
     /// for one that is only waiting on a congested kernel - the congestion is transient and takes the retries with it
     /// when it clears. Counting timeouts would let a busy period take healthy projections out of service, and the
@@ -463,7 +521,7 @@ public partial class Observer
     bool ShouldQuarantineObserver(Observers config)
     {
         var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-        var failedPartitionCount = Failures.Partitions.Count(_ => _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout && (!webhook || _.IsQuarantined));
+        var failedPartitionCount = Failures.Partitions.Count(_ => webhook ? _.IsQuarantined : _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout);
         if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
         {
             logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);
@@ -481,7 +539,7 @@ public partial class Observer
             var failedPartitionRatio = totalObservedPartitions == 0
                 ? 0.0
                 : (double)failedPartitionCount / totalObservedPartitions;
-            if (failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
+            if (webhook ? failedPartitionRatio >= config.QuarantineOnFailedPartitionPercentage : failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
             {
                 logger.ObserverFailedPartitionPercentageThresholdExceeded(failedPartitionRatio, config.QuarantineOnFailedPartitionPercentage);
                 return true;

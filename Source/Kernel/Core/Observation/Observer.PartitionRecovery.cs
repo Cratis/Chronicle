@@ -72,7 +72,7 @@ public partial class Observer
             }
         }
 
-        var config = await configurationProvider.GetFor(_observerKey);
+        var config = await GetRetryConfiguration();
         var started = 0;
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
         {

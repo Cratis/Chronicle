@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -99,7 +100,10 @@ public class RetryFailedPartition(
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        return await observer.IsSubscribed() && (Request.ObserverType != ObserverType.External || await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId));
+        if (!await observer.IsSubscribed()) return false;
+        var subscription = await observer.GetSubscription();
+        return !typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType) ||
+            await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId);
     }
 
     /// <inheritdoc/>

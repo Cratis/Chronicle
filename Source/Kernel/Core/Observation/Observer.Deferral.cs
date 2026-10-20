@@ -41,14 +41,24 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
-        if (IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
-        if (!Failures.TryGet(partition, out var failure)) return episodeId is null;
-        return !failure.IsQuarantined && await IsDeferralDue(failure);
+        if (IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed) return false;
+        if (!Failures.TryGet(partition, out var failure)) return episodeId is null && deferralId is null;
+
+        // Catch-up and replay do not own the failed episode. Even after its deadline, leave delivery to the
+        // episode's recovery job: an unfenced completion must not clear or overwrite the durable resume position.
+        if (episodeId is null && deferralId is null && failure.Deferral is { } deferral)
+        {
+            await RegisterDeferralReminder(failure, deferral);
+            return false;
+        }
+
+        return IsCurrentRecovery(partition, episodeId, deferralId) && !failure.IsQuarantined &&
+            !await ParkExpiredWebhookRetry(failure, await GetRetryConfiguration()) && await IsDeferralDue(failure);
     }
 
     bool IsCurrentRecovery(Key partition, FailedPartitionId? episodeId, Guid? deferralId)
     {
-        if (!Failures.TryGet(partition, out var failure)) return episodeId is null;
+        if (!Failures.TryGet(partition, out var failure)) return episodeId is null && deferralId is null;
         return (episodeId is null || episodeId == failure.Id) && failure.Deferral?.Id == deferralId;
     }
 

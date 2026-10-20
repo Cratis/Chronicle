@@ -36,6 +36,12 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
     public Task<IImmutableList<JobStepDetails>> PrepareRecoverySteps(RetryFailedPartitionRequest request) =>
         base.PrepareSteps(request);
 
+    /// <summary>
+    /// Checks whether the persisted job can resume.
+    /// </summary>
+    /// <returns>Whether the observer permits resuming.</returns>
+    public Task<bool> CheckCanResume() => CanResume();
+
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>(ImmutableList<JobStepDetails>.Empty);

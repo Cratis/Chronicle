@@ -227,7 +227,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                if (currentState.EpisodeId is not null && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
+                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
                 {
                     return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
                 }
