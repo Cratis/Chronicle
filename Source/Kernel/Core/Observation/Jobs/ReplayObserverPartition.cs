@@ -27,6 +27,12 @@ public class ReplayObserverPartition(
     }
 
     /// <inheritdoc/>
+    protected override async Task OnBeforeResumingJobSteps()
+    {
+        await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);

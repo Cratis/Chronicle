@@ -213,6 +213,7 @@ public partial class Observer
             return;
         }
 
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 

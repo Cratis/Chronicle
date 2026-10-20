@@ -22,6 +22,12 @@ public class TestableReplayObserverPartition(
     public Type GrainType => typeof(IReplayObserverPartition);
 
     /// <summary>
+    /// Revalidates persisted replay admission before resuming job steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task ResumeForTesting() => OnBeforeResumingJobSteps();
+
+    /// <summary>
     /// Completes the partition replay with the state set by the specification.
     /// </summary>
     /// <returns>Awaitable task.</returns>
