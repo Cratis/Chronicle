@@ -35,7 +35,7 @@ public class and_replay_enters_while_the_subscriber_is_handling : given.an_obser
         var handling = _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
         _beforeReplay = _stateStorage.State;
         var replaying = _observer.Replay();
-        await _resetStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _resetStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _subscriberResult.SetResult(ObserverSubscriberResult.Ok(42UL));
         await handling;
         _releaseReset.SetResult();

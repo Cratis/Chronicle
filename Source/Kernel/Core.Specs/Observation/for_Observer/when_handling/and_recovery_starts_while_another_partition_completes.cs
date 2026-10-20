@@ -46,7 +46,7 @@ public class and_recovery_starts_while_another_partition_completes : given.an_ob
         var firstHandling = _observer.Handle(_firstPartition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
         var secondHandling = _observer.Handle(_secondPartition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
         var recovery = _observer.TransitionTo<CatchingUpInFlight>();
-        var recovering = await _jobStarting.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var recovering = await _jobStarting.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
 
         // Whichever partition starts recovery first, complete the other live Handle while that start awaits.
         var completingSubscriber = recovering == _firstPartition ? _secondSubscriber : _firstSubscriber;

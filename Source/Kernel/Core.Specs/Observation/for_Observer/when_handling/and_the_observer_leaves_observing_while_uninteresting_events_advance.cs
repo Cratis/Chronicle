@@ -31,7 +31,7 @@ public class and_the_observer_leaves_observing_while_uninteresting_events_advanc
     async Task Because()
     {
         var leaving = _observer.TransitionTo<Routing>();
-        await _unsubscribeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _unsubscribeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _observer.Handle(_partition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(EventType.Unknown, 42UL)]);
 
         _unsubscribeRelease.SetResult();
