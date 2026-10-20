@@ -86,13 +86,24 @@ public class UniqueConstraintMigrator(
     internal static string SubjectIndexName(string tableName)
     {
         var name = "IX_" + tableName + "_" + SubjectColumn;
-        if (name.Length <= MaxIdentifierLength) return name;
+        if (Encoding.UTF8.GetByteCount(name) <= MaxIdentifierLength) return name;
 
-        // PostgreSQL truncates longer identifiers, which would collide with the table's other indexes, so keep a
-        // hash of the full name where the truncation cannot remove it.
+        // PostgreSQL truncates identifiers longer than its limit in bytes, which would collide with the table's other
+        // indexes, so keep a hash of the full name where the truncation cannot remove it.
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..8];
         var suffix = "_" + hash + "_" + SubjectColumn;
-        return name[..(MaxIdentifierLength - suffix.Length)] + suffix;
+        var prefixLength = 0;
+        var prefixBytes = 0;
+        while (prefixLength < name.Length)
+        {
+            var next = char.IsSurrogatePair(name, prefixLength) ? 2 : 1;
+            var bytes = Encoding.UTF8.GetByteCount(name.AsSpan(prefixLength, next));
+            if (prefixBytes + bytes > MaxIdentifierLength - suffix.Length) break;
+            prefixBytes += bytes;
+            prefixLength += next;
+        }
+
+        return name[..prefixLength] + suffix;
     }
 
     /// <summary>
