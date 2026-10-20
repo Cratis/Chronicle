@@ -1,14 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.StateMachines;
 
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
-/// Keeps the in-flight partitions and handled-event totals that handling records while a state transition is awaiting.
+/// Keeps the positions, in-flight partitions and handled-event totals recorded while a state transition is awaiting.
 /// </summary>
 /// <remarks>
 /// The state machine replaces <see cref="ObserverState"/> with whatever a state's <c language="csharp">OnEnter</c> or <c language="csharp">OnLeave</c>
@@ -16,7 +15,7 @@ namespace Cratis.Chronicle.Observation;
 /// flushes and partition replays run while such a hook awaits - a transition started by an interleaving catch-up
 /// report does not block them - so without this every in-flight marker cleared and every handled count added in that
 /// window is overwritten by the snapshot. The marker then stays persisted for good and the totals fall short (#4972).
-/// No state owns these fields, so a hook that left them as it found them takes what handling recorded meanwhile.
+/// Position ownership is resolved per field, recovery relinquishes markers by set difference, and replay owns its reset.
 /// </remarks>
 public partial class Observer
 {
@@ -38,28 +37,6 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Determines whether the transition hook decided the handled-event totals itself.
-    /// </summary>
-    /// <remarks>
-    /// The totals are the hook's when they differ from the handed snapshot by value, or when the hook started a replay.
-    /// Reference equality is not enough: with zero handed the dictionary is the shared empty singleton, so a replay's
-    /// reset (a zero count and an empty dictionary) is indistinguishable from the hook having left them alone, and counts
-    /// recorded meanwhile would wrongly survive the reset. Starting a replay is the one transition that resets the
-    /// totals, so entering it is what marks them as the hook's even when the reset changed nothing by value.
-    /// </remarks>
-    /// <param name="handed">The state the hook was handed.</param>
-    /// <param name="returned">The state the hook returned.</param>
-    /// <returns>True if the hook owns the totals, false if not.</returns>
-    static bool HookOwnsHandledCounts(ObserverState handed, ObserverState returned) =>
-        (returned.IsReplaying && !handed.IsReplaying) ||
-        returned.HandledEventCount != handed.HandledEventCount ||
-        !HasSameCounts(returned.HandledEventCountPerEventType, handed.HandledEventCountPerEventType);
-
-    static bool HasSameCounts(IReadOnlyDictionary<EventTypeId, EventCount> left, IReadOnlyDictionary<EventTypeId, EventCount> right) =>
-        ReferenceEquals(left, right) ||
-        (left.Count == right.Count && left.All(_ => right.TryGetValue(_.Key, out var count) && count == _.Value));
-
-    /// <summary>
     /// Remembers the state a transition hook is about to be handed.
     /// </summary>
     /// <remarks>
@@ -74,7 +51,7 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Notes that in-flight partitions or handled-event totals changed, so a transition hook awaiting meanwhile keeps them.
+    /// Notes that positions, in-flight partitions or handled-event totals changed during an awaiting transition hook.
     /// </summary>
     void RecordedHandlingState()
     {
@@ -101,21 +78,6 @@ public partial class Observer
             return;
         }
 
-        var returned = State;
-        if (ReferenceEquals(returned.InFlightPartitions, handed.InFlightPartitions))
-        {
-            returned = returned with { InFlightPartitions = recorded.InFlightPartitions };
-        }
-
-        if (!HookOwnsHandledCounts(handed, returned))
-        {
-            returned = returned with
-            {
-                HandledEventCount = recorded.HandledEventCount,
-                HandledEventCountPerEventType = recorded.HandledEventCountPerEventType
-            };
-        }
-
-        State = returned;
+        State = ObserverTransitionStateMerge.Merge(handed, recorded, State);
     }
 }
