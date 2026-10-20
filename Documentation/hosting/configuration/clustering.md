@@ -83,8 +83,19 @@ membership. Use an isolated `Localhost` cluster for development resets. To repla
 | advertisedIP | string | | The IP address the silo advertises to other cluster members. Resolved from the machine's host name when not set; set it explicitly (e.g. `127.0.0.1`) when running multiple nodes on one machine. |
 | defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` or `Sql` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
 | defunctSiloExpiration | timespan | 03:00:00 | The age at which a defunct membership entry is removed by the sweep. A node never reuses a silo identity, so dead entries only have diagnostic value. |
+| probeTimeout | timespan | Orleans default | Interval between liveness probes and the timeout for each probe. Applies to `MongoDB` and `Sql` clustering. |
+| numMissedProbesLimit | number | Orleans default | Missed probes before a silo is suspected to be down. Applies to `MongoDB` and `Sql` clustering. |
+| numVotesForDeathDeclaration | number | Orleans default | Non-expired votes needed to declare a silo down. Must not exceed `numProbedSilos`. Applies to `MongoDB` and `Sql` clustering. |
+| tableRefreshTimeout | timespan | Orleans default | Interval between fetching membership table updates. Applies to `MongoDB` and `Sql` clustering. |
+| iAmAliveTablePublishTimeout | timespan | Orleans default | Interval between publishing this silo's heartbeat to the membership table. Applies to `MongoDB` and `Sql` clustering. |
+| numProbedSilos | number | Orleans default | Number of other silos each silo probes for liveness. Applies to `MongoDB` and `Sql` clustering. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
+
+The optional membership settings above keep the Orleans defaults when omitted. Time spans use
+`hh:mm:ss` format. Configure the same values on every node. Shorter timeouts detect failures sooner,
+but can also mark healthy nodes as failed during network delays or heavy load. Orleans validates the
+membership options at startup; these settings do not change localhost clustering.
 
 ## Configuration examples
 

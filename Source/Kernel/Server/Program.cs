@@ -159,13 +159,7 @@ hostBuilder
 
             // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
             // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
-            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options =>
-            {
-                options.DefunctSiloCleanupPeriod = clustering.DefunctSiloCleanupPeriod > TimeSpan.Zero
-                    ? clustering.DefunctSiloCleanupPeriod
-                    : null;
-                options.DefunctSiloExpiration = clustering.DefunctSiloExpiration;
-            });
+            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
 
             if (clustering.AdvertisedIP is { } advertisedIP)
             {
