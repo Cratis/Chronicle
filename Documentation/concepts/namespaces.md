@@ -1,7 +1,7 @@
 ---
+title: Namespaces and data isolation
 description: Chronicle namespaces segregate data within a single event store, for example per tenant in a multi-tenant system, and determine database names.
 ---
-# Namespaces
 
 Chronicle has been designed with the concept of namespaces from the ground up.
 Namespaces provide a way to provide segregation of data in the same event store.
@@ -14,6 +14,8 @@ When not specified, Chronicle will use the **Default** namespace. For how namesp
 > In cloud terminology it is often linked to Software as a Service offerings were companies
 > can sign up to use a system. The system being the same for all these companies, or tenants,
 > but all their data segregated from each other.
+
+For client usage and namespace removal, see [Manage namespaces](../namespaces/index.md).
 
 ## Subscription Readiness
 
