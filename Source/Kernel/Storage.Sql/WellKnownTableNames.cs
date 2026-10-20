@@ -9,6 +9,16 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The Orleans membership table versions.
+    /// </summary>
+    public const string MembershipVersions = "MembershipVersions";
+
+    /// <summary>
+    /// The Orleans silo membership entries.
+    /// </summary>
+    public const string MembershipEntries = "MembershipEntries";
+
+    /// <summary>
     /// The table holding retained alert incidents.
     /// </summary>
     public const string AlertIncidents = "AlertIncidents";
