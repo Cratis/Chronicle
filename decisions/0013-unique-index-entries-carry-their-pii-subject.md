@@ -11,7 +11,7 @@ applies-to:
   - Source/Kernel/Core/Events/Constraints/**
   - Source/Kernel/Core/EventSequences/**
   - Source/Kernel/Core/Compliance/GDPR/PIIManager.cs
-  - Source/Kernel/Core/Patches/19.100.0/**
+  - Source/Kernel/Core/Patches/19.101.0/**
   - Source/Kernel/Storage/Events/Constraints/**
   - Source/Kernel/Storage.InMemory/Events/Constraints/**
   - Source/Kernel/Storage.MongoDB/Events/Constraints/**
@@ -51,7 +51,7 @@ and the event store cannot be queried by subject.
    nullable `Subject` column, with an index, to both table shapes. Existing tables gain the column through the
    table migrator's upgrade path, which only adds the column if it is missing. The in-memory store keeps the
    subject with each value.
-5. **Entries written before this release are backfilled by a reindex.** Patch `19.100.0`
+5. **Entries written before this release are backfilled by a reindex.** Patch `19.101.0`
    (`RecordSubjectsOnUniqueConstraintClaims`) starts the 0008 reindex job, in every namespace of every event store,
    for each unique constraint that covers a personal-data property in any generation of its event types. It
    re-derives each entry from the event log with its subject. Constraints without personal data are left alone; the
@@ -75,7 +75,7 @@ and the event store cannot be queried by subject.
 ## Consequences
 
 - An erased subject's values become available again as soon as the erasure succeeds. This is intended.
-- Entries written before this release gain their subject when the `19.100.0` backfill reindex completes; until it
+- Entries written before this release gain their subject when the `19.101.0` backfill reindex completes; until it
   does, erasure cannot find them. Values of subjects erased before this release become claimable again then.
 - While the backfill rebuilds a constraint, governed appends to it are refused.
 - An append that obtained the subject's key before the erasure fence, and writes its index entry after the

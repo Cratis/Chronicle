@@ -15,5 +15,5 @@ public class when_comparing_the_version_with_the_previous_rebuild : given.a_reco
         _previousPatch = new RebuildConstraintIndexesForDecryptedValues(_storage, _grainFactory, Substitute.For<ILogger<RebuildConstraintIndexesForDecryptedValues>>());
 
     [Fact] void should_apply_after_the_previous_rebuild() => (_patch.Version > _previousPatch.Version).ShouldBeTrue();
-    [Fact] void should_have_the_expected_version() => _patch.Version.ShouldEqual(new SemanticVersion(19, 100, 0));
+    [Fact] void should_have_the_expected_version() => _patch.Version.ShouldEqual(new SemanticVersion(19, 101, 0));
 }

@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Patches;
 public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFactory grainFactory, ILogger<RecordSubjectsOnUniqueConstraintClaims> logger) : ICanApplyPatch
 {
     /// <inheritdoc/>
-    public SemanticVersion Version => new(19, 100, 0);
+    public SemanticVersion Version => new(19, 101, 0);
 
     /// <inheritdoc/>
     public async Task Up()
