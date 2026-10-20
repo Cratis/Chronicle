@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
@@ -22,6 +24,9 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     protected IObserver _observer;
     protected IConnectedClients _connectedClients;
     protected ConnectedClient _client;
+    protected EventType _storedEventType;
+    protected EventType _connectionEventType;
+    protected ReactorDefinition _connectionDefinition;
 
     async Task Establish()
     {
@@ -43,25 +48,31 @@ public class a_reactor_grain_with_a_stored_definition : Specification
         _client = new ConnectedClient { ConnectionId = TheConnection, Version = "1.0.0" };
         _connectedClients = Substitute.For<IConnectedClients>();
         _connectedClients.GetConnectedClient(_client.ConnectionId).Returns(_client);
+        _connectedClients.IsConnected(_client.ConnectionId).Returns(true);
         _silo.AddProbe(_ => _connectedClients);
 
         _observer = Substitute.For<IObserver>();
         _silo.AddProbe(_ => _observer);
 
-        var definition = new ReactorDefinition("the-reactor", ReactorOwner.Client, EventSequenceId.Log, []);
+        // The stored definition is shared by every connection registering the reactor; here another connection - another
+        // client version, as during a rolling deployment - registered last, with different event types.
+        _storedEventType = new EventType("stored-event-type", EventTypeGeneration.First);
+        _connectionEventType = new EventType("connection-event-type", EventTypeGeneration.First);
+        var storedDefinition = new ReactorDefinition("the-reactor", ReactorOwner.Client, EventSequenceId.Log, [new(_storedEventType, WellKnownExpressions.EventSourceId)]);
+        _connectionDefinition = new ReactorDefinition("the-reactor", ReactorOwner.Client, EventSequenceId.Log, [new(_connectionEventType, WellKnownExpressions.EventSourceId)]);
         var storage = Substitute.For<IStorage<ReactorDefinition>>();
-        storage.State = definition;
+        storage.State = storedDefinition;
         _silo.Options.StorageFactory = _ => storage;
 
         var key = new ConnectedObserverKey("the-reactor", "the-event-store", "the-namespace", EventSequenceId.Log, TheConnection);
 
-        // A fresh activation, as after losing the one the client registered with - the definition is all it has.
+        // A fresh activation, as after losing the one the client registered with.
         _grain = await _silo.CreateGrainAsync<Reactor>(key.ToString());
     }
 
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReactorObserverSubscriber>(
         ObserverType.Reactor,
-        Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
         Arg.Any<SiloAddress>(),
         Arg.Is<ConnectedClient>(client => client.ConnectionId == _client.ConnectionId),
         Arg.Any<bool>(),

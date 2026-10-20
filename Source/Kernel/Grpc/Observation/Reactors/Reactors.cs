@@ -142,15 +142,16 @@ internal sealed class Reactors(
                     registration.Namespace,
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
+                var definition = registration.Reactor.ToChronicle();
                 using (var span = activitySource.Register())
                 {
                     span?.Activity?.Tag(key, ObserverType.Reactor);
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
-                    await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
+                    await clientObserver.SetDefinitionAndSubscribe(definition);
                 }
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
-                    clientObserver.KeepSubscription,
+                    () => clientObserver.KeepSubscription(definition),
                     TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                     registration.ConnectionId,
                     logger,

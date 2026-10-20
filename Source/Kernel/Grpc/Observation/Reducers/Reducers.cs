@@ -198,10 +198,10 @@ internal sealed class Reducers(
                         registration.Namespace,
                         (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
+                    var reducerDefinition = registration.Reducer.ToChronicle();
                     using (var span = activitySource.Register())
                     {
                         span?.Activity?.Tag(key, ObserverType.Reducer);
-                        var reducerDefinition = registration.Reducer.ToChronicle();
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
                         try
@@ -215,7 +215,7 @@ internal sealed class Reducers(
                     }
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(
-                        clientObserver!.KeepSubscription,
+                        () => clientObserver!.KeepSubscription(reducerDefinition),
                         TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                         registration.ConnectionId,
                         logger,

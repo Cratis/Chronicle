@@ -143,9 +143,9 @@ public class Reducer(
     }
 
     /// <inheritdoc/>
-    public async Task KeepSubscription()
+    public async Task KeepSubscription(ReducerDefinition definition)
     {
-        if (!State.IsActive)
+        if (!definition.IsActive)
         {
             return;
         }
@@ -155,15 +155,20 @@ public class Reducer(
 
         if (!await _observer.KnowsClient(_observerKey.ConnectionId))
         {
+            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            {
+                return;
+            }
+
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
                 ObserverType.Reducer,
-                State.EventTypes.Select(_ => _.EventType).ToArray(),
+                definition.EventTypes.Select(_ => _.EventType).ToArray(),
                 localSiloDetails.SiloAddress,
                 connectedClient,
-                filters: State.Filters,
-                generationDelivery: State.GenerationDelivery);
+                filters: definition.Filters,
+                generationDelivery: definition.GenerationDelivery);
         }
 
         _subscribed = true;

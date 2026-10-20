@@ -7,7 +7,7 @@ public class and_the_observer_lost_the_client : given.a_reactor_grain_with_a_sto
 {
     void Establish() => _observer.KnowsClient(_client.ConnectionId).Returns(false);
 
-    Task Because() => _grain.KeepSubscription();
+    Task Because() => _grain.KeepSubscription(_connectionDefinition);
 
-    [Fact] Task should_restore_the_subscription_of_the_client() => WasRestored(1);
+    [Fact] Task should_restore_the_subscription_with_the_definition_of_its_own_connection() => WasRestored(1);
 }
