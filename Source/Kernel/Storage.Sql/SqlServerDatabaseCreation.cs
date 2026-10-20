@@ -13,8 +13,20 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal static class SqlServerDatabaseCreation
 {
     /// <summary>
+    /// SQL Server errors meaning the identity may not use the master database at all: login failed (18456), cannot open
+    /// the database requested by the login (4060), and the server principal cannot access the database (916).
+    /// </summary>
+    static readonly HashSet<int> _masterUnavailable = [18456, 4060, 916];
+
+    /// <summary>
     /// Serializes database existence checks and creation across kernel processes, before the target can be opened.
     /// </summary>
+    /// <remarks>
+    /// The lock lives in master. An identity that may not use master - a contained database user, common with Azure SQL
+    /// and least-privilege logins - cannot take it, and could not create a database either; for it the existence check
+    /// and creation run without the lock, exactly as they did before the lock existed. The existence check only opens
+    /// the target, so a database that is already provisioned keeps working.
+    /// </remarks>
     /// <param name="connectionString">The target connection string.</param>
     /// <param name="prepareConnection">Prepares the connection with its resolved identity.</param>
     /// <param name="create">The existence check and optional creation.</param>
@@ -26,7 +38,16 @@ internal static class SqlServerDatabaseCreation
         builder.InitialCatalog = "master";
         await using var connection = new SqlConnection(builder.ConnectionString);
         await prepareConnection(connection);
-        await connection.OpenAsync();
+        try
+        {
+            await connection.OpenAsync();
+        }
+        catch (SqlException ex) when (_masterUnavailable.Contains(ex.Number))
+        {
+            await create();
+            return;
+        }
+
         var creationLock = SqlServerDatabaseSchemaLock.Instance;
         await creationLock.Acquire(connection, resource, DatabaseSchemaLock.DefaultTimeout);
         try

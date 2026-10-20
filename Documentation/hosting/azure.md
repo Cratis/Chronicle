@@ -67,6 +67,7 @@ Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authenticati
 - `Scope` is the resolver API's scope. `ClientId` selects the identity that calls the resolver, not the database identity.
 - Do not also set an `Authorization` header: both would supply the bearer token, and the resolver rejects that configuration.
 - `CreateIfMissing=false` stops Chronicle from creating databases, so a database your platform has not provisioned fails with a clear error.
+- With `CreateIfMissing=true` on SQL Server, kernels coordinate database creation through a lock in `master`. An identity that cannot open `master`, such as a contained database user, skips that lock and only checks that its database exists. It cannot create a missing database, so provision those databases up front.
 
 [Authenticate the resolver](configuration/storage-connection-resolution.md#authenticate-the-resolver) also covers static bearer tokens and OAuth client credentials. [A database per tenant on Azure SQL](configuration/storage-connection-resolution.md#a-database-per-tenant-on-azure-sql) shows a complete resolved setup.
 
