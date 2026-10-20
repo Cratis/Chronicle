@@ -18,10 +18,11 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// ordinally on the version identifier, which every caller computes the same way from the same versions.
 /// </para>
 /// <para>
-/// An election is only final once the winner is older than <see cref="SettleTime"/>. Creation times are stamped at
-/// one-second granularity, so a concurrent write landing in the same second can be invisible to one listing and
-/// still sort first in the next. Waiting until the winner has settled means every write that could sort before it
-/// has landed and is visible, so the winner can no longer change.
+/// An election is only final once the winner was older than <see cref="SettleTime"/> when the listing that found it
+/// started. Creation times are stamped at one-second granularity, so a concurrent write landing in the same second
+/// can be invisible to one listing and still sort first in the next. A listing started after the winner settled sees
+/// every write that could sort before it, so the winner can no longer change. Settling is judged against the start
+/// of the listing, not its end, because a listing can be delivered long after it was taken.
 /// </para>
 /// </remarks>
 /// <param name="secretClient">The <see cref="SecretClient"/> to read versions through.</param>
@@ -75,19 +76,29 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
     {
         for (var round = 0; ; round++)
         {
+            var listingStarted = timeProvider.GetUtcNow();
             var elected = await FindWinner(name);
             if (elected is null)
             {
                 return null;
             }
 
-            var remaining = (elected.CreatedOn ?? DateTimeOffset.MinValue) + SettleTime - timeProvider.GetUtcNow();
-            if (remaining <= TimeSpan.Zero || round == MaximumSettleRounds)
+            var settledAt = (elected.CreatedOn ?? DateTimeOffset.MinValue) + SettleTime;
+            if (settledAt <= listingStarted || round == MaximumSettleRounds)
             {
                 return await ReadVersion(name, elected.Version);
             }
 
-            await Task.Delay(remaining, timeProvider);
+            var remaining = settledAt - timeProvider.GetUtcNow();
+            if (remaining > SettleTime)
+            {
+                remaining = SettleTime;
+            }
+
+            if (remaining > TimeSpan.Zero)
+            {
+                await Task.Delay(remaining, timeProvider);
+            }
         }
     }
 
