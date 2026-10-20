@@ -74,13 +74,13 @@ public partial class Sink
         object? coerced;
         try
         {
-            coerced = CoerceForColumn(column, unwrapped);
+            coerced = type == typeof(string) ? unwrapped.ToString() : CoerceForColumn(column, unwrapped);
         }
         catch (Exception exception) when (exception is FormatException or InvalidCastException or OverflowException or ArgumentException)
         {
             return query;
         }
-        if (coerced is null) return query;
+        if (coerced is null || !type.IsInstanceOfType(coerced)) return query;
         var entry = Expression.Parameter(typeof(DynamicReadModelEntity), "entry");
         var property = Expression.Call(typeof(EF), nameof(EF.Property), [column.ClrType], entry, Expression.Constant(column.Name));
         var constant = Expression.Convert(Expression.Constant(coerced), column.ClrType);

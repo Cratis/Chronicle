@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink;
 public abstract class when_filtering_join_candidates : Specification
 {
     const string Target = "quoted'\"\\snowman☃";
+    static readonly Guid _foreignId = Guid.Parse("ac0ef349-d07d-4a70-af32-791a23883df4");
     ISqlSinkHarness _harness;
     ISink _sink;
     readonly SqlReadCapture _capture = new();
@@ -25,19 +26,21 @@ public abstract class when_filtering_join_candidates : Specification
     IDictionary<string, object?> _matched;
     IDictionary<string, object?> _unrelated;
     bool _found;
+    string _guidJoinName;
+    string _afterIncompatibleJoin;
     protected abstract ISqlSinkHarness CreateHarness(SqlReadCapture capture);
 
     async Task Establish()
     {
         _harness = CreateHarness(_capture);
-        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"group":{"type":"integer"},"name":{"type":"string"},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"}}}}}}""");
+        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"group":{"type":"integer"},"foreignId":{"type":"string"},"name":{"type":"string"},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"}}}}}}""");
         _sink = _harness.CreateSink(new ReadModelDefinition("candidates", "candidate_rows", "Candidates", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "candidates", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
         for (var index = 0; index < 30; index++)
         {
             dynamic child = new ExpandoObject();
             child.id = index < 2 ? Target : $"child-{index}";
             child.label = index == 2 ? Target : "label";
-            await Apply(index.ToString(), new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("group", null, index < 2 ? 77 : index), new PropertyDifference("name", null, "initial"), new PropertyDifference("children", null, new List<ExpandoObject> { child })]), 1UL);
+            await Apply(index.ToString(), new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("group", null, index < 2 ? 77 : index), new PropertyDifference("foreignId", null, _foreignId.ToString()), new PropertyDifference("name", null, "initial"), new PropertyDifference("children", null, new List<ExpandoObject> { child })]), 1UL);
         }
     }
 
@@ -54,6 +57,12 @@ public abstract class when_filtering_join_candidates : Specification
         await Apply("0", new ChildRemovedFromAll("children", "id", Target, ArrayIndexers.NoIndexers), 3UL);
         _matched = (await _sink.FindOrDefault(new Key("1", ArrayIndexers.NoIndexers)))!;
         _unrelated = (await _sink.FindOrDefault(new Key("2", ArrayIndexers.NoIndexers)))!;
+        await Apply("0", new Joined(new ExpandoObject(), _foreignId, "foreignId", ArrayIndexers.NoIndexers, [new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("name", null, "guid-joined")])]), 4UL);
+        var guidParent = (IDictionary<string, object?>)(await _sink.FindOrDefault(new Key("1", ArrayIndexers.NoIndexers)))!;
+        _guidJoinName = (string)guidParent["name"]!;
+        await Apply("0", new Joined(new ExpandoObject(), _foreignId, "group", ArrayIndexers.NoIndexers, [new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("name", null, "incompatible")])]), 5UL);
+        var afterIncompatible = (IDictionary<string, object?>)(await _sink.FindOrDefault(new Key("1", ArrayIndexers.NoIndexers)))!;
+        _afterIncompatibleJoin = (string)afterIncompatible["name"]!;
     }
 
     async Task Apply(string id, Change change, ulong sequence)
@@ -64,6 +73,8 @@ public abstract class when_filtering_join_candidates : Specification
     }
 
     void Destroy() => _harness.Dispose();
+    [Fact] public void should_join_a_guid_key_against_a_string_column() => _guidJoinName.ShouldEqual("guid-joined");
+    [Fact] public void should_fall_back_without_throwing_for_an_incompatible_scalar_key() => _afterIncompatibleJoin.ShouldEqual("guid-joined");
     [Fact] public void should_find_a_parent_with_escaped_unicode_child_values() => _found.ShouldBeTrue();
     [Fact] public void should_filter_json_candidates_before_materializing() => _hasJsonPredicate.ShouldBeTrue();
     [Fact] public void should_materialize_only_the_three_matching_json_candidates() => _lookupRows.ShouldEqual(3);
