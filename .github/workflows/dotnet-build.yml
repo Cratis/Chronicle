@@ -325,7 +325,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-  specs:
+  specs-other:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [dotnet-build]
@@ -352,7 +352,7 @@ jobs:
       - name: Run tests with coverage
         # Integration tests are executed by .github/workflows/integration.yml.
         # Keep regular specs focused on non-integration test suites.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql." --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -367,6 +367,68 @@ jobs:
           name: coverage-results-specs
           path: ./coverage-results/
           retention-days: 1
+
+  specs-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [dotnet-build]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [postgresql, sqlserver, remaining]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      - name: Run SQL collection filter specs
+        run: python3 .github/scripts/test-sql-spec-filter.py
+
+      - name: Run SQL specs with coverage
+        run: |
+          set -euo pipefail
+          filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
+          dotnet test Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --no-build --configuration Release --settings specs.runsettings --filter "$filter" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+
+      - name: Assert SQL specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: The SQL specs ${{ matrix.shard }} shard
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-specs-sql-${{ matrix.shard }}
+          path: ./coverage-results/
+          retention-days: 1
+
+  # Preserve the required check and all existing integration/coverage dependencies.
+  # A failed, skipped or cancelled shard must never turn this aggregate green.
+  specs:
+    if: always()
+    needs: [specs-other, specs-sql]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every spec job to pass
+        env:
+          OTHER_RESULT: ${{ needs.specs-other.result }}
+          SQL_RESULT: ${{ needs.specs-sql.result }}
+        run: test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
 
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
