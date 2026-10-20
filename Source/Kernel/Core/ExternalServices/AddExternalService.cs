@@ -61,6 +61,11 @@ public record AddExternalService(
     IDictionary<string, string> Options)
 {
     /// <summary>
+    /// Gets the optional OAuth scope.
+    /// </summary>
+    public string OAuthScope { get; init; } = string.Empty;
+
+    /// <summary>
     /// Handles the command by saving the assembled definition into the event store's external service storage.
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
@@ -103,7 +108,7 @@ public record AddExternalService(
         {
             AuthorizationType.Basic => new(new BasicAuthorization { Username = BasicUsername, Password = BasicPassword }),
             AuthorizationType.Bearer => new(new BearerTokenAuthorization { Token = BearerToken }),
-            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret }),
+            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret, Scope = OAuthScope }),
             _ => null
         };
 }

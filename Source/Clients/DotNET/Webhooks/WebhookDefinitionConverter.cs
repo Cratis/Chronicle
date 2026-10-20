@@ -51,7 +51,8 @@ internal static class WebhookDefinitionConverter
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
             none => { });
 

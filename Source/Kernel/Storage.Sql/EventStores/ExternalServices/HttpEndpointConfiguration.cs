@@ -46,6 +46,11 @@ public class HttpEndpointConfiguration
     public string? OAuthClientSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional OAuth scope.
+    /// </summary>
+    public string OAuthScope { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the headers.
     /// </summary>
     [Json]

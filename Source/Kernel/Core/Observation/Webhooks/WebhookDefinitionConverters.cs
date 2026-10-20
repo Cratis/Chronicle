@@ -69,7 +69,7 @@ internal static class WebhookDefinitionConverters
             var auth when auth.Value2 is not null => new OAuthAuthorization(
                 auth.Value2.Authority,
                 auth.Value2.ClientId,
-                auth.Value2.ClientSecret),
+                auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
             _ => WebhookAuthorization.None
         };
         return new(
@@ -105,7 +105,8 @@ internal static class WebhookDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
             none => { });
 
