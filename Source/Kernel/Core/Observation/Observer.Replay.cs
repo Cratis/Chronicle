@@ -243,12 +243,22 @@ public partial class Observer
         Skips.JobStarted(partition);
         RecordedHandlingState();
         await WriteStateAsync();
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
+        try
         {
-            ReplaysAllEventTypes = !retainOtherCounts,
-            ReaderScope = ReaderScope,
-            HeldBackFrom = heldBackFrom
-        });
+            await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
+            {
+                ReplaysAllEventTypes = !retainOtherCounts,
+                ReaderScope = ReaderScope,
+                HeldBackFrom = heldBackFrom
+            });
+        }
+        catch
+        {
+            // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
+            // back to catch-up from the captured bound, as a refused replay does, and report the failure.
+            await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
+            throw;
+        }
     }
 
     async Task<bool> TransitionToReplayIfNeeded(int recovery)
