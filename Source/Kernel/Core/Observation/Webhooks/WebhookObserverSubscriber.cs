@@ -37,13 +37,16 @@ public class WebhookObserverSubscriber(
     IStorage storage) : Grain<WebhookDefinition>, IWebhookObserverSubscriber, INotifyWebhookDefinitionsChanged
 {
     ObserverKey _key = ObserverKey.NotSet;
-    AccessTokenInfo _accessTokenInfo = AccessTokenInfo.Empty;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
-        await EnsureAuthorized();
+        if (State.Target.Authorization.IsT2)
+        {
+            var oauth = State.Target.Authorization.AsT2;
+            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore);
+        }
     }
 
     /// <inheritdoc/>
@@ -65,10 +68,13 @@ public class WebhookObserverSubscriber(
             return HandleError(error);
         }
 
-        await EnsureAuthorized();
-
-        var accessToken = _accessTokenInfo.IsExpired ? null : _accessTokenInfo.AccessToken;
-        var onNextResult = await webhookMediator.OnNext(State.Target, partition, events, accessToken, cancellationToken: cancellationToken);
+        var target = State.Target;
+        if (target.Authorization.IsT2)
+        {
+            var oauth = target.Authorization.AsT2;
+            target = target with { Authorization = oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) } };
+        }
+        var onNextResult = await webhookMediator.OnNext(target, partition, events, cancellationToken: cancellationToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)
@@ -91,8 +97,11 @@ public class WebhookObserverSubscriber(
     public async Task OnWebhookDefinitionsChanged()
     {
         await ReadStateAsync();
-        _accessTokenInfo = AccessTokenInfo.Empty;
-        await EnsureAuthorized();
+        if (State.Target.Authorization.IsT2)
+        {
+            var oauth = State.Target.Authorization.AsT2;
+            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore);
+        }
     }
 
     async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events)
@@ -128,39 +137,5 @@ public class WebhookObserverSubscriber(
         }
 
         return released;
-    }
-
-    async Task EnsureAuthorized()
-    {
-        if (_accessTokenInfo.IsExpired)
-        {
-            _accessTokenInfo = await State.Target.Authorization.Match(
-                basic => Task.FromResult(AccessTokenInfo.Empty),
-                bearer => Task.FromResult(AccessTokenInfo.Empty),
-                async oAuth =>
-                {
-                    var decryptedOAuth = oAuth with
-                    {
-                        ClientSecret = encryption.Decrypt(oAuth.ClientSecret)
-                    };
-
-                    var tokenInfo = await oAuthClient.AcquireToken(decryptedOAuth);
-                    SetGrainLifetime(tokenInfo);
-                    return tokenInfo;
-                },
-                none => Task.FromResult(AccessTokenInfo.Empty));
-        }
-    }
-
-    void SetGrainLifetime(AccessTokenInfo tokenInfo)
-    {
-        if (!tokenInfo.IsExpired && tokenInfo.ExpiresAt != DateTimeOffset.MinValue)
-        {
-            var idleTime = tokenInfo.ExpiresAt - DateTimeOffset.UtcNow;
-            if (idleTime > TimeSpan.Zero)
-            {
-                DelayDeactivation(idleTime);
-            }
-        }
     }
 }

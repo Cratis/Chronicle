@@ -22,4 +22,9 @@ public class OAuthAuthorization
     /// Gets or sets the OAuth client secret.
     /// </summary>
     public string ClientSecret { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional OAuth scope.
+    /// </summary>
+    public string Scope { get; set; } = string.Empty;
 }

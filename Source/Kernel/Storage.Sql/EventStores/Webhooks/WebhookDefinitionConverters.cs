@@ -67,7 +67,7 @@ public static class WebhookDefinitionConverters
             authorization = new OAuthAuthorization(
                 target.OAuthAuthority,
                 target.OAuthClientId,
-                target.OAuthClientSecret);
+                target.OAuthClientSecret) { Scope = target.OAuthScope ?? string.Empty };
         }
         else
         {
@@ -100,6 +100,7 @@ public static class WebhookDefinitionConverters
                 sqlTarget.OAuthAuthority = oauth.Authority;
                 sqlTarget.OAuthClientId = oauth.ClientId;
                 sqlTarget.OAuthClientSecret = oauth.ClientSecret;
+                sqlTarget.OAuthScope = oauth.Scope;
             },
             none => { });
 

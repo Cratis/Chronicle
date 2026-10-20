@@ -56,20 +56,14 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
             try
             {
-                var hasTable = await TableExists(context, tableName);
-
-                if (!hasTable)
+                // An existing table without an upgrade needs no schema change, so it does not wait for other kernels.
+                if (upgradeTableAction is null && await TableExists(context, tableName))
                 {
-                    await createTableAction(context, tableName);
-                    logger.CreatedTable(tableName);
+                    logger.TableAlreadyExists(tableName);
                 }
                 else
                 {
-                    logger.TableAlreadyExists(tableName);
-                    if (upgradeTableAction is not null)
-                    {
-                        await upgradeTableAction(context, tableName);
-                    }
+                    await DatabaseSchemaLock.Run(context, () => CreateOrUpgradeTable(tableName, context, createTableAction, upgradeTableAction));
                 }
 
                 _migratedTables.TryAdd(key, true);
@@ -164,6 +158,25 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         }
     }
 
+    static async Task<bool> TryCreateTable(string tableName, TContext context, Func<TContext, string, Task> createTableAction)
+    {
+        try
+        {
+            await createTableAction(context, tableName);
+            return true;
+        }
+        catch (Exception ex) when (SchemaObjectAlreadyExists.Is(ex))
+        {
+            // A kernel not taking the schema lock may have created it first. Its table is adopted like any existing one.
+            if (!await TableExists(context, tableName))
+            {
+                throw;
+            }
+
+            return false;
+        }
+    }
+
     static async Task<bool> TableExists(TContext context, string tableName)
     {
         var connection = context.Database.GetDbConnection();
@@ -192,6 +205,33 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         finally
         {
             await connection.CloseAsync();
+        }
+    }
+
+    async Task CreateOrUpgradeTable(string tableName, TContext context, Func<TContext, string, Task> createTableAction, Func<TContext, string, Task>? upgradeTableAction)
+    {
+        // Another kernel may have created the table while this one waited for the lock, so look again.
+        if (!await TableExists(context, tableName) && await TryCreateTable(tableName, context, createTableAction))
+        {
+            logger.CreatedTable(tableName);
+            return;
+        }
+
+        logger.TableAlreadyExists(tableName);
+        if (upgradeTableAction is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await upgradeTableAction(context, tableName);
+        }
+        catch (Exception ex) when (SchemaObjectAlreadyExists.Is(ex))
+        {
+            // A kernel not taking the schema lock changed it at the same time. The upgrade checks what is
+            // there before changing anything, so running it again settles what is left.
+            await upgradeTableAction(context, tableName);
         }
     }
 }

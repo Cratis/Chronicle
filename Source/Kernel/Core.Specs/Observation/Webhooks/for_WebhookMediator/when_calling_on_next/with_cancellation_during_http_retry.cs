@@ -32,7 +32,7 @@ public class with_cancellation_during_http_retry : given.a_webhook_mediator
                 MaxRetryAttempts = 3
             }));
         _services = services.BuildServiceProvider();
-        _mediator = new WebhookMediator(new WebhookHttpClientFactory(_services.GetRequiredService<IHttpClientFactory>()), _jsonOptions);
+        _mediator = new WebhookMediator(new WebhookHttpClientFactory(_services.GetRequiredService<IHttpClientFactory>(), Substitute.For<IOAuthClient>()), _jsonOptions);
     }
 
     async Task Because()

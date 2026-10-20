@@ -89,7 +89,7 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             return true;
         }
 
-        var result = await _registrar.TestOAuthAuthorization(command.OAuthAuthority, command.OAuthClientId, command.OAuthClientSecret, command.EventStore);
+        var result = await _registrar.TestOAuthAuthorization(command.OAuthAuthority, command.OAuthClientId, command.OAuthClientSecret, command.OAuthScope, command.EventStore);
         return result.Success;
     }
 

@@ -49,7 +49,7 @@ public record ObserverInformation(
     /// <param name="namespace">The namespace within the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read observers from.</param>
     /// <returns>A collection of observer information.</returns>
-    internal static async Task<IEnumerable<ObserverInformation>> AllObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
+    public static async Task<IEnumerable<ObserverInformation>> AllObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
         var states = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.GetAll();
@@ -68,7 +68,7 @@ public record ObserverInformation(
     /// The join is an inner one on purpose: an observer that has never run has nothing to replay, so unlike the
     /// all-observers listing it must not appear here.
     /// </remarks>
-    internal static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
+    public static async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IEnumerable<string> eventTypes,
@@ -90,7 +90,7 @@ public record ObserverInformation(
     /// <param name="namespace">The namespace within the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe observers from.</param>
     /// <returns>An observable subject emitting collections of observer information.</returns>
-    internal static ISubject<IEnumerable<ObserverInformation>> ObserveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
+    public static ISubject<IEnumerable<ObserverInformation>> ObserveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var subject = new ReplaySubject<IEnumerable<ObserverInformation>>(1);
         storage

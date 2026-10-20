@@ -29,7 +29,7 @@ public record ObserverInformationForEventType(string Id, string Namespace, Obser
     /// <param name="eventTypeId">The identifier of the event type to find consuming observers for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read observers and namespaces from.</param>
     /// <returns>A collection of <see cref="ObserverInformationForEventType"/>.</returns>
-    internal static async Task<IEnumerable<ObserverInformationForEventType>> GetObserversForEventType(
+    public static async Task<IEnumerable<ObserverInformationForEventType>> GetObserversForEventType(
         EventStoreName eventStore,
         string eventTypeId,
         IStorage storage)
@@ -53,7 +53,7 @@ public record ObserverInformationForEventType(string Id, string Namespace, Obser
     /// <param name="eventTypeId">The identifier of the event type to find consuming observers for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read observers and namespaces from.</param>
     /// <returns>An observable subject emitting collections of <see cref="ObserverInformationForEventType"/>.</returns>
-    internal static ISubject<IEnumerable<ObserverInformationForEventType>> ObserveObserversForEventType(
+    public static ISubject<IEnumerable<ObserverInformationForEventType>> ObserveObserversForEventType(
         EventStoreName eventStore,
         string eventTypeId,
         IStorage storage)

@@ -17,6 +17,21 @@ A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient f
 
 The observer's subscriber timeout cancels the webhook HTTP operation, including any retry delay, and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
 
+## OAuth client credentials
+
+The .NET webhook builder supports `WithOAuth(authority, clientId, clientSecret, scope)`;
+`scope` is optional and defaults to an empty string. The Workbench's OAuth form also accepts
+an optional scope. For Microsoft Entra client credentials, request the resource's
+`api://<application-id>/.default` scope. An empty scope is omitted from the token request.
+Existing registrations without scope continue to work unchanged; re-registering OAuth
+credentials without scope clears a previously configured scope.
+
+The kernel shares tokens for the same token endpoint, client, scope, and credentials,
+and refreshes shortly before expiry. Tokens without an expiry are not cached. Authorization
+is applied on each HTTP send, including sends from long-lived external-service clients.
+A `401` invalidates the rejected token and retries the same request once with a fresh token;
+other responses do not trigger an OAuth retry. Receivers should remain idempotent.
+
 ## Pin the generation your endpoint understands
 
 To keep an endpoint on the event shape it knows, opt in per webhook with the .NET

@@ -34,7 +34,7 @@ public record EventSourceDetails(
     /// <param name="eventStore">The event store to get event sources for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the event sources.</param>
     /// <returns>A collection of event source definitions.</returns>
-    internal static async Task<IEnumerable<EventSourceDetails>> AllEventSources(EventStoreName eventStore, IStorage storage)
+    public static async Task<IEnumerable<EventSourceDetails>> AllEventSources(EventStoreName eventStore, IStorage storage)
     {
         var definitions = await storage.GetEventStore(eventStore).EventSources.GetAll();
         return definitions.ToReadModel();
@@ -46,6 +46,6 @@ public record EventSourceDetails(
     /// <param name="eventStore">The event store to observe event sources for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the event sources.</param>
     /// <returns>An observable subject emitting collections of event source definitions.</returns>
-    internal static ISubject<IEnumerable<EventSourceDetails>> ObserveEventSources(EventStoreName eventStore, IStorage storage) =>
+    public static ISubject<IEnumerable<EventSourceDetails>> ObserveEventSources(EventStoreName eventStore, IStorage storage) =>
         storage.GetEventStore(eventStore).EventSources.ObserveAll().TransformSubject(_ => _.ToReadModel());
 }

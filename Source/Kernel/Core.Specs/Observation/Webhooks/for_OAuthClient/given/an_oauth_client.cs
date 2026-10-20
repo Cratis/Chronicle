@@ -20,7 +20,7 @@ public class an_oauth_client : Specification
         _messageHandler = new FakeHttpMessageHandler();
         _httpClient = new HttpClient(_messageHandler);
         _httpClientFactory = Substitute.For<IHttpClientFactory>();
-        _httpClientFactory.CreateClient(OAuthClient.HttpClientName).Returns(_httpClient);
+        _httpClientFactory.CreateClient(OAuthClient.HttpClientName).Returns(_ => new HttpClient(_messageHandler, false));
 
         _policy = Substitute.For<IWebhookTargetPolicy>();
         _policy.Evaluate(Arg.Any<string>(), Arg.Any<Concepts.EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);

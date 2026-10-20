@@ -58,7 +58,7 @@ public partial class Database
 
     /// <summary>
     /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per physical target to prevent concurrent migration race conditions
-    /// when multiple grains access the same database simultaneously.
+    /// when multiple grains — or multiple kernel processes, through <see cref="DatabaseSchemaLock"/> — access the same database simultaneously.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
     /// <param name="target">The <see cref="SqlTarget"/> the context connects to.</param>
@@ -93,7 +93,9 @@ public partial class Database
 
             try
             {
-                await context.Database.MigrateAsync();
+                // EF Core takes its own migrations lock in the database as well; this one also covers the history
+                // table it creates before taking that lock, and keeps all of Chronicle's schema changes in one queue.
+                await DatabaseSchemaLock.Run(context, () => context.Database.MigrateAsync());
             }
             catch (Exception ex) when (IsAlreadyExistsException(ex))
             {
@@ -178,7 +180,8 @@ public partial class Database
                 }
                 catch (Exception ex) when (IsAlreadyExistsException(ex))
                 {
-                    // Another concurrent migrator created the database; safe to ignore.
+                    // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
+                    // The database cannot be locked before it exists, so this is the only guard creation has across processes.
                 }
             }
 
@@ -233,7 +236,15 @@ public partial class Database
     {
         if (options.Value.Storage.CreateIfMissing)
         {
-            await Execute(connection, $"CREATE SCHEMA IF NOT EXISTS \"{schema.Replace("\"", "\"\"", StringComparison.Ordinal)}\"");
+            try
+            {
+                await Execute(connection, $"CREATE SCHEMA IF NOT EXISTS \"{schema.Replace("\"", "\"\"", StringComparison.Ordinal)}\"");
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Two concurrent IF NOT EXISTS creations can still collide on the catalog; the schema is there.
+            }
+
             return;
         }
 
@@ -252,7 +263,14 @@ public partial class Database
                 throw new SchemaDoesNotExist(database, schema);
             }
 
-            await Execute(connection, $"CREATE SCHEMA [{schema.Replace("]", "]]", StringComparison.Ordinal)}]");
+            try
+            {
+                await Execute(connection, $"CREATE SCHEMA [{schema.Replace("]", "]]", StringComparison.Ordinal)}]");
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Another kernel created the schema between the check and the creation (SQL Server 2714).
+            }
         }
 
         await using var command = connection.CreateCommand();
