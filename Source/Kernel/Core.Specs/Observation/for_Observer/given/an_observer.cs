@@ -144,6 +144,7 @@ public class an_observer : Specification
         _webhookTargetPolicy.EvaluateForDelivery(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventStoreStorage.Webhooks.Has(Arg.Any<WebhookId>()).Returns(true);
         _eventStoreStorage.Webhooks.Get(Arg.Any<WebhookId>()).Returns(new WebhookDefinition(
             (WebhookId)_observerId.Value,
             WebhookOwner.Kernel,

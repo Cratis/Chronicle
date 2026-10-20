@@ -14,7 +14,10 @@ public partial class Observer
 
     async Task<bool> ValidateStoredWebhookTarget()
     {
-        if (_subscription.SubscriberType != typeof(IWebhookObserverSubscriber) && (Definition.Type != ObserverType.External || Definition.Owner != ObserverOwner.Kernel)) return true;
+        if (!await IsStoredWebhook())
+        {
+            return true;
+        }
 
         var definition = await storage.GetEventStore(_observerKey.EventStore).Webhooks.Get((WebhookId)_observerId.Value);
         if (!definition.IsActive) return false;
@@ -50,5 +53,22 @@ public partial class Observer
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Determines whether this observer delivers to a stored webhook. Other kernel-owned external observers,
+    /// such as event store subscriptions, share the same observer type and owner and must not be evaluated.
+    /// </summary>
+    /// <returns>True when the observer delivers to a stored webhook.</returns>
+    async Task<bool> IsStoredWebhook()
+    {
+        if (_subscription.IsSubscribed)
+        {
+            return typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        }
+
+        return Definition.Type == ObserverType.External &&
+            Definition.Owner == ObserverOwner.Kernel &&
+            await storage.GetEventStore(_observerKey.EventStore).Webhooks.Has((WebhookId)_observerId.Value);
     }
 }
