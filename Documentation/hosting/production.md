@@ -340,3 +340,7 @@ Each container reaches the others over the Compose network by service name, so t
 address works. When you instead run multiple nodes directly on one host, set
 `Cratis__Chronicle__Clustering__AdvertisedIP` and distinct `SiloPort`/`GatewayPort` values per node - see
 [Clustering](configuration/clustering.md).
+
+## See also
+
+- [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.
