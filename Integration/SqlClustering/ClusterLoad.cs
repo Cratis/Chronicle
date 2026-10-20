@@ -31,12 +31,14 @@ public sealed class ClusterLoad : IAsyncDisposable
         options.ExplicitArtifacts.RegisterEventType<ClusterEventAppended>();
         _client = new(options);
         _store = await _client.GetEventStore("sql-clustering");
+        await _store.DiscoverAll();
+        await _store.RegisterAll();
         _reactor = await _store.Reactors.Register(
             "cluster-integrity",
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
             (@event, _) =>
             {
-                _observed.Enqueue(@event.Content["id"]!.GetValue<Guid>());
+                _observed.Enqueue(@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>());
                 return Task.CompletedTask;
             });
         await _reactor.WaitTillActive(TimeSpan.FromSeconds(60));
