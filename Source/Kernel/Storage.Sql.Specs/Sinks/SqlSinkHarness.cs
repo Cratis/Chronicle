@@ -53,6 +53,11 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
+    /// <summary>
+    /// Gets the logger for sink diagnostics.
+    /// </summary>
+    public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
@@ -84,7 +89,8 @@ public class SqlSinkHarness : ISqlSinkHarness
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()),
-            _replayingTables);
+            _replayingTables,
+            Logger);
     }
 
     /// <summary>
