@@ -38,6 +38,8 @@ public class a_cached_oauth_client : Specification
     protected class Endpoint(a_cached_oauth_client fixture) : HttpMessageHandler
     {
         public int TokenRequests;
+        public int DiscoveryRequests;
+        public int DiscoveryTimeouts;
         public string Form = "";
         public bool Block;
         public bool Fail;
@@ -59,6 +61,12 @@ public class a_cached_oauth_client : Specification
             }
             if (request.Method == HttpMethod.Get)
             {
+                DiscoveryRequests++;
+                if (DiscoveryTimeouts > 0)
+                {
+                    DiscoveryTimeouts--;
+                    throw new TaskCanceledException("Discovery timed out.");
+                }
                 return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { token_endpoint = "https://authority.example/token" }) };
             }
             var number = Interlocked.Increment(ref TokenRequests);

@@ -36,7 +36,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? tim
         {
             endpoint = await discovery.Value.WaitAsync(cancellationToken);
         }
-        catch when (discovery.IsValueCreated && discovery.Value.IsFaulted)
+        catch when (discovery.IsValueCreated && (discovery.Value.IsFaulted || discovery.Value.IsCanceled))
         {
             _endpoints.TryRemove(new(authority, discovery));
             throw;
