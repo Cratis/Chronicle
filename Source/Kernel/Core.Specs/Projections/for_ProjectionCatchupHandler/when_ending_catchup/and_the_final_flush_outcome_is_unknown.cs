@@ -14,7 +14,10 @@ using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionCatchupHandler.when_ending_catchup;
 
-public class and_the_final_flush_fails : Specification
+/// <summary>
+/// A final flush whose outcome is unknown may have lost writes for events catch-up handled, so catch-up must not finish.
+/// </summary>
+public class and_the_final_flush_outcome_is_unknown : Specification
 {
     readonly Key _partition = "partition";
     readonly EventSequenceNumber _sequenceNumber = 42UL;
@@ -31,7 +34,7 @@ public class and_the_final_flush_fails : Specification
         var projections = Substitute.For<Engine.IProjectionsManager>();
         projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(projection);
         _pipeline = Substitute.For<IProjectionPipeline>();
-        _pipeline.EndBulk().Returns(Task.FromResult<IEnumerable<SinkFailedPartition>>([new(_partition, _sequenceNumber)]));
+        _pipeline.EndBulk().Returns(Task.FromResult<IEnumerable<SinkFailedPartition>>([new(_partition, _sequenceNumber) { OutcomeUnknown = true }]));
         var pipelines = Substitute.For<IProjectionPipelineManager>();
         pipelines.GetFor(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, projection).Returns(_pipeline);
         var grainFactory = Substitute.For<IGrainFactory>();

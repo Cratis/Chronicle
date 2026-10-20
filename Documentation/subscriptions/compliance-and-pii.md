@@ -1,3 +1,6 @@
+---
+description: How Chronicle preserves each event's compliance identity and copies the subject's encryption key when subscriptions forward events between event stores.
+---
 # Compliance and PII
 
 When subscriptions forward events from a source event store outbox to a target event store inbox, Chronicle preserves the compliance identity of every event — and copies the subject's encryption key along with it, unless that subject has been erased in the target. Both halves matter for right-to-erasure, and this page covers what each of them does.

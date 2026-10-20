@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="Result">The append validation and storage result.</param>
 /// <param name="Outcome">How the keyed append was settled.</param>
-public record IdempotentAppendResult(AppendResult Result, AppendOutcome Outcome = AppendOutcome.Appended)
+public record IdempotentAppendResult(AppendResult Result, AppendOutcome Outcome = AppendOutcome.Committed)
 {
     /// <summary>
     /// Gets the durable keys that refused comparison.

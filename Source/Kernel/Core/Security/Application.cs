@@ -30,7 +30,7 @@ public record Application(
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to observe applications from.</param>
     /// <returns>An observable subject emitting collections of applications.</returns>
-    internal static ISubject<IEnumerable<Application>> AllApplications(IStorage storage) =>
+    public static ISubject<IEnumerable<Application>> AllApplications(IStorage storage) =>
         storage.System.Applications
             .ObserveAll()
             .TransformSubject(apps => apps.Select(ApplicationConverters.ToApplication));

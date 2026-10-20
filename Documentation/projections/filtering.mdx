@@ -1,3 +1,6 @@
+---
+description: Chronicle projections observe all events of their declared event types and ignore reactor-style metadata filters; this explains how to narrow input.
+---
 # Appended event metadata and projections
 
 Projections build read models by mapping events to fields. They observe all events of the types declared in their definition — they do not use `[FilterEventsByTag]`, `[EventSourceType]`, or `[EventStreamType]` to filter incoming events.

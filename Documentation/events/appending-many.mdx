@@ -1,3 +1,6 @@
+---
+description: Append many events to a Chronicle event sequence in one call for imports, migrations and multi-step operations, preserving order and cutting overhead.
+---
 # Appending many
 
 Appending many events in a single call is useful for batch workflows such as imports, migrations, or multi-step business operations.
@@ -17,6 +20,22 @@ AppendMany is transactional all the way to storage. Either all events in the bat
 - The batch is validated as a unit and written atomically.
 - Sequence numbers are assigned in the order provided.
 - The event sequence state is updated once the batch commits.
+
+## Appending a batch once
+
+`AppendManyOnce` appends events for one event source with a single `IdempotencyKey`. Chronicle derives a different key for each event from the batch key and the event's zero-based position (`IdempotencyKey.ForIndex`), so the batch is keyed per event. Retrying the same batch with the same key and the same events in the same order writes nothing new. There is also `AppendManyOnceWithNamedTags`. See [Appending](./appending#appending-once) for keys, outcomes, and conflicts.
+
+<ChronicleClientTabs snippet="events/appending-many/once" />
+
+`AppendManyResult.Outcomes` has one `AppendOutcome` per event, in the order you gave them. `IdempotencyConflicts` and `HasIdempotencyConflicts` report refused keys. Because a batch is atomic, check them before assuming the batch was written. `WasAlreadyAppended` is `true` when every event was already in the sequence.
+
+### Keys on individual events
+
+When a batch spans event sources, set `IdempotencyKey` on each `EventForEventSourceId` instead. If any event in the batch has a key, the batch is appended once. Events without a key are appended normally, so a mixed batch is valid and `Outcomes` reports `Appended` for them.
+
+<ChronicleClientTabs snippet="events/appending-many/keyed-events" />
+
+Keyed batches follow the same rules as a single keyed append: an older kernel throws `IdempotentAppendsNotSupported`, and keys are refused inside a unit of work and with effect receipts.
 
 ## When to use
 

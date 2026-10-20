@@ -78,6 +78,9 @@ public partial class EventStore : IEventStore
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
     int _backgroundRegistrationRetryActive;
     Task? _backgroundRegistrationRetryTask;
+    CancellationTokenSource? _backgroundRegistrationRetryCancellation;
+    object? _backgroundRegistrationRetrySyncObject;
+    bool _isRegistrationDetached;
     StorePreparationGate? _preparation;
     volatile RegistrationOutcome _registration = RegistrationOutcome.NotRun;
     long _identityDriftEpoch;
@@ -622,15 +625,27 @@ public partial class EventStore : IEventStore
             return;
         }
 
+        // Detaching the store cancels this source, so an abandoned store does not stay reachable through the loop.
+        var cancellation = new CancellationTokenSource();
+        lock (BackgroundRegistrationRetrySync)
+        {
+            _backgroundRegistrationRetryCancellation = cancellation;
+            if (_isRegistrationDetached)
+            {
+                cancellation.Cancel();
+            }
+        }
+
         _logger.EnteringBackgroundRegistrationRetry();
 
         // Tracked (not discarded) so a caller that needs to observe the loop's completion - a graceful shutdown, a
         // specification - can, without this method itself depending on anything awaiting it.
-        _backgroundRegistrationRetryTask = RetryRegistrationInBackgroundUntilSuccessOrDisconnect();
+        _backgroundRegistrationRetryTask = RetryRegistrationInBackgroundUntilSuccessOrDisconnect(cancellation);
     }
 
-    async Task RetryRegistrationInBackgroundUntilSuccessOrDisconnect()
+    async Task RetryRegistrationInBackgroundUntilSuccessOrDisconnect(CancellationTokenSource cancellation)
     {
+        var cancellationToken = cancellation.Token;
         var disconnected = false;
         Task StopOnDisconnect()
         {
@@ -645,9 +660,16 @@ public partial class EventStore : IEventStore
             while (!disconnected)
             {
                 var delay = _registrationBackoff.NextDelay(attempt);
-                await Task.Delay(delay);
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
 
-                if (disconnected)
+                if (disconnected || cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
@@ -666,6 +688,11 @@ public partial class EventStore : IEventStore
                 }
                 catch (Exception exception)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     _logger.RetryingRegisterAllArtifactsInBackground(exception, attempt, delay);
                     attempt++;
                 }
@@ -674,6 +701,13 @@ public partial class EventStore : IEventStore
         finally
         {
             Connection.Lifecycle.OnDisconnected -= StopOnDisconnect;
+            lock (BackgroundRegistrationRetrySync)
+            {
+                // Owned by this loop; cleared under the lock so a concurrent stop never cancels a disposed source.
+                _backgroundRegistrationRetryCancellation = null;
+                cancellation.Dispose();
+            }
+
             Interlocked.Exchange(ref _backgroundRegistrationRetryActive, 0);
         }
     }

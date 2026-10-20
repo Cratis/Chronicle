@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_performing;
 
@@ -30,5 +31,5 @@ public class and_the_subscriber_fails_without_handling_any_events : given.a_perf
             Arg.Any<string>(),
             FailureKind.Handling);
 
-    [Fact] void should_not_report_any_handled_events() => _observer.DidNotReceive().ReportHandledEvents(Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_not_report_any_handled_events() => _observer.DidNotReceive().ReportHandledEvents(Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>(), Arg.Any<JobStepId>(), Arg.Any<EventSequenceNumber>());
 }

@@ -14,7 +14,7 @@
   href: subject.mdx
 - name: Event Store
   href: event-store.md
-- name: Namespaces
+- name: Namespaces and data isolation
   href: namespaces.md
 - name: Event Sequence
   href: event-sequence.md
@@ -30,7 +30,7 @@
   href: designing-read-models.mdx
 - name: "Deep dive: consistency"
   href: consistency.md
-- name: Constraints
+- name: Constraints at append time
   href: constraints.md
 - name: Event Metadata Tags
   href: event-metadata-tags.md

@@ -51,6 +51,13 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     }
 
     /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope = "")
+    {
+        _authorization = new OAuthAuthorization(authority, clientId, clientSecret) { Scope = scope };
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IWebhookDefinitionBuilder WithHeader(string key, string value)
     {
         _headers[key] = value;

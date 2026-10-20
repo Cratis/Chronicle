@@ -1,3 +1,6 @@
+---
+description: Use FromEvery in a declarative Chronicle projection to update a read model property whenever any handled event is processed, such as audit metadata.
+---
 # Projection With FromEvery
 
 Use an every-event mapping in a declarative projection when a read model property should update whenever any event handled by the projection is processed. This is most useful for audit metadata, event source identifiers, and other fields that should stay synchronized with the latest event.

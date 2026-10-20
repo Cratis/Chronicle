@@ -201,6 +201,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             NoAutoMapProperties = [.. _noAutoMapProperties],
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
+        RootRemovalViaJoin.Record(definition, [.. _removedWithJoinDefinitions.Keys.Select(_ => _.Id)]);
         ProjectionGenerationDeliveryValidation.Apply(definition, effectiveDelivery);
         EventStreamReadModel.ValidateProjection(typeof(TReadModel), definition);
 

@@ -70,7 +70,7 @@ public static class WebhookDefinitionConverters
             authorization = new Concepts.Security.OAuthAuthorization(
                 target.OAuthAuthorization.Authority,
                 target.OAuthAuthorization.ClientId,
-                target.OAuthAuthorization.ClientSecret);
+                target.OAuthAuthorization.ClientSecret) { Scope = target.OAuthAuthorization.Scope };
         }
         else
         {
@@ -105,7 +105,8 @@ public static class WebhookDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             },
             none => { });
 

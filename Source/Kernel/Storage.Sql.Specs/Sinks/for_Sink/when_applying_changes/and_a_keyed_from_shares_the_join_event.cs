@@ -90,7 +90,7 @@ public class and_a_keyed_from_shares_the_join_event : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
         return new ReadModelDbContext(options, "test", _columns, Substitute.For<IReadModelMigrator>());
     }

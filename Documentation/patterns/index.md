@@ -1,3 +1,6 @@
+---
+description: Chronicle behavior patterns mine a store's event history for recurring behavior so you can ask what usually happens in a given situation.
+---
 # Behavior Patterns
 
 Chronicle mines the event history of a store for **recurring behavior** — combinations of context that keep leading to the same action — and lets you ask what usually happens in a situation. The answer is backed by what actually happened, not by a guess.

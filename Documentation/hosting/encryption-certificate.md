@@ -1,3 +1,6 @@
+---
+description: Protect the ASP.NET Core Data Protection keys Chronicle uses for OAuth tokens with an X.509 certificate, shared across clustered instances.
+---
 # Data Protection Key Encryption
 
 Chronicle uses ASP.NET Core Data Protection to securely manage encryption keys for OAuth tokens and other sensitive data. In production environments, these keys must be protected with an X.509 certificate to ensure security across multiple Chronicle instances.

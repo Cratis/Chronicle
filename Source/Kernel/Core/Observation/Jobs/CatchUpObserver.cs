@@ -52,25 +52,24 @@ public class CatchUpObserver(
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
-        }
-        finally
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-            // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-            // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-            // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
-            // grain become free to process CaughtUp(), even if finalization fails after recording partitions.
-            // Only a catch-up whose every step completed may move the observer past events it read but did not
-            // handle; a step that stopped early can leave events behind the furthest point another step reached.
-            _ = observer.CaughtUp(
-                JobId,
-                State.LastHandledEventSequenceNumber,
-                AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
-        }
+        // A finalization that fails — a final flush whose outcome is unknown — throws and fails the job, so the
+        // observer is not moved past events whose writes may have been lost. It stays catching up, and the
+        // observer's watchdog starts a new catch-up once it sees no live catch-up job.
+        await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
+
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process CaughtUp().
+        // Only a catch-up whose every step completed may move the observer past events it read but did not
+        // handle; a step that stopped early can leave events behind the furthest point another step reached.
+        _ = observer.CaughtUp(
+            JobId,
+            State.LastHandledEventSequenceNumber,
+            AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
 
         if (!AllStepsCompletedSuccessfully)
         {

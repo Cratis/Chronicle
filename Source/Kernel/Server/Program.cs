@@ -228,6 +228,10 @@ hostBuilder
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
 
+       // Lets an HTTP storage connection resolver authenticate with Microsoft Entra ID (AzureCredential).
+       // Inert unless storage.connectionResolution configures that authentication type.
+       services.AddAzureConnectionResolverAuthentication();
+
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
 

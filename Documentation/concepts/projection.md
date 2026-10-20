@@ -1,3 +1,6 @@
+---
+description: A Chronicle projection is a declarative observer that turns the events you care about into a read model for your application or API.
+---
 # Projection
 
 A projection in Chronicle is a specialized observer. It is a declarative approach to describing

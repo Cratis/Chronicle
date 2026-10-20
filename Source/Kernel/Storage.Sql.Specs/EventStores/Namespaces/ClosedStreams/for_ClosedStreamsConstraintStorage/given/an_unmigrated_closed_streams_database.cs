@@ -38,5 +38,5 @@ public class an_unmigrated_closed_streams_database : Specification, IDisposable
     }
 
     protected NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseSqlite(_connectionString).AddConceptAsSupport().Options);
+        .UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
 }

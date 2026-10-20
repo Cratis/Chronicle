@@ -41,7 +41,7 @@ public record FailedPartitionDetails(
     /// <param name="observerId">Optional observer identifier to narrow the result to a single observer.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
     /// <returns>A collection of <see cref="FailedPartitionDetails"/>.</returns>
-    internal static async Task<IEnumerable<FailedPartitionDetails>> GetFailedPartitions(
+    public static async Task<IEnumerable<FailedPartitionDetails>> GetFailedPartitions(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         string? observerId,
@@ -63,7 +63,7 @@ public record FailedPartitionDetails(
     /// <param name="observerId">Optional observer identifier to narrow the result to a single observer.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
     /// <returns>An observable subject emitting collections of <see cref="FailedPartitionDetails"/>.</returns>
-    internal static ISubject<IEnumerable<FailedPartitionDetails>> AllFailedPartitions(
+    public static ISubject<IEnumerable<FailedPartitionDetails>> AllFailedPartitions(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         string? observerId,

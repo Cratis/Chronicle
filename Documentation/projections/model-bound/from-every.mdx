@@ -1,3 +1,6 @@
+---
+description: Use an every-event mapping in a model-bound Chronicle projection to update a property after any processed event, such as last-modified audit metadata.
+---
 # From Every Event
 
 Use an every-event mapping when a read model property should update whenever any event in the projection is processed. This is usually audit metadata such as the last modification time, the latest event sequence number, or the correlation id of the operation that last touched the read model.

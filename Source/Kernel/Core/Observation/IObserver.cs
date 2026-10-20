@@ -55,13 +55,25 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <param name="partition">The <see cref="Key"/> of the partition that handled the events.</param>
     /// <param name="countsPerEventType">The number of successfully handled events, broken down by <see cref="EventTypeId"/>.</param>
+    /// <param name="reportedBy">The <see cref="JobStepId"/> of the job step reporting the counts.</param>
+    /// <param name="handledUpTo">The <see cref="EventSequenceNumber"/> of the last event the counts cover.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
+    /// <para>
     /// Only the counts are needed to maintain the observer's handled-event statistics, so callers pass those
     /// rather than the full <see cref="AppendedEvent"/> payloads. On the replay path this avoids shipping the
     /// decrypted events across the grain boundary a second time when the observer only reads their type ids.
+    /// </para>
+    /// <para>
+    /// With write coalescing on, the call only merges the counts in memory, so a catch-up over many partitions does not
+    /// queue one storage write per step behind the observer's other turns past the response timeout. It does not
+    /// interleave: with write coalescing turned off it writes through, and that write must not overlap another turn's
+    /// state changes.
+    /// A report is identified by <paramref name="reportedBy"/>, <paramref name="partition"/> and <paramref name="handledUpTo"/>, so a step can send it
+    /// again after a timeout without the counts being taken twice.
+    /// </para>
     /// </remarks>
-    Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType);
+    Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo);
 
     /// <summary>
     /// Get the subscription for the observer.

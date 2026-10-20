@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.ReadModels.Querying
+description: Chronicle's read model API is keyed, with no filter or search surface; this explains why and what to do instead for querying.
 ---
 
 # Querying Read Models

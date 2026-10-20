@@ -1,3 +1,6 @@
+---
+description: "Where to start contributing to Chronicle: integration tests, issue labels, the PrimeUI license, building a client, and the clients and kernel."
+---
 # Contributing
 
 | Topic | Description |

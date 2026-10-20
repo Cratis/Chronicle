@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Compliance.Arc
+description: Chronicle PII encryption, key-based erasure and automatic decryption work transparently with Arc read models and queries, with no extra configuration.
 ---
 
 # Compliance in Arc applications

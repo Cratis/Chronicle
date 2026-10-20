@@ -261,10 +261,7 @@ public class HandleEventsForPartition(
                             }
 
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                            var okCountsPerEventType = handledEvents
-                                .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
-                                .CountByEventType();
-                            await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, currentState.Partition, okCountsPerEventType, logger);
+                            await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             break;
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -284,10 +281,7 @@ public class HandleEventsForPartition(
                                 }
 
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                                var failedCountsPerEventType = handledEvents
-                                    .Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation)
-                                    .CountByEventType();
-                                await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, currentState.Partition, failedCountsPerEventType, logger);
+                                await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             }
                             else
                             {
@@ -355,6 +349,11 @@ public class HandleEventsForPartition(
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
+            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+        }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
             // A grain call timing out is recorded once, briefly, and never escalated to the observer: the observer
@@ -375,6 +374,12 @@ public class HandleEventsForPartition(
         catch (Exception e)
         {
             logger.FailedPerforming(e, nameof(HandleEventsForPartition));
+            var failedAt = lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber;
+            if (!await TryReportPartitionFailed(failedAt, e))
+            {
+                return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e);
+            }
+
             if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
             {
                 return e;
@@ -383,6 +388,25 @@ public class HandleEventsForPartition(
             logger.FailedWithPartialSuccess(e, lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), e));
         }
+    }
+
+    /// <summary>
+    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
+    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
+    /// left without a failed partition to retry it.
+    /// </summary>
+    /// <param name="partition">The partition the step was handling.</param>
+    /// <param name="failedAt">The sequence number the partition failed at.</param>
+    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
+    /// <param name="error">The failure.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
+    {
+        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
+            messages,
+            string.Empty));
     }
 
     static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
@@ -447,6 +471,20 @@ public class HandleEventsForPartition(
         }
 
         return lastScanned;
+    }
+
+    async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
+    {
+        try
+        {
+            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind());
+            return true;
+        }
+        catch (Exception reportError)
+        {
+            logger.FailedReportingPartitionFailed(reportError, _eventSourceId, failedAt);
+            return false;
+        }
     }
 
     /// <summary>
@@ -547,5 +585,18 @@ public class HandleEventsForPartition(
     {
         var eventTypes = subscriptionEventTypes.ToArray();
         return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
+    }
+
+    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
+    {
+        var counts = handledEvents
+            .Where(e => e.Context.SequenceNumber <= handledUpTo)
+            .CountByEventType();
+        return TransientTimeouts.ReportHandledEventsWithoutFailing(
+            _observer,
+            new(partition, counts, JobStepId, handledUpTo),
+            TransientRetryDelay,
+            logger,
+            cancellationToken);
     }
 }

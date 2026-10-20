@@ -29,7 +29,7 @@ public record NamespaceNames(string Id, string Name)
     /// <param name="eventStore">The name of the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read namespaces from.</param>
     /// <returns>A collection of namespace names.</returns>
-    internal static async Task<IEnumerable<NamespaceNames>> AllNamespaces(string eventStore, IStorage storage)
+    public static async Task<IEnumerable<NamespaceNames>> AllNamespaces(string eventStore, IStorage storage)
     {
         var namespaces = await storage.GetEventStore(new Concepts.EventStoreName(eventStore)).Namespaces.GetAll();
         return [.. namespaces.Select(@namespace => new NamespaceNames(@namespace.Name.Value, @namespace.Name.Value))];
@@ -41,7 +41,7 @@ public record NamespaceNames(string Id, string Name)
     /// <param name="eventStore">The name of the event store.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe namespaces from.</param>
     /// <returns>An observable subject emitting collections of namespace names.</returns>
-    internal static ISubject<IEnumerable<NamespaceNames>> ObserveNamespaces(string eventStore, IStorage storage) =>
+    public static ISubject<IEnumerable<NamespaceNames>> ObserveNamespaces(string eventStore, IStorage storage) =>
         storage.GetEventStore(new Concepts.EventStoreName(eventStore))
             .Namespaces
             .ObserveAll()

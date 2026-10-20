@@ -1,3 +1,6 @@
+---
+description: Chronicle analyzer rule CHR0022 reports reactor methods that return events as side effects without [OnceOnly], which can append duplicates on replay.
+---
 # CHR0022: Reactor methods returning event side effects must be marked with [OnceOnly]
 
 ## Rule Description
@@ -25,6 +28,8 @@ Warning
 A reactor observes events and produces side effects. When a handler **returns** an event, Chronicle appends it to the event log as a follow-up fact. Reactors are also re-run during replay operations — observer rewind, redaction, and revision — so a handler that appends an event and is not idempotent would append that event a second time on every replay, producing duplicate facts and, in turn, incorrect projected state.
 
 `[OnceOnly]` excludes the handler from replay; it does not mean once per event source or guarantee exactly-once side effects. Failed-partition recovery and crash redelivery can run the handler again, so it must still be idempotent. The rule targets methods that *return* events because replaying them can append duplicate facts. See [Once-only handlers](/chronicle/reactors/once-only/) for the distinction between replay and recovery.
+
+In C#, Chronicle also appends the returned events with idempotency keys derived from the reactor delivery, which protects those events from failed-partition recovery. The keys do not run the handler less often, so the rule still applies: replay re-runs the handler, and if the output changed since the first run, the kernel refuses the append until you bump the [effect epoch](/chronicle/reactors/delivery-identity/#when-to-bump-the-effect-epoch) or mark the handler `[OnceOnly]`. See [Duplicate protection for returned events](/chronicle/reactors/side-effects/#duplicate-protection-for-returned-events).
 
 ## Related Rules
 

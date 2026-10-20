@@ -21,4 +21,15 @@ public record FailedPartition(Key EventSourceId, EventSequenceNumber EventSequen
     /// which can hold personal data.
     /// </remarks>
     public string Reason { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the store could not say whether the partition's writes were applied.
+    /// </summary>
+    /// <remarks>
+    /// An ordinary write failure is known not to have been applied, and is retried from the event that failed. When the
+    /// outcome is unknown - the write raised an error other than a per-document write failure, or a deadline cut it
+    /// short - some of the partition's writes may have been applied and others lost, so progress past them cannot be
+    /// trusted.
+    /// </remarks>
+    public bool OutcomeUnknown { get; init; }
 }

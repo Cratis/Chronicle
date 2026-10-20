@@ -1,3 +1,6 @@
+---
+description: Chronicle external services are named, per-event-store configurations describing how to connect to an HTTP API or database outside Chronicle.
+---
 # External Services
 
 External Services are named, per–event store configurations that describe **how to connect to something outside Chronicle** — an HTTP API or a database. Instead of scattering URLs, connection strings, and secrets across features (such as [captures](../captures/index.mdx)), you configure a connection once as an External Service and reference it by name.

@@ -1,3 +1,6 @@
+---
+description: Chronicle runs as a separate kernel process and your application is a gRPC client; this section explains how client configuration flows to it.
+---
 # Configuration
 
 Chronicle always runs as a **separate process** — the kernel — and your application talks to it as a **client** over gRPC. There is no in-process or embedded kernel to host inside your app, so on this side you're configuring *how your application connects and behaves as a client*. (To configure the kernel itself — ports, storage backends, features — see [Hosting Configuration](../hosting/configuration/index.md).)

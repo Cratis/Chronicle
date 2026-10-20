@@ -1,3 +1,6 @@
+---
+description: A passive Chronicle projection is not materialized to a store but queried on demand for in-memory lookups, declared with Passive().
+---
 # Passive projection
 
 A passive projection is a projection that is not actively materialized to a persistent store but can be queried on-demand for in-memory lookups. This is useful for scenarios where you need to construct read models from events without the overhead of maintaining persistent state.

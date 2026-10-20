@@ -1,3 +1,6 @@
+---
+description: Remove root read models and child items in a model-bound Chronicle projection with RemovedWith and RemovedWithJoin attributes.
+---
 # Removing Read Models
 
 Model-bound projections remove root read models with `RemovedWith` and child items with `RemovedWith` or `RemovedWithJoin`. Root-level `RemovedWithJoin` is not yet supported: the engine ignores it and logs a warning. Do not rely on it to remove root instances.
@@ -26,7 +29,7 @@ In this example, an account can be removed by an `AccountClosed` event or an `Ac
 
 ## RemovedWithJoin
 
-`RemovedWithJoin` on a root class is **not yet supported**. The engine logs a warning and does not subscribe to the removal event. Do not add this attribute to a root read model: it will not delete its instances. Use `RemovedWith` for root deletion, or use `RemovedWithJoin` on a child collection for child-item removal.
+`RemovedWithJoin` on a root class is **not yet supported**. The engine logs a warning and does not subscribe to the removal event. The .NET client also logs a warning at startup when a projection declares it at the root. Do not add this attribute to a root read model: it will not delete its instances. Use `RemovedWith` for root deletion, or use `RemovedWithJoin` on a child collection for child-item removal.
 
 ## Removing Children
 

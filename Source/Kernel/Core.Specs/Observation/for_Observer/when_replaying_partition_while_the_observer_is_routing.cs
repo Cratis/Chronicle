@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -24,7 +25,7 @@ public class when_replaying_partition_while_the_observer_is_routing : given.an_o
         _observerHandledCountsStorage
             .GetFor(_observerId, _partition)
             .Returns(new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 40UL });
-        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 100UL });
+        await _observer.ReportHandledEvents(_partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 100UL }, JobStepId.New(), 1UL);
     }
 
     async Task Because()

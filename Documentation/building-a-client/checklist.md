@@ -1,3 +1,6 @@
+---
+description: A top-to-bottom checklist for building a new Chronicle client, covering contracts, the idiomatic layer, authentication, clustering and connection strings.
+---
 # The checklist
 
 Everything below is pulled from the detailed pages in this section — this page exists so you can

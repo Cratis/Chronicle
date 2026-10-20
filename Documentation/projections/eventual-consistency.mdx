@@ -1,3 +1,6 @@
+---
+description: Chronicle projections update read models asynchronously, so they are eventually consistent; this explains the processing pipeline and its trade-offs.
+---
 # Eventual Consistency in Projections
 
 Projections in Chronicle operate under the principle of **eventual consistency**, meaning that read models are updated asynchronously as events are processed. This design provides significant performance benefits but requires understanding of how and when data becomes consistent.

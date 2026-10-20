@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_removing;
 
@@ -21,7 +22,7 @@ public class and_source_deletion_commits_but_throws : given.an_observer
         _error = await Catch.Exception(_observer.Remove);
         _storageStats.ResetCounts();
         _observerHandledCountsStorage.ClearReceivedCalls();
-        await _observer.ReportHandledEvents("partition", new Dictionary<EventTypeId, EventCount> { ["event"] = 1 });
+        await _observer.ReportHandledEvents("partition", new Dictionary<EventTypeId, EventCount> { ["event"] = 1 }, JobStepId.New(), 1UL);
         await _observer.FailedPartitionRecovered("partition", 42UL);
         await _observer.ReceiveReminder(Observer.AlertReminderName, default);
         await _observer.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.ApplicationRequested, "Spec"), default);

@@ -1,6 +1,6 @@
 ---
 title: Add Chronicle to a worker service
-description: Set up Chronicle in a .NET worker service (generic host) — the natural home for the reacting side of an event-sourced system, with the DI container wiring everything up for you.
+description: Set up Chronicle in a .NET worker service, the natural home for the reacting side of an event-sourced system, with DI wiring everything up.
 ---
 
 A worker service is the natural home for the *reacting* side of an event-sourced system: no web front end, just a long-running host that processes events, runs scheduled jobs, or keeps derived data up to date. Setup is mostly a matter of letting the generic host's DI container do the wiring — register Chronicle once, then inject what you need wherever you need it.

@@ -15,5 +15,6 @@ public class and_the_final_flush_fails : given.an_ordered_bulk_write
 
     [Fact] void should_report_the_failed_partition() => _finalFailures.Single().EventSourceId.ShouldEqual(KeyFor(0));
     [Fact] void should_report_the_failed_sequence_number() => _finalFailures.Single().EventSequenceNumber.Value.ShouldEqual(1UL);
+    [Fact] void should_know_the_write_was_not_applied() => _finalFailures.Single().OutcomeUnknown.ShouldBeFalse();
     [Fact] void should_flush_only_at_the_end() => _attempts.Count.ShouldEqual(1);
 }

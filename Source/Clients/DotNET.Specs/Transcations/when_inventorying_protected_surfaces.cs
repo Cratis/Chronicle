@@ -150,6 +150,7 @@ public class when_inventorying_protected_surfaces : Specification
         Add(
             "Sequence identity, append notifications, staging accessor and local serialization do not acquire committed state.",
             "IEventSequence.get_Id`0/0",
+            "IEventSequence.get_SupportsIdempotentAppends`0/0",
             "IEventSequence.get_AppendOperations`0/0",
             "IEventSequence.get_Transactional`0/0",
             "IEventSequence.Prepare`0/1");

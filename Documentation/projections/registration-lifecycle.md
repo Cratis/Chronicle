@@ -1,3 +1,6 @@
+---
+description: How Chronicle handles projection registration when clients connect, including changed definitions, the version guard for older clients, and rollback.
+---
 # Registration lifecycle
 
 Clients register their projections on every connect — the full set of definitions the client's code

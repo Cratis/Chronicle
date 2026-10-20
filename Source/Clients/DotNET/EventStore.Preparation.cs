@@ -30,13 +30,29 @@ public partial class EventStore
     internal void ThrowIfArtifactPreparationReentered() => _preparation?.ThrowIfReentered();
 
     /// <summary>
-    /// Detaches a failed store's constructor-installed callback before cache eviction.
+    /// Detaches a failed store's constructor-installed callback before cache eviction, and stops its background
+    /// registration retry so the abandoned store is not kept reachable by that loop.
     /// </summary>
     internal void DetachAutomaticRegistration()
     {
+        StopBackgroundRegistrationRetry();
         Connection.Lifecycle.OnConnected -= RegisterAfterConnect;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
         if (Occurrences is IDisposable disposable) disposable.Dispose();
+    }
+
+    /// <summary>
+    /// Stops the background registration retry, now and for any loop started later. Used when the store is detached
+    /// and when the owning client is disposed, which does not raise a disconnect that would end the loop.
+    /// </summary>
+    internal void StopBackgroundRegistrationRetry()
+    {
+        // Under the same lock as the loop's start, so one of the two always observes the other.
+        lock (BackgroundRegistrationRetrySync)
+        {
+            _isRegistrationDetached = true;
+            _backgroundRegistrationRetryCancellation?.Cancel();
+        }
     }
 
     void PublishLocalPreparationFailure(Exception failure)

@@ -1,3 +1,6 @@
+---
+description: Adorn an event type with [Unique] so Chronicle allows only one event of that type per event source, enforced as a model-bound constraint.
+---
 # Unique event type constraint
 
 Adorn the event type class with `[Unique]` to enforce that **only one event of this type** can be appended per event source. Use this when the event itself is a unique fact — for example, registering a user can only happen once.

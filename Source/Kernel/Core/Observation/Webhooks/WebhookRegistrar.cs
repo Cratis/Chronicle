@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
@@ -144,13 +147,17 @@ public sealed class WebhookRegistrar(
     /// <param name="authority">The authority to acquire the token from.</param>
     /// <param name="clientId">The client identifier to authenticate with.</param>
     /// <param name="clientSecret">The client secret to authenticate with.</param>
+    /// <param name="scope">The optional scope to request, empty for none.</param>
     /// <returns>The <see cref="WebhookTestResult"/> of the attempt.</returns>
-    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret)
+    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret, string scope)
     {
         var authorization = new OAuthAuthorization(
             new Authority(authority),
             new ClientId(clientId),
-            new ClientSecret(clientSecret));
+            new ClientSecret(clientSecret))
+        {
+            Scope = scope ?? string.Empty
+        };
 
         try
         {
@@ -185,7 +192,7 @@ public sealed class WebhookRegistrar(
             var oAuth = new OAuthAuthorization(
                 new Authority(oAuthContract.Authority),
                 new ClientId(oAuthContract.ClientId),
-                new ClientSecret(oAuthContract.ClientSecret));
+                new ClientSecret(oAuthContract.ClientSecret)) { Scope = oAuthContract.Scope };
 
             try
             {
@@ -285,7 +292,7 @@ public sealed class WebhookRegistrar(
             oauth => (WebhookAuthorization)new OAuthAuthorization(
                 oauth.Authority,
                 oauth.ClientId,
-                new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value))),
+                new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value))) { Scope = oauth.Scope },
             none => WebhookAuthorization.None);
 
         var encryptedTarget = new Concepts.Observation.Webhooks.WebhookTarget(
@@ -301,8 +308,43 @@ public sealed class WebhookRegistrar(
         await authorization.Match(
             basic => Append(eventSequence, webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
             bearer => Append(eventSequence, webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
-            oauth => Append(eventSequence, webhookId, new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret)),
+            oauth => AppendOAuth(eventSequence, webhookId, oauth),
             none => Task.CompletedTask);
+    }
+
+    async Task AppendOAuth(IEventSequence sequence, string webhookId, OAuthAuthorization oauth)
+    {
+        var authorization = new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret);
+        if (string.IsNullOrEmpty(oauth.Scope))
+        {
+            await Append(sequence, webhookId, authorization);
+            return;
+        }
+
+        var events = new EventToAppend[]
+        {
+            new(
+                EventSourceType.Default,
+                webhookId,
+                EventStreamType.All,
+                EventStreamId.Default,
+                typeof(OAuthAuthorizationSetForWebhook).GetEventType(),
+                [],
+                new JsonObject { ["authority"] = oauth.Authority.Value, ["clientId"] = oauth.ClientId.Value, ["clientSecret"] = oauth.ClientSecret.Value }),
+            new(
+                EventSourceType.Default,
+                webhookId,
+                EventStreamType.All,
+                EventStreamId.Default,
+                typeof(OAuthScopeSetForWebhook).GetEventType(),
+                [],
+                new JsonObject { ["scope"] = oauth.Scope })
+        };
+        var result = await sequence.AppendMany(events, CorrelationId.New(), [], Identity.System, new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+        if (!result.IsSuccess)
+        {
+            throw new WebhookRegistrationFailed(webhookId, typeof(OAuthScopeSetForWebhook));
+        }
     }
 
     /// <summary>
