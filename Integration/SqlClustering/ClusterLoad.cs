@@ -14,6 +14,7 @@ public sealed class ClusterLoad : IAsyncDisposable
     readonly ConcurrentQueue<Guid> _observed = new();
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _acknowledged = new();
     readonly ConcurrentQueue<Guid> _unknown = new();
+    readonly ConcurrentQueue<Task> _outstanding = new();
     readonly CancellationTokenSource _stop = new();
     readonly string _source = Guid.NewGuid().ToString();
     ChronicleClient _client = null!;
@@ -62,6 +63,7 @@ public sealed class ClusterLoad : IAsyncDisposable
     {
         await _stop.CancelAsync();
         await _load;
+        await SettleOutstandingAppends();
         var acknowledged = _acknowledged.ToArray();
         (acknowledged.Length >= 20).ShouldBeTrue();
 
@@ -107,7 +109,9 @@ public sealed class ClusterLoad : IAsyncDisposable
             var id = Guid.NewGuid();
             try
             {
-                var result = await _store.EventLog.Append(_source, new ClusterEventAppended(id)).WaitAsync(TimeSpan.FromSeconds(30));
+                var append = _store.EventLog.Append(_source, new ClusterEventAppended(id));
+                _outstanding.Enqueue(append);
+                var result = await append.WaitAsync(TimeSpan.FromSeconds(30));
                 if (result.IsSuccess)
                 {
                     _acknowledged.Enqueue((id, result.SequenceNumber));
@@ -128,6 +132,22 @@ public sealed class ClusterLoad : IAsyncDisposable
             {
                 await cadence.WaitForNextTickAsync();
             }
+        }
+    }
+
+    async Task SettleOutstandingAppends()
+    {
+        // An append abandoned by WaitAsync keeps running; the log is only read once every attempt has finished,
+        // so a late append can neither escape verification nor race the reactor check.
+        // Their outcome is already recorded as unknown; only their completion matters here, not their result.
+        var outstanding = Task.WhenAll(_outstanding.Select(append => append.ContinueWith(_ => { }, TaskScheduler.Default)));
+        try
+        {
+            await outstanding.WaitAsync(TimeSpan.FromMinutes(2));
+        }
+        catch (TimeoutException)
+        {
+            throw new InvalidOperationException("Appends were still outstanding two minutes after the load stopped.");
         }
     }
 
