@@ -95,6 +95,7 @@ public class when_a_receiver_defers_and_the_observer_reactivates(context context
 
         protected override async Task OnDisposeAsync()
         {
+            _receiver?.ReleaseRetry();
             _lease?.Dispose();
             _receiver?.Dispose();
             await base.OnDisposeAsync();
