@@ -71,7 +71,7 @@ public class UniqueConstraintIndexUpdater(
             }
 
             var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
-            await storage.Save(context.EventSourceId, definition, eventSequenceNumber, value, scopeKey, cancellationToken);
+            await storage.Save(context.EventSourceId, definition, eventSequenceNumber, value, scopeKey, definition.SubjectFor(context), cancellationToken);
         }
     }
 }

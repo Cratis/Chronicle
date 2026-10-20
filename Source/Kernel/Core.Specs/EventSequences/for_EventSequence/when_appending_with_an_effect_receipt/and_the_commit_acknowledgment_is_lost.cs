@@ -19,5 +19,5 @@ public class and_the_commit_acknowledgment_is_lost : given.an_event_sequence_wit
     [Fact] void should_repair_the_event_type_tail() => _stateStorage.State.TailSequenceNumberPerEventType[_eventType.Id].Value.ShouldEqual(0UL);
     [Fact] void should_repair_the_constraint_index() => _constraintIndexSequenceNumbers.ShouldContainOnly(EventSequenceNumber.First);
     [Fact] async Task should_dispatch_the_committed_event() => await _appendedEventsQueues.Received(1).Enqueue(Arg.Is<IEnumerable<AppendedEvent>>(events => events.Count() == 1 && events.First().Context.EventType == _eventType));
-    [Fact] void should_use_the_winners_source_for_constraints() => _constraintValidation.Received(1).Establish(_eventSourceId, _eventType.Id, Arg.Any<System.Dynamic.ExpandoObject>(), EventSourceType.Default, EventStreamType.All, EventStreamId.Default, null);
+    [Fact] void should_use_the_winners_source_for_constraints() => _constraintValidation.Received(1).Establish(_eventSourceId, _eventType.Id, Arg.Any<System.Dynamic.ExpandoObject>(), EventSourceType.Default, EventStreamType.All, EventStreamId.Default, null, Arg.Any<Subject?>(), Arg.Any<IReadOnlyCollection<string>?>());
 }

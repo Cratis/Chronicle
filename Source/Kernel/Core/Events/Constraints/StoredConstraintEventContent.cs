@@ -42,16 +42,31 @@ public class StoredConstraintEventContent(EventStoreName eventStore, EventStoreN
     /// <returns>The released content, or the original content when no metadata applies.</returns>
     public async Task<ExpandoObject> Release(AppendedEvent @event, CancellationToken cancellationToken = default)
     {
+        var schema = await SchemaFor(@event, cancellationToken);
+        if (!schema.Schema.HasSchemaMetadata()) return @event.Content;
+        var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
+        var json = converter.ToJsonObject(@event.Content, schema.Schema);
+        var released = await metadata.Release(eventStore, @namespace, schema.Schema, identifier, json).WaitAsync(cancellationToken);
+        return converter.ToExpandoObject(released, schema.Schema);
+    }
+
+    /// <summary>
+    /// Gets the top-level properties of a stored event that carry personal data according to its schema generation.
+    /// </summary>
+    /// <param name="event">The stored event.</param>
+    /// <param name="cancellationToken">The read deadline.</param>
+    /// <returns>The property names.</returns>
+    public async Task<IReadOnlyCollection<string>> PersonalPropertiesOf(AppendedEvent @event, CancellationToken cancellationToken = default) =>
+        ConstraintPersonalData.PropertiesOf((await SchemaFor(@event, cancellationToken)).Schema);
+
+    async Task<EventTypeSchema> SchemaFor(AppendedEvent @event, CancellationToken cancellationToken)
+    {
         if (!_schemas.TryGetValue(@event.Context.EventType, out var schema))
         {
             schema = await eventTypes.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation).WaitAsync(cancellationToken);
             _schemas[@event.Context.EventType] = schema;
         }
 
-        if (!schema.Schema.HasSchemaMetadata()) return @event.Content;
-        var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
-        var json = converter.ToJsonObject(@event.Content, schema.Schema);
-        var released = await metadata.Release(eventStore, @namespace, schema.Schema, identifier, json).WaitAsync(cancellationToken);
-        return converter.ToExpandoObject(released, schema.Schema);
+        return schema;
     }
 }
