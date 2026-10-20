@@ -13,7 +13,7 @@ public class and_provisioners_race_for_it(VaultFixture fixture) : Specification
     const int Provisioners = 8;
 
     IEncryptionKeyStorage _store;
-    EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();
+    readonly EncryptionKeyIdentifier _identifier = Guid.NewGuid().ToString();
     EncryptionKeyAtRevision[] _results;
     EncryptionKeyAtRevision? _stored;
 
