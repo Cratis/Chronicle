@@ -23,7 +23,9 @@ public class when_cancelling_a_store_wide_read : given.a_statistics_reader
             if (Interlocked.Increment(ref _started) == StatisticsReader.MaximumConcurrentNamespaceReads) _full.TrySetResult();
             var context = call.Arg<CallContext>();
             _contexts.Add(context);
-            await Task.Delay(Timeout.InfiniteTimeSpan, context.CancellationToken);
+            var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var registration = context.CancellationToken.Register(() => cancelled.TrySetCanceled(context.CancellationToken));
+            await cancelled.Task;
             return new GetInstancesResponse();
         });
     }
