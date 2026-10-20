@@ -28,15 +28,30 @@ public class and_events_belong_to_an_event_store : given.a_webhook_mediator
 
     [Fact] void should_tag_the_delivery_request() => _handler.EventStore.ShouldEqual((EventStoreName)"orders");
 
+    void Destroy() => _httpClient.Dispose();
+
     sealed class CapturingHandler : HttpMessageHandler
     {
+        readonly List<HttpResponseMessage> _responses = [];
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                foreach (var response in _responses) response.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         public EventStoreName? EventStore { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var store);
             EventStore = store;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            _responses.Add(response);
+            return Task.FromResult(response);
         }
     }
 }

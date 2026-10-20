@@ -26,4 +26,17 @@ public interface IWebhookMediator
     /// <param name="cancellationToken">Cancellation of the entire delivery, including the resilience pipeline.</param>
     /// <returns>A <see cref="Task{T}"/> of <see cref="Catch"/>.</returns>
     Task<Catch> OnNext(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Notify that events should be observed.
+    /// </summary>
+    /// <param name="eventStore">The event store, or null for global policy.</param>
+    /// <param name="webhookTarget">The <see cref="WebhookTarget"/>.</param>
+    /// <param name="partition"><see cref="Key"/> for the partition.</param>
+    /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
+    /// <param name="accessToken">Optional access token to use for authorization.</param>
+    /// <param name="timeout">The optional timeout.</param>
+    /// <param name="cancellationToken">Cancellation of the entire delivery, including the resilience pipeline.</param>
+    /// <returns>The typed delivery outcome, including partial progress and any deadline.</returns>
+    Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default);
 }

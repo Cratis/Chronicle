@@ -373,8 +373,32 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <param name="kind">What kind of thing went wrong. Defaults to <see cref="FailureKind.Unknown"/>.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
+    /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+
+    /// <summary>
+    /// Persist a delivery deadline without consuming an attempt.
+    /// </summary>
+    /// <param name="partition">The partition to defer.</param>
+    /// <param name="deferral">The deadline and first unhandled event.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="expectedDeferralId">The deferral that owned the delivery.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null);
+
+    /// <summary>
+    /// Check recovery ownership and the persisted deadline before delivering.
+    /// </summary>
+    /// <param name="partition">The partition to deliver.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy job.</param>
+    /// <param name="deferralId">The deferral that owns the delivery.</param>
+    /// <returns>Whether delivery may resume now.</returns>
+    [AlwaysInterleave]
+    Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Records a projection bulk flush's failed partitions with one alert snapshot for the batch.
@@ -398,29 +422,35 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition that has recovered.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event the recovery handled, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
     /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the recovery read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when it read nothing.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Notify that a recovery attempt ended without recovering the partition and without recording a new failure.
     /// </summary>
     /// <param name="partition">The partition that is still failed.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// The retry reminder is removed when the recovery starts, so the partition needs another retry scheduled.
     /// </remarks>
     [AlwaysInterleave]
-    Task FailedPartitionNotRecovered(Key partition);
+    Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Notify that the partition has partially recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+    Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Check if the observer is currently preparing for a catch-up (between the <see cref="CatchUp"/> call and <see cref="RegisterCatchingUpPartitions"/> being called).

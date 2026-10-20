@@ -18,9 +18,9 @@ public sealed class PinnedWebhookReceiver : HttpMessageHandler
     volatile bool _failDelivery;
 
     /// <summary>
-    /// Sets whether deliveries received from now on are answered with a 400.
+    /// Sets whether deliveries received from now on are answered with a transient 503.
     /// </summary>
-    /// <param name="fail">True to answer with 400, false to answer with 200.</param>
+    /// <param name="fail">True to answer with 503, false to answer with 200.</param>
     public void FailDeliveries(bool fail) => _failDelivery = fail;
 
     /// <summary>
@@ -50,7 +50,7 @@ public sealed class PinnedWebhookReceiver : HttpMessageHandler
         var payload = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!.AsObject();
         var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _gates.Enqueue(response);
-        var statusCode = _failDelivery ? System.Net.HttpStatusCode.BadRequest : System.Net.HttpStatusCode.OK;
+        var statusCode = _failDelivery ? System.Net.HttpStatusCode.ServiceUnavailable : System.Net.HttpStatusCode.OK;
         foreach (var @event in payload["events"]!.AsArray())
         {
             await _deliveries.Writer.WriteAsync((@event!.AsObject(), response), cancellationToken);
