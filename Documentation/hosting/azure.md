@@ -113,7 +113,7 @@ Cratis__Chronicle__Clustering__ServiceId=chronicle
 - Membership uses the same connection resolution as storage, so the managed identity needs no extra setup.
 - The silo (11111) and gateway (30000) ports must be reachable between nodes. Set `advertisedIP` when the default address is not.
 
-Clustering gives you more than one node. It does not by itself make a deployment zero-downtime, and this guide makes no such promise. Test how your rollout behaves before relying on it. <!-- TODO(#5127): link the rolling-deploy runbook --> See [Clustering](configuration/clustering.md) for the full set of options, limits and defunct-silo cleanup.
+Clustering gives you more than one node. It does not by itself make a deployment zero-downtime, and this guide makes no such promise. Test how your rollout behaves before relying on it, and follow the [rolling-deploy runbook](rolling-deploy.md) when you replace nodes. See [Clustering](configuration/clustering.md) for the full set of options, limits and defunct-silo cleanup.
 
 ## Put it together
 
@@ -148,3 +148,4 @@ If every tenant shares the one database, drop the `ConnectionResolution` lines a
 - [Storage connection resolution](configuration/storage-connection-resolution.md)
 - [Health endpoint](configuration/health-endpoint.md)
 - [Clustering](configuration/clustering.md)
+- [Roll out a new version to a multi-node cluster](rolling-deploy.md)
