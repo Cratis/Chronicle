@@ -32,6 +32,7 @@ public sealed class FailedPartitionEqualityComparer :
             x.RecoveryCursor == y.RecoveryCursor &&
             x.RecoveryOwner == y.RecoveryOwner &&
             x.Hold == y.Hold &&
+            x.Deferral == y.Deferral &&
             AttemptsEqual(x.Attempts, y.Attempts);
     }
 

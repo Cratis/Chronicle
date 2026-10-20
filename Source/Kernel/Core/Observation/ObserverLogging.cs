@@ -38,6 +38,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
 
+    [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
+    internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
+
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 

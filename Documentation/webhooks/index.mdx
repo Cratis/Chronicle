@@ -12,10 +12,26 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
 
 :::caution[Failed deliveries are retried]
-A non-2xx response, such as `400` or `500`, fails the webhook batch. Transient failures (`5xx`, `408`, `429`, timeouts and connection errors) are first retried by Chronicle's HTTP client up to three times with exponential backoff, and a circuit breaker can fail calls fast while an endpoint keeps failing. When the batch still fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
+A non-2xx response, such as `400` or `500`, fails the webhook batch. Each delivery makes one HTTP attempt; the HTTP client does not sleep or retry inline. A circuit breaker can fail calls fast while an endpoint keeps failing. When the batch fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
-The observer's subscriber timeout cancels the webhook HTTP operation, including any retry delay, and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
+The observer's subscriber timeout cancels the webhook HTTP operation and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
+
+## Circuit-open deferrals and manual retry
+
+Circuit breakers are shared by target authority (scheme, host, and port), not by path,
+observer, or event store. An open circuit defers delivery until its deadline without
+consuming a partition retry attempt. The deadline and first unhandled event are persisted,
+so restart or resubscription does not make delivery resume early.
+
+A manual partition retry is an explicit operator override: it clears the deferral and
+retries immediately, recording an information-level log with the overridden reason and
+deadline. If the circuit is still open, delivery is rejected without sending an HTTP
+request and the partition is deferred again. Automatic recovery does not override deadlines.
+
+The `chronicle-webhook-circuit-opened` and `chronicle-webhook-circuit-rejected` counters
+are tagged by normalized target `authority`. Circuit-open deferrals also log the authority
+and deadline; paths, observer identifiers, and event-store names are not metric tags.
 
 ## OAuth client credentials
 

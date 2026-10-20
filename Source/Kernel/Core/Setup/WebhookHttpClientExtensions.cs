@@ -39,27 +39,25 @@ public static class WebhookHttpClientExtensions
             {
                 var webhooks = context.ServiceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.Webhooks;
 
-                // Retry with exponential backoff
-                pipeline.AddRetry(new HttpRetryStrategyOptions
-                {
-                    MaxRetryAttempts = 3,
-                    Delay = TimeSpan.FromSeconds(webhooks.RetryDelaySeconds),
-                    BackoffType = DelayBackoffType.Exponential,
-                    ShouldHandle = retryArguments => ValueTask.FromResult(HttpClientResiliencePredicates.IsTransient(retryArguments.Outcome))
-                });
-
+                // The observer owns durable retries; the HTTP pipeline performs one attempt only.
                 // Circuit breaker
                 pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
                 {
                     SamplingDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerSamplingDurationSeconds),
                     FailureRatio = 0.5, // trip if 50% fail
                     MinimumThroughput = 10,
-                    BreakDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerBreakDurationSeconds)
+                    BreakDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerBreakDurationSeconds),
+                    OnOpened = arguments =>
+                    {
+                        var authority = arguments.Context.GetRequestMessage()!.RequestUri!.GetLeftPart(UriPartial.Authority);
+                        WebhookDeliveryMetrics.CircuitOpened(authority);
+                        return ValueTask.CompletedTask;
+                    }
                 });
 
                 // Timeout per request
                 pipeline.AddTimeout(TimeSpan.FromSeconds(webhooks.RequestTimeoutSeconds));
-            });
+            }).SelectPipelineByAuthority();
         return builder;
     }
 

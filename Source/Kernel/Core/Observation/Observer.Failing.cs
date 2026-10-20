@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Observation.Webhooks;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -23,7 +25,9 @@ public partial class Observer
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> exceptionMessages,
         string exceptionStackTrace,
-        FailureKind kind = FailureKind.Unknown)
+        FailureKind kind = FailureKind.Unknown,
+        FailedPartitionId? episodeId = null,
+        Guid? deferralId = null)
     {
         if (IsRetired || _removed)
         {
@@ -35,6 +39,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
+            if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
             var config = await configurationProvider.GetFor(_observerKey);
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
@@ -117,35 +122,35 @@ public partial class Observer
     /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
     /// exclude, which are never counted as handled.
     /// </remarks>
-    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
+    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FailingPartitionRecovered(partition);
-        await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         EvaluateSuspectedSkips();
     }
 
     /// <inheritdoc/>
-    public async Task FailedPartitionNotRecovered(Key partition)
+    public async Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
-        if (!Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionNotRecovered(partition);
         await RegisterRetryReminder(failure);
     }
 
     /// <inheritdoc/>
-    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed) return;
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed) return;
+            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
             Skips.Delivered(partition, lastHandledEventSequenceNumber);
@@ -179,6 +184,22 @@ public partial class Observer
         {
             logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
             return PartitionRecoveryOutcome.PartitionQuarantined;
+        }
+
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (failure.Deferral is { } deferral)
+            {
+                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
+                failure.Deferral = null;
+                await failures.WriteStateAsync();
+                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
         }
 
         await StartRecoverJobForFailedPartition(failure);
@@ -297,6 +318,12 @@ public partial class Observer
 
     async Task RegisterRetryReminder(FailedPartition failure)
     {
+        if (failure.Deferral is { } deferral)
+        {
+            await RegisterDeferralReminder(failure, deferral);
+            return;
+        }
+
         var config = await configurationProvider.GetFor(_observerKey);
         var retryDelay = GetNextRetryDelay(failure, config);
         await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
@@ -333,12 +360,12 @@ public partial class Observer
         }
     }
 
-    async Task ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null)
+    async Task<bool> ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed) return;
+            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
             if (lastHandled is not null)
             {
                 HandleNewLastHandledEventForPartition(partition, lastHandled);
@@ -354,6 +381,7 @@ public partial class Observer
             ChangeAlertState();
             await WriteStateAsync();
             await failures.WriteStateAsync();
+            return true;
         }
         finally
         {
@@ -371,12 +399,14 @@ public partial class Observer
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!await IsDeferralDue(failedPartition)) return;
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope };
+        var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
         await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
             request,
-            requestPredicate: r => r.Key == failedPartition.Partition);
+            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
     }
 
     /// <summary>
@@ -393,7 +423,7 @@ public partial class Observer
     /// </remarks>
     bool ShouldQuarantineObserver(Observers config)
     {
-        var failedPartitionCount = Failures.Partitions.Count(_ => _.LastAttempt.Kind != FailureKind.Timeout);
+        var failedPartitionCount = Failures.Partitions.Count(_ => _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout);
         if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
         {
             logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);

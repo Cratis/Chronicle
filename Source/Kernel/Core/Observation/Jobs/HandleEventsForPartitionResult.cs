@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -11,6 +12,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="LastHandledEventSequenceNumber">The sequence number of the last successfully handled event.</param>
 public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEventSequenceNumber)
 {
+    /// <summary>
+    /// Gets the durable deferral when this step stopped without completing delivery.
+    /// </summary>
+    public PartitionDeferral? Deferral { get; init; }
+
     /// <summary>
     /// Gets the sequence number of the last event the step read and dealt with, whether it handed it to the
     /// subscriber or left it out because the observer's filters exclude it.

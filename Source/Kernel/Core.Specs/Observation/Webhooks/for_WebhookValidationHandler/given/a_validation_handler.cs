@@ -41,13 +41,26 @@ public class a_validation_handler : for_WebhookTargetPolicy.given.a_target_polic
 
     protected class RecordingHandler : HttpMessageHandler
     {
+        readonly List<HttpResponseMessage> _responses = [];
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                foreach (var response in _responses) response.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         public int Calls { get; private set; }
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
-            return Task.FromResult(new HttpResponseMessage(StatusCode));
+            var response = new HttpResponseMessage(StatusCode);
+            _responses.Add(response);
+            return Task.FromResult(response);
         }
     }
 }

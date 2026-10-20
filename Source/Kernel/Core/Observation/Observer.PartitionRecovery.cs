@@ -34,13 +34,13 @@ public partial class Observer
     bool _partitionRecoveryTurnScheduled;
 
     /// <inheritdoc/>
-    public Task TryRecoverAllFailedPartitions()
+    public async Task TryRecoverAllFailedPartitions()
     {
-        if (IsRetired || _removed) return Task.CompletedTask;
+        if (IsRetired || _removed) return;
 
+        await ReconcilePartitionDeferrals();
         _recoveryOfAllFailedPartitionsRequested = true;
         SchedulePartitionRecoveryTurn();
-        return Task.CompletedTask;
     }
 
     void SchedulePartitionRecoveryTurn()

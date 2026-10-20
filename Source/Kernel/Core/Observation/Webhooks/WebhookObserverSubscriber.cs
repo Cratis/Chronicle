@@ -10,7 +10,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -74,14 +73,20 @@ public class WebhookObserverSubscriber(
             var oauth = target.Authorization.AsT2;
             target = target with { Authorization = oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) } };
         }
-        var onNextResult = await webhookMediator.OnNext(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
-        return onNextResult.Match(HandleSuccess, HandleError);
-
-        ObserverSubscriberResult HandleSuccess(None none)
+        var onNextResult = await webhookMediator.Deliver(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
+        if (onNextResult.Deferral is { } deferral)
         {
-            logger.SuccessfullyHandledAllEvents(_key);
-            return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
+            return new(ObserverSubscriberState.Deferred, onNextResult.LastHandled, [], string.Empty) { Deferral = deferral };
         }
+
+        if (!onNextResult.IsSuccess)
+        {
+            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled };
+        }
+
+        logger.SuccessfullyHandledAllEvents(_key);
+        return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
+
         ObserverSubscriberResult HandleError(Exception error)
         {
             logger.ErrorHandling(error, _key);

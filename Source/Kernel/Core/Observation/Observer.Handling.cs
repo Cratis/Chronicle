@@ -466,7 +466,12 @@ public partial class Observer
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
 
-                    if (result.State == ObserverSubscriberState.Failed)
+                    if (result.State == ObserverSubscriberState.Deferred)
+                    {
+                        await PartitionDeferred(partition, result.Deferral!);
+                        stateChanged = true;
+                    }
+                    else if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
                         failureKind = FailureKind.Handling;

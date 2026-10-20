@@ -254,7 +254,9 @@ public class an_observer : Specification
                 Partition = partition.Partition,
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
-                Attempts = partition.Attempts.ToArray()
+                Attempts = partition.Attempts.ToArray(),
+                Deferral = partition.Deferral,
+                RecoveryCursor = partition.RecoveryCursor
             }).ToArray()
         };
 

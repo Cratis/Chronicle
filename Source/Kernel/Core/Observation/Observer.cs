@@ -172,6 +172,7 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
     }
@@ -542,7 +543,11 @@ public partial class Observer(
             return;
         }
 
-        await UnregisterReminderNamed(reminderName);
+        if (!Failures.Partitions.Any(_ => IsRetryReminderFor(_, reminderName) && _.Deferral is not null))
+        {
+            await UnregisterReminderNamed(reminderName);
+        }
+
         if (CannotRecoverFromReminder())
         {
             return;
