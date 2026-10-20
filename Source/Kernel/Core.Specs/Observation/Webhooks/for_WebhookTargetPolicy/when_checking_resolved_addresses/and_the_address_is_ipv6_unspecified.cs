@@ -1,0 +1,16 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Net;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
+
+namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookTargetPolicy.when_checking_resolved_addresses;
+
+public class and_the_address_is_ipv6_unspecified : given.a_target_policy
+{
+    void Establish() => Configure(new() { Validation = WebhookValidationMode.Enforce });
+
+    void Because() => _result = _policy.CheckAddresses(new Uri("https://receiver.example"), [IPAddress.Parse("::")], null);
+
+    [Fact] void should_reject_the_address() => _result.IsAllowed.ShouldBeFalse();
+}

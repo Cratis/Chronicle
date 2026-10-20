@@ -48,7 +48,8 @@ public static class WebhookDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
-            definition.IsReplayable)
+            definition.IsReplayable,
+            definition.IsActive)
         {
             GenerationDelivery = definition.GenerationDelivery
         };

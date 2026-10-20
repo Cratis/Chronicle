@@ -38,7 +38,7 @@ public class with_failed_webhook_request : given.a_webhook_mediator
         _httpClientFactory.Create(_target).Returns(_httpClient);
     }
 
-    async Task Because() => _result = await _mediator.OnNext(_target, _partition, _events);
+    async Task Because() => _result = await _mediator.OnNext("orders", _target, _partition, _events);
 
     [Fact] void should_fail() => _result.IsSuccess.ShouldBeFalse();
 

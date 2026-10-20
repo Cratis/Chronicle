@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
@@ -440,7 +441,13 @@ public partial class Observer
                     while (true)
                     {
                         var target = subscriberSelector.Select(_subscription, partition);
-                        var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
+
+                        // A webhook partition has one non-interleavable activation across live delivery and jobs,
+                        // independent of which silo owns the observer or executes the job.
+                        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+                            ? SiloAddress.Zero
+                            : target.SiloAddress;
+                        var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));

@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -15,22 +17,35 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Acquires and shares client-credentials tokens until shortly before their expiry.
 /// </summary>
 /// <param name="httpClientFactory">The HTTP client factory.</param>
+/// <param name="policy">The target policy.</param>
 /// <param name="timeProvider">The clock used for token expiry.</param>
 [Singleton]
-public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? timeProvider = null) : IOAuthClient
+public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPolicy policy, TimeProvider? timeProvider = null) : IOAuthClient
 {
+    /// <summary>
+    /// The dedicated OAuth client, sharing webhook target validation and redirect protection.
+    /// </summary>
+    public const string HttpClientName = "webhook-oauth";
+
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly ConcurrentDictionary<string, Lazy<Task<string?>>> _endpoints = new();
     readonly ConcurrentDictionary<OAuthTokenKey, Lazy<Task<AccessTokenInfo>>> _tokens = new();
 
     /// <inheritdoc/>
-    public Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization) => AcquireToken(authorization, CancellationToken.None);
+    public Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization) => AcquireToken(authorization, null, CancellationToken.None);
 
     /// <inheritdoc/>
-    public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, CancellationToken cancellationToken)
+    public Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, EventStoreName? eventStore) => AcquireToken(authorization, eventStore, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, CancellationToken cancellationToken) => AcquireToken(authorization, null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<AccessTokenInfo> AcquireToken(OAuthAuthorization authorization, EventStoreName? eventStore, CancellationToken cancellationToken)
     {
         var authority = authorization.Authority.Value.TrimEnd('/');
-        var discovery = _endpoints.GetOrAdd(authority, static (key, owner) => new(() => owner.Discover(key)), this);
+        await Validate($"{authority}/.well-known/openid-configuration", eventStore, cancellationToken);
+        var discovery = _endpoints.GetOrAdd(authority, static (key, state) => new(() => state.Client.Discover(key, state.EventStore)), (Client: this, EventStore: eventStore));
         string? endpoint;
         try
         {
@@ -48,10 +63,11 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? tim
             return AccessTokenInfo.Empty;
         }
 
+        await Validate(endpoint, eventStore, cancellationToken);
         var key = Key(endpoint, authorization);
         while (true)
         {
-            var request = _tokens.GetOrAdd(key, static (_, state) => new(() => state.Client.Fetch(state.Endpoint, state.Authorization)), (Client: this, Endpoint: endpoint, Authorization: authorization));
+            var request = _tokens.GetOrAdd(key, static (_, state) => new(() => state.Client.Fetch(state.Endpoint, state.Authorization, state.EventStore)), (Client: this, Endpoint: endpoint, Authorization: authorization, EventStore: eventStore));
             if (request.IsValueCreated && request.Value.IsCompletedSuccessfully && _clock.GetUtcNow() >= (await request.Value).ExpiresAt)
             {
                 _tokens.TryRemove(new(key, request));
@@ -96,16 +112,36 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? tim
         authorization.Scope,
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(authorization.ClientSecret.Value))));
 
-    async Task<string?> Discover(string authority)
+    static HttpRequestMessage CreateRequest(HttpMethod method, string url, EventStoreName? eventStore)
     {
-        using var client = httpClientFactory.CreateClient();
-        var configuration = await client.GetFromJsonAsync<OpenIdConfiguration>($"{authority}/.well-known/openid-configuration");
+        var request = new HttpRequestMessage(method, url);
+        if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
+        return request;
+    }
+
+    static void EnsureSuccess(HttpResponseMessage response)
+    {
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            throw new WebhookTargetRejected($"OAuth redirects are not allowed (HTTP {(int)response.StatusCode}).");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    async Task<string?> Discover(string authority, EventStoreName? eventStore)
+    {
+        using var client = httpClientFactory.CreateClient(HttpClientName);
+        using var request = CreateRequest(HttpMethod.Get, $"{authority}/.well-known/openid-configuration", eventStore);
+        using var response = await client.SendAsync(request);
+        EnsureSuccess(response);
+        var configuration = await response.Content.ReadFromJsonAsync<OpenIdConfiguration>();
         return configuration?.TokenEndpoint;
     }
 
-    async Task<AccessTokenInfo> Fetch(string endpoint, OAuthAuthorization authorization)
+    async Task<AccessTokenInfo> Fetch(string endpoint, OAuthAuthorization authorization, EventStoreName? eventStore)
     {
-        using var client = httpClientFactory.CreateClient();
+        using var client = httpClientFactory.CreateClient(HttpClientName);
         var request = new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",
@@ -117,9 +153,10 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? tim
             request["scope"] = authorization.Scope;
         }
 
-        using var content = new FormUrlEncodedContent(request);
-        using var response = await client.PostAsync(endpoint, content);
-        response.EnsureSuccessStatusCode();
+        using var tokenRequest = CreateRequest(HttpMethod.Post, endpoint, eventStore);
+        tokenRequest.Content = new FormUrlEncodedContent(request);
+        using var response = await client.SendAsync(tokenRequest);
+        EnsureSuccess(response);
         var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
         if (token is null || string.IsNullOrEmpty(token.AccessToken))
         {
@@ -129,6 +166,12 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, TimeProvider? tim
         var lifetime = Math.Max(0, token.ExpiresIn);
         var margin = Math.Min(60, lifetime / 2.0);
         return new(token.AccessToken, _clock.GetUtcNow().AddSeconds(lifetime - margin));
+    }
+
+    async Task Validate(string url, EventStoreName? eventStore, CancellationToken cancellationToken)
+    {
+        var result = await policy.Evaluate(url, eventStore, cancellationToken);
+        if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
     }
 
     record OAuthTokenKey(string Endpoint, string ClientId, string Scope, string SecretHash);
