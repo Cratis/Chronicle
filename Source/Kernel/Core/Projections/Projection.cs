@@ -615,7 +615,7 @@ public class Projection(
                 case DefinitionEvolutionOperation.PartialReplay when policy.Allows(plan.Operation):
                     this.ScheduleInSeparateTurn(() => ReplayProjectionPartitions(key, @namespace, plan.AffectedEventSources, plan.AffectedEventTypes));
                     break;
-                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation):
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
                     this.ScheduleInSeparateTurn(() => ReplayProjection(key, @namespace));
                     break;
                 default:
@@ -658,6 +658,9 @@ public class Projection(
 
         (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
         {
+            _ when currentDefinition.Scope == ProjectionScope.Global => (
+                GlobalProjectionReplay.RefusalReason,
+                new ProjectionDefinitionChangedReplayCandidateReason()),
             ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
                 "Projection definition has changed. Update available.",
                 new ProjectionUpdateAvailableReplayCandidateReason()),

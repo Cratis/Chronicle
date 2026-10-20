@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
@@ -119,6 +120,11 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.Unknown;
             }
 
+            if (projection.Scope == ProjectionScope.Global)
+            {
+                throw new GlobalProjectionReplayNotSupported();
+            }
+
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             var failedPartitions = (await pipeline.EndBulk()).ToArray();
             await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
@@ -126,7 +132,7 @@ public class ProjectionReplayHandler(
                 ? ICanHandleReplayForObserver.Error.Unknown
                 : Result<ICanHandleReplayForObserver.Error>.Success();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not GlobalProjectionReplayNotSupported)
         {
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
@@ -214,6 +220,11 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.Unknown;
             }
 
+            if (projection.Scope == ProjectionScope.Global)
+            {
+                throw new GlobalProjectionReplayNotSupported();
+            }
+
             var getReplayContext = await getContext(projection);
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             if (getReplayContext.TryPickT1(out _, out var replayContext))
@@ -228,7 +239,7 @@ public class ProjectionReplayHandler(
 
             return await doWork(pipeline, projection, replayContext);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not GlobalProjectionReplayNotSupported)
         {
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;

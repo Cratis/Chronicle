@@ -18,6 +18,8 @@ public class and_namespaces_share_a_global_sink : given.a_projection_replay_hand
     IMongoCollection<BsonDocument> _replayCollection;
     ObserverDetails _secondNamespace;
     ReplayContext _context;
+    Exception _firstRefusal;
+    Exception _secondRefusal;
 
     void Establish()
     {
@@ -42,10 +44,12 @@ public class and_namespaces_share_a_global_sink : given.a_projection_replay_hand
 
     async Task Because()
     {
-        await _handler.BeginReplayFor(_observerDetails);
-        await _handler.BeginReplayFor(_secondNamespace);
+        _firstRefusal = await Catch.Exception(() => _handler.BeginReplayFor(_observerDetails));
+        _secondRefusal = await Catch.Exception(() => _handler.BeginReplayFor(_secondNamespace));
     }
 
+    [Fact] void should_refuse_the_first_namespace() => _firstRefusal.Message.ShouldEqual(GlobalProjectionReplay.RefusalReason);
+    [Fact] void should_refuse_the_second_namespace() => _secondRefusal.Message.ShouldEqual(GlobalProjectionReplay.RefusalReason);
     [Fact] void should_leave_other_namespaces_live_writes_on_the_live_collection() => _sharedCollections.GetCollection().ShouldBeSame(_liveCollection);
     [Fact] async Task should_not_clear_a_shared_rebuild() => await _replayCollection.DidNotReceive().DeleteManyAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>());
     [Fact] async Task should_not_establish_a_namespace_local_replay_context() => await _replayContexts.DidNotReceive().Establish(Arg.Any<ReadModelType>(), Arg.Any<ReadModelContainerName>());
