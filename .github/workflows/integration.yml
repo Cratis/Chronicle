@@ -382,6 +382,8 @@ jobs:
             docker pull "${{ inputs.chronicle-image }}"
             if [ "${{ matrix.provider }}" = "PostgreSql" ]; then
               docker pull postgres:16
+            else
+              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
             fi
 
       # Three kernel containers from the image the Client shards use. No retries: an append that
