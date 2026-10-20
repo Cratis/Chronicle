@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -43,12 +44,14 @@ public class Reducer(
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
+    ClientSubscriptionKeeper? _subscriptionKeeper;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+        _subscriptionKeeper = new(this, TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds), logger);
 
         return Task.CompletedTask;
     }
@@ -67,6 +70,7 @@ public class Reducer(
         {
             if (_subscribed)
             {
+                _subscriptionKeeper!.Stop();
                 await _observer!.Unsubscribe();
                 _subscribed = false;
             }
@@ -102,9 +106,11 @@ public class Reducer(
             }
 
             _subscribed = true;
+            _subscriptionKeeper!.Keep(_observer, _observerKey.ConnectionId, _connectedClients, client => RestoreSubscription(definition, client));
         }
         else if (_subscribed && !definition.IsActive)
         {
+            _subscriptionKeeper!.Stop();
             await _observer!.Unsubscribe();
             _subscribed = false;
         }
@@ -137,10 +143,20 @@ public class Reducer(
             // and the action (Unsubscribe) as two separate grain calls would race against a new client's
             // Subscribe that lands between them — the old client's Unsubscribe would then destroy the
             // new client's subscription.
+            _subscriptionKeeper!.Stop();
             await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
             _subscribed = false;
         }
     }
+
+    Task RestoreSubscription(ReducerDefinition definition, ConnectedClient connectedClient) =>
+        _observer!.RestoreClientSubscription<IReducerObserverSubscriber>(
+            ObserverType.Reducer,
+            definition.EventTypes.Select(_ => _.EventType).ToArray(),
+            localSiloDetails.SiloAddress,
+            connectedClient,
+            filters: definition.Filters,
+            generationDelivery: definition.GenerationDelivery);
 
     async Task EvolveForAllNamespaces(
         ReducerKey key,
