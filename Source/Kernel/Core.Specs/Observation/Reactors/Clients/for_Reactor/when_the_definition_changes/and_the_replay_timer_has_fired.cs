@@ -9,5 +9,5 @@ public class and_the_replay_timer_has_fired : given.a_reactor_grain_with_replay_
 
     async Task Because() => await _silo.TimerRegistry.FireAllAsync();
 
-    [Fact] void should_dispose_the_replay_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
+    [Fact] void should_dispose_the_replay_timer_and_keep_the_subscription_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
 }

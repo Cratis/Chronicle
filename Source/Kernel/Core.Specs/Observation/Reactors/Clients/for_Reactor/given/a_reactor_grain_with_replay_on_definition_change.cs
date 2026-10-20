@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
@@ -42,7 +43,9 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
         var namespacesGrain = Substitute.For<INamespaces>();
         namespacesGrain.GetAll().Returns([]);
         _silo.AddProbe(_ => namespacesGrain);
-        _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
+        var connectedClients = Substitute.For<IConnectedClients>();
+        connectedClients.IsConnected(Arg.Any<ConnectionId>()).Returns(true);
+        _silo.AddProbe(_ => connectedClients);
         _observerProbe = Substitute.For<IObserver>();
         _silo.AddProbe(_ => _observerProbe);
 

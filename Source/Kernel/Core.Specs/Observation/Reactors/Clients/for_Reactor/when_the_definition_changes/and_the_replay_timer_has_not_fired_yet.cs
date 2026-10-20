@@ -7,5 +7,5 @@ public class and_the_replay_timer_has_not_fired_yet : given.a_reactor_grain_with
 {
     async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
 
-    [Fact] void should_register_the_replay_timer() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
+    [Fact] void should_register_the_replay_timer_besides_keeping_the_subscription() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(2);
 }
