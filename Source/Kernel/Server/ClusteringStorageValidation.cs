@@ -27,10 +27,15 @@ internal static class ClusteringStorageValidation
             throw new SqlClusteringRequiresServerStorage(storage);
         }
 
-        if (options.Clustering.Type == ClusteringType.MongoDB
-            && !string.Equals(storage, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
+        // The server falls back to MongoDB storage when no type is set, so only reject storage that is
+        // explicitly something else.
+        if (options.Clustering.Type == ClusteringType.MongoDB && IsExplicitlyNotMongoDB(storage))
         {
             throw new MongoDBClusteringRequiresMongoDBStorage(storage);
         }
     }
+
+    static bool IsExplicitlyNotMongoDB(string storage) =>
+        new[] { StorageType.InMemory, StorageType.Sqlite, StorageType.MsSql, StorageType.PostgreSql }
+            .Any(type => string.Equals(storage, type, StringComparison.OrdinalIgnoreCase));
 }
