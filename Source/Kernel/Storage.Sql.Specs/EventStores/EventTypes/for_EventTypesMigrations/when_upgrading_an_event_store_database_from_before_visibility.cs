@@ -80,6 +80,6 @@ public class when_upgrading_an_event_store_database_from_before_visibility : Spe
     EventStoreDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<EventStoreDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options);
 }

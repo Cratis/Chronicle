@@ -23,7 +23,7 @@ public class when_recording_initialization : Specification, IDisposable
     {
         _connection = new SqliteConnection($"DataSource=initialization-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         await _connection.OpenAsync();
-        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options;
+        _options = new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options;
         await using (var context = new EventStoreDbContext(_options))
         {
             await context.Database.MigrateAsync();

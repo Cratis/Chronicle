@@ -284,6 +284,16 @@ public static class WellKnownTableNames
     public const string ClosedStreams = "ClosedStreams";
 
     /// <summary>
+    /// The table that holds in-flight events per observer partition.
+    /// </summary>
+    public const string InFlightEvents = "InFlightEvents";
+
+    /// <summary>
+    /// The table that holds handled-event counts per observer, partition and event type.
+    /// </summary>
+    public const string ObserverHandledCounts = "ObserverHandledCounts";
+
+    /// <summary>
     /// The table that holds durable application and schedule occurrences.
     /// </summary>
     public const string Occurrences = "Occurrences";

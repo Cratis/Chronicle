@@ -3,6 +3,8 @@ title: Reducers
 description: Fold event sequences into derived read-model state with explicit transition logic.
 ---
 
+A Chronicle reducer is an observer that folds events into read-model state using code you write.
+
 When a view depends on the previous state, writing its transitions as code can be clearer than
 mapping properties. A reducer folds events one at a time, receiving the state the previous event
 produced and returning the next state for that event source.

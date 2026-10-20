@@ -141,7 +141,7 @@ public class and_a_dictionary_shaped_property_is_set : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());

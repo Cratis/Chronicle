@@ -17,7 +17,7 @@ public class an_event_store_db_context : Specification
     {
         var options = new DbContextOptionsBuilder<EventStoreDbContext>()
             .UseSqlite("DataSource=:memory:")
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         context = new EventStoreDbContext(options);

@@ -171,7 +171,7 @@ public class and_property_change_has_leaf_relative_path_with_array_indexers_targ
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
