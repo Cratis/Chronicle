@@ -54,7 +54,7 @@ internal static class ObserverTransitionStateMerge
         return !recorded.IsActualValue || returned > recorded ? returned : recorded;
     }
 
-    static ISet<Key> MergeInFlightPartitions(ObserverState handed, ObserverState recorded, ObserverState returned)
+    static HashSet<Key> MergeInFlightPartitions(ObserverState handed, ObserverState recorded, ObserverState returned)
     {
         var partitions = recorded.InFlightPartitions.ToHashSet();
         partitions.ExceptWith(handed.InFlightPartitions.Except(returned.InFlightPartitions));
@@ -62,7 +62,15 @@ internal static class ObserverTransitionStateMerge
         return partitions;
     }
 
-    // Replay owns even an unchanged zero/empty reset; otherwise count changes by value mark hook ownership.
+    /// <summary>
+    /// Determines whether the hook decided the handled-event totals itself.
+    /// </summary>
+    /// <remarks>
+    /// Entering replay owns even an unchanged zero/empty reset; otherwise a change by value marks hook ownership.
+    /// </remarks>
+    /// <param name="handed">The snapshot handed to the hook.</param>
+    /// <param name="returned">The snapshot returned by the hook.</param>
+    /// <returns>True if the hook owns the totals.</returns>
     static bool HookOwnsHandledCounts(ObserverState handed, ObserverState returned) =>
         (returned.IsReplaying && !handed.IsReplaying) ||
         returned.HandledEventCount != handed.HandledEventCount ||
