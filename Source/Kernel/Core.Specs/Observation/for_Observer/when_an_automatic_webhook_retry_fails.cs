@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_an_automatic_webhook_retry_fails : given.a_webhook_observer
 {
-    protected override Configuration.Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, BackoffDelay = 15 };
+    protected override Configuration.Observers CreateWebhookRetryConfig() => new Configuration.Webhooks().Retry;
 
     PartitionDeferral _expired;
     FailedPartition _failure;
@@ -25,6 +25,6 @@ public class when_an_automatic_webhook_retry_fails : given.a_webhook_observer
     [Fact] void should_replace_the_expired_deadline() => _failure.Deferral!.Id.ShouldNotEqual(_expired.Id);
     [Fact] void should_use_backoff_instead_of_the_old_reason() => _failure.Deferral!.Reason.ShouldEqual(PartitionDeferralReason.RetryBackoff);
     [Fact] void should_persist_a_future_deadline() => (_failure.Deferral!.Until > DateTimeOffset.UtcNow).ShouldBeTrue();
-    [Fact] void should_bound_the_first_attempt_jitter() => ((_failure.Deferral!.Until - _failure.Deferral.Since).TotalSeconds >= 24d && (_failure.Deferral!.Until - _failure.Deferral.Since).TotalSeconds <= 36d).ShouldBeTrue();
+    [Fact] void should_bound_the_first_attempt_jitter() => (_failure.Deferral!.Until - _failure.Deferral.Since).TotalSeconds.ShouldBeInRange(0.8d, 1.2d);
     [Fact] void should_preserve_the_unhandled_sequence() => _failure.Deferral!.ResumeFrom.ShouldEqual(new Concepts.Events.EventSequenceNumber(42));
 }

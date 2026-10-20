@@ -10,13 +10,13 @@ public class when_resuming_a_webhook_before_its_deadline : given.a_retry_failed_
 {
     bool _canResume;
 
-    async Task Establish()
+    void Establish()
     {
         _request = _request with { ObserverType = ObserverType.External };
         _observer.IsSubscribed().Returns(true);
         _observer.GetSubscription().Returns(new ObserverSubscription("observer-id", _request.ObserverKey, [], typeof(IWebhookObserverSubscriber), SiloAddress.Zero));
         _observer.CanResumeFailedPartition(_request.Key, null, null).Returns(false);
-        await _job.Start(_request);
+        _stateStorage.State.Request = _request;
     }
 
     async Task Because() => _canResume = await _job.CheckCanResume();
