@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Webhooks;
 using Orleans;
@@ -45,10 +47,13 @@ public class when_a_receiver_defers_and_the_observer_reactivates(context context
         public async Task Establish()
         {
             await EventStore.Webhooks.Register(_webhook, _target.AbsoluteUri, builder => builder.WithEventType<SomeEvent>());
+            var registration = await EventStore.Reactors.WaitForHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor", TimeSpan.FromSeconds(30));
+            var tail = (await EventStore.GetEventSequence(EventSequenceId.System).GetTailSequenceNumber()).Value;
+            await registration.WaitTillReachesEventSequenceNumber(tail);
             var key = new ObserverKey(_webhook.Value, EventStore.Name.Value, EventStore.Namespace.Value, Concepts.EventSequences.EventSequenceId.Log);
             _observer = Services.GetRequiredService<IGrainFactory>().GetGrain<IObserver>(key.ToString());
-            await EventStore.EventLog.Append("busy", new SomeEvent(42));
-            await WaitFor(async () => (await GetFailures()).Partitions.Any(partition => partition.Deferral is not null));
+            var appended = await EventStore.EventLog.Append("busy", new SomeEvent(42));
+            (await appended.WaitForCompletion()).IsSuccess.ShouldBeFalse();
         }
 
         public async Task Because()
@@ -69,7 +74,21 @@ public class when_a_receiver_defers_and_the_observer_reactivates(context context
             AfterReactivation = failure.Deferral!;
             AttemptsAfterReactivation = failure.Attempts.Count();
 
-            await WaitFor(async () => Accepted.Count == 2 && !await _observer.HasFailedPartitions());
+            await _receiver.WaitForRetry().WaitAsync(TimeSpan.FromSeconds(120));
+            Job retryJob;
+            try
+            {
+                retryJob = (await EventStore.Jobs.GetJobs()).Single(job =>
+                    job.Type.Value.Contains("RetryFailedPartition", StringComparison.Ordinal) &&
+                    job.Details.Value == $"{_webhook}-busy");
+            }
+            finally
+            {
+                _receiver.ReleaseRetry();
+            }
+
+            var completed = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(retryJob.Id, TimeSpan.FromSeconds(30));
+            completed?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
             HasFailedPartitionsAfterRecovery = await _observer.HasFailedPartitions();
             RecoveredBody = Accepted.GetAll().Single(delivery => delivery.Body == RejectedBody).Body;
         }
@@ -81,17 +100,8 @@ public class when_a_receiver_defers_and_the_observer_reactivates(context context
             await base.OnDisposeAsync();
         }
 
-        Task<FailedPartitions> GetFailures() => Services.GetRequiredService<IStorage>()
+        Task<Concepts.Observation.FailedPartitions> GetFailures() => Services.GetRequiredService<IStorage>()
             .GetEventStore(EventStore.Name.Value).GetNamespace(EventStore.Namespace.Value).FailedPartitions.GetFor((Concepts.Observation.ObserverId)_webhook.Value);
-
-        static async Task WaitFor(Func<Task<bool>> predicate)
-        {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-            while (!await predicate())
-            {
-                await Task.Delay(100, timeout.Token);
-            }
-        }
     }
 
     [Fact] void should_not_consume_a_retry_budget_on_receiver_back_pressure() => Context.AttemptsBeforeReactivation.ShouldEqual(0);
