@@ -13,6 +13,33 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal static class SqlServerDatabaseCreation
 {
     /// <summary>
+    /// Serializes database existence checks and creation across kernel processes, before the target can be opened.
+    /// </summary>
+    /// <param name="connectionString">The target connection string.</param>
+    /// <param name="prepareConnection">Prepares the connection with its resolved identity.</param>
+    /// <param name="create">The existence check and optional creation.</param>
+    /// <returns>The provisioning operation.</returns>
+    internal static async Task RunWithLock(string connectionString, Func<System.Data.Common.DbConnection, Task> prepareConnection, Func<Task> create)
+    {
+        var builder = new SqlConnectionStringBuilder(connectionString) { Pooling = false };
+        var resource = DatabaseSchemaLock.ResourceFor(builder.InitialCatalog);
+        builder.InitialCatalog = "master";
+        await using var connection = new SqlConnection(builder.ConnectionString);
+        await prepareConnection(connection);
+        await connection.OpenAsync();
+        var creationLock = SqlServerDatabaseSchemaLock.Instance;
+        await creationLock.Acquire(connection, resource, DatabaseSchemaLock.DefaultTimeout);
+        try
+        {
+            await create();
+        }
+        finally
+        {
+            await creationLock.Release(connection, resource);
+        }
+    }
+
+    /// <summary>
     /// Creates a database with bounded, database-specific logical and physical filenames.
     /// </summary>
     /// <param name="connectionString">The target connection string.</param>

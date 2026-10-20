@@ -158,40 +158,18 @@ public partial class Database
                 return;
             }
 
-            var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
-            if (!await creator.ExistsAsync())
+            if (databaseType == DatabaseType.SqlServer && options.Value.Storage.CreateIfMissing)
             {
-                if (!options.Value.Storage.CreateIfMissing)
-                {
-                    throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
-                }
-
-                try
-                {
-                    if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
-                    {
-                        // SQL Server's default logical log filename appends _log to the database name.
-                        // Explicit file names keep that second sysname within 128 units too.
-                        await SqlServerDatabaseCreation.Create(connectionString, _resolution.PrepareRawConnection);
-                    }
-                    else
-                    {
-                        await creator.CreateAsync();
-                    }
-                }
-                catch (Exception ex) when (IsAlreadyExistsException(ex))
-                {
-                    // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
-                    // The database cannot be locked before it exists, so this is the only guard creation has across processes.
-                }
-
-                if (context.Database.GetDbConnection() is SqlConnection connection)
-                {
-                    // ExistsAsync's failed login to the missing database is cached by the pool. The losing
-                    // CreateAsync exits before EF clears that pool, so MigrateAsync would see the cached 4060
-                    // and try CREATE DATABASE again even though the schema-lock connection can already open it.
-                    SqlConnection.ClearPool(connection);
-                }
+                // Lock in master before probing the target. A peer must not open the new database while
+                // EF is still enabling READ_COMMITTED_SNAPSHOT, which needs exclusive database access.
+                await SqlServerDatabaseCreation.RunWithLock(
+                    connectionString,
+                    _resolution.PrepareRawConnection,
+                    () => CreateDatabase(context, target, databaseType));
+            }
+            else
+            {
+                await CreateDatabase(context, target, databaseType);
             }
 
             _ensuredDatabaseKeys.TryAdd(connectionString, true);
@@ -199,6 +177,45 @@ public partial class Database
         finally
         {
             migrationLock.Release();
+        }
+    }
+
+    async Task CreateDatabase(DbContext context, SqlTarget target, DatabaseType databaseType)
+    {
+        var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
+        if (!await creator.ExistsAsync())
+        {
+            if (!options.Value.Storage.CreateIfMissing)
+            {
+                throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
+            }
+
+            try
+            {
+                if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
+                {
+                    // SQL Server's default logical log filename appends _log to the database name.
+                    // Explicit file names keep that second sysname within 128 units too.
+                    await SqlServerDatabaseCreation.Create(target.ConnectionString, _resolution.PrepareRawConnection);
+                }
+                else
+                {
+                    await creator.CreateAsync();
+                }
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
+                // PostgreSQL creation and external provisioners do not share the SQL Server master lock.
+            }
+
+            if (context.Database.GetDbConnection() is SqlConnection connection)
+            {
+                // ExistsAsync's failed login to the missing database is cached by the pool. The losing
+                // CreateAsync exits before EF clears that pool, so MigrateAsync would see the cached 4060
+                // and try CREATE DATABASE again even though the schema-lock connection can already open it.
+                SqlConnection.ClearPool(connection);
+            }
         }
     }
 
