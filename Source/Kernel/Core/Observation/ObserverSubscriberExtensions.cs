@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -41,7 +42,8 @@ public static class ObserverSubscriberExtensions
     /// <exception cref="SubscriberCallTimedOut">Thrown when the subscriber does not answer within the timeout.</exception>
     /// <remarks>
     /// Every path that delivers to a subscriber goes through here, so they all bound the wait the same way and report
-    /// the same named failure when it elapses. Giving up abandons the wait rather than the work - the subscriber is a
+    /// the same named failure when it elapses. Webhooks cancel and drain their HTTP call before returning. Other
+    /// subscribers retain the existing behavior: giving up abandons the wait rather than the work - the subscriber is a
     /// grain and keeps processing the batch - so this bounds how long the caller is held, not how long the subscriber
     /// runs. That is what makes it safe to shorten: the events are redelivered on the partition's retry, and a
     /// subscriber that eventually finishes the abandoned batch has done work that is idempotent by design.
@@ -142,6 +144,11 @@ public static class ObserverSubscriberExtensions
         ObserverSubscriberContext context,
         CancellationToken cancellationToken)
     {
+        if (subscriber is IWebhookObserverSubscriber webhook)
+        {
+            return await OnNextWebhook(webhook, timeout, partition, events, context, cancellationToken);
+        }
+
         var call = subscriber.OnNext(partition, events, context);
         if (timeout <= TimeSpan.Zero)
         {
@@ -160,5 +167,54 @@ public static class ObserverSubscriberExtensions
             _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
             throw new SubscriberCallTimedOut(partition, timeout);
         }
+    }
+
+    static async Task<ObserverSubscriberResult> OnNextWebhook(
+        IWebhookObserverSubscriber subscriber,
+        TimeSpan timeout,
+        Key partition,
+        IEnumerable<AppendedEvent> events,
+        ObserverSubscriberContext context,
+        CancellationToken cancellationToken)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeout > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(timeout);
+        }
+
+        // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
+        // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
+        // until it has crossed the barrier.
+        ObserverSubscriberResult result;
+        try
+        {
+            result = await subscriber.OnNext(partition, events, context, deadline.Token);
+        }
+        catch (Exception exception)
+        {
+            var timedOut = deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+            await deadline.CancelAsync();
+            await subscriber.Drain();
+            if (exception is OperationCanceledException && timedOut)
+            {
+                throw new SubscriberCallTimedOut(partition, timeout);
+            }
+
+            throw;
+        }
+
+        if (deadline.IsCancellationRequested)
+        {
+            await subscriber.Drain();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (deadline.IsCancellationRequested)
+        {
+            throw new SubscriberCallTimedOut(partition, timeout);
+        }
+
+        return result;
     }
 }

@@ -4,6 +4,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -51,7 +52,8 @@ public class OAuthHttpMessageHandler(HttpClient client, OAuthAuthorization autho
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
-        var token = await tokens.AcquireToken(authorization, cancellationToken);
+        request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var eventStore);
+        var token = await tokens.AcquireToken(authorization, eventStore, cancellationToken);
         var response = await Send(request, body, token, cancellationToken);
         if (response.StatusCode != HttpStatusCode.Unauthorized)
         {
@@ -60,7 +62,7 @@ public class OAuthHttpMessageHandler(HttpClient client, OAuthAuthorization autho
 
         response.Dispose();
         tokens.Invalidate(authorization, token);
-        token = await tokens.AcquireToken(authorization, cancellationToken);
+        token = await tokens.AcquireToken(authorization, eventStore, cancellationToken);
         var retried = await Send(request, body, token, cancellationToken);
         if (retried.StatusCode == HttpStatusCode.Unauthorized)
         {
