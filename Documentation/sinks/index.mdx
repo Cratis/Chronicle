@@ -93,7 +93,14 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
-The SQL sink creates nonunique indexes for declared top-level scalar `[Index]` properties on SQL Server, PostgreSQL, and SQLite.
+Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background
+online builds (`CONCURRENTLY` on PostgreSQL and `ONLINE = ON` on SQL Server); empty and replay-shadow
+tables can build synchronously. Per-table locks serialize builders across kernels without waiting
+on a competing builder. SQL Server uses online builds on supported editions (Enterprise, Azure SQL,
+and Managed Instance); other editions, or error 1712, fall back to a normal background build that
+can block database writes while it runs. Other build failures are logged.
+Ordinary activation does not prune undeclared indexes. When an already-cached read-model definition
+changes, reconciliation removes undeclared `chronicle_idx_*` indexes, preserving custom indexes.
 
 SQL Server indexed strings use an explicit `MaxLength`, `StringLength`, or `Length` bound up to 850 characters,
 or 450 characters if the indexed property has no bound. Unindexed, unbounded strings remain
