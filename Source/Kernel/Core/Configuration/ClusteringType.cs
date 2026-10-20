@@ -17,5 +17,10 @@ public enum ClusteringType
     /// Multi node clustering with membership kept in MongoDB - all nodes sharing the same
     /// MongoDB storage and cluster id form one cluster.
     /// </summary>
-    MongoDB = 1
+    MongoDB = 1,
+
+    /// <summary>
+    /// Multi node clustering with membership kept in the shared SQL Server or PostgreSQL cluster database.
+    /// </summary>
+    Sql = 2
 }

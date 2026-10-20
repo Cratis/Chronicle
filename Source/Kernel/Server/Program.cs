@@ -63,6 +63,7 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
@@ -146,9 +147,9 @@ hostBuilder
    .UseOrleans(_ =>
    {
         var clustering = chronicleOptions.Clustering;
-        if (clustering.Type == Cratis.Chronicle.Configuration.ClusteringType.MongoDB)
+        if (clustering.Type is ClusteringType.MongoDB or ClusteringType.Sql)
         {
-            // Membership is kept in MongoDB (wired by WithMongoDB below) - nodes sharing the
+            // Membership is wired by WithMongoDB or WithSql below. Nodes sharing the
             // same storage and cluster id form one cluster.
             _.Configure<Orleans.Configuration.ClusterOptions>(options =>
             {
@@ -185,7 +186,7 @@ hostBuilder
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
-        // Applies to both clustering types, and to calls a silo makes to itself as well as to a
+        // Applies to all clustering types, and to calls a silo makes to itself as well as to a
         // sibling. Startup work that fans out across everything the server holds grows with the
         // deployment while Orleans' 30 second default does not, so this is the knob that lets an
         // operator get a server that has outgrown it to start again.

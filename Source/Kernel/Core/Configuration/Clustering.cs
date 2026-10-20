@@ -15,8 +15,8 @@ public class Clustering
 
     /// <summary>
     /// Gets the type of cluster membership to use. Defaults to single node localhost clustering;
-    /// use <see cref="ClusteringType.MongoDB"/> to let multiple nodes sharing the same MongoDB
-    /// storage and cluster id form one cluster.
+    /// use <see cref="ClusteringType.MongoDB"/> or <see cref="ClusteringType.Sql"/> to let multiple
+    /// nodes sharing the same storage and cluster id form one cluster.
     /// </summary>
     public ClusteringType Type { get; set; } = ClusteringType.Localhost;
 
@@ -51,7 +51,7 @@ public class Clustering
 
     /// <summary>
     /// Gets how often defunct silo entries are swept out of the cluster membership table when
-    /// using <see cref="ClusteringType.MongoDB"/>. Without the sweep, repeated restarts and failed
+    /// using <see cref="ClusteringType.MongoDB"/> or <see cref="ClusteringType.Sql"/>. Without the sweep, repeated restarts and failed
     /// rollouts accumulate dead silo entries forever, and new nodes stall validating against them
     /// when joining. Set to <see cref="TimeSpan.Zero"/> to disable the sweep.
     /// </summary>
