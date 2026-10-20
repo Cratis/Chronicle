@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Observation.given;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -18,7 +19,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     protected IReducerMediator _mediator;
     protected IReducerPipeline _firstPipeline;
     protected IReducerPipeline _secondPipeline;
-    protected FakeTimeProvider _clock;
+    protected DeliveryClock _clock;
     protected TestKitSilo _silo;
     protected readonly ObserverSubscriberKey _key = new("the-reducer", "the-store", "the-namespace", EventSequenceId.Log, "the-partition", string.Empty);
 
@@ -56,20 +57,11 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(callInfo => callInfo.Arg<ReducerDelegate>()([], null));
         _secondPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(callInfo => callInfo.Arg<ReducerDelegate>()([], null));
 
-        _clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        _clock = new DeliveryClock();
         silo.AddService<TimeProvider>(_clock);
 
         _subscriber = await silo.CreateGrainAsync<ReducerObserverSubscriber>(_key.ToString());
         _pipelineFactory.ClearReceivedCalls();
-    }
-
-    protected sealed class FakeTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        DateTimeOffset _now = now;
-
-        public void Advance(TimeSpan by) => _now += by;
-
-        public override DateTimeOffset GetUtcNow() => _now;
     }
 
     static ReducerDefinition CreateDefinition() => new(

@@ -58,6 +58,9 @@ public class ReducerObserverSubscriber(
     DateTimeOffset _pipelineBuiltAt = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
+    public Task Drain() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
@@ -67,6 +70,11 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        if (ClientDeliveryWait.Expired(context, _clock, logger, _key, partition))
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
+        }
+
         if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
         {
             await HandlePipeline();
@@ -97,6 +105,11 @@ public class ReducerObserverSubscriber(
 
             await (_pipeline?.Reduce(reducerContext, async (events, initialState) =>
             {
+                // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
+                if (ClientDeliveryWait.Expired(context, _clock, logger, _key, partition))
+                {
+                    throw new AbandonedDeliveryDiscarded();
+                }
                 var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
                 reducerMediator.OnNext(
                     _key.ObserverId,
@@ -106,12 +119,16 @@ public class ReducerObserverSubscriber(
                     new(partition, events, initialState),
                     reducerSubscriberResultTCS);
 
-                var result = await reducerSubscriberResultTCS.Task;
+                var result = await ClientDeliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context, _clock, logger, _key, partition);
                 tcs.SetResult(AsHandledByThePipeline(result.ObserverResult));
                 return result;
             }) ?? Task.CompletedTask);
 
             return await tcs.Task;
+        }
+        catch (AbandonedDeliveryDiscarded)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
         }
         catch (TaskCanceledException)
         {

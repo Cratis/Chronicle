@@ -423,6 +423,12 @@ public partial class Observer
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
+            if (_deliveryFences.IsHeld(partition, _clock.GetUtcNow()))
+            {
+                await PartitionFailed(partition, eventsToHandle[0].Context.SequenceNumber, ["Previous abandoned delivery is still fenced"], string.Empty);
+                return;
+            }
+            DeliveryFenceContext? deliveryFence = null;
             var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
             State = State with { InFlightPartitions = inFlightPartitions };
             RecordedHandlingState();
@@ -437,6 +443,9 @@ public partial class Observer
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
                     var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
+                    var hold = _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+                        ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(_observerKey)
+                        : TimeSpan.Zero;
 
                     ObserverSubscriberResult result;
                     while (true)
@@ -451,7 +460,9 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
+                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, hold, _clock);
+                        deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
+                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
 
                         // A disconnected result from one client instance only removes that instance —
                         // the batch is retried against the remaining instances. Only when the last
@@ -542,7 +553,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy, deliveryFence: deliveryFence);
                 }
                 else
                 {

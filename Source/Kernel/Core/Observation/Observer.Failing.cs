@@ -28,7 +28,8 @@ public partial class Observer
         FailureKind kind = FailureKind.Unknown,
         FailedPartitionId? episodeId = null,
         Guid? deferralId = null,
-        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry)
+        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry,
+        DeliveryFenceContext? deliveryFence = null)
     {
         if (IsRetired || _removed)
         {
@@ -47,6 +48,11 @@ public partial class Observer
             logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            failure.LastAttempt.DeliveryFence = deliveryFence;
+            if (kind == FailureKind.Timeout && (_subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient)) || deliveryFence is not null))
+            {
+                await HoldAbandonedDelivery(partition, deliveryFence);
+            }
             if (!partitionWasAlreadyFailed)
             {
                 State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
