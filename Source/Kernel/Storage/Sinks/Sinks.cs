@@ -33,6 +33,7 @@ public class Sinks(
         readModel.Sink.EnsureReadModelSupported();
         ThrowIfUnknownSink(readModel.Sink.Type);
         var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
+        if (_sinks.TryGetValue(key, out var cached) && SameDefinition(cached.Definition, readModel)) return cached.Sink;
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync();
         try

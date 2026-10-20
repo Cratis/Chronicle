@@ -82,7 +82,8 @@ public partial class Sink
         var database = context.Database;
         var connection = database.GetDbConnection();
         var gate = _indexGates.GetOrAdd($"{connection.ConnectionString}:{table}", _ => new SemaphoreSlim(1, 1));
-        if (!await gate.WaitAsync(0)) return;
+        if (reconcile) await gate.WaitAsync();
+        else if (!await gate.WaitAsync(0)) return;
         try
         {
             await database.OpenConnectionAsync();
