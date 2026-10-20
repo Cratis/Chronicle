@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.Timeout;
 
 namespace Orleans.Hosting;
 
@@ -44,6 +45,10 @@ public static class WebhookHttpClientExtensions
                 pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
                 {
                     SamplingDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerSamplingDurationSeconds),
+                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                        .Handle<HttpRequestException>()
+                        .Handle<TimeoutRejectedException>()
+                        .HandleResult(IsTransientDeliveryFailure),
                     FailureRatio = 0.5, // trip if 50% fail
                     MinimumThroughput = 10,
                     BreakDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerBreakDurationSeconds),
@@ -59,6 +64,13 @@ public static class WebhookHttpClientExtensions
                 pipeline.AddTimeout(TimeSpan.FromSeconds(webhooks.RequestTimeoutSeconds));
             }).SelectPipelineByAuthority();
         return builder;
+    }
+
+    static bool IsTransientDeliveryFailure(HttpResponseMessage response)
+    {
+        if (response.StatusCode == System.Net.HttpStatusCode.RequestTimeout) return true;
+        if ((int)response.StatusCode < 500) return false;
+        return response.StatusCode != System.Net.HttpStatusCode.ServiceUnavailable || WebhookMediator.GetRetryAfter(response) is null;
     }
 
     static SocketsHttpHandler CreateHandler(WebhookConnection connection) => new()

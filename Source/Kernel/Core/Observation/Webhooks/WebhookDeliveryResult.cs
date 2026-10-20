@@ -18,4 +18,9 @@ public record WebhookDeliveryResult(EventSequenceNumber LastHandled, Exception? 
     /// Gets whether every event was delivered.
     /// </summary>
     public bool IsSuccess => Error is null && Deferral is null;
+
+    /// <summary>
+    /// Gets the failure classification used by the observer's durable retry policy.
+    /// </summary>
+    public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
 }

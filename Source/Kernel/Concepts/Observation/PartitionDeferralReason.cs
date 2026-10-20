@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public enum PartitionDeferralReason
 {
     /// <summary>
+    /// No deferral reason was specified.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
     /// The target circuit breaker is open.
     /// </summary>
     CircuitOpen = 1,

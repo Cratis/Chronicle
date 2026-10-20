@@ -81,7 +81,7 @@ public class WebhookObserverSubscriber(
 
         if (!onNextResult.IsSuccess)
         {
-            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled };
+            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled, FailurePolicy = onNextResult.FailurePolicy };
         }
 
         logger.SuccessfullyHandledAllEvents(_key);

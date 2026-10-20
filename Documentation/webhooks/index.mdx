@@ -12,7 +12,7 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
 
 :::caution[Failed deliveries are retried]
-A non-2xx response, such as `400` or `500`, fails the webhook batch. Each delivery makes one HTTP attempt; the HTTP client does not sleep or retry inline. A circuit breaker can fail calls fast while an endpoint keeps failing. When the batch fails, Chronicle marks the partition as failed and retries it according to the [observer retry settings](../hosting/configuration/observers.md); after the configured attempts are exhausted, it quarantines the partition (a `maxRetryAttempts` of `0` retries indefinitely). Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
+Each delivery makes one HTTP attempt; the HTTP client does not sleep or retry inline. Transient failures (`5xx`, `408`, connection errors and timeouts) consume the partition's retry budget. Chronicle persists an exponential backoff deadline with bounded ±20% jitter, capped by the [observer retry settings](../hosting/configuration/observers.md), before scheduling recovery. The default budget is finite: ten retries, then the partition is quarantined (parked). Setting `maxRetryAttempts` to `0` explicitly opts into indefinite retries. Make your receiving endpoint idempotent: a retried or replayed batch can arrive more than once.
 :::
 
 The observer's subscriber timeout cancels the webhook HTTP operation and waits for cancellation cleanup before another delivery can start. Cancelling a catch-up, replay, or partition-retry job also cancels its HTTP operation. Jobs do not immediately retry a timed-out webhook call; recovery remains the observer's responsibility. Cancellation cannot undo a request the receiver has already processed, so receivers must still be idempotent.
@@ -32,6 +32,30 @@ request and the partition is deferred again. Automatic recovery does not overrid
 The `chronicle-webhook-circuit-opened` and `chronicle-webhook-circuit-rejected` counters
 are tagged by normalized target `authority`. Circuit-open deferrals also log the authority
 and deadline; paths, observer identifiers, and event-store names are not metric tags.
+
+## Receiver back-pressure and permanent failures
+
+A valid `Retry-After` on `429` or `503` defers the partition without consuming a retry
+attempt. Both delta-seconds and HTTP-date values are accepted. Deadlines are clamped to
+`Webhooks.MaximumRetryAfterSeconds` (default 24 hours); malformed or past values fall
+back to the transient failure budget. A `429` without a valid deadline is also retryable.
+No receiver back-pressure response sleeps on a worker or trips the circuit breaker.
+
+Other `4xx` responses indicate a configuration problem, except `408` and `410`. Chronicle
+records the failure and pauses the entire observer using its existing quarantine state,
+rather than retrying unchanged credentials or URLs. Correct the configuration and clear
+the observer quarantine to resume delivery.
+
+A `410 Gone` immediately parks the partition with no automatic retries and logs the target
+authority. It does **not** retire the webhook in this release. Operator intervention is
+required; retirement with a retained alert is a follow-up capability.
+
+Backoff deadlines, receiver deadlines, retry counts, and the inclusive resume position
+survive reactivation. A failed automatic retry replaces its expired deadline with a fresh
+`RetryBackoff` deadline; reactivation never resamples jitter or burns another attempt.
+Structured logs distinguish configuration rejection, `410` parking, circuit-open rejection,
+receiver back-pressure, and backoff attempt/deadline. Non-webhook observer retry behavior
+is unchanged.
 
 ## OAuth client credentials
 

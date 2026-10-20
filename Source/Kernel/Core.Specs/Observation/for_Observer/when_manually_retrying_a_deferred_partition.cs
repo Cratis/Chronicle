@@ -29,7 +29,7 @@ public class when_manually_retrying_a_deferred_partition : given.a_webhook_obser
     [Fact] void should_log_the_reason_at_information_level() => HasInformationLog("Reason", _overridden.Reason).ShouldBeTrue();
     [Fact] void should_log_the_overridden_deadline() => HasInformationLog("Deadline", _overridden.Until).ShouldBeTrue();
 
-    bool HasInformationLog(string key, object value) => _recordedLogger.Entries.Any(log =>
+    bool HasInformationLog(string key, object value) => _recordedLogger.Entries.Exists(log =>
         log.Level == LogLevel.Information && log.State.Any(entry => entry.Key == key && Equals(entry.Value, value)));
 
     sealed class RecordingLogger : ILogger<Observer>

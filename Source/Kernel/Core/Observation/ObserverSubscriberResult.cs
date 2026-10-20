@@ -21,6 +21,11 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     public PartitionDeferral? Deferral { get; init; }
 
     /// <summary>
+    /// Gets the kernel delivery recovery policy, independently of the persisted failure classification.
+    /// </summary>
+    public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
+
+    /// <summary>
     /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>
     public bool HandledAnyEvents => LastSuccessfulObservation != EventSequenceNumber.Unavailable;

@@ -27,7 +27,8 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind = FailureKind.Unknown,
         FailedPartitionId? episodeId = null,
-        Guid? deferralId = null)
+        Guid? deferralId = null,
+        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry)
     {
         if (IsRetired || _removed)
         {
@@ -52,14 +53,28 @@ public partial class Observer
             }
 
             _metrics?.PartitionRetryAttempt();
+            var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+            if (webhook)
+            {
+                // This deadline belongs to the attempt that just ran, not the next retry.
+                failure.Deferral = null;
+                failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
+            }
+
             if (!IsQuarantined)
             {
-                quarantineObserver = ShouldQuarantineObserver(config);
-                if (!quarantineObserver)
+                quarantineObserver = webhook ? failurePolicy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
+                if (webhook && failurePolicy == WebhookDeliveryFailurePolicy.ParkPartition)
+                {
+                    logger.QuarantiningFailedPartition(partition);
+                    failures.State.Quarantine(partition);
+                    _metrics?.PartitionQuarantined();
+                }
+                else if (!quarantineObserver)
                 {
                     if (config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts)
                     {
-                        retryDelayToRegister = GetNextRetryDelay(failure, config);
+                        retryDelayToRegister = webhook ? SetWebhookRetryBackoff(failure, config, sequenceNumber) : GetNextRetryDelay(failure, config);
                     }
                     else
                     {
@@ -68,6 +83,18 @@ public partial class Observer
                         _metrics?.PartitionQuarantined();
                     }
                 }
+            }
+
+            if (webhook && !quarantineObserver)
+            {
+                quarantineObserver = ShouldQuarantineObserver(config);
+            }
+
+            // Arm durable webhook backoff before persisting it, including coalesced writes.
+            if (failure.Deferral is { } backoff && retryDelayToRegister is not null)
+            {
+                await RegisterDeferralReminder(failure, backoff);
+                retryDelayToRegister = null;
             }
 
             ChangeAlertState();
@@ -299,6 +326,18 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
+    TimeSpan SetWebhookRetryBackoff(FailedPartition failure, Observers config, EventSequenceNumber sequenceNumber)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var maximum = TimeSpan.FromSeconds(Math.Max(1, config.MaximumBackoffDelay));
+        var basis = Math.Min(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget), maximum.TotalSeconds);
+        var jitter = 0.8 + (Random.Shared.NextDouble() * 0.4);
+        var delay = TimeSpan.FromSeconds(Math.Clamp(basis * jitter, 0.001, maximum.TotalSeconds));
+        failure.Deferral = new(Guid.NewGuid(), PartitionDeferralReason.RetryBackoff, now, now + delay, sequenceNumber);
+        logger.WebhookRetryScheduled(failure.Partition, failure.AttemptsInCurrentBudget, failure.Deferral.Until);
+        return delay;
+    }
+
     /// <summary>
     /// Writes a single failed partition to storage, leaving the others as they are.
     /// </summary>
@@ -423,7 +462,8 @@ public partial class Observer
     /// </remarks>
     bool ShouldQuarantineObserver(Observers config)
     {
-        var failedPartitionCount = Failures.Partitions.Count(_ => _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout);
+        var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        var failedPartitionCount = Failures.Partitions.Count(_ => _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout && (!webhook || _.IsQuarantined));
         if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
         {
             logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);

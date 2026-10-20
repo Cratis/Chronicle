@@ -403,6 +403,7 @@ public partial class Observer
 
         var failed = false;
         var failureKind = FailureKind.Unknown;
+        var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
@@ -475,6 +476,7 @@ public partial class Observer
                     {
                         failed = true;
                         failureKind = FailureKind.Handling;
+                        failurePolicy = result.FailurePolicy;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
@@ -535,7 +537,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy);
                 }
                 else
                 {

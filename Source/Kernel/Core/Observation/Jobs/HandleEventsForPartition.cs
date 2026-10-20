@@ -214,6 +214,7 @@ public class HandleEventsForPartition(
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
             var exceptionStackTrace = string.Empty;
             var failureKind = FailureKind.Unknown;
+            var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -294,6 +295,7 @@ public class HandleEventsForPartition(
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
                             failureKind = FailureKind.Handling;
+                            failurePolicy = eventObserverResult.FailurePolicy;
                             if (eventObserverResult.HandledAnyEvents)
                             {
                                 var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
@@ -343,7 +345,7 @@ public class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId);
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),

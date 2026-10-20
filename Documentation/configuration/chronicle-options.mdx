@@ -366,6 +366,23 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
 | `TestTimeoutSeconds` | `30` | Timeout for the registration reachability probe. |
 
+### Delivery retry policy
+
+Webhook delivery uses one HTTP attempt at a time. The observer owns exponential retries,
+a finite retry budget, and durable deadlines; the HTTP resilience pipeline has no retry
+strategy. `RetryDelaySeconds` is retained for compatibility but no longer controls delivery
+retries. Use the [observer retry settings](../hosting/configuration/observers.md) for
+`BackoffDelay`, `ExponentialBackoffDelayFactor`, `MaximumBackoffDelay`, and
+`MaxRetryAttempts`. Webhook backoff adds bounded ±20% jitter and persists the selected
+next-attempt deadline.
+
+`MaximumRetryAfterSeconds` bounds receiver-provided `Retry-After` delays on `429` and
+`503` responses. Its default is `86400` seconds (24 hours). Invalid or expired headers
+fall back to the retry budget, without sleeping in the HTTP pipeline. A valid deferral
+and an open-circuit rejection do not consume retry attempts. See
+[webhook delivery policy](../webhooks/index.mdx#receiver-back-pressure-and-permanent-failures)
+for configuration-error pauses, immediate `410` parking, and manual recovery.
+
 For example, `Cratis__Chronicle__Webhooks__Validation=Enforce` enables blocking, and
 `Cratis__Chronicle__Webhooks__AllowedHosts__0=hooks.example.com` approves one host. OAuth authorities
 and discovered token endpoint hosts must also be approved. Cloud metadata addresses need explicit

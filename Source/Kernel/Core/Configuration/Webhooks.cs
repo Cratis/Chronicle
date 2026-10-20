@@ -54,4 +54,9 @@ public class Webhooks
     /// Gets the timeout in seconds applied when testing a webhook endpoint.
     /// </summary>
     public int TestTimeoutSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Gets the maximum accepted Retry-After delay in seconds. Longer receiver deadlines are clamped to this bound.
+    /// </summary>
+    public int MaximumRetryAfterSeconds { get; init; } = 24 * 60 * 60;
 }

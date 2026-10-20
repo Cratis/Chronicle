@@ -375,8 +375,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="kind">What kind of thing went wrong. Defaults to <see cref="FailureKind.Unknown"/>.</param>
     /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
     /// <param name="deferralId">The deferral that owned the recovery.</param>
+    /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.
