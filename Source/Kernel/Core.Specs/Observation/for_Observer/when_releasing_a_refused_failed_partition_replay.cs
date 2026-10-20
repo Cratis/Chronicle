@@ -13,7 +13,7 @@ public class when_releasing_a_refused_failed_partition_replay : when_partition_r
         _failedPartitionsStorage.State.AddFailedPartition(_partition, 12UL);
     }
 
-    async Task Because() => await _observer.ReleaseRefusedPartitionReplay(_partition);
+    async Task Because() => await _observer.ReleaseRefusedPartitionReplay(_partition, 45UL);
 
     [Fact] void should_remove_the_replay_marker() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);
     [Fact] void should_preserve_handled_progress() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_lastHandledEventSequenceNumber);

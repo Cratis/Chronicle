@@ -30,7 +30,7 @@ public class when_resuming_a_persisted_global_replay : given.a_partition_replay_
 
     [Fact] void should_refuse_before_resuming_steps() => _error.ShouldBeOfExactType<GlobalProjectionReplayNotSupported>();
     [Fact] async Task should_not_begin_the_partition_replay_again() => await _replayStateServiceClient.DidNotReceive().BeginReplayPartitionFor(Arg.Any<ObserverDetails>(), Arg.Any<Concepts.Keys.Key>());
-    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key);
+    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key, _request.HeldBackFrom);
     [Fact] void should_not_claim_a_successful_replay() => _observer.ReceivedCalls().Select(call => call.GetMethodInfo().Name).ShouldContainOnly(nameof(IObserver.ReleaseRefusedPartitionReplay));
     [Fact] void should_fail_the_job_permanently() => _stateStorage.State.Status.ShouldEqual(JobStatus.Failed);
     [Fact] void should_not_touch_the_sink() => _replayStateServiceClient.ReceivedCalls().ShouldBeEmpty();

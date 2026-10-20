@@ -20,6 +20,6 @@ public class when_recovering_a_dual_scoped_partition_replay : given.a_recovered_
     [Fact] void should_fail_the_job_permanently() => _stateStorage.State.Status.ShouldEqual(JobStatus.Failed);
     [Fact] void should_record_the_reason() => _stateStorage.State.StatusChanges[^1].ExceptionMessages.ShouldContain(GlobalProjectionReplay.RefusalReason);
     [Fact] void should_not_dispatch_to_silos() => _replayStateServiceClient.ReceivedCalls().ShouldBeEmpty();
-    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key);
+    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key, _request.HeldBackFrom);
     [Fact] void should_not_claim_a_successful_replay() => _observer.ReceivedCalls().Select(call => call.GetMethodInfo().Name).ShouldContainOnly(nameof(IObserver.ReleaseRefusedPartitionReplay));
 }

@@ -23,7 +23,7 @@ public class and_late_work_arrives_during_cleanup : given.an_observer
         await _observer.CaughtUp(JobId.New(), 42UL);
         await _observer.Replayed(42UL);
         await _observer.ReleaseRefusedReplay();
-        await _observer.ReleaseRefusedPartitionReplay("partition");
+        await _observer.ReleaseRefusedPartitionReplay("partition", 45UL);
         await _observer.PartitionFailed("late", 43UL, ["Late failure"], "Stack");
     }
 

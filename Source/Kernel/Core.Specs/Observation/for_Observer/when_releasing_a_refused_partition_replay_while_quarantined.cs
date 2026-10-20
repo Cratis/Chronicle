@@ -14,7 +14,7 @@ public class when_releasing_a_refused_partition_replay_while_quarantined : given
         _stateStorage.State.ReplayingPartitions.Add("partition");
     }
 
-    async Task Because() => await _observer.ReleaseRefusedPartitionReplay("partition");
+    async Task Because() => await _observer.ReleaseRefusedPartitionReplay("partition", 45UL);
 
     [Fact] void should_preserve_handled_progress() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_preserve_the_next_position() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)45UL);

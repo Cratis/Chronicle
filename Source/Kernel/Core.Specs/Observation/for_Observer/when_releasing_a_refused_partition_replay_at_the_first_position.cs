@@ -14,7 +14,7 @@ public class when_releasing_a_refused_partition_replay_at_the_first_position : w
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber.First, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns((EventSequenceNumber)10UL);
     }
 
-    async Task Because() => await _observer.ReleaseRefusedPartitionReplay(_partition);
+    async Task Because() => await _observer.ReleaseRefusedPartitionReplay(_partition, EventSequenceNumber.First);
 
     [Fact] void should_preserve_the_absence_of_handled_progress() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_preserve_the_first_position() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);

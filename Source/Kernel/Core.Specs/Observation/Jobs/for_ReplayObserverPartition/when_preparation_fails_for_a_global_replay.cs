@@ -18,5 +18,5 @@ public class when_preparation_fails_for_a_global_replay : given.a_recovered_glob
     [Fact] void should_refuse() => _error.ShouldBeOfExactType<GlobalProjectionReplayNotSupported>();
     [Fact] void should_fail_the_job_permanently() => _stateStorage.State.Status.ShouldEqual(JobStatus.Failed);
     [Fact] void should_not_touch_the_sink() => _replayStateServiceClient.ReceivedCalls().ShouldBeEmpty();
-    [Fact] async Task should_release_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key);
+    [Fact] async Task should_release_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedPartitionReplay(_request.Key, _request.HeldBackFrom);
 }

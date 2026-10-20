@@ -46,8 +46,17 @@ rebuild across all namespaces is not currently supported. Persisted replay jobs 
 completion fail terminally and release replay markers without changing the observer's last-handled or next-event
 positions, resolving failed partitions, or finalizing or promoting the sink. This uses a refusal-specific release,
 not replay completion. Full release clears superseded partition catch-up markers, just as routing does, and
-re-evaluates from the retained cursor; quarantine remains in force. Partition release probes catch-up at the
-retained next-event position, without claiming replay coverage or resolving a failed partition.
+re-evaluates from the retained cursor; quarantine remains in force. Partition replay durably records a
+`HeldBackFrom` lower bound when its marker is set, before job admission. Refusal probes partition catch-up from
+that bound, including its first event, never from the shared cursor that other partitions may have advanced.
+It claims no replay coverage and resolves no failed partition.
+
+Legacy persisted jobs have no held-back bound. Released kernels beginning with v19.7.0 could admit Global/Both
+partition replay jobs before the admission restrictions. A legacy refusal therefore releases the marker but
+records a visible **quarantined partition failure** with an unknown bound and an operator-recovery explanation.
+It preserves observer progress and existing failure history and does not schedule catch-up or automatic retries
+onto the unchanged sink. Reconcile the sink and determine a safe recovery position before clearing partition
+quarantine; do not guess from shared progress or restart at zero.
 Namespace-scoped projections are unaffected.
 
 For an upgrade with a global replay already in flight, stop replay workers and contributing writes

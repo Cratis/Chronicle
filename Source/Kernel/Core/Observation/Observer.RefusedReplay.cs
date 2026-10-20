@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
@@ -34,21 +35,28 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task ReleaseRefusedPartitionReplay(Key partition)
+    public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
     {
         if (IsRetired || _removed || !State.ReplayingPartitions.Contains(partition)) return;
 
         // Keep ownership until the catch-up decision, but claim no replay coverage or successful delivery.
         Skips.JobStarted(partition);
         var ownership = Skips.OwnershipTicket(partition);
-        State.ReplayingPartitions.Remove(partition);
-        RecordedHandlingState();
-        await WriteStateAsync();
         try
         {
-            if (!IsQuarantined)
+            // Never guess a legacy job's bound from shared progress: other partitions may have advanced it.
+            // Persist the quarantined failure before removing the marker, so a crash cannot enable live delivery.
+            if (!heldBackFrom.IsActualValue)
             {
-                await ProbeAndStartCatchupJobFrom(partition, State.NextEventSequenceNumber);
+                await QuarantineRefusedPartitionWithoutPosition(partition);
+            }
+
+            State.ReplayingPartitions.Remove(partition);
+            RecordedHandlingState();
+            await WriteStateAsync();
+            if (heldBackFrom.IsActualValue && !IsQuarantined)
+            {
+                await ProbeAndStartCatchupJobFrom(partition, heldBackFrom);
             }
         }
         finally
@@ -57,5 +65,31 @@ public partial class Observer
         }
 
         EvaluateSuspectedSkips();
+    }
+
+    async Task QuarantineRefusedPartitionWithoutPosition(Key partition)
+    {
+        const string reason = "Refused legacy partition replay has no persisted held-back position. The unchanged sink cannot be caught up safely; reconcile the sink and select a recovery position before clearing partition quarantine.";
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            var alreadyFailed = Failures.TryGet(partition, out var existing);
+            var position = alreadyFailed ? existing!.LastAttempt.SequenceNumber : EventSequenceNumber.Unavailable;
+            logger.PartitionFailed(partition, position, [reason], string.Empty);
+            failures.State.RegisterAttempt(partition, position, [reason], string.Empty);
+            failures.State.Quarantine(partition);
+            if (!alreadyFailed)
+            {
+                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
+            }
+
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 }

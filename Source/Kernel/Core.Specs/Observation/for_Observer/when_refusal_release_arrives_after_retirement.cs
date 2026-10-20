@@ -8,7 +8,7 @@ public class when_refusal_release_arrives_after_retirement : given.a_retired_obs
     async Task Because()
     {
         await _observer.ReleaseRefusedReplay();
-        await _observer.ReleaseRefusedPartitionReplay("not-replaying");
+        await _observer.ReleaseRefusedPartitionReplay("not-replaying", 45UL);
     }
 
     [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);

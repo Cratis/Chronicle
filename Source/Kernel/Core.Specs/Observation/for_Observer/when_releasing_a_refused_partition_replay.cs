@@ -9,8 +9,8 @@ public class when_releasing_a_refused_partition_replay : when_partition_replayed
 
     async Task Because()
     {
-        await _observer.ReleaseRefusedPartitionReplay(_partition);
-        await _observer.ReleaseRefusedPartitionReplay(_partition);
+        await _observer.ReleaseRefusedPartitionReplay(_partition, 45UL);
+        await _observer.ReleaseRefusedPartitionReplay(_partition, 45UL);
     }
 
     [Fact] void should_remove_the_partition_replay_marker() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);

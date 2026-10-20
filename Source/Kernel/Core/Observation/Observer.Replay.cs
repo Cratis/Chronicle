@@ -234,15 +234,21 @@ public partial class Observer
         {
             await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
         }
+
+        // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
+        // may interleave those awaits: events below this cursor were already handled or belong to existing
+        // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
+        var heldBackFrom = State.NextEventSequenceNumber;
+        State.ReplayingPartitions.Add(partition);
+        Skips.JobStarted(partition);
+        RecordedHandlingState();
+        await WriteStateAsync();
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
         {
             ReplaysAllEventTypes = !retainOtherCounts,
-            ReaderScope = ReaderScope
+            ReaderScope = ReaderScope,
+            HeldBackFrom = heldBackFrom
         });
-
-        State.ReplayingPartitions.Add(partition);
-        Skips.JobStarted(partition);
-        await WriteStateAsync();
     }
 
     async Task<bool> TransitionToReplayIfNeeded(int recovery)

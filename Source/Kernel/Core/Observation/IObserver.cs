@@ -328,12 +328,13 @@ public interface IObserver : IGrainWithStringKey
     Task ReleaseRefusedReplay();
 
     /// <summary>
-    /// Releases a refused partition replay and probes catch-up from the observer's retained next position.
+    /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
     /// </summary>
     /// <param name="partition">The partition whose replay was refused.</param>
-    /// <remarks>Does not advance progress or resolve failed partitions. Retired, removed and non-replaying partitions are unchanged.</remarks>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <remarks>Does not advance progress or resolve failed partitions. Unknown bounds quarantine the partition; retired, removed and non-replaying partitions are unchanged.</remarks>
     /// <returns>Awaitable task.</returns>
-    Task ReleaseRefusedPartitionReplay(Key partition);
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
 
     /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
