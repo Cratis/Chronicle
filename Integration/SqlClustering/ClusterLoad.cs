@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.SqlClustering;
 
 public sealed class ClusterLoad : IAsyncDisposable
 {
-    readonly ConcurrentQueue<Guid> _observed = new();
+    readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _observed = new();
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _acknowledged = new();
     readonly ConcurrentQueue<Guid> _unknown = new();
     readonly ConcurrentQueue<Task> _outstanding = new();
@@ -39,7 +39,7 @@ public sealed class ClusterLoad : IAsyncDisposable
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
             (@event, _) =>
             {
-                _observed.Enqueue(@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>());
+                _observed.Enqueue((@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>(), @event.Context.SequenceNumber));
                 return Task.CompletedTask;
             });
         await _reactor.WaitTillActive(TimeSpan.FromSeconds(60));
@@ -83,8 +83,7 @@ public sealed class ClusterLoad : IAsyncDisposable
         acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
         acknowledged.All(append => stored.Any(@event => @event.Context.SequenceNumber == append.Sequence && ((ClusterEventAppended)@event.Content).Id == append.Id)).ShouldBeTrue();
         storedSequences.Zip(storedSequences.Skip(1), (first, next) => next == first + 1).All(contiguous => contiguous).ShouldBeTrue();
-        _observed.ShouldContainOnly(storedIds);
-        _observed.Count.ShouldEqual(storedIds.Length);
+        VerifyObservations(stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)), _observed);
     }
 
     public async ValueTask DisposeAsync()
@@ -99,6 +98,28 @@ public sealed class ClusterLoad : IAsyncDisposable
             _client?.Dispose();
             _stop.Dispose();
         }
+    }
+
+    internal static void VerifyObservations(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed)
+    {
+        // Delivery is at-least-once. Repeated handling must refer to the same stored event, not just the same payload id.
+        // This fixture has one reactor, sequence and partition, so the sequence number also fixes the ReactorDelivery identity.
+        var storedEvents = stored.ToHashSet();
+        var observedEvents = observed.ToHashSet();
+        storedEvents.All(observedEvents.Contains).ShouldBeTrue();
+        observedEvents.All(storedEvents.Contains).ShouldBeTrue();
+    }
+
+    internal static bool IsUncertainAppend(Exception exception) =>
+        exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
+        IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message);
+
+    internal static bool IsUnavailableSiloAppend(string? exceptionType, string message)
+    {
+        // CommandFailed belongs to the client's private Contracts dependency; do not add a public dependency on it.
+        return exceptionType == "Cratis.Chronicle.Contracts.Commands.CommandFailed" &&
+            message.StartsWith("Command failed: The target silo became unavailable for message: Request ", StringComparison.Ordinal) &&
+            message.Contains(" Cratis.Chronicle.EventSequences.IEventSequence.Append(", StringComparison.Ordinal);
     }
 
     async Task Run()
@@ -124,9 +145,11 @@ public sealed class ClusterLoad : IAsyncDisposable
                     Failed($"{id}: {string.Join(';', result.Errors)}");
                 }
             }
-            catch (Exception exception) when (exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut)
+            catch (Exception exception) when (IsUncertainAppend(exception))
             {
                 // The request may still complete or may have been stored before the connection broke.
+                // An in-flight append to a dead silo has the same uncertain outcome:
+                // https://github.com/Cratis/Chronicle/issues/5231.
                 _unknown.Enqueue(id);
                 Failed($"{id}: {exception.GetType().Name}: {exception.Message}");
             }

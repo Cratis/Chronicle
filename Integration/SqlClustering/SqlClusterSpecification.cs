@@ -54,7 +54,7 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
     }
 
     [Fact]
-    public async Task should_preserve_acknowledged_events_and_observation_without_duplicates()
+    public async Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event()
     {
         try
         {
