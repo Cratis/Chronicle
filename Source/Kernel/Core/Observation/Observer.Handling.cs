@@ -29,6 +29,7 @@ public partial class Observer
         {
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
+        RecordedHandlingState();
 
         return WriteStateAsync();
     }
@@ -355,6 +356,7 @@ public partial class Observer
                 NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
+            RecordedHandlingState();
             await WriteProgressStateDebounced();
             return;
         }
@@ -370,6 +372,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -383,6 +386,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -395,6 +399,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -623,6 +628,7 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+        RecordedHandlingState();
     }
 
     /// <summary>
