@@ -41,6 +41,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
     internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
 
+    [LoggerMessage(LogLevel.Information, "Webhook partition {Partition} attempt {Attempt} failed: RetryBackoff until {Deadline}")]
+    internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, Key partition, int attempt, DateTimeOffset deadline);
+
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 

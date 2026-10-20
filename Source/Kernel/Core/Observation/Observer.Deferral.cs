@@ -14,7 +14,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, expectedDeferralId)) return;
+            if (IsRetired || _removed || IsQuarantined || !IsCurrentRecovery(partition, episodeId, expectedDeferralId)) return;
             var exists = Failures.TryGet(partition, out var failure);
             failure ??= new() { Partition = partition };
 
