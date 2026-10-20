@@ -254,6 +254,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
+        {
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
+
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
