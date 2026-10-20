@@ -45,12 +45,19 @@ public class WebhookObserverSubscriber(
         if (State.Target.Authorization.IsT2)
         {
             var oauth = State.Target.Authorization.AsT2;
-            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) });
+            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore, cancellationToken);
         }
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    public Task Drain() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        OnNext(partition, events, context, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context, CancellationToken cancellationToken)
     {
         try
         {
@@ -67,7 +74,7 @@ public class WebhookObserverSubscriber(
             var oauth = target.Authorization.AsT2;
             target = target with { Authorization = oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) } };
         }
-        var onNextResult = await webhookMediator.OnNext(target, partition, events);
+        var onNextResult = await webhookMediator.OnNext(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)
@@ -93,7 +100,7 @@ public class WebhookObserverSubscriber(
         if (State.Target.Authorization.IsT2)
         {
             var oauth = State.Target.Authorization.AsT2;
-            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) });
+            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore);
         }
     }
 

@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +20,9 @@ public class and_required_values_are_missing : Specification
         var storage = Substitute.For<IStorage>();
         storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
         _scenario.Services.AddSingleton(storage);
+        var policy = Substitute.For<IWebhookTargetPolicy>();
+        policy.Evaluate(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
+        _scenario.Services.AddSingleton(policy);
     }
 
     async Task Because() => _result = await _scenario.Validate(new AddWebhooks(string.Empty, null!));

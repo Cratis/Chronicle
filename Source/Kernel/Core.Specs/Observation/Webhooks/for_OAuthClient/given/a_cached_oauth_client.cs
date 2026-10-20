@@ -3,7 +3,9 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_OAuthClient.given;
 
@@ -24,7 +26,9 @@ public class a_cached_oauth_client : Specification
         _endpoint = new Endpoint(this);
         _factory = Substitute.For<IHttpClientFactory>();
         _factory.CreateClient(Arg.Any<string>()).Returns(_ => new HttpClient(_endpoint, false));
-        _client = new OAuthClient(_factory, _clock);
+        var policy = Substitute.For<IWebhookTargetPolicy>();
+        policy.Evaluate(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
+        _client = new OAuthClient(_factory, policy, _clock);
         _authorization = new("https://authority.example", "client", "secret");
     }
 

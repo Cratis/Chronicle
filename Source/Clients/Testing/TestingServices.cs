@@ -411,5 +411,6 @@ internal sealed class TestingServices : IServices
             null!,
             new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-            storage);
+            storage,
+            NullLogger<KernelWebhookRegistrar>.Instance);
 }

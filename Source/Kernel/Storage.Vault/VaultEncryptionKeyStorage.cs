@@ -24,9 +24,7 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// taken from the <c language="csharp">connectionDetails</c> constructor parameter.
 /// </para>
 /// </remarks>
-/// <param name="connectionDetails">The Vault server address (for example <c language="csharp">http://vault:8200</c>).</param>
-/// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null) : IEncryptionKeyStorage
+public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
     const string DefaultMountPoint = "secret";
     const string PublicKeyField = "publicKey";
@@ -45,8 +43,34 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     /// </remarks>
     const string ErasureLeaf = "erasure";
 
-    readonly VaultClient _vaultClient = CreateVaultClient(connectionDetails);
-    readonly string _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
+    /// <summary>
+    /// The error Vault answers a check-and-set write with when the path already has a version.
+    /// </summary>
+    const string CheckAndSetMismatch = "check-and-set";
+
+    readonly IVaultClient _vaultClient;
+    readonly string _mountPoint;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VaultEncryptionKeyStorage"/> class.
+    /// </summary>
+    /// <param name="connectionDetails">The Vault server address (for example <c language="csharp">http://vault:8200</c>).</param>
+    /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
+    public VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null)
+        : this(CreateVaultClient(connectionDetails), mountPoint)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VaultEncryptionKeyStorage"/> class over an existing client.
+    /// </summary>
+    /// <param name="vaultClient">The <see cref="IVaultClient"/> to talk to Vault through.</param>
+    /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
+    internal VaultEncryptionKeyStorage(IVaultClient vaultClient, string? mountPoint = null)
+    {
+        _vaultClient = vaultClient;
+        _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
+    }
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -63,14 +87,20 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         var path = BuildPath(eventStore, eventStoreNamespace, identifier, actualRevision);
-        var data = new Dictionary<string, object>
-        {
-            [PublicKeyField] = Convert.ToBase64String(key.Public),
-            [PrivateKeyField] = Convert.ToBase64String(key.Private)
-        };
-
-        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, data, mountPoint: _mountPoint);
+        await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, KeyData(key), mountPoint: _mountPoint);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Race-safe across silos: the key is written with a KV v2 check-and-set of zero, which Vault only accepts when
+    /// the path has no version yet. A provisioner that loses the write converges on the key that won.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKey key) =>
+        (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
@@ -94,8 +124,20 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         }
 
         var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
-        await SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
-        return await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? new(key, revision);
+        var path = BuildPath(eventStore, eventStoreNamespace, identifier, revision);
+        try
+        {
+            await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, KeyData(key), checkAndSet: 0, mountPoint: _mountPoint);
+            return new(key, revision);
+        }
+        catch (VaultApiException ex) when (IsCheckAndSetMismatch(ex))
+        {
+            // Another provisioner wrote this revision first. Converge on its key; never hand back the candidate,
+            // which was not written. A winner that cannot be read back was removed concurrently.
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+                ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            return new(winner, revision);
+        }
     }
 
     /// <inheritdoc/>
@@ -244,6 +286,17 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    static Dictionary<string, object> KeyData(EncryptionKey key) => new()
+    {
+        [PublicKeyField] = Convert.ToBase64String(key.Public),
+        [PrivateKeyField] = Convert.ToBase64String(key.Private)
+    };
+
+    static bool IsCheckAndSetMismatch(VaultApiException exception) =>
+        exception.HttpStatusCode == HttpStatusCode.BadRequest &&
+        ((exception.ApiErrors?.Any(error => error.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase)) ?? false) ||
+         exception.Message.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase));
 
     static VaultClient CreateVaultClient(string address)
     {

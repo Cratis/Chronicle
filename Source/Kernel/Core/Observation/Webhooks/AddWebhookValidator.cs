@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using FluentValidation;
 
@@ -19,16 +20,19 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
 {
     readonly WebhookRegistrar _registrar;
     readonly IStorage _storage;
+    readonly IWebhookTargetPolicy _policy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AddWebhookValidator"/> class.
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> to test endpoints and authorizations with.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the existing webhooks.</param>
-    public AddWebhookValidator(WebhookRegistrar registrar, IStorage storage)
+    /// <param name="policy">The shared webhook and OAuth target policy.</param>
+    public AddWebhookValidator(WebhookRegistrar registrar, IStorage storage, IWebhookTargetPolicy policy)
     {
         _registrar = registrar;
         _storage = storage;
+        _policy = policy;
 
         When(_ => _.AuthorizationType == AuthorizationType.OAuth, () =>
         {
@@ -46,16 +50,36 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
         });
 
         RuleFor(_ => _)
-            .MustAsync(BeValidOAuthConfiguration)
-            .WithMessage("Unable to acquire a valid OAuth token.");
+            .CustomAsync(ValidateTargets)
+            .DependentRules(() =>
+            {
+                RuleFor(_ => _)
+                    .MustAsync(BeValidOAuthConfiguration)
+                    .WithMessage("Unable to acquire a valid OAuth token.");
 
-        RuleFor(_ => _)
-            .MustAsync(BeValidWebhookEndpoint)
-            .WithMessage("Unable to connect to the webhook endpoint.");
+                RuleFor(_ => _)
+                    .MustAsync(BeValidWebhookEndpoint)
+                    .WithMessage("Unable to connect to the webhook endpoint.");
+            });
 
         RuleFor(_ => _)
             .MustAsync(NotHaveDuplicateName)
             .WithMessage("A webhook with the same name already exists.");
+    }
+
+    async Task ValidateTargets(AddWebhook command, ValidationContext<AddWebhook> context, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(command.Url))
+        {
+            var target = await _policy.Evaluate(command.Url, command.EventStore, cancellationToken);
+            if (!target.IsAllowed) context.AddFailure(nameof(command.Url), target.Reason);
+        }
+
+        if (command.AuthorizationType == AuthorizationType.OAuth && !string.IsNullOrEmpty(command.OAuthAuthority))
+        {
+            var authority = await _policy.Evaluate(command.OAuthAuthority, command.EventStore, cancellationToken);
+            if (!authority.IsAllowed) context.AddFailure(nameof(command.OAuthAuthority), authority.Reason);
+        }
     }
 
     async Task<bool> BeValidOAuthConfiguration(AddWebhook command, CancellationToken cancellationToken)
@@ -65,7 +89,7 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             return true;
         }
 
-        var result = await _registrar.TestOAuthAuthorization(command.OAuthAuthority, command.OAuthClientId, command.OAuthClientSecret, command.OAuthScope);
+        var result = await _registrar.TestOAuthAuthorization(command.OAuthAuthority, command.OAuthClientId, command.OAuthClientSecret, command.OAuthScope, command.EventStore);
         return result.Success;
     }
 
@@ -76,7 +100,7 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             return true;
         }
 
-        var result = await _registrar.TestWebhook(command.Target());
+        var result = await _registrar.TestWebhook(command.Target(), command.EventStore);
         return result.Success;
     }
 
