@@ -27,12 +27,13 @@ public sealed class ClusterLoad : IAsyncDisposable
 
     public async Task Start(SqlCluster cluster)
     {
-        var options = new ChronicleOptions(cluster.ConnectionString) { AutoDiscoverAndRegister = false, ConnectTimeout = 30 };
+        var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30 };
         options.ExplicitArtifacts.RegisterEventType<ClusterEventAppended>();
         _client = new(options);
+
+        // Automatic registration is what re-registers the reactor after the client reconnects to another node, the
+        // way an application does; a manually registered store stays unregistered once its node goes away.
         _store = await _client.GetEventStore("sql-clustering");
-        await _store.DiscoverAll();
-        await _store.RegisterAll();
         _reactor = await _store.Reactors.Register(
             "cluster-integrity",
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
