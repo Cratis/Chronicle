@@ -152,6 +152,12 @@ public class ReplayObserver(
     /// </remarks>
     protected override async Task<bool> CanResume()
     {
+        // A job without a request was never persisted, or has been removed since it was found; there is nothing to resume.
+        if (State.Request is null)
+        {
+            return false;
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed())
         {

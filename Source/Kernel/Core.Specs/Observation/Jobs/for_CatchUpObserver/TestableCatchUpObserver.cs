@@ -38,6 +38,12 @@ public class TestableCatchUpObserver(
     /// <returns>Awaitable task.</returns>
     public Task CompleteForTesting() => OnAllStepsCompleted();
 
+    /// <summary>
+    /// Invokes the check for whether the job can be resumed.
+    /// </summary>
+    /// <returns>True if the job can be resumed.</returns>
+    public Task<bool> CanResumeForTesting() => CanResume();
+
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
