@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Text.Json;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Json;
@@ -51,9 +50,9 @@ public class ReadModelDbContext(
         value => DecimalColumnValues.ForSqlServer(value),
         value => DecimalColumnValues.FromSqlServer(value));
 
-    static readonly ValueConverter<decimal, string> _sqliteDecimalConverter = new(
-        value => value.ToString(CultureInfo.InvariantCulture),
-        value => decimal.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture));
+    static readonly ValueConverter<decimal, double> _sqliteDecimalConverter = new(
+        value => (double)value,
+        value => FromSqliteDecimal(value));
 
     static readonly ValueConverter<Guid, string> _sqliteGuidConverter = new(
         v => v.ToString("D"),
@@ -149,7 +148,7 @@ public class ReadModelDbContext(
                     {
                         DatabaseType.PostgreSql => "NUMERIC",
                         DatabaseType.SqlServer => "DECIMAL(38,18)",
-                        _ => "TEXT"
+                        _ => "NUMERIC"
                     });
                     if (databaseType == DatabaseType.Sqlite)
                     {
@@ -178,6 +177,13 @@ public class ReadModelDbContext(
                 entity.HasKey(keyColumn.Name).HasName(PrimaryKeyNames.For(databaseType, tableName));
             }
         });
+    }
+
+    static decimal FromSqliteDecimal(double value)
+    {
+        if (value >= (double)decimal.MaxValue) return decimal.MaxValue;
+        if (value <= (double)decimal.MinValue) return decimal.MinValue;
+        return (decimal)value;
     }
 
     static string GetJsonColumnType(DatabaseType databaseType) => databaseType switch
