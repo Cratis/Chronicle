@@ -8,7 +8,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Webhooks;
-using Orleans;
 using Orleans.Core.Internal;
 using context = Cratis.Chronicle.Integration.for_Webhooks.when_a_receiver_defers_and_the_observer_reactivates.context;
 
