@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -16,6 +17,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 
@@ -32,6 +34,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
@@ -39,6 +42,7 @@ internal sealed class Reactors(
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
+    IOptions<ChronicleOptions> options,
     ILogger<Reactors> logger) : IReactors
 {
     /// <inheritdoc/>
@@ -145,7 +149,12 @@ internal sealed class Reactors(
                     await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
                 }
 
-                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                await ClientSubscriptionKeeper.KeepWhileConnected(
+                    clientObserver.KeepSubscription,
+                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    registration.ConnectionId,
+                    logger,
+                    cancellationToken);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,

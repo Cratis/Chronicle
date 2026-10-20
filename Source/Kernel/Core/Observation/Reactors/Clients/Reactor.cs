@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -37,7 +36,6 @@ public class Reactor(
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     bool _subscribed;
-    ClientSubscriptionKeeper? _subscriptionKeeper;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -45,7 +43,6 @@ public class Reactor(
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
-        _subscriptionKeeper = new(this, TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds), logger);
 
         return Task.CompletedTask;
     }
@@ -64,7 +61,6 @@ public class Reactor(
         {
             if (_subscribed)
             {
-                _subscriptionKeeper!.Stop();
                 await _observer!.Unsubscribe();
                 _subscribed = false;
             }
@@ -114,7 +110,6 @@ public class Reactor(
                     definition.Filters);
             }
             _subscribed = true;
-            _subscriptionKeeper!.Keep(_observer, _observerKey.ConnectionId, _connectedClients, client => RestoreSubscription(definition, client));
         }
     }
 
@@ -135,21 +130,33 @@ public class Reactor(
         // and the action (Unsubscribe) as two separate grain calls would race against a new client's
         // Subscribe that lands between them — the old client's Unsubscribe would then destroy the
         // new client's subscription.
-        _subscriptionKeeper!.Stop();
         await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
 
         _subscribed = false;
     }
 
-    Task RestoreSubscription(ReactorDefinition definition, ConnectedClient connectedClient) =>
-        _observer!.RestoreClientSubscription<IReactorObserverSubscriber>(
-            ObserverType.Reactor,
-            definition.EventTypes.Select(e => e.EventType).ToArray(),
-            localSiloDetails.SiloAddress,
-            connectedClient,
-            definition.IsReplayable,
-            definition.Filters,
-            definition.GenerationDelivery);
+    /// <inheritdoc/>
+    public async Task KeepSubscription()
+    {
+        var key = new ReactorKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        _observer ??= GrainFactory.GetGrain<IObserver>(key);
+
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
+            await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                ObserverType.Reactor,
+                State.EventTypes.Select(e => e.EventType).ToArray(),
+                localSiloDetails.SiloAddress,
+                connectedClient,
+                State.IsReplayable,
+                State.Filters,
+                State.GenerationDelivery);
+        }
+
+        _subscribed = true;
+    }
 
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
