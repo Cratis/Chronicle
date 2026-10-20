@@ -97,7 +97,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         _readModelExporterOptions = new JsonSchemaExporterOptions
         {
             TreatNullObliviousAsNonNullable = true,
-            TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true)
+            TransformSchemaNode = TransformReadModelNode
         };
     }
 
@@ -308,6 +308,24 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             throw new SelfReferencingJsonSchemaType(type);
         }
+    }
+
+    JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
+    {
+        var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
+        var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(true) ?? [];
+        var lengths = attributes.Select(attribute => attribute switch
+        {
+            System.ComponentModel.DataAnnotations.MaxLengthAttribute length when length.Length > 0 => (int?)length.Length,
+            System.ComponentModel.DataAnnotations.StringLengthAttribute length => length.MaximumLength,
+            System.ComponentModel.DataAnnotations.LengthAttribute length => length.MaximumLength,
+            _ => null
+        }).Where(length => length is not null).ToArray();
+        if (transformed is JsonObject node && lengths.Length > 0)
+        {
+            node["maxLength"] = lengths.Min();
+        }
+        return transformed;
     }
 
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues, Action<JsonObject, Type>? recordCompensation = null, bool preserveUnformattedNullability = false)

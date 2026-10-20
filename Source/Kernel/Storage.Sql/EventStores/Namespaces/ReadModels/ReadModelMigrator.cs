@@ -285,7 +285,7 @@ public class ReadModelMigrator(
             return databaseType switch
             {
                 DatabaseType.PostgreSql => column.IsKey ? "VARCHAR(200)" : "TEXT",
-                DatabaseType.SqlServer => column.IsKey ? "NVARCHAR(200)" : "NVARCHAR(MAX)",
+                DatabaseType.SqlServer => column.SqlServerStringType,
                 _ => "TEXT"
             };
         }

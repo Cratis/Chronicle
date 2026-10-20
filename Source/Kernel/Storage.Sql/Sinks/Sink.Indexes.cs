@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -32,10 +33,14 @@ public partial class Sink
                     continue;
                 }
 
-                if (databaseType == DatabaseType.SqlServer && column.ClrType == typeof(string) && !column.IsKey)
+                if (databaseType == DatabaseType.SqlServer && column.ClrType == typeof(string))
                 {
-                    _logger.IndexNotCreated(_tableName, path.Path, "NVARCHAR(MAX) is not an indexable SQL Server key (nonclustered keys are limited to 1700 bytes)");
-                    continue;
+                    var length = await context.Database.SqlQuery<int>($"SELECT CAST(CHARACTER_MAXIMUM_LENGTH AS int) AS [Value] FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=SCHEMA_NAME() AND TABLE_NAME={table} AND COLUMN_NAME={column.Name}").SingleOrDefaultAsync();
+                    if (length is < 1 or > 850)
+                    {
+                        _logger.IndexNotCreated(_tableName, path.Path, "the existing string column is unbounded or exceeds the SQL Server nonclustered key limit of 1700 bytes; replay to apply a supported bound");
+                        continue;
+                    }
                 }
 
                 try

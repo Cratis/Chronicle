@@ -93,7 +93,16 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
-The SQL sink does not create the indexes a read model declares with `[Index]`; only the MongoDB sink does today. Create any indexes you need on the SQL table yourself.
+The SQL sink creates nonunique indexes for declared top-level scalar `[Index]` properties on SQL Server, PostgreSQL, and SQLite.
+
+SQL Server indexed strings use an explicit `MaxLength`, `StringLength`, or `Length` bound up to 850 characters,
+or 450 characters if the indexed property has no bound. Unindexed, unbounded strings remain
+`NVARCHAR(MAX)`; larger declared bounds remain unbounded and receive an index diagnostic. This
+mapping does not change event schemas, read-model generations, or request a replay. Existing SQL
+column types are not changed automatically: explicitly replay the model to apply a new column type.
+Writes exceeding a bounded column's length fail rather than truncate the value, causing the projection's
+partition to fail. SQL Server string comparisons use the database collation (commonly case-insensitive);
+PostgreSQL btree keys remain subject to its approximately 2.7 KB entry limit.
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
 

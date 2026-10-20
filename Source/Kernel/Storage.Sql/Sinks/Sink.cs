@@ -118,7 +118,7 @@ public partial class Sink : ISink
         _indexes = readModel.Indexes;
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
-        _columns = ProjectedColumns.ForSchema(_schema);
+        _columns = ProjectedColumns.ForSchema(_schema, _indexes);
     }
 
     /// <inheritdoc/>
