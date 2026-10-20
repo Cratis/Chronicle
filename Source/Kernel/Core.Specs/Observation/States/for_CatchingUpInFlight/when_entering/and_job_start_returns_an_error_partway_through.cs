@@ -41,4 +41,5 @@ public class and_job_start_returns_an_error_partway_through : given.a_catching_u
     [Fact] void should_only_record_attempted_partitions_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldContainOnly(_attemptedPartitions);
     [Fact] void should_transition_to_quarantined() => _stateMachine.Received(1).TransitionTo<QuarantinedObserver>();
     [Fact] void should_not_transition_to_routing() => _stateMachine.DidNotReceive().TransitionTo<Routing>();
+    [Fact] void should_keep_only_markers_still_needing_recovery() => _resultingStoredState.InFlightPartitions.ShouldContainOnly(_storedState.InFlightPartitions.Except(_attemptedPartitions.Take(1)));
 }
