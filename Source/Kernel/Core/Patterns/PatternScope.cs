@@ -31,7 +31,7 @@ public record PatternScope(string Id, string Name, string UserName)
     /// <param name="namespace">The namespace to get scopes for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the mined patterns and identities.</param>
     /// <returns>The scopes that have established patterns.</returns>
-    internal static async Task<IEnumerable<PatternScope>> AllPatternScopes(
+    public static async Task<IEnumerable<PatternScope>> AllPatternScopes(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IStorage storage)
