@@ -73,7 +73,12 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             // Another provisioner inserted the same revision first (primary key violation on
             // Identifier + Revision). Converge on the persisted key so every writer encrypts under the same one.
             var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-            return winner ?? key;
+            if (winner is null)
+            {
+                throw;
+            }
+
+            return winner;
         }
     }
 
