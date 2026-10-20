@@ -1,3 +1,6 @@
+---
+description: Chronicle migrations evolve immutable events by upcasting and downcasting event type generations in the kernel, in place and without rewriting history.
+---
 # Migrations
 
 Every system evolves. Business rules change, data models improve, and properties get renamed, split, or combined. In event-sourced systems this creates a challenge: events are immutable facts, and the historical record cannot simply be edited. Chronicle solves this with a declarative migration system that lets you evolve event schemas without losing backward compatibility.

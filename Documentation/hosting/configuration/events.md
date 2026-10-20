@@ -1,3 +1,6 @@
+---
+description: Configure how Chronicle Server queues appended events and retains causation properties.
+---
 # Events
 
 Event configuration controls how Chronicle Server queues appended events and retains causation properties.

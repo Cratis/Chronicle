@@ -15,7 +15,7 @@ public class when_creating_application_tables : Specification
     void Because()
     {
         _tables = new Migrations.v19_67_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations.OfType<CreateTableOperation>().Select(table => table.Name).ToArray();
-        using var context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().Options);
+        using var context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite("Data Source=:memory:").AddConceptAsSupport().WithoutServiceProviderCaching().Options);
         _mapsReceipts = context.Model.FindEntityType(typeof(EffectReceiptEntry)) is not null;
     }
 

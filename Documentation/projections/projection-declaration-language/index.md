@@ -1,3 +1,6 @@
+---
+description: The Projection Declaration Language (PDL) is the part of the Cratis Screenplay language that Chronicle compiles into projection definitions.
+---
 # Projection Declaration Language
 
 The Projection Declaration Language (PDL) is part of the **Cratis Screenplay** language — the

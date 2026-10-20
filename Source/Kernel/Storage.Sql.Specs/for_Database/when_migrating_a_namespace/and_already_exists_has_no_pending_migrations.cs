@@ -33,7 +33,7 @@ public class and_already_exists_has_no_pending_migrations(PostgreSqlFixture fixt
 
         // Build the options the way Database.BuildOptions does, so this context shares the kernel's EF configuration.
         builder
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(_failure);
         await using var context = new NamespaceDbContext(builder.Options);
 

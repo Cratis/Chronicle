@@ -22,6 +22,12 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     public Subject? Subject { get; init; }
 
     /// <summary>
+    /// Gets or inits the optional <see cref="IdempotencyKey"/> that makes appending this event idempotent. A batch in which any event
+    /// has a key is appended once; events without a key are appended normally.
+    /// </summary>
+    public IdempotencyKey? IdempotencyKey { get; init; }
+
+    /// <summary>
     /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
     /// </summary>
     public EventStreamType EventStreamType { get; init; } = EventStreamType.All;

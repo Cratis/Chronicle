@@ -69,6 +69,15 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
         EventStore);
 
     /// <summary>
+    /// Gets the MongoDB database containing the served read models.
+    /// </summary>
+    internal MongoDB.Driver.IMongoDatabase ReadModelDatabase =>
+        _cluster!.Silos[0].ServiceProvider.GetRequiredService<Cratis.Chronicle.Storage.MongoDB.IDatabase>()
+            .GetReadModelDatabase(
+                (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)EventStore,
+                KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+    /// <summary>
     /// Brings the cluster up and drives one event end to end so every benchmark starts from an
     /// operational cluster rather than racing the first activation.
     /// </summary>

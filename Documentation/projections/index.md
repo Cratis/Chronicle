@@ -3,6 +3,8 @@ title: Projections
 description: Build specialized, queryable read models from events and choose the right projection style and consistency model.
 ---
 
+A Chronicle projection is an observer that declaratively maps events onto a read model and keeps it up to date.
+
 Your events are the source of truth, but events are a poor thing to *read* — nobody wants to replay a
 thousand `MoneyDeposited` facts to show an account balance. A **projection** does that folding for you:
 it watches a stream of events and continuously builds a **read model** — a shaped, queryable view that's

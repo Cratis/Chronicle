@@ -1,3 +1,6 @@
+---
+description: The OnceOnly attribute marks a Chronicle reactor handler that must not run again when its observer is replayed, and what it guarantees.
+---
 # OnceOnly
 
 The `OnceOnly` attribute marks a reactor handler that must not run again when its observer is replayed.
@@ -28,6 +31,10 @@ When the side effect must survive that retry too, take a [delivery identity](del
 attribute: it gives you a key that is stable across the failure and the recovery, so a record you keep under it
 lets the handler recognize the redelivery. The two compose — `OnceOnly` keeps replay out for free, the identity
 covers what is left.
+
+## Relationship to returned-event keys
+
+In C#, the events a handler returns are also appended with [idempotency keys derived from the delivery](side-effects#duplicate-protection-for-returned-events), so a retry after a failed partition does not append them twice even without `OnceOnly`. The two answer different questions. The keys make the *append* safe to repeat. `[OnceOnly]` keeps the *handler* from running during replay, which is what protects anything the handler does outside the event log. If you changed what a handler returns and want replays to append the new shape, bump the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) instead; if the handler must not run again at all, keep `[OnceOnly]`.
 
 ## Where you put it
 

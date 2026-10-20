@@ -208,8 +208,68 @@ jobs:
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
+    if: github.event_name != 'pull_request'
     needs: [wire-compatibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          path: ./**/obj
+          # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
+          key: dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Build with DEVELOPMENT symbol
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Pack DEVELOPMENT build output
+        run: |
+          set -euo pipefail
+          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
+
+      - name: Upload DEVELOPMENT build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-development
+          path: build-output-development.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
+  # requested PR path waits for successful specs (implicit success() also blocks cancellation).
+  dotnet-build-development-requested:
+    if: github.event_name == 'pull_request' && inputs.integration_requested
+    needs: [wire-compatibility, specs]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -314,8 +374,9 @@ jobs:
     # On a pull request the matrix fans out only after the ordinary specs passed in this same run
     # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
     # independent of specs, so a failing spec does not hide integration results there.
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && needs.dotnet-build-development.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
-    needs: [dotnet-build, dotnet-build-development, specs]
+    # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
+    needs: [dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -441,9 +502,9 @@ jobs:
           retention-days: 1
 
   coverage-merge-and-cache:
-    # Implicit success() on all dependencies skips this if any integration job fails or
-    # is skipped (ordinary PR pushes). Never cache incomplete results under the SHA key.
-    if: github.event_name != 'pull_request_target'
+    # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
+    # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]

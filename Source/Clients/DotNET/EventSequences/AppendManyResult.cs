@@ -63,6 +63,26 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
+    /// Gets what the append did for each event, aligned with <see cref="SequenceNumbers"/>. Every entry is <see cref="AppendOutcome.Appended"/> for an unkeyed append.
+    /// </summary>
+    public IEnumerable<AppendOutcome> Outcomes { get; init; } = [];
+
+    /// <summary>
+    /// Gets the idempotency keys that were refused because they already identify a different event.
+    /// </summary>
+    public IEnumerable<IdempotencyKeyConflict> IdempotencyConflicts { get; init; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether any idempotency key was refused.
+    /// </summary>
+    public bool HasIdempotencyConflicts => IdempotencyConflicts.Any();
+
+    /// <summary>
+    /// Gets a value indicating whether every event was already in the sequence, so this call wrote nothing.
+    /// </summary>
+    public bool AllAlreadyAppended => Outcomes.Any() && Outcomes.All(_ => _ != AppendOutcome.Appended);
+
+    /// <summary>
     /// Gets the observer service used for waiting for completion.
     /// </summary>
     internal Contracts.Observation.IObservers? Observers { get; init; }

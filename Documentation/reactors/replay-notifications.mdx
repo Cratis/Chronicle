@@ -1,3 +1,6 @@
+---
+description: Implement ICanBeNotifiedWhenReplay so a Chronicle reactor or reducer learns when a replay begins and ends, for example to pause external work.
+---
 # Replay notifications
 
 A [replay](replay) re-delivers history to an observer, and some reactors and reducers need to know when that starts and when it is over. A reactor that feeds a cache or an external index might pause its writes for the duration; a reducer that keeps in-memory state might reset it.

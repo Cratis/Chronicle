@@ -15,6 +15,8 @@ public static class JsonSchemaCompatibilityExtensions
     const string EnumerationNamesKey = "x-enumNames";
     const string FormatKey = "format";
     const string TitleKey = "title";
+    const string DetailsKey = "details";
+    static readonly string[] _protectionKeys = ["compliance", "security"];
 
     /// <summary>
     /// Determines whether a generated schema still describes the stored data.
@@ -23,7 +25,7 @@ public static class JsonSchemaCompatibilityExtensions
     /// <param name="generated">The incoming schema.</param>
     /// <returns>Whether the schemas are compatible.</returns>
     /// <remarks>
-    /// Titles, nullable format markers, growing or renamed enumerations and default-only property refinements
+    /// Titles, the free-text details of protection metadata, nullable format markers, growing or renamed enumerations and default-only property refinements
     /// are tolerated. Protection metadata may be added, but existing metadata may not be removed or changed.
     /// Other changes require a new generation. Default-only refinements work in both directions for rolling upgrades.
     /// </remarks>
@@ -35,6 +37,8 @@ public static class JsonSchemaCompatibilityExtensions
         StripNullableFormatMarkers(generatedNode);
         StripTitles(storedNode);
         StripTitles(generatedNode);
+        StripProtectionDetails(storedNode);
+        StripProtectionDetails(generatedNode);
         return DefaultOnlyPropertyRefinement.EraseCompatibleDifferences(storedNode, generatedNode) &&
             TryEraseCompatibleEnumerations(storedNode, generatedNode) &&
             JsonNode.DeepEquals(storedNode, generatedNode);
@@ -79,6 +83,8 @@ public static class JsonSchemaCompatibilityExtensions
     {
         var storedNode = JsonNode.Parse(stored.ToJson());
         var generatedNode = JsonNode.Parse(stored.MorePrecise(generated).ToJson());
+        StripProtectionDetails(storedNode);
+        StripProtectionDetails(generatedNode);
         var incoming = DefaultOnlyPropertyRefinement.Pairs(storedNode, generatedNode).ToDictionary(pair => pair.Path, pair => pair.Generated);
         foreach (var (previous, _, _, path) in DefaultOnlyPropertyRefinement.Pairs(storedNode, storedNode))
         {
@@ -107,6 +113,21 @@ public static class JsonSchemaCompatibilityExtensions
     /// </summary>
     /// <param name="node">The schema node.</param>
     internal static void StripTitles(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema => schema.Remove(TitleKey));
+
+    /// <summary>
+    /// Strips the free-text details from compliance and security metadata; the metadata type and scope remain.
+    /// </summary>
+    /// <param name="node">The schema node.</param>
+    internal static void StripProtectionDetails(JsonNode? node) => DefaultOnlyPropertyRefinement.Normalize(node, schema =>
+    {
+        foreach (var key in _protectionKeys)
+        {
+            if (schema[key] is JsonArray entries)
+            {
+                entries.OfType<JsonObject>().ToList().ForEach(entry => entry.Remove(DetailsKey));
+            }
+        }
+    });
 
     /// <summary>
     /// Strips nullable markers from format declarations.

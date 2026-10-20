@@ -26,7 +26,7 @@ public class PostgreSqlAlertIncidentsHarness : SqlAlertIncidentsHarness
 
     /// <inheritdoc/>
     protected override NamespaceDbContext Context() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(_connectionString).AddConceptAsSupport().Options);
+        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
 
     /// <inheritdoc/>
     protected override Task<string> ConnectionString() => Fixture.CreateDatabase();

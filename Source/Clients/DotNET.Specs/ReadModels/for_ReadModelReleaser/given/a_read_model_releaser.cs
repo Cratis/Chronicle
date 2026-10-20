@@ -53,6 +53,14 @@ public class a_read_model_releaser : Specification
     /// <param name="Secret">The namespace-scoped encrypted value, which needs no subject at all.</param>
     public record MixedProtection([property: PII] string Notes, [property: Encrypted(EncryptionScope.Namespace)] string Secret);
 
+    protected ILogger _logger;
+    /// <summary>
+    /// A composed read model with a nullable subject-scoped PII concept and no resolvable subject.
+    /// </summary>
+    /// <param name="Name">Plain value.</param>
+    /// <param name="Email">The nullable subject-scoped PII value.</param>
+    public record Composed(string Name, [property: PII] string? Email);
+
     protected IEventStore _eventStore;
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -78,6 +86,8 @@ public class a_read_model_releaser : Specification
 
     void Establish()
     {
+        _logger = Substitute.For<ILogger>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns((EventStoreName)"test-event-store");
         _eventStore.Namespace.Returns((EventStoreNamespaceName)"test-namespace");
@@ -97,7 +107,7 @@ public class a_read_model_releaser : Specification
             _schemaGenerator,
             _servicesAccessor,
             new JsonSerializerOptions(),
-            Substitute.For<ILogger>());
+            _logger);
     }
 
     /// <summary>
@@ -120,6 +130,9 @@ public class a_read_model_releaser : Specification
             var request = callInfo.Arg<ReleaseRequest>();
             return Task.FromResult(new ReleaseResponse { Payload = request.Payload });
         });
+
+    protected int WarningCount() =>
+        _logger.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(ILogger.Log) && call.GetArguments()[0] is LogLevel.Warning);
 
     protected ReleaseRequest? LastReleaseRequest() =>
         _compliance.ReceivedCalls()

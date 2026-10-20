@@ -15,6 +15,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SqlStorage = Cratis.Chronicle.Storage.Sql.SystemStorage;
 
 namespace Cratis.Chronicle.Setup;
@@ -69,15 +70,27 @@ public static class SqlChronicleBuilderExtensions
 
     static void AddHealthCheck(IChronicleBuilder builder, ChronicleOptions options)
     {
-        var connectionString = options.Storage.ConnectionDetails;
+        var storage = options.Storage;
+        string name;
+        if (string.Equals(storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        {
+            name = "postgresql";
+        }
+        else if (string.Equals(storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
+        {
+            name = "mssql";
+        }
+        else
+        {
+            return;
+        }
 
-        if (string.Equals(options.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Services.AddHealthChecks().AddNpgSql(connectionString, name: "postgresql", timeout: TimeSpan.FromSeconds(3));
-        }
-        else if (string.Equals(options.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Services.AddHealthChecks().AddSqlServer(connectionString, name: "mssql", timeout: TimeSpan.FromSeconds(3));
-        }
+        // Connects the way the storage does, through the resolved identity, rather than with the raw connection details.
+        builder.Services.AddHealthChecks().Add(new HealthCheckRegistration(
+            name,
+            sp => new SqlConnectionHealthCheck(storage.ConnectionDetails, SqlConnectionResolution.From(sp, storage).PrepareRuntimeConnection),
+            failureStatus: null,
+            tags: null,
+            timeout: TimeSpan.FromSeconds(3)));
     }
 }

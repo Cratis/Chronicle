@@ -96,7 +96,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport().AddInterceptors(Interceptors).Options;
+        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
 
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
         var context = new ReadModelDbContext(options, containerName, _columns, _migrator);

@@ -1,3 +1,6 @@
+---
+description: Set any Chronicle Server option with environment variables using the Cratis__Chronicle__ prefix and double underscores for nested sections.
+---
 # Environment Variables
 
 All configuration options can be set using environment variables with the prefix `Cratis__Chronicle__`. Use double underscores (`__`) to represent nested configuration sections.
@@ -128,7 +131,40 @@ Cratis__Chronicle__Storage__ConnectionResolution__Connection__Resolver=Http
 Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Endpoint=https://platform-mgmt.example/internal/connections
 ```
 
-See [storage connection resolution](storage-connection-resolution.md) for every resolver setting.
+### HTTP resolver authentication
+
+Choose one of these alternatives alongside the HTTP resolver and endpoint above. Authentication to the resolver is independent of database authentication. Supply tokens and secrets from your deployment's secret store.
+
+Static bearer token:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Headers__Authorization='Bearer <token-from-your-secret-store>'
+```
+
+OAuth client credentials:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=ClientCredentials
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__TokenEndpoint=https://login.example/oauth2/token
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId=chronicle
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientSecret='<from-your-secret-store>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=connections
+```
+
+Microsoft Entra ID with a user-assigned managed identity:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=AzureCredential
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Credential=ManagedIdentity
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId='<resolver-identity-client-id>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=api://platform-mgmt/.default
+```
+
+`ManagedIdentity` is the default; omit `ClientId` for a system-assigned identity. For workload identity, set `Credential=WorkloadIdentity` and provide `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_FEDERATED_TOKEN_FILE` through your workload identity setup. Set the resolver's `ClientId` to the workload application's client id. `Credential=Default` selects the Azure SDK's default credential chain.
+
+Do not combine an `Authorization` header with `Authentication__Type` other than `None`. Replace `Connection` with `Identity` in these paths when authenticating the identity slot's HTTP resolver instead.
+
+See [storage connection resolution](storage-connection-resolution.md#authenticate-the-resolver) for JSON examples and every resolver setting.
 
 ## Observers
 

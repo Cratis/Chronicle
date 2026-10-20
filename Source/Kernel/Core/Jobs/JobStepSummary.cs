@@ -36,7 +36,7 @@ public record JobStepSummary(
     /// <param name="jobId">The unique identifier of the job.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read job steps from.</param>
     /// <returns>A collection of job step summaries.</returns>
-    internal static async Task<IEnumerable<JobStepSummary>> GetJobSteps(
+    public static async Task<IEnumerable<JobStepSummary>> GetJobSteps(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         Cratis.Orleans.Jobs.JobId jobId,

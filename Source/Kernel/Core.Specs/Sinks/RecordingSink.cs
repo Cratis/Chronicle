@@ -35,6 +35,11 @@ public class RecordingSink : ISink
     /// </summary>
     public ExpandoObject? Existing { get; set; }
 
+    /// <summary>
+    /// Gets or sets the failed partitions every write reports.
+    /// </summary>
+    public IEnumerable<FailedPartition> FailedPartitions { get; set; } = [];
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
@@ -53,7 +58,7 @@ public class RecordingSink : ISink
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
     {
         _writeModes.Add(mode);
-        return Task.FromResult<IEnumerable<FailedPartition>>([]);
+        return Task.FromResult(FailedPartitions);
     }
 
     /// <inheritdoc/>

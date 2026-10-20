@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Testing;
 public enum DroppedReply
 {
     /// <summary>
-    /// A receipted append (any append shape).
+    /// A receipted or keyed append (any append shape).
     /// </summary>
     Append = 0,
 

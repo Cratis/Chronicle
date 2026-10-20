@@ -140,6 +140,7 @@ public partial class Observer(
     TimeSpan _writeCoalescingInterval = TimeSpan.Zero;
     Dictionary<Key, Dictionary<EventTypeId, EventCount>> _pendingHandledCounts = [];
     IGrainTimer? _coalescedWriteTimer;
+    bool _coalescedWriteBroughtForward;
     bool _failureStateWritePending;
     Dictionary<FailedPartitionId, TimeSpan> _pendingRetryReminders = [];
     int _debouncedProgressWrites;
@@ -171,6 +172,7 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
     }
 

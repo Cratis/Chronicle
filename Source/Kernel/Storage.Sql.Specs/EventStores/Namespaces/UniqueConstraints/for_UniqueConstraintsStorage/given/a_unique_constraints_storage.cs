@@ -61,7 +61,7 @@ public class a_unique_constraints_storage : Specification
     {
         var options = new DbContextOptionsBuilder<UniqueConstraintDbContext>()
             .UseSqlite(_connection.ConnectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(_interceptors)
             .Options;
 

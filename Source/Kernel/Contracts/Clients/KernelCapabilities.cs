@@ -32,4 +32,9 @@ public static class KernelCapabilities
     /// The kernel validates several ordered guards for the same event source atomically.
     /// </summary>
     public const string ConcurrencyScopeConjunctions = "concurrency-scope-conjunctions";
+
+    /// <summary>
+    /// The kernel settles keyed appends against durable idempotency identities through the AppendOnce and AppendManyOnce operations.
+    /// </summary>
+    public const string IdempotentAppends = "idempotent-appends";
 }

@@ -1,3 +1,6 @@
+---
+description: Mark a declarative Chronicle projection forward-only with NotRewindable() so it cannot be replayed or rewound from scratch.
+---
 # Projection with NotRewindable
 
 The `NotRewindable()` method marks a projection as forward-only, meaning it cannot be replayed or rewound. This is useful for projections that maintain state that should not be recreated from scratch or for performance-critical scenarios where replay is not needed.

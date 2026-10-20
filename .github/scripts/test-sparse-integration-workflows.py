@@ -3,7 +3,10 @@
 
 """Guard trigger separation and check names so unrelated labels cannot mask failures."""
 
+from dataclasses import dataclass
+from itertools import product
 from pathlib import Path
+import re
 import unittest
 
 import yaml
@@ -15,6 +18,63 @@ def workflow(filename):
     # PyYAML treats `on` as YAML 1.1's boolean true; BaseLoader keeps GitHub's key intact.
     with (WORKFLOWS / filename).open(encoding="utf-8") as file:
         return yaml.load(file, Loader=yaml.BaseLoader)
+
+
+@dataclass(frozen=True)
+class ConditionContext:
+    event: str
+    requested: bool
+    results: dict
+    cancelled: bool = False
+    actor: str = "contributor"
+
+    def bindings(self):
+        values = {
+            "github.event_name": self.event,
+            "github.actor": self.actor,
+            "inputs.integration_requested": self.requested,
+            "cancelled()": self.cancelled,
+        }
+        values.update({f"needs.{name}.result": result for name, result in self.results.items()})
+        return values
+
+
+def implicit_success_allows(expression, dependencies, results):
+    statuses = ("success()", "failure()", "cancelled()", "always()")
+    if any(status in expression for status in statuses):
+        return True
+    return all(results[dependency] == "success" for dependency in dependencies)
+
+
+def evaluate_boolean_condition(expression, bindings):
+    for token, value in bindings.items():
+        expression = expression.replace(token, repr(value))
+    expression = expression.replace("&&", " and ").replace("||", " or ")
+    expression = re.sub(r"!(?!=)", " not ", expression).strip()
+    # Only substituted literals and boolean/comparison operators may reach eval.
+    remainder = re.sub(r"'[^']*'|True|False|and|or|not|==|!=|[()\s]", "", expression)
+    if remainder:
+        raise AssertionError(f"Unsupported condition tokens: {remainder}")
+    return eval(expression, {"__builtins__": {}}, {})
+
+
+def condition_allows(job, context):
+    """Evaluate these jobs' boolean conditions, including GitHub's implicit success().
+
+    This checks eligibility after needs complete, not scheduler timing. Separate DAG
+    assertions below prove which jobs must complete before DEVELOPMENT is eligible.
+    """
+    expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
+    if not implicit_success_allows(expression, job["needs"], context.results):
+        return False
+    return evaluate_boolean_condition(expression, context.bindings())
+
+
+def dependency_ancestors(jobs, job_id):
+    ancestors = set(jobs[job_id].get("needs", []))
+    for dependency in jobs[job_id].get("needs", []):
+        ancestors.update(dependency_ancestors(jobs, dependency))
+    return ancestors
 
 
 class SparseIntegrationWorkflows(unittest.TestCase):
@@ -70,7 +130,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                                 for job in self.build["jobs"].values()))
         self.assertEqual({"requested-integration", "requested-detect-hot-core"},
                          set(jobs["hot-core-gate-requested"]["needs"]))
-        for job in ("dotnet-build-development", "integration", "integration-api", "mongodb"):
+        for job in ("dotnet-build-development-requested", "integration", "integration-api", "mongodb"):
             self.assertIn("inputs.integration_requested", self.build["jobs"][job]["if"])
         for name in ("Build development Docker image", "Push development Docker image"):
             step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"] if step.get("name") == name)
@@ -139,10 +199,114 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
 
+    def test_development_paths_preserve_steps_permissions_and_artifact(self):
+        jobs = self.build["jobs"]
+        parallel = jobs["dotnet-build-development"]
+        requested = jobs["dotnet-build-development-requested"]
+        self.assertEqual("github.event_name != 'pull_request'", parallel["if"])
+        self.assertEqual("github.event_name == 'pull_request' && inputs.integration_requested",
+                         requested["if"])
+        self.assertEqual(["wire-compatibility"], parallel["needs"])
+        self.assertEqual(["wire-compatibility", "specs"], requested["needs"])
+        self.assertEqual(["dotnet-build"], jobs["specs"]["needs"])
+        self.assertEqual(["wire-compatibility"], jobs["dotnet-build"]["needs"])
+        for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
+            self.assertEqual(parallel[key], requested[key], key)
+        steps = requested["steps"]
+        self.assertEqual(8, len(steps))
+        build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
+        self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
+                         "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
+        upload = steps[-1]["with"]
+        self.assertEqual("build-output-development", upload["name"])
+        self.assertEqual("build-output-development.tar.zst", upload["path"])
+        self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
+        self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
+                         jobs["integration"]["with"]["chronicle-image"])
+
+    def test_development_eligibility_for_specs_success_failure_cancel_and_skip(self):
+        jobs = self.build["jobs"]
+        states = ("success", "failure", "cancelled", "skipped")
+        for event, requested, specs, wire in product(
+                ("pull_request", "schedule", "workflow_dispatch"), (False, True), states, states):
+            results = {"wire-compatibility": wire, "specs": specs}
+            context = ConditionContext(event, requested, results)
+            with self.subTest(event=event, requested=requested, specs=specs, wire=wire):
+                self.assertEqual(event != "pull_request" and wire == "success",
+                                 condition_allows(jobs["dotnet-build-development"], context))
+                self.assertEqual(event == "pull_request" and requested and
+                                 specs == "success" and wire == "success",
+                                 condition_allows(jobs["dotnet-build-development-requested"], context))
+
+    def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
+        job = self.build["jobs"]["integration"]
+        self.assertEqual({"dotnet-build", "specs", "dotnet-build-development",
+                          "dotnet-build-development-requested"}, set(job["needs"]))
+        states = ("success", "failure", "cancelled", "skipped")
+        for event, requested, specs, development, release, cancelled in product(
+                ("pull_request", "schedule", "workflow_dispatch"), (False, True),
+                states, states, states, (False, True)):
+            is_pr = event == "pull_request"
+            results = {"dotnet-build": release, "specs": specs,
+                       "dotnet-build-development": "skipped" if is_pr else development,
+                       "dotnet-build-development-requested": development if is_pr else "skipped"}
+            expected = (not cancelled and release == "success" and development == "success"
+                        and (not is_pr or (requested and specs == "success")))
+            with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
+                context = ConditionContext(event, requested, results, cancelled)
+                self.assertEqual(expected, condition_allows(job, context))
+        dependabot = ConditionContext("schedule", False, {name: "success" for name in job["needs"]},
+                                      actor="dependabot[bot]")
+        self.assertFalse(condition_allows(job, dependabot))
+
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
         self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(coverage["needs"]))
-        self.assertEqual("github.event_name != 'pull_request_target'", coverage["if"])
+        self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
+        self.assertIn("!cancelled()", coverage["if"])
+        for dependency in coverage["needs"]:
+            self.assertIn(f"needs.{dependency}.result == 'success'", coverage["if"])
+
+    def test_coverage_allows_successful_paths_despite_skipped_development_ancestor(self):
+        jobs = self.build["jobs"]
+        coverage = jobs["coverage-merge-and-cache"]
+        ancestors = dependency_ancestors(jobs, "coverage-merge-and-cache")
+        self.assertIn("dotnet-build-development", ancestors)
+        self.assertIn("dotnet-build-development-requested", ancestors)
+        # Model transitive implicit-success propagation without claiming to emulate
+        # GitHub's scheduler. Explicit status functions must bypass this restriction.
+        modeled_job = dict(coverage, needs=sorted(ancestors))
+        for event in ("pull_request", "schedule", "workflow_dispatch"):
+            results = dict.fromkeys(ancestors, "success")
+            sibling = ("dotnet-build-development" if event == "pull_request"
+                       else "dotnet-build-development-requested")
+            results[sibling] = "skipped"
+            context = ConditionContext(event, True, results)
+            with self.subTest(event=event):
+                self.assertTrue(condition_allows(modeled_job, context))
+                # Seed the old guard: this fixture must detect the skipped ancestor.
+                old_guard = dict(modeled_job, **{"if": "github.event_name != 'pull_request_target'"})
+                self.assertFalse(condition_allows(old_guard, context))
+
+    def test_coverage_rejects_incomplete_cancelled_ordinary_and_dependabot_runs(self):
+        coverage = self.build["jobs"]["coverage-merge-and-cache"]
+        states = ("success", "failure", "cancelled", "skipped", "")
+        for event, cancelled, results in product(
+                ("pull_request", "schedule", "workflow_dispatch", "pull_request_target"),
+                (False, True), product(states, repeat=len(coverage["needs"]))):
+            prerequisites = dict(zip(coverage["needs"], results))
+            context = ConditionContext(event, True, prerequisites, cancelled)
+            expected = (event != "pull_request_target" and not cancelled
+                        and all(result == "success" for result in results))
+            with self.subTest(event=event, cancelled=cancelled, results=prerequisites):
+                self.assertEqual(expected, condition_allows(coverage, context))
+        # Ordinary PRs skip integration; Dependabot also skips the matrix. Keep
+        # their existing coverage behavior through immediate prerequisite results.
+        for actor in ("contributor", "dependabot[bot]"):
+            results = dict.fromkeys(coverage["needs"], "success")
+            results["integration"] = "skipped"
+            context = ConditionContext("pull_request", False, results, actor=actor)
+            self.assertFalse(condition_allows(coverage, context))
 
 
 if __name__ == "__main__":

@@ -32,9 +32,9 @@
   href: connection-strings/toc.yml
 - name: Tenancy
   href: tenancy/toc.yml
-- name: Namespaces
+- name: Manage namespaces
   href: namespaces/toc.yml
-- name: Constraints
+- name: Define constraints
   href: constraints/toc.yml
 - name: Closing Streams
   href: closing-streams/toc.yml

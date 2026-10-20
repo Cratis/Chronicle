@@ -1,6 +1,6 @@
 ---
 title: Event sources and streams
-description: Declare an event source and its named event streams as a C# type, append through it, and let Chronicle derive the concurrency guard from the dimensions you declare.
+description: Declare a Chronicle event source and its event streams as a C# type, append through it, and derive the concurrency guard from its dimensions.
 ---
 
 An event source definition is a C# type that names a kind of event source, lists the event streams it owns and declares which dimensions its appends are guarded by. You use it to stop passing routing strings around and to get a consistent concurrency guard for every append.

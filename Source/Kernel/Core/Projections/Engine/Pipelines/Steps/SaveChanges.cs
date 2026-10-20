@@ -3,6 +3,8 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -70,13 +72,15 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             // TODO: Return the number of affected records and pass this along to the changeset storage
             var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
 
-            if (failedPartitions.Any())
+            // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
+            // of this event's own partition stops the rest of the save: the other partitions' events are retried.
+            foreach (var failedPartition in failedPartitions)
             {
-                foreach (var failedPartition in failedPartitions)
-                {
-                    context.AddFailedPartition(failedPartition);
-                }
+                context.AddFailedPartition(failedPartition);
+            }
 
+            if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key))
+            {
                 return context;
             }
 
@@ -94,6 +98,12 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
         await ApplyPendingFutureSaves(context);
 
         return context;
+    }
+
+    static bool HasFailedOwnPartition(IEnumerable<FailedPartition> failedPartitions, IChangeset<AppendedEvent, ExpandoObject> changeset, Key key)
+    {
+        var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
+        return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
     }
 
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
@@ -125,7 +135,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             context.AddFailedPartition(failedPartition);
         }
 
-        if (!failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, pendingSave.Key.Value)))
+        if (!HasFailedOwnPartition(failedPartitions, pendingSave.Changeset, pendingSave.Key))
         {
             await ResolveSavedFuture(pendingSave);
         }

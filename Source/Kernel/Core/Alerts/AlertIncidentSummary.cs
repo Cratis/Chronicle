@@ -27,7 +27,7 @@ public record AlertIncidentSummary(
     /// <param name="readiness">Sampled materialization health.</param>
     /// <param name="namespace">Optional affected namespace.</param>
     /// <returns>The complete counts with sampled health.</returns>
-    internal static async Task<AlertIncidentSummary> GetOpenIncidentCounts(
+    public static async Task<AlertIncidentSummary> GetOpenIncidentCounts(
         EventStoreName eventStore,
         IStorage storage,
         IAlertIncidentsReadiness readiness,

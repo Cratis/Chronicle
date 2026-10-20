@@ -69,7 +69,7 @@ public class an_event_types_storage : Specification, IDisposable
     {
         var options = new DbContextOptionsBuilder<EventStoreDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new EventStoreDbContext(options);

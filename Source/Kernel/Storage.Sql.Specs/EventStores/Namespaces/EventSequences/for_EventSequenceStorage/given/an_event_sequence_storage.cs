@@ -89,7 +89,7 @@ public class an_event_sequence_storage : Specification, IDisposable
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return new EventSequenceDbContext(builder.Options, _tableName, _migrator);
     }
 

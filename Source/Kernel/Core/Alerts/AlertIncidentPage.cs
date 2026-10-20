@@ -39,7 +39,7 @@ public record AlertIncidentPage(
     /// <param name="afterIncidentId">Exclusive identity; a non-empty identity enables continuation.</param>
     /// <returns>The page with its sampled health.</returns>
     /// <exception cref="InvalidAlertIncidentQuery">The scope, cursor, or page limit is invalid.</exception>
-    internal static async Task<AlertIncidentPage> GetOpenIncidents(
+    public static async Task<AlertIncidentPage> GetOpenIncidents(
         EventStoreName eventStore,
         IStorage storage,
         IAlertIncidentsReadiness readiness,

@@ -130,7 +130,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());

@@ -1,3 +1,6 @@
+---
+description: Define Chronicle clients, as clientId and clientSecret pairs, at startup through configuration or secrets management instead of the API.
+---
 # Client Bootstrap Configuration
 
 Chronicle supports declarative client configuration, allowing clients (clientId/clientSecret pairs) to be defined at startup via configuration or secrets management, rather than exclusively through the Workbench UI.
