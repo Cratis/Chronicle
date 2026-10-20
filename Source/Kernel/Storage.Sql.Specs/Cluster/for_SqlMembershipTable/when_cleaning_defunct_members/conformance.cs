@@ -10,16 +10,27 @@ public abstract class conformance(MembershipHarness harness) : a_membership_tabl
     MembershipTableData _after;
     async Task Because()
     {
-        for (var generation = 1; generation <= 4; generation++)
+        var cutoff = Entry.IAmAliveTime.AddDays(1);
+        for (var generation = 1; generation <= 9; generation++)
         {
             var entry = CreateEntry(generation);
-            entry.Status = generation == 2 ? SiloStatus.Active : SiloStatus.Dead;
-            if (generation >= 3) entry.IAmAliveTime = entry.IAmAliveTime.AddDays(2);
+            entry.Status = generation switch
+            {
+                2 => SiloStatus.Active,
+                3 => SiloStatus.Joining,
+                4 => SiloStatus.ShuttingDown,
+                _ => SiloStatus.Dead
+            };
+            if (generation == 5) entry.IAmAliveTime = cutoff.AddDays(1);
+            if (generation == 6) entry.StartTime = cutoff.AddDays(1);
+            if (generation == 7) entry.SuspectTimes.Add(Tuple.Create(Entry.SiloAddress, cutoff.AddDays(1)));
+            if (generation == 8) entry.SuspectTimes.Add(Tuple.Create(Entry.SiloAddress, cutoff));
+            if (generation == 9) entry.SuspectTimes = null;
             (await Table.InsertRow(entry, (await Table.ReadAll()).Version.Next())).ShouldBeTrue();
         }
-        await Table.CleanupDefunctSiloEntries(new DateTimeOffset(Entry.IAmAliveTime.AddDays(1)));
+        await Table.CleanupDefunctSiloEntries(new DateTimeOffset(cutoff));
         _after = await Table.ReadAll();
     }
-    [Fact] public void should_remove_only_old_non_active_members() => _after.Members.Select(member => member.Item1.SiloAddress.Generation).Order().ShouldEqual([2, 3, 4]);
-    [Fact] public void should_preserve_the_version() => _after.Version.Version.ShouldEqual(4);
+    [Fact] public void should_remove_only_dead_members_with_all_times_before_the_cutoff() => _after.Members.Select(member => member.Item1.SiloAddress.Generation).Order().ShouldEqual([2, 3, 4, 5, 6, 7, 8]);
+    [Fact] public void should_preserve_the_version() => _after.Version.Version.ShouldEqual(9);
 }

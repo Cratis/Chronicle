@@ -29,6 +29,9 @@ public partial class SqlMembershipTable
 
     async Task<bool> Write(MembershipEntry entry, string? etag, TableVersion version)
     {
+        await using var scope = await database.Cluster();
+        var context = scope.DbContext;
+        RequireServerDatabase(context);
         if (!int.TryParse(version.VersionEtag, CultureInfo.InvariantCulture, out var expectedVersion) || version.Version <= expectedVersion ||
             (etag is not null && !int.TryParse(etag, CultureInfo.InvariantCulture, out _)))
         {
@@ -42,8 +45,6 @@ public partial class SqlMembershipTable
         }
 
         var row = entry.ToSql(_clusterId, expectedEtag + 1);
-        await using var scope = await database.Cluster();
-        var context = scope.DbContext;
         try
         {
             await context.Database.CreateExecutionStrategy().ExecuteInTransactionAsync(

@@ -11,7 +11,7 @@ using Orleans.Configuration;
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
-/// Stores Orleans membership with atomic cluster-version and per-silo ETag comparisons.
+/// Stores Orleans membership in PostgreSQL or SQL Server with atomic cluster-version and per-silo ETag comparisons.
 /// </summary>
 /// <param name="database">The migration-aware cluster database.</param>
 /// <param name="options">The Orleans cluster identity.</param>
@@ -24,6 +24,7 @@ public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOpti
     {
         await using var scope = await database.Cluster();
         var context = scope.DbContext;
+        RequireServerDatabase(context);
         if (tryInitTableVersion)
         {
             await context.Database.CreateExecutionStrategy().ExecuteInTransactionAsync(
@@ -57,6 +58,7 @@ public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOpti
     public async Task UpdateIAmAlive(MembershipEntry entry)
     {
         await using var scope = await database.Cluster();
+        RequireServerDatabase(scope.DbContext);
         var row = entry.ToSql(_clusterId, 0);
         await Rows(scope.DbContext, row).ExecuteUpdateAsync(update => update.SetProperty(member => member.IAmAliveTime, row.IAmAliveTime));
     }
@@ -65,9 +67,18 @@ public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOpti
     public async Task CleanupDefunctSiloEntries(DateTimeOffset beforeDate)
     {
         await using var scope = await database.Cluster();
-        await scope.DbContext.Set<MembershipRow>()
-            .Where(row => row.ClusterId == _clusterId && row.Status != (int)SiloStatus.Active && row.IAmAliveTime < beforeDate.UtcDateTime)
-            .ExecuteDeleteAsync();
+        var context = scope.DbContext;
+        RequireServerDatabase(context);
+        var cutoff = beforeDate.UtcDateTime;
+        var candidates = await context.Set<MembershipRow>().AsNoTracking()
+            .Where(row => row.ClusterId == _clusterId && row.Status == (int)SiloStatus.Dead && row.IAmAliveTime < cutoff && row.StartTime < cutoff)
+            .ToListAsync();
+        foreach (var row in candidates.Where(row => row.ToOrleans().SuspectTimes?.Exists(vote => vote.Item2 >= cutoff) != true))
+        {
+            await Rows(context, row)
+                .Where(member => member.Status == (int)SiloStatus.Dead && member.ETag == row.ETag && member.IAmAliveTime == row.IAmAliveTime)
+                .ExecuteDeleteAsync();
+        }
     }
 
     /// <inheritdoc/>
@@ -75,10 +86,19 @@ public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOpti
     {
         await using var scope = await database.Cluster();
         var context = scope.DbContext;
+        RequireServerDatabase(context);
         await context.Database.CreateExecutionStrategy().ExecuteInTransactionAsync(
             () => context.Set<MembershipVersion>().Where(row => row.ClusterId == clusterId).ExecuteDeleteAsync(),
             async () => !await context.Set<MembershipVersion>().AnyAsync(row => row.ClusterId == clusterId),
             IsolationLevel.ReadCommitted);
+    }
+
+    static void RequireServerDatabase(ClusterDbContext context)
+    {
+        if (!context.Database.IsNpgsql() && !context.Database.IsSqlServer())
+        {
+            throw new SqlMembershipRequiresServerDatabase(context.Database.ProviderName);
+        }
     }
 
     static IQueryable<MembershipRow> Rows(ClusterDbContext context, MembershipRow row) => context.Set<MembershipRow>()
@@ -86,6 +106,8 @@ public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOpti
 
     async Task<MembershipTableData> Read(ClusterDbContext context, SiloAddress? address)
     {
+        RequireServerDatabase(context);
+
         // The version MUST precede the rows: a concurrent writer then invalidates this view's CAS.
         await context.Database.OpenConnectionAsync();
         var version = await context.Set<MembershipVersion>().AsNoTracking().SingleOrDefaultAsync(row => row.ClusterId == _clusterId);
