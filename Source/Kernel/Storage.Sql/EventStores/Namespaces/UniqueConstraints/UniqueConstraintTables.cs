@@ -56,12 +56,12 @@ public static class UniqueConstraintTables
     /// </summary>
     /// <param name="names">All table names in the catalog.</param>
     /// <param name="eventSequenceId">The event sequence.</param>
-    /// <param name="primaryKeys">Entries of <c>table|primary key column</c> on PostgreSQL, or null for other providers.</param>
+    /// <param name="primaryKeys">Entries of "table|primary key column" on PostgreSQL, or null for other providers.</param>
     /// <returns>The per-event-source and per-value table names.</returns>
     /// <remarks>
     /// A name is classified by its suffix, except on PostgreSQL near its byte limit, where truncation may remove or
-    /// change the suffix. There the primary key identifies the table: <c>EventSourceId</c> for per-event-source claims,
-    /// <c>Value</c> for per-value claims. This also handles names that fit the limit exactly.
+    /// change the suffix. There the primary key identifies the table: EventSourceId for per-event-source claims,
+    /// Value for per-value claims. This also handles names that fit the limit exactly.
     /// </remarks>
     internal static (string[] PerEventSource, string[] PerValue) Classify(IEnumerable<string> names, EventSequenceId eventSequenceId, IEnumerable<string>? primaryKeys)
     {
