@@ -3,6 +3,7 @@
 
 """Guard trigger separation and check names so unrelated labels cannot mask failures."""
 
+from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 import re
@@ -19,24 +20,34 @@ def workflow(filename):
         return yaml.load(file, Loader=yaml.BaseLoader)
 
 
-def condition_allows(job, event, requested, results, cancelled=False, actor="contributor"):
-    """Evaluate these jobs' boolean conditions, including GitHub's implicit success().
+@dataclass(frozen=True)
+class ConditionContext:
+    event: str
+    requested: bool
+    results: dict
+    cancelled: bool = False
+    actor: str = "contributor"
 
-    This checks eligibility after needs complete, not scheduler timing. Separate DAG
-    assertions below prove which jobs must complete before DEVELOPMENT is eligible.
-    """
-    expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
-    if not any(status in expression for status in ("success()", "failure()", "cancelled()", "always()")):
-        if any(results[dependency] != "success" for dependency in job["needs"]):
-            return False
-    values = {
-        "github.event_name": event,
-        "github.actor": actor,
-        "inputs.integration_requested": requested,
-        "cancelled()": cancelled,
-    }
-    values.update({f"needs.{name}.result": result for name, result in results.items()})
-    for token, value in values.items():
+    def bindings(self):
+        values = {
+            "github.event_name": self.event,
+            "github.actor": self.actor,
+            "inputs.integration_requested": self.requested,
+            "cancelled()": self.cancelled,
+        }
+        values.update({f"needs.{name}.result": result for name, result in self.results.items()})
+        return values
+
+
+def implicit_success_allows(expression, dependencies, results):
+    statuses = ("success()", "failure()", "cancelled()", "always()")
+    if any(status in expression for status in statuses):
+        return True
+    return all(results[dependency] == "success" for dependency in dependencies)
+
+
+def evaluate_boolean_condition(expression, bindings):
+    for token, value in bindings.items():
         expression = expression.replace(token, repr(value))
     expression = expression.replace("&&", " and ").replace("||", " or ")
     expression = re.sub(r"!(?!=)", " not ", expression).strip()
@@ -45,6 +56,18 @@ def condition_allows(job, event, requested, results, cancelled=False, actor="con
     if remainder:
         raise AssertionError(f"Unsupported condition tokens: {remainder}")
     return eval(expression, {"__builtins__": {}}, {})
+
+
+def condition_allows(job, context):
+    """Evaluate these jobs' boolean conditions, including GitHub's implicit success().
+
+    This checks eligibility after needs complete, not scheduler timing. Separate DAG
+    assertions below prove which jobs must complete before DEVELOPMENT is eligible.
+    """
+    expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
+    if not implicit_success_allows(expression, job["needs"], context.results):
+        return False
+    return evaluate_boolean_condition(expression, context.bindings())
 
 
 class SparseIntegrationWorkflows(unittest.TestCase):
@@ -200,13 +223,13 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for event, requested, specs, wire in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True), states, states):
             results = {"wire-compatibility": wire, "specs": specs}
+            context = ConditionContext(event, requested, results)
             with self.subTest(event=event, requested=requested, specs=specs, wire=wire):
                 self.assertEqual(event != "pull_request" and wire == "success",
-                                 condition_allows(jobs["dotnet-build-development"], event, requested, results))
+                                 condition_allows(jobs["dotnet-build-development"], context))
                 self.assertEqual(event == "pull_request" and requested and
                                  specs == "success" and wire == "success",
-                                 condition_allows(jobs["dotnet-build-development-requested"],
-                                                  event, requested, results))
+                                 condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
@@ -223,9 +246,11 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             expected = (not cancelled and release == "success" and development == "success"
                         and (not is_pr or (requested and specs == "success")))
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
-                self.assertEqual(expected, condition_allows(job, event, requested, results, cancelled))
-        self.assertFalse(condition_allows(job, "schedule", False,
-                                         {name: "success" for name in job["needs"]}, actor="dependabot[bot]"))
+                context = ConditionContext(event, requested, results, cancelled)
+                self.assertEqual(expected, condition_allows(job, context))
+        dependabot = ConditionContext("schedule", False, {name: "success" for name in job["needs"]},
+                                      actor="dependabot[bot]")
+        self.assertFalse(condition_allows(job, dependabot))
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
