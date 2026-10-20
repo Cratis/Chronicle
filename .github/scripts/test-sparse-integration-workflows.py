@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 import yaml
@@ -199,6 +200,39 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
 
+    def test_sql_specs_run_in_parallel_without_reducing_coverage(self):
+        jobs = self.build["jobs"]
+        sql = jobs["specs-sql"]
+        self.assertEqual(["postgresql", "sqlserver", "remaining"], sql["strategy"]["matrix"]["shard"])
+        self.assertEqual("false", sql["strategy"]["fail-fast"])
+        steps = sql["steps"]
+        run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
+        self.assertIn("set -euo pipefail", run)
+        self.assertIn("sql-spec-filter.py '${{ matrix.shard }}'", run)
+        self.assertIn('Storage.Sql.Specs.csproj --no-build', run)
+        self.assertIn('--filter "$filter"', run)
+        self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
+        self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
+        ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
+                        if step["name"] == "Run tests with coverage")
+        self.assertIn("&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.", ordinary)
+        download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
+                        if step["name"] == "Download all coverage artifacts")
+        self.assertEqual("coverage-results-*", download["with"]["pattern"])
+
+    def test_stable_specs_check_requires_every_shard_to_succeed(self):
+        aggregate = self.build["jobs"]["specs"]
+        self.assertEqual("always()", aggregate["if"])
+        self.assertEqual(["specs-other", "specs-sql"], aggregate["needs"])
+        step = aggregate["steps"][0]
+        self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
+        self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
+        for ordinary, sql in product(("success", "failure", "cancelled", "skipped"), repeat=2):
+            with self.subTest(ordinary=ordinary, sql=sql):
+                result = subprocess.run(["bash", "-c", step["run"]],
+                                        env={"OTHER_RESULT": ordinary, "SQL_RESULT": sql}, check=False)
+                self.assertEqual(ordinary == sql == "success", result.returncode == 0)
+
     def test_development_paths_preserve_steps_permissions_and_artifact(self):
         jobs = self.build["jobs"]
         parallel = jobs["dotnet-build-development"]
@@ -208,7 +242,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                          requested["if"])
         self.assertEqual(["wire-compatibility"], parallel["needs"])
         self.assertEqual(["wire-compatibility", "specs"], requested["needs"])
-        self.assertEqual(["dotnet-build"], jobs["specs"]["needs"])
+        self.assertEqual(["specs-other", "specs-sql"], jobs["specs"]["needs"])
+        for job_id in ("specs-other", "specs-sql"):
+            self.assertEqual(["dotnet-build"], jobs[job_id]["needs"])
         self.assertEqual(["wire-compatibility"], jobs["dotnet-build"]["needs"])
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
