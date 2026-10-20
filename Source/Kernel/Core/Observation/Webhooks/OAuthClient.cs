@@ -112,6 +112,23 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
         authorization.Scope,
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(authorization.ClientSecret.Value))));
 
+    static HttpRequestMessage CreateRequest(HttpMethod method, string url, EventStoreName? eventStore)
+    {
+        var request = new HttpRequestMessage(method, url);
+        if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
+        return request;
+    }
+
+    static void EnsureSuccess(HttpResponseMessage response)
+    {
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            throw new WebhookTargetRejected($"OAuth redirects are not allowed (HTTP {(int)response.StatusCode}).");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
     async Task<string?> Discover(string authority, EventStoreName? eventStore)
     {
         using var client = httpClientFactory.CreateClient(HttpClientName);
@@ -149,23 +166,6 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
         var lifetime = Math.Max(0, token.ExpiresIn);
         var margin = Math.Min(60, lifetime / 2.0);
         return new(token.AccessToken, _clock.GetUtcNow().AddSeconds(lifetime - margin));
-    }
-
-    static HttpRequestMessage CreateRequest(HttpMethod method, string url, EventStoreName? eventStore)
-    {
-        var request = new HttpRequestMessage(method, url);
-        if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
-        return request;
-    }
-
-    static void EnsureSuccess(HttpResponseMessage response)
-    {
-        if ((int)response.StatusCode is >= 300 and < 400)
-        {
-            throw new WebhookTargetRejected($"OAuth redirects are not allowed (HTTP {(int)response.StatusCode}).");
-        }
-
-        response.EnsureSuccessStatusCode();
     }
 
     async Task Validate(string url, EventStoreName? eventStore, CancellationToken cancellationToken)

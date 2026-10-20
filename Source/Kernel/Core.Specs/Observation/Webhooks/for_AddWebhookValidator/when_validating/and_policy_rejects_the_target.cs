@@ -18,12 +18,12 @@ public class and_policy_rejects_the_target : for_WebhookRegistrar.given.a_webhoo
     {
         var policy = Substitute.For<IWebhookTargetPolicy>();
         policy.Evaluate(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(new WebhookTargetValidation(false, "Webhook target must use HTTPS."));
-        _webhookMediator.OnNext(Arg.Any<Concepts.Observation.Webhooks.WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>()).Returns(Catch.Success());
+        _webhookMediator.OnNext(Arg.Any<EventStoreName?>(), Arg.Any<Concepts.Observation.Webhooks.WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>()).Returns(Catch.Success());
         _validator = new AddWebhookValidator(_registrar, _storage, policy);
     }
 
     async Task Because() => _result = await _validator.ValidateAsync(new AddWebhook("orders", "receiver", "http://receiver.example", "event-log", [], AuthorizationType.None, "", "", "", "", "", "", new Dictionary<string, string>(), true, true));
 
     [Fact] void should_reject_registration() => _result.IsValid.ShouldBeFalse();
-    [Fact] void should_not_probe_the_target() => _webhookMediator.DidNotReceive().OnNext(Arg.Any<Concepts.Observation.Webhooks.WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>());
+    [Fact] void should_not_probe_the_target() => _webhookMediator.DidNotReceive().OnNext(Arg.Any<EventStoreName?>(), Arg.Any<Concepts.Observation.Webhooks.WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>());
 }

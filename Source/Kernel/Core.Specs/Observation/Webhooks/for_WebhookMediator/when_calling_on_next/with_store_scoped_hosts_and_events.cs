@@ -11,7 +11,10 @@ public class with_store_scoped_hosts_and_events : given.a_store_scoped_delivery
 {
     Catch _result;
 
-    async Task Because() => _result = await _mediator.OnNext("orders", _target, "partition",
+    async Task Because() => _result = await _mediator.OnNext(
+        "orders",
+        _target,
+        "partition",
         [AppendedEvent.Empty() with { Context = EventContext.Empty with { EventStore = "untrusted-payload-store" } }]);
 
     [Fact] void should_deliver_using_the_explicit_store_policy() => _result.IsSuccess.ShouldBeTrue();
