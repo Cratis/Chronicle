@@ -1023,7 +1023,10 @@ public partial class EventSequence(
             // expando from the original content for constraint purposes, while the encrypted expando is what
             // actually gets appended and persisted.
             var plaintextEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+            var personalData = new ConstraintPersonalDataOfEvent(
+                subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
+                ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -1086,7 +1089,8 @@ public partial class EventSequence(
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        ConstraintBatchClaims? batchClaims = default)
+        ConstraintBatchClaims? batchClaims = default,
+        ConstraintPersonalDataOfEvent? personalData = default)
     {
         if (_closedStreamsChanged)
         {
@@ -1100,7 +1104,7 @@ public partial class EventSequence(
             return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
         }
 
-        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData?.Subject, personalData?.Properties);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)
         {

@@ -3,11 +3,13 @@
 
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
@@ -24,6 +26,7 @@ public class UniqueConstraintsStorage(
     ILogger<UniqueConstraintsStorage> logger) : IUniqueConstraintsStorage
 {
     const string ValueIndexName = "value";
+    const string SubjectIndexName = "subject";
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <inheritdoc/>
@@ -101,27 +104,34 @@ public class UniqueConstraintsStorage(
     /// <param name="sequenceNumber">The claim's sequence number.</param>
     /// <param name="value">The hashed value.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="subject">The subject whose personal data the value derives from, or null.</param>
     /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
-    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
+    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", Subject? subject = default, CancellationToken cancellationToken = default)
     {
         if (definition.Mode != UniqueConstraintMode.PerValue)
         {
-            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, cancellationToken);
+            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, subject, cancellationToken);
             return;
         }
 
         var collection = GetValuesCollectionFor(definition.Name, scopeKey);
         await EnsureOwnerIndex(collection, cancellationToken);
+        var claim = Builders<UniqueConstraintValueIndex>.Update
+            .SetOnInsert(_ => _.Value, value)
+            .SetOnInsert(_ => _.EventSourceId, eventSourceId)
+            .SetOnInsert(_ => _.SequenceNumber, sequenceNumber);
+        var recordSubject = subject is null
+            ? Builders<UniqueConstraintValueIndex>.Update.Unset(_ => _.Subject)
+            : Builders<UniqueConstraintValueIndex>.Update.Set(_ => _.Subject, subject.Value);
+        var update = Builders<UniqueConstraintValueIndex>.Update.Combine(claim, recordSubject);
+
         try
         {
             await collection.UpdateOneAsync(
                 _ => _.Value == value && _.EventSourceId == eventSourceId,
-                Builders<UniqueConstraintValueIndex>.Update
-                    .SetOnInsert(_ => _.Value, value)
-                    .SetOnInsert(_ => _.EventSourceId, eventSourceId)
-                    .SetOnInsert(_ => _.SequenceNumber, sequenceNumber),
+                update,
                 new UpdateOptions { IsUpsert = true },
                 cancellationToken);
         }
@@ -168,6 +178,26 @@ public class UniqueConstraintsStorage(
     public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default) =>
         await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
+    /// <inheritdoc/>
+    public async Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
+    {
+        // Both claim shapes store the subject under the same element, so one typed filter serves every collection.
+        var database = eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+constraint").Database;
+        var filter = new BsonDocument("name", new BsonRegularExpression($"^{Regex.Escape(eventSequenceId.Value)}\\+.+\\+constraint$"));
+        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = filter }, cancellationToken);
+        foreach (var name in await names.ToListAsync(cancellationToken))
+        {
+            await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(_ => _.Subject == subject.Value, cancellationToken);
+        }
+    }
+
+    static Task<string> CreateSubjectIndex<TRow>(IMongoCollection<TRow> collection, System.Linq.Expressions.Expression<Func<TRow, object?>> subject, CancellationToken cancellationToken) =>
+        collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TRow>(
+                Builders<TRow>.IndexKeys.Ascending(subject),
+                new CreateIndexOptions { Name = SubjectIndexName, Sparse = true }),
+            cancellationToken: cancellationToken);
+
     static async IAsyncEnumerable<UniqueConstraintValue> Drain<TRow>(IAsyncCursor<TRow> cursor, Func<TRow, UniqueConstraintValue> value, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using (cursor)
@@ -198,7 +228,7 @@ public class UniqueConstraintsStorage(
         await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
     }
 
-    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, CancellationToken cancellationToken)
+    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, Subject? subject, CancellationToken cancellationToken)
     {
         var collection = GetCollectionFor(name, scopeKey);
         await EnsureIndex(collection, cancellationToken).ConfigureAwait(false);
@@ -206,7 +236,7 @@ public class UniqueConstraintsStorage(
         {
             await collection.ReplaceOneAsync(
                 u => u.EventSourceId == eventSourceId,
-                new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
+                new UniqueConstraintIndex(eventSourceId, value, sequenceNumber, subject?.Value),
                 new ReplaceOptions { IsUpsert = true },
                 cancellationToken);
         }
@@ -233,6 +263,7 @@ public class UniqueConstraintsStorage(
                 Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId),
                 new CreateIndexOptions { Name = "owner" }),
             cancellationToken: cancellationToken);
+        await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken);
         _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
     }
 
@@ -273,6 +304,11 @@ public class UniqueConstraintsStorage(
                 logger.FallingBackToNonUniqueIndex(collection.CollectionNamespace.FullName);
                 await CreateValueIndex(collection, unique: false, cancellationToken).ConfigureAwait(false);
             }
+        }
+
+        if (!existing.Contains(SubjectIndexName))
+        {
+            await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken).ConfigureAwait(false);
         }
 
         _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);

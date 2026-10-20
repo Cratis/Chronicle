@@ -16,7 +16,9 @@ public class and_a_constraint_refuses_the_pipeline : given.an_event_sequence_wit
         Arg.Any<EventSourceType?>(),
         Arg.Any<EventStreamType?>(),
         Arg.Any<EventStreamId?>(),
-        Arg.Any<ConstraintBatchClaims?>())
+        Arg.Any<ConstraintBatchClaims?>(),
+        Arg.Any<Subject?>(),
+        Arg.Any<IReadOnlyCollection<string>?>())
         .Returns(call => new ConstraintValidationContext([new given.RejectingConstraintValidator()], _eventSourceId, _eventType.Id, call.Arg<ExpandoObject>()));
     async Task Because() => _result = await AppendEffect();
 

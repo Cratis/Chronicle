@@ -24,6 +24,12 @@ public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) 
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        ConstraintBatchClaims? batchClaims = default) =>
-        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+        ConstraintBatchClaims? batchClaims = default,
+        Subject? subject = default,
+        IReadOnlyCollection<string>? personalProperties = default) =>
+        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId, batchClaims)
+        {
+            Subject = subject,
+            PersonalProperties = personalProperties ?? []
+        };
 }

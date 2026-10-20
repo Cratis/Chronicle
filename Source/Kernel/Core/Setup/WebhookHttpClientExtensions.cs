@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -22,7 +24,17 @@ public static class WebhookHttpClientExtensions
     /// <returns>The builder for continuation.</returns>
     public static ISiloBuilder AddWebhookObserverHttpClient(this ISiloBuilder builder)
     {
+        builder.Services.TryAddSingleton<IWebhookHostResolver, WebhookHostResolver>();
+        builder.Services.TryAddSingleton<IWebhookTargetPolicy, WebhookTargetPolicy>();
+        builder.Services.TryAddSingleton<WebhookConnection>();
+        builder.Services.AddTransient<WebhookValidationHandler>();
+        builder.Services.AddHostedService<WebhookValidationStartup>();
+        builder.Services.AddHttpClient(OAuthClient.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<WebhookConnection>()))
+            .AddHttpMessageHandler<WebhookValidationHandler>();
         builder.Services.AddHttpClient(WebhookHttpClientFactory.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<WebhookConnection>()))
+            .AddHttpMessageHandler<WebhookValidationHandler>()
             .AddResilienceHandler($"{WebhookHttpClientFactory.HttpClientName}-pipeline", (pipeline, context) =>
             {
                 var webhooks = context.ServiceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.Webhooks;
@@ -50,4 +62,13 @@ public static class WebhookHttpClientExtensions
             });
         return builder;
     }
+
+    static SocketsHttpHandler CreateHandler(WebhookConnection connection) => new()
+    {
+        AllowAutoRedirect = false,
+
+        // A proxy would resolve/connect to the receiver on our behalf, bypassing address validation.
+        UseProxy = false,
+        ConnectCallback = connection.Connect
+    };
 }
