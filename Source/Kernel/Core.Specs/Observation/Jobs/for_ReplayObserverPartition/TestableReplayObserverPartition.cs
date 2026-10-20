@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserverPartition;
@@ -22,6 +24,13 @@ public class TestableReplayObserverPartition(
 {
     /// <inheritdoc/>
     public Type GrainType => typeof(IReplayObserverPartition);
+
+    /// <summary>
+    /// Prepares partition replay steps without starting the job framework.
+    /// </summary>
+    /// <param name="request">The replay request.</param>
+    /// <returns>The prepared steps.</returns>
+    public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverPartitionRequest request) => PrepareSteps(request);
 
     /// <summary>
     /// Revalidates persisted replay admission before resuming job steps.

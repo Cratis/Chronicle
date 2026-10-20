@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -24,8 +25,29 @@ public class ReplayObserverPartition(
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// Recovery of a running job can bypass CanResume and go straight to finalization. Check before the base
+    /// implementation writes progress or dispatches anything; a scope refusal is terminal, not a resumable stop.
+    /// </remarks>
+    public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
+    {
+        if (State.Status == JobStatus.Failed) return await base.Resume();
+        try
+        {
+            await EnsureReplaySupported();
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
+        }
+
+        return await base.Resume();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
+        await EnsureReplaySupported();
         await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
     }
 
@@ -35,12 +57,19 @@ public class ReplayObserverPartition(
     /// globally scoped must not continue writing into the shared sink. The replay itself is not begun again, so
     /// reactors and reducers are not told twice that their partition replay started.
     /// </remarks>
-    protected override Task OnBeforeResumingJobSteps() =>
-        GlobalProjectionReplay.EnsureSupported(storage, Request.ObserverKey, Request.ObserverType);
+    protected override Task OnBeforeResumingJobSteps() => EnsureReplaySupported();
+
+    /// <inheritdoc/>
+    protected override async Task<bool> CanResume()
+    {
+        await EnsureReplaySupported();
+        return await base.CanResume();
+    }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
@@ -81,9 +110,10 @@ public class ReplayObserverPartition(
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
-        var steps = new[]
+        await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType);
+        return new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
@@ -98,7 +128,8 @@ public class ReplayObserverPartition(
                     ReaderScope = request.ReaderScope
                 })
         }.ToImmutableList();
-
-        return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
     }
+
+    Task EnsureReplaySupported() => GlobalProjectionReplay.EnsureSupported(
+        storage, Request.ObserverKey, Request.ObserverType, State, WriteStateAsync);
 }

@@ -10,9 +10,9 @@ public class when_resuming_a_persisted_global_replay : given.a_partition_replay_
 {
     Exception _error;
 
-    async Task Establish()
+    void Establish()
     {
-        await _job.Start(_request);
+        _stateStorage.State.Request = _request;
         _replayStateServiceClient.ClearReceivedCalls();
         var identifier = _request.ObserverKey.ObserverId.Value;
         _eventStore.Projections.Has(identifier).Returns(true);

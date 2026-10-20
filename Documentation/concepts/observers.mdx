@@ -34,7 +34,11 @@ before upgrading all silos together; do not mix versions that can still start gl
 versions that refuse it. Preserve the served model, replay containers, backups, contexts and occurrences
 for investigation. Resume, flush, end and legacy cleanup refuse an uncoordinated global replay rather
 than promoting its shadow. A source namespace's completion does not establish that a global model or
-backup is complete. There is no automatic in-place repair: keep the affected model out of service until
+backup is complete. Persisted full and partition replay jobs recheck the stored projection scope during
+preparation, resume and completion. A refused Global or Both resume ends the job as **Failed**, with the scope
+refusal retained in its failure history, before step recovery or sink finalization. Further resume attempts
+are refused as a failed job, not retried in a loop. These checks do not restrict reactors or reducers, which
+have no global projection scope. There is no automatic in-place repair: keep the affected model out of service until
 an operator can restore a known-good model and reconcile every contributing sequence offline. Do not
 delete a replay container or backup merely because a namespace-local replay has ended.
 

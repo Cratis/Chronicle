@@ -27,6 +27,14 @@ public class TestableReplayObserver(
     public Type GrainType => typeof(IReplayObserver);
 
     /// <summary>
+    /// Gets or sets a value indicating whether preparation errors should be awaited by Start in the specification.
+    /// </summary>
+    public bool PrepareSynchronouslyForTesting { get; set; }
+
+    /// <inheritdoc/>
+    protected override bool StartStepsInBackground => !PrepareSynchronouslyForTesting && base.StartStepsInBackground;
+
+    /// <summary>
     /// Invokes <see cref="ReplayObserver.PrepareSteps"/> for testing.
     /// </summary>
     /// <param name="request">The request to prepare steps for.</param>
