@@ -20,7 +20,8 @@ public class and_near_limit_tables_do_not_have_a_claim_primary_key : Specificati
     }
 
     void Because() => _result = UniqueConstraintTables.Classify(
-        [_composite, _unrelated, _missing], EventSequenceId.Log,
+        [_composite, _unrelated, _missing],
+        EventSequenceId.Log,
         [$"{_composite}|EventSourceId", $"{_composite}|Value", $"{_unrelated}|Id"]);
 
     [Fact] void should_not_classify_any_source_tables() => _result.PerEventSource.ShouldBeEmpty();
