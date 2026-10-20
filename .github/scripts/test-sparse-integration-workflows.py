@@ -70,6 +70,13 @@ def condition_allows(job, context):
     return evaluate_boolean_condition(expression, context.bindings())
 
 
+def dependency_ancestors(jobs, job_id):
+    ancestors = set(jobs[job_id].get("needs", []))
+    for dependency in jobs[job_id].get("needs", []):
+        ancestors.update(dependency_ancestors(jobs, dependency))
+    return ancestors
+
+
 class SparseIntegrationWorkflows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -255,7 +262,51 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
         self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(coverage["needs"]))
-        self.assertEqual("github.event_name != 'pull_request_target'", coverage["if"])
+        self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
+        self.assertIn("!cancelled()", coverage["if"])
+        for dependency in coverage["needs"]:
+            self.assertIn(f"needs.{dependency}.result == 'success'", coverage["if"])
+
+    def test_coverage_allows_successful_paths_despite_skipped_development_ancestor(self):
+        jobs = self.build["jobs"]
+        coverage = jobs["coverage-merge-and-cache"]
+        ancestors = dependency_ancestors(jobs, "coverage-merge-and-cache")
+        self.assertIn("dotnet-build-development", ancestors)
+        self.assertIn("dotnet-build-development-requested", ancestors)
+        # Model transitive implicit-success propagation without claiming to emulate
+        # GitHub's scheduler. Explicit status functions must bypass this restriction.
+        modeled_job = dict(coverage, needs=sorted(ancestors))
+        for event in ("pull_request", "schedule", "workflow_dispatch"):
+            results = dict.fromkeys(ancestors, "success")
+            sibling = ("dotnet-build-development" if event == "pull_request"
+                       else "dotnet-build-development-requested")
+            results[sibling] = "skipped"
+            context = ConditionContext(event, True, results)
+            with self.subTest(event=event):
+                self.assertTrue(condition_allows(modeled_job, context))
+                # Seed the old guard: this fixture must detect the skipped ancestor.
+                old_guard = dict(modeled_job, **{"if": "github.event_name != 'pull_request_target'"})
+                self.assertFalse(condition_allows(old_guard, context))
+
+    def test_coverage_rejects_incomplete_cancelled_ordinary_and_dependabot_runs(self):
+        coverage = self.build["jobs"]["coverage-merge-and-cache"]
+        states = ("success", "failure", "cancelled", "skipped", "")
+        for event, cancelled, results in product(
+                ("pull_request", "schedule", "workflow_dispatch", "pull_request_target"),
+                (False, True), product(states, repeat=len(coverage["needs"]))):
+            prerequisites = dict(zip(coverage["needs"], results))
+            context = ConditionContext(event, True, prerequisites, cancelled)
+            expected = (event != "pull_request_target" and not cancelled
+                        and all(result == "success" for result in results))
+            with self.subTest(event=event, cancelled=cancelled, results=prerequisites):
+                self.assertEqual(expected, condition_allows(coverage, context))
+        # Ordinary PRs skip integration; Dependabot also skips the matrix. Keep
+        # their existing coverage behavior through immediate prerequisite results.
+        for actor in ("contributor", "dependabot[bot]"):
+            results = dict.fromkeys(coverage["needs"], "success")
+            results["integration"] = "skipped"
+            context = ConditionContext("pull_request", False, results, actor=actor)
+            self.assertFalse(condition_allows(coverage, context))
 
 
 if __name__ == "__main__":

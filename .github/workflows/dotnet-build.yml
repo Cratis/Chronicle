@@ -502,9 +502,9 @@ jobs:
           retention-days: 1
 
   coverage-merge-and-cache:
-    # Implicit success() on all dependencies skips this if any integration job fails or
-    # is skipped (ordinary PR pushes). Never cache incomplete results under the SHA key.
-    if: github.event_name != 'pull_request_target'
+    # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
+    # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]
