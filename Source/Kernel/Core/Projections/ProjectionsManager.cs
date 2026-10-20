@@ -109,7 +109,7 @@ public partial class ProjectionsManager(
     public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
-        var definitionList = StampWithVersion(definitions, version);
+        var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
 
         // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers
@@ -236,6 +236,18 @@ public partial class ProjectionsManager(
 
     static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
         [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
+
+    List<ProjectionDefinition> FilterUnsupportedKernelDefinitions(List<ProjectionDefinition> definitions)
+    {
+        var unsupported = definitions.Where(definition => definition.Owner == ProjectionOwner.Kernel && definition.Scope == ProjectionScope.Global).ToArray();
+        foreach (var definition in unsupported)
+        {
+            logger.IgnoringGlobalKernelRegistration(_eventStoreName, definition.Identifier, definition.Scope);
+        }
+
+        // Retirement must use the filtered set too: an old silo still includes the global definition in its full set.
+        return definitions.Except(unsupported).ToList();
+    }
 
     bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
         State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));

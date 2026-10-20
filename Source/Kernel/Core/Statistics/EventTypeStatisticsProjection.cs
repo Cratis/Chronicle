@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Kernel;
 
 namespace Cratis.Chronicle.Statistics;
@@ -11,9 +10,8 @@ namespace Cratis.Chronicle.Statistics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Scoped to both, because the two questions it answers have different shapes. Inside a namespace an operator asks
-/// what this namespace holds; across an event store the landing page asks what the store holds in total, and a sum
-/// over every namespace's rows is not something a per-namespace read model can be asked for in one read.
+/// Materialized per namespace. Store-wide queries concatenate these rows rather than maintaining a shared
+/// global sink, whose rebuild would require coordinated ownership across all contributing namespaces.
 /// </para>
 /// <para>
 /// The key is composite rather than the event source id, which is what makes this a projection at all: counting by
@@ -27,7 +25,6 @@ public class EventTypeStatisticsProjection : IKernelProjectionFor<EventTypeStati
 {
     /// <inheritdoc/>
     public void Define(IKernelProjectionBuilder<EventTypeStatistics> builder) => builder
-        .ScopedTo(ProjectionScope.Both)
         .IdentifiedByComposite(key => key
             .With(_ => _.EventType, "$eventContext(EventType.Id)")
             .With(_ => _.Namespace, "$eventContext(Namespace)"))

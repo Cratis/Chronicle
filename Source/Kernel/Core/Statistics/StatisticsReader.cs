@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Namespaces;
 using Cratis.DependencyInjection;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
@@ -12,11 +13,12 @@ namespace Cratis.Chronicle.Statistics;
 /// Represents an implementation of <see cref="IStatisticsReader"/>.
 /// </summary>
 /// <param name="readModels"><see cref="IReadModelsService"/> to read materialized instances through.</param>
+/// <param name="grainFactory">The grain factory for discovering contributing namespaces.</param>
 [Singleton]
-public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
+public class StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory) : IStatisticsReader
 {
     /// <summary>
-    /// The upper bound on rows read in one request.
+    /// The upper bound on rows read per namespace in one request.
     /// </summary>
     /// <remarks>
     /// One row per event type per namespace, so this is exceeded only by a store with tens of thousands of
@@ -48,11 +50,15 @@ public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore) =>
+    public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore)
+    {
+        var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
 
-        // The global half of the projection materializes against the event store rather than any one namespace,
-        // which is what makes a store-wide total one read instead of a read per namespace.
-        GetEventTypeStatistics(eventStore, EventStoreNamespaceName.NotSet);
+        // The former global collection was a disjoint union keyed by (event type, namespace).
+        // Keep MaximumRows per namespace; a failed contributor fails the query rather than returning partial totals.
+        var rows = await Task.WhenAll(namespaces.Select(@namespace => GetEventTypeStatistics(eventStore, @namespace)));
+        return rows.SelectMany(_ => _).ToArray();
+    }
 
     /// <summary>
     /// Read one statistics row from the JSON of a read model instance.

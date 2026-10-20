@@ -27,6 +27,7 @@ public class a_partition_replay_job : Specification
     protected IObserverServiceClient _replayStateServiceClient;
     protected ReplayObserverPartitionRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
+    protected Cratis.Chronicle.Storage.IEventStoreStorage _eventStore;
 
     async Task Establish()
     {
@@ -44,7 +45,7 @@ public class a_partition_replay_job : Specification
         var jobStepStorage = Substitute.For<IJobStepStorage>();
         var jobTypes = Substitute.For<IJobTypes>();
         var storage = Substitute.For<Cratis.Chronicle.Storage.IStorage>();
-        var eventStore = Substitute.For<Cratis.Chronicle.Storage.IEventStoreStorage>();
+        var eventStore = _eventStore = Substitute.For<Cratis.Chronicle.Storage.IEventStoreStorage>();
         var eventStoreNamespace = Substitute.For<Cratis.Chronicle.Storage.IEventStoreNamespaceStorage>();
 
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStore);

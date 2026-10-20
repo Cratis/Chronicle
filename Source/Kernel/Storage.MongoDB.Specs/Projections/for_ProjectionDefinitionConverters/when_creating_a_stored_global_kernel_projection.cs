@@ -37,7 +37,8 @@ public class when_creating_a_stored_global_kernel_projection : Specification
     {
         var declaration = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection));
         _readModel = declaration.ReadModel;
-        var definition = declaration.Projections.Single(projection => projection.Scope == ProjectionScope.Global);
+        var namespaced = declaration.Projections.Single();
+        var definition = namespaced with { Identifier = $"{namespaced.Identifier.Value}.global", Scope = ProjectionScope.Global };
         var restored = BsonSerializer.Deserialize<StoredDefinition>(definition.ToMongoDB().ToBsonDocument()).ToKernel();
         _storage = Substitute.For<IStorage>();
         _storage.GetEventStore(_eventStore).GetNamespace(EventStoreNamespaceName.NotSet).Sinks.GetFor(_readModel).Returns(Substitute.For<ISink>());
