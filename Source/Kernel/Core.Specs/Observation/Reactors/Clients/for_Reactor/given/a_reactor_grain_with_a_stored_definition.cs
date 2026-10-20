@@ -14,7 +14,7 @@ using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.given;
 
-public class a_subscribed_reactor_grain : Specification
+public class a_reactor_grain_with_a_stored_definition : Specification
 {
     protected const string TheConnection = "the-connection";
     protected Reactor _grain;
@@ -43,7 +43,6 @@ public class a_subscribed_reactor_grain : Specification
         _client = new ConnectedClient { ConnectionId = TheConnection, Version = "1.0.0" };
         _connectedClients = Substitute.For<IConnectedClients>();
         _connectedClients.GetConnectedClient(_client.ConnectionId).Returns(_client);
-        _connectedClients.IsConnected(_client.ConnectionId).Returns(true);
         _silo.AddProbe(_ => _connectedClients);
 
         _observer = Substitute.For<IObserver>();
@@ -55,9 +54,9 @@ public class a_subscribed_reactor_grain : Specification
         _silo.Options.StorageFactory = _ => storage;
 
         var key = new ConnectedObserverKey("the-reactor", "the-event-store", "the-namespace", EventSequenceId.Log, TheConnection);
+
+        // A fresh activation, as after losing the one the client registered with - the definition is all it has.
         _grain = await _silo.CreateGrainAsync<Reactor>(key.ToString());
-        await _grain.SetDefinitionAndSubscribe(definition);
-        _observer.ClearReceivedCalls();
     }
 
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReactorObserverSubscriber>(

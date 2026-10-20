@@ -42,7 +42,6 @@ public class and_the_observer_lost_the_client : Specification
         _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };
         var connectedClients = Substitute.For<IConnectedClients>();
         connectedClients.GetConnectedClient(_client.ConnectionId).Returns(_client);
-        connectedClients.IsConnected(_client.ConnectionId).Returns(true);
         _silo.AddProbe(_ => connectedClients);
 
         _observer = Substitute.For<IObserver>();
@@ -55,11 +54,12 @@ public class and_the_observer_lost_the_client : Specification
         _silo.Options.StorageFactory = _ => storage;
 
         var key = new ConnectedObserverKey("the-reducer", "the-event-store", "the-namespace", EventSequenceId.Log, _client.ConnectionId);
+
+        // A fresh activation, as after losing the one the client registered with - the definition is all it has.
         _grain = await _silo.CreateGrainAsync<Reducer>(key.ToString());
-        await _grain.SetDefinitionAndSubscribe(definition);
     }
 
-    Task Because() => _silo.FireAllTimersAsync();
+    Task Because() => _grain.KeepSubscription();
 
     [Fact] async Task should_restore_the_subscription_of_the_client() => await _observer.Received(1).RestoreClientSubscription<IReducerObserverSubscriber>(
         ObserverType.Reducer,
