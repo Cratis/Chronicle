@@ -16,5 +16,6 @@ public class UniqueConstraintValueIndexClassMap : IBsonClassMapFor<UniqueConstra
     {
         classMap.AutoMap();
         classMap.MapIdProperty(_ => _.Value);
+        classMap.MapMember(_ => _.Subject).SetIgnoreIfNull(true);
     }
 }

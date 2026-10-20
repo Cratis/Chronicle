@@ -18,7 +18,7 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 {
     readonly object _lock = new();
     readonly Dictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
-    readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber)> _values = [];
+    readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber, string? Subject)> _values = [];
 
     /// <inheritdoc/>
     public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
@@ -80,10 +80,11 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     /// <param name="sequenceNumber">The claim's sequence number.</param>
     /// <param name="value">The hashed value.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="subject">The subject whose personal data the value derives from, or null.</param>
     /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
-    public Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
+    public Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", Subject? subject = default, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         lock (_lock)
@@ -96,6 +97,7 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
                     throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
                 }
 
+                _values[key] = owner with { Subject = subject?.Value };
                 return Task.CompletedTask;
             }
 
@@ -110,7 +112,7 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
                 _index[sourceKey] = (value.Value, sequenceNumber);
             }
 
-            _values[key] = (eventSourceId.Value, sequenceNumber);
+            _values[key] = (eventSourceId.Value, sequenceNumber, subject?.Value);
         }
 
         return Task.CompletedTask;
@@ -166,6 +168,26 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
             if (definition.Mode == UniqueConstraintMode.PerValue && _values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
             {
                 _values.Remove(key);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            foreach (var (key, entry) in _values.Where(_ => _.Value.Subject == subject.Value).ToArray())
+            {
+                _values.Remove(key);
+                var sourceKey = (entry.EventSourceId, key.ConstraintName, key.ScopeKey);
+                if (_index.TryGetValue(sourceKey, out var held) && held.Value == key.Value)
+                {
+                    _index.Remove(sourceKey);
+                }
             }
         }
 
