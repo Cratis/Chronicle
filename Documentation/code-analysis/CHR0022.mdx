@@ -29,6 +29,8 @@ A reactor observes events and produces side effects. When a handler **returns** 
 
 `[OnceOnly]` excludes the handler from replay; it does not mean once per event source or guarantee exactly-once side effects. Failed-partition recovery and crash redelivery can run the handler again, so it must still be idempotent. The rule targets methods that *return* events because replaying them can append duplicate facts. See [Once-only handlers](/chronicle/reactors/once-only/) for the distinction between replay and recovery.
 
+In C#, Chronicle also appends the returned events with idempotency keys derived from the reactor delivery, which protects those events from failed-partition recovery. The keys do not run the handler less often, so the rule still applies: replay re-runs the handler, and if the output changed since the first run, the kernel refuses the append until you bump the [effect epoch](/chronicle/reactors/delivery-identity/#when-to-bump-the-effect-epoch) or mark the handler `[OnceOnly]`. See [Duplicate protection for returned events](/chronicle/reactors/side-effects/#duplicate-protection-for-returned-events).
+
 ## Related Rules
 
 - [Reactors](/chronicle/reactors/) — reactor side effects and idempotency.

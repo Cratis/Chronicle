@@ -45,5 +45,5 @@ public class when_getting_by_ids : Specification, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().Options);
+    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
 }

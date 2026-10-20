@@ -3,6 +3,8 @@ title: Read models
 description: Build specialized, queryable views from events and choose how to retrieve and observe them.
 ---
 
+A Chronicle read model is a shaped, queryable view of your data that is built from events by projections or reducers.
+
 Your events are the truth of *what happened*, but they're a terrible thing to query — to show an
 account balance you'd have to replay every deposit and withdrawal. A **read model** is the answer to
 that: a shaped, queryable view of your data, built from events and kept up to date for you. It's the

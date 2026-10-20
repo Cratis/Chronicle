@@ -120,7 +120,7 @@ public class SqlSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport()
+        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(Interceptors)
             .Options;
 

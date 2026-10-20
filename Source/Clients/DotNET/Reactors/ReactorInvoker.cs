@@ -139,7 +139,7 @@ public class ReactorInvoker(
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
-                var returnValueFailure = await HandleReturnValue(method, returnValue, eventContext);
+                var returnValueFailure = await HandleReturnValue(method, returnValue, eventContext, reactorId);
                 if (returnValueFailure is not null)
                 {
                     return returnValueFailure;
@@ -189,10 +189,13 @@ public class ReactorInvoker(
             eventStore?.Name ?? eventContext.EventStore,
             () => _methodsByEventType.AllEventTypes.Select(eventTypes.GetEventTypeFor));
 
-        return ReactorDelivery.For(reactorId, sequence, eventContext);
+        return ReactorDelivery.For(reactorId, sequence, eventContext) with
+        {
+            EffectEpoch = targetType.GetCustomAttribute<ReactorAttribute>()?.EffectEpoch ?? 0
+        };
     }
 
-    async Task<ReactorInvocationResult?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
+    async Task<ReactorInvocationResult?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext, ReactorId reactorId)
     {
         if (method.ReturnType == typeof(void))
         {
@@ -222,7 +225,9 @@ public class ReactorInvoker(
 
             var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
             {
-                EventStore = eventStore
+                EventStore = eventStore,
+                Delivery = ResolveDelivery(reactorId, eventContext),
+                Logger = logger
             };
             if (sideEffectHandlers.CanHandle(reactorContext, eventStore, result))
             {
@@ -253,7 +258,9 @@ public class ReactorInvoker(
 
         var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
         {
-            EventStore = eventStore
+            EventStore = eventStore,
+            Delivery = ResolveDelivery(reactorId, eventContext),
+            Logger = logger
         };
         if (sideEffectHandlers.CanHandle(syncReactorContext, eventStore, returnValue))
         {

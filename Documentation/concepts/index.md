@@ -3,7 +3,7 @@ title: Concepts
 description: Understand Chronicle's core event-sourcing concepts, terminology, and consistency model.
 ---
 
-This area contains explanations and guidance on the concepts in Cratis.
+The concepts area explains the building blocks of Chronicle: the event store, events and event sequences, and the observers (projections, reducers and reactors) that turn events into read models and side effects.
 
 | Topic | Description |
 | ------- | ----------- |
