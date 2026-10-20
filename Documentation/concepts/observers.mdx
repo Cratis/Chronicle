@@ -43,7 +43,11 @@ progress, admitting a replay job, or changing its shared sink. Replaying only on
 that are still writing. A definition change that would require an automatic full replay retains an
 explanatory recommendation instead; performing it also refuses the namespace-local replay. A coordinated
 rebuild across all namespaces is not currently supported. Persisted replay jobs refused during recovery or
-completion fail terminally and release the observer's replay marker without finalizing or promoting the sink.
+completion fail terminally and release replay markers without changing the observer's last-handled or next-event
+positions, resolving failed partitions, or finalizing or promoting the sink. This uses a refusal-specific release,
+not replay completion. Full release clears superseded partition catch-up markers, just as routing does, and
+re-evaluates from the retained cursor; quarantine remains in force. Partition release probes catch-up at the
+retained next-event position, without claiming replay coverage or resolving a failed partition.
 Namespace-scoped projections are unaffected.
 
 For an upgrade with a global replay already in flight, stop replay workers and contributing writes

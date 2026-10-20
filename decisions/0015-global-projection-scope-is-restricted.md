@@ -85,3 +85,17 @@ This is a bounded patch-level restriction for built-in declarations, statistics 
 ### Future global materialization
 
 Future support uses decisions 0014/0016/0017, never a second fixed-name owner. Require explicit contributor membership and namespace incarnations, committed coverage for each input, deterministic conflict semantics and provider exclusion. Disjoint ownership, proven commutative operations or a durably ordered aggregate input can establish determinism; a contributor vector alone cannot. Failed steps and unknown obligations block publication. Do not build a global stream speculatively or lift the restriction merely because generation bindings exist.
+
+## Refused replay release
+
+Persisted full and partition jobs can encounter this restriction during preparation, recovery, resume, or
+completion. They fail terminally without touching the sink. Refusal is **not** replay completion: the observer's
+last-handled and next-event positions must remain unchanged, and no failed partition is resolved.
+
+The observer exposes explicit refusal-release operations. Full release clears the replay flag and superseded
+partition replay/catch-up markers, resets skip-detection ownership, persists state, and routes from the retained
+cursor unless quarantined. Catch-up markers are cleared because full replay supersedes that partition work and
+routing itself clears them before re-evaluating outstanding work. Retired, removed, and non-replaying observers
+are unchanged. Partition release removes only its replay marker, claims no completed skip coverage, and hands
+ownership to catch-up by probing that partition from the retained next-event position. Failed partitions remain
+owned by failure recovery, and quarantined observers stay quarantined.

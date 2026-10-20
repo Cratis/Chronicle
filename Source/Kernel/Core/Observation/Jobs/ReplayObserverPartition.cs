@@ -162,5 +162,5 @@ public class ReplayObserverPartition(
     }
 
     async Task NotifyObserverOfRefusal(ReplayObserverPartitionRequest request) => await GrainFactory.GetGrain<IObserver>(request.ObserverKey)
-        .PartitionReplayed(request.Key, EventSequenceNumber.Unavailable);
+        .ReleaseRefusedPartitionReplay(request.Key);
 }

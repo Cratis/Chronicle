@@ -372,20 +372,20 @@ public class ReplayObserver(
         return true;
     }
 
-    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
+    Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+
+    Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        NotifyObserverWithRetry(() => canResolve
+            ? observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
+            : observer.Replayed(lastHandledEventSequenceNumber));
+
+    async Task NotifyObserverWithRetry(Func<Task> notify)
     {
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                if (canResolve)
-                {
-                    await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
-                }
-                else
-                {
-                    await observer.Replayed(lastHandledEventSequenceNumber);
-                }
+                await notify();
 
                 return;
             }
@@ -428,9 +428,9 @@ public class ReplayObserver(
                 _refusalNotificationScheduled = true;
                 var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
 
-                // Release replay ownership without finalizing the sink or claiming any successful progress.
+                // Refusal is not completion: it must not replace the observer's retained cursor.
                 // Do not await the observer from Start: its replay turn may still be waiting for this job.
-                CompletionNotification = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
+                CompletionNotification = NotifyObserverOfRefusal(observer);
             }
 
             throw;

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver;
@@ -29,6 +28,6 @@ public class when_recovering_a_stopped_global_replay : given.a_recovered_global_
     [Fact] void should_not_repeat_the_failure_transition() => _stateStorage.State.StatusChanges.Count.ShouldEqual(_failureRecords);
     [Fact] void should_not_contact_silos() => _replayServiceClient.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_resume_or_prepare_steps() => _jobStepStorage.ReceivedCalls().ShouldBeEmpty();
-    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).Replayed(EventSequenceNumber.Unavailable);
-    [Fact] void should_not_claim_a_successful_replay() => _observer.ReceivedCalls().Select(call => call.GetMethodInfo().Name).ShouldContainOnly(nameof(IObserver.Replayed));
+    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedReplay();
+    [Fact] void should_not_claim_a_successful_replay() => _observer.ReceivedCalls().Select(call => call.GetMethodInfo().Name).ShouldContainOnly(nameof(IObserver.ReleaseRefusedReplay));
 }
