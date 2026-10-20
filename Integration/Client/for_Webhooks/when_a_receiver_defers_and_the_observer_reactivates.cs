@@ -68,7 +68,13 @@ public class when_a_receiver_defers_and_the_observer_reactivates(context context
             SuccessfulPartitionsWhileDeferred = Accepted.Count;
 
             await _observer.AsReference<IGrainManagementExtension>().DeactivateOnIdle().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
-            await _observer.GetState();
+
+            // The manager owns the subscription, which is not persisted by the observer activation.
+            // Reactivate both as on a silo restart so the manager restores it from the webhook definition.
+            var webhooks = Services.GetRequiredService<IGrainFactory>()
+                .GetGrain<Observation.Webhooks.IWebhooks>(EventStore.Name.Value);
+            await webhooks.AsReference<IGrainManagementExtension>().DeactivateOnIdle().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            await webhooks.Ensure();
             failure = (await GetFailures()).Partitions.Single();
             AfterReactivation = failure.Deferral!;
             AttemptsAfterReactivation = failure.Attempts.Count();
