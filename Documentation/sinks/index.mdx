@@ -111,6 +111,10 @@ Writes exceeding a bounded column's length fail rather than truncate the value, 
 partition to fail. SQL Server string comparisons use the database collation (commonly case-insensitive);
 PostgreSQL btree keys remain subject to its approximately 2.7 KB entry limit.
 
+Join lookups and child removals select candidate rows in SQL before materializing documents.
+JSON predicates deliberately admit a superset of matches; Chronicle's existing path walker and
+value comparison still determine which rows and children are actually updated.
+
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
 
 ### Decimal columns

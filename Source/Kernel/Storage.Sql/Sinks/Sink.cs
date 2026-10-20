@@ -429,7 +429,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         }
 
         await using var scope = await OpenActiveScope();
-        var entries = await scope.DbContext.Entries.AsNoTracking().ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, rootColumn, childValue, tracking: false);
         foreach (var entry in entries)
         {
             var keyValue = ContainsChildValue(entry, rootColumn, pathSegments, childValue) ? entry[keyColumn.Name] : null;
@@ -532,7 +532,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
             return;
         }
 
-        var entries = await scope.DbContext.Entries.ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, rootColumn, joinValue);
         var modified = false;
         foreach (var entry in entries.Where(entry => EntryMatchesJoin(entry, rootColumn, segments, joinValue)))
         {
@@ -556,7 +556,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         }
 
         var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty, childRemoved.Key);
-        var entries = await scope.DbContext.Entries.ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, column, childRemoved.Key);
         var modified = false;
         foreach (var entry in entries)
         {
