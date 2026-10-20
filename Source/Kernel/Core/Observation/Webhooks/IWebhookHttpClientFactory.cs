@@ -14,7 +14,7 @@ public interface IWebhookHttpClientFactory
     /// Creates the <see cref="HttpClient"/> for the given <see cref="WebhookTarget"/>.
     /// </summary>
     /// <param name="webhookTarget">The <see cref="WebhookTarget"/>.</param>
-    /// <param name="accessToken">Optional access token to use for authorization.</param>
+    /// <param name="accessToken">Legacy access token parameter; OAuth tokens are now applied on each send.</param>
     /// <returns>The <see cref="HttpClient"/>.</returns>
     HttpClient Create(WebhookTarget webhookTarget, string? accessToken = null);
 }

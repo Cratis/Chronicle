@@ -18,7 +18,7 @@ public class an_oauth_client : Specification
         _messageHandler = new FakeHttpMessageHandler();
         _httpClient = new HttpClient(_messageHandler);
         _httpClientFactory = Substitute.For<IHttpClientFactory>();
-        _httpClientFactory.CreateClient().Returns(_httpClient);
+        _httpClientFactory.CreateClient().Returns(_ => new HttpClient(_messageHandler, false));
 
         _client = new OAuthClient(_httpClientFactory);
     }

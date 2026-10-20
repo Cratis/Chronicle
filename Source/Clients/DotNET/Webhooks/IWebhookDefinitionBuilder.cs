@@ -43,6 +43,18 @@ public interface IWebhookDefinitionBuilder
     IWebhookDefinitionBuilder WithBearerToken(string token);
 
     /// <summary>
+    /// Uses OAuth client credentials, optionally requesting a scope.
+    /// </summary>
+    /// <param name="authority">The authority.</param>
+    /// <param name="clientId">The client identifier.</param>
+    /// <param name="clientSecret">The client secret.</param>
+    /// <param name="scope">The optional scope.</param>
+    /// <returns>The builder continuation.</returns>
+    /// <exception cref="NotSupportedException">The builder does not support scoped OAuth configuration.</exception>
+    IWebhookDefinitionBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope = "") =>
+        throw new NotSupportedException("This builder does not support OAuth.");
+
+    /// <summary>
     /// Adds a header to the webhook requests.
     /// </summary>
     /// <param name="key">The header key.</param>

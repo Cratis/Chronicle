@@ -9,4 +9,10 @@ namespace Cratis.Chronicle.Concepts.Security;
 /// <param name="Authority">The OAuth authority.</param>
 /// <param name="ClientId">The OAuth client ID.</param>
 /// <param name="ClientSecret">The OAuth client secret.</param>
-public record OAuthAuthorization(Authority Authority, ClientId ClientId, ClientSecret ClientSecret);
+public record OAuthAuthorization(Authority Authority, ClientId ClientId, ClientSecret ClientSecret)
+{
+    /// <summary>
+    /// Gets the optional OAuth scope.
+    /// </summary>
+    public string Scope { get; init; } = string.Empty;
+}
