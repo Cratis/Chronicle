@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Configuration;
 public class Webhooks
 {
     /// <summary>
+    /// The webhook retry delays in seconds used when <see cref="Observers.BackoffScheduleSeconds"/> is not configured.
+    /// The last entry repeats.
+    /// </summary>
+    public static readonly IReadOnlyList<int> DefaultBackoffScheduleSeconds = [1, 5, 30, 120, 600, 1800, 3600];
+
+    /// <summary>
     /// Gets the validation rollout mode. Enforce will become the default in the next major release.
     /// </summary>
     public WebhookValidationMode Validation { get; init; } = WebhookValidationMode.Warn;
@@ -54,4 +60,22 @@ public class Webhooks
     /// Gets the timeout in seconds applied when testing a webhook endpoint.
     /// </summary>
     public int TestTimeoutSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Gets the webhook-specific observer retry, parking and quarantine policy.
+    /// These defaults are independent of the global observer retry settings.
+    /// </summary>
+    public Observers Retry { get; init; } = new()
+    {
+        MaxRetryAttempts = 0,
+        MaximumBackoffDelay = 3600,
+        RetryBudget = TimeSpan.FromHours(24),
+        QuarantineOnFailedPartitionCount = 5,
+        QuarantineOnFailedPartitionPercentage = 0.5
+    };
+
+    /// <summary>
+    /// Gets the maximum accepted Retry-After delay in seconds. Longer receiver deadlines are clamped to this bound.
+    /// </summary>
+    public int MaximumRetryAfterSeconds { get; init; } = 24 * 60 * 60;
 }

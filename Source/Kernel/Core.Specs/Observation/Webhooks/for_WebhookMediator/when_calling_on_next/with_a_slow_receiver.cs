@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookMediator.when_calling
 
 public class with_a_slow_receiver : given.a_webhook_mediator
 {
+    HttpClient _client;
     IWebhookObserverSubscriber _subscriber;
     SlowReceiver _receiver;
     WebhookTarget _target;
@@ -21,7 +22,8 @@ public class with_a_slow_receiver : given.a_webhook_mediator
     {
         _target = new(new WebhookTargetUrl("https://example.com/webhook"), WebhookAuthorization.None, new Dictionary<string, string>());
         _receiver = new SlowReceiver();
-        _httpClientFactory.Create(_target).Returns(new HttpClient(_receiver) { BaseAddress = new Uri(_target.Url) });
+        _client = new HttpClient(_receiver) { BaseAddress = new Uri(_target.Url) };
+        _httpClientFactory.Create(_target).Returns(_client);
         _subscriber = Substitute.For<IWebhookObserverSubscriber>();
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(async call =>
@@ -71,15 +73,24 @@ public class with_a_slow_receiver : given.a_webhook_mediator
     [Fact] void should_never_overlap_the_retry() => _receiver.Peak.ShouldEqual(1);
     [Fact] void should_cancel_the_http_request() => _receiver.Cancelled.ShouldEqual(2);
 
+    void Destroy() => _client.Dispose();
+
     class SlowReceiver : HttpMessageHandler
     {
         public int Active;
         public int Peak;
         public int Cancelled;
-        public TaskCompletionSource Finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource CancellationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource ReleaseCleanup = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource Finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource CancellationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource ReleaseCleanup = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int _completed;
+        readonly HttpResponseMessage _response = new(HttpStatusCode.OK);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _response.Dispose();
+            base.Dispose(disposing);
+        }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -87,7 +98,7 @@ public class with_a_slow_receiver : given.a_webhook_mediator
             try
             {
                 await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(cancellationToken);
-                return new(HttpStatusCode.OK);
+                return _response;
             }
             catch (OperationCanceledException)
             {

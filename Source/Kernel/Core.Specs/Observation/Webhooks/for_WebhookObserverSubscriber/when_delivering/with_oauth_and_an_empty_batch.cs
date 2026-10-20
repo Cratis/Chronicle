@@ -10,7 +10,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Security;
 using Orleans.Core;
 using Orleans.TestKit;
-using Catch = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookObserverSubscriber.when_delivering;
 
@@ -37,7 +36,7 @@ public class with_oauth_and_an_empty_batch : Specification
         encryption.Decrypt("encrypted").Returns("secret");
         _tokens = Substitute.For<IOAuthClient>();
         _mediator = Substitute.For<IWebhookMediator>();
-        _mediator.OnNext((EventStoreName)"orders", Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(Catch.Success());
+        _mediator.Deliver((EventStoreName)"orders", Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(new WebhookDeliveryResult(Concepts.Events.EventSequenceNumber.Unavailable));
         silo.AddService(storage);
         silo.AddService(encryption);
         silo.AddService(_tokens);
@@ -54,6 +53,6 @@ public class with_oauth_and_an_empty_batch : Specification
 
     [Fact] async Task should_authorize_activation_for_the_store() => await _tokens.Received(1).AcquireToken(_decrypted, (EventStoreName)"orders", Arg.Any<CancellationToken>());
     [Fact] async Task should_authorize_definition_changes_for_the_store() => await _tokens.Received(1).AcquireToken(_decrypted, (EventStoreName)"orders");
-    [Fact] async Task should_deliver_with_the_store_and_decrypted_scoped_configuration() => await _mediator.Received(1).OnNext((EventStoreName)"orders", Arg.Is<WebhookTarget>(_ => _.Authorization.AsT2 == _decrypted), Arg.Any<Key>(), Arg.Is<IEnumerable<Concepts.Events.AppendedEvent>>(_ => !_.Any()), null, null, Arg.Any<CancellationToken>());
+    [Fact] async Task should_deliver_with_the_store_and_decrypted_scoped_configuration() => await _mediator.Received(1).Deliver((EventStoreName)"orders", Arg.Is<WebhookTarget>(_ => _.Authorization.AsT2 == _decrypted), Arg.Any<Key>(), Arg.Is<IEnumerable<Concepts.Events.AppendedEvent>>(_ => !_.Any()), null, null, Arg.Any<CancellationToken>());
     [Fact] void should_accept_the_empty_batch() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
 }

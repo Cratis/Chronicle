@@ -13,18 +13,20 @@ public class with_cancellation_during_http_retry : given.a_webhook_mediator
 {
     readonly CancellationTokenSource _cancellation = new();
     ServiceProvider _services;
+    FailingReceiver _receiver;
     int _requests;
     Cratis.Monads.Catch _result;
 
     void Establish()
     {
+        _receiver = new(() =>
+        {
+            _requests++;
+            _cancellation.CancelAfter(TimeSpan.FromMilliseconds(100));
+        });
         var services = new ServiceCollection();
         services.AddHttpClient(WebhookHttpClientFactory.HttpClientName)
-            .ConfigurePrimaryHttpMessageHandler(() => new FailingReceiver(() =>
-            {
-                _requests++;
-                _cancellation.CancelAfter(TimeSpan.FromMilliseconds(100));
-            }))
+            .ConfigurePrimaryHttpMessageHandler(() => _receiver)
             .AddResilienceHandler("cancellation-spec", pipeline => pipeline.AddRetry(new HttpRetryStrategyOptions
             {
                 Delay = TimeSpan.FromSeconds(5),
@@ -44,6 +46,7 @@ public class with_cancellation_during_http_retry : given.a_webhook_mediator
     void Destroy()
     {
         _services.Dispose();
+        _receiver.Dispose();
         _cancellation.Dispose();
     }
 
@@ -52,10 +55,18 @@ public class with_cancellation_during_http_retry : given.a_webhook_mediator
 
     class FailingReceiver(Action received) : HttpMessageHandler
     {
+        readonly HttpResponseMessage _response = new(HttpStatusCode.InternalServerError);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _response.Dispose();
+            base.Dispose(disposing);
+        }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             received();
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+            return Task.FromResult(_response);
         }
     }
 }

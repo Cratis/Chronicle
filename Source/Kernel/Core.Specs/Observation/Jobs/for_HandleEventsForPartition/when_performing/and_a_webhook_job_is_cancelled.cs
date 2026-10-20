@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_pe
 public class and_a_webhook_job_is_cancelled : given.a_performing_job_step
 {
     Catch<JobStepResult> _result;
+    Action _cancelJob;
     int _calls;
     bool _cancelled;
 
@@ -25,6 +26,7 @@ public class and_a_webhook_job_is_cancelled : given.a_performing_job_step
             .Returns(async call =>
             {
                 _calls++;
+                _cancelJob();
                 try
                 {
                     await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(call.Arg<CancellationToken>());
@@ -40,7 +42,8 @@ public class and_a_webhook_job_is_cancelled : given.a_performing_job_step
 
     async Task Because()
     {
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        using var cancellation = new CancellationTokenSource();
+        _cancelJob = cancellation.Cancel;
         _result = await _jobStep.InvokePerformStep(_performState, cancellation.Token);
     }
 

@@ -92,6 +92,12 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
+Webhook retries use these same budget and delay settings, with bounded ±20% jitter and a persisted
+`RetryBackoff` deadline. `maxRetryAttempts: 0` still means unlimited retries. For webhooks, the
+observer-quarantine thresholds count parked non-timeout partitions, not transient partitions still
+waiting for retry. Receiver `Retry-After` and open-circuit deferrals consume no retry attempts.
+See [Webhook delivery policy](../../webhooks/index.mdx#receiver-back-pressure-and-permanent-failures).
+
 ## Ending quarantine
 
 An observer's quarantine ends only through one of these actions:

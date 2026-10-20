@@ -26,7 +26,8 @@ public class when_retrying_with_an_event_store : Specification
 
     async Task Because()
     {
-        using var client = OAuthHttpMessageHandler.CreateClient(new HttpClient(_receiver), _authorization, _tokens);
+        using var innerClient = new HttpClient(_receiver);
+        using var client = OAuthHttpMessageHandler.CreateClient(innerClient, _authorization, _tokens);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://receiver.example");
         request.Options.Set(WebhookRequestOptions.EventStore, (EventStoreName)"orders");
         using var response = await client.SendAsync(request);
@@ -42,13 +43,26 @@ public class when_retrying_with_an_event_store : Specification
 
     sealed class Receiver : HttpMessageHandler
     {
+        readonly List<HttpResponseMessage> _responses = [];
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                foreach (var response in _responses) response.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         public List<EventStoreName?> Stores { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var store);
             Stores.Add(store);
-            return Task.FromResult(new HttpResponseMessage(Stores.Count == 1 ? HttpStatusCode.Unauthorized : HttpStatusCode.OK));
+            var response = new HttpResponseMessage(Stores.Count == 1 ? HttpStatusCode.Unauthorized : HttpStatusCode.OK);
+            _responses.Add(response);
+            return Task.FromResult(response);
         }
     }
 }

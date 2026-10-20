@@ -44,13 +44,26 @@ public class a_store_scoped_delivery : a_webhook_mediator
 
     protected sealed class Receiver : HttpMessageHandler
     {
+        readonly List<HttpResponseMessage> _responses = [];
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                foreach (var response in _responses) response.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
         public List<EventStoreName?> Stores { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var store);
             Stores.Add(store);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            _responses.Add(response);
+            return Task.FromResult(response);
         }
     }
 }
