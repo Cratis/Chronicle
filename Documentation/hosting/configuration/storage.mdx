@@ -16,8 +16,10 @@ Configure the storage backend for Chronicle Server.
 | `InMemory` | In-memory (ephemeral, non-durable) |
 
 > [!NOTE]
-> Only `MongoDB` storage supports a multi-node cluster. `PostgreSql`, `MsSql` and `Sqlite` register no cluster
-> membership provider, so run a single node on them. See [Clustering](clustering.md).
+> Multi-node clustering is explicit opt-in: select `clustering.type: MongoDB` with MongoDB storage, or
+> `clustering.type: Sql` with `PostgreSql` or `MsSql` storage. All nodes must share one cluster database
+> and cluster identity. `Sqlite` and `InMemory` do not support multi-node clustering. `Localhost` remains
+> the default for every storage type. See [Clustering](clustering.md).
 
 ## MongoDB
 
