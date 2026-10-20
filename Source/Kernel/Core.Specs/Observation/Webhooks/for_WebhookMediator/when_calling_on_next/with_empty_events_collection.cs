@@ -36,7 +36,7 @@ public class with_empty_events_collection : given.a_webhook_mediator
         _httpClientFactory.Create(_target).Returns(_httpClient);
     }
 
-    async Task Because() => _result = await _mediator.OnNext(_target, _partition, _events);
+    async Task Because() => _result = await _mediator.OnNext("orders", _target, _partition, _events);
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
 

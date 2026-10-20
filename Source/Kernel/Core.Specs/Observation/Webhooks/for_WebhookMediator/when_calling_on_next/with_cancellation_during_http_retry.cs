@@ -38,7 +38,7 @@ public class with_cancellation_during_http_retry : given.a_webhook_mediator
     async Task Because()
     {
         var target = new WebhookTarget(new("https://example.com/webhook"), WebhookAuthorization.None, new Dictionary<string, string>());
-        _result = await _mediator.OnNext(target, "partition", [], cancellationToken: _cancellation.Token);
+        _result = await _mediator.OnNext("orders", target, "partition", [], cancellationToken: _cancellation.Token);
     }
 
     void Destroy()

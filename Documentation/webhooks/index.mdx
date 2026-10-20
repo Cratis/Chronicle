@@ -95,9 +95,9 @@ An exact host entry also explicitly permits that host's private addresses. `*.ex
 subdomains, not `example.com` or `notexample.com`. Entries are hosts, without a scheme, path, or port.
 An event-store entry **replaces** the global host list, so include both receiver and OAuth hosts there.
 Administrator approval means adding the host to this configuration; there is no CLI proposal/approval flow.
-Requests without event-store context use the global list and emit a debug diagnostic. This includes
-empty-event reachability probes and OAuth callers that do not supply event-store context; include
-those hosts globally as well.
+Registration reachability probes and webhook OAuth requests carry their event-store context,
+including deliveries with an empty batch. Callers without event-store context use the global list
+and emit a debug diagnostic; include their receiver and OAuth hosts globally.
 
 DNS is resolved again when opening each connection; every answer is checked before connecting to
 an approved IP directly. IPv4-mapped IPv6 addresses are checked as IPv4. Loopback, private, link-local,

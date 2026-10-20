@@ -3,6 +3,7 @@
 
 using System.Net.Http.Json;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
@@ -21,7 +22,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions) : IWebhookMediator
 {
     /// <inheritdoc/>
-    public async Task<Catch> OnNext(WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    public async Task<Catch> OnNext(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (timeout is { } duration && duration > TimeSpan.Zero)
@@ -37,7 +38,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             {
                 Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
             };
-            if (batch.Length > 0) request.Options.Set(WebhookRequestOptions.EventStore, batch[0].Context.EventStore);
+            if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
             using var response = await httpClient.SendAsync(request, deadline.Token);
             if (!response.IsSuccessStatusCode)
             {

@@ -45,7 +45,7 @@ public class WebhookObserverSubscriber(
         if (State.Target.Authorization.IsT2)
         {
             var oauth = State.Target.Authorization.AsT2;
-            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore);
+            await oAuthClient.AcquireToken(oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) }, _key.EventStore, cancellationToken);
         }
     }
 
@@ -74,7 +74,7 @@ public class WebhookObserverSubscriber(
             var oauth = target.Authorization.AsT2;
             target = target with { Authorization = oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) } };
         }
-        var onNextResult = await webhookMediator.OnNext(target, partition, events, cancellationToken: cancellationToken);
+        var onNextResult = await webhookMediator.OnNext(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
         return onNextResult.Match(HandleSuccess, HandleError);
 
         ObserverSubscriberResult HandleSuccess(None none)

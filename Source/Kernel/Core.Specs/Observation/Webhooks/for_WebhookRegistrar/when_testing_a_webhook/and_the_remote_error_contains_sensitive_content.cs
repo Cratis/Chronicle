@@ -10,7 +10,7 @@ public class and_the_remote_error_contains_sensitive_content : given.a_webhook_r
 {
     WebhookTestResult _result;
 
-    void Establish() => _webhookMediator.OnNext(Arg.Any<WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>())
+    void Establish() => _webhookMediator.OnNext(Arg.Any<Concepts.EventStoreName?>(), Arg.Any<WebhookTarget>(), Arg.Any<Concepts.Keys.Key>(), Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>())
         .Returns(Catch.Failed(new HttpRequestException("remote-secret-body")));
 
     async Task Because() => _result = await _registrar.TestWebhook(new Contracts.Observation.Webhooks.WebhookTarget { Url = "https://receiver.example" });

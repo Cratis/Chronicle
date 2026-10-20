@@ -8,7 +8,7 @@ public class with_caller_cancellation : given.a_cancellable_delivery
     async Task Because()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        _result = await _mediator.OnNext(_target, "partition", [], cancellationToken: cancellation.Token);
+        _result = await _mediator.OnNext("orders", _target, "partition", [], cancellationToken: cancellation.Token);
     }
 
     [Fact] void should_cancel_the_http_operation_before_returning() => _cancelled.ShouldBeTrue();

@@ -26,7 +26,7 @@ public class with_a_slow_receiver : given.a_webhook_mediator
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(async call =>
             {
-                await _mediator.OnNext(_target, call.Arg<Key>(), call.Arg<IEnumerable<AppendedEvent>>());
+                await _mediator.OnNext("orders", _target, call.Arg<Key>(), call.Arg<IEnumerable<AppendedEvent>>());
                 return ObserverSubscriberResult.Ok(EventSequenceNumber.First);
             });
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>())
@@ -44,7 +44,7 @@ public class with_a_slow_receiver : given.a_webhook_mediator
 
     async Task<ObserverSubscriberResult> Deliver(Key partition, IEnumerable<AppendedEvent> events, CancellationToken token)
     {
-        await _mediator.OnNext(_target, partition, events, cancellationToken: token);
+        await _mediator.OnNext("orders", _target, partition, events, cancellationToken: token);
         return ObserverSubscriberResult.Ok(EventSequenceNumber.First);
     }
 

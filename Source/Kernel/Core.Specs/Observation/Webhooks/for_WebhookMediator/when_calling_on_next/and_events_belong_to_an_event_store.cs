@@ -24,7 +24,7 @@ public class and_events_belong_to_an_event_store : given.a_webhook_mediator
         _httpClientFactory.Create(Arg.Any<WebhookTarget>(), null).Returns(_httpClient);
     }
 
-    async Task Because() => await _mediator.OnNext(_target, new Key("partition", Properties.ArrayIndexers.NoIndexers), [AppendedEvent.Empty() with { Context = EventContext.Empty with { EventStore = "orders" } }]);
+    async Task Because() => await _mediator.OnNext("orders", _target, new Key("partition", Properties.ArrayIndexers.NoIndexers), [AppendedEvent.Empty() with { Context = EventContext.Empty with { EventStore = "untrusted-payload-store" } }]);
 
     [Fact] void should_tag_the_delivery_request() => _handler.EventStore.ShouldEqual((EventStoreName)"orders");
 

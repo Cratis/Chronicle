@@ -228,6 +228,7 @@ public sealed class WebhookRegistrar(
 
         var chronicleTarget = target.ToChronicle();
         var result = await webhookMediator.OnNext(
+            eventStore,
             chronicleTarget,
             new Key(WebhookTestPartitionKey, ArrayIndexers.NoIndexers),
             [],

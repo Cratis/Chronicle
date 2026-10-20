@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookMediator.when_calling
 
 public class with_a_delivery_timeout : given.a_cancellable_delivery
 {
-    async Task Because() => _result = await _mediator.OnNext(_target, "partition", [], timeout: TimeSpan.FromMilliseconds(100));
+    async Task Because() => _result = await _mediator.OnNext("orders", _target, "partition", [], timeout: TimeSpan.FromMilliseconds(100));
 
     [Fact] void should_cancel_the_http_operation_before_returning() => _cancelled.ShouldBeTrue();
     [Fact] void should_not_report_success() => _result.IsSuccess.ShouldBeFalse();
