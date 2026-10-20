@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a
 /// </summary>
 public class and_the_registry_lost_the_client : given.a_connected_client
 {
-    void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection)).Returns(false);
+    void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection)).Returns(false, true);
 
     async Task Because()
     {
