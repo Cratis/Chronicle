@@ -11,9 +11,11 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
@@ -29,6 +31,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">Storage for validating registered event generations.</param>
+/// <param name="logger">The logger for probe failures, not exposed to callers.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
 /// actually changed becomes an event. Testing lives here too, because a validator has to ask the same questions
@@ -41,7 +44,8 @@ public sealed class WebhookRegistrar(
     IOAuthClient oauthClient,
     IWebhookMediator webhookMediator,
     IOptions<ChronicleOptions> options,
-    IStorage storage)
+    IStorage storage,
+    ILogger<WebhookRegistrar> logger)
 {
     const string WebhookTestPartitionKey = "test";
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
@@ -148,8 +152,9 @@ public sealed class WebhookRegistrar(
     /// <param name="clientId">The client identifier to authenticate with.</param>
     /// <param name="clientSecret">The client secret to authenticate with.</param>
     /// <param name="scope">The optional scope to request, empty for none.</param>
+    /// <param name="eventStore">The event store, or null for global policy.</param>
     /// <returns>The <see cref="WebhookTestResult"/> of the attempt.</returns>
-    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret, string scope)
+    internal async Task<WebhookTestResult> TestOAuthAuthorization(string authority, string clientId, string clientSecret, string scope = "", EventStoreName? eventStore = null)
     {
         var authorization = new OAuthAuthorization(
             new Authority(authority),
@@ -161,7 +166,7 @@ public sealed class WebhookRegistrar(
 
         try
         {
-            var tokenInfo = await oauthClient.AcquireToken(authorization);
+            var tokenInfo = await oauthClient.AcquireToken(authorization, eventStore);
             return new WebhookTestResult
             {
                 Success = !string.IsNullOrEmpty(tokenInfo.AccessToken),
@@ -170,10 +175,11 @@ public sealed class WebhookRegistrar(
         }
         catch (Exception ex)
         {
+            logger.ProbeFailed(ex);
             return new WebhookTestResult
             {
                 Success = false,
-                ErrorMessage = ex.Message
+                ErrorMessage = ex is WebhookTargetRejected ? ex.Message : "Unable to acquire OAuth access token."
             };
         }
     }
@@ -182,8 +188,9 @@ public sealed class WebhookRegistrar(
     /// Tests whether a webhook target can be reached.
     /// </summary>
     /// <param name="target">The webhook target to test.</param>
+    /// <param name="eventStore">The event store, or null for global policy.</param>
     /// <returns>The <see cref="WebhookTestResult"/> of the attempt.</returns>
-    internal async Task<WebhookTestResult> TestWebhook(Contracts.Observation.Webhooks.WebhookTarget target)
+    internal async Task<WebhookTestResult> TestWebhook(Contracts.Observation.Webhooks.WebhookTarget target, EventStoreName? eventStore = null)
     {
         string? accessToken = null;
 
@@ -196,7 +203,7 @@ public sealed class WebhookRegistrar(
 
             try
             {
-                var tokenInfo = await oauthClient.AcquireToken(oAuth);
+                var tokenInfo = await oauthClient.AcquireToken(oAuth, eventStore);
                 if (string.IsNullOrEmpty(tokenInfo.AccessToken))
                 {
                     return new WebhookTestResult
@@ -210,16 +217,18 @@ public sealed class WebhookRegistrar(
             }
             catch (Exception ex)
             {
+                logger.ProbeFailed(ex);
                 return new WebhookTestResult
                 {
                     Success = false,
-                    ErrorMessage = $"OAuth authorization failed: {ex.Message}"
+                    ErrorMessage = ex is WebhookTargetRejected ? ex.Message : "Unable to acquire OAuth access token."
                 };
             }
         }
 
         var chronicleTarget = target.ToChronicle();
         var result = await webhookMediator.OnNext(
+            eventStore,
             chronicleTarget,
             new Key(WebhookTestPartitionKey, ArrayIndexers.NoIndexers),
             [],
@@ -235,7 +244,7 @@ public sealed class WebhookRegistrar(
         return new WebhookTestResult
         {
             Success = false,
-            ErrorMessage = exception?.Message ?? "Unable to connect to webhook endpoint."
+            ErrorMessage = exception is WebhookTargetRejected ? exception.Message : "Unable to connect to webhook endpoint."
         };
     }
 

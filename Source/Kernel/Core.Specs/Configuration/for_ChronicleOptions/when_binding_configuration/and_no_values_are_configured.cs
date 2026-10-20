@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Microsoft.Extensions.Configuration;
 
 namespace Cratis.Chronicle.Configuration.for_ChronicleOptions.when_binding_configuration;
@@ -19,6 +20,10 @@ public class and_no_values_are_configured : Specification
             .Bind(_options);
     }
 
+    [Fact] void should_default_target_validation_to_warn() => _options.Webhooks.Validation.ShouldEqual(WebhookValidationMode.Warn);
+    [Fact] void should_not_allow_insecure_http_by_default() => _options.Webhooks.AllowInsecureHttp.ShouldBeFalse();
+    [Fact] void should_have_no_approved_hosts_by_default() => _options.Webhooks.AllowedHosts.ShouldBeEmpty();
+    [Fact] void should_have_no_event_store_host_overrides_by_default() => _options.Webhooks.EventStoreAllowedHosts.ShouldBeEmpty();
     [Fact] void should_default_the_revise_interval() => _options.ConnectedClients.ReviseIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_reservation_ttl() => _options.ConnectedClients.ReservationTtlSeconds.ShouldEqual(30);
     [Fact] void should_default_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(5);
