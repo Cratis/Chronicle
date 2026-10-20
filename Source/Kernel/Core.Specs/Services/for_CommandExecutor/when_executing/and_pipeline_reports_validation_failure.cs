@@ -24,6 +24,6 @@ public class and_pipeline_reports_validation_failure : given.a_command_pipeline
 
     [Fact] void should_not_be_successful() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_carry_the_message() => _result.ValidationResults[0].Message.ShouldEqual("Name is required.");
-    [Fact] void should_carry_the_member() => _result.ValidationResults[0].Members[0].ShouldEqual(nameof(TheCommand.Name));
+    [Fact] void should_carry_the_member() => _result.ValidationResults[0].Members[0].ShouldEqual("name");
     [Fact] void should_carry_the_error_severity() => _result.ValidationResults[0].Severity.ShouldEqual(Contracts.Validation.ValidationResultSeverity.Error);
 }
