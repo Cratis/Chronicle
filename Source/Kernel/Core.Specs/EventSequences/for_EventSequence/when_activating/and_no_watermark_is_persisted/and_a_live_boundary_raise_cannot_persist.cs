@@ -19,7 +19,7 @@ public class and_a_live_boundary_raise_cannot_persist : given.a_catching_up_sequ
         await Seed(0, "first", email: "a");
         await Seed(1, "second", email: "b");
         await Seed(2, "third", email: "c");
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 if (call.ArgAt<EventSequenceNumber>(2) >= (EventSequenceNumber)3) _liveWrites++;

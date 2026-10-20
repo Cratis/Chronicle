@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using NSubstitute.Extensions;
 
@@ -15,7 +16,7 @@ public class and_a_claim_is_refused_by_a_holder_the_fold_changes : given.a_repla
         await _claims.Save("holder", _definition, 0, Hash("v"));
         Event(1, "claimant", "Claimed", "v");
         Event(2, "holder", "Claimed", "w");
-        _unique.Configure().Save("claimant", _definition, 1, Hash("v"), string.Empty, Arg.Any<CancellationToken>())
+        _unique.Configure().Save("claimant", _definition, 1, Hash("v"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 _attempts++;

@@ -11,8 +11,8 @@ Every observer decides what events they are interested in during the subscriptio
 This information is stored in the [event store](./event-store.md).
 
 Adding event types does not always rewind an observer. Definition evolution depends on the observer
-kind and its configuration: projections can use a partial replay when the change is independent,
-or a full replay when it is not. Reactors do not replay on definition changes by default.
+kind and its configuration: projections require a full replay for historical backfills and mapping
+changes. Reactors do not replay on definition changes by default.
 See [Observer configuration](../hosting/configuration/observers.md) and
 [Projection registration lifecycle](../projections/registration-lifecycle.md).
 

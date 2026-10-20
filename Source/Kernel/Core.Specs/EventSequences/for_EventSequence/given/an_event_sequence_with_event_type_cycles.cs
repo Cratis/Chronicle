@@ -38,7 +38,9 @@ public class an_event_sequence_with_event_type_cycles : appending_many_events
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(call => new ConstraintValidation(
                 [.. _definitions.Select(definition => new UniqueEventTypeConstraintValidator(definition, _uniqueEventTypesStorage)), _recordingValidator])
                 .Establish(

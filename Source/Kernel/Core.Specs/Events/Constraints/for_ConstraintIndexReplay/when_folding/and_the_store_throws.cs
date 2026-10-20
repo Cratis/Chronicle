@@ -13,7 +13,7 @@ public class and_the_store_throws : given.a_replay
     {
         Event(0, "first", "Claimed", "first");
         Event(1, "second", "Claimed", "second");
-        _unique.Configure().Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Configure().Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new IOException("write unavailable")));
         Start();
     }

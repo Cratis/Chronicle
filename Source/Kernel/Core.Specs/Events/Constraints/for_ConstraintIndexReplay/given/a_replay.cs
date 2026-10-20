@@ -54,7 +54,7 @@ public class a_replay : Specification
             .Returns(call => _claims.IsAllowed(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<UniqueConstraintValue>(2), call.ArgAt<string>(3)));
         _unique.GetForStream(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.GetForStream(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 _writes.Add($"claim:{call.ArgAt<EventSourceId>(0)}:{call.ArgAt<UniqueConstraintValue>(3)}");
