@@ -24,6 +24,13 @@ public class ReplayObserverPartition(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
+    bool _refusalNotificationScheduled;
+
+    /// <summary>
+    /// Gets the retained notification releasing an observer after a refused partition replay.
+    /// </summary>
+    internal Task CompletionNotification { get; private set; } = Task.CompletedTask;
+
     /// <inheritdoc/>
     /// <remarks>
     /// Recovery of a running job can bypass CanResume and go straight to finalization. Check before the base
@@ -31,7 +38,6 @@ public class ReplayObserverPartition(
     /// </remarks>
     public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
     {
-        if (State.Status == JobStatus.Failed) return await base.Resume();
         try
         {
             await EnsureReplaySupported();
@@ -65,6 +71,9 @@ public class ReplayObserverPartition(
         await EnsureReplaySupported();
         return await base.CanResume();
     }
+
+    /// <inheritdoc/>
+    protected override Task OnFailedToPrepare() => EnsureReplaySupported();
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
@@ -112,7 +121,7 @@ public class ReplayObserverPartition(
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
-        await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType);
+        await EnsureReplaySupported(request);
         return new[]
         {
             CreateStep<IHandleEventsForPartition>(
@@ -130,6 +139,28 @@ public class ReplayObserverPartition(
         }.ToImmutableList();
     }
 
-    Task EnsureReplaySupported() => GlobalProjectionReplay.EnsureSupported(
-        storage, Request.ObserverKey, Request.ObserverType, State, WriteStateAsync);
+    async Task EnsureReplaySupported(ReplayObserverPartitionRequest? request = null)
+    {
+        request ??= Request;
+        try
+        {
+            await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            if (!_refusalNotificationScheduled)
+            {
+                _refusalNotificationScheduled = true;
+
+                // Release the held partition without advancing its watermark or resolving its failures.
+                // Retain rather than await: the observer can still be waiting for this job's Start turn.
+                CompletionNotification = NotifyObserverOfRefusal(request);
+            }
+
+            throw;
+        }
+    }
+
+    async Task NotifyObserverOfRefusal(ReplayObserverPartitionRequest request) => await GrainFactory.GetGrain<IObserver>(request.ObserverKey)
+        .PartitionReplayed(request.Key, EventSequenceNumber.Unavailable);
 }

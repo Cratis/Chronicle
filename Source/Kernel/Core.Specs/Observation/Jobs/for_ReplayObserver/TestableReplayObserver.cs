@@ -81,4 +81,16 @@ public class TestableReplayObserver(
     /// </summary>
     /// <returns>True if the job can be resumed.</returns>
     public Task<bool> CanResumeForTesting() => CanResume();
+
+    /// <summary>
+    /// Revalidates replay admission before starting prepared job steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task StartPreparedStepsForTesting() => OnBeforeStartingJobSteps();
+
+    /// <summary>
+    /// Invokes replay cleanup after a preparation failure.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task FailPreparationForTesting() => OnFailedToPrepare();
 }

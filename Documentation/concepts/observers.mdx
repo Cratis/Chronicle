@@ -32,9 +32,9 @@ with many namespaces, without serializing every contributor. The local `IStatist
 overloads stop waiting for discovery, cancel contributing reads and stop scheduling further namespaces.
 Existing query and wire contracts are unchanged; they do not add a client cancellation field.
 
-The row limit is **10,000 per namespace**, not per store. Returning 10,000 rows (even if exactly that many
-exist), or reporting more than 10,000 total rows, fails the query rather than returning potentially truncated
-totals. A structured warning identifies the event store, namespace, row limit, returned row count and reported
+The row limit is **10,000 per namespace**, not per store. Exactly 10,000 rows are accepted when the reported
+total confirms that the result is complete. A reported total larger than the returned row count or the limit,
+or a full page whose completeness cannot be determined, fails the query rather than returning partial totals. A structured warning identifies the event store, namespace, row limit, returned row count and reported
 total count. Any failed, canceled or capped contributor prevents a successful store-wide result; no partial
 totals are returned.
 
@@ -42,7 +42,9 @@ Full and partition replay of a persisted **global-scope projection** are refused
 progress, admitting a replay job, or changing its shared sink. Replaying only one namespace cannot safely rebuild data shared with other namespaces
 that are still writing. A definition change that would require an automatic full replay retains an
 explanatory recommendation instead; performing it also refuses the namespace-local replay. A coordinated
-rebuild across all namespaces is not currently supported. Namespace-scoped projections are unaffected.
+rebuild across all namespaces is not currently supported. Persisted replay jobs refused during recovery or
+completion fail terminally and release the observer's replay marker without finalizing or promoting the sink.
+Namespace-scoped projections are unaffected.
 
 For an upgrade with a global replay already in flight, stop replay workers and contributing writes
 before upgrading all silos together; do not mix versions that can still start global replay with

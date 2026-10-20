@@ -26,6 +26,14 @@ public class TestableReplayObserverPartition(
     public Type GrainType => typeof(IReplayObserverPartition);
 
     /// <summary>
+    /// Gets or sets a value indicating whether preparation failures are awaited by Start in the specification.
+    /// </summary>
+    public bool PrepareSynchronouslyForTesting { get; set; }
+
+    /// <inheritdoc/>
+    protected override bool StartStepsInBackground => !PrepareSynchronouslyForTesting && base.StartStepsInBackground;
+
+    /// <summary>
     /// Prepares partition replay steps without starting the job framework.
     /// </summary>
     /// <param name="request">The replay request.</param>
@@ -43,4 +51,22 @@ public class TestableReplayObserverPartition(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     public Task CompleteForTesting() => OnAllStepsCompleted();
+
+    /// <summary>
+    /// Revalidates replay admission before starting prepared job steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task StartPreparedStepsForTesting() => OnBeforeStartingJobSteps();
+
+    /// <summary>
+    /// Checks whether the persisted replay can resume.
+    /// </summary>
+    /// <returns>True if replay can resume.</returns>
+    public Task<bool> CanResumeForTesting() => CanResume();
+
+    /// <summary>
+    /// Invokes replay cleanup after a preparation failure.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task FailPreparationForTesting() => OnFailedToPrepare();
 }

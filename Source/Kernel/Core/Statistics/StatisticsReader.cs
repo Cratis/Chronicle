@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Statistics;
 public class StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory, ILogger<StatisticsReader> logger) : IStatisticsReader
 {
     /// <summary>
-    /// The upper bound on rows read per namespace in one request. Reaching it fails the read rather than truncating totals.
+    /// The upper bound on rows read per namespace in one request. A full page must prove completeness to contribute totals.
     /// </summary>
     public const int MaximumRows = 10_000;
 
@@ -60,7 +60,8 @@ public class StatisticsReader(IReadModelsService readModels, IGrainFactory grain
         };
         var response = await readModels.GetInstances(request, cancellationToken).WaitAsync(cancellationToken);
 
-        if (response.Instances.Count >= MaximumRows || response.TotalCount > MaximumRows)
+        if (response.TotalCount > response.Instances.Count || response.TotalCount > MaximumRows ||
+            (response.Instances.Count >= MaximumRows && response.TotalCount != response.Instances.Count))
         {
             logger.StatisticsReadLimitReached(eventStore, @namespace, MaximumRows, response.Instances.Count, response.TotalCount);
             throw new InvalidOperationException($"Statistics for event store '{eventStore}', namespace '{@namespace}' reached the {MaximumRows} row limit. Complete totals cannot be returned.");

@@ -58,15 +58,19 @@ internal static class GlobalProjectionReplay
         }
         catch (GlobalProjectionReplayNotSupported exception)
         {
-            state.Status = JobStatus.Failed;
-            state.StatusChanges.Add(new()
+            if (state.Status != JobStatus.Failed)
             {
-                Status = JobStatus.Failed,
-                Occurred = DateTimeOffset.UtcNow,
-                ExceptionMessages = [exception.Message],
-                ExceptionStackTrace = exception.StackTrace ?? string.Empty
-            });
-            await persist();
+                state.Status = JobStatus.Failed;
+                state.StatusChanges.Add(new()
+                {
+                    Status = JobStatus.Failed,
+                    Occurred = DateTimeOffset.UtcNow,
+                    ExceptionMessages = [exception.Message],
+                    ExceptionStackTrace = exception.StackTrace ?? string.Empty
+                });
+                await persist();
+            }
+
             throw;
         }
     }

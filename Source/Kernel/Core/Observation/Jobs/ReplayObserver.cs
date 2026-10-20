@@ -44,6 +44,8 @@ public class ReplayObserver(
     /// </remarks>
     internal const int ActiveStepWindow = 16;
 
+    bool _refusalNotificationScheduled;
+
     /// <summary>
     /// Gets the notification of the observer that the replay concluded, once the job has concluded.
     /// </summary>
@@ -77,7 +79,6 @@ public class ReplayObserver(
     /// </remarks>
     public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
     {
-        if (State.Status == JobStatus.Failed) return await base.Resume();
         try
         {
             await EnsureReplaySupported();
@@ -93,7 +94,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
-        await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType);
+        await EnsureReplaySupported(request);
         var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
         State.ReplayStartedAt = DateTimeOffset.UtcNow;
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
@@ -413,6 +414,26 @@ public class ReplayObserver(
         await Task.WhenAll(deleteAllOtherJobsForObserver);
     }
 
-    Task EnsureReplaySupported() => GlobalProjectionReplay.EnsureSupported(
-        storage, Request.ObserverKey, Request.ObserverType, State, WriteStateAsync);
+    async Task EnsureReplaySupported(ReplayObserverRequest? request = null)
+    {
+        request ??= Request;
+        try
+        {
+            await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            if (!_refusalNotificationScheduled)
+            {
+                _refusalNotificationScheduled = true;
+                var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+
+                // Release replay ownership without finalizing the sink or claiming any successful progress.
+                // Do not await the observer from Start: its replay turn may still be waiting for this job.
+                CompletionNotification = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
+            }
+
+            throw;
+        }
+    }
 }
