@@ -10,7 +10,7 @@ using ProtoBuf.Grpc;
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
-/// Drops replies only for successful receipted appends. Every other sequence operation is unchanged.
+/// Drops replies only for successful receipted or keyed appends. Every other sequence operation is unchanged.
 /// </summary>
 /// <param name="inner">The real service.</param>
 /// <param name="replies">The reply-loss driver.</param>
@@ -59,16 +59,32 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     }
 
     /// <inheritdoc/>
-    public Task<CommandResult<AppendOnceResponse>> AppendOnce(AppendOnceRequest request, CallContext callContext = default) => inner.AppendOnce(request, callContext);
+    public async Task<CommandResult<AppendOnceResponse>> AppendOnce(AppendOnceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendOnce(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
 
     /// <inheritdoc/>
-    public Task<CommandResult<AppendOnceResponse>> AppendOnceWithNamedTags(AppendOnceWithNamedTagsRequest request, CallContext callContext = default) => inner.AppendOnceWithNamedTags(request, callContext);
+    public async Task<CommandResult<AppendOnceResponse>> AppendOnceWithNamedTags(AppendOnceWithNamedTagsRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendOnceWithNamedTags(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
 
     /// <inheritdoc/>
-    public Task<CommandResult<AppendManyOnceResponse>> AppendManyOnce(AppendManyOnceRequest request, CallContext callContext = default) => inner.AppendManyOnce(request, callContext);
+    public async Task<CommandResult<AppendManyOnceResponse>> AppendManyOnce(AppendManyOnceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendManyOnce(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
 
     /// <inheritdoc/>
-    public Task<CommandResult<AppendManyOnceResponse>> AppendManyOnceWithNamedTags(AppendManyOnceWithNamedTagsRequest request, CallContext callContext = default) => inner.AppendManyOnceWithNamedTags(request, callContext);
+    public async Task<CommandResult<AppendManyOnceResponse>> AppendManyOnceWithNamedTags(AppendManyOnceWithNamedTagsRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendManyOnceWithNamedTags(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
 
     /// <inheritdoc/>
     public Task<CommandResult<CompleteStreamResponse>> CompleteStream(CompleteStreamRequest request, CallContext callContext = default) => inner.CompleteStream(request, callContext);
