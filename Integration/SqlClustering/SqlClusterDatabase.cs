@@ -57,7 +57,11 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
     {
         if (postgres)
         {
+            // Each node keeps an Npgsql pool per database (cluster, and one per event store and namespace), which
+            // holds 30-38 connections per node under this load. Three nodes therefore sit at PostgreSQL's stock
+            // limit of 100 and a restarting node is refused (53300). Size the server for the cluster, as production must.
             return new PostgreSqlBuilder("postgres:16")
+                .WithCommand("-c", "max_connections=300")
                 .WithNetwork(network).WithNetworkAliases("database")
                 .WithDatabase(Database).WithPassword(Password).Build();
         }
