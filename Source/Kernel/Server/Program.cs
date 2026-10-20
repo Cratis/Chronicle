@@ -69,6 +69,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
+var localhostGuard = LocalhostClusteringGuard.Decide(chronicleOptions);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks();
 
@@ -177,7 +178,11 @@ hostBuilder
         }
         else
         {
-            if (!isSqlStorage && !isInMemoryStorage && ConnectionStringLocality.IsNonLocal(chronicleOptions.Storage.ConnectionDetails))
+            if (localhostGuard == LocalhostClusteringGuardAction.Lease)
+            {
+                _.AddSingleWriterLease();
+            }
+            else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
             {
                 logger.LocalhostClusteringAgainstSharedStorage();
             }

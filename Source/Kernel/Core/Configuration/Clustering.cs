@@ -14,6 +14,11 @@ public class Clustering
     public ClusterRoles Roles { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the single-writer lease for Localhost clustering.
+    /// </summary>
+    public SingleWriterLease SingleWriterLease { get; set; } = new();
+
+    /// <summary>
     /// Gets the type of cluster membership to use. Defaults to single node localhost clustering;
     /// use <see cref="ClusteringType.MongoDB"/> to let multiple nodes sharing the same MongoDB
     /// storage and cluster id form one cluster.

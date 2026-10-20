@@ -55,7 +55,7 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI was not found - it is neither embedded in this build nor present in the web root '{WebRoot}' - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotAvailable(this ILogger<Kernel> logger, string webRoot);
 
-    [LoggerMessage(LogLevel.Warning, "Localhost clustering is configured while storage points at a non-local host. This node will form its own isolated single-node cluster - other nodes sharing this storage will each form a separate cluster over the same data, with no error at startup. Set Cratis__Chronicle__Clustering__Type=MongoDB on every node for them to join as one cluster")]
+    [LoggerMessage(LogLevel.Warning, "Localhost clustering is configured while storage points at a non-local host and the single-writer lease is disabled. Another node sharing this storage can silently process the same data. Enable Clustering.SingleWriterLease, or use MongoDB clustering on every node with MongoDB storage for them to join as one cluster")]
     internal static partial void LocalhostClusteringAgainstSharedStorage(this ILogger<Kernel> logger);
 
     [LoggerMessage(LogLevel.Critical, "Unhandled exception occurred (terminating: {IsTerminating})")]

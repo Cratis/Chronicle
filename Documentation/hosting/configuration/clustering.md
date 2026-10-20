@@ -6,20 +6,14 @@ description: Configure how multiple Chronicle Server nodes form one Orleans clus
 Clustering configuration controls how multiple Chronicle Server nodes form one Orleans cluster and how grain workloads are distributed across them. This enables horizontal scale out and assigning specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
 
 > [!WARNING]
-> The clustering type defaults to `Localhost`, which is single-node membership. Any production deployment
-> that runs more than one node **must** set the type to `MongoDB` on every node. Two nodes left on the
-> default that share the same MongoDB do **not** join as one cluster - each forms its own isolated
-> single-node cluster over the same data, a split-brain topology reported by no error at startup. Set it
-> with the `Cratis__Chronicle__Clustering__Type=MongoDB` environment variable (or `clustering.type` in
-> `chronicle.json`), and give every node the same `clusterId` and `serviceId`. The server logs a warning
-> when it detects localhost clustering against non-local storage, but it does not refuse to start.
+> `Localhost` means **one active node per kernel storage**, not one independent node per container.
+> A single-writer lease now guards this rule by default on MongoDB, PostgreSQL, SQL Server and SQLite.
+> A second node waits without activating grains or processing events, then fails startup if its
+> acquisition timeout expires. Changing `clusterId` or `serviceId` does not bypass this guard.
 >
-> Running more than one node requires MongoDB storage. The `MongoDB` clustering type keeps membership in
-> the MongoDB storage backend, and it is the only backend that registers a cluster membership table. With
-> `PostgreSql`, `MsSql` or `Sqlite` storage Chronicle registers no membership provider, so there is no
-> supported way to run more than one node on those backends, and setting `clustering.type` to `MongoDB`
-> alongside one of them does not add one. `InMemory` storage is scoped to a single process. Run a single node
-> on SQL storage. The localhost-clustering warning is not logged for SQL storage.
+> For multiple active nodes, use MongoDB storage and set `Cratis__Chronicle__Clustering__Type=MongoDB`
+> on every node, with identical `clusterId` and `serviceId`. That mode uses cluster membership rather
+> than the single-writer lease. `InMemory` is process-local and never takes a lease.
 
 ## Use cases
 
@@ -57,8 +51,38 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
 | advertisedIP | string | | The IP address the silo advertises to other cluster members. Resolved from the machine's host name when not set; set it explicitly (e.g. `127.0.0.1`) when running multiple nodes on one machine. |
 | defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
 | defunctSiloExpiration | timespan | 03:00:00 | The age at which a defunct membership entry is removed by the sweep. A node never reuses a silo identity, so dead entries only have diagnostic value. |
+| singleWriterLease.enabled | boolean or null | null (automatic) | Enables the lease for `Localhost` on persistent storage. Set `false` only when another mechanism guarantees one writer. Does not enable a lease for `MongoDB` clustering or `InMemory` storage. |
+| singleWriterLease.ttl | timespan | 00:00:30 | Database lease lifetime; minimum five seconds. |
+| singleWriterLease.acquireTimeout | timespan | 00:02:00 | Maximum startup wait. Zero makes one acquisition attempt; negative values are invalid. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
+
+## Single-writer lease
+
+The node acquires the fixed `kernel` lease in the system/cluster database **before** Orleans runtime
+initialization. No grains, observer rehydration or processing start until acquisition succeeds. Waiting
+nodes are not ready. Acquisition waits at most `acquireTimeout`; the timeout error identifies the last
+known holder, host and expiry. Temporary storage failures are retried within that budget.
+
+The holder renews every TTL/3. If it cannot confirm a renewal for TTL/2 (15 seconds by default), it marks
+readiness unhealthy, logs at Critical level and requests shutdown with a nonzero process exit code. A
+watchdog forces process termination before the original TTL expires if graceful shutdown gets stuck.
+A renewal rejected because ownership was lost fences the process immediately. Set the TTL so that half
+of it comfortably exceeds the host's shutdown timeout. Your restart policy must restart failed processes.
+
+During normal shutdown, renewal continues until the silo has stopped its grains and runtime services;
+then the lease is released. After SIGKILL, a crash or a lost release, a successor waits at most the
+remaining TTL rather than requiring manual cleanup. The lease row/document remains for diagnostics;
+expiry is not driven by a MongoDB TTL index.
+
+PostgreSQL, SQL Server and MongoDB use **database server time** for acquisition, renewal and expiry, not
+the application's wall clock. MongoDB requires version 5.0 or later for server-time `$dateAdd` update pipelines.
+SQLite uses the host clock: sharing a SQLite file across hosts with unsynchronized clocks is unsupported,
+as are network shares without reliable file locking.
+
+Disabling `singleWriterLease.enabled` preserves unguarded single-node behavior. If storage is remote,
+the server warns about the risk, including for PostgreSQL and SQL Server. This is an escape hatch, not a
+way to scale out. See [Production scaling](../production.md#scaling) for safe replacement deployments.
 
 ## Configuration examples
 
