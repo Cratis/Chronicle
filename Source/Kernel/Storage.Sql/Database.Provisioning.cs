@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -182,6 +183,14 @@ public partial class Database
                 {
                     // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
                     // The database cannot be locked before it exists, so this is the only guard creation has across processes.
+                }
+
+                if (context.Database.GetDbConnection() is SqlConnection connection)
+                {
+                    // ExistsAsync's failed login to the missing database is cached by the pool. The losing
+                    // CreateAsync exits before EF clears that pool, so MigrateAsync would see the cached 4060
+                    // and try CREATE DATABASE again even though the schema-lock connection can already open it.
+                    SqlConnection.ClearPool(connection);
                 }
             }
 
