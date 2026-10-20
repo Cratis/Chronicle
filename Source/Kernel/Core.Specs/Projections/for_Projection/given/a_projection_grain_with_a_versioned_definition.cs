@@ -20,6 +20,7 @@ public class a_projection_grain_with_a_versioned_definition : Specification
     protected IStorage<ProjectionDefinition> _stateStorage;
     protected IProjectionDefinitionComparer _comparer;
     protected Storage.IStorage _storage;
+    protected IObjectComparer _objectComparer;
     protected ProjectionDefinition _stored;
 
     async Task Establish()
@@ -32,7 +33,8 @@ public class a_projection_grain_with_a_versioned_definition : Specification
         _comparer = Substitute.For<IProjectionDefinitionComparer>();
         _silo.AddService(_comparer);
         _silo.AddService(Substitute.For<IProjectionFactory>());
-        _silo.AddService(Substitute.For<IObjectComparer>());
+        _objectComparer = Substitute.For<IObjectComparer>();
+        _silo.AddService(_objectComparer);
         _storage = Substitute.For<Storage.IStorage>();
         _storage.GetEventStore(Arg.Any<EventStoreName>()).ReadModels.GetAll().Returns([]);
         _silo.AddService(_storage);
