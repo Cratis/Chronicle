@@ -59,6 +59,11 @@ public class ReadModelDefinition
     public Guid SinkConfigurationId { get; set; } = Guid.Empty;
 
     /// <summary>
+    /// Gets or sets the indexed property paths serialized as JSON.
+    /// </summary>
+    public string IndexesJson { get; set; } = "[]";
+
+    /// <summary>
     /// Gets or sets the versioned schemas associated with the read model.
     /// </summary>
     [Json]

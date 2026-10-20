@@ -109,31 +109,19 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
     }
 
     /// <summary>
-    /// Build the <see cref="ProjectionDefinition"/> definitions the declaration lowers to.
+    /// Build the namespaced kernel projection definition.
     /// </summary>
-    /// <returns>The built definitions - one, or two for <see cref="ProjectionScope.Both"/>.</returns>
-    /// <remarks>
-    /// <para>
-    /// The owner and the rewindability are decided here rather than left to the declaration. A kernel projection
-    /// that could be declared replayable would be a kernel projection someone can replay.
-    /// </para>
-    /// <para>
-    /// <see cref="ProjectionScope.Both"/> lowers to two single-scope definitions rather than one definition the
-    /// engine has to materialize twice. A projection is observed and materialized per namespace, so "both" is two
-    /// observers by nature; making that explicit at declaration time keeps the engine unaware there is such a
-    /// thing as a dual scope, and leaves each half an ordinary projection that can be inspected, reasoned about
-    /// and diagnosed on its own.
-    /// </para>
-    /// </remarks>
-    public IReadOnlyCollection<ProjectionDefinition> Build() => _scope switch
+    /// <returns>The built definition.</returns>
+    /// <exception cref="InvalidOperationException">The declaration requests global or dual-scope materialization.</exception>
+    public IReadOnlyCollection<ProjectionDefinition> Build()
     {
-        ProjectionScope.Both =>
-        [
-            BuildFor(identifier, ProjectionScope.Namespaced),
-            BuildFor(new ProjectionId($"{identifier.Value}{GlobalIdentifierSuffix}"), ProjectionScope.Global)
-        ],
-        _ => [BuildFor(identifier, _scope)]
-    };
+        if (_scope != ProjectionScope.Namespaced)
+        {
+            throw new InvalidOperationException("Kernel projections support only namespaced materialization until decision 0014 provides global generation ownership.");
+        }
+
+        return [BuildFor(identifier, ProjectionScope.Namespaced)];
+    }
 
     ProjectionDefinition BuildFor(ProjectionId projectionId, ProjectionScope scope) =>
         new(

@@ -25,6 +25,11 @@ public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> Upd
     internal IReadOnlyList<NullArrayParent> NullArrayParents { get; init; } = [];
 
     /// <summary>
+    /// Gets the top-level array paths the array filters address, which the target document must hold for the update to apply.
+    /// </summary>
+    internal IReadOnlyList<string> RequiredArrayPaths { get; init; } = [];
+
+    /// <summary>
     /// Compares only the original positional values, excluding internal repair metadata.
     /// </summary>
     /// <param name="other">The value to compare with.</param>

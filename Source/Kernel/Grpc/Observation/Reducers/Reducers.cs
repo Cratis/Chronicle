@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -23,6 +24,7 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 
@@ -39,6 +41,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
@@ -46,6 +49,7 @@ internal sealed class Reducers(
     IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reducers> activitySource,
+    IOptions<ChronicleOptions> options,
     ILogger<Reducers> logger) : IReducers
 {
     /// <inheritdoc/>
@@ -210,7 +214,12 @@ internal sealed class Reducers(
                         }
                     }
 
-                    await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    await ClientSubscriptionKeeper.KeepWhileConnected(
+                        clientObserver!.KeepSubscription,
+                        TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                        registration.ConnectionId,
+                        logger,
+                        cancellationToken);
 
                     logger.Disconnected(
                         registration.Reducer.ReducerId,

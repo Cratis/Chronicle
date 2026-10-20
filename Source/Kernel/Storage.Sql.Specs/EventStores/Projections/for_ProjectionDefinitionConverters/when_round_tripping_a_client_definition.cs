@@ -20,11 +20,12 @@ public class when_round_tripping_a_client_definition : Specification
 
     async Task Because()
     {
-        var template = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single(definition => definition.Scope == ProjectionScope.Global);
+        var template = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single();
         var definition = template with
         {
             Owner = ProjectionOwner.Client,
             Identifier = "client-projection",
+            Scope = ProjectionScope.Global,
             FromEvery = template.FromEvery with { Key = "Category", AutoMap = AutoMap.Disabled },
             NoAutoMapProperties = null
         };

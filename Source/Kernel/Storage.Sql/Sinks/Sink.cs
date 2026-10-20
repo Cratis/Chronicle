@@ -62,6 +62,7 @@ public partial class Sink : ISink
     readonly IDatabase _database;
     readonly IExpandoObjectConverter _expandoObjectConverter;
     readonly JsonSchema _schema;
+    readonly IReadOnlyCollection<IndexDefinition> _indexes;
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
@@ -114,6 +115,7 @@ public partial class Sink : ISink
         _database = database;
         _expandoObjectConverter = expandoObjectConverter;
         _schema = readModel.GetSchemaForLatestGeneration();
+        _indexes = readModel.Indexes;
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
         _columns = ProjectedColumns.ForSchema(_schema);
@@ -320,6 +322,7 @@ public partial class Sink : ISink
         await NamePrimaryKeyAfterPrimaryTable();
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await PrepareInitialRun();
+        await EnsureIndexes();
         await BeginBulk();
     }
 
@@ -329,6 +332,7 @@ public partial class Sink : ISink
         // Re-enter replay mode after an interruption without wiping the replay table — it
         // already contains the work the previous run produced before it was paused.
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
+        await EnsureIndexes();
         await BeginBulk();
     }
 
@@ -402,9 +406,6 @@ public partial class Sink : ISink
     /// </summary>
     Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() =>
         _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
-
-    /// <inheritdoc/>
-    public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)

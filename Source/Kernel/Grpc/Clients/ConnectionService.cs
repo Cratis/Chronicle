@@ -51,14 +51,7 @@ internal sealed class ConnectionService(
         _ = Task.Run(
             async () =>
             {
-                await connectedClients.OnClientConnected(
-                    request.ConnectionId,
-                    request.ClientVersion,
-                    request.IsRunningWithDebugger,
-                    request.ProcessId,
-                    request.ProcessPath,
-                    request.MachineName,
-                    request.ClientType);
+                await Register(connectedClients, request);
 
                 try
                 {
@@ -79,6 +72,8 @@ internal sealed class ConnectionService(
                         {
                             break;
                         }
+
+                        await KeepRegistered(connectedClients, request);
 
                         subject.OnNext(new ConnectionKeepAlive
                         {
@@ -193,5 +188,45 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
+    }
+
+    static Task Register(IConnectedClients connectedClients, ConnectRequest request) =>
+        connectedClients.OnClientConnected(
+            request.ConnectionId,
+            request.ClientVersion,
+            request.IsRunningWithDebugger,
+            request.ProcessId,
+            request.ProcessPath,
+            request.MachineName,
+            request.ClientType);
+
+    /// <summary>
+    /// Registers the client again if its silo's registry no longer knows it while the connection is still open.
+    /// </summary>
+    /// <remarks>
+    /// The registry lives in a grain activation only. Orleans deactivates an activation when the silo owning its
+    /// directory entry leaves the cluster, and the new activation starts out knowing no client - so a client
+    /// connected to a surviving silo would otherwise be treated as gone by every observer it is subscribed to.
+    /// </remarks>
+    /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
+    /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request)
+    {
+        try
+        {
+            if (await connectedClients.IsConnected(request.ConnectionId))
+            {
+                return;
+            }
+
+            logger.RegisteringClientAgain(request.ConnectionId);
+            await Register(connectedClients, request);
+        }
+        catch (Exception ex)
+        {
+            // A silo that is still leaving the cluster can fail a call or two; the next keep-alive retries.
+            logger.FailedToKeepClientRegistered(request.ConnectionId, ex);
+        }
     }
 }

@@ -22,4 +22,16 @@ public interface IReactor : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Unsubscribe();
+
+    /// <summary>
+    /// Keep the subscription of the connected client in place, restoring it if the observer has lost it.
+    /// </summary>
+    /// <remarks>
+    /// The observer's subscription lives in its activation only, and an activation can be lost while the client stays
+    /// connected - with the silo hosting it, or when Orleans deactivates it because the silo owning its directory entry
+    /// left the cluster. The connection that registered the client calls this periodically for as long as it is open,
+    /// which is what puts the client back. A healthy check is one read-only call to the observer.
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    Task KeepSubscription();
 }

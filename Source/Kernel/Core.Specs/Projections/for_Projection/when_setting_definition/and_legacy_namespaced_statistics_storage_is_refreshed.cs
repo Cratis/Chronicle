@@ -17,7 +17,7 @@ using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Projections.for_Projection.when_setting_definition;
 
-public class and_legacy_statistics_storage_is_refreshed : Specification
+public class and_legacy_namespaced_statistics_storage_is_refreshed : Specification
 {
     readonly List<ProjectionDefinition> _saved = [];
     readonly List<int> _timers = [];
@@ -68,9 +68,9 @@ public class and_legacy_statistics_storage_is_refreshed : Specification
         }
     }
 
-    [Fact] void should_cover_both_statistics_projections() => _saved.Count.ShouldEqual(2);
+    [Fact] void should_refresh_only_the_namespaced_statistics_projection() => _saved.Count.ShouldEqual(1);
     [Fact] void should_save_the_lossless_definitions() => _saved.ShouldEachConformTo(definition => !definition.HasLegacyStorageFields);
-    [Fact] void should_restore_global_routing() => _saved.Select(definition => definition.Scope).ShouldContain(ProjectionScope.Global);
+    [Fact] void should_keep_namespaced_routing() => _saved.Select(definition => definition.Scope).ShouldContainOnly(ProjectionScope.Namespaced);
     [Fact] void should_persist_each_upgrade() => _stateStorages.ShouldEachConformTo(state => state.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(state.WriteStateAsync)) == 1);
     [Fact] void should_schedule_no_replay() => _timers.ShouldEachConformTo(count => count == 0);
     [Fact] void should_not_begin_evolution_in_any_namespace() => _namespaces.ShouldEachConformTo(namespaces => !namespaces.ReceivedCalls().Any());

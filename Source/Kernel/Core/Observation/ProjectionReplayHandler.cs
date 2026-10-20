@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
@@ -119,6 +120,11 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.Unknown;
             }
 
+            if (projection.Scope == ProjectionScope.Global)
+            {
+                throw new GlobalProjectionReplayNotSupported();
+            }
+
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             var failedPartitions = (await pipeline.EndBulk()).ToArray();
             await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
@@ -126,7 +132,7 @@ public class ProjectionReplayHandler(
                 ? ICanHandleReplayForObserver.Error.Unknown
                 : Result<ICanHandleReplayForObserver.Error>.Success();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not GlobalProjectionReplayNotSupported)
         {
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;
@@ -134,26 +140,12 @@ public class ProjectionReplayHandler(
     }
 
     /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition)
-    {
-        if (!CanHandle(observerDetails))
-        {
-            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-        }
-
-        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
-    }
+    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) =>
+        CheckPartitionReplay(observerDetails);
 
     /// <inheritdoc/>
-    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition)
-    {
-        if (!CanHandle(observerDetails))
-        {
-            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
-        }
-
-        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
-    }
+    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) =>
+        CheckPartitionReplay(observerDetails);
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
@@ -194,6 +186,28 @@ public class ProjectionReplayHandler(
             (await definitions.Get(observerDetails.Key.ObserverId.Value)).IsKernelOwned;
     }
 
+    async Task<Result<ICanHandleReplayForObserver.Error>> CheckPartitionReplay(ObserverDetails observerDetails)
+    {
+        await GlobalProjectionReplay.EnsureSupported(storage, observerDetails.Key, observerDetails.Type);
+        if (!CanHandle(observerDetails))
+        {
+            return Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle);
+        }
+
+        var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
+        if (projection is null)
+        {
+            return Result.Failed(ICanHandleReplayForObserver.Error.Unknown);
+        }
+
+        if (projection.Scope == ProjectionScope.Global)
+        {
+            throw new GlobalProjectionReplayNotSupported();
+        }
+
+        return Result<ICanHandleReplayForObserver.Error>.Success();
+    }
+
     async Task<Result<ICanHandleReplayForObserver.Error>> DoWorkOnPipeline(
         ObserverDetails observerDetails,
         Func<IProjection, Task<Result<ReplayContext, GetContextError>>> getContext,
@@ -214,6 +228,11 @@ public class ProjectionReplayHandler(
                 return ICanHandleReplayForObserver.Error.Unknown;
             }
 
+            if (projection.Scope == ProjectionScope.Global)
+            {
+                throw new GlobalProjectionReplayNotSupported();
+            }
+
             var getReplayContext = await getContext(projection);
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             if (getReplayContext.TryPickT1(out _, out var replayContext))
@@ -228,7 +247,7 @@ public class ProjectionReplayHandler(
 
             return await doWork(pipeline, projection, replayContext);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not GlobalProjectionReplayNotSupported)
         {
             logger.Failed(ex, observerDetails.Key.ObserverId, observerDetails.Type);
             return ICanHandleReplayForObserver.Error.Unknown;

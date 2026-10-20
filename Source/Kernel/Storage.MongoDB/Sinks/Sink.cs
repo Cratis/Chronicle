@@ -281,7 +281,7 @@ public class Sink(
             return [];
         }
 
-        var write = new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert);
+        var write = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
         if (!plan.UsesJoinTargetsOnlyFilter)
         {
             await UnsetNullParents(write, options);
@@ -993,6 +993,26 @@ public class Sink(
 
         var schema = readModel.GetSchemaForLatestGeneration();
         return documents.Select(document => expandoObjectConverter.ToExpandoObject(document, schema)).ToArray();
+    }
+
+    /// <summary>
+    /// Narrows a write positioned in an array by array filters to the documents holding that array. Against a document
+    /// without it — a root whose children were all removed, or one the write would upsert — MongoDB fails the whole update
+    /// with error 2 and the partition fails on every retry. Such a write is a no-op instead, exactly as when the array
+    /// exists and no element matches.
+    /// </summary>
+    /// <param name="write">The write to narrow.</param>
+    /// <returns>The narrowed write.</returns>
+    static UpdateWrite ScopeToExistingArrays(UpdateWrite write)
+    {
+        var requiredArrayPaths = write.Converted.RequiredArrayPaths;
+        if (requiredArrayPaths.Count == 0)
+        {
+            return write;
+        }
+
+        var filter = Builders<BsonDocument>.Filter.And([write.Filter, .. requiredArrayPaths.Select(path => Builders<BsonDocument>.Filter.Exists(path))]);
+        return write with { Filter = filter, IsUpsert = false };
     }
 
     static bool IsDirectKeyScopedChange(Change change) =>
