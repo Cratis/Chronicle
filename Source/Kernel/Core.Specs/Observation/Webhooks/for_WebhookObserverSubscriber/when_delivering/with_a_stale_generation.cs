@@ -28,7 +28,7 @@ public class with_a_stale_generation : Specification
     {
         var silo = new TestKitSilo();
         _mediator = Substitute.For<IWebhookMediator>();
-        _mediator.OnNext(Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>()).Returns(Cratis.Monads.Catch.Success());
+        _mediator.OnNext("store", Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>()).Returns(Cratis.Monads.Catch.Success());
         silo.AddService(_mediator);
         silo.AddService(Substitute.For<IOAuthClient>());
         silo.AddService(Substitute.For<IEncryption>());
@@ -52,6 +52,6 @@ public class with_a_stale_generation : Specification
 
     async Task Because() => _result = await _grain.OnNext(new Key("customer-1", ArrayIndexers.NoIndexers), [_event], new(null));
 
-    [Fact] async Task should_deliver_the_current_pin() => await _mediator.Received(1).OnNext(_definition.Target, Arg.Any<Key>(), Arg.Is<IEnumerable<AppendedEvent>>(_ => _.Single().Context.EventType == new EventType("customer", 1)), Arg.Any<string?>(), Arg.Any<TimeSpan?>());
+    [Fact] async Task should_deliver_the_current_pin() => await _mediator.Received(1).OnNext("store", _definition.Target, Arg.Any<Key>(), Arg.Is<IEnumerable<AppendedEvent>>(_ => _.Single().Context.EventType == new EventType("customer", 1)), Arg.Any<string?>(), Arg.Any<TimeSpan?>());
     [Fact] void should_acknowledge_the_delivered_event() => _result.LastSuccessfulObservation.ShouldEqual(_event.Context.SequenceNumber);
 }

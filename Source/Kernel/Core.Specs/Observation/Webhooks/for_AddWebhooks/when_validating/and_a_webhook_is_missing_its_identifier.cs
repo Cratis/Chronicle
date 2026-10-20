@@ -5,6 +5,7 @@ using Cratis.Arc.Commands;
 using Cratis.Arc.Testing.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,6 +21,9 @@ public class and_a_webhook_is_missing_its_identifier : Specification
         var storage = Substitute.For<IStorage>();
         storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
         _scenario.Services.AddSingleton(storage);
+        var policy = Substitute.For<IWebhookTargetPolicy>();
+        policy.Evaluate(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
+        _scenario.Services.AddSingleton(policy);
     }
 
     async Task Because() => _result = await _scenario.Validate(new AddWebhooks("some-event-store", [new WebhookDefinition { Identifier = string.Empty, EventSequenceId = "event-log" }]));

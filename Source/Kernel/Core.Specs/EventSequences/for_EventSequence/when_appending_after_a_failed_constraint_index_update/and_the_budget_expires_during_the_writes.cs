@@ -22,16 +22,16 @@ public class and_the_budget_expires_during_the_writes : given.an_event_sequence_
         await Seed(0);
         await Seed(1, _second, email: "other@example.com");
         _eventSequence.ConstraintIndexTimeProvider = _clock;
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 if (call.ArgAt<EventSourceId>(0) == _second && ++_secondWrites == 1)
                 {
                     _clock.Advance(TimeSpan.FromMilliseconds(4750));
-                    return Task.FromCanceled(call.ArgAt<CancellationToken>(5));
+                    return Task.FromCanceled(call.ArgAt<CancellationToken>(6));
                 }
                 if (call.ArgAt<EventSourceId>(0) != _second) _firstWrites++;
-                return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5));
+                return _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<Subject?>(5), call.ArgAt<CancellationToken>(6));
             });
     }
 

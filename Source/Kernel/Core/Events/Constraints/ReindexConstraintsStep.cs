@@ -52,6 +52,7 @@ public class ReindexConstraintsStep(
     /// <param name="validator">The <see cref="UniqueConstraintValidator"/> that updates the index.</param>
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
     /// <param name="beforeWrite">Called before the first write to a scope.</param>
+    /// <param name="personalProperties">The event's top-level properties that carry personal data.</param>
     /// <returns>Awaitable task.</returns>
     internal static async Task ReindexEvent(
         UniqueConstraintDefinition definition,
@@ -60,7 +61,8 @@ public class ReindexConstraintsStep(
         HashSet<(EventSourceId EventSourceId, string ScopeKey)> seen,
         UniqueConstraintValidator validator,
         IUniqueConstraintsStorage uniqueConstraintsStorage,
-        Action? beforeWrite = null)
+        Action? beforeWrite = null,
+        IReadOnlyCollection<string>? personalProperties = null)
     {
         var scopeKey = definition.Scope.BuildScopeKey(
             @event.Context.EventSourceType,
@@ -76,14 +78,7 @@ public class ReindexConstraintsStep(
             await uniqueConstraintsStorage.ClearValues(definition, scopeKey);
         }
 
-        var context = new ConstraintValidationContext(
-            [validator],
-            @event.Context.EventSourceId,
-            @event.Context.EventType.Id,
-            content,
-            @event.Context.EventSourceType,
-            @event.Context.EventStreamType,
-            @event.Context.EventStreamId);
+        var context = ConstraintPersonalData.ContextFor(@event, content, personalProperties ?? [], [validator]);
 
         // A value-carrying event whose covered property released to an empty value means the subject's
         // encryption key was erased (GDPR right-to-erasure) and the plaintext is permanently unreadable.
@@ -234,19 +229,20 @@ public class ReindexConstraintsStep(
                 // plaintext; reindexing must match it or a rebuilt PII index would diverge from new appends.
                 var content = await storedContent.Release(@event, cancellationToken);
                 closingReindexer.Include(@event, content);
-                await ReindexDefinitions(tracking, @event, content);
+                var personalProperties = await storedContent.PersonalPropertiesOf(@event, cancellationToken);
+                await ReindexDefinitions(tracking, @event, content, personalProperties);
                 tracking.Progress.ProcessedThrough = @event.Context.SequenceNumber;
             }
         }
     }
 
-    async Task ReindexDefinitions(RebuildTracking tracking, AppendedEvent @event, ExpandoObject content)
+    async Task ReindexDefinitions(RebuildTracking tracking, AppendedEvent @event, ExpandoObject content, IReadOnlyCollection<string> personalProperties)
     {
         foreach (var definition in tracking.Definitions)
         {
             try
             {
-                await ReindexEvent(definition, @event, content, tracking.Seen[definition.Name], tracking.Validators[definition.Name], tracking.Storage, () => tracking.Progress.WroteAnything = true);
+                await ReindexEvent(definition, @event, content, tracking.Seen[definition.Name], tracking.Validators[definition.Name], tracking.Storage, () => tracking.Progress.WroteAnything = true, personalProperties);
             }
             catch (DuplicateUniqueConstraintValue error)
             {

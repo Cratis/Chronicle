@@ -22,4 +22,9 @@ public class UniqueConstraintValueEntry
     /// Gets or sets the sequence number of the claim.
     /// </summary>
     public decimal SequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject whose personal data the value derives from, or null when it holds none.
+    /// </summary>
+    public string? Subject { get; set; }
 }

@@ -42,7 +42,9 @@ public class and_building_the_validators_fails : given.an_event_sequence
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(callInfo => new ConstraintValidationContext(
                 [rejectingValidator],
                 callInfo.ArgAt<EventSourceId>(0),

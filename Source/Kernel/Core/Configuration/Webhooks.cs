@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation.Webhooks.Validation;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -8,6 +10,26 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Webhooks
 {
+    /// <summary>
+    /// Gets the validation rollout mode. Enforce will become the default in the next major release.
+    /// </summary>
+    public WebhookValidationMode Validation { get; init; } = WebhookValidationMode.Warn;
+
+    /// <summary>
+    /// Gets whether HTTP is allowed in Development. Ignored outside Development.
+    /// </summary>
+    public bool AllowInsecureHttp { get; init; }
+
+    /// <summary>
+    /// Gets the global host allow-list, with exact hosts or wildcard subdomains such as *.example.com.
+    /// </summary>
+    public IEnumerable<string> AllowedHosts { get; init; } = [];
+
+    /// <summary>
+    /// Gets host allow-lists keyed by event-store name. An entry replaces, rather than extends, the global list.
+    /// </summary>
+    public IReadOnlyDictionary<string, string[]> EventStoreAllowedHosts { get; init; } = new Dictionary<string, string[]>();
+
     /// <summary>
     /// Gets the delay in seconds used as the base for the exponential backoff between webhook delivery retries.
     /// </summary>
