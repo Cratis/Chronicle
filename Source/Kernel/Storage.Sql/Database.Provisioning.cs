@@ -184,6 +184,16 @@ public partial class Database
                     // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
                     // The database cannot be locked before it exists, so this is the only guard creation has across processes.
                 }
+                catch (Exception ex) when (IsTransientCreationTimeout(ex))
+                {
+                    // SQL Server's ALTER DATABASE SET READ_COMMITTED_SNAPSHOT ON, issued right after CREATE DATABASE, can
+                    // block on a sibling kernel's connection to the database just created and time out rather than fail
+                    // with "already exists". The database exists by then regardless; only rethrow if it somehow does not.
+                    if (!await creator.ExistsAsync())
+                    {
+                        throw;
+                    }
+                }
 
                 if (context.Database.GetDbConnection() is SqlConnection connection)
                 {

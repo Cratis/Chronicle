@@ -526,6 +526,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
 
+    static bool IsTransientCreationTimeout(Exception? ex) => SchemaObjectCreationTimedOut.Is(ex);
+
 #if DEVELOPMENT
     async Task<string[]> BoundDatabases()
     {
