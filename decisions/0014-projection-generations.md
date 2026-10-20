@@ -47,7 +47,7 @@ The source baseline is `fb5968a46ab962af4c50bfd0c1387b933d04aec1`:
 
 ## Decision
 
-Give projections and reducers immutable revisions and independently materialized generations, publish one Active generation through an authoritative binding, and resolve reads explicitly against that binding or a retained generation pin. Keep the feature opt-in and default off; enable only complete, proven capability slices under decisions 0016 and 0017, without changing disabled-mode legacy contracts.
+Give projections and reducers immutable revisions and independently materialized generations, publish one Active generation through an authoritative binding, and resolve reads explicitly against that binding or a retained generation pin. Keep the feature opt-in and default off; enable only complete, proven capability slices under decisions 0016 and 0017, without changing legacy contracts for event stores that have never been initialized for generations. An initialized store stays binding-governed even if the flag is later turned off (decision 0017).
 
 ### Identity and execution isolation
 
@@ -123,7 +123,7 @@ Default enabled retention is one following Retired generation for 24 hours and o
 
 Rollback uses the same publication protocol to a currently proven Retired target. Archived/unknown occurrences need a new catch-up/rebuild lineage. Force may waive only a defined failed-partition policy, never coverage, ownership, drain, membership, history validity or interpretation compatibility. Retention pins delay physical removal, not erasure enforcement.
 
-Once enabled, legacy full Replay admits a new repair generation at the Active execution revision selected at admission, not a pending desired-definition candidate. Publish it through the same binding protocol, preserve JobId/NotSet and existing job completion meaning, and complete only after repair is served; do not insert evolution-approval waiting. Original generation pins remain where they were. Explicit partition replay needs shadow/adoption proof or clear refusal; disabled-mode legacy behavior remains except independent safety fixes. Decision 0017 specifies concurrency and recovery.
+Once enabled, legacy full Replay admits a new repair generation at the Active execution revision selected at admission, not a pending desired-definition candidate. Publish it through the same binding protocol, preserve JobId/NotSet and existing job completion meaning, and complete only after repair is served; do not insert evolution-approval waiting. Original generation pins remain where they were. Explicit partition replay needs shadow/adoption proof or clear refusal; never-initialized stores keep legacy behavior except independent safety fixes. Decision 0017 specifies concurrency and recovery.
 
 Coverage includes a source-history revision/invalidation fence, not only a sequence frontier. Revision/redaction below that frontier invalidates or repairs every affected readable/following generation, including in-flight builds. Erasure dominates rollback and read availability: repair affected generations or make them unreadable/delete them according to policy; fail closed until compliant. Neither slow publication, retained snapshots, restore nor pinned access may resurrect erased data.
 
@@ -164,7 +164,7 @@ Acceptance settles the product choices, not runtime readiness. Keep generations 
 
 ## Timeline and scope
 
-Ship generations as an additive, default-off minor capability with unchanged disabled-mode APIs, version ordering, replay completion and reads. Default-on behavior, mandatory approval or forced reader conversion waits for a future major. Basic binding/pin safety, exact reducer execution when advertised, provenance and downgrade safety are not deferrable. Partial evolution, advanced selectors/gates and acceleration may follow after individual proof. Reactor version changes retain single delivery ownership/stable delivery identity and at-least-once retries, not dual following-generation execution or exactly-once external effects.
+Ship generations as an additive, default-off minor capability with unchanged APIs, version ordering, replay completion and reads for event stores that have never been initialized for generations. Default-on behavior, mandatory approval or forced reader conversion waits for a future major. Basic binding/pin safety, exact reducer execution when advertised, provenance and downgrade safety are not deferrable. Partial evolution, advanced selectors/gates and acceleration may follow after individual proof. Reactor version changes retain single delivery ownership/stable delivery identity and at-least-once retries, not dual following-generation execution or exactly-once external effects.
 
 Implementation sequencing and release tracking belong to [epic #5155](https://github.com/Cratis/Chronicle/issues/5155). Shared-global materialization stays restricted under decision 0015 until coordinated ownership, deterministic input semantics and provider exclusion are proven.
 
