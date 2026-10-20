@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -13,10 +14,12 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// Represents a job for retrying a failed partition.
 /// </summary>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/>.</param>
+/// <param name="storage"><see cref="IStorage"/> for reading the persisted projection definition on resume.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
 public class ReplayObserverPartition(
     IObserverServiceClient replayStateServiceClient,
+    IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
@@ -27,10 +30,13 @@ public class ReplayObserverPartition(
     }
 
     /// <inheritdoc/>
-    protected override async Task OnBeforeResumingJobSteps()
-    {
-        await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
-    }
+    /// <remarks>
+    /// Only the admission check is repeated: a persisted partition replay of a projection whose stored definition is
+    /// globally scoped must not continue writing into the shared sink. The replay itself is not begun again, so
+    /// reactors and reducers are not told twice that their partition replay started.
+    /// </remarks>
+    protected override Task OnBeforeResumingJobSteps() =>
+        GlobalProjectionReplay.EnsureSupported(storage, Request.ObserverKey, Request.ObserverType);
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
