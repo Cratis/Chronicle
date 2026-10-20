@@ -13,6 +13,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public class ArrayFilters : IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>>
 {
     readonly HashSet<BsonDocumentArrayFilterDefinition<BsonDocument>> _filters = new(new ArrayFiltersEqualityComparer());
+    readonly HashSet<string> _arrayPaths = [];
+
+    /// <summary>
+    /// Gets the top-level array paths the filtered properties are positioned in. MongoDB rejects an update whose array
+    /// filters address a path the document does not have (error 2), so a write carrying these filters only applies to a
+    /// document that holds every one of them.
+    /// </summary>
+    public IReadOnlyCollection<string> ArrayPaths => _arrayPaths;
 
     /// <summary>
     /// Adds a single <see cref="BsonDocumentArrayFilterDefinition{T}"/> filter.
@@ -30,6 +38,28 @@ public class ArrayFilters : IEnumerable<BsonDocumentArrayFilterDefinition<BsonDo
         {
             Add(filter);
         }
+    }
+
+    /// <summary>
+    /// Adds the filters for a property and records the top-level array path the property is positioned in.
+    /// </summary>
+    /// <param name="property">The MongoDB property the filters position, such as applications.$[a].name.</param>
+    /// <param name="filters">The filters to add.</param>
+    public void AddRange(string property, IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>> filters)
+    {
+        var filtersForProperty = filters.ToArray();
+        if (filtersForProperty.Length == 0)
+        {
+            return;
+        }
+
+        var markerIndex = property.IndexOf(".$[", StringComparison.Ordinal);
+        if (markerIndex > 0)
+        {
+            _arrayPaths.Add(property[..markerIndex]);
+        }
+
+        AddRange(filtersForProperty);
     }
 
     /// <inheritdoc/>
