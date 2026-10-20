@@ -51,20 +51,30 @@ public class EventResultHandler : IReactorSideEffectHandler
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var eventSourceId = reactorContext.GetEventSourceId();
-        var result = await eventStore.EventLog.Append(
-            eventSourceId,
-            value,
-            reactorContext.GetEventStreamType(),
-            reactorContext.GetEventStreamId(),
-            reactorContext.GetEventSourceType(),
-            subject: reactorContext.GetSubject());
+        var key = ReactorEffectKeys.ForReturned(reactorContext, eventStore, 0);
+        var result = key is null
+            ? await eventStore.EventLog.Append(
+                eventSourceId,
+                value,
+                reactorContext.GetEventStreamType(),
+                reactorContext.GetEventStreamId(),
+                reactorContext.GetEventSourceType(),
+                subject: reactorContext.GetSubject())
+            : await eventStore.EventLog.AppendOnce(
+                eventSourceId,
+                value,
+                key,
+                reactorContext.GetEventStreamType(),
+                reactorContext.GetEventStreamId(),
+                reactorContext.GetEventSourceType(),
+                subject: reactorContext.GetSubject());
 
         if (result.IsSuccess)
         {
             return Result.Success<ReactorSideEffectFailure>();
         }
 
-        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId]));
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId], reactorContext));
     }
 
     IEventTypes EventTypesFor(ReactorContext reactorContext) =>

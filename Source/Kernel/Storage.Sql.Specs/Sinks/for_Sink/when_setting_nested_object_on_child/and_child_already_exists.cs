@@ -210,7 +210,7 @@ public class and_child_already_exists : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());

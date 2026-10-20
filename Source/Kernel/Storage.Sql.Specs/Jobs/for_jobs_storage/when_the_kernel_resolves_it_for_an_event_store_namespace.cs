@@ -76,7 +76,7 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
         // through Arc, and concept support added on top.
         var builder = new DbContextOptionsBuilder<JobsDbContext>();
         builder.UseDatabaseFromConnectionString($"Data Source={_databaseFile}");
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return builder.Options;
     }
 
