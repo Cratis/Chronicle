@@ -41,14 +41,25 @@ public class a_connected_client : Specification
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
+            new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
             options);
     }
 
     void Destroy() => _subscription?.Dispose();
 
-    protected void Connect() =>
-        _subscription = _connectionService.Connect(new ConnectRequest { ConnectionId = TheConnection }).Subscribe(_ => { });
+    protected void Connect(bool isRunningWithDebugger = false) =>
+        _subscription = _connectionService
+            .Connect(new ConnectRequest { ConnectionId = TheConnection, IsRunningWithDebugger = isRunningWithDebugger })
+            .Subscribe(_ => { });
+
+    protected async Task ConnectAndWaitForRegistration(bool isRunningWithDebugger = false)
+    {
+        Connect(isRunningWithDebugger);
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientConnected)) >= 1);
+    }
+
+    protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 
     protected async Task WaitUntil(Func<bool> condition)
     {
@@ -61,6 +72,9 @@ public class a_connected_client : Specification
 
     protected int CallsTo(string methodName) =>
         _connectedClients.ReceivedCalls().Count(call => call.GetMethodInfo().Name == methodName);
+
+    protected Task WasRestored(int times) =>
+        _connectedClients.Received(times).OnClientRestored(new ConnectionId(TheConnection), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
 
     protected Task WasRegistered(int times) =>
         _connectedClients.Received(times).OnClientConnected(new ConnectionId(TheConnection), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());

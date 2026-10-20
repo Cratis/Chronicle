@@ -19,9 +19,9 @@ public class and_checking_the_registry_fails : given.a_connected_client
 
     async Task Because()
     {
-        Connect();
-        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientConnected)) >= 2);
+        Connect(isRunningWithDebugger: true);
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientRestored)) >= 1);
     }
 
-    [Fact] Task should_check_again_at_the_next_keep_alive() => WasRegistered(2);
+    [Fact] Task should_check_again_at_the_next_keep_alive() => WasRestored(1);
 }

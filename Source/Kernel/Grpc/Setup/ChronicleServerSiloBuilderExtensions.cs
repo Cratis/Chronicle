@@ -78,6 +78,7 @@ public static class ChronicleServerSiloBuilderExtensions
             });
         });
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
@@ -190,6 +191,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     sp.GetRequiredService<ILocalSiloDetails>(),
                     sp.GetRequiredService<Cratis.Chronicle.Clients.ConnectedClientsQuery>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Services.Clients.OpenConnections>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp));
