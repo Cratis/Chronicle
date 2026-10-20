@@ -24,7 +24,7 @@ public class a_cancellable_delivery : a_webhook_mediator
         {
             try
             {
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(cancellationToken);
                 return new(System.Net.HttpStatusCode.OK);
             }
             finally

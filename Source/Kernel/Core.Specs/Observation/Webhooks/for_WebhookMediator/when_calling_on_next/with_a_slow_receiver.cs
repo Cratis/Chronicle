@@ -14,6 +14,7 @@ public class with_a_slow_receiver : given.a_webhook_mediator
     SlowReceiver _receiver;
     WebhookTarget _target;
     int _activeWhenTimeoutReturned;
+    bool _returnedBeforeCleanup;
     Task _delivery = Task.CompletedTask;
 
     void Establish()
@@ -49,12 +50,23 @@ public class with_a_slow_receiver : given.a_webhook_mediator
 
     async Task Because()
     {
-        await Catch.Exception(() => _subscriber.OnNextWithin(TimeSpan.FromMilliseconds(100), "partition", [], new(null)));
+        var delivery = Catch.Exception(() => _subscriber.OnNextWithin(TimeSpan.FromMilliseconds(100), "partition", [], new(null)));
+        try
+        {
+            await _receiver.CancellationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            _returnedBeforeCleanup = delivery.IsCompleted;
+        }
+        finally
+        {
+            _receiver.ReleaseCleanup.TrySetResult();
+        }
+        await delivery;
         _activeWhenTimeoutReturned = _receiver.Active;
         await Catch.Exception(() => _subscriber.OnNextWithin(TimeSpan.FromMilliseconds(100), "partition", [], new(null)));
         await _receiver.Finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
+    [Fact] void should_wait_for_cancellation_cleanup() => _returnedBeforeCleanup.ShouldBeFalse();
     [Fact] void should_cancel_and_drain_before_returning() => _activeWhenTimeoutReturned.ShouldEqual(0);
     [Fact] void should_never_overlap_the_retry() => _receiver.Peak.ShouldEqual(1);
     [Fact] void should_cancel_the_http_request() => _receiver.Cancelled.ShouldEqual(2);
@@ -65,6 +77,8 @@ public class with_a_slow_receiver : given.a_webhook_mediator
         public int Peak;
         public int Cancelled;
         public TaskCompletionSource Finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource CancellationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReleaseCleanup = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int _completed;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -72,7 +86,7 @@ public class with_a_slow_receiver : given.a_webhook_mediator
             Peak = Math.Max(Peak, Interlocked.Increment(ref Active));
             try
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(600), cancellationToken);
+                await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(cancellationToken);
                 return new(HttpStatusCode.OK);
             }
             catch (OperationCanceledException)
@@ -83,7 +97,8 @@ public class with_a_slow_receiver : given.a_webhook_mediator
             finally
             {
                 // Cancellation must finish unwinding before a retry may enter the handler.
-                await Task.Delay(10);
+                CancellationStarted.TrySetResult();
+                await ReleaseCleanup.Task;
                 Interlocked.Decrement(ref Active);
                 if (Interlocked.Increment(ref _completed) == 2) Finished.TrySetResult();
             }

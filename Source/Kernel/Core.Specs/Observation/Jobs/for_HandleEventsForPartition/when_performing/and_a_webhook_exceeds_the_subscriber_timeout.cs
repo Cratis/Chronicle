@@ -27,7 +27,7 @@ public class and_a_webhook_exceeds_the_subscriber_timeout : given.a_performing_j
                 _calls++;
                 try
                 {
-                    await Task.Delay(Timeout.InfiniteTimeSpan, TimeProvider.System, call.Arg<CancellationToken>());
+                    await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(call.Arg<CancellationToken>());
                     return ObserverSubscriberResult.Ok(EventSequenceNumber.First);
                 }
                 finally

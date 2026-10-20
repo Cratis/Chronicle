@@ -561,12 +561,13 @@ public class HandleEventsForPartition(
         }
     }
 
-    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition) =>
-        subscription.GetSubscriberKeyFor(
-            partition,
-            typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
-                ? SiloAddress.Zero
-                : subscriberSelector.Select(subscription, partition).SiloAddress);
+    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
+    {
+        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+            ? SiloAddress.Zero
+            : subscriberSelector.Select(subscription, partition).SiloAddress;
+        return subscription.GetSubscriberKeyFor(partition, siloAddress);
+    }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);

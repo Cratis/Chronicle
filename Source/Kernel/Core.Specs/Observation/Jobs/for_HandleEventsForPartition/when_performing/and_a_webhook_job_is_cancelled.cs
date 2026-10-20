@@ -27,7 +27,7 @@ public class and_a_webhook_job_is_cancelled : given.a_performing_job_step
                 _calls++;
                 try
                 {
-                    await Task.Delay(Timeout.InfiniteTimeSpan, TimeProvider.System, call.Arg<CancellationToken>());
+                    await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(call.Arg<CancellationToken>());
                     return ObserverSubscriberResult.Ok(EventSequenceNumber.First);
                 }
                 finally
