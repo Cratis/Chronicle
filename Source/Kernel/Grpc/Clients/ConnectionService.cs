@@ -121,12 +121,20 @@ internal sealed class ConnectionService(
     /// <inheritdoc/>
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
-        var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
-        var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
-
-        if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, DateTimeOffset.UtcNow, _lapse, out var request))
+        var respondedAt = DateTimeOffset.UtcNow;
+        try
         {
-            await Restore(connectedClients, request);
+            var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+            var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
+
+            if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
+            {
+                await Restore(connectedClients, request);
+            }
+        }
+        finally
+        {
+            openConnections.Handled(keepAlive.ConnectionId, DateTimeOffset.UtcNow);
         }
     }
 

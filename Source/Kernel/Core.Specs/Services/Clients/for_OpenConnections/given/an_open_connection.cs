@@ -24,7 +24,14 @@ public class an_open_connection : Specification
     protected bool Responded(bool registryKnowsClient, TimeSpan after) => Responded(registryKnowsClient, after, out _);
 
     protected bool Responded(bool registryKnowsClient, TimeSpan after, out ConnectRequest? restoreFrom) =>
-        _connections.Responded(new ConnectionId(TheConnection), registryKnowsClient, _openedAt + after, _lapse, out restoreFrom);
+        Responded(registryKnowsClient, after, handledAfter: after, out restoreFrom);
+
+    protected bool Responded(bool registryKnowsClient, TimeSpan after, TimeSpan handledAfter, out ConnectRequest? restoreFrom)
+    {
+        var restore = _connections.Responded(new ConnectionId(TheConnection), registryKnowsClient, _openedAt + after, _lapse, out restoreFrom);
+        _connections.Handled(new ConnectionId(TheConnection), _openedAt + handledAfter);
+        return restore;
+    }
 
     protected void Close() => _connections.Closed(new ConnectionId(TheConnection));
 }

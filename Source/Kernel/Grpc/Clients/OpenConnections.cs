@@ -20,6 +20,11 @@ namespace Cratis.Chronicle.Services.Clients;
 /// put back. A client that stopped responding stays dropped, even if it starts responding again.
 /// </para>
 /// <para>
+/// A gap is measured from when the previous response was handled, not from when it arrived. The client waits for each
+/// response to be handled before it can send the next, so time the server spends handling one - a registry call held up
+/// while a silo leaves the cluster - is the server's delay, not the client's silence.
+/// </para>
+/// <para>
 /// Shared by every call on the silo: the connection is opened by one call and the client responds through others.
 /// </para>
 /// </remarks>
@@ -41,11 +46,24 @@ internal sealed class OpenConnections
     public void Closed(ConnectionId connectionId) => _connections.TryRemove(connectionId, out _);
 
     /// <summary>
+    /// Record that a response from the client was handled, which is when the client can send its next one.
+    /// </summary>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> the client responded on.</param>
+    /// <param name="at">When the response was handled.</param>
+    public void Handled(ConnectionId connectionId, DateTimeOffset at)
+    {
+        if (_connections.TryGetValue(connectionId, out var connection))
+        {
+            connection.Handled(at);
+        }
+    }
+
+    /// <summary>
     /// Record that the client responded to a keep-alive, and decide whether the registry should get it back.
     /// </summary>
     /// <param name="connectionId">The <see cref="ConnectionId"/> the client responded on.</param>
     /// <param name="registryKnowsClient">Whether the registry of connected clients knew the client when it responded.</param>
-    /// <param name="at">When the client responded.</param>
+    /// <param name="at">When the response arrived.</param>
     /// <param name="lapse">The longest gap between responses that cannot have got the client dropped as stale.</param>
     /// <param name="request">The <see cref="ConnectRequest"/> to restore the client from, when it should be restored.</param>
     /// <returns>True if the registry lost a client that is open here and has kept responding; false otherwise.</returns>
@@ -74,17 +92,24 @@ internal sealed class OpenConnections
     sealed class OpenConnection(ConnectRequest request, DateTimeOffset openedAt)
     {
         readonly Lock _lock = new();
-        DateTimeOffset _lastResponse = openedAt;
+        DateTimeOffset _lastHandled = openedAt;
         bool _lapsed;
 
         public ConnectRequest Request { get; } = request;
+
+        public void Handled(DateTimeOffset at)
+        {
+            lock (_lock)
+            {
+                _lastHandled = at;
+            }
+        }
 
         public bool Responded(bool registryKnowsClient, DateTimeOffset at, TimeSpan lapse)
         {
             lock (_lock)
             {
-                var gap = at - _lastResponse;
-                _lastResponse = at;
+                var gap = at - _lastHandled;
 
                 // The registry still holding the client settles it: whatever the gap, it was not dropped.
                 if (registryKnowsClient)
