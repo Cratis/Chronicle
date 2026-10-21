@@ -43,6 +43,11 @@ public class HandleEventsForObserverState : JobStepState
     public IEnumerable<EventType> EventTypes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the <see cref="ObserverReaderScope"/> the step reads with. Null for a step persisted before steps carried a scope.
+    /// </summary>
+    public ObserverReaderScope? ReaderScope { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether events belonging to a partition the observer has already recorded
     /// as failed are skipped rather than delivered.
     /// </summary>

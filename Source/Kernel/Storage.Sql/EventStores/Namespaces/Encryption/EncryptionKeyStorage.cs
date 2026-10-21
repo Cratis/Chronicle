@@ -47,9 +47,24 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
-        StoredEncryptionKey key)
+        StoredEncryptionKey key) =>
+        (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
+        var entity = await scope.DbContext.EncryptionKeys
+            .Where(e => e.Identifier == identifier.Value)
+            .OrderByDescending(e => e.Revision)
+            .FirstOrDefaultAsync();
+        return entity is null ? null : new(new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey), entity.Revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, StoredEncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
             return existing;
         }
@@ -66,14 +81,16 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
                 PrivateKey = key.Private
             });
             await scope.DbContext.SaveChangesAsync();
-            return key;
+            return new(key, revision);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
-            // Another provisioner inserted the same revision first (primary key violation on
-            // Identifier + Revision). Converge on the persisted key so every writer encrypts under the same one.
-            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-            return winner ?? key;
+            // Another provisioner inserted the same revision first (primary key violation on Identifier + Revision).
+            // Converge on the persisted key so every writer encrypts under the same one. Any other write failure
+            // propagates: nothing was persisted, so the candidate must never be handed back.
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+                ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            return new(winner, revision);
         }
     }
 

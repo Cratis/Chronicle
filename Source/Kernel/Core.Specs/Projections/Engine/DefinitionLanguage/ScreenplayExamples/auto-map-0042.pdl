@@ -1,0 +1,4 @@
+projection User => UserReadModel
+  every
+    no automap
+    LastUpdated = $eventContext.occurred

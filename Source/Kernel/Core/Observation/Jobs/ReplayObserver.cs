@@ -28,6 +28,39 @@ public class ReplayObserver(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
+    /// <summary>
+    /// The number of times the observer is notified that the replay concluded before it is left to the observer's watchdog.
+    /// </summary>
+    internal const int MaximumNotificationAttempts = 5;
+
+    /// <summary>
+    /// The number of partition steps a replay keeps active at once.
+    /// </summary>
+    /// <remarks>
+    /// Every step reports its progress to the one observer grain, which answers one call at a time. A step per
+    /// partition started all at once - thousands of them - queued those calls past the response timeout, and every
+    /// timeout made another. The window is what that one grain can serve, not what the silos could run.
+    /// </remarks>
+    internal const int ActiveStepWindow = 16;
+
+    /// <summary>
+    /// Gets the notification of the observer that the replay concluded, once the job has concluded.
+    /// </summary>
+    /// <remarks>
+    /// It is not awaited from the job's own turn - the observer's replay may still be waiting on this job - so it is
+    /// kept here to be observed instead of being dropped. It retries, and a notification that still cannot be delivered
+    /// is left for the observer's watchdog, which finds a replaying observer with no replay job and routes it again.
+    /// </remarks>
+    internal Task CompletionNotification { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Gets or sets how long to wait before notifying the observer again after it did not take the notification.
+    /// </summary>
+    internal TimeSpan NotificationRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <inheritdoc/>
+    protected override int? MaxActiveSteps => ActiveStepWindow;
+
     /// <inheritdoc/>
     /// <remarks>
     /// A definition change replays through Subscribe, and behind Subscribe sits the client's registration call with
@@ -55,12 +88,21 @@ public class ReplayObserver(
                         EventSequenceNumber.First,
                         EventSequenceNumber.Max,
                         EventObservationState.Replay,
-                        request.EventTypes))
+                        request.EventTypes)
+                    {
+                        ReaderScope = request.ReaderScope
+                    })
             ];
         }
 
-        var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
+        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
+        var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
+
+        // Legacy key enumeration used the stored definition at preparation time, not the request's types.
+        var readerScope = request.ReaderScope ?? ObserverReaderScope.For(
+            false,
+            (await eventStoreStorage.Observers.Get(request.ObserverKey.ObserverId)).EventTypes);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey, readerScope);
 
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
@@ -76,7 +118,10 @@ public class ReplayObserver(
                     EventSequenceNumber.First,
                     EventSequenceNumber.Max,
                     EventObservationState.Replay,
-                    request.EventTypes));
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                });
             steps.Add(step);
             if (failedKeys.Contains(key))
             {
@@ -107,6 +152,12 @@ public class ReplayObserver(
     /// </remarks>
     protected override async Task<bool> CanResume()
     {
+        // A job without a request was never persisted, or has been removed since it was found; there is nothing to resume.
+        if (State.Request is null)
+        {
+            return false;
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed())
         {
@@ -153,8 +204,17 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    /// <remarks>
+    /// A step that timed out is run again - the callee was too busy, which says nothing about the events - and the
+    /// partition is reported as failed only when the attempts are used up.
+    /// </remarks>
+    protected override bool ShouldRetryStep(JobStepId stepId, JobStepResult result, int attempt) =>
+        TransientTimeouts.ShouldRetry(result, attempt, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
         if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
             handled?.LastHandledEventSequenceNumber.IsActualValue == true)
@@ -177,8 +237,6 @@ public class ReplayObserver(
             var percentComplete = (double)completedSteps / progress.TotalSteps * 100;
             logger.ReplayProgress(completedSteps, progress.TotalSteps, percentComplete, State.LastHandledEventSequenceNumber);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -200,7 +258,7 @@ public class ReplayObserver(
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
         // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
-        _ = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
+        CompletionNotification = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
@@ -259,8 +317,8 @@ public class ReplayObserver(
         }
 
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
-        // Observe faults so a failed completion is logged rather than silently reported as success.
-        _ = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
+        // The notification is kept and retried rather than dropped, so a failed one is not silently lost.
+        CompletionNotification = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -293,20 +351,31 @@ public class ReplayObserver(
 
     async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        try
+        for (var attempt = 1; ; attempt++)
         {
-            if (canResolve)
+            try
             {
-                await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
+                if (canResolve)
+                {
+                    await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
+                }
+                else
+                {
+                    await observer.Replayed(lastHandledEventSequenceNumber);
+                }
+
+                return;
             }
-            else
+            catch (Exception exception)
             {
-                await observer.Replayed(lastHandledEventSequenceNumber);
+                logger.ReplayCompletionNotificationFailed(exception);
+                if (attempt >= MaximumNotificationAttempts)
+                {
+                    return;
+                }
             }
-        }
-        catch (Exception exception)
-        {
-            logger.ReplayCompletionNotificationFailed(exception);
+
+            await Task.Delay(NotificationRetryDelay);
         }
     }
 

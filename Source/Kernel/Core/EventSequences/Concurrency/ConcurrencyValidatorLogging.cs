@@ -13,4 +13,7 @@ internal static partial class ConcurrencyValidatorLogging
 {
     [LoggerMessage(LogLevel.Debug, "Skipping the concurrency check for event source '{EventSourceId}' - the append declared a concurrency scope that carries no expected sequence number, so there is nothing to compare against and the append proceeds unchecked")]
     internal static partial void SkippingIncompleteConcurrencyScope(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId);
+
+    [LoggerMessage(LogLevel.Warning, "Could not read the first conflicting event for the concurrency violation on event source '{EventSourceId}' - the violation is reported without it")]
+    internal static partial void CouldNotReadConflictingEvent(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId, Exception exception);
 }

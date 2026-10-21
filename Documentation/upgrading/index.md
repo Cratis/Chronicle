@@ -36,6 +36,18 @@ that anything was broken, and it does not mean every surface changed. Read the g
 the version you are moving to before planning work.
 :::
 
+## Exact decimals and precise event schemas
+
+Upgrade the kernel before expecting the .NET client to register precise schemas for defaulted
+concept properties. The client negotiates this support and retains its legacy event schema against
+older kernels. Adding PII or encryption metadata affects only subsequent appends; review and
+[redact historical plaintext](../events/redaction.mdx) if necessary.
+
+Replay existing SQL read models that carry decimal properties before relying on the new decimal
+column mapping. The migrator does not alter their existing columns in place. See
+[Exact decimal values](../events/schema-representation.mdx#exact-decimal-values) for provider mappings, legacy doubles and the
+SQL Server scale limit.
+
 ## Guides
 
 Start with [Every major version](major-versions.md). It has one entry per major boundary —

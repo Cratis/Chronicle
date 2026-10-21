@@ -12,16 +12,37 @@ namespace Cratis.Chronicle.Reactors;
 /// Represents an implementation of <see cref="IReactorMethodArgumentsResolver"/>.
 /// </summary>
 [Singleton]
-public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
+public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver, IRegisteredReactorMethodArgumentsResolver
 {
     /// <inheritdoc/>
-    public async Task<object?[]> Resolve(
+    public Task<object?[]> Resolve(
         MethodInfo method,
         object reactor,
         object @event,
         EventContext eventContext,
         IEventStore? eventStore,
-        IServiceProvider? serviceProvider)
+        IServiceProvider? serviceProvider) =>
+        Resolve(method, reactor, @event, eventContext, eventStore, serviceProvider, null);
+
+    /// <inheritdoc/>
+    Task<object?[]> IRegisteredReactorMethodArgumentsResolver.Resolve(
+        MethodInfo method,
+        object reactor,
+        object @event,
+        EventContext eventContext,
+        IEventStore? eventStore,
+        IServiceProvider? serviceProvider,
+        ReactorDelivery delivery) =>
+        Resolve(method, reactor, @event, eventContext, eventStore, serviceProvider, delivery);
+
+    static async Task<object?[]> Resolve(
+        MethodInfo method,
+        object reactor,
+        object @event,
+        EventContext eventContext,
+        IEventStore? eventStore,
+        IServiceProvider? serviceProvider,
+        ReactorDelivery? delivery)
     {
         var parameters = method.GetParameters();
         var arguments = new object?[parameters.Length];
@@ -40,7 +61,8 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
                 @event,
                 eventContext,
                 eventStore,
-                serviceProvider);
+                serviceProvider,
+                delivery);
         }
 
         return arguments;
@@ -52,7 +74,8 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
         object @event,
         EventContext eventContext,
         IEventStore? eventStore,
-        IServiceProvider? serviceProvider)
+        IServiceProvider? serviceProvider,
+        ReactorDelivery? delivery)
     {
         if (parameterType == typeof(EventContext))
         {
@@ -61,7 +84,7 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
 
         if (parameterType == typeof(ReactorDelivery))
         {
-            return ReactorDelivery.For(reactor, eventContext);
+            return delivery ?? ResolveDelivery(reactor, eventContext, eventStore);
         }
 
         if (eventStore is not null && IsReadModel(eventStore, parameterType))
@@ -78,6 +101,25 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver
         }
 
         return serviceProvider.GetRequiredService(parameterType);
+    }
+
+    static ReactorDelivery ResolveDelivery(object reactor, EventContext eventContext, IEventStore? eventStore)
+    {
+        if (eventStore is null)
+        {
+            return ReactorDelivery.For(reactor, eventContext);
+        }
+
+        var reactorType = reactor.GetType();
+        var effectEpoch = reactorType.GetCustomAttribute<ReactorAttribute>()?.EffectEpoch ?? 0;
+        if (eventStore.Reactors is Reactors reactors && reactors.Handlers.FirstOrDefault(_ => _.ReactorType == reactorType) is { } handler)
+        {
+            return ReactorDelivery.For(handler.Id, handler.EventSequenceId, eventContext) with { EffectEpoch = effectEpoch };
+        }
+
+        // Preserve standalone declaration-based resolution when the store has no native registration for this type.
+        var sequence = reactorType.GetEventSequenceId(eventStore.EventTypes, eventStore.Name);
+        return ReactorDelivery.For(reactorType.GetReactorId(), sequence, eventContext) with { EffectEpoch = effectEpoch };
     }
 
     static bool IsReadModel(IEventStore eventStore, Type type) =>

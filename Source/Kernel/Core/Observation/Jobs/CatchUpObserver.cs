@@ -52,25 +52,24 @@ public class CatchUpObserver(
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        try
-        {
-            await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
-        }
-        finally
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-            // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-            // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-            // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
-            // grain become free to process CaughtUp(), even if finalization fails after recording partitions.
-            // Only a catch-up whose every step completed may move the observer past events it read but did not
-            // handle; a step that stopped early can leave events behind the furthest point another step reached.
-            _ = observer.CaughtUp(
-                JobId,
-                State.LastHandledEventSequenceNumber,
-                AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
-        }
+        // A finalization that fails — a final flush whose outcome is unknown — throws and fails the job, so the
+        // observer is not moved past events whose writes may have been lost. It stays catching up, and the
+        // observer's watchdog starts a new catch-up once it sees no live catch-up job.
+        await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
+
+        var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process CaughtUp().
+        // Only a catch-up whose every step completed may move the observer past events it read but did not
+        // handle; a step that stopped early can leave events behind the furthest point another step reached.
+        _ = observer.CaughtUp(
+            JobId,
+            State.LastHandledEventSequenceNumber,
+            AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
 
         if (!AllStepsCompletedSuccessfully)
         {
@@ -86,10 +85,18 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    /// <remarks>
+    /// A step that timed out is run again - the callee was too busy, which says nothing about the events - and the
+    /// partition is reported as failed only when the attempts are used up.
+    /// </remarks>
+    protected override bool ShouldRetryStep(JobStepId stepId, JobStepResult result, int attempt) =>
+        TransientTimeouts.ShouldRetry(result, attempt, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -98,6 +105,12 @@ public class CatchUpObserver(
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
+        // A job without a request was never persisted, or has been removed since it was found; there is nothing to resume.
+        if (State.Request is null)
+        {
+            return Task.FromResult(false);
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
     }
@@ -118,8 +131,14 @@ public class CatchUpObserver(
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
 
-        var observerKeyIndexes = storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
-        var index = await observerKeyIndexes.GetFor(request.ObserverKey);
+        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
+        var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
+
+        // Legacy key enumeration used the stored definition at preparation time, not the request's types.
+        var readerScope = request.ReaderScope ?? ObserverReaderScope.For(
+            false,
+            (await eventStoreStorage.Observers.Get(request.ObserverKey.ObserverId)).EventTypes);
+        var index = await observerKeyIndexes.GetFor(request.ObserverKey, readerScope);
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var keysToCatchUp = new List<Key>();
@@ -136,6 +155,13 @@ public class CatchUpObserver(
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
         var steps = CreateStepsFor(request, keysToCatchUp);
+        if (steps.Count == 0)
+        {
+            // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
+            using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
+            logger.NoJobStepsPrepared(nameof(CatchUpObserver));
+        }
+
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);
         return steps;
     }
@@ -155,7 +181,8 @@ public class CatchUpObserver(
                         EventObservationState.None,
                         request.EventTypes)
                     {
-                        SkipFailedPartitions = true
+                        SkipFailedPartitions = true,
+                        ReaderScope = request.ReaderScope
                     })
             ];
         }
@@ -169,7 +196,10 @@ public class CatchUpObserver(
                     request.FromEventSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes)))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope
+                }))
             .ToImmutableList();
     }
 }

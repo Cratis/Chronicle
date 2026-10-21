@@ -49,6 +49,38 @@ public sealed class EventStoreStorage(
     Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly Occurrences.OccurrencesStorage _occurrences = new();
+    bool _initialized;
+    bool _observersInitialized;
+
+    /// <summary>
+    /// Initializes a store with an event-types storage factory for in-process composition.
+    /// </summary>
+    /// <param name="eventStore">The event store name.</param>
+    /// <param name="sinksFactory">The sinks factory.</param>
+    /// <param name="jobsStorage">The jobs storage.</param>
+    /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    internal EventStoreStorage(
+        EventStoreName eventStore,
+        SinksFactory sinksFactory,
+        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
+        : this(eventStore, sinksFactory, jobsStorage)
+    {
+        EventTypes = eventTypesFactory(eventStore);
+    }
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage();
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage();
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
@@ -97,6 +129,26 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage();
+
+    /// <inheritdoc/>
+    public Task<bool> IsInitialized() => Task.FromResult(_initialized);
+
+    /// <inheritdoc/>
+    public Task<bool> AreObserversInitialized() => Task.FromResult(_observersInitialized);
+
+    /// <inheritdoc/>
+    public Task MarkObserversInitialized()
+    {
+        _observersInitialized = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task MarkInitialized()
+    {
+        _initialized = true;
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

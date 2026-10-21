@@ -41,7 +41,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
             return;
         }
 
-        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
+        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo:8.2";
         _container = new ContainerBuilder(image)
             .WithMongoDBKernelCompatibility()
             .WithCommand("/bin/sh", "-c", StartupCommand)

@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/data-tables.md -->
 # Data tables reference
 
+## Contents
+
+- Pick the component by query kind
+- Shared props
+- Paging, sorting and filtering scope
+- Selection event
+- Column filtering
+- Filter state shape
+- Custom match modes
+
 Use a standalone table when you need query-backed rows **without** the
 `DataPage` chrome — embedded in a panel, a card, or a dialog. Import from
 `@cratis/components/DataTables`.
@@ -32,13 +42,17 @@ Both components take the same prop names:
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `query` | `Constructor<TQuery>` | required |
-| `emptyMessage` | `string` | required |
+| `emptyMessage` | `string` | required; only for a real empty result |
+| `loadingMessage` / `failureMessage` / `unauthorizedMessage` | `ReactNode` | default `messages.dataTable.loading/failed/unauthorized` |
 | `children` | `ReactNode` | the `Column` declarations |
 | `queryArguments` | `TArguments` | forwarded to the query |
 | `dataKey` | `string \| undefined` | row identity |
-| `selection` | `TDataType \| undefined \| null` | controlled selection |
+| `selection` | `TDataType \| undefined \| null` | controlled single selection |
+| `selectionMode` | `'single' \| 'multiple'` | default single |
+| `selectedItems` / `onSelectedItemsChange` | `TDataType[]` / `(items: TDataType[]) => void` | checkbox multi-selection |
 | `onSelectionChange` | `(event: DataTableSelectionChangeEvent<TDataType>) => void` | `event.value` is the row or `null` |
 | `globalFilterFields` | `string[] \| undefined` | enables the search box |
+| `globalSearchPlaceholder` / `globalSearchAriaLabel` | `string` | search copy and accessible name |
 | `defaultFilters` | `DataTableFilterMeta` | initial filter state |
 | `className` | `string` | |
 | `pt` | `DataTableParts` | per-part attributes (`ptOptions`/`unstyled` are accepted no-ops) |
@@ -59,6 +73,10 @@ Both components take the same prop names:
     <Column field='ownerName' header='Owner' />
 </DataTableForQuery>
 ```
+
+Query tables show loading until the first result, failure on error/unauthorized,
+and `empty-row` only for a real empty result. During refresh the table marks
+`aria-busy`; status parts are `loadingRow`, `loadingCell`, `failureRow`, `failureCell`.
 
 ## Paging, sorting and filtering scope
 
@@ -87,11 +105,17 @@ interface DataTableSelectionChangeEvent<TData> {
 Add a selection column with `<Column selectionMode='single' headerStyle={{ width: '3rem' }} />`
 when you want an explicit selector rather than row click selection.
 
+For checkboxes, use `selectionMode='multiple'` on the table and column, with
+`selectedItems` / `onSelectedItemsChange` (receives the array, not an event).
+Select-all covers only rows left visible by filtering, not unloaded pages;
+localize its name with `messages.dataTable.selectAllRows`.
+
 ## Column filtering
 
 Set `filter` on a column to get a per-column filter menu. `dataType` picks the
 match modes (`'text'`, `'numeric'`, `'date'`, `'boolean'`; default `'text'`),
-`showFilterMatchModes={false}` hides the mode picker, and `filterElement`
+`showFilterMatchModes={false}` hides the mode picker. `filterOptions` takes
+`{ label, value }[]` for list choices instead of free-form input; `filterElement`
 replaces the editor entirely:
 
 ```tsx

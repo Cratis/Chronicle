@@ -133,8 +133,10 @@ behavior truly requires DOM events — do not make it the default. Avoid
 snapshots; they hide behavior and make refactors noisy.
 
 Cratis Components mount inside `CratisComponentsProvider`, so a specification
-that renders one for real must provide it, and jsdom needs a `ResizeObserver`
-stub for the table and split-pane components.
+that renders one for real must provide it (enable `toaster` only when asserting
+toasts). In jsdom, provide a `ResizeObserver` stub for any Components area that
+observes size, including observable tables, Filter and toolbars. Source-checked
+in Components (`Source/**`); this is not a split-pane-only requirement.
 
 ## Async and time
 
@@ -182,10 +184,7 @@ them.
 ## Route near misses
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code

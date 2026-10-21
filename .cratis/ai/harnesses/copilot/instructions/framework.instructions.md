@@ -1,0 +1,56 @@
+---
+applyTo: "**/*"
+profile: framework
+---
+<!-- cratis-ai-managed: harnesses/copilot/instructions/framework.instructions.md -->
+<!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->
+
+# Framework Profile — Contributing to Cratis Itself
+
+> **Framework profile only.** This applies when you are working **inside a Cratis framework repository** (Arc, Chronicle, Fundamentals, Components, Specifications, and the like) — building the framework. If you are building an *application on* Cratis, ignore this file and follow the Application profile (`general.md` + `vertical-slices.md`).
+
+The framework repos are **libraries**, not event-sourced applications. The application-profile architecture — vertical slices, model-bound `[Command]`/`[ReadModel]` artifacts, projections/read-models, reactors, MVVM app components — **does not exist here and must not be imposed**. A Cratis framework repo has its own architecture per its purpose.
+
+## What still applies (universal rules)
+
+Everything tagged `profile: universal` holds in framework repos exactly as in apps: **C# conventions** (`csharp.md`), **TypeScript conventions** (`typescript.md`), **code quality** (`code-quality*.md`), **specs** (`specs.md` / `specs.csharp.md` / `specs.typescript.md` — `Cratis.Specifications` is how the framework tests itself, using the plain `Specification` base + NSubstitute against the classes under test — this is the dominant mode in framework repos. The in-process `*Scenario` family lives in `specs.scenarios.csharp.md` (`profile: application`); applications add it where pipelines, validation, constraints or projections contribute proof, starting with plain calls for pure decisions; a framework repo reaches for it only to test the very engine it provides — Arc → `CommandScenario`, Chronicle → `EventScenario`/`ReadModelScenario`/`ReactorScenario` — not as a general testing mode. The **cratis-application-slice-specifications** skill is application-oriented), **documentation**, **git-commits**, **pull-requests**, **concepts** (`ConceptAs<T>` / `EventSourceId<T>` are Fundamentals/Chronicle primitives the framework defines and uses), and **American English**.
+
+## What does NOT apply
+
+Skip these `profile: application` rules entirely when in a framework repo: `vertical-slices.md`, `reactors.md`, `react.md`, `components.md`, `dialogs.md`, `frontend-quality.md`, `frontend-testing.md`, `storybook.md`, `efcore.md`, `efcore.specs.md`, `mongodb.md`. Do not create vertical-slice folders, `[Command]`/`Handle()` records, read models, or MVVM app components in framework source.
+
+## The repos and their shape
+
+Each framework repo is organized by what it builds, not by feature slices:
+
+- **Fundamentals** — the base library. `ConceptAs<T>`, type discovery (`IInstancesOf<T>` / `IImplementationsOf<T>`), serialization, common primitives. `Source/DotNET` includes `Fundamentals.TypeDiscovery.Generator`, `Metrics.Roslyn` (`Cratis.Metrics.Roslyn`) and `OpenTelemetry` (`Cratis.OpenTelemetry`); `Source/JavaScript` publishes `@cratis/fundamentals`, and `Source/ESLintConfig` publishes `@cratis/eslint-config` (verified at v7.23.0).
+- **Specifications** — BDD lifecycle, assertions and analyzers. `Source/Specifications` supplies common helpers, `Source/XUnit` and `Source/NUnit` supply runner-specific bases/assertions, and `Source/CodeAnalysis` supplies the bundled analyzers (v4.1.1).
+- **Orleans** — shared silo hosting, grain serializers, jobs and jobs storage (MongoDB/SQL/in-memory), in `Cratis.Orleans*` packages (v1.16.3). The core does not require Chronicle; the optional `.Chronicle` adapter does.
+- **Arc** — the CQRS + model-binding + proxy-generation engine. `Source/DotNET` (the command/query pipeline, validation, authorization, identity, the Roslyn **proxy generator**) + `Source/JavaScript` (`@cratis/arc`, `@cratis/arc.react`, `@cratis/arc.react.mvvm`). Arc.Core does **not** depend on Chronicle.
+- **Chronicle** — the event-sourcing engine. `Source/Kernel` (the engine: **Orleans grains**, event sequences, observers/projections/reducers, storage providers — MongoDB and others), `Source/Clients` (the client SDKs incl. `DotNET` and `Testing`), `Infrastructure`, `Tools`, `Workbench`. The kernel is the deep, performance- and consistency-critical core. Its shared job engine, jobs storage, serializers and reusable silo hosting now come from the separate **Orleans** repo, not Chronicle-owned jobs code (Chronicle v19.50.0).
+- **Components** — the React component library (Components-owned markup and styling contract; React Aria internally; optional PrimeReact/MUI presentation adapters under `Adapters/`). `Source/<Component>/` folder per component (`CommandDialog`, `DataPage`, `DataTables`, …) with Storybook stories; published as `@cratis/components`. (Application rules *consume* these components; here you *build* them.)
+
+Repo conventions follow from this: `Source/DotNET` + `Source/JavaScript` for dual-stack libraries; `Kernel` vs `Clients` for Chronicle; a folder-per-component library layout for Components. Match the structure of the area you are editing — do not introduce app-style layouts.
+
+## Framework-contributor principles
+
+- **Public API design is the product.** These libraries are consumed by every Cratis app, so the **Lovable APIs** value (`general.md`) is paramount: sane defaults, convention over configuration, extensible/overridable, minimal boilerplate. Design the API the app developer will love before the implementation.
+- **Backward compatibility is a contract.** A change to a public type, attribute, interface, or generated-proxy shape is a breaking change for every downstream app — label PRs by semver impact (`major`/`minor`/`patch`) and treat removals/renames of public surface as `major`.
+- **Convention discovery is built here.** `IInstancesOf<T>` / `IImplementationsOf<T>`, attribute-based discovery, and source generation are the mechanisms the framework *provides*; use them internally too rather than hand-registration where a convention fits. A Fundamentals project reference does not carry the type-discovery analyzer like its NuGet package does: reference `Fundamentals.TypeDiscovery.Generator` explicitly, or your project's types may be absent from the generated universe.
+- **Source generators / analyzers** (Arc's proxy generator, Fundamentals) follow Roslyn conventions; their output is consumed verbatim by apps, so treat generated shape as public API.
+- **Orleans grains** in the Chronicle kernel follow `orleans.md`.
+- **An alternate implementation of an interface must match the primary one's *semantics*, not just its signature.** Chronicle ships several implementations of the same storage interfaces (MongoDB, SQL, in-memory) and the in-memory ones exist precisely so the real kernel code paths can run without infrastructure. When you touch one, **diff it against the persistent implementations** — the signature tells you nothing about the contract. The specific trap: query criteria carry **sentinels meaning "do not narrow"** (`EventSourceId.Unspecified`, `EventSourceType.Unspecified`/`Default`, `EventStreamType.All`, `EventStreamId.Default`, an empty event-type set). Callers asking for "everything" pass those sentinels, never `null`, so a plain `is not null` check narrows every row away and the read silently returns nothing. A divergence here does not fail — it makes specs pass vacuously, which is worse.
+- **A stub that silently succeeds is a bug, not a placeholder.** An unimplemented method returning `Task.CompletedTask`/an empty result lets a spec assert on work that never happened. Implement it, or make it fail loudly — never leave it quietly lying.
+- **Specs** use `Cratis.Specifications` (the `Establish`/`Because`/`should_` BDD style) with NSubstitute — the same philosophy as apps, without the Arc/Chronicle `*Scenario` app-testing helpers.
+- **Treat "no spec touches this public API" as a defect in itself.** Public surface with zero coverage is where silent breakage lives — an entire read surface, including two shipped assertion helpers, was once dead in `Cratis.Chronicle.Testing` because nothing ever called it. When adding public API, add at least one spec that exercises it end to end.
+
+## Quality gates (framework)
+
+- Build clean (Debug and Release) with **zero warnings, zero errors**.
+- Specs pass for affected projects (C# via `dotnet test`; TS packages via their test command; Components also `build-storybook`).
+- For public-facing changes (APIs, attributes, generated output, component props): update the product documentation and verify it.
+- Match the repo's existing patterns; when a deep architectural question isn't answered by the universal rules or this file, consult the **repo's own docs/CONTRIBUTING** or ask — do not infer framework internals from a single call site.
+
+## Depth lives in the repo
+
+This file is the cross-cutting framework-contributor baseline. Repo-specific internals — the Chronicle kernel's grain/observer/storage design, Arc's proxy-generator internals, the Components build pipeline — are owned by each repo's own documentation, not duplicated here. Follow those for area-specific detail.

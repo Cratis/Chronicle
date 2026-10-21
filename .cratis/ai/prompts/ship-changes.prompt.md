@@ -46,10 +46,28 @@ The description is published verbatim as the release notes, so it follows the co
   - No development write-up: no Overview/Verification/Test plan headings (only a first `## Summary`
     is allowed), no review, testing or provenance notes. Those go in a PR comment.
   - `(#n)` ends the bullet that delivers an issue and `(part of #n)` marks anything that stays open;
-    never `Closes`/`Fixes`/`Refs` before a number, and never an issue reference inside an HTML comment,
-    which still closes the issue.
+    never `Closes`/`Fixes`/`Refs` before a number, and never an issue reference inside an HTML comment
+    (release-action removes comments, so it would close nothing).
   - Links are absolute `https://` URLs, never relative paths.
 - Post reviewer notes (checks run, what was not verified, review provenance, stacking, merge or
   deploy order) right after creating the PR with `gh pr comment <n> --body-file .ai-work/pr-notes.md`.
   Never put them in the description, even for `no-release`.
 - After pushing, if `verify-release-notes` fails, fix it by editing the description; it re-runs on edit.
+
+## Cleanup — the last step, never skipped
+
+Shipping is not finished until the delivered work is cleaned up. Worktrees and branches left behind
+cost real disk and accumulate across sessions. After the merge succeeds:
+
+1. Leave the worktree you worked in: `cd` to the main checkout (`git worktree list` shows it first).
+2. Run `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh` and report its summary line.
+   It fetches, checks out nothing, and removes only worktrees and local branches whose work is
+   verifiably on the default branch; it never forces and reports what it kept and why. Worktrees holding
+   non-empty `.ai-work/` directories are kept by default. Preserve any needed records before a manual
+   `--include-work-records` opt-in; automatic hooks never opt in. Use `git worktree lock <path>` to pin a
+   long-lived worktree; locked worktrees remain kept even with opt-in.
+3. `git switch main && git pull --ff-only` in the main checkout so it matches the merged result.
+
+Claude Code and Pi also run the script from a hook after `gh pr merge` and at session start; running it
+here as well is deliberate, because Copilot, Cursor and OpenCode have no hook and this step is their only
+trigger. If the script reports the shipped worktree as kept, say why in the final message.

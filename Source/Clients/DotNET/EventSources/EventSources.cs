@@ -6,6 +6,7 @@ using System.Reflection;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.EventSources;
+using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.EventSources;
 
@@ -25,7 +26,8 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
     /// <inheritdoc/>
     public Task Discover()
     {
-        var definitions = clientArtifacts.EventSources.Select(Describe).ToArray();
+        var catalog = ExplicitArtifactCatalog.From(clientArtifacts);
+        var definitions = clientArtifacts.EventSources.Select(type => Describe(type, catalog?.GetEventSourceNameFor(type))).ToArray();
 
         var duplicate = definitions
             .GroupBy(_ => _.Name, StringComparer.Ordinal)
@@ -75,10 +77,12 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
     /// <param name="type">The type carrying the definition.</param>
     /// <returns>The <see cref="EventSourceDefinition"/>.</returns>
     /// <exception cref="DuplicateEventStreamName">The type declares the same stream twice.</exception>
-    internal static EventSourceDefinition Describe(Type type)
+    internal static EventSourceDefinition Describe(Type type) => Describe(type, null);
+
+    static EventSourceDefinition Describe(Type type, string? registeredName)
     {
         var attribute = type.GetCustomAttribute<EventSourceAttribute>();
-        var name = attribute?.Name ?? DefaultNameFor(type);
+        var name = registeredName ?? ArtifactIdentity.EventSourceNameFor(type);
         var streams = type.GetCustomAttributes<EventStreamAttribute>()
             .Select(_ => new EventStream(_.Name, _.Description, _.Concurrency))
             .ToArray();
@@ -91,9 +95,4 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
 
         return new EventSourceDefinition(type, name, attribute?.Description ?? string.Empty, attribute?.Concurrency ?? ConcurrencyDimensions.None, streams);
     }
-
-    static string DefaultNameFor(Type type) =>
-        type.Name.Length > "EventSource".Length && type.Name.EndsWith("EventSource", StringComparison.Ordinal)
-            ? type.Name[..^"EventSource".Length]
-            : type.Name;
 }

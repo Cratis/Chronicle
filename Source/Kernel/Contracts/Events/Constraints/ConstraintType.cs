@@ -30,5 +30,9 @@ public enum ConstraintType
     /// <summary>
     /// Represents a stream-closed constraint.
     /// </summary>
-    StreamClosed = 4
+    StreamClosed = 4,
+    /// <summary>
+    /// Represents an event-driven stream closing constraint.
+    /// </summary>
+    ClosesStream = 5
 }

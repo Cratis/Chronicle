@@ -53,7 +53,7 @@ public class an_observer_state_storage : Specification, IDisposable
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new NamespaceDbContext(options);

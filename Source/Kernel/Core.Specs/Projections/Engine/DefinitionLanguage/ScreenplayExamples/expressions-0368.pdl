@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from DocEvent
+    CreatedAt = $eventContext.occurred
+    CreatedBy = $eventContext.eventSourceId
+    LastUpdated = $eventContext.occurred
+    Version = $eventContext.sequenceNumber

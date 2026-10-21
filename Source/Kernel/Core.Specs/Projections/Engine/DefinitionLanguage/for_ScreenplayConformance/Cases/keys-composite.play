@@ -1,0 +1,25 @@
+// A composite key built from event properties
+// Screenplay documentation: Documentation/screenplay/projections/keys.md
+
+type OrderKey
+  orderId String
+  region String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        region String
+        label String
+      readmodel OrderView
+        id OrderKey
+        label String
+      query OrderViewById => OrderView?
+        by id OrderKey
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          key OrderKey
+            orderId = orderId
+            region = region
+          label = label

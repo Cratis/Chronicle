@@ -5,7 +5,9 @@ description: Inspect the historical states Chronicle produced for one read model
 
 Snapshots let you inspect how a read model reached its current state. Chronicle groups events by correlation ID, replays the read model after each group, and returns the state produced by each step.
 
-This is useful when a projection or reducer produced a surprising result and you need to see the path as well as the final state.
+This is useful when a projection produced a surprising result and you need to see the path as well as
+the final state. `GetSnapshotsById` returns historical projection states; reducer-backed models return
+an empty history. For reducers, test the event fold with a [read-model scenario](../testing/read-models/scenario.mdx).
 
 ## How snapshots are grouped
 
@@ -26,8 +28,6 @@ The read model type must be registered, and the key must identify the read model
 
 <ChronicleClientTabs snippet="read-models/getting-snapshots/basic" />
 
-Kotlin currently exposes single-instance read-model lookup only, so snapshots are not shown for that client.
-
 ## Analyze the timeline
 
 Snapshot data is usually most useful when you print or inspect the correlation ID, event count, timestamp, and resulting state together.
@@ -42,7 +42,7 @@ Snapshot retrieval has to read the relevant history, group events by correlation
 
 Use snapshots when:
 
-- You are debugging a projection or reducer.
+- You are debugging a projection.
 - You need an audit trail for how one instance evolved.
 - You need to understand transaction or request boundaries.
 - The key has a reasonable event history.

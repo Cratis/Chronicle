@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Sinks
+description: A Chronicle sink is the storage backend where read model instances from projections and reducers are written; two sink types are built in.
 ---
 # Sinks
 
@@ -92,9 +93,41 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
-The SQL sink does not create the indexes a read model declares with `[Index]`; only the MongoDB sink does today. Create any indexes you need on the SQL table yourself.
+Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background
+online builds (`CONCURRENTLY` on PostgreSQL and `ONLINE = ON` on SQL Server); empty and replay-shadow
+tables can build synchronously. Per-table locks serialize builders across kernels without waiting
+on a competing builder. SQL Server uses online builds on supported editions (Enterprise, Azure SQL,
+and Managed Instance); other editions, or error 1712, fall back to a normal background build that
+can block database writes while it runs. Other build failures are logged.
+Ordinary activation does not prune undeclared indexes. When an already-cached read-model definition
+changes, reconciliation removes undeclared `chronicle_idx_*` indexes, preserving custom indexes.
+
+SQL Server indexed strings use an explicit `MaxLength`, `StringLength`, or `Length` bound up to 850 characters,
+or 450 characters if the indexed property has no bound. Unindexed, unbounded strings remain
+`NVARCHAR(MAX)`; larger declared bounds remain unbounded and receive an index diagnostic. This
+mapping does not change event schemas, read-model generations, or request a replay. Existing SQL
+column types are not changed automatically: explicitly replay the model to apply a new column type.
+Writes exceeding a bounded column's length fail rather than truncate the value, causing the projection's
+partition to fail. SQL Server string comparisons use the database collation (commonly case-insensitive);
+PostgreSQL btree keys remain subject to its approximately 2.7 KB entry limit.
+
+Join lookups and child removals select candidate rows in SQL before materializing documents.
+JSON predicates deliberately admit a superset of matches; Chronicle's existing path walker and
+value comparison still determine which rows and children are actually updated.
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
+
+### Decimal columns
+
+Decimal-formatted read-model properties use NUMERIC on PostgreSQL, DECIMAL(38,18) on SQL Server,
+and invariant decimal text in SQLite TEXT columns. MongoDB stores them as Decimal128. Double
+and float properties keep their floating-point storage types. SQLite TEXT decimal columns sort
+and compare lexicographically, not numerically.
+
+Existing SQL column types are not altered in place. Replay the read model to create a table with
+the new mapping. SQL Server values are rounded to scale 18 with midpoints rounded away from zero;
+only integer parts exceeding 20 digits are refused. Existing DECIMAL(18,2) columns round further;
+see [Exact decimal values](../events/schema-representation#exact-decimal-values) for limits and upgrade requirements.
 
 ### Enabling the SQL Sink
 

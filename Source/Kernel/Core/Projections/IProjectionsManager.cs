@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.Concurrency;
@@ -26,6 +28,14 @@ public interface IProjectionsManager : IGrainWithStringKey
     Task Ensure();
 
     /// <summary>
+    /// Ensure healthy active projections are subscribed in the given namespace, joining any pending pass for it.
+    /// </summary>
+    /// <param name="namespace">The namespace to reconcile.</param>
+    /// <returns>A task that completes after healthy subscriptions; retired observers are skipped and artifact failures are logged for retry.</returns>
+    [AlwaysInterleave]
+    Task EnsureSubscribedIn(EventStoreNamespaceName @namespace);
+
+    /// <summary>
     /// Get all the <see cref="ProjectionDefinition">projection definitions</see> available.
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
@@ -49,8 +59,26 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// storage, and its sink container is left untouched. Leave unset for a partial registration (for example saving a
     /// single projection), which must never retire anything.
     /// </param>
+    /// <param name="registrant">
+    /// Optional identity of the application registering. It is recorded per projection, and a full set only retires
+    /// projections the same registrant registered - applications sharing an event store never retire each other's.
+    /// </param>
+    /// <param name="version">
+    /// Optional software version of the registering application, as a semantic version. It is stored with each
+    /// definition. A definition whose stored version is greater than this one is left out - a registration from an
+    /// older client never overwrites a newer one - and a full set that is older than any stored projection of its owner
+    /// retires nothing. A missing or unparseable version, on either side, leaves registration unguarded.
+    /// </param>
     /// <returns>Awaitable task.</returns>
-    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null);
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+
+    /// <summary>
+    /// Removes an orphaned projection and its observer in every namespace, serialized with registration.
+    /// Kernel-owned definitions and projections declared by a connected client are refused.
+    /// </summary>
+    /// <param name="identifier">The projection identifier.</param>
+    /// <returns>The removal result. Projection refusals are store-wide and have no blocking namespace.</returns>
+    Task<ObserverRemovalResult> Remove(ProjectionId identifier);
 
     /// <summary>
     /// Forget a single registered projection.

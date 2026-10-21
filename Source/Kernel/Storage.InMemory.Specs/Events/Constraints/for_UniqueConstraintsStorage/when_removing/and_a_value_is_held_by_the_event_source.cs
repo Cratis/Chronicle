@@ -18,8 +18,8 @@ public class and_a_value_is_held_by_the_event_source : given.a_unique_constraint
 
     async Task Because()
     {
-        await _storage.Save(_holder, ConstraintNameValue, EventSequenceNumber.First, _value);
-        await _storage.Remove(_holder, ConstraintNameValue);
+        await _storage.Save(_holder, _definition, EventSequenceNumber.First, _value);
+        await _storage.Remove(_holder, _definition);
         (_isAllowedForOther, _) = await _storage.IsAllowed(_otherEventSourceId, _definition, _value);
     }
 

@@ -25,7 +25,7 @@ public class a_caching_projection_definitions_storage : Specification
         _storage = new(_inner);
     }
 
-    protected static ProjectionDefinition DefinitionFor(ProjectionId id) =>
+    public static ProjectionDefinition DefinitionFor(ProjectionId id) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,

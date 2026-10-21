@@ -1,3 +1,6 @@
+---
+description: Configure the storage backend for Chronicle Server, such as MongoDB or PostgreSQL, including database name prefixes.
+---
 # Storage
 
 Configure the storage backend for Chronicle Server.
@@ -13,8 +16,10 @@ Configure the storage backend for Chronicle Server.
 | `InMemory` | In-memory (ephemeral, non-durable) |
 
 > [!NOTE]
-> Only `MongoDB` storage supports a multi-node cluster. `PostgreSql`, `MsSql` and `Sqlite` register no cluster
-> membership provider, so run a single node on them. See [Clustering](clustering.md).
+> Multi-node clustering is explicit opt-in: select `clustering.type: MongoDB` with MongoDB storage, or
+> `clustering.type: Sql` with `PostgreSql` or `MsSql` storage. All nodes must share one cluster database
+> and cluster identity. `Sqlite` and `InMemory` do not support multi-node clustering. `Localhost` remains
+> the default for every storage type. See [Clustering](clustering.md).
 
 ## MongoDB
 
@@ -69,6 +74,69 @@ For environment-variable configuration, use `Cratis__Chronicle__Storage__Databas
 }
 ```
 
+### Passwordless Azure authentication
+
+On Azure SQL, use a Microsoft Entra ID mode in the connection string instead of a password, for example `Authentication=Active Directory Managed Identity;User Id=<client-id>`. On Azure Database for PostgreSQL, have a [connection resolver](storage-connection-resolution.md) return an Entra access token as the identity. The supported modes, and what not to combine with a resolved token, are in [Microsoft Entra ID authentication](storage-connection-resolution.md#microsoft-entra-id-authentication). For an end-to-end setup, see [Run Chronicle on Azure](../azure.md).
+
+## SQL database names
+
+PostgreSQL and SQL Server isolate event stores, namespaces and projected read models in separate databases. The configured cluster database supplies the prefix:
+
+| Identity | Logical database name |
+| --- | --- |
+| Event store | `<cluster>+es+<store>` |
+| Namespace, including `Default` | `<cluster>+es+<store>+<namespace>` |
+| Default-namespace read models | `<cluster>+<store>` |
+| Named-namespace read models | `<cluster>+<store>+<namespace>` |
+
+Names within the provider's limit stay unchanged: 63 UTF-8 bytes for PostgreSQL, 128 UTF-16 code units for SQL Server. Longer names use a readable prefix, `~`, and the first 16 lowercase hexadecimal characters of the SHA-256 of the full logical name in UTF-8. The prefix ends at a Unicode character boundary. The configured cluster name is never shortened; startup rejects it if it exceeds the limit.
+
+### Permanent bindings
+
+The cluster's `DatabaseNames` table records each identity's physical database name. Short names are bound too. Its logical key is `(Kind, EventStore, Namespace)`; `Namespace` stores `Default` explicitly, including for event store identities. `PhysicalName` is unique under PostgreSQL's ordinal equality or SQL Server's server collation. The configured cluster database has a reserved row with `Kind = 0`, an empty `EventStore`, and `Namespace = 'Default'`.
+
+| Kind | Identity |
+| --- | --- |
+| `0` | Cluster |
+| `1` | Event store |
+| `2` | Namespace |
+| `3` | Read models |
+
+Bindings survive restarts and development wipes. Adding a namespace cannot move an existing database. A namespace is bound before it is made available; another kernel can reload that binding when resolving jobs storage. An unbound jobs identity fails instead of guessing a database name.
+
+For an existing PostgreSQL deployment, Chronicle preserves a legacy truncated database only where ownership is clear. An event store takes precedence over its own namespaces and read models; default-namespace read models take precedence over that store's named-namespace read models. Unrelated stores or namespaces have no precedence. A losing identity gets a separate hashed database, with a warning, only if the shared database contains no schema or migration history that could belong to it.
+
+### Resolve shared legacy ownership
+
+`DatabaseOwnershipUnresolved` names the identity, shared database and competing claimants. Do not delete migration history or repeatedly restart the kernel: that can strand event history in the old database while new writes go elsewhere.
+
+1. Stop every kernel using this cluster database and take a recoverable backup of the cluster and shared database.
+2. Identify which tables and rows belong to the reported identity. Event store metadata, namespace events/constraints/observer state/jobs, and projected read models have different owners. If two identities' rows are mixed in the same table, separate them from verified business identity information before proceeding; do not copy another identity's data.
+3. Create a separate target database with a valid physical name, on the same server and with the required permissions. Use the computed hashed name or another unused name within the provider limit.
+4. Copy the identity's tables, data, indexes, constraints and any required dependencies. Copy only its `__EFMigrationsHistory` rows: a namespace owns the rows starting with `NS-` and the jobs rows starting with `Cratis-Orleans-Jobs-`; every other row belongs to the event store. Read model databases normally have no EF migration history. Preserve the original database until recovery is verified.
+5. Insert the identity's binding into the cluster's `DatabaseNames` table. Use its exact store and namespace, the kind from the table above and the target physical name. Do not update an existing binding. Both unique constraints must hold; a duplicate is a conflict to investigate, not a row to overwrite.
+6. Restart the kernels. Chronicle honors the inserted binding. Confirm migrations complete and the identity's events, jobs and read models are reachable before retiring any original data.
+
+For example, bind a namespace named `TenantA` in store `Orders` to a database you have already created and populated. On PostgreSQL, run this in the cluster database:
+
+```sql
+INSERT INTO "DatabaseNames" ("Kind", "EventStore", "Namespace", "PhysicalName")
+VALUES (2, 'Orders', 'TenantA', 'orders_tenant_a_recovered');
+```
+
+On SQL Server, the equivalent insert is:
+
+```sql
+INSERT INTO [DatabaseNames] ([Kind], [EventStore], [Namespace], [PhysicalName])
+VALUES (2, N'Orders', N'TenantA', N'orders_tenant_a_recovered');
+```
+
+`DatabaseMigrationIncomplete` is a different failure: an object already exists but EF migration history still has pending migrations. The error names the database and first pending migration. Repair the schema/history mismatch from a backup and verified schema evidence; Chronicle does not treat duplicate objects as proof that migration completed.
+
+## Platform-managed databases
+
+When a platform decides where each event store and namespace lives, configure [storage connection resolution](storage-connection-resolution.md) to resolve the server, database, schema and identity per namespace and purpose. `createIfMissing: false` stops Chronicle from creating databases, and `schema` keeps its tables in the schema you grant.
+
 ## SQLite
 
 ```json
@@ -104,4 +172,7 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
+| schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
+| createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
+| connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 

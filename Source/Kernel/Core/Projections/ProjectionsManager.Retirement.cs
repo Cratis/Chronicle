@@ -29,24 +29,29 @@ public partial class ProjectionsManager
     /// <inheritdoc/>
     public async Task Forget(ProjectionId identifier)
     {
-        if (State.Projections.All(projection => projection.Identifier != identifier))
+        if (State.Projections.All(projection => projection.Identifier != identifier) &&
+            !await storage.GetEventStore(_eventStoreName).Projections.Has(identifier))
         {
             return;
         }
 
+        ForgetSubscriptionsFor(identifier);
         logger.RetiringProjection(identifier);
         await projectionsService.Unregister(_eventStoreName, identifier);
         await GrainFactory.GetGrain<IProjection>(new ProjectionKey(identifier, _eventStoreName)).Remove();
 
         State.Projections = State.Projections.Where(projection => projection.Identifier != identifier).ToList();
+        State.Registrants = State.Registrants.Where(_ => _.Key != identifier.Value).ToDictionary(_ => _.Key, _ => _.Value);
         await WriteStateAsync();
     }
 
-    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner, Dictionary<ProjectionId, Exception> failures)
+    async Task RetireUnregisteredProjections(IReadOnlyList<ProjectionDefinition> registeredDefinitions, ProjectionOwner owner, string? registrant, Dictionary<ProjectionId, Exception> failures)
     {
         var registeredIdentifiers = registeredDefinitions.Select(definition => definition.Identifier).ToHashSet();
         var orphans = State.Projections
-            .Where(projection => projection.Owner == owner && !registeredIdentifiers.Contains(projection.Identifier))
+            .Where(projection => projection.Owner == owner &&
+                !registeredIdentifiers.Contains(projection.Identifier) &&
+                IsRegisteredBy(projection.Identifier, registrant))
             .ToList();
         if (orphans.Count == 0)
         {
@@ -86,9 +91,22 @@ public partial class ProjectionsManager
         await WriteStateAsync();
     }
 
+    /// <summary>
+    /// Whether a stored projection may be retired by a full set from the given registrant. Without a registrant
+    /// the owner alone decides (kernel callers); with one, only projections that same registrant registered qualify,
+    /// so applications sharing an event store never retire each other's projections.
+    /// </summary>
+    /// <param name="identifier">The stored projection identifier.</param>
+    /// <param name="registrant">The registrant of the full set, if any.</param>
+    /// <returns>True if it may be retired by this registrant.</returns>
+    bool IsRegisteredBy(ProjectionId identifier, string? registrant) =>
+        string.IsNullOrEmpty(registrant) ||
+        (State.Registrants.TryGetValue(identifier.Value, out var recorded) && recorded == registrant);
+
     async Task StopObserverFor(ProjectionDefinition orphan, EventStoreNamespaceName @namespace)
     {
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(orphan.Identifier, _eventStoreName, @namespace, orphan.EventSequenceId));
+        _subscribed.TryRemove((orphan.Identifier, @namespace), out _);
         await observer.Retire();
 
         var jobsManager = GrainFactory.GetJobsManager(_eventStoreName, @namespace);

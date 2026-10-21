@@ -23,7 +23,7 @@ internal sealed class Webhooks(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddWebhook(global::Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhookRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhook((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)request.Name, request.Url, request.EventSequenceId, request.EventTypes, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.IsReplayable, request.IsActive));
+            new global::Cratis.Chronicle.Observation.Webhooks.AddWebhook((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)request.Name, request.Url, request.EventSequenceId, request.EventTypes, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.IsReplayable, request.IsActive) { OAuthScope = request.OAuthScope, GenerationDelivery = (global::Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery)request.GenerationDelivery });
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.AddWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -72,6 +72,7 @@ internal sealed class Webhooks(
             AuthorizationType = source.AuthorizationType,
             Headers = source.Headers,
             IsReplayable = source.IsReplayable,
-            IsActive = source.IsActive
+            IsActive = source.IsActive,
+            GenerationDelivery = (global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery)source.GenerationDelivery
         };
 }

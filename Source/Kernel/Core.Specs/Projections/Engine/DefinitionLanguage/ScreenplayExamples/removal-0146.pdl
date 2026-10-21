@@ -1,0 +1,10 @@
+projection Product => ProductReadModel
+  from ProductCreated
+    Name = name
+    CategoryId = categoryId
+
+  join Category on CategoryId
+    with CategoryCreated
+      CategoryName = name
+
+  remove via join on CategoryDeleted

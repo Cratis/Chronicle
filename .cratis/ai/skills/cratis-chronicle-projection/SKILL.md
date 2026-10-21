@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-projection
-description: Add Chronicle projection behavior to an existing read model - model-bound attributes first, the fluent IProjectionFor<T> builder when they cannot express the shape. Covers AutoMap, keys, children and nested types, counters, event-sequence selection, variants ([VariantOf<T>]/.VariantOf<T>() and [EntersOn<T>]/.EntersOn<T>()) for an entity with mutually exclusive lifecycle shapes such as a work item that is a backlog entry then a pull request then closed, and the startup-crash traps. Use when populating a read model from events; do not use to create the read model and its query surface, and do not reach for a reducer before exhausting these options.
+description: Add Chronicle projection behavior to an existing read model - model-bound attributes first, the fluent IProjectionFor builder when they cannot express the shape. Covers AutoMap, keys, children and nested types, counters, event-sequence selection, variants (VariantOf and EntersOn, as attributes or fluent calls) for an entity with mutually exclusive lifecycle shapes such as a work item that is a backlog entry then a pull request then closed, and the startup-crash traps. Use when populating a read model from events; do not use to create the read model and its query surface, and do not reach for a reducer before exhausting these options.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/SKILL.md -->
@@ -9,16 +9,20 @@ license: MIT
 
 A projection consumes **events** and produces read-model state. It is pure: no
 side effects, and it never reads another read model. Prefer model-bound
-attributes on the read model; fall back to the fluent builder only when the
-attributes cannot express the shape; reach for a reducer only after both fail.
+attributes on the read model; use the fluent builder when mappings need
+structure or the model should stay attribute-free; choose reducer code when
+state transitions read better as code. Follow the
+[read-model style ladder](../cratis-chronicle-read-model/SKILL.md#step-3--choose-a-projection-or-a-reducer):
+a self-reducing model is the new .NET reducer default, not a mandatory separate
+class. See [reducers](../cratis-chronicle-reducer/SKILL.md) for that contract.
 
 ## Verified product sources
 
-This skill is verified against this exact source:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Projections`, `Cratis.Chronicle.Projections.ModelBound`, `Cratis.Chronicle.Keys`, `Cratis.Chronicle.EventSequences` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | `Cratis.Chronicle.Projections`, `Cratis.Chronicle.Projections.ModelBound`, `Cratis.Chronicle.Keys`, `Cratis.Chronicle.EventSequences`; self-model builder conflicts (`Source/Clients/DotNET/ReadModels/ReadModelBuilderOwnership.cs`, `Reducers/SelfReducerMethods.cs`) |
 
 Reverify product sources before claiming support for another version.
 
@@ -26,6 +30,15 @@ Reverify product sources before claiming support for another version.
 > not Chronicle types. A Chronicle read model that exists only as a projection
 > target needs no `[ReadModel]` at all — that attribute is what gives it an Arc
 > query surface.
+
+## What makes a type a model-bound projection
+
+Chronicle treats a type as a model-bound projection when the class, its primary
+constructor parameters, or its public instance properties carry an
+`[EventSequence]` attribute or any projection annotation — **except
+`[Passive]`**, which is deliberately excluded. `[Passive]` on its own therefore
+does not make a read model a projection; it changes how an existing projection
+is registered.
 
 ## Model-bound projections — the default
 
@@ -45,10 +58,15 @@ Matching property names map automatically. **AutoMap is on by default** — both
 for model-bound types and for the fluent builder — so never call `.AutoMap()`
 except inside a scope where you disabled it.
 
+`[NotProjected]` (property or record parameter) marks a member deliberately
+assembled by the query rather than projection state. AutoMap skips it and
+CHR0024 does not report it. It does not permit reading another read model from
+the projection. Source: `Projections/ModelBound/NotProjectedAttribute.cs`.
+
 `[Key]` is `Cratis.Chronicle.Keys.KeyAttribute`. It has no arguments and targets
 a property or a record constructor parameter, never the class.
 
-Read [references/model-bound-attributes.md](references/model-bound-attributes.md)
+When authoring a model-bound projection, read [references/model-bound-attributes.md](references/model-bound-attributes.md)
 for the complete attribute list with exact arities, parameter names, and valid
 targets. Two things there are worth knowing before you write anything:
 
@@ -57,10 +75,16 @@ targets. Two things there are worth knowing before you write anything:
   `[FromEvent<T>]` is an **object-initializer property**, never a constructor
   argument: `[Count<TEvent>(ConstantKey = "<key>")]`.
 
-## Fluent projections — the fallback
+A counter or aggregate (`[Increment<T>]`, `[Decrement<T>]`, `[Count<T>]`) sees the
+event, not the item's previous state. Its commands must refuse non-transitions
+(a close for an already closed item) or the counter drifts permanently and replay
+reproduces the drift; see **cratis-chronicle-event-modeling**
+(`references/event-log-hygiene.md`).
 
-Use `Cratis.Chronicle.Projections.IProjectionFor<TReadModel>` when the attributes
-cannot express the shape — for example when two events feed one child collection
+## Fluent projections — structured mappings
+
+Use `Cratis.Chronicle.Projections.IProjectionFor<TReadModel>` when the mapping
+needs structure or an attribute-free model — for example when two events feed one child collection
 through different key properties.
 
 ```csharp
@@ -79,7 +103,7 @@ public class <ReadModelName>Projection : IProjectionFor<<ReadModelName>>
 the interface** — do not add one. Use `[Projection(id: "<id>")]` when the
 identity must be explicit.
 
-Read [references/fluent-builder.md](references/fluent-builder.md) for the real
+When you use the fluent builder, read [references/fluent-builder.md](references/fluent-builder.md) for the real
 member list. The trap that costs the most time: **`UsingKey`, `UsingParentKey`,
 `UsingCompositeKey`, and `UsingConstantKey` are not on the projection builder.**
 They live on the per-event builder that `From<TEvent>` hands to your callback.
@@ -87,7 +111,7 @@ They live on the per-event builder that `From<TEvent>` hands to your callback.
 ## Choose a bounded projection shape
 
 Project the fields a consumer needs, rather than building a universal entity
-with every detail and historical entry. Children are useful for bounded related
+with every detail and past entry. Children are useful for bounded related
 state, not an invitation to embed an unbounded timeline. Give growing histories
 their own paged read model. A slim summary may combine event facts without
 query-time joins, but there is no framework requirement that a query read only
@@ -95,7 +119,9 @@ one collection. Preserve security/compliance boundaries when choosing the shape.
 
 When replacing a reducer, preserve creation/admission and late-event guards;
 an unconditional `[SetValue<T>]` is not equivalent to guarded state transition
-code. See the reducer skill's conversion guidance. Evaluate variants below when
+code. A self model cannot also have a competing projection in the same catalog
+(`AmbiguousReadModelBuilder`); remove the old builder when switching. See the
+reducer skill's conversion guidance. Evaluate variants below when
 shapes diverge; do not mandate them for every status field.
 
 ## Joins are on events, never on read models
@@ -133,8 +159,7 @@ variants only when the shapes genuinely diverge; a single read model with a
 `Status` flag is still right when every stage shares almost all its
 properties.
 
-> Variants require `Cratis.Chronicle` `19.1.0` or later — newer than this
-> skill's `18.3.0` baseline. Reverify before claiming support.
+Requires `Cratis.Chronicle` 19.1.0 or later for variants.
 
 Both approaches use the identity type only to anchor the group — it does not
 need to be a read model itself, and does not need a common CLR base type with
@@ -172,7 +197,7 @@ join, so an out-of-order or replayed event can never resurrect a variant the
 entity has since left. A variant that declares no entering event at all throws
 `VariantMustDeclareEntersOnEvent` at startup.
 
-Read [references/variants.md](references/variants.md) for the complete group
+When declaring a variant group or shared variant mappings, read [references/variants.md](references/variants.md) for the complete group
 declaration, the update-only reclassification in full, `[GlobalFor<T>]` rules
 and its declaration-error trap, and best practices for picking an identity
 type.
@@ -226,15 +251,22 @@ or a reactor rather than annotating the projection.
 
 ## `[FromAll]` versus `[FromEvery]`
 
-- `[FromAll]` subscribes to **every** event type in the system. It is for audit
-  and log models; pair it with `[NotRewindable]`. It targets a **property only**,
-  so it cannot go on a record positional parameter.
-- `[FromEvery]` captures across the events the model **already** declares through
-  its `[FromEvent<T>]` attributes — for example to stamp `EventContext` data. It
-  subscribes to nothing new.
+- `[FromAll]` subscribes to **every** event type in the sequence (join-only
+  event types are excluded). It is for audit/log models; pair it with
+  `[NotRewindable]`. It targets a **property only**, not a positional parameter.
+  Fluent `.FromAll()` can count into dictionaries using a per-event context key.
+- `[FromEvery]` (Requires Chronicle 19.49.0 for child-only events) captures across events the model **already** consumes, including
+  events handled **only by child or nested-child collections**, updating the
+  owning parent. It subscribes to nothing new. Model-bound always
+  includes children; fluent `IFromEveryBuilder.ExcludeChildProjections()` opts
+  out (PDL: `exclude children`).
 
 Their two optional arguments are in **opposite order**: `[FromAll(contextProperty,
 property)]` and `[FromEvery(property, contextProperty)]`. Name them.
+
+## Definition changes replay
+
+Read [references/definition-changes.md](references/definition-changes.md) when a changed mapping, key, filter, join or child must replay, or when a corrected mapping does not repair existing counters and joins (replay rebuilds them; deploying alone does not).
 
 ## After creating
 
@@ -246,10 +278,7 @@ projection spans streams.
 ## Route near misses
 
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code
@@ -258,10 +287,14 @@ projection spans streams.
 
 ## Verify
 
-- Model-bound attributes were exhausted before the fluent builder, and the
-  fluent builder before any reducer.
+- The style follows the read-model ladder: attributes for clear mappings,
+  fluent for structure, reducer code for clearer state transitions; conversion
+  preserves guards and leaves no competing self-model builder.
 - `.AutoMap()` is called only inside a `.NoAutoMap()` scope.
-- Every join is on an event type.
+- Every join is on an event type; CHR0042 overlaps are deliberate.
+- One class implements only one `IProjectionFor<T>` (CHR0057).
+- Inert filters/clear mappings and non-nullable clears (CHR0041–CHR0048) are
+  checked rather than suppressed; deliberately query-owned members use `[NotProjected]`.
 - No `[FromEventSequence]` attribute appears anywhere.
 - No projection carries a filter attribute expecting it to filter.
 - `ConstantKey` is written as a property initializer.

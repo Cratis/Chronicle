@@ -58,7 +58,13 @@ sequenceDiagram
 
 Because the projection runs inline at query time, you always get a result that is consistent with every event appended so far — including one you may have just appended a millisecond ago.
 
+:::caution[A fresh read is not a guard]
+An on-demand read is current when you read it, but it does not note where in the log it stopped and it does not protect the append that follows. Another writer can append between your read and your write, and both appends succeed. To make a rule hold while writers race, use a [constraint](../constraints/index.md) or a [decision-consistent read](./decision-reads.mdx). See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+:::
+
 The replay reads only the events of the event source whose id is the key you asked for. That fits a read model keyed by its event source id. A projection that joins events from other event sources, or sets its key from event content with `UsingKey`, misses those events when read this way — keep it materialized, and wait for the append's observers when you need your own write back.
+
+A [per-stream read model](per-stream.mdx) declares `[EventStream<TSource>(stream)]`, which implies passive. Its stream-aware instance read folds only the declared source type, stream type and requested stream ID; key-only reads are refused. A plain stream query still guards nothing. Use a stream-scoped decision read when a monthly rule must hold while writers race.
 
 ### When to Use On-Demand Computation
 
@@ -67,7 +73,7 @@ On-demand computation is the right choice when:
 - Strong read-after-write consistency is required
 - The event history for each instance is short (tens to low hundreds of events)
 - The read model is accessed infrequently relative to how often events are appended
-- You are validating a command against current state before appending new events
+- You are reading current state to show it, or to check something you can repair afterwards. A check that must hold when two writers race needs a [decision-consistent read](./decision-reads.mdx)
 
 When those apply, mark the read model passive — see [Passive projections](../projections/declarative/passive). For a practical guide to working with read model instances, see [Getting a Single Instance](getting-single-instance) and [Getting a Collection of Instances](getting-collection-instances).
 
@@ -136,10 +142,10 @@ Materialized projections are the right choice when:
 
 | Scenario | Recommended Model |
 |---|---|
-| Financial or inventory checks requiring exact current state | On-demand computation |
+| Showing exact current state, such as a balance or stock level | On-demand computation |
 | Read-after-write in the same request | On-demand computation, or waiting for the append's observers |
-| Command validation against current state | On-demand computation |
-| Rules that must hold when two writers race | A [constraint](../constraints/index.md), or a [decision-consistent read](./decision-reads) when the decision depends on an admitted event-source-keyed projection |
+| A command check you can repair afterwards | On-demand computation |
+| Rules that must hold when two writers race | A [constraint](../constraints/index.md), or a [decision-consistent read](./decision-reads.mdx) when the decision depends on an admitted event-source-keyed projection |
 | Dashboards and list views over large datasets | Materialized projections |
 | Real-time UIs observing changes as they happen | Materialized projections with watchers |
 | Infrequently accessed instances with short event histories | On-demand computation |
@@ -152,4 +158,4 @@ Materialized projections are the right choice when:
 | Materialized, read after waiting | Asynchronously; the caller waits | Includes the caller's own append | O(1) read, plus the wait |
 | Materialized projections | Asynchronously | Eventual | O(1) — stored result |
 
-These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models for authoritative state checks, and an explicit wait in the few places where one caller must read its own write.
+None of these guards an append: passive read models are fresh, but they are still unguarded, because nothing checks at append time that the state you read is unchanged. Only constraints, concurrency scopes and decision reads do. These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models where a check must see current state (still unguarded, so pair them with a decision read or a constraint when the rule must hold), and an explicit wait in the few places where one caller must read its own write.

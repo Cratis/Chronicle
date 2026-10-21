@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
@@ -71,7 +72,7 @@ public class and_a_dictionary_shaped_property_is_set : Specification
         }
 
         _database = Substitute.For<IDatabase>();
-        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
         _sink = new SqlSink(
@@ -140,7 +141,7 @@ public class and_a_dictionary_shaped_property_is_set : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());

@@ -1,0 +1,25 @@
+---
+title: "CHR0057: An artifact must target one read model"
+description: "CHR0057 reports a type implementing multiple projection or reducer interfaces."
+---
+
+## Rule description
+
+A .NET class must implement only one closed `IProjectionFor<TReadModel>` or only one closed `IReducerFor<TReadModel>` of each kind. Artifact identifiers belong to the class, not to each interface implementation, so one class cannot represent two projections or two reducers.
+
+The rule also checks inherited interfaces. Two inheritance paths to the same closed interface count as one implementation.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Split the class into separate projection or reducer classes, one per read model. Each class then has its own artifact identifier.
+
+Default artifact discovery throws `TypeImplementsMultipleProjectionInterfaces` or `TypeMustImplementOnlyOneReducer` for an invalid class. Both name the class instead of silently skipping it, and the projection exception also lists its read models.
+
+## Related topics
+
+- [Declarative projections](../projections/declarative/index.mdx)
+- [Reducers](../reducers/index.mdx)

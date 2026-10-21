@@ -54,6 +54,8 @@ Every rule here reduces noise. `var` avoids redundant type repetition. Expressio
 - Prefer LINQ (`.Where`, `.Any`, `.Select`, `.FirstOrDefault`) over a `foreach` that filters inside its body with an `if`/`continue` or an early `return` — put the filter in the query so the intent is explicit (`items.Where(predicate)`, `return items.Any(predicate);`). Reserve `foreach` for genuine iteration with side effects. (Filtering inside a loop is what the analyzers flag as a "missed opportunity to use Where".)
 - Don't use regions — they hide code instead of organizing it. If a file needs regions, it needs refactoring.
 - Never add postfixes like `Async`, `Impl`, `Service` to class names — they add noise without information.
+- Name a method without the `Async` suffix unless a synchronous method of the same name also exists, never write an explicit `private` modifier (property setters excepted), and never put a `.Features.` segment in a namespace.
+- The `Cratis.Architecture.CodeAnalysis` analyzer package (26 diagnostics, `CRARCH0001`–`CRARCH0026`; verified at `v1.0.2`) enforces these and others: `CRARCH0003` postfixes, `0004` `.Features.` namespaces, `0005` regions, `0006`/`0024` `LoggerMessage`, `0007` `IServiceProvider` injection, `0008` `is null`, `0017` namespace matches folder, `0019` `Async` suffix, `0022` explicit `private`, `0023` typed logger category; `0012` (`async void`) and `0014` (test types in production) are errors. When a repository has the package, a `CRARCH` warning is the house convention, not noise.
 - For types with no implementation body, omit the braces (e.g. `public interface IMyInterface;`).
 - Prefer `record` types for immutable data structures (events, commands, read models, concepts) — they give you value equality, immutability, and concise syntax for free.
 
@@ -307,7 +309,7 @@ public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> h
 
 - Never inject `IEnumerable<TInterface>` to enumerate implementations of an abstraction. That signature only works if every implementation is hand-registered, which defeats convention-based discovery. Use `IInstancesOf<TInterface>` instead.
 - Never write `services.AddSingleton<TInterface, Impl>()` or `services.AddTransient<TInterface, Impl>()` for a type that exists to be discovered. Mark the implementation with `[Singleton]` (for singletons) or rely on the `IFoo → Foo` convention (for transients) and remove the registration line.
-- `IInstancesOf<T>` resolves at the point of access — implementations added later in the assembly become available without touching the consumer or any composition root.
+- `IInstancesOf<T>` fixes its type set at construction and resolves instances on each enumeration through the consumer's service provider (Fundamentals 7.23.0). It does not discover late-loaded implementations on access. A singleton consumer captures the root provider; it must not enumerate scoped implementations. Resolve a scoped or transient consumer inside a scope when any implementation is scoped.
 - `IEnumerable<T>` is still the right type to **return** from a method that yields a sequence of values. The rule applies only when the goal is to enumerate **implementations** of an abstraction.
 
 ## Logging
@@ -335,7 +337,9 @@ These are the building blocks. Each type has a specific role in the vertical sli
 | `[ReadModel]` | Marks a record as a model-bound query — define static query methods on the record |
 | `CommandValidator<T>` | FluentValidation validator for commands |
 | `IProjectionFor<T>` | Fluent projection definition — AutoMap is on by default, never call `.AutoMap()` |
-| `IReducerFor<T>` | Imperative reducer — receives current state, returns new state |
+| Self-reducing model | New .NET reducer default: public static `Reduce(event, model? current[, EventContext])`, returns model or `Task<model>` (nullable results allowed); marker-free discovery, no fold-time DI |
+| `IReducerFor<T>` | Separate instance fold for injected services, replay instance behavior or separation from the model |
+| `ChronicleOptions.ExplicitArtifacts.RegisterReducer<T>()` | Nominate a plain instance class only when its assembly cannot reference Chronicle; also accepts self models (see **cratis-chronicle-client-dotnet**, discovery reference) |
 | `IReactor` | Marker interface for side-effect observers — method dispatch by event type parameter |
 | `IConstraint` | Constraint definition — enforced server-side by Chronicle at append time |
 | `AggregateRoot` | Chronicle aggregate root with `Apply()` and `Commit()` |

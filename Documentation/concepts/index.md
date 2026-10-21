@@ -3,7 +3,7 @@ title: Concepts
 description: Understand Chronicle's core event-sourcing concepts, terminology, and consistency model.
 ---
 
-This area contains explanations and guidance on the concepts in Cratis.
+The concepts area explains the building blocks of Chronicle: the event store, events and event sequences, and the observers (projections, reducers and reactors) that turn events into read models and side effects.
 
 | Topic | Description |
 | ------- | ----------- |
@@ -16,6 +16,7 @@ This area contains explanations and guidance on the concepts in Cratis.
 | [Event Store](./event-store.md) | Where your events live — durably persisted in a database |
 | [Namespaces](./namespaces.md) | What are namespaces within an event store |
 | [Event Sequence](./event-sequence.md) | What is an event sequence |
+| [Effect receipts](./effect-receipts.md) | Recover the first committed outcome of retryable occurrence work |
 | [Observer](./observers.mdx) | What is an observer |
 | [Projections, reducers, and reactors](./observer-patterns.md) | The three observer patterns side by side — deriving state from events vs causing side effects |
 | [Projection](./projection.md) | How a projection declaratively maps events onto a read model instance |

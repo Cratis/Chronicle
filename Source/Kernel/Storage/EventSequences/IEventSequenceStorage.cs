@@ -275,6 +275,16 @@ public interface IEventSequenceStorage
     Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber);
 
     /// <summary>
+    /// Reads only metadata at the supplied sequence locators. Missing events are omitted.
+    /// </summary>
+    /// <param name="sequenceNumbers">The bounded collection of locators.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stored metadata, without event content.</returns>
+    /// <exception cref="EventMetadataReadsNotSupported">The provider does not support metadata-only reads.</exception>
+    Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
+
+    /// <summary>
     /// Get the last instance of the specified event types for a specific event source.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
@@ -307,6 +317,16 @@ public interface IEventSequenceStorage
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns><see cref="IEventCursor"/>.</returns>
     Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Read attempted append slots from committed storage to settle an uncertain outcome.
+    /// </summary>
+    /// <param name="first">First attempted slot, inclusive.</param>
+    /// <param name="last">Last attempted slot, inclusive.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A cursor over committed events in the range.</returns>
+    Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default) =>
+        GetRange(first, last, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Get a bounded range, narrowed by observer event source and stream types where supported.
@@ -377,11 +397,25 @@ public interface IEventSequenceStorage
 
     /// <summary>
     /// Replace the generational content for an event at a specific sequence number.
-    /// Used during event type migration when new generations are added and existing events
-    /// need their content updated with the migrated content for all generations.
+    /// Retained for compatibility; generation backfill uses the guarded, add-only operation instead.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to update.</param>
     /// <param name="content">The new content per <see cref="EventTypeGeneration"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content);
+
+    /// <summary>
+    /// Reads protected base content independently of revision delivery.
+    /// </summary>
+    /// <param name="sequenceNumber">The event to read.</param>
+    /// <returns>The stored generations, or null when the event does not exist.</returns>
+    Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber);
+
+    /// <summary>
+    /// Atomically adds missing generations, hashes and provenance without replacing existing content.
+    /// </summary>
+    /// <param name="observed">The snapshot to guard against concurrent revision, redaction or source changes.</param>
+    /// <param name="generations">The generations to add.</param>
+    /// <returns>True if all generations were added; false on a conflict or an existing target.</returns>
+    Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations);
 }

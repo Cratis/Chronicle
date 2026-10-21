@@ -29,6 +29,7 @@ public class and_the_client_sent_the_servers_own_descriptor_set : Specification
             Substitute.For<IGrainFactory>(),
             Substitute.For<ILocalSiloDetails>(),
             new ConnectedClientsQuery(Substitute.For<IGrainFactory>(), Options.Create(new ChronicleOptions())),
+            new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(new ChronicleOptions()));
 
@@ -40,6 +41,8 @@ public class and_the_client_sent_the_servers_own_descriptor_set : Specification
         DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
     });
 
+    [Fact] void should_advertise_conjunction_support() => _result.Capabilities.ShouldContain(KernelCapabilities.ConcurrencyScopeConjunctions);
+    [Fact] void should_advertise_idempotent_appends() => _result.Capabilities.ShouldContain(KernelCapabilities.IdempotentAppends);
     [Fact] void should_report_compatible() => _result.IsCompatible.ShouldBeTrue();
     [Fact] void should_report_nothing() => _result.Incompatibilities.ShouldBeEmpty();
     [Fact] void should_report_the_running_server_version() => _result.ServerVersion.ShouldEqual(ServerVersion.Version);

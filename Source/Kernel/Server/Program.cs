@@ -63,6 +63,7 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
@@ -146,9 +147,9 @@ hostBuilder
    .UseOrleans(_ =>
    {
         var clustering = chronicleOptions.Clustering;
-        if (clustering.Type == Cratis.Chronicle.Configuration.ClusteringType.MongoDB)
+        if (clustering.Type is ClusteringType.MongoDB or ClusteringType.Sql)
         {
-            // Membership is kept in MongoDB (wired by WithMongoDB below) - nodes sharing the
+            // Membership is wired by WithMongoDB or WithSql below. Nodes sharing the
             // same storage and cluster id form one cluster.
             _.Configure<Orleans.Configuration.ClusterOptions>(options =>
             {
@@ -158,13 +159,7 @@ hostBuilder
 
             // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
             // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
-            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options =>
-            {
-                options.DefunctSiloCleanupPeriod = clustering.DefunctSiloCleanupPeriod > TimeSpan.Zero
-                    ? clustering.DefunctSiloCleanupPeriod
-                    : null;
-                options.DefunctSiloExpiration = clustering.DefunctSiloExpiration;
-            });
+            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
 
             if (clustering.AdvertisedIP is { } advertisedIP)
             {
@@ -185,7 +180,7 @@ hostBuilder
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
-        // Applies to both clustering types, and to calls a silo makes to itself as well as to a
+        // Applies to all clustering types, and to calls a silo makes to itself as well as to a
         // sibling. Startup work that fans out across everything the server holds grows with the
         // deployment while Orleans' 30 second default does not, so this is the knob that lets an
         // operator get a server that has outgrown it to start again.
@@ -227,6 +222,10 @@ hostBuilder
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
+
+       // Lets an HTTP storage connection resolver authenticate with Microsoft Entra ID (AzureCredential).
+       // Inert unless storage.connectionResolution configures that authentication type.
+       services.AddAzureConnectionResolverAuthentication();
 
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
@@ -270,6 +269,7 @@ hostBuilder
    });
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
@@ -294,6 +294,15 @@ if (encryptionCertificateRing.IsConfigured)
 else
 {
     logger.EncryptionCertificateRingNotConfigured();
+}
+
+// Serve the Workbench under a configured prefix. UsePathBase strips the prefix when the reverse proxy passes it
+// through and leaves the path alone when the proxy has already stripped it, so both kinds of proxy work. It is
+// first so that nothing after it - the health port policy included - ever sees the prefix. (#4822)
+var workbenchBasePath = WorkbenchBasePath.Normalize(chronicleOptions.Workbench.BasePath);
+if (workbenchBasePath.Length > 0)
+{
+    app.UsePathBase(workbenchBasePath);
 }
 
 // Opt-in: when the dedicated health port is exclusive, nothing but the health endpoint is answered
@@ -341,6 +350,7 @@ var workbenchStaticFileOptions = new StaticFileOptions();
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (serveWorkbench)
 {
+    workbenchFileProvider = WorkbenchBasePath.Apply(workbenchFileProvider!, workbenchBasePath);
     workbenchStaticFileOptions = new StaticFileOptions { FileProvider = workbenchFileProvider };
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = workbenchFileProvider });
     app.UseStaticFiles(workbenchStaticFileOptions);

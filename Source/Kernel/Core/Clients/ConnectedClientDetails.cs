@@ -38,7 +38,7 @@ public record ConnectedClientDetails(
     /// </summary>
     /// <param name="clients">The <see cref="ConnectedClientsQuery"/> holding the cluster view.</param>
     /// <returns>A collection of <see cref="ConnectedClientDetails"/>.</returns>
-    internal static async Task<IEnumerable<ConnectedClientDetails>> GetConnectedClients(ConnectedClientsQuery clients) =>
+    public static async Task<IEnumerable<ConnectedClientDetails>> GetConnectedClients(ConnectedClientsQuery clients) =>
         (await clients.GetAll()).ToReadModel();
 
     /// <summary>
@@ -46,7 +46,7 @@ public record ConnectedClientDetails(
     /// </summary>
     /// <param name="clients">The <see cref="ConnectedClientsQuery"/> holding the cluster view.</param>
     /// <returns>An observable subject emitting collections of <see cref="ConnectedClientDetails"/>.</returns>
-    internal static ISubject<IEnumerable<ConnectedClientDetails>> AllConnectedClients(ConnectedClientsQuery clients) =>
+    public static ISubject<IEnumerable<ConnectedClientDetails>> AllConnectedClients(ConnectedClientsQuery clients) =>
         clients.InvokeAndWrapWithTransformSubject(
             clients.ObserveAll,
             connected => connected.ToReadModel());
@@ -63,7 +63,7 @@ public record ConnectedClientDetails(
     /// <remarks>
     /// Only client-owned observers have connected clients - for kernel-owned observers this is empty.
     /// </remarks>
-    internal static async Task<IEnumerable<ConnectedClientDetails>> ConnectedClientsForObserver(
+    public static async Task<IEnumerable<ConnectedClientDetails>> ConnectedClientsForObserver(
         string eventStore,
         string @namespace,
         string observerId,

@@ -78,6 +78,8 @@ public sealed class ControllableEventStoreDatabase : IEventStoreDatabase, IDispo
         readonly Dictionary<Type, object> _collections = [];
         public IMongoClient Client { get; } = Substitute.For<IMongoClient>();
 
+        public Task Drop() => Task.CompletedTask;
+
         public IMongoCollection<T> GetCollection<T>(string? name = default)
         {
             lock (_collectionsLock)

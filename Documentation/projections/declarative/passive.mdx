@@ -1,3 +1,6 @@
+---
+description: A passive Chronicle projection is not materialized to a store but queried on demand for in-memory lookups, declared with Passive().
+---
 # Passive projection
 
 A passive projection is a projection that is not actively materialized to a persistent store but can be queried on-demand for in-memory lookups. This is useful for scenarios where you need to construct read models from events without the overhead of maintaining persistent state.
@@ -11,8 +14,10 @@ Use the `.Passive()` method to mark a projection as passive:
 This projection:
 
 - Will not be actively maintained in persistent storage
-- Can be queried on-demand using the `IProjections` service
+- Can be read on demand through `ReadModels.GetInstanceById`
 - Reconstructs the read model from events when requested
+
+A read model declaring `[EventStream<TSource>(stream)]` is also passive, even without `.Passive()`. It stays keyed by event source ID but requires a stream-aware instance read; a key-only read is refused rather than mixing stream IDs. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
 
 ## Using passive projections
 
@@ -36,24 +41,27 @@ Events should match the read model structure or use explicit mapping:
 
 When you call `GetInstanceById` on a passive projection:
 
-1. Chronicle retrieves all relevant events for the specified event source ID
-2. The projection logic is applied to reconstruct the read model in memory
-3. The resulting read model is returned without being persisted
-4. Each call reconstructs the model from scratch, ensuring up-to-date data
+1. Chronicle folds the relevant events for the specified event source ID in memory, starting from the first event.
+2. The result is returned. Nothing is kept between reads: there is no persistent read-model sink and no cached state.
+3. Every later read folds the history again, so it reflects everything appended up to that read, including redactions, revisions and erased personal data.
+
+By-ID reads select one event source. A cross-source join or custom-key aggregation cannot generally
+reconstruct the same answer as its materialized counterpart this way. See
+[consistency models](../../read-models/consistency.md) before making an existing projection passive.
 
 ## When to use passive projections
 
 Passive projections are ideal for:
 
 - **Infrequent queries**: When read models are accessed rarely or sporadically
-- **Real-time data**: When you always need the most current state without caching concerns
-- **Memory-sensitive scenarios**: When you want to avoid storing projection state
+- **Current source state**: When you need an on-demand fold instead of waiting for materialization
+- **Storage-sensitive scenarios**: When you want to avoid a persistent read-model sink
 - **Temporary calculations**: For read models that are computed and discarded
 - **Testing and debugging**: When you need to inspect event-driven state without persistence
 
 ## Performance considerations
 
-- Passive projections have higher latency since they reconstruct on each request
-- They consume more CPU but less storage compared to active projections
-- Consider caching strategies if the same passive projection is accessed frequently
-- Use for read models with simple event processing logic to minimize reconstruction time
+- Every read folds the source's history from the start, so read cost grows with the number of relevant events for that source.
+- Passive projections trade persistent storage for read-time processing on every read.
+- A reactor or command that reads a passive model on every event over a long stream repeats that fold each time; keep such histories short, or use a materialized projection when eventual consistency is acceptable.
+- Use bounded, source-local histories when read latency matters.

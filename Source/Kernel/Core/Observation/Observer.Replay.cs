@@ -26,6 +26,10 @@ public partial class Observer
             return JobId.NotSet;
         }
 
+        // Refuse before resetting progress, entering replay, or starting a job. The handler also guards
+        // persisted jobs that resume without coming through this observer entry point.
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+
         while (_catchUpHandoversSettled is { } settled)
         {
             logger.WaitingForCatchUpHandoverBeforeReplay();
@@ -42,6 +46,7 @@ public partial class Observer
         // routing in between and replace it.
         if (State.RunningState != ObserverRunningState.Replaying)
         {
+            Skips.Reset();
             var canReplay = await CanTransitionTo<Replay>();
             await TransitionTo<Replay>();
             if (State.RunningState != ObserverRunningState.Replaying)
@@ -95,6 +100,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Reset();
 
         var eventTypeIds = replayedEventTypes.Select(_ => _.Id).ToHashSet();
         if (eventTypeIds.Count > 0 && replayedPartitions.Count > 0)
@@ -163,6 +169,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
@@ -186,9 +193,10 @@ public partial class Observer
             }
         }
 
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+        EvaluateSuspectedSkips();
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -205,6 +213,7 @@ public partial class Observer
             return;
         }
 
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 
@@ -216,6 +225,7 @@ public partial class Observer
             ? partitionCounts.Where(_ => eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
             : partitionCounts.ToDictionary();
         State = WithSubtractedPartitionHandledEventCounts(State, replayedPartitionCounts);
+        RecordedHandlingState();
         await handledCountsStorage.RemoveFor(_observerId, partition);
         var retainedPartitionCounts = retainOtherCounts
             ? partitionCounts.Where(_ => !eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
@@ -226,10 +236,12 @@ public partial class Observer
         }
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
         {
-            ReplaysAllEventTypes = !retainOtherCounts
+            ReplaysAllEventTypes = !retainOtherCounts,
+            ReaderScope = ReaderScope
         });
 
         State.ReplayingPartitions.Add(partition);
+        Skips.JobStarted(partition);
         await WriteStateAsync();
     }
 

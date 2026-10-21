@@ -204,6 +204,10 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber) => inner.GetEventAt(sequenceNumber);
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => inner.GetMetadataAt(sequenceNumbers, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
         inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
@@ -230,6 +234,12 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     /// <inheritdoc/>
     public Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content) =>
         inner.ReplaceGenerationContent(sequenceNumber, content);
+
+    /// <inheritdoc/>
+    public Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber) => inner.GetStoredGenerations(sequenceNumber);
+
+    /// <inheritdoc/>
+    public Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations) => inner.TryAddGenerations(observed, generations);
 
     static string BuildKey(EventSourceId? eventSourceId, IEnumerable<string>? eventTypeTokens)
     {

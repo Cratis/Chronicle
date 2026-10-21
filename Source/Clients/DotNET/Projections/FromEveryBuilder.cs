@@ -3,14 +3,13 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IFromEveryBuilder{TReadModel}"/>. The stored child-inclusion flag
-/// defaults to true but does not currently make child-only events run parent every-event mappings.
+/// Represents an implementation of <see cref="IFromEveryBuilder{TReadModel}"/>. Child events also update their
+/// containing parent's every-event mappings by default; use <see cref="ExcludeChildProjections"/> to opt out.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
@@ -22,12 +21,7 @@ public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEve
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the property to set on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
-
-        var propertyPath = namingPolicy.GetPropertyName(accessorPropertyPath);
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set on read model '{typeof(TReadModel).FullName}'");
         if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
         {
             throw new DuplicatePropertyInProjection(propertyPath);

@@ -39,7 +39,10 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
             @event.EventTypes,
             new WebhookTarget(@event.TargetUrl, WebhookAuthorization.None, @event.TargetHeaders),
             @event.IsReplayable,
-            @event.IsActive);
+            @event.IsActive)
+        {
+            GenerationDelivery = @event.GenerationDelivery
+        };
 
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.Add(definition);
@@ -93,6 +96,23 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
     }
 
     /// <summary>
+    /// Applies an optional OAuth scope after authorization has been set.
+    /// </summary>
+    /// <param name="event">The scope fact.</param>
+    /// <param name="eventContext">The event context.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task OAuthScopeSet(OAuthScopeSetForWebhook @event, EventContext eventContext)
+    {
+        var webhookId = new WebhookId(eventContext.EventSourceId.Value);
+        var manager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
+        var definition = (await manager.GetWebhookDefinitions()).FirstOrDefault(_ => _.Identifier == webhookId);
+        if (definition?.Target.Authorization.IsT2 == true)
+        {
+            await manager.SetAuthorization(webhookId, definition.Target.Authorization.AsT2 with { Scope = @event.Scope.Value });
+        }
+    }
+
+    /// <summary>
     /// Handles event types being set for a webhook.
     /// </summary>
     /// <param name="event">The event containing the event types.</param>
@@ -105,6 +125,20 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
 
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         await webhooksManager.SetEventTypes(webhookId, @event.EventTypes);
+    }
+
+    /// <summary>
+    /// Handles a delivery policy change together with its event type pins.
+    /// </summary>
+    /// <param name="event">The event containing the delivery policy and pins.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task GenerationDeliverySet(GenerationDeliverySetForWebhook @event, EventContext eventContext)
+    {
+        var webhookId = new WebhookId(eventContext.EventSourceId.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
+        var definition = (await webhooksManager.GetWebhookDefinitions()).Single(_ => _.Identifier == webhookId);
+        await webhooksManager.Update(definition with { GenerationDelivery = @event.GenerationDelivery, EventTypes = @event.EventTypes });
     }
 
     /// <summary>

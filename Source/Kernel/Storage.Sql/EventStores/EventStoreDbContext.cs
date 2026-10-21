@@ -27,6 +27,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
+    /// Gets or sets the first-time initialization marker.
+    /// </summary>
+    public DbSet<EventStoreInitialization> EventStoreInitialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the event types DbSet.
     /// </summary>
     public DbSet<EventType> EventTypes { get; set; }
@@ -112,6 +117,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<EventSeedsEntity> EventSeeds { get; set; }
 
     /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // WebhookTarget and ObserverFilters are value objects serialized as JSON columns.
@@ -136,6 +145,18 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
         base.OnModelCreating(modelBuilder);
+        Occurrences.OccurrenceModel.Configure(modelBuilder);
+        modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
+        {
+            entity.ToTable("LifecycleFanOutIntents");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        }).Entity<Occurrences.TriggerDefinitionEntry>(entity =>
+        {
+            entity.ToTable("TriggerDefinitions");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        });
 
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql). PostgreSQL is the only provider that requires this because its

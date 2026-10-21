@@ -36,4 +36,9 @@ public record ObserverDefinition(
         : this(ObserverId.Unspecified, [], EventSequenceId.Unspecified, ObserverType.Unknown, ObserverOwner.None, false)
     {
     }
+
+    /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
 }

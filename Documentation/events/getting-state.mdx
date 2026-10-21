@@ -1,3 +1,6 @@
+---
+description: Read Chronicle event sequence state such as the tail sequence number to capture checkpoints or check whether an observer has caught up.
+---
 # Getting state
 
 Event sequence state provides information about how far a sequence has progressed. The most common state value is the tail sequence number, which represents the latest event appended to the sequence. Use the `IEventSequence` APIs, such as `GetTailSequenceNumber` and related state calls, to capture the current position.
@@ -26,7 +29,7 @@ Kotlin and Java don't currently expose a way to read the tail sequence number at
 
 <ChronicleClientTabs snippet="events/getting-state/tail-for-event-source" />
 
-This scoped form (filtering by event source and event types) is currently C#-only. Elixir and TypeScript can capture the *overall* tail (see above), but neither exposes a way to scope it to specific event types.
+This scoped form (filtering by event source and event types) is currently C#-only. TypeScript can capture the *overall* tail (see above) but doesn't expose a way to scope it to specific event types. Elixir scopes the tail to an observer's event types with `get_tail_sequence_number_for_observer/2`.
 
 ### Check whether an observer is caught up
 

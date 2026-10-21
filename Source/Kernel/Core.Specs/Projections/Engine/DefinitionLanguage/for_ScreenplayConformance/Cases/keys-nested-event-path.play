@@ -1,0 +1,20 @@
+// A key read through a composite event property
+// Screenplay documentation: Documentation/screenplay/projections/keys.md
+
+type OrderReference
+  orderId String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        reference OrderReference
+        label String
+      readmodel OrderView
+        orderId String
+        label String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced key reference.orderId
+          label = label

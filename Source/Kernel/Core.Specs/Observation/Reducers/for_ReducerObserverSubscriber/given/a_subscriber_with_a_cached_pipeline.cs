@@ -19,11 +19,12 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     protected IReducerPipeline _firstPipeline;
     protected IReducerPipeline _secondPipeline;
     protected FakeTimeProvider _clock;
+    protected TestKitSilo _silo;
     protected readonly ObserverSubscriberKey _key = new("the-reducer", "the-store", "the-namespace", EventSequenceId.Log, "the-partition", string.Empty);
 
     async Task Establish()
     {
-        var silo = new TestKitSilo();
+        var silo = _silo = new TestKitSilo();
         _definition = CreateDefinition();
         var stateStorage = Substitute.For<IStorage<ReducerDefinition>>();
         stateStorage.State = _definition;

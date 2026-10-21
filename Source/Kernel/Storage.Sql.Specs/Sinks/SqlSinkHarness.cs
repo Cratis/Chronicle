@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
@@ -19,7 +20,7 @@ using SqlSink = Cratis.Chronicle.Storage.Sql.Sinks.Sink;
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
-/// Runs the shared <see cref="ISink"/> contract against the SQL sink, backed by an in-memory SQLite database.
+/// Runs the shared <see cref="ISink"/> contract against the SQL sink, backed by a file-based SQLite database in WAL mode.
 /// </summary>
 public class SqlSinkHarness : ISqlSinkHarness
 {
@@ -27,30 +28,51 @@ public class SqlSinkHarness : ISqlSinkHarness
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
         Substitute.For<ILogger<ReadModelMigrator>>());
     readonly ReplayingTables _replayingTables = new();
+    readonly string _path = Path.Combine(Path.GetTempPath(), $"chronicle-sink-{Guid.NewGuid():N}.db");
     IReadOnlyList<ProjectedColumn> _columns = [];
     SqliteConnection? _connection;
     ReadModelDefinition? _definition;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="SqlSinkHarness"/> class.
+    /// </summary>
+    public SqlSinkHarness() => ConnectionString = new SqliteConnectionStringBuilder
+    {
+        DataSource = _path,
+        Cache = SqliteCacheMode.Private,
+        Pooling = false
+    }.ToString();
+
+    /// <summary>
     /// Gets the isolated database shared by this harness's connections.
     /// </summary>
-    public string ConnectionString { get; init; } = $"Data Source=sink-{Guid.NewGuid():N};Mode=Memory;Cache=Shared;Pooling=False";
+    public string ConnectionString { get; init; }
 
     /// <summary>
     /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
+    /// <summary>
+    /// Gets the logger for sink diagnostics.
+    /// </summary>
+    public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _definition = definition;
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
+        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (_connection is null)
         {
-            // Keep the in-memory database alive, but never share a connection between concurrent scopes.
             _connection = new SqliteConnection(ConnectionString);
             _connection.Open();
+            using var command = _connection.CreateCommand();
+
+            // Like production, WAL and private caches let separate connections read the committed schema
+            // while replay promotion holds a schema write lock inside its transaction.
+            command.CommandText = "PRAGMA journal_mode=WAL";
+            command.ExecuteNonQuery();
         }
 
         // Honors the container the sink asks for rather than always handing back the main one: a replay
@@ -58,7 +80,7 @@ public class SqlSinkHarness : ISqlSinkHarness
         // ignored the name would fail every replay case for a reason that has nothing to do with the sink.
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
-        database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+        database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), () => { }));
 
         return new SqlSink(
@@ -67,7 +89,8 @@ public class SqlSinkHarness : ISqlSinkHarness
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()),
-            _replayingTables);
+            _replayingTables,
+            Logger);
     }
 
     /// <summary>
@@ -91,13 +114,19 @@ public class SqlSinkHarness : ISqlSinkHarness
     }
 
     /// <inheritdoc/>
-    public virtual void Dispose() => _connection?.Dispose();
+    public virtual void Dispose()
+    {
+        _connection?.Dispose();
+        File.Delete(_path);
+        File.Delete($"{_path}-wal");
+        File.Delete($"{_path}-shm");
+    }
 
     async Task<ReadModelDbContext> CreateContext(string containerName)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport()
+        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(Interceptors)
             .Options;
 

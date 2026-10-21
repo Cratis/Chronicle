@@ -1,5 +1,6 @@
 ---
 applyTo: "**"
+description: The subject of a Chronicle event is the identity the event is about, which keys PII encryption and erasure and defaults to the event source id.
 ---
 
 # Subject
@@ -47,7 +48,7 @@ explicit subject is provided:
 
 <ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" />
 
-An explicit `subject` argument always takes precedence over a `[Subject]` property. Resolving the subject from an event property on append is C#-only — Elixir, Kotlin, Java, and TypeScript pass the subject explicitly on every append (shown above). Kotlin and Java (`@Subject`), TypeScript (`@subject()`) and Elixir (`subject :field`) each have a read-model subject marker, which Chronicle uses when releasing a read model, not when appending an event.
+An explicit `subject` argument always takes precedence over a `[Subject]` property. Resolving the subject from an event property on append works in C# and Elixir (`subject: :field` on the event type); Kotlin, Java, and TypeScript pass the subject explicitly on every append (shown above). Kotlin and Java (`@Subject`), TypeScript (`@subject()`) and Elixir (`subject :field`) each have a read-model subject marker, which Chronicle uses when releasing a read model, not when appending an event.
 
 ## Reading the subject back
 

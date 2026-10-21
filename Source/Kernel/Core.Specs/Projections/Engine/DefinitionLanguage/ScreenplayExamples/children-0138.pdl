@@ -1,0 +1,10 @@
+projection Doc => DocReadModel
+  children departments identified by deptId
+    from DepartmentCreated key deptId
+      parent companyId
+      Name = name
+
+    children teams identified by teamId
+      from TeamCreated key teamId
+        parent deptId
+        Name = name

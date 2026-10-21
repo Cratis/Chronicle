@@ -25,16 +25,18 @@ public class EventsWithConcurrencyScopesResultHandler : IReactorSideEffectHandle
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         var eventsWithConcurrencyScopes = (EventsWithConcurrencyScopes)value;
-        var concurrencyScopes = eventsWithConcurrencyScopes.ConcurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value);
-        var result = await eventStore.EventLog.AppendMany(
-            eventsWithConcurrencyScopes.Events,
-            concurrencyScopes: concurrencyScopes);
+        var concurrencyScopes = eventsWithConcurrencyScopes.Entries;
+        var events = ReactorEffectKeys.Apply(reactorContext, eventStore, eventsWithConcurrencyScopes.Events.ToList());
+        var result = concurrencyScopes.GroupBy(_ => _.Key).Any(_ => _.Count() > 1)
+            ? await eventStore.EventLog.AppendMany(events, null, null, concurrencyScopes)
+            : await eventStore.EventLog.AppendMany(events, concurrencyScopes: concurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value));
 
         if (!result.IsSuccess)
         {
             return Result.Failed(ReactorSideEffectFailure.FromAppendResult(
                 result,
-                eventsWithConcurrencyScopes.Events.Select(_ => _.EventSourceId)));
+                events.Select(_ => _.EventSourceId),
+                reactorContext));
         }
 
         return Result.Success<ReactorSideEffectFailure>();

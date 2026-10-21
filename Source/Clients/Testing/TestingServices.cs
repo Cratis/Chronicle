@@ -57,6 +57,7 @@ using KernelMaterializedReadModelStore = KernelCore::Cratis.Chronicle.ReadModels
 using KernelNamespacesService = KernelGrpc::Cratis.Chronicle.Services.Namespaces.Namespaces;
 using KernelObserverRemover = KernelCore::Cratis.Chronicle.Observation.ObserverRemover;
 using KernelObserversService = KernelGrpc::Cratis.Chronicle.Services.Observation.Observers;
+using KernelOccurrencesService = KernelGrpc::Cratis.Chronicle.Services.Occurrences.Occurrences;
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
 using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
@@ -99,6 +100,7 @@ internal sealed class TestingServices : IServices
     readonly Lazy<IWebhooks> _webhooks;
     readonly Lazy<IExternalServices> _externalServices;
     readonly Lazy<ICaptures> _captures;
+    readonly Lazy<Contracts.Occurrences.IOccurrences> _occurrences;
     readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions;
     readonly Lazy<IJobs> _jobs;
     readonly Lazy<IEventSeeding> _seeding;
@@ -125,12 +127,14 @@ internal sealed class TestingServices : IServices
     /// <param name="compliance">The scenario's shared compliance stack and encryption keys.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="eventTypes">Resolves the event types belonging to this test store.</param>
+    /// <param name="replies">Optional reply-loss driver.</param>
     public TestingServices(
         IGrainFactory grainFactory,
         IStorage storage,
         InProcessCompliance compliance,
         JsonSerializerOptions jsonSerializerOptions,
-        Func<Cratis.Chronicle.Events.IEventTypes> eventTypes)
+        Func<Cratis.Chronicle.Events.IEventTypes> eventTypes,
+        DropReplyInterceptor? replies = null)
     {
         // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
         // command handlers resolve their parameters from - the same instances the service constructors used
@@ -148,16 +152,7 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));
-                    services.AddSingleton(new KernelWebhookRegistrar(
-                        grainFactory,
-                        new KernelWebhookComparer(
-                            storage,
-                            new ObjectComparer(),
-                            NullLogger<KernelWebhookComparer>.Instance),
-                        null!,
-                        null!,
-                        new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
-                        Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
+                    services.AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
 
                     // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
                     // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
@@ -171,10 +166,10 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(eventTypes());
                 }));
 
-        _observers = new(() => new KernelObserversService(
+        _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance)));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
@@ -185,6 +180,7 @@ internal sealed class TestingServices : IServices
                 storage,
                 jsonSerializerOptions,
                 new ActivitySource<KernelReactorsService>(),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 NullLogger<KernelReactorsService>.Instance));
 
         _reducers = new(() =>
@@ -194,6 +190,7 @@ internal sealed class TestingServices : IServices
                 new ExpandoObjectConverter(new TypeFormats()),
                 jsonSerializerOptions,
                 new ActivitySource<KernelReducersService>(),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 NullLogger<KernelReducersService>.Instance));
 
         _projections = new(() =>
@@ -202,7 +199,9 @@ internal sealed class TestingServices : IServices
                 new ExpandoObjectConverter(new TypeFormats()),
                 null!,
                 null!,
-                null!));
+                null!,
+                null!,
+                NullLogger<KernelProjectionsService>.Instance));
 
         _webhooks = new(() =>
             new KernelWebhooksService(
@@ -220,6 +219,9 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 NullLogger<KernelCapturesService>.Instance));
 
+        _occurrences = new(() =>
+            new Occurrences.OccurrenceReplies(new KernelOccurrencesService(commandPipeline.Value, storage, NullLogger<KernelOccurrencesService>.Instance), replies ?? new()));
+
         _eventStoreSubscriptions = new(() =>
             new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
@@ -230,14 +232,16 @@ internal sealed class TestingServices : IServices
             new KernelSeedingService(commandPipeline.Value, grainFactory, NullLogger<KernelSeedingService>.Instance));
 
         _sequences = new(() =>
-            new KernelSequencesService(
-                commandPipeline.Value,
-                storage,
-                compliance.CreateEventCompliance(),
-                jsonSerializerOptions,
-                new EventSequences.InProcessQueryContextManager(),
-                grainFactory,
-                NullLogger<KernelSequencesService>.Instance));
+            new EventSequences.SequenceReplies(
+                new KernelSequencesService(
+                    commandPipeline.Value,
+                    storage,
+                    compliance.CreateEventCompliance(),
+                    jsonSerializerOptions,
+                    new EventSequences.InProcessQueryContextManager(),
+                    grainFactory,
+                    NullLogger<KernelSequencesService>.Instance),
+                replies ?? new()));
 
         _namespaces = new(() =>
             new KernelNamespacesService(commandPipeline.Value, storage, NullLogger<KernelNamespacesService>.Instance));
@@ -351,6 +355,9 @@ internal sealed class TestingServices : IServices
     public ICaptures Captures => _captures.Value;
 
     /// <inheritdoc/>
+    public Contracts.Occurrences.IOccurrences Occurrences => _occurrences.Value;
+
+    /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions.Value;
 
     /// <inheritdoc/>
@@ -394,4 +401,18 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
+        new(
+            grainFactory,
+            new KernelWebhookComparer(
+                storage,
+                new ObjectComparer(),
+                NullLogger<KernelWebhookComparer>.Instance),
+            null!,
+            null!,
+            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
+            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
+            storage,
+            NullLogger<KernelWebhookRegistrar>.Instance);
 }

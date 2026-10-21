@@ -1,7 +1,18 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/model-bound-attributes.md -->
 # Model-bound projection attributes
 
-Verified against `Cratis.Chronicle` `18.3.0`.
+## Contents
+
+- Namespaces that are not `Projections.ModelBound`
+- Source and shape
+- Setting values
+- Counters
+- Variants
+- Relationships
+- Source selection
+- Labels, not filters
+- What makes a type a model-bound projection
+- AutoMap
 
 Unless noted, every attribute below lives in
 `Cratis.Chronicle.Projections.ModelBound`. Generic arity is stated exactly:
@@ -32,6 +43,7 @@ attribute takes no generic parameter at all.
 | `[Nested]` | non-generic | none | property, parameter; single |
 | `[FromAll]` | non-generic | `(string? contextProperty = default, string? property = default)` | **property only**; single |
 | `[FromEvery]` | non-generic | `(string? property = default, string? contextProperty = default)` | property, parameter; single |
+| `[NotProjected]` | non-generic | none | property, parameter |
 | `[NoAutoMap]` | non-generic | none | class, struct, property, parameter; inherited |
 | `[NotRewindable]` | non-generic | none | class, struct; single |
 | `[Passive]` | non-generic | none | class, struct; single |
@@ -40,6 +52,13 @@ attribute takes no generic parameter at all.
 
 Note that `[FromAll]` and `[FromEvery]` take their two optional arguments in
 **opposite order**. Always pass them by name.
+
+`[FromEvery]` includes child-only and nested-child
+contributing events in the owning parent's mappings (no attribute opt-out).
+`[FromAll]` subscribes to every sequence event type except join-only types;
+pair it with `[NotRewindable]`. `[NotProjected]` excludes a query-assembled member
+from AutoMap and CHR0024. Sources: `Projections/ModelBound/NotProjectedAttribute.cs`,
+`Projections/FromEveryBuilder.cs`, and `Documentation/projections/model-bound/`.
 
 ## Setting values
 
@@ -51,6 +70,12 @@ Note that `[FromAll]` and `[FromEvery]` take their two optional arguments in
 | `[AddFrom<T>]` | `<T>` | `(string? eventPropertyName = default)` | property, parameter; repeatable |
 | `[SubtractFrom<T>]` | `<T>` | `(string? eventPropertyName = default)` | property, parameter; repeatable |
 | `[ClearWith<T>]` | `<T>` | **none** | class, property, parameter; repeatable |
+
+Requires Chronicle 19.51.1 for dotted CLR member paths in model-bound attributes
+and naming-policy conversion of every nested path segment. Check the client/kernel
+versions; earlier nested mappings can remain empty. A corrected definition follows
+`observers.definitionEvolution`: Automatic rebuilds it, while PartialOnly/Manual
+can recommend replay. Do not assume upgrading repaired stored state.
 
 ## Counters
 
@@ -79,7 +104,7 @@ that key. That is a different mechanism from the fluent builder's
 | `[EntersOn<T>]` | `<T>` | `(string? key = default)` | class, struct; repeatable |
 | `[GlobalFor<TIdentity>]` | `<TIdentity>` | none | class, struct; single |
 
-Requires `Cratis.Chronicle` `19.1.0` or later. See
+Requires `Cratis.Chronicle` 19.1.0 or later for variants. See
 [variants.md](variants.md) for the full mechanics, the update-only
 reclassification of non-entering events, and the `VariantMustDeclareEntersOnEvent`
 startup trap.
@@ -117,12 +142,7 @@ for reducers and reactors.
 
 ## What makes a type a model-bound projection
 
-Chronicle treats a type as a model-bound projection when the class, its primary
-constructor parameters, or its public instance properties carry an
-`[EventSequence]` attribute or any projection annotation — **except
-`[Passive]`**, which is deliberately excluded. `[Passive]` on its own therefore
-does not make a read model a projection; it changes how an existing projection
-is registered.
+See "What makes a type a model-bound projection" in SKILL.md.
 
 ## AutoMap
 

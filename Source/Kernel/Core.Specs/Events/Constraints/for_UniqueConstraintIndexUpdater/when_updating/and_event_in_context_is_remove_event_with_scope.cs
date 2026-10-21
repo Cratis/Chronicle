@@ -26,5 +26,5 @@ public class and_event_in_context_is_remove_event_with_scope : Specification
 
     async Task Because() => await _updater.Update(EventSequenceNumber.First);
 
-    [Fact] void should_remove_from_storage_with_scope_key() => _storage.Received(1).Remove(_context.EventSourceId, _definition.Name, "est:MySourceType");
+    [Fact] void should_remove_from_storage_with_scope_key() => _storage.Received(1).Remove(_context.EventSourceId, _definition, "est:MySourceType");
 }

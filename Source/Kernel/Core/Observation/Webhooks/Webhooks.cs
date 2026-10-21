@@ -234,10 +234,22 @@ public class Webhooks(
         // Always call Subscribe — for [KeepAlive] grains the in-memory
         // subscription state can be stale after databases are dropped.
         logger.Subscribing(definition.Identifier, namespaceName);
-        await observer.Subscribe<IWebhookObserverSubscriber>(
-            ObserverType.External,
-            definition.EventTypes.ToArray(),
-            localSiloDetails.SiloAddress);
+        if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            await observer.SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(
+                ObserverType.External,
+                definition.EventTypes.ToArray(),
+                localSiloDetails.SiloAddress,
+                definition.GenerationDelivery,
+                subscriberArgs: EventGenerationDelivery.Pinned);
+        }
+        else
+        {
+            await observer.Subscribe<IWebhookObserverSubscriber>(
+                ObserverType.External,
+                definition.EventTypes.ToArray(),
+                localSiloDetails.SiloAddress);
+        }
     }
 
     async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)

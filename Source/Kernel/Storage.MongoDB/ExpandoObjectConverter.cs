@@ -89,12 +89,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    static bool HasProtectedValueMetadata(JsonSchema schema) =>
+        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+
     BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {
         // Compliance handlers replace protected scalar values with opaque strings while the registered schema
         // intentionally remains the schema of the plaintext event. Persist the ciphertext as-is rather than
         // coercing it through the plaintext scalar type.
-        if (value is string compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        if (value is string compliantValue && HasProtectedValueMetadata(schemaProperty))
         {
             return new BsonString(compliantValue);
         }
@@ -145,7 +148,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             return null;
         }
 
-        if (bsonValue is BsonString compliantValue && schemaProperty.GetComplianceMetadata().Any())
+        if (bsonValue is BsonString compliantValue && HasProtectedValueMetadata(schemaProperty))
         {
             return compliantValue.Value;
         }
@@ -276,7 +279,10 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             case BsonType.Int64:
                 return value.AsInt64;
             case BsonType.Decimal128:
-                return (ulong)value.AsDecimal;
+                var decimalValue = value.AsDecimal;
+                return decimalValue >= 0 && decimalValue <= ulong.MaxValue && decimal.Truncate(decimalValue) == decimalValue
+                    ? (object)(ulong)decimalValue
+                    : decimalValue;
         }
 
         return null;
@@ -309,7 +315,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return value.ToInt32();
 
             case JsonObjectType.Number:
-                return value.ToDouble();
+                return value is BsonDecimal128 ? value.ToDecimal() : value.ToDouble();
         }
 
         return null!;

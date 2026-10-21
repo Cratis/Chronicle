@@ -15,12 +15,10 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using Orleans.Providers;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
@@ -48,13 +46,12 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="logger">The logger.</param>
-[StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
     IStorage storage,
-    ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    ILogger<ProjectionObserverSubscriber> logger) : Grain, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
@@ -62,6 +59,7 @@ public class ProjectionObserverSubscriber(
     IProjectionChangesetNotifier? _changesetNotifier;
     JsonSchema? _schema;
     Exception? _pipelineBuildFailure;
+    ProjectionDefinition _definition = null!;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -76,31 +74,8 @@ public class ProjectionObserverSubscriber(
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
 
-        // Always fetch the current definition from the IProjection grain rather than relying on
-        // the stored State. The stored State can be stale when this grain re-activates after
-        // a deactivation that occurred while the projection definition was being updated (for
-        // example, during an application restart). IProjection.State is always authoritative
-        // because it is persisted before the replay is started.
-        var currentDefinition = await projection.GetDefinition();
-        if (currentDefinition.ReadModel is not null)
-        {
-            // Check if definition has changed
-            var definitionChanged = HasDefinitionChanged(State, currentDefinition);
-
-            if (definitionChanged)
-            {
-                State = currentDefinition;
-                await WriteStateAsync();
-
-                // CRITICAL: If definition changed, we MUST evict the pipeline cache BEFORE calling
-                // HandlePipeline(), otherwise the old cached pipeline will be reused. The pipeline
-                // cache key is (eventStore, namespace, projectionId), which does NOT include the
-                // definition version, so a cache hit with the old definition will prevent the new
-                // definition from being used.
-                projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
-            }
-        }
-
+        // Only the Projection grain persists definitions. Subscribers retain no grain state.
+        _definition = await projection.GetDefinition();
         await HandlePipeline();
     }
 
@@ -114,9 +89,7 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        // Update state with the new definition
-        State = definition;
-        await WriteStateAsync();
+        _definition = definition;
 
         // Pipeline caches are silo-local; a definition notification must evict this subscriber's cache too.
         projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
@@ -160,22 +133,58 @@ public class ProjectionObserverSubscriber(
 
             foreach (var @event in events)
             {
-                // An event this projection no longer takes part in still reaches us for a while after a
-                // definition drops it: the subscriber is told about the new definition before the observer's
-                // subscription is narrowed to match, and a replay scheduled by that same change reads through
-                // the subscription's event types. Resolving a key for it would throw and fail the partition,
-                // which is how removing a child collection could leave the projection stuck mid-replay (#3722).
-                // Skipping is what the definition actually says to do - the event contributes nothing here -
-                // while still advancing the observer past it. An event type the definition *does* name but the
-                // pipeline cannot resolve is a different thing entirely, and still fails so it gets retried.
+                var sequenceNumber = @event.Context.SequenceNumber;
+
+                // Definition notifications precede the subscription rebind, so a handled type can still arrive
+                // in the old pin. Only an unhandled type may be skipped; a generation mismatch must be processed.
                 if (_projection?.Accepts(@event.Context.EventType) == false)
                 {
+                    // SetDefinition waits for this subscriber's notification. Calling that grain here
+                    // could deadlock, so re-check shared storage directly before deciding to skip.
+                    var definitions = storage.GetEventStore(_key.EventStore).Projections;
+                    if (!await definitions.Has(_key.ObserverId))
+                    {
+                        logger.PipelineNotReady(_key);
+                        return new(
+                            ObserverSubscriberState.Failed,
+                            lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                            ["Projection definition no longer exists."],
+                            string.Empty);
+                    }
+
+                    var current = await definitions.Get(_key.ObserverId);
+                    if (ProjectionFactory.DefinitionFingerprintFor(_definition) != ProjectionFactory.DefinitionFingerprintFor(current))
+                    {
+                        _definition = current;
+                        projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
+                        await HandlePipeline();
+                        if (_pipeline is null)
+                        {
+                            return new(
+                                ObserverSubscriberState.Failed,
+                                lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                                _pipelineBuildFailure?.GetAllMessages() ?? ["Projection pipeline is not yet ready — will be retried."],
+                                _pipelineBuildFailure?.StackTrace ?? string.Empty);
+                        }
+                    }
+                }
+
+                var pin = _projection?.GenerationDelivery == EventGenerationDelivery.Pinned
+                    ? _projection.EventTypes.FirstOrDefault(_ => _.Id == @event.Context.EventType.Id)
+                    : null;
+                if (pin is null && _projection?.Accepts(@event.Context.EventType) == false)
+                {
                     lastSuccessfullyObservedEvent = @event;
-                    logger.SkippedEventNotInProjection(@event.Context.EventType, @event.Context.SequenceNumber, _key);
+                    logger.SkippedEventNotInProjection(@event.Context.EventType, sequenceNumber, _key);
                     continue;
                 }
 
-                var pipelineContext = await _pipeline.Handle(@event);
+                // Already-pinned events have been released by the observer. Re-select/release only a mismatch
+                // through the current projection's release boundary, which also migrates an unstored generation.
+                var eventToHandle = pin is not null && pin != @event.Context.EventType
+                    ? await _projection!.ReleaseEvent(pin, @event)
+                    : @event;
+                var pipelineContext = await _pipeline.Handle(eventToHandle);
                 changeset = pipelineContext.Changeset;
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
@@ -201,11 +210,11 @@ public class ProjectionObserverSubscriber(
                 }
 
                 lastSuccessfullyObservedEvent = @event;
-                logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
+                logger.SuccessfullyHandledEvent(sequenceNumber, _key);
             }
 
             // Note: We don't want to send changesets if the projection is not active
-            if (changeset?.HasChanges == true && State.IsActive)
+            if (changeset?.HasChanges == true && _definition.IsActive)
             {
                 var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
 
@@ -257,7 +266,7 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        if (State.ReadModel is null)
+        if (_definition.ReadModel is null)
         {
             return;
         }
@@ -268,10 +277,10 @@ public class ProjectionObserverSubscriber(
         // later definition change (or the retry in OnNext) rebuild the pipeline without a reactivation.
         try
         {
-            var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
+            var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(_definition.ReadModel, _key.EventStore)).GetDefinition();
             var eventStoreStorage = storage.GetEventStore(_key.EventStore);
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-            var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
+            var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, _definition, readModel, eventTypeSchemas);
             _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
             _projection = projection;
             _schema = readModel.GetSchemaForLatestGeneration();
@@ -284,101 +293,5 @@ public class ProjectionObserverSubscriber(
             _pipelineBuildFailure = exception;
             logger.FailedBuildingPipeline(exception, _key);
         }
-    }
-
-    bool HasDefinitionChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
-    {
-        if (oldDefinition.ReadModel != newDefinition.ReadModel ||
-            oldDefinition.IsActive != newDefinition.IsActive ||
-            oldDefinition.IsRewindable != newDefinition.IsRewindable ||
-            oldDefinition.EventSequenceId != newDefinition.EventSequenceId)
-        {
-            return true;
-        }
-
-        return HasProjectionRulesChanged(oldDefinition, newDefinition);
-    }
-
-    bool HasProjectionRulesChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
-    {
-        // oldDefinition can be a grain's uninitialized State (all reference members null) when this
-        // subscriber has never persisted a definition yet - the four dictionaries below are typed
-        // non-nullable but are not guaranteed non-null at runtime in that case. (#3934)
-        if ((oldDefinition.From?.Count ?? 0) != (newDefinition.From?.Count ?? 0) ||
-            (oldDefinition.Join?.Count ?? 0) != (newDefinition.Join?.Count ?? 0) ||
-            (oldDefinition.RemovedWith?.Count ?? 0) != (newDefinition.RemovedWith?.Count ?? 0) ||
-            (oldDefinition.RemovedWithJoin?.Count ?? 0) != (newDefinition.RemovedWithJoin?.Count ?? 0))
-        {
-            return true;
-        }
-
-        if (oldDefinition.From is not null && newDefinition.From is not null)
-        {
-            foreach (var (eventType, oldFromRule) in oldDefinition.From)
-            {
-                if (!newDefinition.From.TryGetValue(eventType, out var newFromRule))
-                {
-                    return true;
-                }
-
-                if (oldFromRule.Key != newFromRule.Key ||
-                    oldFromRule.Properties.Count != newFromRule.Properties.Count)
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (oldDefinition.Join is not null && newDefinition.Join is not null)
-        {
-            foreach (var (eventType, oldJoinRule) in oldDefinition.Join)
-            {
-                if (!newDefinition.Join.TryGetValue(eventType, out var newJoinRule))
-                {
-                    return true;
-                }
-
-                if (oldJoinRule.Key != newJoinRule.Key ||
-                    oldJoinRule.Properties.Count != newJoinRule.Properties.Count)
-                {
-                    return true;
-                }
-            }
-        }
-
-        // A child collection that was added, removed or redefined changes the projection structure -
-        // without this, a children-only change kept the stale cached pipeline (#3722).
-        return HasChildCollectionsChanged(oldDefinition.Children, newDefinition.Children) ||
-            HasChildCollectionsChanged(oldDefinition.Nested, newDefinition.Nested);
-    }
-
-    bool HasChildCollectionsChanged(IDictionary<PropertyPath, ChildrenDefinition>? oldChildren, IDictionary<PropertyPath, ChildrenDefinition>? newChildren)
-    {
-        var oldCount = oldChildren?.Count ?? 0;
-        var newCount = newChildren?.Count ?? 0;
-        if (oldCount != newCount)
-        {
-            return true;
-        }
-
-        if (oldChildren is null || newChildren is null)
-        {
-            return false;
-        }
-
-        foreach (var (property, oldChild) in oldChildren)
-        {
-            if (!newChildren.TryGetValue(property, out var newChild))
-            {
-                return true;
-            }
-
-            if (oldChild.IdentifiedBy != newChild.IdentifiedBy || HasProjectionRulesChanged(oldChild, newChild))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

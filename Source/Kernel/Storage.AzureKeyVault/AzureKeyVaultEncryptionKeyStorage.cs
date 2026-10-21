@@ -28,9 +28,23 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the
 /// <see cref="SecretClient"/> constructor parameter.
 /// </para>
+/// <para>
+/// Azure Key Vault has no conditional write, so first-time provisioning cannot be made atomic by the vault itself.
+/// Instead every provisioner writes its candidate as a new version of the same secret, tagged as a provisioning
+/// candidate, and every reader and provisioner elects the same winner from the versions: the oldest candidate by
+/// creation time, tie-broken ordinally on the version identifier. An election is only final once the winner is
+/// older than the election's settle time, which is what stops a concurrent write that lands in the same
+/// second from being elected after a provisioner has already returned its own key. A secret whose latest version
+/// is not a provisioning candidate - one written by <see cref="SaveFor"/> or before elections existed - is served
+/// as its latest version, exactly as before.
+/// </para>
+/// <para>
+/// Deleting a key purges it after the soft delete, because crypto-shredding is only an erasure once the key
+/// material cannot be recovered. A vault that refuses the purge - purge protection, or a missing purge permission -
+/// fails the deletion loudly with <see cref="EncryptionKeyNotPurged"/>.
+/// </para>
 /// </remarks>
-/// <param name="secretClient">The <see cref="SecretClient"/> to use for communicating with Azure Key Vault.</param>
-public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient) : IEncryptionKeyStorage
+public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
     const string SecretNamePrefix = "chronicle";
     const string PublicKeyField = "publicKey";
@@ -48,6 +62,29 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
     /// a deletion of every revision leave the fence standing.
     /// </remarks>
     const string ErasureSuffix = "erasure";
+
+    readonly SecretClient _secretClient;
+    readonly ProvisioningCandidateElection _election;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureKeyVaultEncryptionKeyStorage"/> class.
+    /// </summary>
+    /// <param name="secretClient">The <see cref="SecretClient"/> to use for communicating with Azure Key Vault.</param>
+    public AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient)
+        : this(secretClient, TimeProvider.System)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureKeyVaultEncryptionKeyStorage"/> class.
+    /// </summary>
+    /// <param name="secretClient">The <see cref="SecretClient"/> to use for communicating with Azure Key Vault.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> elections are settled against.</param>
+    internal AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient, TimeProvider timeProvider)
+    {
+        _secretClient = secretClient;
+        _election = new(secretClient, timeProvider, Deserialize);
+    }
 
     [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SanitizeRegex { get; }
@@ -67,13 +104,48 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, actualRevision);
-        var value = JsonSerializer.Serialize(new Dictionary<string, string>
-        {
-            [PublicKeyField] = Convert.ToBase64String(key.Public),
-            [PrivateKeyField] = Convert.ToBase64String(key.Private)
-        });
+        await _secretClient.SetSecretAsync(name, Serialize(key));
+    }
 
-        await secretClient.SetSecretAsync(name, value);
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetOrAddFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKey key) =>
+        (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var revision = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
+        if (revision is null)
+        {
+            return null;
+        }
+
+        var key = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
+        return key is null ? null : new(key, revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
+        var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, revision);
+        var candidate = new KeyVaultSecret(name, Serialize(key));
+        ProvisioningCandidateElection.MarkAsCandidate(candidate);
+        await _secretClient.SetSecretAsync(candidate);
+
+        // Converge on the elected candidate, which is ours unless another provisioner raced us. It is never the
+        // candidate unread: if no candidate can be read back, the secret was removed concurrently.
+        var winner = await _election.Elect(name) ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+        return new(winner, revision);
     }
 
     /// <inheritdoc/>
@@ -107,24 +179,7 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
             return null;
         }
 
-        var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, targetRevision);
-        try
-        {
-            var secret = await secretClient.GetSecretAsync(name);
-            var data = JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value);
-            if (data is null ||
-                !data.TryGetValue(PublicKeyField, out var publicBase64) || publicBase64 is null ||
-                !data.TryGetValue(PrivateKeyField, out var privateBase64) || privateBase64 is null)
-            {
-                return null;
-            }
-
-            return new EncryptionKey(Convert.FromBase64String(publicBase64), Convert.FromBase64String(privateBase64));
-        }
-        catch (RequestFailedException ex) when (ex.Status == 404)
-        {
-            return null;
-        }
+        return await ReadKey(BuildSecretName(eventStore, eventStoreNamespace, identifier, targetRevision));
     }
 
     /// <inheritdoc/>
@@ -145,15 +200,19 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
     {
         if (IsLatest(revision))
         {
-            var revisions = await ListRevisions(eventStore, eventStoreNamespace, identifier);
+            // Revisions a previous deletion soft-deleted but could not purge are no longer listed as secrets, so
+            // they are gathered from the deleted secrets too - repeating an incomplete erasure completes it.
+            var revisions = (await ListRevisions(eventStore, eventStoreNamespace, identifier))
+                .Concat(await ListDeletedRevisions(eventStore, eventStoreNamespace, identifier))
+                .Distinct();
             foreach (var rev in revisions)
             {
-                await DeleteSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, rev));
+                await DeleteAndPurgeSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, rev));
             }
         }
         else
         {
-            await DeleteSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, revision!));
+            await DeleteAndPurgeSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, revision!));
         }
     }
 
@@ -165,7 +224,7 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
     {
         try
         {
-            var secret = await secretClient.GetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier));
+            var secret = await _secretClient.GetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier));
             if (secret.Value.Properties.Enabled == false ||
                 JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
                 !data.TryGetValue(ErasedThroughField, out var erasedThrough))
@@ -221,6 +280,25 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
+    static string Serialize(EncryptionKey key) => JsonSerializer.Serialize(new Dictionary<string, string>
+    {
+        [PublicKeyField] = Convert.ToBase64String(key.Public),
+        [PrivateKeyField] = Convert.ToBase64String(key.Private)
+    });
+
+    static EncryptionKey? Deserialize(string value)
+    {
+        var data = JsonSerializer.Deserialize<Dictionary<string, string>>(value);
+        if (data is null ||
+            !data.TryGetValue(PublicKeyField, out var publicBase64) || publicBase64 is null ||
+            !data.TryGetValue(PrivateKeyField, out var privateBase64) || privateBase64 is null)
+        {
+            return null;
+        }
+
+        return new EncryptionKey(Convert.FromBase64String(publicBase64), Convert.FromBase64String(privateBase64));
+    }
+
     static string Sanitize(string input) =>
         SanitizeRegex.Replace(input.ToLowerInvariant(), "-").Trim('-');
 
@@ -256,7 +334,7 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
             [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
         });
 
-        await secretClient.SetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier), value);
+        await _secretClient.SetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier), value);
     }
 
     async Task<EncryptionKeyRevision> GetNextRevision(
@@ -285,7 +363,7 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         var prefix = BuildSecretPrefix(eventStore, eventStoreNamespace, identifier);
         var revisions = new List<EncryptionKeyRevision>();
 
-        await foreach (var secretProperties in secretClient.GetPropertiesOfSecretsAsync())
+        await foreach (var secretProperties in _secretClient.GetPropertiesOfSecretsAsync())
         {
             if (secretProperties.Enabled != true)
             {
@@ -307,11 +385,46 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         return revisions;
     }
 
+    async Task<List<EncryptionKeyRevision>> ListDeletedRevisions(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier)
+    {
+        var prefix = BuildSecretPrefix(eventStore, eventStoreNamespace, identifier);
+        var revisions = new List<EncryptionKeyRevision>();
+
+        await foreach (var deleted in _secretClient.GetDeletedSecretsAsync())
+        {
+            if (deleted.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                uint.TryParse(deleted.Name[prefix.Length..], out var revisionValue))
+            {
+                revisions.Add(revisionValue);
+            }
+        }
+
+        return revisions;
+    }
+
+    async Task<EncryptionKey?> ReadKey(string name)
+    {
+        KeyVaultSecret latest;
+        try
+        {
+            latest = (await _secretClient.GetSecretAsync(name)).Value;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+
+        return ProvisioningCandidateElection.IsCandidate(latest.Properties) ? await _election.Elect(name) : Deserialize(latest.Value);
+    }
+
     async Task<bool> SecretExists(string name)
     {
         try
         {
-            var response = await secretClient.GetSecretAsync(name);
+            var response = await _secretClient.GetSecretAsync(name);
             return response.Value.Properties.Enabled != false;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
@@ -320,16 +433,29 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
         }
     }
 
-    async Task DeleteSecret(string name)
+    async Task DeleteAndPurgeSecret(string name)
     {
         try
         {
-            var operation = await secretClient.StartDeleteSecretAsync(name);
+            var operation = await _secretClient.StartDeleteSecretAsync(name);
             await operation.WaitForCompletionAsync();
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            // Secret does not exist — nothing to delete.
+            // Not a live secret - never written, or soft-deleted by an earlier deletion that could not purge it.
+        }
+
+        try
+        {
+            await _secretClient.PurgeDeletedSecretAsync(name);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // Nothing soft-deleted to purge - already purged, or a vault without soft delete removed it outright.
+        }
+        catch (RequestFailedException ex) when (ex.Status == 403)
+        {
+            throw new EncryptionKeyNotPurged(name, ex);
         }
     }
 }

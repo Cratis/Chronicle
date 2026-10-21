@@ -22,14 +22,16 @@ namespace Cratis.Chronicle.Schemas;
 /// Represents an implementation of <see cref="IJsonSchemaGenerator"/>.
 /// </summary>
 [Singleton]
-public class JsonSchemaGenerator : IJsonSchemaGenerator
+public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 {
     static FieldInfo? _paramDefaultValueField;
 
     readonly ConcurrentDictionary<Type, JsonSchema> _schemasByType = new();
     readonly ConcurrentDictionary<Type, JsonSchema> _readModelSchemasByType = new();
+    readonly ConcurrentDictionary<Type, JsonSchema> _legacySchemasByType = new();
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
+    readonly JsonSchemaExporterOptions _preciseEventExporterOptions;
     readonly JsonSchemaExporterOptions _readModelExporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
     readonly ISecurityMetadataResolver _securityMetadataResolver;
@@ -86,10 +88,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: false)
         };
 
-        _readModelExporterOptions = new JsonSchemaExporterOptions
+        _preciseEventExporterOptions = new JsonSchemaExporterOptions
         {
             TreatNullObliviousAsNonNullable = true,
             TransformSchemaNode = (context, schema) => TransformNode(context, schema, restorePropertiesWithDefaultValues: true)
+        };
+
+        _readModelExporterOptions = new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = TransformReadModelNode
         };
     }
 
@@ -118,33 +126,33 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             type,
             static (typeToGenerate, generator) =>
             {
-                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._preciseEventExporterOptions);
                 return new JsonSchema(node.AsObject());
             },
             this);
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Differs from <see cref="Generate"/> in one way: a converter-backed property - a concept, for instance - whose
-    /// constructor parameter has a default value (<c language="csharp">OwnerSubject? Owner = null</c>) gets the same schema
-    /// it would get without the default, instead of the untyped <c language="csharp">{"default": null}</c> System.Text.Json
-    /// produces for it. Without a type the property is dropped when the read model is read, and without compliance
-    /// metadata a <c language="csharp">[PII]</c> value is stored in the clear.
-    /// <para>
-    /// Event types keep the <see cref="Generate"/> shape on purpose. The kernel compares a registered event type's
-    /// schema with the stored one and refuses a change within a generation, so giving such a property a type would stop
-    /// an existing event type from registering.
-    /// </para>
-    /// <para>
-    /// Cached the same way, and for the same reasons, as <see cref="Generate"/>.
-    /// </para>
-    /// </remarks>
     public JsonSchema GenerateForReadModel(Type type) =>
         _readModelSchemasByType.GetOrAdd(
             type,
             static (typeToGenerate, generator) =>
             {
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._readModelExporterOptions);
+                return new JsonSchema(node.AsObject());
+            },
+            this);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Preserves the default-only shape used by kernels that do not advertise precise event type schemas.
+    /// This representation is only used when registering against those kernels, not for read models.
+    /// </remarks>
+    public JsonSchema GenerateLegacyEventType(Type type) =>
+        _legacySchemasByType.GetOrAdd(
+            type,
+            static (typeToGenerate, generator) =>
+            {
+                var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
                 return new JsonSchema(node.AsObject());
             },
             this);
@@ -302,12 +310,30 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues)
+    JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
+    {
+        var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
+        var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(true) ?? [];
+        var lengths = attributes.Select(attribute => attribute switch
+        {
+            System.ComponentModel.DataAnnotations.MaxLengthAttribute length when length.Length > 0 => (int?)length.Length,
+            System.ComponentModel.DataAnnotations.StringLengthAttribute length => length.MaximumLength,
+            System.ComponentModel.DataAnnotations.LengthAttribute length => length.MaximumLength,
+            _ => null
+        }).Where(length => length is not null).ToArray();
+        if (transformed is JsonObject node && lengths.Length > 0)
+        {
+            node["maxLength"] = lengths.Min();
+        }
+        return transformed;
+    }
+
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema, bool restorePropertiesWithDefaultValues, Action<JsonObject, Type>? recordCompensation = null, bool preserveUnformattedNullability = false)
     {
         var type = context.TypeInfo.Type;
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
-        if (RepresentConverterBackedType(type, context.PropertyInfo?.AttributeProvider) is { } represented)
+        if (RepresentConverterBackedType(type, context.PropertyInfo?.AttributeProvider, recordCompensation, preserveUnformattedNullability) is { } represented)
         {
             return represented;
         }
@@ -424,7 +450,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             if (restorePropertiesWithDefaultValues)
             {
-                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj);
+                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj, recordCompensation, preserveUnformattedNullability);
             }
 
             if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
@@ -446,8 +472,15 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
             if (compensationAttribute is not null)
             {
-                var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
-                schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+                if (recordCompensation is not null)
+                {
+                    recordCompensation(schemaObj, compensationAttribute.CompensatedEventType);
+                }
+                else
+                {
+                    var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
+                    schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+                }
             }
         }
 
@@ -459,6 +492,8 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="typeInfo">The <see cref="JsonTypeInfo"/> of the object whose properties to restore.</param>
     /// <param name="schema">The object's schema node.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
+    /// <param name="preserveUnformattedNullability">Whether read-model nullability should be preserved for unformatted representations.</param>
     /// <remarks>
     /// System.Text.Json's schema exporter describes a property served by a custom converter - a concept, for instance -
     /// with an empty schema that the node transform replaces. When the property's constructor parameter has a default value
@@ -468,14 +503,14 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// transform still sees the property, so the schema is produced here the same way it would be without the default,
     /// and the default is kept.
     /// </remarks>
-    void RestorePropertySchemasReplacedByDefaultValues(JsonTypeInfo typeInfo, JsonObject schema)
+    void RestorePropertySchemasReplacedByDefaultValues(JsonTypeInfo typeInfo, JsonObject schema, Action<JsonObject, Type>? recordCompensation, bool preserveUnformattedNullability)
     {
         if (schema["properties"] is not JsonObject properties) return;
 
         foreach (var property in typeInfo.Properties.Where(_ => _.AssociatedParameter is { HasDefaultValue: true }))
         {
             if (properties[property.Name] is not JsonObject propertySchema || !HasOnlyDefaultValue(propertySchema)) continue;
-            if (RepresentConverterBackedType(property.PropertyType, property.AttributeProvider) is not JsonObject restored) continue;
+            if (RepresentConverterBackedType(property.PropertyType, property.AttributeProvider, recordCompensation, preserveUnformattedNullability) is not JsonObject restored) continue;
 
             restored["default"] = propertySchema["default"]?.DeepClone();
             properties[property.Name] = restored;
@@ -487,8 +522,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="type">The declared <see cref="Type"/>.</param>
     /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
+    /// <param name="preserveUnformattedNullability">Whether read-model nullability should be preserved for unformatted representations.</param>
     /// <returns>The schema node, or null when the type is not converter backed and its exported schema stands.</returns>
-    JsonNode? RepresentConverterBackedType(Type type, ICustomAttributeProvider? attributeProvider)
+    JsonNode? RepresentConverterBackedType(Type type, ICustomAttributeProvider? attributeProvider, Action<JsonObject, Type>? recordCompensation, bool preserveUnformattedNullability)
     {
         var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
@@ -501,13 +538,13 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (formatType.GetCustomAttribute<JsonSchemaTypeAttribute>() is { } jsonSchemaType)
         {
             ThrowIfSelfReferencing(formatType, jsonSchemaType.Type);
-            return RepresentAs(jsonSchemaType.Type, type, attributeProvider);
+            return RepresentAs(jsonSchemaType.Type, type, attributeProvider, recordCompensation, preserveUnformattedNullability);
         }
 
         // Handle concept types - redirect to the underlying primitive type's schema
         if (type.IsConcept())
         {
-            return RepresentAs(type.GetConceptValueType(), type, attributeProvider);
+            return RepresentAs(type.GetConceptValueType(), type, attributeProvider, recordCompensation, preserveUnformattedNullability);
         }
 
         // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
@@ -523,7 +560,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             if (elementType?.IsConcept() == true)
             {
                 var underlyingItemType = elementType.GetConceptValueType();
-                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
+                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, StructuralOptionsFor(recordCompensation, preserveUnformattedNullability));
 
                 // The element concept's own schema metadata has to be carried onto the item schema. This
                 // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
@@ -559,6 +596,8 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="representedAs">The <see cref="Type"/> whose schema describes what actually goes on the wire.</param>
     /// <param name="declaredType">The declared <see cref="Type"/> being represented.</param>
     /// <param name="attributeProvider">The property or parameter the type is declared on, if any.</param>
+    /// <param name="recordCompensation">Optional unresolved structural compensation recorder.</param>
+    /// <param name="preserveUnformattedNullability">Whether read-model nullability should be preserved for unformatted representations.</param>
     /// <returns>The schema node for <paramref name="representedAs"/>, carrying the declared type's metadata.</returns>
     /// <remarks>
     /// The declared type's compliance metadata has to travel onto the substituted schema — the classification
@@ -567,14 +606,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <para>
     /// The nullable marker has to be re-applied for the same reason: System.Text.Json's schema exporter does not
     /// propagate NRT nullable markers through custom converters, so the actual property nullability is read via
-    /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format so that
+    /// <see cref="NullabilityInfoContext"/>. When the property is nullable, '?' is appended to the format, or
+    /// 'null' is included in the read-model schema type for unformatted representations, so that
     /// <c language="csharp">IsNullable()</c> returns true and <c language="csharp">GetDefaultValue()</c> returns null rather than the primitive
-    /// default (e.g. 0 for ulong).
+    /// default (e.g. 0 for ulong). Event schemas retain their unformatted type declarations so existing event
+    /// generations remain compatible with their registered schemas.
     /// </para>
     /// </remarks>
-    JsonNode RepresentAs(Type representedAs, Type declaredType, ICustomAttributeProvider? attributeProvider)
+    JsonNode RepresentAs(Type representedAs, Type declaredType, ICustomAttributeProvider? attributeProvider, Action<JsonObject, Type>? recordCompensation, bool preserveUnformattedNullability)
     {
-        var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, _exporterOptions);
+        var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, StructuralOptionsFor(recordCompensation, preserveUnformattedNullability));
         if (representedSchema is not JsonObject representedSchemaObject) return representedSchema;
 
         if (_metadataResolver.HasMetadataFor(declaredType))
@@ -587,13 +628,19 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
 
-        if (PropertyIsNullable(declaredType, attributeProvider) &&
-            representedSchemaObject.TryGetPropertyValue("format", out var format))
+        if (PropertyIsNullable(declaredType, attributeProvider))
         {
-            var formatValue = format!.GetValue<string>();
-            if (!formatValue.EndsWith('?'))
+            if (representedSchemaObject.TryGetPropertyValue("format", out var format))
             {
-                representedSchemaObject["format"] = formatValue + "?";
+                var formatValue = format!.GetValue<string>();
+                if (!formatValue.EndsWith('?'))
+                {
+                    representedSchemaObject["format"] = formatValue + "?";
+                }
+            }
+            else if (preserveUnformattedNullability && representedSchemaObject["type"] is JsonValue type)
+            {
+                representedSchemaObject["type"] = new JsonArray(type.DeepClone(), "null");
             }
         }
 

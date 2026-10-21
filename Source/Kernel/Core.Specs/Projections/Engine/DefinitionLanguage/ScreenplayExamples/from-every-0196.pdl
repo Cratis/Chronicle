@@ -1,0 +1,15 @@
+projection Group => GroupReadModel
+  every
+    LastActivity = $eventContext.occurred
+    exclude children
+
+  from GroupCreated
+    Name = name
+
+  children members identified by userId
+    from UserAdded
+      Name = userName
+
+  children posts identified by postId
+    from PostCreated
+      Title = title

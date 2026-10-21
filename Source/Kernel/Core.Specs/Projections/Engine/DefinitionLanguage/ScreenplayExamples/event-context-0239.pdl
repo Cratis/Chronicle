@@ -1,0 +1,10 @@
+projection UserActivity => UserActivityReadModel
+  from UserLoggedIn
+    LastLogin = $eventContext.occurred
+    LastLoginSequence = $eventContext.sequenceNumber
+    count LoginCount
+
+  from UserAction
+    LastAction = actionType
+    LastActionTime = $eventContext.occurred
+    LastCorrelation = $eventContext.correlationId

@@ -1,11 +1,14 @@
+---
+description: Chronicle external services are named, per-event-store configurations describing how to connect to an HTTP API or database outside Chronicle.
+---
 # External Services
 
-External Services are named, per–event store configurations that describe **how to connect to something outside Chronicle** — an HTTP API or a database. Instead of scattering URLs, connection strings, and secrets across features (such as [captures](../captures/index.md)), you configure a connection once as an External Service and reference it by name.
+External Services are named, per–event store configurations that describe **how to connect to something outside Chronicle** — an HTTP API or a database. Instead of scattering URLs, connection strings, and secrets across features (such as [captures](../captures/index.mdx)), you configure a connection once as an External Service and reference it by name.
 
 ## Why External Services
 
 - **One place for connection details.** Base URLs, hosts, credentials, and provider options live on the service, not inside the feature that uses it.
-- **Secrets stay out of declarations.** A [capture](../captures/index.md) API source references `api <Name>` — the URL and authentication come from the referenced External Service, so no secrets live in capture text.
+- **Secrets stay out of declarations.** A [capture](../captures/index.mdx) API source references `api <Name>` — the URL and authentication come from the referenced External Service, so no secrets live in capture text.
 - **Extensible.** The endpoint model is open — new endpoint types can be added without changing existing ones.
 
 ## Endpoint types
@@ -42,7 +45,7 @@ External Services can also be registered programmatically — see [Registering E
 
 ## Using External Services from captures
 
-A [capture](../captures/index.md) API source references an External Service by name. The capture only declares *what* to poll (the route and interval); *where* and *how to authenticate* come from the External Service:
+A [capture](../captures/index.mdx) API source references an External Service by name. The capture only declares *what* to poll (the route and interval); *where* and *how to authenticate* come from the External Service:
 
 ```cdl
 capture Customers

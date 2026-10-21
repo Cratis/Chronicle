@@ -12,11 +12,19 @@ namespace Cratis.Chronicle.Events.Constraints;
 public static class UniqueAttributeExtensions
 {
     /// <summary>
+    /// Get the retention mode declared on a unique property constraint.
+    /// </summary>
+    /// <param name="member">Member to inspect.</param>
+    /// <returns>The declared mode, defaulting to one value per event source.</returns>
+    public static UniqueConstraintMode GetConstraintMode(this MemberInfo member) =>
+        member.GetCustomAttribute<UniqueAttribute>()?.Mode ?? UniqueConstraintMode.PerEventSource;
+
+    /// <summary>
     /// Get the constraint name for a type adorned with <see cref="UniqueAttribute"/>, defaults to type name if not explicitly defined.
     /// </summary>
     /// <param name="member">Type to get for that has <see cref="UniqueAttribute"/>.</param>
     /// <returns>Name of constraint.</returns>
-    public static ConstraintName GetConstraintName(this MemberInfo member) => member.GetCustomAttribute<UniqueAttribute>()?.Name ?? member.Name;
+    public static ConstraintName GetConstraintName(this MemberInfo member) => ArtifactIdentity.ConstraintNameFor(member, member.GetCustomAttribute<UniqueAttribute>()?.Name);
 
     /// <summary>
     /// Get the constraint message for a type adorned with <see cref="UniqueAttribute"/>, defaults to type name if not explicitly defined.

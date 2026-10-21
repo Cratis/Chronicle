@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -26,6 +27,16 @@ public interface IDecisionRead
 
     /// <summary>Gets the target sequence.</summary>
     EventSequenceId EventSequenceId { get; }
+
+    /// <summary>
+    /// Gets the event stream type, or null for a source-wide read.
+    /// </summary>
+    EventStreamType? EventStreamType => null;
+
+    /// <summary>
+    /// Gets the event stream identifier, or null for a source-wide read.
+    /// </summary>
+    EventStreamId? EventStreamId => null;
 
     /// <summary>Gets the private scope without exposing a sequence number in the public API.</summary>
     internal ConcurrencyScope Scope { get; }

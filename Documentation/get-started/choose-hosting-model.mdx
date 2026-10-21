@@ -1,6 +1,6 @@
 ---
 title: Choose an application host model
-description: Pick the level of host your application code runs in — console, worker service, or ASP.NET Core, with Arc as an application layer on top — then run the Chronicle kernel locally against MongoDB, PostgreSQL, SQL Server, or SQLite, or let Aspire wire the database choice for you.
+description: Choose whether Chronicle runs in a console, worker service or ASP.NET Core host, then run the kernel locally against a database or with Aspire.
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -153,13 +153,13 @@ services:
       - 127.0.0.1:35000:35000
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - 127.0.0.1:27017:27017
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"

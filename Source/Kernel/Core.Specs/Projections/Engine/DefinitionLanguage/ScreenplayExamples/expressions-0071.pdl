@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  from UserAssignedToGroup
+    GroupId = $eventSourceId
+    UserId = userId

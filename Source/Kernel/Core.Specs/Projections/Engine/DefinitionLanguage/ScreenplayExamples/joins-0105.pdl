@@ -1,0 +1,14 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CustomerId = customerId
+    ProductId = productId
+
+  join Customer on CustomerId
+    with CustomerCreated
+      CustomerName = name
+
+  join Product on ProductId
+    with ProductCreated
+      ProductName = name
+      ProductPrice = price

@@ -31,6 +31,7 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 - `csharp.md` — C# conventions
 - `concepts.md` — `ConceptAs<T>` / `EventSourceId<T>`
 - `efcore.md` — EF Core read models (only if the project uses EF Core)
+- `mongodb.md` — MongoDB queries: native driver API, never LINQ; Arc owns paging and sorting (only if the project uses MongoDB)
 - `general.md` — the operating manual
 
 Load **cratis-application-slice-conformance** when it is installed; read the skill for the slice type (`cratis-arc-command`, `cratis-chronicle-read-model`, `cratis-chronicle-projection`, `cratis-chronicle-reactor`) before writing the artifact it covers.
@@ -50,7 +51,7 @@ Load **cratis-application-slice-conformance** when it is installed; read the ski
 
 ## Process
 
-0. **Find the contract.** Apply Phase 0 of `application-profile.md` first: the repository is opted in only when the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set that root; an empty directory, install output, an installed skill, a `.play` file outside the root or an untracked or uncommitted draft is not opt-in. When opted in, an accepted model under the root is the contract, and new behaviour missing from the model is a request to add it, not a reason to use an outline. Skill availability is checked separately from opt-in. Without opt-in, an agreed outline is the contract and code-first work (infrastructure, clients, adapters, framework) is preserved. If the slice is in a Screenplay model, the `.play` slice and its specifications are the contract: write C# only for scope the renderer rejects or for adapters, never edit Stage-managed output, and never change the model to match code. If the contract is ambiguous or contradictory, do not guess: stop that scope and return one specific question (for `.play`, an edit request: address, change, reason).
+0. **Find the contract.** Apply Phase 0 of `application-profile.md` first: decide opt-in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, model root and drafts. When opted in, an accepted model under the root is the contract, and new behaviour missing from the model is a request to add it, not a reason to use an outline. Skill availability is checked separately from opt-in. Without opt-in, an agreed outline is the contract and code-first work (infrastructure, clients, adapters, framework) is preserved. If the slice is in a Screenplay model, the `.play` slice and its specifications are the contract: write C# only for scope the renderer rejects or for adapters, never edit Stage-managed output, and never change the model to match code. If the contract is ambiguous or contradictory, do not guess: stop that scope and return one specific question (for `.play`, an edit request: address, change, reason).
 1. **Determine the namespace root** by reading an existing source file to identify the convention (e.g. `Studio`, `Library`, `MyApp`).
 2. **Read existing slices** in the same feature to understand naming, existing concepts, and events you may reference.
 3. **Create a single `.cs` file** at `<Feature>/<Slice>/<Slice>.cs` (under the app source root; an optional `<Module>/` may group the feature — there is **no** top-level `Features/` wrapper).
@@ -111,7 +112,7 @@ public record ProjectRegistered(ProjectName Name);
 
 - Record decorated with `[ReadModel]`; query methods are **static** methods on the record; custom paths use `[Path("...")]`.
 - **AutoMap is on by default — NEVER call `.AutoMap()`.** Matching property names map automatically; diverge with `[SetFrom<T>]` / `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a `.NoAutoMap()` scope.
-- Default to model-bound attributes (`[FromEvent<T>]` class-level, etc.); use fluent `IProjectionFor<T>` for joins/transforms; use a reducer for "current state + event → next state".
+- Start with model-bound attributes for clear mappings; use fluent `IProjectionFor<T>` when mappings need structure; choose reducer code when prior-state branches, calculations or guards read better as code. Default new .NET reducers to static `Reduce` on the model; use `IReducerFor<T>` for DI/replay instance behavior/separation and nominated plain classes only when their assembly cannot reference Chronicle. Follow **cratis-chronicle-read-model** and **cratis-chronicle-reducer** for signatures, Arc query discovery and ownership; preserve admission/ordering guards when converting. Other SDK and Stage contracts are unchanged.
 - Projections consume **events**, never other read models.
 - Identity concepts derive from `EventSourceId<T>` (not `ConceptAs<Guid>`).
 

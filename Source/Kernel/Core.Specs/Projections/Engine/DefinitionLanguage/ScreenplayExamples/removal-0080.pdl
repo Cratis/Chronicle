@@ -1,0 +1,2 @@
+projection Doc => DocReadModel
+  remove via join on UserDeleted key userId

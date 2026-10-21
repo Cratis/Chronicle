@@ -1,0 +1,7 @@
+projection Subscription => SubscriptionReadModel
+  from SubscriptionCreated
+    Status = "Active"
+
+  remove with SubscriptionCancelled
+  remove with PaymentFailed
+  remove with TrialExpired

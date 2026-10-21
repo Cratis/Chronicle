@@ -79,7 +79,10 @@ public partial class EventSequenceStorage(
         var stateForStorage = state.ToMongoDB();
         var update = Builders<EventSequenceState>.Update
             .Set(_ => _.SequenceNumber, stateForStorage.SequenceNumber)
-            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType);
+            .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType)
+            .Set(_ => _.ConstraintIndexWatermark, stateForStorage.ConstraintIndexWatermark)
+            .Set(_ => _.ConstraintIndexCatchUpBelow, stateForStorage.ConstraintIndexCatchUpBelow)
+            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing);
 
         await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -233,11 +236,11 @@ public partial class EventSequenceStorage(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags)
     {
-        occurred = StoredTimestamps.Normalize(occurred);
-        causation = causation.Select(StoredTimestamps.Normalize).ToArray();
-
+        var writeIssued = false;
         try
         {
+            occurred = StoredTimestamps.Normalize(occurred);
+            causation = causation.Select(StoredTimestamps.Normalize).ToArray();
             var generationalContent = new Dictionary<string, BsonDocument>();
             foreach (var (generation, expandoContent) in content)
             {
@@ -266,9 +269,11 @@ public partial class EventSequenceStorage(
                 [],
                 subject?.IsSet == true ? subject : null)
             {
+                AppendedGeneration = eventType.Generation.Value,
                 NamedTags = namedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray()
             };
             var collection = _collection;
+            writeIssued = true;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
             // Return the content for the event type's generation
@@ -303,11 +308,13 @@ public partial class EventSequenceStorage(
                     eventHash,
                     Subject: resolvedSubject)
                 {
-                    NamedTags = namedTags
+                    NamedTags = namedTags,
+                    AppendedGeneration = eventType.Generation
                 },
                 returnContent)
             {
-                GenerationalContent = genContentDict
+                GenerationalContent = genContentDict,
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
             });
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -321,6 +328,10 @@ public partial class EventSequenceStorage(
             var nextAvailableSequenceNumber = highest?.SequenceNumber.Next() ?? EventSequenceNumber.First;
             return new DuplicateEventSequenceNumber(nextAvailableSequenceNumber);
         }
+        catch (Exception error)
+        {
+            throw ClassifySingleAppendFailure(error, writeIssued);
+        }
     }
 
     /// <inheritdoc/>
@@ -329,113 +340,17 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.Select(@event => @event with
-        {
-            Occurred = StoredTimestamps.Normalize(@event.Occurred),
-            Causation = @event.Causation.Select(StoredTimestamps.Normalize).ToArray()
-        }).ToArray();
-        if (eventsArray.Length == 0)
-        {
-            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
-        }
+        var result = await AppendBatch(events, false);
+        return result.TryGetResult(out var appended) ? Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended) : result.AsT1.AsT0;
+    }
 
-        var client = database.Client;
-        using var session = await client.StartSessionAsync().ConfigureAwait(false);
-
-        try
-        {
-            session.StartTransaction();
-            var collection = _collection;
-            var eventsToInsert = new List<Event>();
-            var appendedEvents = new List<AppendedEvent>();
-
-            foreach (var eventToAppend in eventsArray)
-            {
-                var generationalContent = new Dictionary<string, BsonDocument>();
-                foreach (var (generation, content) in eventToAppend.GenerationalContent)
-                {
-                    var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, generation);
-                    generationalContent[generation.ToString()] = SerializeContent(content, schema.Schema);
-                }
-
-                var hashesForStorage = eventToAppend.ContentHashes.ToDictionary(
-                    kvp => kvp.Key.ToString(),
-                    kvp => kvp.Value.Value);
-                var resolvedSubject = eventToAppend.Subject?.IsSet == true
-                    ? eventToAppend.Subject
-                    : new Subject(eventToAppend.EventSourceId.Value);
-
-                var @event = new Event(
-                    eventToAppend.SequenceNumber,
-                    eventToAppend.CorrelationId,
-                    eventToAppend.Causation,
-                    eventToAppend.CausedByChain,
-                    eventToAppend.EventType.Id,
-                    eventToAppend.Occurred,
-                    eventToAppend.EventSourceType,
-                    eventToAppend.EventSourceId,
-                    eventToAppend.EventStreamType,
-                    eventToAppend.EventStreamId,
-                    eventToAppend.Tags.Select(_ => _.Value),
-                    generationalContent,
-                    hashesForStorage,
-                    [],
-                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null)
-                {
-                    NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray(),
-                    EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null
-                };
-
-                eventsToInsert.Add(@event);
-
-                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-                appendedEvents.Add(new AppendedEvent(
-                    new(
-                        eventToAppend.EventType,
-                        eventToAppend.EventSourceType,
-                        eventToAppend.EventSourceId,
-                        eventToAppend.EventStreamType,
-                        eventToAppend.EventStreamId,
-                        eventToAppend.SequenceNumber,
-                        eventToAppend.Occurred,
-                        eventStore,
-                        @namespace,
-                        eventToAppend.CorrelationId,
-                        eventToAppend.Causation,
-                        await identityStorage.GetFor(eventToAppend.CausedByChain),
-                        eventToAppend.Tags,
-                        appendedHash,
-                        Subject: resolvedSubject)
-                    {
-                        NamedTags = eventToAppend.NamedTags,
-                        EventSource = eventToAppend.EventSource
-                    },
-                    eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
-                {
-                    GenerationalContent = generationalContent.ToDictionary(kvp => int.Parse(kvp.Key), kvp => EventContentBson.ToJson(kvp.Value))
-                });
-            }
-
-            logger.AppendingInserting(eventsToInsert.Count, eventSequenceId);
-            await collection.InsertManyAsync(session, eventsToInsert).ConfigureAwait(false);
-
-            await session.CommitTransactionAsync().ConfigureAwait(false);
-            logger.AppendingInserted(eventsToInsert.Count, appendedEvents.Count, eventSequenceId);
-            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
-        }
-        catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
-        }
-        catch (MongoBulkWriteException<Event> bulkWriteException) when (bulkWriteException.WriteErrors.Any(writeError => writeError.Category == ServerErrorCategory.DuplicateKey))
-        {
-            return await AbortAndResolveNextAvailableSequenceNumber(session).ConfigureAwait(false);
-        }
-        catch
-        {
-            await session.AbortTransactionAsync().ConfigureAwait(false);
-            throw;
-        }
+    /// <inheritdoc/>
+    public async Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default)
+    {
+        var collection = _collection.WithReadConcern(ReadConcern.Majority).WithReadPreference(ReadPreference.Primary);
+        var filter = Builders<Event>.Filter.Gte(e => e.SequenceNumber, first) & Builders<Event>.Filter.Lte(e => e.SequenceNumber, last);
+        var cursor = await collection.Find(filter).SortByAscendingSequenceNumber().ToCursorAsync(cancellationToken).ConfigureAwait(false);
+        return new EventCursor(converter, cursor);
     }
 
     /// <inheritdoc/>
@@ -454,7 +369,7 @@ public partial class EventSequenceStorage(
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        var document = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
 
         var revision = new EventRevision(
             eventType.Generation,
@@ -815,6 +730,33 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        var filter = Builders<Event>.Filter.In(_ => _.SequenceNumber, numbers);
+        var projection = Builders<Event>.Projection.Exclude(_ => _.Content).Exclude(_ => _.ContentHashes).Exclude(_ => _.Revisions);
+        var events = await _collection.Find(filter).SortBy(_ => _.SequenceNumber).Project<Event>(projection).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return events.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            _.CorrelationId,
+            _.Causation,
+            _.CausedBy,
+            _.Tags.Select(tag => new Concepts.Events.Tag(tag)).ToArray(),
+            _.Subject ?? new Subject(_.EventSourceId.Value),
+            _.EventSource ?? EventSourceName.NotSet)).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         logger.GettingEventAtSequenceNumber(eventSequenceId, sequenceNumber);
@@ -1031,7 +973,7 @@ public partial class EventSequenceStorage(
         {
             var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
             var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
-            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            generationalContent[generation.ToString()] = EventContentBson.FromJson(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions), schema.Schema);
         }
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
@@ -1042,6 +984,10 @@ public partial class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
+        await ReceiptCollection.EnsureIndexesAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"),
+                new CreateIndexOptions { Name = "occurrenceId" })).ConfigureAwait(false);
         await _collection.EnsureIndexesAsync(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),
@@ -1099,6 +1045,41 @@ public partial class EventSequenceStorage(
                 .Set(e => e.CausedBy, redactionCausedByChain)
                 .Set(e => e.Revisions, [])
                 .Set(e => e.ContentHashes, new Dictionary<string, string>()));
+    }
+
+    /// <summary>
+    /// Preserve uncertain writes; only pre-write failures and aborted transactions prove absence.
+    /// </summary>
+    /// <param name="error">The append failure.</param>
+    /// <param name="writeIssued">Whether the insert was issued.</param>
+    /// <returns>The original error, or proof that the attempted events were not committed.</returns>
+    internal static Exception ClassifyAppendFailure(Exception error, bool writeIssued) =>
+        !writeIssued || (error is MongoException mongo && !mongo.HasErrorLabel("UnknownTransactionCommitResult") && mongo.HasErrorLabel("TransientTransactionError"))
+            ? new EventsNotCommitted(error)
+            : error;
+
+    /// <summary>
+    /// Classifies a single-event append failure independently of transaction settlement.
+    /// </summary>
+    /// <param name="error">The append failure.</param>
+    /// <param name="writeIssued">Whether the insert was issued.</param>
+    /// <returns>The original error or proof that the insert was rejected.</returns>
+    internal static Exception ClassifySingleAppendFailure(Exception error, bool writeIssued)
+    {
+        // MongoDB server error_codes.yml names 121 (DocumentValidationFailure) and 10334 (BSONObjectTooLarge):
+        // https://github.com/mongodb/mongo/blob/r8.0.0/src/mongo/base/error_codes.yml
+        // Legacy size uasserts 17419/17420 reject before updateDocument/insertDocument:
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L750-L753
+        // https://github.com/mongodb/mongo/blob/r2.6.0/src/mongo/db/ops/update.cpp#L885-L887
+        if (error is MongoWriteException
+            {
+                WriteError: { Category: ServerErrorCategory.Uncategorized, Code: 121 or 10334 or 17419 or 17420 },
+                WriteConcernError: null
+            } write && !write.HasErrorLabel("UnknownTransactionCommitResult"))
+        {
+            return new EventsNotCommitted(error);
+        }
+        return ClassifyAppendFailure(error, writeIssued);
     }
 
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
@@ -1177,11 +1158,11 @@ public partial class EventSequenceStorage(
     }
 
     BsonDocument SerializeContent(ExpandoObject content, JsonSchema schema) =>
-        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions));
+        EventContentBson.FromJson(JsonSerializer.Serialize(expandoObjectConverter.ToJsonObject(content, schema), jsonSerializerOptions), schema);
 
     async Task<DuplicateEventSequenceNumber> AbortAndResolveNextAvailableSequenceNumber(IClientSessionHandle session)
     {
-        await session.AbortTransactionAsync().ConfigureAwait(false);
+        await AbortReceiptTransaction(session).ConfigureAwait(false);
         var highest = await _collection.Find(FilterDefinition<Event>.Empty)
                                       .SortByDescendingSequenceNumber()
                                       .Limit(1)

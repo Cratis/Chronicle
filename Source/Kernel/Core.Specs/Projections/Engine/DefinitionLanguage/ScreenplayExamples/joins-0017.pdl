@@ -1,0 +1,12 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CustomerId = customerId
+
+  join Customer on CustomerId
+    with CustomerCreated
+      CustomerName = name
+      CustomerEmail = email
+    with CustomerUpdated
+      CustomerName = name
+      CustomerEmail = email

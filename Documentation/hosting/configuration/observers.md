@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle observer retry behavior, timeouts, watchdog monitoring and fan-out, and how definition changes are evolved.
+---
 # Observers
 
 Observer configuration controls retry behavior, timeouts, watchdog monitoring, and how events fan out to scaled-out client instances.
@@ -45,12 +48,12 @@ Chronicle compares every newly registered projection and reducer definition with
 | Classification | Behavior |
 | --- | --- |
 | No action | A newly consumed event type has no historical events, so existing read models cannot change |
-| Partial replay | A projection adds independently mapped event types, or a reducer adds event types that occur only after its previously consumed events for each affected event source. Chronicle applies only those new event types to the affected event sources |
-| Full replay | The mapping, reducer implementation fingerprint, filter, key, join, child structure, or another order-dependent part changed. Chronicle rebuilds the complete observer |
+| Partial replay | A reducer adds event types that occur only after its previously consumed events for each affected event source. Chronicle applies only those new event types to the affected event sources |
+| Full replay | A projection adds event types with historical events, or the mapping, reducer implementation fingerprint, filter, key, join, child structure, or another order-dependent part changed. Chronicle rebuilds the complete observer |
 
 `Automatic` applies every classification. `PartialOnly` applies no-action and partial plans, but creates a replay recommendation when a full replay is required. `Manual` creates a recommendation for both partial and full plans. No-action plans never create recommendations because history cannot be affected.
 
-Chronicle deliberately falls back to full replay when it cannot prove that event sources and mapped properties are independent. Auto-mapping, overlapping property mappings, joins, parent/child relationships, custom keys, removals, and subscriptions to every event can combine historical contributions and therefore cannot use partial replay safely.
+Projection definition changes requiring historical backfill always use full replay, even for independent property mappings. Replaying selected historical events into the live container can reject writes behind its watermark or apply contributions twice. With `PartialOnly` or `Manual`, these changes therefore create a full-replay recommendation. Explicit partition replay is unchanged.
 
 Reducer registrations include a fingerprint of their reducer methods. Changing reducer code therefore triggers classification even when its event-type subscription is unchanged. Reducer methods are imperative, so Chronicle only chooses a partial reducer replay when history proves every newly consumed event follows all previously consumed events within its event source. Interleaved history falls back to full replay.
 
@@ -88,6 +91,12 @@ be told apart from one that was only waiting on a busy kernel:
 A partition whose last attempt is a `Timeout` does not count toward the quarantine thresholds above.
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
+
+Webhook retries use these same budget and delay settings, with bounded ±20% jitter and a persisted
+`RetryBackoff` deadline. `maxRetryAttempts: 0` still means unlimited retries. For webhooks, the
+observer-quarantine thresholds count parked non-timeout partitions, not transient partitions still
+waiting for retry. Receiver `Retry-After` and open-circuit deferrals consume no retry attempts.
+See [Webhook delivery policy](../../webhooks/index.mdx#receiver-back-pressure-and-permanent-failures).
 
 ## Ending quarantine
 
@@ -142,3 +151,18 @@ configured `fanOutStrategy`. If an instance disconnects, it is removed immediate
 partitions are redistributed to the remaining instances - the observer only unsubscribes when the
 last instance is gone.
 
+
+### Concurrent client versions
+
+During a rolling deployment, two versions of an application can be connected at once and register the same
+observer with different event types. The last registration wins: the observer follows the definition of the
+client that registered last, and the earlier client stops receiving events for it.
+
+When the client that won leaves, Chronicle hands the observer over to the most recently superseded client that
+is still connected, exactly as if that client had registered again. The hand-over happens when the connection
+is dropped and when the watchdog finds the client gone. It never ends a quarantine and never reactivates a
+retired observer. When no earlier client remains, the observer unsubscribes.
+
+Events of types that only the departed client handled are not replayed to the client that takes over; that
+belongs to the planned union of the event types of concurrent clients. Serving both sets of event types at the
+same time is not supported yet.

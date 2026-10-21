@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.AggregateRoots;
+using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.given;
 
@@ -138,6 +139,17 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
 
             await Task.Delay(50);
         }
+    }
+
+    /// <summary>
+    /// Waits until the client's own artifact registration has finished successfully, so that it cannot land after a
+    /// specification's manual re-registration and overwrite the changed definition with the previous one.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected async Task WaitForClientRegistration()
+    {
+        var outcome = await EventStore.WaitForRegistration(TimeSpanFactory.FromSeconds(30));
+        Assert.True(outcome.IsSuccess, $"Client registration did not succeed: {outcome.Failure}");
     }
 
     protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId) =>

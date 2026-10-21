@@ -78,11 +78,19 @@ public class InMemorySink(
     {
         if (key.Value is ExpandoObject expandoKey)
         {
+            // Each part is length-prefixed so that a separator inside a value cannot make two
+            // different composite keys produce the same storage key.
             var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key))
+            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key, StringComparer.Ordinal))
             {
-                if (stringBuilder.Length > 0) stringBuilder.Append('_');
-                stringBuilder.Append(value);
+                if (value is null)
+                {
+                    stringBuilder.Append('~');
+                    continue;
+                }
+
+                var part = value.ToString() ?? string.Empty;
+                stringBuilder.Append(part.Length).Append(':').Append(part);
             }
 
             return stringBuilder.ToString();
@@ -169,14 +177,7 @@ public class InMemorySink(
                     }
 
                     Collection[rowKey] = joinedState;
-                    if (eventSequenceNumber.IsActualValue)
-                    {
-                        LastHandledEventSequenceNumbers[rowKey] =
-                            LastHandledEventSequenceNumbers.TryGetValue(rowKey, out var current)
-                                ? Math.Max(current, eventSequenceNumber.Value)
-                                : eventSequenceNumber.Value;
-                    }
-
+                    AdvanceWatermark(rowKey, eventSequenceNumber);
                     updatedKeys.Add(rowKey);
                 }
             }
@@ -208,6 +209,8 @@ public class InMemorySink(
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
+        var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
+
         // Removing a child from every model that matches spans documents, so it cannot be expressed by
         // applying changes to the one being written - the persistent sinks run it across the container
         // at this point, and leaving it out here dropped it silently.
@@ -221,9 +224,9 @@ public class InMemorySink(
             RemoveChildFromDocument(state, childRemovedFromAll);
         }
 
-        if (rootJoins.Any(joined => joined.HasKeyedFrom))
+        if (rootJoins.Any(joined => joined.HasKeyedFrom) || childJoins.Length > 0)
         {
-            // The joined update may have touched this same row. Apply only the keyed From changes
+            // The joined update may have touched this same row. Apply only the direct changes
             // on top of the now-current row, without replaying the join against the From key.
             lock (_collectionLock)
             {
@@ -234,7 +237,12 @@ public class InMemorySink(
             }
         }
 
-        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !rootJoins.Contains(joined));
+        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !(rootJoins.Contains(joined) || childJoins.Contains(joined))).ToArray();
+        if (childJoins.Length > 0 && directChanges.Length == 0)
+        {
+            return Task.FromResult<IEnumerable<FailedPartition>>([]);
+        }
+
         var result = ApplyActualChanges(key, directChanges, state);
         ((dynamic)result).id = key.Value;
         bool wroteToPrimary;
@@ -248,17 +256,7 @@ public class InMemorySink(
             }
 
             Collection[keyValue] = result;
-
-            // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
-            // range and permanently block every later guarded write to this instance.
-            if (eventSequenceNumber.IsActualValue)
-            {
-                LastHandledEventSequenceNumbers[keyValue] =
-                    LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var current)
-                        ? Math.Max(current, eventSequenceNumber.Value)
-                        : eventSequenceNumber.Value;
-            }
-
+            AdvanceWatermark(keyValue, eventSequenceNumber);
             wroteToPrimary = !_isReplaying;
         }
 
@@ -528,6 +526,64 @@ public class InMemorySink(
 
         return !LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var lastHandled) ||
                lastHandled < eventSequenceNumber.Value;
+    }
+
+    Joined[] ApplyChildJoins(IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    {
+        // Child joins enrich every stored parent holding the child, even when the changeset's initial state is empty.
+        // Apply them before a removal takes the child away, and consume them so they cannot replace a root directly.
+        var joins = changeset.Changes.OfType<Joined>()
+            .Where(joined => !joined.ArrayIndexers.IsEmpty)
+            .ToArray();
+        if (joins.Length == 0)
+        {
+            return joins;
+        }
+
+        var updatedKeys = new List<object>();
+        bool wrotePrimary;
+        lock (_collectionLock)
+        {
+            wrotePrimary = !_isReplaying;
+            foreach (var joined in joins)
+            {
+                updatedKeys.AddRange(ApplyJoinToRowsHoldingTheChild(joined, eventSequenceNumber));
+            }
+        }
+
+        foreach (var updatedKey in updatedKeys.Distinct())
+        {
+            NotifyChanged(updatedKey, wrotePrimary);
+        }
+
+        return joins;
+    }
+
+    List<object> ApplyJoinToRowsHoldingTheChild(Joined joined, EventSequenceNumber eventSequenceNumber)
+    {
+        var indexer = joined.ArrayIndexers.All.Last();
+        var childPath = indexer.ArrayProperty + indexer.IdentifierProperty;
+        var rows = Collection.Where(row => joined.Changes.Any() && TryFindValueInDocument(row.Value, childPath.Segments.ToArray(), 0, indexer.Identifier)).ToArray();
+        foreach (var (rowKey, row) in rows)
+        {
+            Collection[rowKey] = ApplyActualChanges(new Key(rowKey, joined.ArrayIndexers), joined.Changes, row.Clone());
+            AdvanceWatermark(rowKey, eventSequenceNumber);
+        }
+
+        return rows.Select(row => row.Key).ToList();
+    }
+
+    void AdvanceWatermark(object keyValue, EventSequenceNumber eventSequenceNumber)
+    {
+        // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
+        // range and permanently block every later guarded write to this instance.
+        if (eventSequenceNumber.IsActualValue)
+        {
+            LastHandledEventSequenceNumbers[keyValue] =
+                LastHandledEventSequenceNumbers.TryGetValue(keyValue, out var current)
+                    ? Math.Max(current, eventSequenceNumber.Value)
+                    : eventSequenceNumber.Value;
+        }
     }
 
     void RemoveChildFromAll(ChildRemovedFromAll childRemoved)

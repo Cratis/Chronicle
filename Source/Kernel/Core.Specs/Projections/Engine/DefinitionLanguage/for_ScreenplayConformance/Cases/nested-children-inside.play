@@ -1,0 +1,44 @@
+// A child collection inside a nested object
+// Screenplay documentation: Documentation/screenplay/projections/nested.mdx
+
+type OrderLine
+  lineNumber Int
+  sku String
+
+type Details
+  lines OrderLine[]
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+        quantity Int
+      event LineChanged
+        orderId String
+        lineNumber Int
+        sku String
+      event LineRemoved
+        orderId String
+        lineNumber Int
+      event ProductDiscontinued
+        sku String
+      event ProductRenamed
+        sku String
+        title String
+      event OrderOpened
+        orderId String
+      readmodel OrderView
+        orderId String
+        details Details
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        nested details
+          from OrderOpened
+          children lines identified by lineNumber
+            from LineAdded key lineNumber
+              parent orderId
+              sku = sku

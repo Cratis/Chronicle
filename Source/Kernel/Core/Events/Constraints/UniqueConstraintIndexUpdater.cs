@@ -19,7 +19,10 @@ public class UniqueConstraintIndexUpdater(
     IUniqueConstraintsStorage storage) : IUpdateConstraintIndex
 {
     /// <inheritdoc/>
-    public async Task Update(EventSequenceNumber eventSequenceNumber)
+    public Task Update(EventSequenceNumber eventSequenceNumber) => Update(eventSequenceNumber, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken)
     {
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
 
@@ -27,7 +30,19 @@ public class UniqueConstraintIndexUpdater(
         // one way has more than one terminal fact, and each of them frees the value.
         if (definition.RemovedWith.Contains(context.EventTypeId))
         {
-            await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
+            var removal = definition.RemovalEventDefinitions.SingleOrDefault(_ => _.EventTypeId == context.EventTypeId);
+            if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
+            {
+                var properties = removal.GetPropertiesAndValues(context).ToList();
+                if (properties.Count > 0)
+                {
+                    await storage.RemoveValue(context.EventSourceId, definition, properties.GetValue(definition.IgnoreCasing), scopeKey, cancellationToken);
+                }
+            }
+            else
+            {
+                await storage.Remove(context.EventSourceId, definition, scopeKey, cancellationToken);
+            }
         }
         else
         {
@@ -42,18 +57,21 @@ public class UniqueConstraintIndexUpdater(
             // so every such event would claim one shared SHA-256("") key and the second one would collide while
             // the validator had already waved it through on the very same emptiness.
             //
-            // The event source still has to let go of whatever it claimed before: the index holds one entry per
-            // event source, and clearing the value means the source no longer holds the old one. Removing the
-            // entry frees it without ever writing the shared empty key.
+            // Per-event-source mode lets go of the source's previous claim when the value is cleared. Per-value
+            // mode keeps earlier claims until a removal event releases them; an absent value claims nothing.
             var propertiesWithValues = definition.GetPropertiesAndValues(context).ToList();
             if (propertiesWithValues.Count == 0)
             {
-                await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
+                if (definition.Mode == UniqueConstraintMode.PerEventSource)
+                {
+                    await storage.Remove(context.EventSourceId, definition, scopeKey, cancellationToken);
+                }
+
                 return;
             }
 
             var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
-            await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
+            await storage.Save(context.EventSourceId, definition, eventSequenceNumber, value, scopeKey, definition.SubjectFor(context), cancellationToken);
         }
     }
 }

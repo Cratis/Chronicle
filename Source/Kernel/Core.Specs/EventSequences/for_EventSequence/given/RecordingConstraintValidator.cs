@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 public class RecordingConstraintValidator(IList<EventSequenceNumber> recordedSequenceNumbers) : IConstraintValidator, IHaveUpdateConstraintIndex
 {
     /// <inheritdoc/>
-    public IConstraintDefinition Definition => throw new NotSupportedException();
+    public IConstraintDefinition Definition { get; } = new UniqueConstraintDefinition("recording", []);
 
     /// <inheritdoc/>
     public bool CanValidate(ConstraintValidationContext context) => false;

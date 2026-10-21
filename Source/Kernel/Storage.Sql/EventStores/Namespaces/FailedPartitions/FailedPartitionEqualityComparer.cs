@@ -29,6 +29,10 @@ public sealed class FailedPartitionEqualityComparer :
             x.IsResolved == y.IsResolved &&
             x.IsQuarantined == y.IsQuarantined &&
             x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset &&
+            x.RecoveryCursor == y.RecoveryCursor &&
+            x.RecoveryOwner == y.RecoveryOwner &&
+            x.Hold == y.Hold &&
+            x.Deferral == y.Deferral &&
             AttemptsEqual(x.Attempts, y.Attempts);
     }
 

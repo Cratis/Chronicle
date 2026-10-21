@@ -1,5 +1,6 @@
 ---
 uid: explicit-subscriptions
+description: Register Chronicle subscriptions between event stores manually with the Subscriptions API, choosing the subscription id and event types to forward.
 ---
 
 # Explicit Event Store Subscriptions
@@ -52,6 +53,35 @@ To subscribe without filtering — every event type your client knows about — 
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" />
 
+## Pin the Generation Your Application Understands
+
+Opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`. A generic
+`WithEventType<T>()` pins the generation declared by that event type. An identifier-only declaration
+resolves to the single generation your client knows; use the identifier-and-generation overload
+when that declaration is ambiguous or the type has no CLR representation.
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/pinned-generations" />
+
+Register the exact generation in both the source and target event stores before subscribing.
+The kernel validates the entire pinned registration request before changing any definitions.
+An unavailable generation or conflicting generations for the same event type fails explicitly;
+a readiness timeout cannot substitute for this validation. Upgrade every kernel silo before opting in.
+
+The source outbox observer selects and releases the pin on live, catch-up, replay, and retry delivery.
+The target inbox appends that delivered generation, not the source event's original append generation.
+Protected values are released with the selected source schema and protected again by the target append;
+an erased target subject's key is never reinstated. If a generation disappears from the target's
+registration later, forwarding fails without appending that event or advancing past it.
+
+Pins and the delivery policy survive restarts, reconnects, and identical registrations. Register the
+same subscription ID with a deliberately changed generation or policy to update it; reconciliation
+rebinds the source observer without an unsubscribe gap. `GetAll()` exposes the policy in
+`GenerationDelivery` and exact generations in `EventTypePins`, alongside the existing id-only `EventTypes`.
+
+The default remains `Compatibility`: existing subscriptions still send generation 1 in their registration
+and retain their existing forwarding behavior. The global client generation-delivery option does not
+opt subscriptions in.
+
 ## Accessing Forwarded Events
 
 Events forwarded via an explicit subscription are placed into the inbox sequence for the source event store. Access inbox events through any observer (reactor, projection, reducer):
@@ -79,7 +109,8 @@ This makes it safe to register all subscriptions at application startup without 
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/startup-registration" />
 
-If any of these subscriptions already exist on the kernel, they are left unchanged.
+Identical registrations leave existing definitions unchanged. A deliberately changed registration updates
+the same subscription, including its exact pins and delivery policy when you opt in.
 
 ## Subscription Lifecycle
 

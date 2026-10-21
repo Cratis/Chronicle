@@ -1,0 +1,20 @@
+// remove with without a key removes the instance of the event source
+// Screenplay documentation: Documentation/screenplay/projections/removal.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        label String
+      event OrderCancelled
+        reason String
+      readmodel OrderView
+        orderId String
+        label String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          label = label
+        remove with OrderCancelled

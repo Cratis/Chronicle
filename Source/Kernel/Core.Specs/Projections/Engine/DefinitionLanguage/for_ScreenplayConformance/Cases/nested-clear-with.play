@@ -1,0 +1,32 @@
+// clear with inside a nested object clears it back to null
+// Screenplay documentation: Documentation/screenplay/projections/nested.mdx
+
+type Shipping
+  carrier String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        carrierId String
+      event OrderShipped
+        orderId String
+        carrier String
+        trackingNumber String
+      event ShippingCleared
+        orderId String
+      event CarrierRenamed
+        carrierId String
+        carrier String
+      readmodel OrderView
+        orderId String
+        carrierId String
+        shipping Shipping optional
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        nested shipping
+          from OrderShipped
+            carrier = carrier
+          clear with ShippingCleared

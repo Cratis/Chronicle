@@ -1,0 +1,33 @@
+---
+title: "CHR0065: Read model fold method will not be discovered"
+description: "CHR0065 warns when an event fold on a read model has the wrong name or is not static, so Chronicle will not discover it as a self reducer."
+---
+
+## Rule description
+
+Chronicle discovers a self reducer from public static methods named `Reduce`. An otherwise fold-shaped method named `Reducer`, `reduce`, `ReduceOn`, or another name is ignored. An instance `Reduce` method alone does not establish self-reducer discovery either. The warning names the method, explains which requirement it misses, and shows the expected signature.
+
+The rule requires all of these signals:
+
+- The containing type is a concrete, non-generic class or record that does not implement `IReducer` or `IReducerFor<T>`.
+- The type carries Arc's `[ReadModel]` attribute, including inherited metadata, or already has a valid self-reduction method or a static `Reduce` near miss recognized by Chronicle's self-reducer policy.
+- The method is public and non-generic, with two or three ordinary parameters: a class or interface with event declaration metadata (`[EventType]` or `[EventTypeGenerationFor<T>]`, including inherited metadata), exactly the containing model type (nullable or non-nullable), and optionally `EventContext`.
+- The result is exactly the containing model or `Task` of that model, including nullable results.
+- The name is not exactly `Reduce`, or the method is not static.
+
+Ordinary helpers, factories, collection-returning queries, non-event arguments, and unrelated types are not reported. The rule requires visible event declaration metadata and respects attribute inheritance. Historical generations and types inheriting event markers count; event membership supplied only by registration or inferred from known derived events of an unmarked dispatch base type does not. A method already reported by CHR0058 as an invalid sibling `Reduce` declaration does not also receive CHR0065.
+
+## Severity
+
+Warning
+
+## How to fix
+
+If the method is intended to fold events, rename it to `Reduce` and make it `public static`. Accept the nullable current model because the first event receives absent state. Use `(event, current)` or `(event, current, EventContext)` and return the model or `Task` of the model.
+
+Review instance-state access before making a method static, and check callers and other overloads before renaming it. If the fold needs injected services, use a separate `IReducerFor<T>` instead. There is no automatic code fix.
+
+## Related topics
+
+- [Self-reducing read models](../reducers/self-reducing-read-models.mdx)
+- [Build a separate reducer](../reducers/getting-started.mdx)

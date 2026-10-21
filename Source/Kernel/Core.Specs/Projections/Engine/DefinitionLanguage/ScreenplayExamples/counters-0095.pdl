@@ -1,0 +1,15 @@
+projection Product => ProductReadModel
+  from ProductCreated
+    Name = name
+    StockLevel = initialStock
+
+  from ItemAdded
+    increment StockLevel
+
+  from ItemSold
+    decrement StockLevel
+    count SalesCount
+
+  from ItemReturned
+    increment StockLevel
+    decrement SalesCount

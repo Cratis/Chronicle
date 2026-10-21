@@ -76,6 +76,24 @@ enum FailureKind {
    Handling = 1;
    Timeout = 2;
    FAILURE_KIND_Disconnected = 3;
+   WaitingForHandler = 4;
+}
+message FastForward {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
+enum FastForwardOutcome {
+   FastForwarded = 0;
+   AlreadyAtTail = 1;
+   ObserverReplaying = 2;
+   NotAvailable = 3;
+}
+message FastForwardResponse {
+   FastForwardOutcome Outcome = 1;
+   uint64 PreviousNextEventSequenceNumber = 2;
+   uint64 NextEventSequenceNumber = 3;
 }
 message GetConnectedClientsForObserverRequest {
    string EventStore = 1;
@@ -180,6 +198,15 @@ message ReplayPartition {
 message ReplayResponse {
    string JobId = 1;
 }
+message RetryFailedPartitions {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
+message RetryFailedPartitionsResponse {
+   int32 FailedPartitions = 1;
+}
 message RetryPartition {
    string EventStore = 1;
    string Namespace = 2;
@@ -218,6 +245,7 @@ service Observers {
    rpc ClearFailedPartitions (.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions) returns (.google.protobuf.Empty);
    rpc ClearObserverQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine) returns (.google.protobuf.Empty);
    rpc ClearPartitionQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine) returns (ClearPartitionQuarantineResponse);
+   rpc FastForward (.Cratis.Chronicle.Contracts.Observation.FastForward) returns (FastForwardResponse);
    rpc GetConnectedClientsForObserver (GetConnectedClientsForObserverRequest) returns (IEnumerable_ConnectedClient);
    rpc GetObserverInformation (GetObserverInformationRequest) returns (ObserverInformation);
    rpc GetObservers (AllObserversRequest) returns (IEnumerable_ObserverInformation);
@@ -226,6 +254,7 @@ service Observers {
    rpc RemoveObserver (.Cratis.Chronicle.Contracts.Observation.RemoveObserver) returns (RemoveObserverResponse);
    rpc Replay (.Cratis.Chronicle.Contracts.Observation.Replay) returns (ReplayResponse);
    rpc ReplayPartition (.Cratis.Chronicle.Contracts.Observation.ReplayPartition) returns (.google.protobuf.Empty);
+   rpc RetryFailedPartitions (.Cratis.Chronicle.Contracts.Observation.RetryFailedPartitions) returns (RetryFailedPartitionsResponse);
    rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (RetryPartitionResponse);
    rpc WaitForCompletion (WaitForObserverCompletionRequest) returns (WaitForObserverCompletionResponse);
 }

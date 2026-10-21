@@ -66,6 +66,21 @@ public class Observers
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
 
     /// <summary>
+    /// Gets the webhook retry delays in seconds. After the last entry, that delay repeats.
+    /// When empty, webhooks use <see cref="Webhooks.DefaultBackoffScheduleSeconds"/>. Only used by Webhooks:Retry.
+    /// </summary>
+    /// <remarks>
+    /// The default stays empty because configuration binding appends configured entries to an existing collection.
+    /// </remarks>
+    public IReadOnlyList<int> BackoffScheduleSeconds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the webhook retry budget from the first attempt since quarantine was cleared.
+    /// Zero disables the elapsed-time limit. Only used by Webhooks:Retry.
+    /// </summary>
+    public TimeSpan RetryBudget { get; init; }
+
+    /// <summary>
     /// Gets the threshold for quarantining an observer based on the number of failed partitions.
     /// A value of 0 disables observer quarantine based on failed partition count.
     /// </summary>
@@ -113,6 +128,21 @@ public class Observers
     /// A larger value trades a longer post-crash re-scan for fewer writes. Defaults to 100.
     /// </remarks>
     public int StatePersistenceBatchInterval { get; init; } = 100;
+
+    /// <summary>
+    /// Gets the maximum time in seconds the observer holds back reported handled-event counts and the follow-up writes of partition failures before making them durable.
+    /// </summary>
+    /// <remarks>
+    /// Every handled batch of every job step reports its counts to the single observer grain. Writing them through
+    /// - an increment per partition plus the whole observer state - on each report makes the grain's queue grow
+    /// past the grain call timeout under a replay. Reports are therefore coalesced per partition and event type and
+    /// written together after at most this many seconds, on the watchdog tick and on deactivation. The sums are
+    /// exact; only their freshness is bounded. A partition failure is recorded in the observer's memory and in its
+    /// failed partitions storage straight away, one partition at a time; the observer state write and the retry
+    /// reminder registration, which are the same for every failure of a burst, wait for the same flush instead of
+    /// holding up the observer once per failure. 0 writes everything through. Defaults to 5.
+    /// </remarks>
+    public int WriteCoalescingInterval { get; init; } = 5;
 
     /// <summary>
     /// Gets the strategy used to fan events out when multiple instances of the same client are

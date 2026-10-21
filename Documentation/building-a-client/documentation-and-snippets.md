@@ -1,3 +1,6 @@
+---
+description: How to shape a new Chronicle client's Documentation folder, snippets and CI validator so it plugs into the shared Chronicle docs site.
+---
 # Documentation and snippets
 
 Chronicle's docs are published as one site, aggregated at build time from a `Documentation/`

@@ -18,6 +18,16 @@
 				"-eCratis__Chronicle__Mcp__ConnectionString=chronicle://host.docker.internal:35000/?disableTls=true",
 				"cratis/chronicle-mcp"
 			]
+		},
+		"screenplay": {
+			"type": "stdio",
+			"command": "cratis",
+			"args": [
+				"screenplay",
+				"mcp",
+				"--project-root",
+				"${workspaceFolder}"
+			]
 		}
 	},
 	"inputs": []

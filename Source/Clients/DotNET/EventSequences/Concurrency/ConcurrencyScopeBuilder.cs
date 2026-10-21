@@ -17,6 +17,7 @@ public class ConcurrencyScopeBuilder
     EventStreamType? _eventStreamType;
     EventStreamId? _eventStreamId;
     EventSourceType? _eventSourceType;
+    Type? _definitionType;
 
     /// <summary>
     /// Sets the <see cref="EventSequenceNumber"/> for the concurrency scope.
@@ -104,6 +105,7 @@ public class ConcurrencyScopeBuilder
     {
         var definition = EventSources.EventSources.Describe(typeof(TSource));
         _eventSourceType = definition.EventSourceType;
+        _definitionType = typeof(TSource);
         if (stream is not null)
         {
             _eventStreamType = (definition.FindStream(stream) ?? throw new EventStreamDoesNotBelongToEventSource(definition.Name, stream)).EventStreamType;
@@ -163,5 +165,5 @@ public class ConcurrencyScopeBuilder
             _eventStreamType,
             _eventStreamId,
             _eventSourceType,
-            _eventTypes.Distinct().ToArray());
+            _eventTypes.Distinct().ToArray()) { DefinitionType = _definitionType };
 }

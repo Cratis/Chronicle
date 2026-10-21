@@ -47,8 +47,15 @@ public class EncryptedSubjectValueHandler(
     public SchemaMetadataTypeName Type => SecurityMetadataType.EncryptedSubject.Value;
 
     /// <inheritdoc/>
-    public Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
-        EncryptedValueOperations.Apply(provisioner, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForSubject(identifier), value);
+    public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await ApplyReportingKey(eventStore, eventStoreNamespace, identifier, value)).Value;
+
+    /// <inheritdoc/>
+    public ProtectionKeyLocation KeyLocationFor(string identifier) => new(ProtectionKind.EncryptedSubject, EncryptedValueKeyIdentifiers.ForSubject(identifier));
+
+    /// <inheritdoc/>
+    public Task<(JsonNode Value, EncryptionKeyUse? Key)> ApplyReportingKey(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        EncryptedValueOperations.Apply(provisioner, encryption, eventStore, eventStoreNamespace, EncryptedValueKeyIdentifiers.ForSubject(identifier), value, ProtectionKind.EncryptedSubject);
 
     /// <inheritdoc/>
     public Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>

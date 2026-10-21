@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -29,6 +31,23 @@ public interface IConnectedClients : IGrainWithStringKey
     Task OnClientConnected(ConnectionId connectionId, string version, bool isRunningWithDebugger, int processId, string processPath, string machineName, string clientType);
 
     /// <summary>
+    /// Put back a client the registry lost while its connection stayed open and the client kept responding.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="OnClientConnected"/> this is not a new connection: it fulfils no reservation, and a client the
+    /// registry already knows is left exactly as it is.
+    /// </remarks>
+    /// <param name="connectionId">The connection identifier.</param>
+    /// <param name="version">The version of the client.</param>
+    /// <param name="isRunningWithDebugger">Whether or not the client is running with debugger.</param>
+    /// <param name="processId">The identifier of the client process.</param>
+    /// <param name="processPath">The full path of the client process executable.</param>
+    /// <param name="machineName">The name of the machine the client process is running on.</param>
+    /// <param name="clientType">The type of the client (for example, <c language="csharp">.NET</c>).</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnClientRestored(ConnectionId connectionId, string version, bool isRunningWithDebugger, int processId, string processPath, string machineName, string clientType);
+
+    /// <summary>
     /// Report that a client was disconnected.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>
@@ -49,6 +68,23 @@ public interface IConnectedClients : IGrainWithStringKey
     /// <param name="connectionId">The <see cref="ConnectionId"/> to check.</param>
     /// <returns>True if connected, false if not.</returns>
     Task<bool> IsConnected(ConnectionId connectionId);
+
+    /// <summary>
+    /// Records projections declared by an existing connection. Unknown connections are ignored.
+    /// </summary>
+    /// <param name="connectionId">The declaring connection.</param>
+    /// <param name="eventStore">The event store containing the projections.</param>
+    /// <param name="projections">The declared projection identifiers.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecordDeclaredProjections(ConnectionId connectionId, EventStoreName eventStore, IEnumerable<ProjectionId> projections);
+
+    /// <summary>
+    /// Checks whether a currently connected client declares a projection.
+    /// </summary>
+    /// <param name="eventStore">The projection's event store.</param>
+    /// <param name="projection">The projection identifier.</param>
+    /// <returns>Whether a connected client declares the projection.</returns>
+    Task<bool> DeclaresProjection(EventStoreName eventStore, ProjectionId projection);
 
     /// <summary>
     /// Gets the <see cref="ConnectedClient"/> from the <see cref="ConnectionId"/>.

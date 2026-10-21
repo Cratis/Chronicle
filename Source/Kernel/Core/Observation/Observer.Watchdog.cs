@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 
@@ -15,6 +17,12 @@ public partial class Observer
     /// Gets the number of consecutive stranded catch-up preparations the watchdog has recovered. This property is for testing purposes only.
     /// </summary>
     internal int CatchupRecoveryAttempts => _catchupRecoveryAttempts;
+
+    /// <summary>
+    /// Sets the consecutive catch-up recovery attempts. This method is for testing purposes only.
+    /// </summary>
+    /// <param name="attempts">The number of attempts.</param>
+    internal void SetCatchupRecoveryAttemptsForTesting(int attempts) => _catchupRecoveryAttempts = attempts;
 
     /// <summary>
     /// Runs all watchdog checks immediately. This method is for testing purposes only.
@@ -62,7 +70,7 @@ public partial class Observer
     /// </remarks>
     async Task RecoverIfStuck()
     {
-        if (await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation())
+        if (await RecoveredBySettlingChecks())
         {
             return;
         }
@@ -71,6 +79,41 @@ public partial class Observer
         {
             await CheckStrandedSubscription();
         }
+    }
+
+    async Task<bool> RecoveredBySettlingChecks() =>
+        await CheckDeferredRouting() || await CheckCatchUpBackoffElapsed() || await CheckOwedRecoveryAfterQuarantine() || await CheckJobTasks() || await CheckStrandedCatchupPreparation();
+
+    async Task<bool> IsWaitingForEventLookupRetry() =>
+        !IsQuarantined && _subscription.IsSubscribed && await GetCurrentState() is Routing { NextEventLookupFailed: true };
+
+    /// <summary>
+    /// Routes the observer again once the backoff after catch-up jobs that produced no work has elapsed.
+    /// </summary>
+    /// <returns>True if the watchdog acted on the observer, false otherwise.</returns>
+    async Task<bool> CheckCatchUpBackoffElapsed()
+    {
+        if (_catchUpBackoffUntil == default || IsBackingOffCatchUp || IsQuarantined || await GetCurrentState() is not Observing)
+        {
+            return false;
+        }
+
+        _catchUpBackoffUntil = default;
+        logger.CatchUpBackoffElapsed();
+        await TransitionTo<Routing>();
+        return true;
+    }
+
+    async Task<bool> CheckDeferredRouting()
+    {
+        if (!await IsWaitingForEventLookupRetry())
+        {
+            return false;
+        }
+
+        logger.WatchdogRetryingEventLookup(State.NextEventSequenceNumber);
+        await TransitionTo<Routing>();
+        return true;
     }
 
     /// <summary>
@@ -171,7 +214,7 @@ public partial class Observer
 
             if (_subscription.Targets.Count == 0)
             {
-                await Unsubscribe();
+                await PromoteSupersededRegistrationOrUnsubscribe();
             }
 
             return;
@@ -186,7 +229,7 @@ public partial class Observer
         if (!await connectedClients.IsConnected(connectedClient.ConnectionId))
         {
             logger.WatchdogClientDisconnected(connectedClient.ConnectionId);
-            await Unsubscribe();
+            await PromoteSupersededRegistrationOrUnsubscribe();
         }
     }
 
@@ -212,10 +255,11 @@ public partial class Observer
                 return false;
             }
 
+            var now = DateTimeOffset.UtcNow;
             var hasRunningReplayJob = replayJobs.Any(job =>
                 job.Request is ReplayObserverRequest req &&
                 req.ObserverKey == _observerKey &&
-                job.IsPreparingOrRunning);
+                job.IsLive(now));
 
             if (!hasRunningReplayJob)
             {
@@ -268,7 +312,7 @@ public partial class Observer
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
-            job.IsPreparingOrRunning &&
+            job.IsLive(DateTimeOffset.UtcNow) &&
             !_concludedCatchUpJobs.Contains(job.Id));
     }
 
@@ -306,9 +350,31 @@ public partial class Observer
             return false;
         }
 
+        if (!await CheckForRelevantEvents(tailSequenceNumber))
+        {
+            return false;
+        }
+
+        if (shouldUpdateTailEventSequenceNumber)
+        {
+            State = State with { TailEventSequenceNumber = tailSequenceNumber };
+            await WriteStateAsync();
+        }
+
+        return true;
+    }
+
+    async Task<bool> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
+    {
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
             State.NextEventSequenceNumber,
             _subscription.EventTypes.ToList());
+
+        if (nextEventResult.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
+        {
+            logger.WatchdogNextEventLookupFailed(State.NextEventSequenceNumber, error);
+            return false;
+        }
 
         var hasRelevantEvent = nextEventResult.Match(num => num.IsActualValue, _ => false);
         if (!hasRelevantEvent)
@@ -321,12 +387,6 @@ public partial class Observer
             };
             await WriteStateAsync();
             return false;
-        }
-
-        if (shouldUpdateTailEventSequenceNumber)
-        {
-            State = State with { TailEventSequenceNumber = tailSequenceNumber };
-            await WriteStateAsync();
         }
 
         return true;

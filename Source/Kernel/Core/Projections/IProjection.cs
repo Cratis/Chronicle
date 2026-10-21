@@ -70,6 +70,15 @@ public interface IProjection : IGrainWithStringKey
     Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
 
     /// <summary>
+    /// Folds events for a strongly consistent single-instance read, carrying existence and initialization across batches.
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="initialState">The state from the previous batch, or an absent instance.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The projected state, including whether the instance exists and has been initialized.</returns>
+    Task<SingleReadModelProjectionState> FoldForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, SingleReadModelProjectionState initialState, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
     /// Process a set of events through the projection and return resulting read-model instances grouped by key.
     /// </summary>
     /// <param name="eventStoreNamespace">The namespace the events are from.</param>

@@ -15,16 +15,14 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
 using Cratis.Json;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
-using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
-using InMemoryIdentityStorage = Cratis.Chronicle.Storage.InMemory.Identities.IdentityStorage;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
 using KernelKey = KernelConcepts::Cratis.Chronicle.Concepts.Keys.Key;
 using KernelProjectionEngine = KernelCore::Cratis.Chronicle.Projections.Engine;
 using KernelReadModels = KernelConcepts::Cratis.Chronicle.Concepts.ReadModels;
@@ -100,15 +98,15 @@ internal static class ProjectionReadModelProcessor
     /// <typeparam name="TReadModel">Type of read model produced by the projection.</typeparam>
     /// <param name="projectionDefinition">The client-side <see cref="Contracts.Projections.ProjectionDefinition"/>.</param>
     /// <param name="events">The events with their associated <see cref="EventSourceId"/> to process.</param>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
-    /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing event input with the scenario's defaults.</param>
-    /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model and event schemas.</param>
+    /// <param name="context">The storage, artifacts, services and original event contexts for the fold.</param>
     /// <param name="initialState">Optional initial read model state.</param>
     /// <param name="strictEventSubscription">
     /// When <see langword="false"/> (the default), a seeded event the projection does not subscribe to is
     /// silently skipped, matching the production engine. When <see langword="true"/>, such an event raises
     /// <see cref="UnsubscribedEventSeeded"/> instead.
     /// </param>
+    /// <param name="seededEvents">Optional routed synthetic input, used when original contexts are not supplied.</param>
+    /// <param name="seededInstances">Optional per-key persisted starting state, including each instance's identifier.</param>
     /// <returns>
     /// A tuple of the primary projected read model (the instance for the first key resolved, exposed as
     /// <c language="csharp">Instance</c>, or <see langword="null"/> if the projection did not apply any changes) and a
@@ -121,95 +119,43 @@ internal static class ProjectionReadModelProcessor
     public static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
-        IEventTypes eventTypes,
-        IEventSerializer eventSerializer,
-        IJsonSchemaGenerator jsonSchemaGenerator,
+        ReadModelFoldContext context,
         TReadModel? initialState = null,
-        bool strictEventSubscription = false)
+        bool strictEventSubscription = false,
+        IReadOnlyList<ReadModelEvent>? seededEvents = null,
+        IReadOnlyDictionary<EventSourceId, TReadModel>? seededInstances = null)
         where TReadModel : class
     {
-        var readModelType = typeof(TReadModel);
-        var schema = jsonSchemaGenerator.GenerateForReadModel(readModelType);
+        var readModelType = context.ReadModelType;
+        var eventStore = context.EventStore;
+        var eventTypes = context.EventTypes;
+        var eventContexts = context.EventContexts;
+        var schema = context.SchemaGenerator.GenerateForReadModel(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
         var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
             projectionDefinition,
-            KernelConceptsNs::Projections.ProjectionOwner.Client);
+            KernelConceptsNs::Projections.ProjectionOwner.Client) with
+        {
+            EventSequenceId = new(context.InputSequenceId?.Value ?? (eventContexts is null ? ReadModelEvents.SequenceId.Value : eventStore.EventLog.Id.Value))
+        };
 
         var eventsList = events.ToList();
 
-        // Build AppendedEvents with correct EventSourceIds for use in key resolution
-        var appendedEvents = new KernelAppendedEvent[eventsList.Count];
-        for (var index = 0; index < eventsList.Count; index++)
-        {
-            var eventTuple = eventsList[index];
-            var actualEventType = eventTuple.Event.GetType();
-            var clientEventType = eventTypes.GetEventTypeFor(actualEventType);
-            var kernelEventType = ToKernelEventType(clientEventType);
-            var serializedJson = await eventSerializer.Serialize(eventTuple.Event);
-            var eventSchema = jsonSchemaGenerator.Generate(actualEventType);
-
-            // JSON data keys remain case-sensitive even when the serializer matches CLR names case-insensitively.
-            // Re-read the serialized content without carrying those node lookup options into projection input.
-            var projectionJson = JsonNode.Parse(serializedJson.ToJsonString(), new JsonNodeOptions { PropertyNameCaseInsensitive = false })!.AsObject();
-            var content = _expandoObjectConverter.ToExpandoObject(projectionJson, eventSchema);
-            var eventSourceId = (KernelConceptsNs::Events.EventSourceId)eventTuple.EventSourceId.Value;
-            var context = KernelConceptsNs::Events.EventContext.Empty with
-            {
-                EventType = kernelEventType,
-                EventSourceId = eventSourceId,
-                SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
-
-                // Give each event a distinct, monotonically increasing occurred time so time-based
-                // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
-                // reflect append order the same way the real runtime does — rather than every event
-                // sharing one timestamp.
-                Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
-            };
-            appendedEvents[index] = new KernelAppendedEvent(context, content);
-        }
-
-        // Populate in-memory event sequence storage with all events so key resolvers
-        // (e.g. FromParentHierarchy for ChildrenFrom projections) can look up parent events
-        // across separate event source streams.
-        var eventSequenceId = KernelConceptsNs::EventSequences.EventSequenceId.Log;
-        var inMemoryEventSequenceStorage = new InMemoryEventSequenceStorage(
-            KernelConceptsNs::EventStoreName.NotSet,
-            KernelConceptsNs::EventStoreNamespaceName.NotSet,
-            eventSequenceId,
-            new InMemoryIdentityStorage());
-        foreach (var appendedEvent in appendedEvents)
-        {
-            await inMemoryEventSequenceStorage.Append(
-                appendedEvent.Context.SequenceNumber,
-                appendedEvent.Context.EventSourceType,
-                appendedEvent.Context.EventSourceId,
-                appendedEvent.Context.EventStreamType,
-                appendedEvent.Context.EventStreamId,
-                appendedEvent.Context.EventType,
-                appendedEvent.Context.CorrelationId,
-                appendedEvent.Context.Causation,
-                [],
-                appendedEvent.Context.Tags,
-                appendedEvent.Context.Occurred,
-                new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, ExpandoObject>
-                {
-                    { KernelConceptsNs::Events.EventTypeGeneration.First, appendedEvent.Content }
-                },
-                new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, KernelConceptsNs::Events.EventHash>());
-        }
-
-        // Generate event type schemas so AutoMap can map properties from events to read model fields.
-        var eventTypeSchemas = BuildEventTypeSchemas(eventsList, eventTypes, jsonSchemaGenerator);
-
-        // Create a projection factory backed by the populated in-memory storage so that
-        // join and parent-hierarchy resolvers can look up events from all event streams.
-        var storageForFactory = new InMemoryStorage(inMemoryEventSequenceStorage);
-        var projectionFactory = CreateProjectionFactory(storageForFactory);
+        // Keep synthetic positions and observer-free folding; prepare migrations through the kernel component.
+        var (appendedEvents, inMemoryEventSequenceStorage) = await ReadModelEvents.Prepare(
+            eventStore,
+            eventsList,
+            eventContexts,
+            persist: eventContexts is null || context.InputSequenceId is not null,
+            seededEvents: seededEvents,
+            inputSequenceId: context.InputSequenceId);
+        var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(eventTypes.All.Select(ToKernelEventType));
+        var projectionFactory = CreateProjectionFactory(eventStore.TestingStore.Storage);
 
         var engineProjection = await projectionFactory.Create(
-            KernelConceptsNs::EventStoreName.NotSet,
-            KernelConceptsNs::EventStoreNamespaceName.NotSet,
+            new(eventStore.Name.Value),
+            new(eventStore.Namespace.Value),
             kernelProjectionDefinition,
             kernelReadModelDefinition,
             eventTypeSchemas);
@@ -234,6 +180,14 @@ internal static class ProjectionReadModelProcessor
         var explicitInitialStateIsPresent = initialState is not null;
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
+        var seededKeys = new HashSet<object>();
+        foreach (var (key, instance) in seededInstances ?? new Dictionary<EventSourceId, TReadModel>())
+        {
+            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key.Value, ArrayIndexers.NoIndexers));
+            statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
+            inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
+            seededKeys.Add(stateKey);
+        }
 
         // Process events, retrying deferred root and child keys after all seeded events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
@@ -241,6 +195,7 @@ internal static class ProjectionReadModelProcessor
         foreach (var @event in appendedEvents)
         {
             var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, deferredChildren, strictEventSubscription);
+            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             rootKey ??= eventKey;
             if (eventRemoved)
             {
@@ -268,6 +223,8 @@ internal static class ProjectionReadModelProcessor
             {
                 explicitInitialStateIsPresent = false;
             }
+
+            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
         }
 
         // Retry only the deferred child branches. A resolved child can materialize the parent of another
@@ -295,6 +252,8 @@ internal static class ProjectionReadModelProcessor
                 {
                     explicitInitialStateIsPresent = false;
                 }
+
+                PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             }
         }
 
@@ -309,7 +268,11 @@ internal static class ProjectionReadModelProcessor
         // Read every materialized instance per-key from the sink, which keeps one document per resolved
         // root key — so a multi-source projection (e.g. a join whose join-source event was seeded first)
         // can be asserted against the intended instance via InstanceForEventSourceId.
-        var instances = BuildInstancesFromSink<TReadModel>(inMemorySink);
+        var instances = BuildInstancesFromSink<TReadModel>(inMemorySink, readModelType);
+        if (seededKeys.Count > 0 && instances.Count == 1)
+        {
+            return (instances.Values.Single(), instances);
+        }
 
         // An explicit initial state remains materialized through empty changesets until an actual root removal.
         // Otherwise presence comes from the same per-key sink state that backs Instances: deferred, joined, or
@@ -318,14 +281,14 @@ internal static class ProjectionReadModelProcessor
             (rootKey is not null && await inMemorySink.FindOrDefault(rootKey) is not null);
         if (!hasPrimary)
         {
-            return (null, instances);
+            return (seededKeys.Count > 0 ? instances.Values.FirstOrDefault() : null, instances);
         }
 
         var state = rootKey is not null && statesByKey.TryGetValue(inMemorySink.GetKeyValue(rootKey), out var rootState)
             ? rootState
             : CreateSeedState();
 
-        InjectIdentifierFromKey<TReadModel>(state, rootKey);
+        InjectIdentifierFromKey(state, rootKey, readModelType);
 
         // Serialize with the same options used to deserialize so concept values — both scalar and the
         // elements of a concept collection (e.g. IReadOnlyList<MyConcept>) — are written in their
@@ -333,8 +296,35 @@ internal static class ProjectionReadModelProcessor
         // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
         // underlying primitive.
         var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
-        var primary = JsonSerializer.Deserialize<TReadModel>(json, _readModelSerializerOptions);
+        var primary = (TReadModel?)JsonSerializer.Deserialize(json, readModelType, _readModelSerializerOptions);
         return (primary, instances);
+    }
+
+    /// <summary>
+    /// Creates a sink using the same read model schema and key conversion as projection folding.
+    /// </summary>
+    /// <param name="readModelType">The read model type.</param>
+    /// <param name="schemaGenerator">The schema generator used by the fold.</param>
+    /// <returns>A sink whose key conversion matches the materialized instances.</returns>
+    internal static InMemorySink CreateSink(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
+        new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
+
+    static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
+    {
+        var identifier = IdentifierProperty.Find(readModelType);
+        if (identifier is null || seededKeys.Count == 0) return;
+
+        // InMemorySink injects id from the storage key on every write. For an explicitly seeded document,
+        // keep the identifier held by its projected state instead; it need not equal that storage key.
+        var property = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifier.Name);
+        foreach (var key in seededKeys)
+        {
+            if (statesByKey.TryGetValue(key, out var state) && sink.Collection.TryGetValue(key, out var document) &&
+                ((IDictionary<string, object?>)state).TryGetValue(property, out var value))
+            {
+                ((IDictionary<string, object?>)document)[property] = value;
+            }
+        }
     }
 
     /// <summary>
@@ -343,8 +333,9 @@ internal static class ProjectionReadModelProcessor
     /// </summary>
     /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
     /// <param name="sink">The in-memory sink populated during processing.</param>
+    /// <param name="readModelType">The runtime read model type.</param>
     /// <returns>A dictionary of every materialized instance keyed by its <see cref="EventSourceId"/>.</returns>
-    static Dictionary<EventSourceId, TReadModel> BuildInstancesFromSink<TReadModel>(InMemorySink sink)
+    static Dictionary<EventSourceId, TReadModel> BuildInstancesFromSink<TReadModel>(InMemorySink sink, Type readModelType)
         where TReadModel : class
     {
         var instances = new Dictionary<EventSourceId, TReadModel>();
@@ -356,7 +347,7 @@ internal static class ProjectionReadModelProcessor
             }
 
             var json = JsonSerializer.Serialize(document, Globals.JsonSerializerOptions);
-            var instance = JsonSerializer.Deserialize<TReadModel>(json, _readModelSerializerOptions);
+            var instance = (TReadModel?)JsonSerializer.Deserialize(json, readModelType, _readModelSerializerOptions);
             if (instance is null)
             {
                 continue;
@@ -375,15 +366,14 @@ internal static class ProjectionReadModelProcessor
     /// the state under that property's camel-cased name — unless an event mapping has already
     /// populated that property.
     /// </summary>
-    /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
     /// <param name="state">The projection state ExpandoObject to inject into.</param>
     /// <param name="key">The resolved projection key, or <see langword="null"/> if no event resolved one.</param>
-    static void InjectIdentifierFromKey<TReadModel>(ExpandoObject state, KernelKey? key)
-        where TReadModel : class
+    /// <param name="readModelType">The runtime read model type.</param>
+    static void InjectIdentifierFromKey(ExpandoObject state, KernelKey? key, Type readModelType)
     {
         if (key is null || key.Value is null) return;
 
-        var identifierProperty = IdentifierProperty.Find(typeof(TReadModel));
+        var identifierProperty = IdentifierProperty.Find(readModelType);
         if (identifierProperty is null) return;
 
         var propertyName = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifierProperty.Name);
@@ -468,39 +458,10 @@ internal static class ProjectionReadModelProcessor
             storage,
             FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
 
-    static List<KernelEventTypes::EventTypeSchema> BuildEventTypeSchemas(
-        IEnumerable<(EventSourceId EventSourceId, object Event)> events,
-        IEventTypes eventTypes,
-        IJsonSchemaGenerator jsonSchemaGenerator)
-    {
-        var seenTypes = new HashSet<Type>();
-        var schemas = new List<KernelEventTypes::EventTypeSchema>();
-
-        foreach (var (_, eventInstance) in events)
-        {
-            var type = eventInstance.GetType();
-            if (!seenTypes.Add(type))
-            {
-                continue;
-            }
-
-            var clientEventType = eventTypes.GetEventTypeFor(type);
-            var kernelEventType = ToKernelEventType(clientEventType);
-            var eventSchema = jsonSchemaGenerator.Generate(type);
-            schemas.Add(new KernelEventTypes::EventTypeSchema(
-                kernelEventType,
-                KernelConceptsNs::Events.EventTypeOwner.Client,
-                KernelConceptsNs::Events.EventTypeSource.Code,
-                eventSchema));
-        }
-
-        return schemas;
-    }
-
     static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event,
         Dictionary<object, ExpandoObject> statesByKey,
@@ -605,7 +566,7 @@ internal static class ProjectionReadModelProcessor
     /// </remarks>
     static async Task<bool> ApplyResolvedEvent(
         KernelProjectionEngine::IProjection projection,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event,
         KernelKey key,
@@ -618,6 +579,7 @@ internal static class ProjectionReadModelProcessor
         if (!statesByKey.TryGetValue(stateKey, out var state))
         {
             state = createSeedState();
+            SetKeyOnSeedState(projection, state, key);
             statesByKey[stateKey] = state;
         }
 
@@ -657,12 +619,40 @@ internal static class ProjectionReadModelProcessor
             var segments = childRemovedFromAll.ChildrenProperty.Segments.Select(segment => segment.Value).ToArray();
             foreach (var parentState in statesByKey.Values)
             {
-                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty.Path, childRemovedFromAll.Key);
+                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty, childRemovedFromAll.Key);
             }
         }
 
         statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         return removed;
+    }
+
+    /// <summary>
+    /// Puts the resolved key on a new root instance's state under the read model's key property, as the live
+    /// pipeline's SetInitialState step does, so a join keyed on the identifier resolves while the instance is being created.
+    /// </summary>
+    /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> the instance belongs to.</param>
+    /// <param name="state">The state of the new instance.</param>
+    /// <param name="key">The resolved <see cref="KernelKey"/> of the instance.</param>
+    static void SetKeyOnSeedState(KernelProjectionEngine::IProjection projection, ExpandoObject state, KernelKey key)
+    {
+        if (projection.HasParent || key.Value is null)
+        {
+            return;
+        }
+
+        var schema = projection.TargetReadModelSchema;
+        var keyPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
+        if (keyPropertyName is null)
+        {
+            return;
+        }
+
+        var dictionary = (IDictionary<string, object?>)state;
+        if (!dictionary.TryGetValue(keyPropertyName, out var existing) || existing is null)
+        {
+            dictionary[keyPropertyName] = key.Value;
+        }
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
@@ -716,7 +706,7 @@ internal static class ProjectionReadModelProcessor
     static async Task HandleEventFor(
         KernelProjectionEngine::IProjection projection,
         KernelProjectionEngine::ProjectionEventContext context,
-        InMemoryEventSequenceStorage eventSequenceStorage,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren)
     {
@@ -811,10 +801,10 @@ internal static class ProjectionReadModelProcessor
     static void ApplyChildRemoved(ExpandoObject state, ChildRemoved childRemoved)
     {
         var segments = childRemoved.ChildrenProperty.Segments.Select(s => s.Value).ToArray();
-        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty.Path, childRemoved.Key);
+        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty, childRemoved.Key);
     }
 
-    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, string identifiedByProperty, object key)
+    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, PropertyPath identifiedByProperty, object key)
     {
         if (index >= segments.Length || !current.TryGetValue(segments[index], out var value) || value is not System.Collections.IEnumerable enumerable)
         {
@@ -827,7 +817,7 @@ internal static class ProjectionReadModelProcessor
         {
             items.RemoveAll(item =>
                 item is ExpandoObject expando &&
-                ((IDictionary<string, object?>)expando).TryGetValue(identifiedByProperty, out var idValue) &&
+                ChildIdentity.TryGetValue(expando, identifiedByProperty, out var idValue) &&
                 Equals(NormalizeStateValue(idValue), NormalizeStateValue(key)));
             current[segments[index]] = items;
             return;
@@ -867,18 +857,15 @@ internal static class ProjectionReadModelProcessor
                     : collection
                         .OfType<ExpandoObject>()
                         .SingleOrDefault(item =>
-                        {
-                            var itemDictionary = (IDictionary<string, object?>)item;
-                            return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
-                                   Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
-                        });
+                            ChildIdentity.TryGetValue(item, indexer.IdentifierProperty, out var value) &&
+                            Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier)));
 
             if (element is null)
             {
                 element = new ExpandoObject();
                 if (indexer.IdentifierProperty.IsSet)
                 {
-                    ((IDictionary<string, object?>)element)[indexer.IdentifierProperty.Path] = NormalizeStateValue(indexer.Identifier);
+                    indexer.IdentifierProperty.SetValue(element, NormalizeStateValue(indexer.Identifier)!, ArrayIndexers.NoIndexers);
                 }
 
                 collection.Add(element);
@@ -935,9 +922,6 @@ internal static class ProjectionReadModelProcessor
             return;
         }
 
-        var propertyName = childAdded.IdentifiedByProperty.LastSegment.Value;
-        var childStateDict = (IDictionary<string, object?>)childState;
-
-        childStateDict[propertyName] = NormalizeStateValue(childAdded.Key);
+        childAdded.IdentifiedByProperty.SetValue(childState, NormalizeStateValue(childAdded.Key)!, ArrayIndexers.NoIndexers);
     }
 }

@@ -41,7 +41,7 @@ public static class ChronicleContainerImageTags
     /// <summary>
     /// Tag for the MongoDB container image used by <c language="csharp">AddCratisChronicleMongoDB</c>.
     /// </summary>
-    public const string MongoDBTag = "8.0";
+    public const string MongoDBTag = "8.2";
 
     /// <summary>
     /// Name of the single-node replica set that <c language="csharp">AddCratisChronicleMongoDB</c> initiates.

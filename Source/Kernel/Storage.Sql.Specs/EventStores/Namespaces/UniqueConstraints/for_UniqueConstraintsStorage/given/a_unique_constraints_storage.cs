@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage.given;
 
@@ -23,20 +25,28 @@ public class a_unique_constraints_storage : Specification
     protected SqliteConnection _connection;
     protected UniqueConstraintDefinition _definition;
     protected UniqueConstraintsStorage _storage;
+    protected readonly List<IInterceptor> _interceptors = [];
+    IUniqueConstraintMigrator _migrator;
 
-    void Establish()
+    async Task Establish()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+        _migrator = new UniqueConstraintMigrator(
+            new TableMigrator<UniqueConstraintDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintDbContext>>>()),
+            new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
+            Substitute.For<ILogger<UniqueConstraintMigrator>>());
+        _connection = new SqliteConnection($"DataSource=claims-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+        await _connection.OpenAsync();
 
-        using (var schemaContext = CreateContext())
+        await using (var schemaContext = CreateContext())
         {
-            schemaContext.Database.EnsureCreated();
+            await schemaContext.EnsureTableExists();
         }
 
         var database = Substitute.For<IDatabase>();
         database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
             .Returns(_ => Task.FromResult(new DbContextScope<UniqueConstraintDbContext>(CreateContext(), () => { })));
+        database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
+            .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateNamespaceContext(), () => { })));
 
         _definition = new(ConstraintNameValue, []);
         _storage = new UniqueConstraintsStorage(_eventStore, _namespace, EventSequenceId.Log, database);
@@ -44,13 +54,17 @@ public class a_unique_constraints_storage : Specification
 
     void Destroy() => _connection.Dispose();
 
+    NamespaceDbContext CreateNamespaceContext() =>
+        new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options);
+
     UniqueConstraintDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<UniqueConstraintDbContext>()
-            .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .UseSqlite(_connection.ConnectionString)
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
+            .AddInterceptors(_interceptors)
             .Options;
 
-        return new UniqueConstraintDbContext(options, $"{EventSequenceId.Log}_{ConstraintNameValue}_constraint", Substitute.For<IUniqueConstraintMigrator>());
+        return new UniqueConstraintDbContext(options, $"{EventSequenceId.Log}_{ConstraintNameValue}_constraint", _migrator);
     }
 }

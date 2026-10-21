@@ -1,0 +1,110 @@
+---
+title: Event source scenarios
+description: Worked examples of event source definitions, with the append, the concurrency scope it produces and what conflicts and what does not.
+---
+
+Use this page to see how a definition behaves in a realistic domain. Each scenario shows the definition, the appends, the scope Chronicle produces and what that scope does to concurrent writers. The scenarios assume the default settings, where [the first append into a scope is not checked](../events/concurrency.mdx#the-first-append-into-a-scope-is-not-checked-by-default). For the rules behind them, read [Concurrency](./concurrency.mdx).
+
+Each scenario names one recommended way and the reason, then the alternatives. Definition-derived guards cover a whole event source or stream, whatever the event type, so they suit cases where the stream is the consistency boundary. For a narrower condition, use a [decision read](../read-models/decision-reads.mdx).
+
+| Scenario | Shows |
+|---|---|
+| [A bank account with monthly streams](#a-bank-account-with-monthly-streams) | Stream dimensions narrow the guard, source dimensions widen it |
+| [A monthly limit on one stream](#a-monthly-limit-on-one-stream) | A decision read inside a definition's stream |
+| [A stream per owner](#a-stream-per-owner) | Writers on different streams of one event source do not conflict |
+| [A process stream](#a-process-stream) | A reactor that follows one stream, and a stream that ends |
+| [A transfer between two accounts](#a-transfer-between-two-accounts) | One atomic append across two event sources |
+
+## A bank account with monthly streams
+
+An account has an `Onboarding` stream that exists once, and a `Transactions` stream with one stream id per month. Customers deposit all the time, so deposits in different months must not interfere. Changes to the account's onboarding data must see everything that happened to the account.
+
+**Recommended:** declare the dimensions on the definition, with the stream's own dimensions on `Transactions`. The month is the consistency boundary: deposits in one month must see each other, and nothing else needs to. **Alternatives:** build an explicit scope per call, which repeats the dimension choice at every call site, or use a decision read when the rule depends on state, such as a balance or a limit. See [Dynamic Consistency Boundary](./dcb.mdx).
+
+<ChronicleClientTabs snippet="event-sources/scenarios/bank-account" variants="csharp" />
+
+The scopes this produces:
+
+| Append | Scope narrows to |
+|---|---|
+| `Deposit(a1, "2026-04", …)` | account `a1`, stream type `Transactions`, stream id `2026-04` |
+| `Verify(a1, …)` | every event of account `a1`, because `Onboarding` declares no dimensions of its own and inherits `EventSourceId` |
+
+What conflicts, when both writers read before either appends:
+
+- Two deposits to `a1` in `2026-04` conflict. The second is rejected and nothing is written for it.
+- A deposit to `a1` in `2026-05` does not conflict with a deposit in `2026-04`.
+- A deposit to account `a2` does not conflict with anything on `a1`.
+- `Verify` after a deposit to the same account conflicts, because its scope covers the whole account. A deposit after `Verify` does not conflict, because its scope covers only the month.
+
+The first deposit of each new month is not checked by default. Two writers that open `2026-06` at the same time both succeed. To check it, turn on `CheckFirstAppendIntoAScope`, as described in [Concurrency](./concurrency.mdx#the-first-append-into-a-scope).
+
+## A monthly limit on one stream
+
+The bank account allows at most 5000 withdrawn a month. A declared dimension guards the whole month, whatever the event type, so it would reject a deposit that races a withdrawal. The rule only cares about withdrawals, so read them with a decision read scoped to the month's stream, and append through the same definition. This scenario uses the definition and events from the first scenario.
+
+**Recommended:** a stream-scoped decision read whose stream type and event source type come from the definition. The guard is as narrow as the rule. **Alternatives:** rely on the declared dimensions alone, which guard the month but do not capture what you read, or read the whole account, which makes every month conflict with every other.
+
+<ChronicleClientTabs snippet="event-sources/scenarios/monthly-limit" variants="csharp" />
+
+```text
+guard Account-a1: types=[MoneyWithdrawn], sourceType=Account, streamType=Transactions, streamId=2026-04, after <tail at read>
+```
+
+- Two withdrawals in `2026-04` on `a1` conflict. The second is rejected, and its caller reads again.
+- A deposit in `2026-04` does not conflict, because the read model counts only `MoneyWithdrawn`.
+- A withdrawal in `2026-05`, or on another account, does not conflict.
+- The guard replaces the definition's default scope for this append. Declared dimensions widen a guard only when you commit under [read protection](../read-models/read-protection.mdx). See [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#declared-routing-on-a-definition).
+
+A count version of this rule is explained step by step in [Event sources and the Dynamic Consistency Boundary](./dcb.mdx#a-guarded-decision-on-one-stream). The same rule on a `BankAccount` source is in [A limit inside one stream](../dynamic-consistency-boundary/scenarios.mdx#a-limit-inside-one-stream).
+
+## A stream per owner
+
+A project collects notes from several authors. Authors write at the same time and should not wait for each other. The notes of one author are ordered and must not interleave with themselves.
+
+**Recommended:** one stream per author, with the stream id as the author id and all three stream dimensions declared. Authors then cannot conflict with each other, and one author's notes stay ordered. **Alternatives:** one stream for all notes, which makes every author conflict with every other, or one event source per author, which loses the project as the common key.
+
+<ChronicleClientTabs snippet="event-sources/scenarios/per-owner" variants="csharp" />
+
+The stream id is the author id. The `Notes` stream declares the event source id, the stream type and the stream id, so the scope narrows to one author's notes on one project.
+
+- Two authors adding notes to the same project do not conflict.
+- The same author adding notes from two devices at once conflicts on the second append. Read the new tail and append again.
+- Appends to the project's other streams, or to other projects, are not affected.
+
+The project's own event source declares `EventSourceId`, so an append that carries no stream is guarded against every event of the project, including every author's notes. Put project-wide facts in a stream of their own if they should not conflict with note-taking.
+
+## A process stream
+
+A money transfer is a process with several steps. Each transfer is one event source, and its steps are events in one `Process` stream. A reactor drives the process, and a closing event ends it.
+
+**Recommended:** one event source per transfer with a `Process` stream, a typed observer filter, and a closing event. The process is the consistency boundary, so the coarse guard is what you want, and the closing event makes the end final for every writer. **Alternatives:** string filters with `[EventSourceType]` and `[EventStreamType]`, which the analyzer cannot check, or a manual `CompleteStream` call, which is a second step after the final append.
+
+<ChronicleClientTabs snippet="event-sources/scenarios/process" variants="csharp" />
+
+- The reactor uses `[FromEventSource<TransferEventSource>("Process")]`. It receives the steps of transfer processes and nothing else.
+- Every append declares the event source id only. The scope narrows to the one transfer, so transfers do not conflict with each other, and two writers advancing the same transfer at the same moment do.
+- `TransferCompleted` carries `[ClosesStream]`. Appended to the `Process` stream, it closes that transfer's process stream. A step appended afterwards is refused with `StreamClosed`, so a late or duplicated message cannot reopen a finished transfer.
+
+A reactor reacts after the event is written. It is not a guard, and it can be given an event again after a recovery. Make each step safe to repeat, and see [once only](../reactors/once-only.mdx) for what that attribute does and does not promise.
+
+## A transfer between two accounts
+
+Moving money between two accounts writes one event to each account. It is one logical operation, so both events are written together or not at all. This scenario uses the definition and events from the first scenario.
+
+**Recommended:** one atomic `AppendMany` with one event per account, routed through the definition, so each account gets its own month guard. **Alternatives:** two separate appends, which can leave one side written, or a decision read per account when the transfer depends on a balance. See [A rule across two keys](../dynamic-consistency-boundary/scenarios.mdx#a-rule-across-two-keys).
+
+<ChronicleClientTabs snippet="event-sources/scenarios/transfer" variants="csharp" />
+
+Each event source id gets its own scope, built from the definition: account `from`, `Transactions`, the month; and account `to`, `Transactions`, the month. The two scopes are checked against the state before the batch.
+
+- If either account got a deposit or a withdrawal in that month after the tail was read, the whole append is rejected, and neither event is written.
+- A concurrent deposit to either account in another month does not matter.
+
+This records the transfer as two events, one on each account, because every event has exactly one event source. See [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) for what that means when one fact concerns two entities.
+
+## Next steps
+
+- [How it works](./how-it-works.mdx)
+- [Dynamic Consistency Boundary](./dcb.mdx): a guarded decision on top of a stream.
+- [Questions and pitfalls](./faq.mdx)

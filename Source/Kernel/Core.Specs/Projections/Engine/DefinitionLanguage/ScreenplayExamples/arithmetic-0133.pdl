@@ -1,0 +1,18 @@
+projection Order => OrderReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    Subtotal = 0
+    Tax = 0
+    Total = 0
+
+  from LineItemAdded
+    add Subtotal by itemTotal
+    add Total by itemTotal
+
+  from TaxCalculated
+    add Tax by taxAmount
+    add Total by taxAmount
+
+  from DiscountApplied
+    subtract Subtotal by discountAmount
+    subtract Total by discountAmount

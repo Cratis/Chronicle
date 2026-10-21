@@ -18,9 +18,10 @@ import { getAntiforgeryHeaders } from '../Features/Security/antiforgery';
 const isDevelopment = import.meta.env.MODE === 'development';
 
 function App() {
-    // Normalized to '' at the root, so it can be concatenated everywhere without producing a double slash -
-    // which is the same value the meta tag already yielded when unset, so the routes below are unchanged when
-    // the Workbench is served where it always has been.
+    // Normalized to '' at the root. The router takes it as its basename, so every route, link and navigation
+    // inside the app is written without it and the router adds it - and strips it from the location it reports.
+    // Only what leaves the router (fetches, full page loads, Arc's API calls) needs the prefix, and gets it
+    // from Arc's apiBasePath and absolutePath().
     const basePath = configuredBasePath;
 
     return (
@@ -32,26 +33,24 @@ function App() {
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
-                        <BrowserRouter>
+                        <BrowserRouter basename={basePath}>
                             <AuthProvider>
                                 <Routes>
-                                    <Route path={basePath}>
-                                        <Route path='login' element={<BlankLayout />}>
-                                            <Route path='' element={<Login />} />
-                                        </Route>
-                                        <Route path='' element={<BlankLayout />}>
-                                            <Route path='' element={
-                                                <ProtectedRoute>
-                                                    <Home />
-                                                </ProtectedRoute>
-                                            } />
-                                        </Route>
-                                        <Route path='event-store/*' element={
+                                    <Route path='login' element={<BlankLayout />}>
+                                        <Route path='' element={<Login />} />
+                                    </Route>
+                                    <Route path='' element={<BlankLayout />}>
+                                        <Route path='' element={
                                             <ProtectedRoute>
-                                                <EventStore />
+                                                <Home />
                                             </ProtectedRoute>
                                         } />
                                     </Route>
+                                    <Route path='event-store/*' element={
+                                        <ProtectedRoute>
+                                            <EventStore />
+                                        </ProtectedRoute>
+                                    } />
                                 </Routes>
                             </AuthProvider>
                         </BrowserRouter>

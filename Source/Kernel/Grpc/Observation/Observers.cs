@@ -47,6 +47,18 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     }
 
     /// <inheritdoc/>
+    public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
+    {
+        var result = await grainFactory.GetObserver(command).FastForward();
+        return new FastForwardResponse
+        {
+            Outcome = (FastForwardOutcome)(int)result.Outcome,
+            PreviousNextEventSequenceNumber = result.PreviousNextEventSequenceNumber.Value,
+            NextEventSequenceNumber = result.NextEventSequenceNumber.Value
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
         var jobId = await grainFactory.GetObserver(command).Replay();
@@ -211,6 +223,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         grainFactory.GetObserver(command).ClearFailedPartitions();
 
     /// <inheritdoc/>
+    public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
+    {
+        var observer = grainFactory.GetObserver(command);
+        var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
+        await observer.TryRecoverAllFailedPartitions();
+        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
+    }
+
+    /// <inheritdoc/>
     public async Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default)
     {
         var eventSequenceId = string.IsNullOrEmpty(command.EventSequenceId)
@@ -225,7 +246,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         return new RemoveObserverResponse
         {
             Outcome = (ObserverRemovalOutcome)(int)result.Outcome,
-            BlockingNamespace = result.Outcome == Concepts.Observation.ObserverRemovalOutcome.Removed ? string.Empty : result.BlockingNamespace.Value
+            BlockingNamespace = result.Outcome == Concepts.Observation.ObserverRemovalOutcome.Removed || result.BlockingNamespace == Concepts.EventStoreNamespaceName.NotSet
+                ? string.Empty
+                : result.BlockingNamespace.Value
         };
     }
 

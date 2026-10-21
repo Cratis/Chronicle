@@ -21,5 +21,11 @@ internal enum KernelConnectionErrorKind
     /// <summary>
     /// The kernel is stopping or unreachable - a transient loss of connection the client recovers from.
     /// </summary>
-    ConnectionLost = 2
+    ConnectionLost = 2,
+
+    /// <summary>
+    /// The kernel no longer knows this client's connection, for instance after the kernel node that held it restarted.
+    /// Retrying the same stream with the same connection id can never succeed - the client has to reconnect.
+    /// </summary>
+    SessionLost = 3
 }

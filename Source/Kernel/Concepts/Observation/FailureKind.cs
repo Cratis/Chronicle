@@ -33,5 +33,10 @@ public enum FailureKind
     /// <summary>
     /// The subscriber was gone by the time the events reached it.
     /// </summary>
-    Disconnected = 3
+    Disconnected = 3,
+
+    /// <summary>
+    /// The partition is held until a connected target declares the awaited event type.
+    /// </summary>
+    WaitingForHandler = 4
 }

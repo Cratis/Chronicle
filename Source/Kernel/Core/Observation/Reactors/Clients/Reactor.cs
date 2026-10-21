@@ -83,13 +83,32 @@ public class Reactor(
             _observer = GrainFactory.GetGrain<IObserver>(key);
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId!);
             var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
-            await _observer.Subscribe<IReactorObserverSubscriber>(
-                ObserverType.Reactor,
-                eventTypes,
-                localSiloDetails.SiloAddress,
-                connectedClient,
-                definition.IsReplayable,
-                definition.Filters);
+            if (definition.StartAtTail)
+            {
+                await _observer.StartAtTailWhenNew();
+            }
+
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
+            else
+            {
+                await _observer.Subscribe<IReactorObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
             _subscribed = true;
         }
     }
@@ -114,6 +133,34 @@ public class Reactor(
         await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
 
         _subscribed = false;
+    }
+
+    /// <inheritdoc/>
+    public async Task KeepSubscription(ReactorDefinition definition)
+    {
+        var key = new ReactorKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        _observer ??= GrainFactory.GetGrain<IObserver>(key);
+
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            {
+                return;
+            }
+
+            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
+            await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                ObserverType.Reactor,
+                definition.EventTypes.Select(e => e.EventType).ToArray(),
+                localSiloDetails.SiloAddress,
+                connectedClient,
+                definition.IsReplayable,
+                definition.Filters,
+                definition.GenerationDelivery);
+        }
+
+        _subscribed = true;
     }
 
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)

@@ -1,29 +1,53 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/authorization.md -->
 # Authorization
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`. Everything below
-describes that version and is in `Cratis.Arc.Authorization` unless stated.
+## Contents
 
-## Versions differ — check the one you run
+- Version requirements
+- Attributes
+- Composition and precedence
+- Named policies
+- Guests and anonymous policies
+- Evaluation order
+- Baselines: two separate mechanisms
+- Default access by hosting model
+- The filters and results
+- Direct calls bypass authorization
+- The principal and system actors
+- Protected decisions and validators
+- Analyzer diagnostics
 
-Authorization changed a lot between the version this skill used to pin
-(`22.16.0`) and `22.41.1`. Advice that is right for one range is wrong for
-another.
+Source: `Cratis.Arc.Core` and `Cratis.Arc`. Everything below is in `Cratis.Arc.Authorization` unless stated.
 
-| Version | Behavior |
-| --- | --- |
-| through `22.20.0` (includes `22.16.0`) | Only Arc's own attributes count, and only `Roles` is evaluated: `Policy` and `AuthenticationSchemes` are read by nothing, so `[Authorize(Policy = "…")]` enforces nothing. Microsoft's `[Authorize]`/`[AllowAnonymous]` are **not** enforced on model-bound commands and read models (Arc's ASP.NET evaluators bind to Arc's same-named attributes), so a command protected only with Microsoft's attribute is open to every caller. Only the first attribute or evaluator that answers is used. |
-| `22.21.0` | Microsoft's `[Authorize]`/`[AllowAnonymous]` are enforced on the ASP.NET Core host. Every stacked requirement applies (AND). Anonymous plus restricted on one member is rejected as ambiguous. Roles are still the only requirement evaluated. |
-| `22.23.0` | Named policies and `AuthenticationSchemes` are evaluated (`IAuthorizationPolicy`, `AddArcAuthorizationPolicy<T>`, ASP.NET Core policies). |
-| `22.26.0` | `Cratis:Arc:Introspection` options. |
-| `22.30.0` | `IFallbackAuthorizationEvaluator` and `AuthorizationPolicyContext.ReceivedAt`. |
-| `22.31.0` | Opt-in policy evaluation for unauthenticated callers. |
-| `22.39.0` | Protected decisions arrive; the validator boundary at the end of this page is verified at `22.41.1`. |
+## Version requirements
 
-If you are on a version before `22.21.0`, either upgrade, or use only Arc's
-attributes with roles and treat everything else as unenforced. Do not write a
-policy-protected endpoint on a version before `22.23.0`. The rest of this page
-is `22.41.1` behavior.
+Authorization capabilities arrived over time. Advice that is right for a recent Arc is wrong for an older one, so check the Arc you run (`dotnet list package`).
+
+Requires Arc 22.21.0 for Microsoft's `[Authorize]`/`[AllowAnonymous]` enforcement on the ASP.NET Core host; every stacked requirement applies (AND), and anonymous plus restricted on one member is rejected as ambiguous.
+
+Requires Arc 22.23.0 for named policies and `AuthenticationSchemes` (`IAuthorizationPolicy`, `AddArcAuthorizationPolicy<T>`, ASP.NET Core policies).
+
+Requires Arc 22.26.0 for the `Cratis:Arc:Introspection` options.
+
+Requires Arc 22.30.0 for `IFallbackAuthorizationEvaluator` and `AuthorizationPolicyContext.ReceivedAt`.
+
+Requires Arc 22.31.0 for opt-in policy evaluation for unauthenticated callers.
+
+Requires Arc 22.39.0 for protected decisions.
+
+Requires Arc 22.51.0 for `IdentityDiscovery`, which controls the users/tenants/details schema separately.
+
+On an Arc older than 22.21.0 only Arc's own attributes count, and only `Roles` is evaluated: `Policy` and `AuthenticationSchemes` are read by nothing, so `[Authorize(Policy = "…")]` enforces nothing, and Microsoft's `[Authorize]`/`[AllowAnonymous]` are **not** enforced on model-bound commands and read models (a command protected only with Microsoft's attribute is open to every caller). Either upgrade, or use only Arc's attributes with roles and treat everything else as unenforced. Do not write a policy-protected endpoint on an Arc older than 22.23.0.
+
+Requires Arc 22.31.2 for identity and declaration continuity to be rechecked around policy evaluation.
+
+Requires Arc 22.43.0 for forwarded identity headers to need a host-wide trust opt-in; older versions trust them from any caller.
+
+Requires Arc 22.44.2 for guest-policy endpoints to be reachable over HTTP, including with an authenticated fallback.
+
+Requires Arc 22.45.0 for discovery to be anonymous only in Development; older versions serve it anonymously everywhere.
+
+Requires Arc 22.46.0 for the backend to neither read nor write the identity cookie.
 
 ## Attributes
 
@@ -38,7 +62,7 @@ There is **no** `[Policy]`, `[Scopes]` or `[Claims]` attribute in Arc.
 With `Cratis.Arc` (ASP.NET Core host), Arc's pipeline **also enforces Microsoft's**
 `[Authorize]` and `[AllowAnonymous]` on model-bound commands and read models,
 including their policies and schemes, over mapped HTTP and hub subscriptions
-(`22.21.0` and later). The two families can be mixed. Arc's own attributes are
+(from Arc 22.21.0). The two families can be mixed. Arc's own attributes are
 the portable choice: they are enforced on every Arc host, whereas on the
 standalone Core host nothing reads Microsoft's. `RolesAttribute` derives from
 **Arc's** `AuthorizeAttribute`, never Microsoft's.
@@ -128,10 +152,11 @@ opt-in:
 - Only a declaration made **entirely** of opted-in policies, with no roles and no
   schemes, can evaluate guests. Roles and schemes always require authentication.
 
-⚠️ The opt-in governs Arc's pipeline verdict only. Today the HTTP layer can reject
-a guest before the policy runs: a Core host with any authentication handler, or an
-ASP.NET Core `FallbackPolicy` that requires authentication, returns 401 first
-(tracked in Cratis/Arc#2948). Test guest endpoints through the real HTTP host.
+Guest-policy endpoints accept unauthenticated callers on both HTTP
+hosts, even with an authenticated fallback policy, when every declared policy
+opts in. Test through the real HTTP host, not only the in-process verdict.
+Source: `Documentation/backend/csharp/introspection/index.md` and the
+host authorization specs under `Source/DotNET`.
 
 ⚠️ Because a method replaces its type, a method-level guest policy on a read model
 with a type-level `[Roles("Admin")]` is reachable by guests when the policy
@@ -302,4 +327,16 @@ service). So an authorization or ownership rule put in such a validator — or i
 `[Unprotected]` command's validator — is **not decision-safe**. Put
 state-dependent permission and ownership rules in `Provide()` or `Handle()` using
 `DecisionRead<T>` or `IDecisionReads`, and route to the validation and Chronicle
-guidance. Validators that read decision state are tracked in Arc#2831.
+guidance. Arc constructs/certifies discoverable parameterless validators;
+factory-supplied or altered rules fail closed. Keep static/service-locator state
+out of them too: certification is not proof of input purity. Validators that
+read decision state are a known limitation.
+Source: [protected validator boundary](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
+
+## Analyzer diagnostics
+
+`ARC0011` warns when a `[Roles]` argument is a string literal: use
+`nameof(<RoleEnum>.<Member>)` so a rename is a compile error rather than a silent
+authorization failure. `ARC0019` flags `[AllowAnonymous]` with `[Authorize]`/`[Roles]`,
+`ARC0020` flags an ASP.NET Core attribute that is not enforced without Arc's ASP.NET
+Core integration, and `ARC0021` flags `AuthenticationSchemes` on the Core host.

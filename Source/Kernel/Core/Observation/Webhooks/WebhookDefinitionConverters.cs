@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using OneOf.Types;
@@ -29,7 +30,10 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             webhookDefinition.Target.ToChronicle(),
             webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
-            webhookDefinition.IsActive && !webhookDefinition.IsInactive);
+            webhookDefinition.IsActive && !webhookDefinition.IsInactive)
+        {
+            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery
+        };
 
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/> to <see cref="WebhookDefinition"/>.
@@ -40,6 +44,7 @@ internal static class WebhookDefinitionConverters
         new()
         {
             Identifier = webhookDefinition.Identifier,
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)webhookDefinition.GenerationDelivery,
             EventSequenceId = webhookDefinition.EventSequenceId,
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
@@ -64,7 +69,7 @@ internal static class WebhookDefinitionConverters
             var auth when auth.Value2 is not null => new OAuthAuthorization(
                 auth.Value2.Authority,
                 auth.Value2.ClientId,
-                auth.Value2.ClientSecret),
+                auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
             _ => WebhookAuthorization.None
         };
         return new(
@@ -100,7 +105,8 @@ internal static class WebhookDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
             none => { });
 
@@ -123,7 +129,7 @@ internal static class WebhookDefinitionConverters
     internal static WebhookDetails ToReadModel(this Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
         var contract = definition.ToContract();
-        return new(
+        return new WebhookDetails(
             contract.Identifier,
             contract.Identifier,
             contract.Target.Url,
@@ -132,7 +138,10 @@ internal static class WebhookDefinitionConverters
             definition.Target.Authorization.ToAuthorizationType(),
             contract.Target.Headers,
             contract.IsReplayable,
-            contract.IsActive);
+            contract.IsActive)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
     }
 
     /// <summary>

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -37,11 +38,20 @@ internal static partial class RoutingLogMessages
     [LoggerMessage(LogLevel.Debug, "Observer is ready for observing. Transitioning to observing state.")]
     internal static partial void Observing(this ILogger<Routing> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Could not look up the next relevant event from {NextEventSequenceNumber}: {Error}. Keeping the observer position unchanged and waiting for the next watchdog tick.")]
+    internal static partial void NextEventLookupFailed(this ILogger<Routing> logger, EventSequenceNumber nextEventSequenceNumber, GetSequenceNumberError error);
+
     [LoggerMessage(LogLevel.Debug, "Observer will fast forward to tail of event sequence.")]
     internal static partial void FastForwarding(this ILogger<Routing> logger);
 
     [LoggerMessage(LogLevel.Debug, "Observer needs to replay. Transitioning to replay state.")]
     internal static partial void NeedsToReplay(this ILogger<Routing> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Every event the observer has not handled belongs to a failed partition, which its retry job owns. Not catching up.")]
+    internal static partial void OnlyFailedPartitionsBehind(this ILogger<Routing> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Could not determine whether catching up would have any work. Assuming it does.")]
+    internal static partial void CouldNotDetermineCatchUpWork(this ILogger<Routing> logger, Exception exception);
 }
 
 internal static class RoutingScopes

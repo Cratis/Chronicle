@@ -4,7 +4,6 @@
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Engine.Expressions;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections;
@@ -27,24 +26,16 @@ public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuil
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        if (!keyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the key on event '{typeof(TEvent).FullName}'", keyAccessor);
-        }
-
-        _keyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(propertyPath)).Build();
+        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, ProjectionPathRole.Source, $"the key on event '{typeof(TEvent).FullName}'");
+        _keyExpression = new EventContentPropertyExpression(propertyPath).Build();
         return (this as TBuilder)!;
     }
 
     /// <inheritdoc/>
     public TBuilder UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        if (!keyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the key from event context on event '{typeof(TEvent).FullName}'", keyAccessor);
-        }
-
-        _keyExpression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(propertyPath)).Build();
+        var propertyPath = ProjectionPropertyPaths.FromExpression(keyAccessor, namingPolicy, ProjectionPathRole.Source, $"the key from event context on event '{typeof(TEvent).FullName}'");
+        _keyExpression = new EventContextPropertyExpression(propertyPath).Build();
         return (this as TBuilder)!;
     }
 

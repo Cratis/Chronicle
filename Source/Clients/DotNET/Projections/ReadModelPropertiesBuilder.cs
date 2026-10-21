@@ -35,7 +35,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Increment<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
@@ -44,7 +44,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         _propertyExpressions[propertyPath] = new DecrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
@@ -53,7 +53,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public IAddBuilder<TReadModel, TEvent, TProperty, TBuilder> Add<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var addBuilder = new AddBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = addBuilder;
@@ -63,7 +63,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public ISubtractBuilder<TReadModel, TEvent, TProperty, TBuilder> Subtract<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var subtractBuilder = new SubtractBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy);
         _propertyExpressions[propertyPath] = subtractBuilder;
@@ -75,7 +75,9 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     {
         var propertyInfo = propertyPath.GetPropertyInfoFor<TReadModel>();
         var primitive = propertyInfo.PropertyType.IsAPrimitiveType() || propertyInfo.PropertyType.IsConcept();
-        propertyPath = _namingPolicy.GetPropertyName(propertyInfo.Name);
+        propertyPath = propertyPath.Segments.Count() == 1
+            ? ProjectionPropertyPaths.Resolve(propertyInfo, _namingPolicy, ProjectionPathRole.Target)
+            : ProjectionPropertyPaths.Resolve(propertyPath, _namingPolicy, ProjectionPathRole.Target);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -89,7 +91,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TProperty, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, !primitive);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -100,7 +102,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public ISetBuilder<TReadModel, TEvent, TBuilder> SetThisValue()
     {
-        var propertyPath = new PropertyPath(WellKnownExpressions.This);
+        var propertyPath = ProjectionPropertyPaths.Resolve(WellKnownExpressions.This, _namingPolicy, ProjectionPathRole.Target);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         var setBuilder = new SetBuilder<TReadModel, TEvent, TBuilder>((this as TBuilder)!, propertyPath, _namingPolicy, false);
         _propertyExpressions[propertyPath] = setBuilder;
@@ -110,14 +112,13 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Clear<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var targetPropertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
 
         // The same ruling the model-bound attributes are held to, enforced in the same place - where the definition
         // is built. C# cannot express "a nullable-annotated reference type" as a generic constraint, so the
         // signature alone cannot refuse this and the check has to be made here.
-        ScalarClear.ThrowIfCannotHoldNull(typeof(TReadModel), targetPropertyPath.GetPropertyInfoFor<TReadModel>());
+        ScalarClear.ThrowIfCannotHoldNull(typeof(TReadModel), readModelPropertyAccessor.GetPropertyInfo());
 
-        var propertyPath = _namingPolicy.GetPropertyName(targetPropertyPath);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         _propertyExpressions[propertyPath] = new ClearBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
@@ -126,7 +127,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     /// <inheritdoc/>
     public TBuilder Count<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var propertyPath = _namingPolicy.GetPropertyName(ResolveTargetPropertyPath(readModelPropertyAccessor));
+        var propertyPath = ResolveTargetPropertyPath(readModelPropertyAccessor);
         ThrowIfPropertyAlreadyDefined(propertyPath);
         _propertyExpressions[propertyPath] = new CountBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
@@ -164,15 +165,8 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
         return (this as TBuilder)!;
     }
 
-    static PropertyPath ResolveTargetPropertyPath<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
-    {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the target property on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
-
-        return propertyPath;
-    }
+    PropertyPath ResolveTargetPropertyPath<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
+        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, _namingPolicy, ProjectionPathRole.Target, $"the target property on read model '{typeof(TReadModel).FullName}'");
 
     void ThrowIfPropertyAlreadyDefined(PropertyPath propertyPath)
     {

@@ -1,3 +1,6 @@
+---
+description: Map event context values such as occurred time, sequence number and causation into a Chronicle read model from a declarative projection.
+---
 # Projection with event context values
 
 Event context contains metadata about each event, such as when it occurred, its sequence number, and causation information. Projections can access these values to enrich read models with event metadata.
@@ -39,19 +42,11 @@ Your read models can include properties for event metadata:
 
 Event context properties can be part of composite keys:
 
-:::note[Client coverage]
-Composite keys are currently a C#-only mechanism — Kotlin, Java, TypeScript, and Elixir have no working composite-key builder yet (see [Composite Keys](./composite-keys)). This example stays C#-only until that lands elsewhere.
-:::
-
 <ChronicleClientTabs snippet="projections/declarative/event-context/composite-key" />
 
 ## Event context in children and joins
 
 Event context properties work in child collections and joins:
-
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
 
 <ChronicleClientTabs snippet="projections/declarative/event-context/children-context" />
 

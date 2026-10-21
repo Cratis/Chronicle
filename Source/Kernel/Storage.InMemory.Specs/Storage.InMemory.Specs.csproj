@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
         <!-- These specs were authored against a now-removed changeset construction API and are excluded pending a rewrite against the current API. -->
         <Compile Remove="Sinks/for_InMemorySink/when_trying_to_find_root_key_by_child_value/**/*.cs" />
     </ItemGroup>

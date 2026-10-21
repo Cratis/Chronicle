@@ -10,7 +10,6 @@ public class an_events_capture : for_LanguageService.given.a_language_service
     const string Declaration = """
         capture ShipmentTracking
           source events
-            sequence inbox-fulfillment
             from ShipmentDispatched
             from ShipmentDelivered
           key $eventSourceId
@@ -25,7 +24,7 @@ public class an_events_capture : for_LanguageService.given.a_language_service
     void Because() => _result = Compile(Declaration);
 
     [Fact] void should_have_events_source() => _result.Source.Type.ShouldEqual(SourceType.Events);
-    [Fact] void should_have_the_inbox_sequence() => _result.Source.Sequence.ShouldEqual("inbox-fulfillment");
+    [Fact] void should_not_name_a_sequence() => _result.Source.Sequence.ShouldBeNull();
     [Fact] void should_capture_from_every_event() => _result.Source.Events.ShouldContainOnly("ShipmentDispatched", "ShipmentDelivered");
     [Fact] void should_not_have_a_poll_interval() => _result.Source.Poll.ShouldBeNull();
     [Fact] void should_key_on_the_event_source_id() => _result.KeyProperty.ShouldEqual("$eventSourceId");

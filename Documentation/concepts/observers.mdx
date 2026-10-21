@@ -1,3 +1,6 @@
+---
+description: A Chronicle observer listens for events appended to an event sequence; this covers failed partitions, quarantine, fast-forwarding and removal.
+---
 # Observers
 
 An observer is a part of your system that is "listening" to events.
@@ -7,12 +10,45 @@ is observing, it will automatically be notified of the event.
 Every observer decides what events they are interested in during the subscription process.
 This information is stored in the [event store](./event-store.md).
 
-If the observer gets additional event types it is observing, the event store will look if there
-are events prior to its current offset of the new event type it is now observing. If there are,
-it will automatically be rewound to the beginning of the sequence and replayed.
+Adding event types does not always rewind an observer. Definition evolution depends on the observer
+kind and its configuration: projections require a full replay for historical backfills and mapping
+changes. Reactors do not replay on definition changes by default.
+See [Observer configuration](../hosting/configuration/observers.md) and
+[Projection registration lifecycle](../projections/registration-lifecycle.md).
 
-During replay, the observer will not be active and when it reaches the end of the sequence it
-will become active again and observe any new events.
+During a full replay, the observer is inactive. When replay completes, it routes again to catch up
+with remaining events and resume live observation, unless it is quarantined.
+
+Kernel projection declarations support only namespaced materialization. Store-wide event statistics read
+each namespace's statistics and concatenate the rows instead of maintaining a shared global sink. The row
+limit applies per namespace; a failed namespace read fails the query rather than returning partial totals.
+
+Full and partition replay of a persisted **global-scope projection** are refused before resetting observer
+progress, admitting a replay job, or changing its shared sink. Replaying only one namespace cannot safely rebuild data shared with other namespaces
+that are still writing. A definition change that would require an automatic full replay retains an
+explanatory recommendation instead; performing it also refuses the namespace-local replay. A coordinated
+rebuild across all namespaces is not currently supported. Namespace-scoped projections are unaffected.
+
+For an upgrade with a global replay already in flight, stop replay workers and contributing writes
+before upgrading all silos together; do not mix versions that can still start global replay with
+versions that refuse it. Preserve the served model, replay containers, backups, contexts and occurrences
+for investigation. Resume, flush, end and legacy cleanup refuse an uncoordinated global replay rather
+than promoting its shadow. A source namespace's completion does not establish that a global model or
+backup is complete. There is no automatic in-place repair: keep the affected model out of service until
+an operator can restore a known-good model and reconcile every contributing sequence offline. Do not
+delete a replay container or backup merely because a namespace-local replay has ended.
+
+Full-set kernel registration retires the former global statistics observers and deletes their jobs, but
+leaves the orphaned shared container intact. New statistics queries do not read it. Once the
+ProjectionsManager grain runs new code, it skips incoming global kernel definitions with a warning,
+including those in an old silo's full set. That full set still retires stored global kernel definitions
+and registers the other kernel projections. The remaining re-registration window is only while the grain
+itself is hosted on an old silo; new silos still refuse global replay. Complete the upgrade and run
+full-set kernel registration on the updated grain. Retirement is not a cross-silo drain guarantee for
+work already executing on an old silo.
+
+Global materialization requires coordinated generation ownership before it can return; see
+[the scope decision](https://github.com/Cratis/Chronicle/blob/main/decisions/0015-global-projection-scope-is-restricted.md).
 
 There are three kinds of observer, each turning events into something different — queryable state, or
 an action:
@@ -32,15 +68,31 @@ The client exposes `IsResolved` and nullable `IsQuarantined`. A missing quaranti
 
 SQL-backed failed-partition queries observe the shared database at the configured live-query polling interval, including changes made by another instance. They emit only changed snapshots, and unsubscribe when the query consumer disconnects. Resolution and retry activity therefore update the view without a manual refresh, subject to the polling interval.
 
-A partition is **quarantined** when it has used up its retry attempts. This is separate from a quarantined *observer*, described below: partition quarantine stops automatic retries of that one partition, while the observer and its other partitions keep running. Clear a partition's quarantine with the `ClearPartitionQuarantine` operation on the `Observers` service (or `ClearFailedPartitionQuarantineFor<TReactor>` from the .NET client). Clearing starts a new retry budget for the partition without discarding its attempt history, and can retry it immediately. Clearing an observer's quarantine is a different operation (`cratis chronicle observers clear-quarantine`) and does not touch its quarantined partitions.
+A partition is **quarantined** when it has used up its retry attempts. This is separate from a quarantined *observer*, described below: partition quarantine stops automatic retries of that one partition. Live delivery can continue for other partitions, but a new failure during projection catch-up stops its single ordered step. Clear a partition's quarantine with the `ClearPartitionQuarantine` operation on the `Observers` service (or `ClearFailedPartitionQuarantineFor<TReactor>` from the .NET client). Clearing starts a new retry budget for the partition without discarding its attempt history, and can retry it immediately. Clearing an observer's quarantine is a different operation (`cratis chronicle observers clear-quarantine`) and does not touch its quarantined partitions.
 
 ## Quarantined observers
 
-When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends when an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench) or when the observer is subscribed again. Connecting an instance of the application's client subscribes its reactors and reducers again, so a redeploy or a restart ends their quarantine. The Kernel subscribes projections, webhooks, event store subscriptions and its own reactors again when it starts, so a Kernel restart ends every quarantine once its clients are back. While the Kernel keeps running, the same happens when a client registers a changed projection or webhook definition, when a webhook is edited, and when a namespace is added. Deactivating and reactivating the observer's grain in a running Kernel does not end the quarantine: the observer still shows as **Quarantined** afterwards rather than **Disconnected**. Event store subscriptions are the exception, because the Kernel checks every minute that they are subscribed and subscribes them again if not. [Observer configuration](../hosting/configuration/observers.md) lists what subscribes each kind of observer again.
+When enough partitions of an observer fail, Chronicle quarantines the observer itself: automatic retries stop and it stops processing until someone acts. A quarantine ends when an operator clears it (`cratis chronicle observers clear-quarantine`, or the Workbench) or when the observer is subscribed again. Connecting an instance of the application's client subscribes its reactors and reducers again, so a redeploy or a restart ends their quarantine. The Kernel subscribes projections, webhooks and its own reactors again when it starts, ending their quarantine. Event store subscriptions remain quarantined across a Kernel restart until an operator clears them. While the Kernel keeps running, the same happens when a client registers a changed projection or webhook definition, when a webhook is edited, and when a namespace is added. Deactivating and reactivating the observer's grain in a running Kernel does not end the quarantine: the observer still shows as **Quarantined** afterwards rather than **Disconnected**. The Kernel also checks event store subscriptions every minute, but this automatic reconciliation does not end their quarantine. [Observer configuration](../hosting/configuration/observers.md) lists what subscribes each kind of observer again.
+
+## Fast forwarding an observer
+
+Fast forwarding moves an observer to the tail of its event sequence. Every event it has not yet handled is skipped without
+invoking it, and its failed partitions are discarded. Use it to get past a backlog, or events that can never be handled, when
+the read side does not need to be rebuilt.
+
+It is the opposite of a replay: nothing the observer already built is reset, so whatever the skipped events would have
+done is missing from it. An observer that is replaying cannot be fast forwarded until the replay completes, and events
+appended after the tail was read are handled as normal.
+
+- Workbench: select the observer and choose **Fast forward**.
+- CLI: `cratis chronicle observers fast-forward <observer-id>`.
+- Clients: `IReactors`, `IReducers` and `IProjections` in .NET expose `FastForward`, and the TypeScript, Kotlin, Elixir and Go clients expose the same operation on their observer and projection APIs.
 
 ## Removing an observer
 
 An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.
+
+A reactor rename or namespace move can leave the same kind of disconnected orphan, because its default id changes. Preserve the existing id to keep its position; remove the old observer only when the identity change is intentional and no service needs it. See [Reactor identity and renaming](../reactors/identity.mdx). The kernel retires renamed client projections during full-set registration.
 
 Removing one deletes exactly that bookkeeping:
 
@@ -56,7 +108,9 @@ Three things are worth knowing before you use it.
 
 **It covers the whole event store, not one namespace.** An observer's definition — and the projection definition it has when it is a projection — are store-level records shared by every namespace. Deleting those while leaving namespaced state behind in the other namespaces would produce the same half-present observer the removal exists to clear up, so the operation reaches every namespace.
 
-**It refuses while the observer is alive.** If the observer is running, or a client is still subscribed to it, in *any* namespace, nothing is deleted and the result names the namespace that blocked it. There is no force flag: stop the application that declares the observer and try again. An observer that is `Disconnected`, `Suspended` or `Quarantined` with no subscribed client is removable — quarantine in particular is where an abandoned observer tends to end up.
+**It refuses while the observer is alive.** For reactors and reducers, if the observer is running or a client is still subscribed in *any* namespace, nothing is deleted and the result names the blocking namespace. For projections, the kernel subscription is not a sign that the declaring application still exists: removal instead refuses while a connected client anywhere in the cluster declares the projection. Kernel-owned projection definitions are never removable. Projection refusals are store-wide and return an empty blocking namespace. There is no force flag: stop the application that declares the observer and try again.
+
+Projection declarations are tracked for the lifetime of each connection. Recording is best-effort: if a connection lookup fails during registration, registration still succeeds but its declarations may not be known until the client registers again. Removal refuses to proceed if its own declaration lookup fails. Older clients that do not send a connection identifier cannot be checked this way, so their projections are removable even while the client is connected. After a kernel restart, declarations are known again as clients reconnect and register. A later registration recreates a removed projection. An abandoned projection is removable even while its kernel subscription is active; a reactor or reducer that is `Disconnected`, `Suspended` or `Quarantined` with no subscribed client is also removable.
 
 **Read models are not touched.** Removal deletes the observer's bookkeeping, never a sink container or the data a projection wrote into it. If you want the read model gone too, delete it separately.
 

@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Testing.Reactors.Scenario
+description: ReactorScenario<TReactor> is an in-process test utility that verifies Chronicle reactor side effects without a server, gRPC transport or observer registration.
 ---
 # ReactorScenario
 
@@ -43,13 +44,45 @@ dotnet add package Cratis.Chronicle.Testing
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to route events through the reactor in order.
 
+## Routed givens
+
+When the reactor reads stream metadata from `EventContext`, supply that metadata with `OnStream(...)` before `Events(...)`:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/routed-events" />
+
+The handler receives the source type, stream type, and stream identifier you specified. Omitted or `null` values use `EventSourceType.Default`, `EventStreamType.All`, and `EventStreamId.Default`. Without `OnStream`, existing givens keep those defaults.
+
+`OnStream` returns a new builder: you can reuse the original without changing its route. The route does not affect read models seeded with `ReadModel(...)`. The non-generic scenario for fluent registrations also accepts `OnStream` and passes the route to its callbacks.
+
+## Observer filters
+
+A class-based reactor with an `[EventSourceType]` or `[EventStreamType]` filter handles only matching givens. A typed `[FromEventSource<T>(stream)]` filter resolves both values from the registered event source definition:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/observer-filters" />
+
+The first two givens are ignored; only the matching payment produces a side effect. A reactor without these filters receives events on any route. `EventSourceType.Unspecified` and `EventStreamType.All` do not narrow delivery; an explicit `EventSourceType.Default` filter matches only that literal source type. Stream identifiers do not narrow these filters.
+
+Every given event advances the sequence number, even if the filter skips it, matching the kernel's append-time numbering. Tag filters (`FilterEventsByTag`) are not applied: scenario givens do not carry tags. Use a kernel-backed integration specification to verify tag-based delivery.
+
+## Redeliver a recorded occurrence
+
+Use `History(...)` instead of `Events(...)` to record an event without invoking the reactor. For example, assign the result of `await scenario.Given.ForEventSource(id).History(@event)` to an occurrence, then call `await scenario.Redeliver(occurrence)` to deliver it. Call `Redeliver` again with the same occurrence to specify recovery or idempotency behavior.
+
+`History(object)` returns one `RecordedOccurrence`, containing the original event and its `EventContext`. `History(params object[])` returns an ordered `IReadOnlyList<RecordedOccurrence>`: multiple arguments, an event array, or no arguments select this overload. A single event selects the single-occurrence overload without ambiguity. Both overloads are also available on the non-generic scenario for fluent registrations.
+
+History allocates scenario-local sequence numbers, correlations, and occurrence times just like live givens. It does not append to an event store, run observers, build read models, or record produced side effects. `OnStream(...)` before `History(...)` records the source and stream route in the context. History and live givens share contiguous numbering; redelivery does not advance it.
+
+Redelivery reuses the exact recorded context, including sequence number, correlation, occurrence time, and routing. Two deliveries of that occurrence to the same reactor therefore receive equal `ReactorDelivery` values and the same delivery `Id`. Observer filters and read-model seeding or deliberate-absence rules apply as for `Events(...)`; a filtered-out occurrence invokes no handler. Handler exceptions propagate to the caller. Produced events, their destinations, and returned commands accumulate across deliveries in the existing recording lists. Fluent scenarios await the applicable callbacks with the original context; assert on their test doubles as usual.
+
+This seam tests how a reactor handles repeated delivery, not kernel retry scheduling or exactly-once external effects.
+
 ## Injecting dependencies
 
 Register the mocks and stubs the reactor depends on through the scenario's `Services` collection — the same `IServiceCollection` you use to configure an application. Logging is registered for you, so a reactor that injects `ILogger<T>` activates without any extra setup:
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/services" />
 
-`Services` resolves both the reactor's constructor dependencies and any service-typed handler-method parameters. If a dependency is missing, the scenario throws `CannotActivateReactorForScenario`, naming the type it could not resolve.
+`Services` resolves both the reactor's constructor dependencies and any service-typed handler-method parameters. If a constructor dependency is missing, the scenario throws `CannotActivateReactorForScenario`, naming the type it could not resolve. A read-model handler parameter that was neither seeded nor explicitly declared absent throws `ReadModelNotSeededForReactorScenario`; see [Seeding read models](#seeding-read-models).
 
 You can also pass a pre-built `IServiceProvider` to the constructor when you need full control over registration:
 
@@ -66,11 +99,39 @@ The optional service provider, side-effect handlers, and event store can still b
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/per-run-artifacts" />
 
+## Fluent registrations (.NET)
+
+For a reactor configured with `ChronicleOptions.ExplicitArtifacts.RegisterReactor(id, define)`, use
+`ReactorScenario(id, defaults)` without a type argument. Construct the defaults with your
+`IClientArtifactsProvider`, optional service provider, and options as its three arguments.
+`InMemoryClientArtifactsProvider` lets you supply just the event types and other artifacts needed
+by that run, without assembly discovery.
+
+The scenario builds the named fluent definition once against the run's event types. Drive it with
+`Given.ForEventSource(id).Events(...)`; each call awaits every applicable callback and keeps event
+sequence numbers contiguous across calls. Assert on the effects captured by your callbacks or test
+doubles. An unknown reactor identifier throws `UnknownReactorId`, and a callback failure propagates
+to the caller. Fluent callbacks receive only the event and an optional `EventContext`; they do not take injected read-model parameters.
+
+This scenario tests fluent handler behavior, not observer delivery, replay, quarantine, or transport
+registration. Use a kernel-backed integration test for those boundaries. The existing generic
+`ReactorScenario<TReactor>` remains the choice for class-based reactors and its produced-side-effect assertions.
+
 ## Seeding read models
 
-A reactor can take a read model as a handler-method parameter, which Chronicle materializes for the event source when the reactor runs. Seed the expected read-model state with `Given.ForEventSourceId(id).ReadModel(...)`, then drive the triggering event:
+A class-based reactor can take a read model as a handler-method parameter, which Chronicle resolves for the event source when the reactor runs. `ReactorScenario<TReactor>` does not run the projection engine: `Given.Events(...)` does **not** build read models, including models marked `[Passive]`. Seed the expected state explicitly, then drive the triggering event:
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/read-model" />
+
+If a read-model parameter resolves to `null` without an explicit declaration of absence, the scenario throws `ReadModelNotSeededForReactorScenario` before invoking the handler. This applies to nullable and non-nullable parameters alike. The message names the type and resolved key, shows the seeding call, and lists any keys already seeded for that type so you can spot a wrong-key seed.
+
+To specify how your reactor behaves when a read model does not exist, declare that absence with `NoReadModel<TReadModel>()`:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/no-read-model" />
+
+The declaration permits `null` for that type and key; it does not remove a seeded instance. It survives `OnStream(...)` and applies across the scenario's builders. When your reactor implements `ICanResolveReadModelKey`, seed or declare absence under the key it returns, rather than the triggering event source identifier.
+
+The guard applies only to the scenario's in-process `EventStoreForTesting`. An explicit `IEventStore` of another type retains production argument-resolution behavior, including `null` for an absent read model.
 
 ## Asserting produced side effects
 
@@ -81,6 +142,18 @@ When a reactor returns a built-in event side effect or an asynchronous command, 
 The scenario records everything the reactor returns — flattening collections and unwrapping cross-stream event wrappers — so `ShouldHaveProduced<T>()`, its predicate overload, and `ShouldNotHaveProduced<T>()` all work against events and commands alike. The raw list is available on `Produced`.
 
 For a custom synchronous return type, register an `IReactorSideEffectHandler` in `scenario.Services` whose `CanHandleReturnType(Type)` claims that type, as you would in the host. The scenario records the result rather than executing the handler. Unclaimed synchronous types are rejected, just as they are in production; built-in event return types need no extra registration.
+
+## Asserting produced destinations
+
+An event's contents can be right while its destination is wrong. Use `ProducedEvents` to inspect each returned event together with its event source identifier, source type, stream type, and stream identifier:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/produced-destinations" />
+
+`ShouldHaveProduced<TEvent>(eventSourceId)` checks the destination source. The two-argument predicate overload receives a `ProducedEvent` and the typed event, so you can check both destination and contents. A failing destination assertion lists the recorded destinations. `Produced` and the existing content-only assertions remain unchanged; commands and other non-event side effects appear only in `Produced`.
+
+Bare returned events use the reactor's context values: the source identifier comes from `ICanProvideEventSourceId` when implemented, otherwise from the triggering event. Reactor-level source and stream attributes and `ICanProvideEventStreamId` supply the remaining route values. Unset values use event-log defaults, not the triggering event's source or stream types or stream identifier. An `EventForEventSourceId` uses its own destination metadata instead, including an event source definition when specified. Collections preserve each event's destination.
+
+The scenario records these events without appending them. If you supply explicit side-effect handlers, assert against those handlers instead; neither recording list is populated.
 
 ## Example: email notification
 

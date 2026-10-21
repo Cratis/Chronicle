@@ -22,11 +22,11 @@ public class when_applying_values_from_two_different_event_stores : given.a_prop
     }
 
     [Fact] async Task should_have_looked_up_the_same_key_for_both_event_stores() =>
-        await _keyStore.Received(2).TryGetFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier);
+        await _keyStore.Received(2).TryGetLatestFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier);
 
     [Fact] void should_never_have_looked_up_a_key_under_either_real_event_store()
     {
-        _keyStore.DidNotReceive().TryGetFor((EventStoreName)"FirstEventStore", Arg.Any<EventStoreNamespaceName>(), Arg.Any<Compliance.EncryptionKeyIdentifier>());
-        _keyStore.DidNotReceive().TryGetFor((EventStoreName)"SecondEventStore", Arg.Any<EventStoreNamespaceName>(), Arg.Any<Compliance.EncryptionKeyIdentifier>());
+        _keyStore.DidNotReceive().TryGetLatestFor((EventStoreName)"FirstEventStore", Arg.Any<EventStoreNamespaceName>(), Arg.Any<Compliance.EncryptionKeyIdentifier>());
+        _keyStore.DidNotReceive().TryGetLatestFor((EventStoreName)"SecondEventStore", Arg.Any<EventStoreNamespaceName>(), Arg.Any<Compliance.EncryptionKeyIdentifier>());
     }
 }

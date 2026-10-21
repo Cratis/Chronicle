@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from AccountCreated
+    Balance = 0.0
+    IsActive = true
+    Status = "New"
+    Notes = null

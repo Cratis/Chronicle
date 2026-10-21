@@ -127,7 +127,9 @@ public class a_projection_grain_with_a_children_projection : Specification
             ? children.Cast<IDictionary<string, object?>>()
             : [];
 
-    static ProjectionDefinition CreateDefinition() => new(
+    protected virtual PropertyPath ChildIdentity => "id";
+
+    ProjectionDefinition CreateDefinition() => new(
         ProjectionOwner.Client,
         EventSequenceId.Log,
         ReadModel,
@@ -140,10 +142,10 @@ public class a_projection_grain_with_a_children_projection : Specification
         new Dictionary<PropertyPath, ChildrenDefinition>
         {
             ["associations"] = new(
-                "id",
+                ChildIdentity,
                 new Dictionary<EventType, FromDefinition>
                 {
-                    [_associated] = new(new Dictionary<PropertyPath, string> { ["id"] = "comment", ["provider"] = "provider", ["reference"] = "reference" }, "comment", WellKnownExpressions.EventSourceId)
+                    [_associated] = new(new Dictionary<PropertyPath, string> { [ChildIdentity] = "comment", ["provider"] = "provider", ["reference"] = "reference" }, "comment", WellKnownExpressions.EventSourceId)
                 },
                 new Dictionary<EventType, JoinDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
@@ -180,6 +182,10 @@ public class a_projection_grain_with_a_children_projection : Specification
                         "type": "object",
                         "properties": {
                           "id": { "type": "string" },
+                          "identity": {
+                            "type": "object",
+                            "properties": { "id": { "type": "string" } }
+                          },
                           "provider": { "type": "integer" },
                           "reference": { "type": "string" }
                         }

@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    PlacedAt = $eventContext.occurred
+    Sequence = $eventContext.sequenceNumber
+    Correlation = $eventContext.correlationId

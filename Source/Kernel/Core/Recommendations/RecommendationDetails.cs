@@ -37,7 +37,7 @@ public record RecommendationDetails(
     /// <param name="namespace">Namespace within the event store the recommendations are for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read recommendations from.</param>
     /// <returns>A collection of recommendations.</returns>
-    internal static async Task<IEnumerable<RecommendationDetails>> GetRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
+    public static async Task<IEnumerable<RecommendationDetails>> GetRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var recommendations = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations.GetAll();
         return recommendations.ToDetails();
@@ -50,7 +50,7 @@ public record RecommendationDetails(
     /// <param name="namespace">Namespace within the event store the recommendations are for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe recommendations from.</param>
     /// <returns>An observable subject emitting collections of recommendations.</returns>
-    internal static ISubject<IEnumerable<RecommendationDetails>> AllRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage) =>
+    public static ISubject<IEnumerable<RecommendationDetails>> AllRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage) =>
         storage
             .GetEventStore(eventStore)
             .GetNamespace(@namespace).Recommendations

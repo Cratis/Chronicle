@@ -21,12 +21,7 @@ public static class ProjectionTypeExtensions
     {
         TypeMustImplementProjection.ThrowIfTypeDoesNotImplementProjection(type);
         var projectionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
-        var id = projectionAttribute?.Id.Value ?? string.Empty;
-        return id switch
-        {
-            "" => new ProjectionId(type.FullName ?? $"{type.Namespace}.{type.Name}"),
-            _ => new ProjectionId(id)
-        };
+        return new ProjectionId(ArtifactIdentity.ObserverIdFor(type, projectionAttribute?.Id.Value));
     }
 
     /// <summary>

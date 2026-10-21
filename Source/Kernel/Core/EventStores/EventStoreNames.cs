@@ -32,7 +32,7 @@ public record EventStoreNames(string Id, string Name)
     /// Observing implicitly registers the event store, so answering a snapshot through the observable
     /// changes what it is reporting on.
     /// </remarks>
-    internal static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage)
+    public static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage)
     {
         var eventStores = await storage.GetEventStores();
         return [.. eventStores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))];
@@ -43,7 +43,7 @@ public record EventStoreNames(string Id, string Name)
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to observe event stores from.</param>
     /// <returns>An observable subject emitting collections of event store names.</returns>
-    internal static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage) =>
+    public static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage) =>
         storage.ObserveEventStores()
             .TransformSubject<IEnumerable<Concepts.EventStoreName>, IEnumerable<EventStoreNames>>(
                 stores => [.. stores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))]);

@@ -15,6 +15,6 @@ public class with_started_captures : given.a_captures_manager
 
     async Task Because() => await _manager.NamespaceAdded("new-tenant");
 
-    [Fact] void should_subscribe_the_events_capture_in_the_namespace() => _subscriptions.Received(1).Subscribe(_eventStore, "new-tenant", Arg.Is<CaptureDefinition>(_ => _.Id == _events.Id));
-    [Fact] void should_leave_poll_captures_alone() => _subscriptions.Received(1).Subscribe(_eventStore, "new-tenant", Arg.Any<CaptureDefinition>());
+    [Fact] void should_subscribe_the_events_capture_in_the_namespace() => _subscriptions.Received(1).Recover(_eventStore, "new-tenant", Arg.Is<CaptureDefinition>(_ => _.Id == _events.Id));
+    [Fact] void should_leave_poll_captures_alone() => _subscriptions.Received(1).Recover(_eventStore, "new-tenant", Arg.Any<CaptureDefinition>());
 }

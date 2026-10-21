@@ -14,8 +14,10 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="EventTypes">The <see cref="IEventTypes"/> known to the event store.</param>
 /// <param name="JsonSerializerOptions">The <see cref="JsonSerializerOptions"/> in use.</param>
 /// <param name="EventStoreName">The name of the event store the projection belongs to, if known.</param>
+/// <param name="GenerationDelivery">The event store's generation delivery policy.</param>
 internal record ExplicitProjectionContext(
     INamingPolicy NamingPolicy,
     IEventTypes EventTypes,
     JsonSerializerOptions JsonSerializerOptions,
-    string? EventStoreName);
+    string? EventStoreName,
+    Observation.EventGenerationDelivery GenerationDelivery = Observation.EventGenerationDelivery.Compatibility);

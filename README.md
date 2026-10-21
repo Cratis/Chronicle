@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://cratis.io">
+  <a href="https://www.cratis.io">
     <img src="full-logo.png" alt="Cratis Chronicle" width="480">
   </a>
 

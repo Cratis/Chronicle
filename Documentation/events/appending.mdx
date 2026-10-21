@@ -1,5 +1,6 @@
 ---
 title: Appending
+description: Append a single event to a Chronicle event sequence, understand how the kernel handles it, and verify the outcome when it is unknown.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
@@ -20,6 +21,14 @@ Before the event is sent, the .NET client adds any [cross-cutting properties](./
 - Updates the sequence state
 
 The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. A result that reports a schema, constraint, or concurrency violation means the event was rejected and not appended, so you can correct the problem and append again without duplicating it. A result that reports *errors* is different: an infrastructure failure can happen after the event was stored, so the outcome is unknown — and so is it when the call fails without a result, such as a timeout or a dropped connection. Appending again blindly after an unknown outcome can store the event twice. Make that retry safe with an [expected sequence number](./concurrency) or a [constraint](../constraints/).
+
+## When the outcome is unknown
+
+`AppendOutcomeUnknown` means the event or batch may or may not be stored. Chronicle could not confirm the attempted slots by reading them back. **Do not retry blindly:** doing so can store the events twice.
+
+Read the event source's events and look for the attempt's correlation id in their context. Append again only if those events are absent. A timeout or dropped connection without a result is also an unknown outcome, not proof that nothing was stored.
+
+Retry with an [idempotency key](#appending-once) instead, so the retry is deduplicated.
 
 ## Verifying a possible duplicate
 
@@ -44,6 +53,56 @@ Object property order does not matter; array order, property presence, and strin
 Missing events, missing generations or schemas, redacted events, erased keys, unsupported protection handlers or storage providers, and failed releases produce `Unavailable`. **Revised events always return `Unavailable`, even if the requested generation was not itself revised. SQL storage currently returns `Unavailable` for all content verification:** it overwrites revisions without retaining revision history, so historical revisions cannot be ruled out. Backends must explicitly support reliable revision tracking before verification can compare content. Protected values also produce `Unavailable` when their schema does not identify a single non-null type, or when multiple protection handlers apply: Chronicle cannot safely recover the original value in those cases. Ordinary reads keep their existing empty-value behavior after erasure.
 
 Prepared content is plaintext, just like an ordinary append request. Verification sends it in a request body and returns only the verdict, never the released stored content. Retain the snapshot only as long as needed. This checks **content**, not causation, tags, routing metadata, or whether the event belongs to the same business operation; your idempotency mechanism must establish that identity. Transport and storage failures can still fail the call and must not be interpreted as equality.
+
+## Appending once
+
+An idempotency key makes a retry safe. Append with the same key again and Chronicle writes nothing a second time. Use one when the outcome of an append is unknown, for example after a timeout, a dropped connection, or a restart in the middle of an operation.
+
+In the .NET client, call `AppendOnce` with an `IdempotencyKey` (or `AppendOnceWithNamedTags` when the event carries [named tags](./appending-with-tags)). It takes the same optional arguments as `Append`.
+
+<ChronicleClientTabs snippet="events/appending/once" />
+
+Create keys explicitly with `new IdempotencyKey(value)`. There is no implicit conversion from a string. A key is 1 to 512 characters, and an empty or longer value throws `IdempotencyKeyNotValid`. Derive it from the business operation, not from a random value, so every retry of the same operation builds the same key.
+
+> [!CAUTION]
+> Never put personal data in a key. Chronicle stores the key with the event, so it is not covered by [compliance](../compliance/) erasure.
+
+### Outcomes
+
+`AppendResult.Outcome` reports what the call did. An unkeyed append always reports `Appended`.
+
+| Outcome | Meaning |
+| --- | --- |
+| `Appended` | This call wrote the event. |
+| `AlreadyAppended` | An event with the same key and the same content is already in the sequence. Nothing was written. |
+| `AlreadyAppendedAfterErasure` | An event with the same key was written earlier and has since been erased. Nothing was written. |
+
+`WasAlreadyAppended` is `true` for the last two.
+
+### Key conflicts
+
+A key that already identifies a different event is refused, not overwritten. The result reports it in `IdempotencyConflicts`, and `HasIdempotencyConflicts` is `true`. Check it explicitly; do not rely on `IsSuccess` alone. Each `IdempotencyKeyConflict` carries the key, the sequence number of the event that holds it, the stored event type, the generation you requested, and a reason:
+
+| Reason | Meaning |
+| --- | --- |
+| `Content` | The key was used for an event with different content. |
+| `Generation` | The key was used for the same event type in a different generation. |
+| `Unverifiable` | The stored event cannot be compared with this one. |
+
+Do not retry with a refused key. Either the two appends are different operations that need different keys, or the stored event is the one you meant to write.
+
+### Kernels without support
+
+Idempotent appends need a kernel that supports them. A keyed append never falls back to an unkeyed one, because that would remove the protection you asked for. Against an older kernel, `AppendOnce` throws `IdempotentAppendsNotSupported` and nothing is sent. Check `IEventSequence.SupportsIdempotentAppends` first when an older kernel might be connected.
+
+### Where keys are not supported
+
+Keys are refused with `IdempotentAppendsNotSupported`, and nothing is appended, in two cases:
+
+- Events staged in a [unit of work](./transactions).
+- Appends that carry an effect receipt.
+
+The Kotlin, TypeScript, and Elixir clients do not have a keyed append API yet. See [where the clients differ](../clients/where-the-clients-differ#keyed-appends).
 
 ## AppendResult
 

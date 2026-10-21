@@ -1,3 +1,6 @@
+---
+description: "What a new Chronicle client must implement for multi-server use: server discovery, load balancing, the wire-compatibility handshake and staying connected."
+---
 # Clustering and the connection lifecycle
 
 [Connection Strings → Server support](../connection-strings/server.md) is the canonical reference

@@ -1,0 +1,10 @@
+projection Group => GroupReadModel
+  from GroupCreated
+    # AutoMap enabled
+
+  children members identified by userId
+    no automap
+
+    from UserAddedToGroup
+      UserId = userId
+      Status = "Active"

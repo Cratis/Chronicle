@@ -37,6 +37,7 @@ public partial class Observer
     public void Dispose()
     {
         _metrics?.Dispose();
+        _coalescedWriteTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);

@@ -1,0 +1,23 @@
+projection Order => OrderReadModel
+  every
+    LastEventTime = $eventContext.occurred
+    EventCount = $eventContext.sequenceNumber
+    exclude children
+
+  from OrderPlaced
+    CustomerId = customerId
+    Total = total
+    Status = "Placed"
+
+  from OrderShipped
+    ShippedAt = $eventContext.occurred
+    Status = "Shipped"
+
+  from OrderDelivered
+    DeliveredAt = $eventContext.occurred
+    Status = "Delivered"
+
+  children items identified by itemId
+    from ItemAdded
+      ProductId = productId
+      Quantity = quantity

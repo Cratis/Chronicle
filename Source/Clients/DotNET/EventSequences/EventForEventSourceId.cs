@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSources;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -19,6 +20,12 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// a <see cref="SubjectAttribute"/> on the event, or falls back to <see cref="EventSourceId"/>.
     /// </summary>
     public Subject? Subject { get; init; }
+
+    /// <summary>
+    /// Gets or inits the optional <see cref="IdempotencyKey"/> that makes appending this event idempotent. A batch in which any event
+    /// has a key is appended once; events without a key are appended normally.
+    /// </summary>
+    public IdempotencyKey? IdempotencyKey { get; init; }
 
     /// <summary>
     /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
@@ -46,6 +53,11 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the name of the stream declared by <see cref="EventSource"/> the event is appended to.
     /// </summary>
     public string? EventStream { get; init; }
+
+    /// <summary>
+    /// Gets or inits concurrency dimensions to resolve individually at an Enforce commit.
+    /// </summary>
+    public ConcurrencyDimensions? DeclaredConcurrency { get; init; }
 
     /// <summary>
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.

@@ -33,6 +33,36 @@ is not part of the fact they record.
 
 The subject is the identity's stable key. It is what events are recorded against, so it does not change.
 
+### Identity resolution on metadata reads
+
+[Metadata reads](../events/getting-events#read-metadata-by-sequence-locator) resolve caused-by
+identities directly from storage rather than a silo's identity cache. A rename is visible on
+the next metadata read, including for events appended before the rename. Each chain link has
+a `Resolution` status:
+
+| Status | Meaning | Name |
+| --- | --- | --- |
+| `Resolved` | The identity exists and has a display name. | The current name. |
+| `NameUnavailable` | The identity exists but its display name is empty. | `null`. |
+| `Missing` | The stored identity identifier no longer resolves. | `null`. |
+| `NotSet` | No caused-by identity was set. | `null`. |
+| `System` | The subject is Chronicle's well-known system identity. | `null`. |
+
+Chronicle never substitutes the subject for an unavailable name. `OnBehalfOf` retains the
+chain order, resolving each link separately. The head's `InitiatorType` is `Agent` when a
+resolved identity acts on behalf of another identity, `User` for a resolved identity without
+that chain, `System` for Chronicle, and `Unknown` for a missing or unset head. An unavailable
+display name does not change whether that identity acts as an agent.
+
+Application-defined service identities are not automatically classified as systems. Recognize
+them by their subjects in your application, rather than relying on display names or the
+`User` classification.
+
+PII erasure removes encryption keys for protected event and read-model data; it does **not**
+erase identity display names. To make a name unavailable on metadata reads, rename that
+identity to an empty name. Its subject and username remain available. Your application owns
+authorization and must enforce it **before** calling the metadata API.
+
 ## Causation
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" />

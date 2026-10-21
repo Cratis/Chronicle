@@ -24,4 +24,5 @@ public class and_job_start_throws : given.a_catching_up_in_flight_state
     [Fact] void should_transition_to_quarantined() => _stateMachine.Received(1).TransitionTo<QuarantinedObserver>();
     [Fact] void should_not_transition_to_routing() => _stateMachine.DidNotReceive().TransitionTo<Routing>();
     [Fact] void should_record_the_partition_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldContain(_partition);
+    [Fact] void should_keep_the_marker() => _resultingStoredState.InFlightPartitions.ShouldContain(_partition);
 }

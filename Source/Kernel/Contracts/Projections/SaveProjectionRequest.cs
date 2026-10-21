@@ -39,4 +39,10 @@ public class SaveProjectionRequest
     /// </summary>
     [ProtoMember(5)]
     public DraftReadModelDefinition? DraftReadModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy to persist with the compiled definition.
+    /// </summary>
+    [ProtoMember(6)]
+    public Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 }

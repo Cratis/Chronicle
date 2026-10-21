@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -33,8 +34,9 @@ public class TestableHandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForPartition> logger)
-    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger), IGrainType
+    ILogger<HandleEventsForPartition> logger,
+    IEventGenerationRelease? eventGenerationRelease = null)
+    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger, eventGenerationRelease), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -44,12 +46,14 @@ public class TestableHandleEventsForPartition(
     public Type GrainType => typeof(IHandleEventsForPartition);
 
     /// <summary>
+    /// Gets the run the step performs in, once <see cref="InvokePerformStep"/> has started it.
+    /// </summary>
+    public StepRunForTesting? Run { get; private set; }
+
+    /// <summary>
     /// Gets a value indicating whether the step persists its progress checkpoint after every reported batch.
     /// </summary>
     public bool IsCheckpointingAfterEveryBatch => CheckpointAfterEveryBatch;
-
-    /// <inheritdoc/>
-    protected override IHandleEventsForPartition GetSelfGrainReference() => Substitute.For<IHandleEventsForPartition>();
 
     /// <summary>
     /// Sets up internal fields for testing, bypassing the full grain preparation flow.
@@ -70,6 +74,9 @@ public class TestableHandleEventsForPartition(
     /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The result of the step.</returns>
-    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken = default) =>
-        PerformStep(currentState, cancellationToken);
+    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken = default)
+    {
+        Run = StepRunForTesting.Begin(this);
+        return PerformStep(currentState, cancellationToken);
+    }
 }

@@ -1,71 +1,216 @@
 ---
-title: Choose a read-model style
-description: Compare model-bound projections, declarative projections, and reducers by building the same Chronicle read model three ways.
+title: Choose how to build a read model
+description: Choose between projection mappings and reducer code, compare the same library view four ways, and plan a safe change of style.
 ---
 
-Every read model answers the same question: "given the events so far, what should this screen or
-workflow read now?" Chronicle gives you more than one way to express that answer because different
-problems read better in different shapes.
+Your library screen needs a book's title and current borrower. The events tell you that the book was
+registered, borrowed, and returned, but the screen needs one answer: **given the events so far, what
+should this view read now?** You should not have to write a fold just to copy a title, or squeeze a
+state-dependent calculation into mapping attributes.
 
-Let's keep one library read model up to date. A book is registered, borrowed, and returned:
+Chronicle offers two families. **Projections** describe mappings that the kernel executes: attributes
+on the model, a fluent `IProjectionFor<T>` definition, or Projection Declaration Language (PDL).
+**Reducers** run your code, passing each event and the previous state to a method that returns the
+next state: static `Reduce` methods on the model, a separate `IReducerFor<T>`, or an explicitly
+nominated plain class. Authoring placement changes within each family; moving between families also
+changes execution and capabilities.
+
+## Which one should I pick?
+
+For application code, follow this order:
+
+1. Start with **[model-bound attributes](model-bound/index.mdx)** when the mapping reads clearly on the model.
+2. Use **[fluent `IProjectionFor<T>`](declarative/index.mdx)** when the mapping needs structure or the model should stay attribute-free.
+3. Choose a **reducer** when the answer reads better as state-transition code. For new code, start with a **[self-reducing read model](../reducers/self-reducing-read-models.mdx)**. Use a separate **[`IReducerFor<T>`](../reducers/getting-started.mdx)** when you need fold-time dependency injection, instance state used during replay, or separation from the model.
+4. Nominate a **[plain reducer class](../clients/dotnet/explicit-artifacts.md#plain-observers-and-constraint-definers)** only when the reducer or contract assembly cannot reference Chronicle.
+
+Use **[PDL](projection-declaration-language/index.md)** when the definition belongs outside application
+code, such as the Workbench, Screenplay, or an [ad-hoc query](projection-declaration-language/adhoc-querying.mdx).
+It is another projection input, not the code-first default.
+
+### Match the choice to your task
+
+| You need… | Pick | Why |
+| --- | --- | --- |
+| A screen showing a book's title and current borrower | Model-bound attributes | The events directly set or clear properties. Keep those mappings next to the shape the screen reads. |
+| A dashboard counting loans or summing amounts | A projection; attributes first | Counting, incrementing, adding, and subtracting are built-in operations. For one total across event sources, use a [constant key](declarative/constant-key.mdx); arithmetic alone does not require a reducer. |
+| A library with a collection of books | Fluent projection when the attributes become hard to scan | [Children](declarative/children.mdx) describe child identity, parent routing, updates, and removal. Attributes support children too. |
+| A book view with a member's details from another event source | A projection, often fluent | A [join](declarative/joins.mdx) correlates events across sources and updates the view. Reducers fold one event source at a time and have no native join operation. |
+| Composite keys, context fields, or an attribute-free model | Fluent projection | The builder makes [key structure](declarative/composite-keys.mdx) and [context mappings](declarative/event-context.mdx) explicit without decorating the model. |
+| A status that depends on the previous status and a rule | Self-reducing model | Branch on `current` and return the next state. The rule and state live together. |
+| A running balance that ignores a debit under a guard | Self-reducing model | Read the previous balance, apply the guard, and calculate the result in code. This derives a view; it does not reject the already-appended debit. |
+| A fold that needs a currency-rate service or clock | Separate `IReducerFor<T>` | Constructor injection is available during the fold. Static `Reduce` accepts only event, current, and optional context. Prefer recording the rate or time in the event: consulting today's service during replay can change yesterday's result. |
+| A model distributed as a shared contract | Separate `IReducerFor<T>` for stateful logic; fluent projection for mapping | Keep behavior in the consuming application without adding transitions or mapping attributes to the contract. |
+| An observer assembly that cannot reference Chronicle | Nominated plain class | Register it at the composition root and let Chronicle infer its one model from supported instance methods. Nomination does not relax signature validation. |
+| An Arc application with queries and state transitions on one record | Self-reducing model with `[ReadModel]` and static query methods | Keep the state, static `Reduce` methods, and query surface together. Apply the version guidance below so reduction does not become an endpoint. |
+| State a command must read on demand | A passive model | `[Passive]` on the model, or `.Passive()` on a fluent projection, avoids materialization lag. For a decision that must remain valid until append, use [decision reads](../read-models/decision-reads.mdx) only with an admitted projection or reducer shape. A fresh passive reducer read does not protect the decision from a concurrent append. |
+| A definition edited in the Workbench or authored in Screenplay | PDL | The definition is text owned by the tooling workflow. Check Chronicle's supported expression subset and save settings. |
+
+:::caution[Arc query discovery]
+In Arc applications, keep `[ReadModel]`, static `Reduce` methods, and query methods on the same record.
+With Arc versions before 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and mark
+intended query methods `[Query]`. From Arc 22.90.0, Arc excludes methods taking the read model
+itself from automatic query discovery, so `Reduce` does not become a query endpoint.
+See [Arc's model-bound queries](/arc/backend/csharp/queries/model-bound/) for the query contract.
+:::
+
+## One library view, four implementations
+
+Compare the forms using the same events. The snippets are alternatives in a Chronicle-enabled
+application with default artifact discovery, not four builders to attach to one model.
 
 <ChronicleClientTabs snippet="projections/choosing-a-read-model-style/events" />
 
-The read model we want is deliberately small:
+The view has the following fields. `Title` and `Isbn` are nullable because a loan event may arrive
+without a registration in this history.
 
 <ChronicleClientTabs snippet="projections/choosing-a-read-model-style/read-model" />
 
-## Model-bound projection: put the mapping on the model
+These examples deliberately define registration as a reset of loan state. Borrowing sets the borrower;
+returning clears it. Borrowing or returning without prior state creates a partial view with the book's
+ID and no title or ISBN. This is a view policy, not an assertion that such a loan is allowed.
 
-For simple property mapping, model-bound projections are the shortest route. The read model declares how
-events populate it:
+### Model-bound: describe the mapping on the model
 
 <ChronicleClientTabs snippet="projections/choosing-a-read-model-style/model-bound" />
 
-Chronicle discovers the projection from the attributes. There is no separate projection class, and the
-mapping sits directly next to the read model the UI or query will read. Reach for this first when the
-events set, add, subtract, count, or clear properties in a way the attributes can express.
+Chronicle discovers the mapping attributes and builds a projection definition. Registration sets the
+bibliographic fields **and** resets both loan fields. The explicit clear matters when a book is
+registered again after a loan; an omitted mapping would leave the old borrower in place.
 
-## Declarative projection: separate the mapping from the model
-
-When the mapping needs to be more explicit, keep the read model clean and define the projection with
-`IProjectionFor<T>`:
+### Fluent: keep the definition separate
 
 <ChronicleClientTabs snippet="projections/choosing-a-read-model-style/fluent" />
 
-This produces the same `BookStatus` documents as the model-bound version, but the trade-off is different:
-more code, more room for explicit mapping, and the read model stays free of Chronicle attributes. Use it
-when a projection needs joins, nested child mapping, event-context mapping, or naming/transformation
-logic that would make attributes hard to scan.
+AutoMap supplies `Title` and `Isbn` from registration without an `.AutoMap()` call. The other mappings
+set the ID and loan fields explicitly. `Define` constructs a definition once for registration; these
+lambdas are not service-injected handlers called for each arriving event.
 
-## Reducer: fold the events as code
+This is still a kernel projection. Move to fluent for a clearer definition or richer mapping
+structure, not to run arbitrary business code inside event processing.
 
-Reducers build read models too, but the shape is imperative: Chronicle passes the event and the current
-state into a method, and you return the next state.
+### Self-reducing: keep transitions with the state
+
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/self-reducing" />
+
+The complete public static `Reduce` shape is the discovery signal. Chronicle needs no model instance
+or reducer marker to invoke it. Each handler accepts nullable current state, including the loan and
+return handlers: either event can be the first event seen, or follow removal.
+
+### Separate reducer: put the fold on an instance
 
 <ChronicleClientTabs snippet="projections/choosing-a-read-model-style/reducer" />
 
-> **TypeScript note:** the C# reducer also receives the `EventContext` (used above to read the event source ID into `Id`) — the TypeScript reducer's handler methods only receive `(event, currentState)`, with no context parameter, so the TypeScript example omits the `Id` field.
+The same transitions now live in an `IReducerFor<T>` class. Chronicle activates that class through its
+service provider. This extra type is useful when the fold needs constructor dependencies or the model
+must remain a data contract. A plain nominated reducer uses the same instance fold, with its model
+inferred at [explicit registration](../clients/dotnet/explicit-artifacts.md).
 
-This is still the same read model, but the expression is a fold over state rather than a projection
-definition. Reach for a reducer when the logic is easier to read as C#: branching, derived values, totals
-with guard logic, temporal state, or calculations that span several previous events.
+### Check the results
 
-## How they differ
+For event source `book-42`, all four implementations produce these field values:
 
-| Style | Mental model | Strength | Cost |
+| Event history | Title / ISBN | Borrowed? | Borrower |
 | --- | --- | --- | --- |
-| [Model-bound projection](model-bound/) | The read model declares how events fill its properties. | Least code; best default for straightforward screen models. | Attributes can get dense when the mapping becomes complex. |
-| [Declarative projection](declarative/) | A separate projection definition maps events to the read model. | Explicit mapping, joins, nested structures, transformations, and a clean read model type. | More ceremony than attributes. |
-| [Reducer](/chronicle/reducers/) | Event plus current state returns next state. | Complex calculations and temporal logic read naturally as code. | More responsibility: handle missing current state and keep the reducer pure. |
+| No events | No instance | — | — |
+| Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | not set |
+| Registered → Borrowed("Avery") | Dune / 9780441172719 | true | Avery |
+| Registered → Borrowed → Returned | Dune / 9780441172719 | false | not set |
+| Registered → Borrowed → Registered("Dune", "9780441172719") | Dune / 9780441172719 | false | not set |
+| Borrowed("Avery") without registration | not set | true | Avery |
+| Returned without registration | not set | false | not set |
 
-Use the simplest style that keeps the intent obvious. Model-bound first, declarative when the mapping
-needs structure, reducer when the calculation reads better as a state transition.
+"Not set" means the field holds no value; each client shows that in its own way. `Id` is `book-42` in every existing instance. The snippets use distinct model type names so they can
+compile together; those names give them different registered identifiers and default containers.
+Equivalent field values do **not** make them interchangeable persisted documents.
 
-## Testing the choice
+The borrower's name is personal data. The snippets mark both the event member and the destination
+member as personal data; a mapping does not transfer compliance annotations. In a real library, select the member
+as the append's subject rather than accepting the book ID fallback. Review [read-model compliance](../compliance/read-models.mdx)
+before deploying: projections retain per-property subject lineage, while reducer protection uses the
+batch's default subject resolved from its first event. Output equality alone does not prove equal
+subject ownership.
 
-You can exercise all three styles with the same
-[read-model scenario](/chronicle/testing/read-models/scenario/). The scenario discovers a model-bound
-projection, an `IProjectionFor<T>`, or an `IReducerFor<T>` for the read model type and runs the events in
-memory. That makes style changes cheap: rewrite the projection as a reducer, keep the same events and
-expected `BookStatus`, and the test tells you whether the behavior stayed the same.
+## Capabilities that change the choice
+
+The API names here follow the .NET examples. Consult each page's client tabs for its authoring shape.
+The separate column covers both `IReducerFor<T>` and a nominated plain instance reducer.
+
+| Capability | Attributes | Fluent | PDL | Self reducer | Separate reducer |
+| --- | --- | --- | --- | --- | --- |
+| [Logic location](architecture.mdx) | Model metadata | Separate `Define` class | Declaration text | Static model methods | Instance methods on another class |
+| [Dependency injection during fold](../reducers/getting-started.mdx) | No | No; DI can build the definition | No | No | Yes |
+| [Joins across event sources](declarative/joins.mdx) | Yes | Yes | Yes | No native joins | No native joins |
+| [Children](declarative/children.mdx) / [nested objects](declarative/nested.mdx) | Mappings | Mappings | Blocks | Your code | Your code |
+| [Counters and sums](declarative/functions.mdx) | Operations; no dynamic dictionary-counter form | Operations, including dynamic dictionary counters | Operations | Your code, per source | Your code, per source |
+| [Remove an instance](model-bound/removal.mdx) | Removal attributes | Removal builders | Removal blocks | Return null | Return null |
+| [Variant groups](model-bound/variants.mdx) | `VariantOf` / `EntersOn` / `GlobalFor` | `VariantOf` / `EntersOn`; no `GlobalFor` equivalent | No native group block | No native group wiring | No native group wiring |
+| [Passive reads](../read-models/consistency.md) | `[Passive]` on model | `.Passive()` | No native passive clause | `[Passive]` on model | `[Passive]` on model |
+| [Append-metadata filters](filtering.mdx) | No | No | No | Tags, source type, stream type | Tags, source type, stream type |
+| [Replay lifecycle hooks](../reducers/self-reducing-read-models.mdx#optional-replay-hooks) | No handler hooks | No handler hooks | No hook clauses | Static `Task` hooks; hook services allowed | Replay notification interfaces |
+| [Decision reads](../read-models/decision-reads.mdx) | Admitted shapes only | Admitted shapes only | No direct .NET client-catalog registration path | Admitted without filters or constructor dependencies | Admitted without filters |
+| [ReadModelScenario](../testing/read-models/scenario.mdx) | Yes | Yes | No direct PDL overload | Yes | Yes, including nominated plain classes |
+
+Metadata subscription filters have no stream-ID option. Observer tags are descriptive labels, not
+append-tag filters. For decision reads, check admission before building the workflow: the projection
+must be a finite, flat event-log shape without joins or hierarchy, with a supported source key (or an
+admitted stream-scoped key). PDL's save path also chooses effective sequence and generation settings;
+do not assume a declaration has every configuration option of a code-authored projection.
+
+## When it is the wrong fit
+
+**A projection is the wrong fit when its mappings hide the state transition.** If you need several
+branches over previous state or guarded calculations, use a reducer. Adding a fluent class does not
+turn the mapping engine into arbitrary per-event code. PDL likewise accepts Chronicle's supported
+projection expressions, not every expression accepted by Screenplay.
+
+**A reducer is the wrong fit when you are rebuilding projection features yourself.** Counts and sums
+already have mapping operations. Cross-source joins, custom aggregation keys, and mutually exclusive
+variant groups belong to projections. Reducers are event-source keyed. A classic reducer with filters or constructor dependencies other than `ILogger<T>` cannot be read as a protected decision read; a self-reducing read model is exempt from the dependency rule. See [Reducers as decision reads](../read-models/decision-reads.mdx#reducers). Choose an instance reducer over a self reducer only when its separation,
+DI, or instance behavior is useful; do not hide durable state in the service instance. Replay invokes
+your code again, and none of the reducer forms promises exactly-once execution or external effects.
+
+Choose [materialized or passive reads](../read-models/consistency.md) separately from authoring style.
+Passive by-ID projection reads select one event source, so cross-source joins and custom-key
+aggregations cannot generally reconstruct the materialized answer that way. Passive reads are not a
+synchronous append mode, and an on-demand result does not enforce uniqueness.
+
+## What it costs to switch later
+
+You can keep event contracts, the read-model schema, the query surface, and the expected field values
+when the new form expresses the same behavior. Storage continuity takes more care:
+
+| What to check | Why it matters |
+| --- | --- |
+| Read-model identifier | In .NET it is the full model type name. Renaming or moving the model changes that identity. |
+| Observer identifier and scope | Attributes default to the model's full name; fluent and separate reducer classes default to their own full names; self reducers default to the model's full name; PDL uses its declaration name. Explicit IDs can preserve observer identity, but store, namespace, and sequence also scope progress. |
+| Container name | The default .NET naming policy pluralizes the short model name. A namespace move can keep the container while changing identity; a type rename usually changes both. Fluent projections can override the container; reducers have no equivalent override. A rename points reads elsewhere and does not copy data. |
+| Replay or rebuild | Definition and reducer-implementation changes are evaluated under the configured evolution policy. Expect replay work or a recommendation; not every source edit triggers a full rebuild. Reusing an ID across projection and reducer kinds is not a state or schema migration. |
+| Compliance lineage | A projection's per-property subject tracking and a reducer's batch/default subject protection differ. Keep model PII annotations and verify subject ownership, release, and erasure after a family change. |
+
+For a safe switch, record the existing IDs, scope, container, and configuration first. Preserve the
+identifiers you intend to keep and remove the previous builder; a self model cannot share ownership
+with another reducer or projection in the same catalog. When moving a fold to static methods, also
+replace constructor dependencies and replay interfaces deliberately.
+
+Run the same event histories against the replacement, then exercise registration and replay against
+a real kernel and the intended sink. Verify stored-state compatibility, catch-up, query results,
+indexes, and compliance. Inspect [registration outcomes](../clients/dotnet/registration-outcome.md) and
+[projection evolution and retirement](registration-lifecycle.md); a running client alone does not
+prove every definition registered. Coordinate stopping the old writer before starting the replacement.
+Projection retirement retains its container, and its successor recommendations concern projections,
+not reducers. Plan the rebuild explicitly when changing families.
+
+## Test the behavior, then test the boundary
+
+The same [ReadModelScenario](../testing/read-models/scenario.mdx) can exercise all four application-code
+forms above, as well as a nominated plain reducer configured through per-run defaults. Give each form
+the same events and assert the same fields, including re-registration and missing current state.
+
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/verify-results" />
+
+The check compares values rather than model type identity. In-process scenarios substitute storage,
+observer lifecycle, and read-model compliance: they do not prove transport, replay policy, encryption,
+erasure, sink subject ownership, or migration of existing documents. Keep the scenario as a behavioral
+regression check and add a real-kernel check before treating a style change as an operationally safe
+replacement.

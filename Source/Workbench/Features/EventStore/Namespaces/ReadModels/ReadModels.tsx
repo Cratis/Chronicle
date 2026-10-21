@@ -2,7 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Routes, Route } from 'react-router-dom';
+import { readModelsPath } from './readModelsPath';
 import { Dropdown } from '@cratis/components/Dropdown';
 import { Allotment } from 'allotment';
 import { Page, ReadModelInstances, getInstanceKey } from 'Components';
@@ -32,6 +33,9 @@ const useReadModelsParams = (): Readonly<Partial<ReadModelsParams>> => {
 const ReadModelsContent = () => {
     const params = useReadModelsParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const locationPathRef = useRef(location.pathname);
+    locationPathRef.current = location.pathname;
     const [allReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
 
     const [selectedReadModel, setSelectedReadModel] = useState<ReadModelDefinition | null>(null);
@@ -114,7 +118,7 @@ const ReadModelsContent = () => {
             setSelectedOccurrence(null);
             setSelectedInstance(null);
             setPage(0);
-            navigate(`/event-store/${params.eventStore}/${params.namespace}/read-models`, { replace: true });
+            navigate(readModelsPath(params.eventStore, params.namespace), { replace: true });
             return;
         }
 
@@ -151,23 +155,15 @@ const ReadModelsContent = () => {
     }, [selectedOccurrence, selectedReadModel]);
 
     useEffect(() => {
-        let newPath = `/event-store/${params.eventStore}/${params.namespace}/read-models`;
+        const newPath = readModelsPath(params.eventStore, params.namespace, {
+            readModel: selectedReadModel?.identifier,
+            occurrence: selectedReadModel ? selectedOccurrence : null,
+            instanceKey: selectedReadModel && selectedOccurrence ? getInstanceKey(selectedInstance) : null
+        });
 
-        if (selectedReadModel) {
-            newPath += `/${selectedReadModel.identifier}`;
-
-            if (selectedOccurrence) {
-                newPath += `/${selectedOccurrence}`;
-
-                const instanceKey = getInstanceKey(selectedInstance);
-                if (instanceKey) {
-                    newPath += `/${instanceKey}`;
-                }
-            }
-        }
-
-        const currentPath = window.location.pathname;
-        if (newPath !== currentPath) {
+        // The router's location, not window's: the latter carries the prefix the Workbench is served under. Read through
+        // a ref so a change of URL alone does not re-run this effect.
+        if (newPath !== locationPathRef.current) {
             navigate(newPath, { replace: true });
         }
     }, [selectedReadModel, selectedOccurrence, selectedInstance, navigate, params.eventStore, params.namespace]);

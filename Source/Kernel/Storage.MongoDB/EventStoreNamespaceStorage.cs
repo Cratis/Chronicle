@@ -32,6 +32,7 @@ using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -41,7 +42,9 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 {
+    readonly Occurrences.OccurrencesStorage _occurrences;
     readonly EventStoreName _eventStore;
+
     readonly EventStoreNamespaceName _namespace;
     readonly IEventStoreNamespaceDatabase _eventStoreNamespaceDatabase;
     readonly IEventConverter _converter;
@@ -61,7 +64,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the storage is for.</param>
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
-    /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -73,7 +75,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         EventStoreNamespaceName @namespace,
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventTypesStorage eventTypesStorage,
-        IObserverDefinitionsStorage observerDefinitionsStorage,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
@@ -81,6 +82,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
+        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>("occurrences").Database);
         _eventStore = eventStore;
         _namespace = @namespace;
         _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;
@@ -96,13 +98,18 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Jobs = jobsStorage.GetFor(eventStore, @namespace).Jobs;
         JobSteps = jobsStorage.GetFor(eventStore, @namespace).JobSteps;
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
+        ObserverDefinitionChanges = new(
+            new ObserverDefinitionChangeRows<ObserverProgressRecord>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverContinuation>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverRestartPlan>(eventStoreNamespaceDatabase),
+            new ObserverDefinitionChangeRows<ObserverJobInventory>(eventStoreNamespaceDatabase));
         AlertIncidents = new Alerts.AlertIncidentsStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
         ObserverHandledCounts = new ObserverHandledCountsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         Patterns = new BehaviorPatternStorage(eventStoreNamespaceDatabase);
-        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
+        ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase);
         Sinks = sinks;
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
@@ -118,6 +125,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     }
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
+
+    /// <inheritdoc/>
     public IChangesetStorage Changesets { get; }
 
     /// <inheritdoc/>
@@ -131,6 +144,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IObserverStateStorage Observers { get; }
+
+    /// <inheritdoc/>
+    public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; }
 
     /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; }

@@ -3,11 +3,9 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
@@ -34,8 +32,6 @@ public class ImmediateProjection(
 {
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
-    EventSequenceNumber _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
-    ExpandoObject? _initialState;
     ReadModelDefinition? _readModelDefinition;
     IProjection? _projection;
 
@@ -65,8 +61,6 @@ public class ImmediateProjection(
     public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
         State = definition;
-        _lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
-        _initialState = null;
         _readModelDefinition = null;
         return Task.CompletedTask;
     }
@@ -94,26 +88,17 @@ public class ImmediateProjection(
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             _readModelDefinition = await readModel.GetDefinition();
             var eventTypes = await _projection!.GetEventTypes();
-            var fromSequenceNumber = _lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : _lastHandledEventSequenceNumber.Next();
-
-            var eventSequenceKey = new EventSequenceKey(_projectionKey!.EventSequenceId, _projectionKey!.EventStore, _projectionKey!.Namespace);
-            var eventSequence = GrainFactory.GetGrain<IEventSequence>(eventSequenceKey);
-            var tail = await eventSequence.GetTailSequenceNumberForEventTypes(eventTypes);
-            if (tail != EventSequenceNumber.Unavailable && tail < fromSequenceNumber && _initialState != null)
-            {
-                logger.UsingCachedModelInstance();
-                if (!HasReadModel(_initialState))
-                {
-                    return ProjectionResult.Empty with { LastHandledEventSequenceNumber = tail };
-                }
-
-                var initialStateAsJson = ReadModelSubjects.CopyToJson(_initialState, expandoObjectConverter.ToJsonObject(_initialState, _readModelDefinition!.GetSchemaForLatestGeneration()));
-                return new(initialStateAsJson, 0, tail);
-            }
-
             var modelKey = _projectionKey.ReadModelKey.IsSpecified ? (EventSourceId)_projectionKey.ReadModelKey.Value : null!;
-            using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(fromSequenceNumber, modelKey, eventTypes: eventTypes);
+            var streamScope = _projectionKey.StreamScope;
+            using var cursor = await _eventSequenceStorage!.GetFromSequenceNumber(
+                EventSequenceNumber.First,
+                streamScope?.EventSourceId ?? modelKey,
+                eventSourceType: streamScope?.EventSourceType,
+                eventStreamType: streamScope?.EventStreamType,
+                eventStreamId: streamScope?.EventStreamId,
+                eventTypes: eventTypes);
             var projectedEventsCount = 0;
+            var lastHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
             var state = GetInitialState();
             while (await cursor.MoveNext())
             {
@@ -127,56 +112,26 @@ public class ImmediateProjection(
                 projectedEventsCount += result.ProjectedEventsCount;
                 state = result.State;
 
-                _lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
+                lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
-            _initialState = state;
-            if (!HasReadModel(state))
+            if (!state.Exists)
             {
                 return ProjectionResult.Empty with
                 {
                     ProjectedEventsCount = projectedEventsCount,
-                    LastHandledEventSequenceNumber = _lastHandledEventSequenceNumber
+                    LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
                 };
             }
 
-            var jsonObject = ReadModelSubjects.CopyToJson(state, expandoObjectConverter.ToJsonObject(state, _readModelDefinition!.GetSchemaForLatestGeneration()));
-            return new(jsonObject, projectedEventsCount, _lastHandledEventSequenceNumber);
+            var jsonObject = ReadModelSubjects.CopyToJson(state.Model, expandoObjectConverter.ToJsonObject(state.Model, _readModelDefinition!.GetSchemaForLatestGeneration()));
+            return new(jsonObject, projectedEventsCount, lastHandledEventSequenceNumber);
         }
         catch (Exception ex)
         {
             logger.FailedGettingModelInstance(ex);
             throw;
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task<ProjectionResult> GetCurrentModelInstanceWithAdditionalEventsApplied(IEnumerable<EventToApply> events)
-    {
-        var eventTypesStorage = storage.GetEventStore(_projectionKey!.EventStore).EventTypes;
-        var eventsToApplyTasks = events.Select(async _ =>
-        {
-            var eventSchema = await eventTypesStorage.GetFor(_.EventType.Id, _.EventType.Generation);
-            return AppendedEvent.EmptyWithEventType(_.EventType) with
-            {
-                Content = expandoObjectConverter.ToExpandoObject(_.Content, eventSchema.Schema)
-            };
-        }).ToArray();
-        var eventsToApply = await Task.WhenAll(eventsToApplyTasks);
-        var initialState = _initialState ?? new ExpandoObject();
-        var result = await HandleEvents(initialState, eventsToApply);
-        _initialState = result.State;
-        if (!HasReadModel(result.State))
-        {
-            return ProjectionResult.Empty with
-            {
-                ProjectedEventsCount = result.ProjectedEventsCount,
-                LastHandledEventSequenceNumber = result.Tail
-            };
-        }
-
-        var jsonObject = ReadModelSubjects.CopyToJson(result.State, expandoObjectConverter.ToJsonObject(result.State, _readModelDefinition!.GetSchemaForLatestGeneration()));
-        return new(jsonObject, result.ProjectedEventsCount, result.Tail);
     }
 
     /// <inheritdoc/>
@@ -192,16 +147,17 @@ public class ImmediateProjection(
     /// <returns>The observer reference for this grain.</returns>
     protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
 
-    static bool HasReadModel(ExpandoObject state) => ((IDictionary<string, object?>)state).Count > 0;
-
-    ExpandoObject GetInitialState()
+    SingleReadModelProjectionState GetInitialState()
     {
-        return _initialState ?? (State.InitialModelState is not null
+        // Preserve the definition's eager seed and presence decision for a never-created instance.
+        var model = State.InitialModelState is not null
             ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _readModelDefinition!.GetSchemaForLatestGeneration())
-            : new ExpandoObject());
+            : new ExpandoObject();
+        var exists = ((IDictionary<string, object?>)model).Count > 0;
+        return new(model, exists, exists);
     }
 
-    async Task<(int ProjectedEventsCount, ExpandoObject State, EventSequenceNumber Tail)> HandleEvents(ExpandoObject initialState, AppendedEvent[] events)
+    async Task<(int ProjectedEventsCount, SingleReadModelProjectionState State, EventSequenceNumber Tail)> HandleEvents(SingleReadModelProjectionState initialState, AppendedEvent[] events)
     {
         var projectionKey = new ProjectionKey(_projectionKey!.ProjectionId, _projectionKey!.EventStore);
         var projectionGrain = GrainFactory.GetGrain<IProjection>(projectionKey);
@@ -211,7 +167,7 @@ public class ImmediateProjection(
             ? eventsWithSequenceNumber[^1].Context.SequenceNumber
             : EventSequenceNumber.Unavailable;
 
-        var state = await projectionGrain.ProcessForSingleReadModel(_projectionKey!.Namespace, initialState, events);
+        var state = await projectionGrain.FoldForSingleReadModel(_projectionKey!.Namespace, initialState, events);
 
         var projectedEventsCount = events.Count(_ => _ is not null);
 

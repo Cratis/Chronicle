@@ -17,24 +17,48 @@ There is no host requirement and no application architecture imposed.
 
 ## Verified product sources
 
-This skill is verified against the `Cratis/Chronicle` repository at tag
-`v18.3.0`. Its client sources are unchanged in public shape since `v17.0.1`
-(the 17→18 client diff is converters, options and doc comments), and `v17.0.1`
-was byte-identical to `16.45.2` for every public type cited here except the
-compatibility check noted below.
+Source: `Cratis/Chronicle`.
 
-| Package | Line | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | `ChronicleClient`, `IEventStore`, `[EventType]`, observers |
-| `Cratis.Chronicle.Connections` | `18.3.0` | `ChronicleConnectionString`, connection lifecycle |
-| `Cratis.Chronicle.AspNetCore` | `18.3.0` | ASP.NET Core wiring, header/subdomain namespace resolvers |
-| `Cratis.Chronicle.Testing` | `18.3.0` | in-process scenarios |
-| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | the analyzers, a **separate opt-in** package |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | `ChronicleClient`, `IEventStore`, `[EventType]`, existing observers; reducer discovery and nomination (`DefaultClientArtifactsProvider.cs`, `Reducers/{SelfReducerMethods,RegisteredReducerReadModel,ReducerCatalog}.cs`, `Registrations/ExplicitArtifacts.Types.cs`) |
+| `Cratis.Chronicle.Connections` | `ChronicleConnectionString`, connection lifecycle |
+| `Cratis.Chronicle.AspNetCore` | ASP.NET Core wiring, header/subdomain namespace resolvers |
+| `Cratis.Chronicle.Testing` | in-process scenarios |
+| `Cratis.Chronicle.CodeAnalysis` | CHR analyzers, distributed as a client dependency |
 
-Take the exact version from nuget.org. The version in source is a `1.0.0`
-placeholder injected at pack time (`Source/Directory.Build.props`), so the
-repository never carries the real number. Reverify before claiming support for a
-version you have not checked.
+Take the version from nuget.org, not the placeholder version in the source.
+
+## Lifecycle
+
+Read [references/lifecycle.md](references/lifecycle.md) when waiting for registration (`WaitForRegistration`, not polling `IsConnected`), diagnosing quiet observers (keepalive loss fails silently, not with an exception), or disposing the client.
+
+## What a standalone app owns that a host would have supplied
+
+Every one of these has a silent default. Read them as a checklist, because the
+defaults are reasonable for a sample and wrong for a service
+(`ChronicleClient.cs`, options constructor):
+
+| Concern | Default when you pass nothing |
+| --- | --- |
+| `IClientArtifactsProvider` | `DefaultClientArtifactsProvider.Default` — full assembly scan |
+| `IServiceProvider` | `DefaultServiceProvider`, which activates everything through `Activator.CreateInstance` |
+| `IIdentityProvider` | `BaseIdentityProvider` |
+| `ICorrelationIdAccessor` | `CorrelationIdAccessor` |
+| `IEventStoreNamespaceResolver` | `DefaultEventStoreNamespaceResolver` — always `"Default"` |
+| `ILoggerFactory` | `new LoggerFactory()` — **a silent one** |
+| Configuration binding | none; there is no `Cratis:Chronicle` section without a host |
+
+The `IServiceProvider` default is the sharp one: **a reactor or reducer with
+constructor dependencies is default-constructed** unless you pass a real
+container. Pass one, or keep observers dependency-free.
+
+The AspNetCore package additionally registers `AddUnitOfWork()`,
+`AddCompliance()`, `AddCausation()`, `AddChronicleHealthCheck()`, and
+`UseCratisChronicle()` — none of which the base package gives you.
+
+**Keep the process alive.** Observation is a live gRPC duplex stream; a console
+app that appends and returns from `Main` never sees a reactor run.
 
 ## Which package
 
@@ -43,9 +67,10 @@ dotnet add package Cratis.Chronicle              # console / worker service
 dotnet add package Cratis.Chronicle.AspNetCore   # ASP.NET Core
 ```
 
-`Cratis.Chronicle.CodeAnalysis` is **not** pulled in by `Cratis.Chronicle`. Add
-it deliberately — it is what warns about the mistakes an event model makes
-silently, such as a nullable event property.
+Requires Chronicle 19.4.8 for `Cratis.Chronicle` to bring `Cratis.Chronicle.CodeAnalysis` as a
+package dependency: consumers receive the CHR analyzers without opting in.
+The package id is still separate; Chronicle does not run these analyzers over
+its own generic client plumbing. Source: `Source/Clients/DotNET/DotNET.csproj`.
 
 ## Connecting
 
@@ -59,153 +84,47 @@ using var client = new ChronicleClient(ChronicleConnectionString.Development);
 var eventStore = await client.GetEventStore("<EventStoreName>");
 ```
 
-That is the compiled documentation snippet verbatim
-(`Documentation/client-snippets/get-started/console/connect.md`). Those snippet
-files are compiled in CI against the real client projects, which makes them the
-safest source of .NET Chronicle example code in existence — prefer them over
-prose documentation.
+Source: `Documentation/client-snippets/get-started/console/connect.md`;
+client snippets compile in product CI. Prefer them to untested prose examples.
 
-`IChronicleClient` — `Source/Clients/DotNET/IChronicleClient.cs:11`:
+**There is no `IChronicleClient.Connect`.** `GetEventStore` discovers and connects;
+`eventStore.Connection.Connect()` is the explicit connection form.
+`ChronicleClient` is `IDisposable`; supply the options constructor's collaborators
+instead of retaining sample defaults. Read [client construction](references/client-construction.md)
+when choosing the constructor or passing a real container/logger.
 
-| Member | Line |
-| --- | --- |
-| `ChronicleOptions Options { get; }` | `:16` |
-| `ICausationManager CausationManager { get; }` | `:21` |
-| `Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default)` | `:32` |
-| `Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)` | `:39` |
-| `void EvictEventStores()` | `:53` |
+### Options and connection strings
 
-**There is no `IChronicleClient.Connect`.** Connecting happens inside
-`GetEventStore`, which discovers artifacts and then connects
-(`Source/Clients/DotNET/ChronicleClient.cs:403-409`). When you do need the
-connection explicitly — in a worker's `ExecuteAsync`, for instance — it is
-`eventStore.Connection.Connect()`.
-
-`ChronicleClient` is `IDisposable`
-(`Source/Clients/DotNET/ChronicleClient.cs:30`) with five public constructors
-(`:76`, `:85`, `:94`, `:110`, `:183`). The one that matters for a real
-application is `:110`:
-
-```csharp
-public ChronicleClient(
-    ChronicleOptions options,
-    IClientArtifactsProvider? artifactsProvider = null,
-    IServiceProvider? serviceProvider = null,
-    IIdentityProvider? identityProvider = null,
-    ICorrelationIdAccessor? correlationIdAccessor = null,
-    IEventStoreNamespaceResolver? namespaceResolver = null,
-    ILoggerFactory? loggerFactory = null,
-    INamingPolicy? namingPolicy = null)
-```
-
-The canonical standalone sample uses it — `Samples/SimpleConsole/Program.cs:28-33`:
-
-```csharp
-var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
-options.DefaultSinkTypeId = sinkType;
-
-using var client = new ChronicleClient(options, loggerFactory: loggerFactory);
-var store = await client.GetEventStore("TestStoreCS");
-```
-
-### Options
-
-`ChronicleOptions` — `Source/Clients/DotNET/ChronicleOptions.cs`. Statics:
-`FromConnectionString(string)` (`:191`), `FromConnectionString(ChronicleConnectionString)`
-(`:198`), `FromDevelopmentConnectionString()` (`:214`). The parameterless
-constructor (`:40`) is the development connection string.
-
-Options worth knowing: `AutoDiscoverAndRegister` (default `true`, `:90`),
-`ConnectTimeout` (default 5 seconds, `:95`), `SkipKeepAlive` (`:127` — turn the
-watchdog off for a short-lived client), `DefaultSinkTypeId` (default
-`WellKnownSinkTypes.MongoDB`), `Tls`, `Authentication`, `RegistrationRetry`.
-
-### Connection strings, not URLs
-
-**There is no `ChronicleUrl` type and no microservice id.** The identity of a
-connection is a connection string plus an event store name and optionally a
-namespace. `ChronicleConnectionString` lives in `Cratis.Chronicle.Connections`
-(`Source/Clients/Connections/ChronicleConnectionString.cs:33`):
-
-```
-chronicle://host[:port]/?opts
-chronicle://user:pass@host[:port]/?opts
-chronicle+srv://host/?opts
-```
-
-Default port `35000`. `Default` is `chronicle://localhost:35000` (`:48`);
-`Development` adds the `chronicle-dev-client` / `chronicle-dev-secret`
-credentials (`:57`). Query options: `apiKey`, `auth`, `skipTlsValidation`,
-`loadBalancer`, `srvNameServer`, `certificatePath`, `certificatePassword`
-(`ChronicleConnectionStringBuilder.cs:27-36`). There is an implicit conversion
-from `string` (`:158`) and a `Redacted` form for logging (`:152`).
-
-> **Certificate validation is skipped by default, and that is deliberate.** The
-> development Chronicle images (`latest-development` and `latest-development-slim`)
-> generate a self-signed certificate on every start, so a development pair
-> connects with no setup. The production image does not: it refuses to start with
-> TLS enabled (the default) and no configured certificate. **A production connection string must set
-> `skipTlsValidation=false`** (or `Tls.SkipCertificateValidation = false`)
-> against a server whose certificate is actually verifiable.
+Read [references/connection-options.md](references/connection-options.md) when setting `ChronicleOptions`, writing a connection string or choosing credentials. A production connection string must set `skipTlsValidation=false`; there is no `ChronicleUrl` type.
 
 ### In a host
 
-```csharp
-var builder = Host.CreateApplicationBuilder(args);
-builder.AddCratisChronicle(options => options.EventStore = "<EventStoreName>");
-builder.Services.AddHostedService<<WorkerName>>();
-await builder.Build().RunAsync();
-```
+`AddCratisChronicle` is an extension on `IHostApplicationBuilder` (and `WebApplicationBuilder`), not on `IServiceCollection`; there is no `WithClaimsBasedNamespaceResolver`.
+`IServiceCollection` instead has `AddCratisChronicleClient` and
+`AddCratisChronicleConnection` (including `skipTlsValidation`,
+`skipCompatibilityCheck` and `skipKeepAlive` parameters).
 
-`AddCratisChronicle` is an extension on **`IHostApplicationBuilder`**
-(`Source/Clients/DotNET/ChronicleHostApplicationBuilderExtensions.cs:28`) and binds
-the `Cratis:Chronicle` configuration section by default (`:25`, `:37`), with
-`ValidateDataAnnotations().ValidateOnStart()`. The bound type is
-`ChronicleClientOptions : ChronicleOptions`, which adds a `[Required] EventStore`
-and an optional `EventStoreNamespaceResolverType`.
+Read [references/hosting.md](references/hosting.md) when wiring Chronicle into a worker or ASP.NET Core host, or when `AddCratisChronicle` or a namespace resolver does not resolve.
 
-> **`AddCratisChronicle` on `IServiceCollection` does not exist**, despite what
-> `Documentation/clients/dotnet/getting-started.md:61` shows. The real extensions
-> are on `IHostApplicationBuilder`, `WebApplicationBuilder` (in the AspNetCore
-> package), and Aspire's `IDistributedApplicationBuilder`. `IHostBuilder.AddCratisChronicle()`
-> also exists but only registers concept type converters
-> (`Source/Clients/DotNET/Hosting/HostBuilderExtensions.cs:18-23`) — it is not
-> the wiring entry point.
+## Pin event generations for delivery
 
-`IChronicleBuilder` extensions are exactly five:
-`WithArtifactsProvider`, `WithIdentityProvider`, `WithCorrelationIdAccessor`,
-`WithNamespaceResolver`, `WithCamelCaseNamingPolicy`
-(`Source/Clients/DotNET/ChronicleBuilderExtensions.cs`). **There is no
-`WithClaimsBasedNamespaceResolver`**, despite a doc comment at
-`ChronicleOptions.cs:141` referring to one. Pass the resolver instead:
-`new ChronicleClient(options, namespaceResolver: new ClaimsBasedNamespaceResolver("tenant_id"))`.
+`ChronicleOptions.EventGenerationDelivery` defaults to `Compatibility`. Opt in
+with `EventGenerationDelivery.Pinned` (`Cratis.Chronicle.Observation`) **before
+connecting**. Reactors/reducers receive their handler's CLR event generation;
+typed materialized projections use each clause's CLR generation.
+
+Requires Chronicle 19.41.0 for reactors/reducers and 19.48.0 for typed materialized projections.
+
+Read [references/pinned-generation-delivery.md](references/pinned-generation-delivery.md)
+for compiling standalone/host configuration, registration constraints, and the
+Compatibility-only surfaces. For migration, PDL pin persistence, and integration
+test requirements, use **cratis-chronicle-event-type-migration**.
 
 ## The client and the server check each other
 
-Since Chronicle 17 the compatibility check is a server-side RPC, and **the client
-runs it automatically inside `Connect()`** —
-`Source/Clients/Connections/ChronicleConnection.cs:310` calls
-`CheckCompatibility` (`:414`), sending the client type, client version, protocol
-version, and the descriptor set its contracts package was built with (`:420-426`).
-The rationale is at `:409-413`: Chronicle has clients in four languages and only
-some can build a descriptor set at runtime, so each ships the one it was built
-with and the server does the single comparison.
+The client runs the server-side compatibility check automatically inside `Connect()`; a genuine mismatch throws `IncompatibleServerException`, while a transport error is logged and ignored by design.
 
-Behavior you can rely on:
-
-- A server too old to have the RPC answers `Unimplemented`, and the client falls
-  back to the previous client-side exchange (`:428-434`) — upgrading the client
-  does not silently drop the check.
-- Any other transport error is **logged and ignored** (`:435-441`), on the stated
-  reasoning that failing to ask says nothing about whether the two sides agree.
-- A genuine mismatch throws `IncompatibleServerException`
-  (`Source/Clients/Connections/IncompatibleServerException.cs:10`) whose message
-  names the server address, its version, its protocol version, and the specific
-  incompatibilities (`:443-449`).
-
-The client identifies itself as `".NET"`
-(`Source/Clients/Connections/ChronicleClientIdentity.cs:22`) with its assembly
-informational version (`:27`) and the contracts protocol version (`:32`).
+Read [references/compatibility-check.md](references/compatibility-check.md) when diagnosing an `IncompatibleServerException`, a skipped compatibility check, or an old-server fallback.
 
 ## Event types
 
@@ -218,7 +137,7 @@ public record <EventName>(<Type> <Property>);
 ```
 
 `EventTypeAttribute` is in `Cratis.Chronicle.Events` —
-`Source/Clients/DotNET/Events/EventTypeAttribute.cs:20`:
+`Source/Clients/DotNET/Events/EventTypeAttribute.cs`:
 
 ```csharp
 public sealed class EventTypeAttribute(string id = "", uint generation = EventTypeGeneration.FirstValue) : Attribute
@@ -231,13 +150,13 @@ public sealed class EventTypeAttribute(string id = "", uint generation = EventTy
 For a new event, pass nothing: the type name is the identifier. Use `generation`
 only when evolving a contract that already exists, and prefer
 `EventTypeGenerationForAttribute<TEventType>` over a second `[EventType]` — the
-guidance is in the attribute's own remarks (`EventTypeAttribute.cs:14-18`).
+guidance is in the attribute's own remarks (`EventTypeAttribute.cs`).
 
 ## Appending
 
 `IEventLog : IEventSequence` is a marker
-(`Source/Clients/DotNET/EventSequences/IEventLog.cs:9`); the surface is on
-`IEventSequence` (`Source/Clients/DotNET/EventSequences/IEventSequence.cs:14`):
+(`Source/Clients/DotNET/EventSequences/IEventLog.cs`); the surface is on
+`IEventSequence` (`Source/Clients/DotNET/EventSequences/IEventSequence.cs`):
 
 ```csharp
 Task<AppendResult> Append(                                   // :115
@@ -256,6 +175,33 @@ Task<AppendManyResult> AppendMany(EventSourceId eventSourceId, IEnumerable<objec
 Task<AppendManyResult> AppendMany(IEnumerable<EventForEventSourceId> events, /* ... */);                            // :167
 ```
 
+Requires Chronicle kernel 19.30.0 for event source definitions.
+
+Event source definitions: a never-instantiated type marked
+`IEventSource`, named by `[EventSource(name)]` (default: the type name without a trailing
+`EventSource`) and declaring streams with `[EventStream(name)]` (all in
+`Cratis.Chronicle.EventSources`; both take `Description` and `Concurrency`). Append through
+it with `EventForEventSourceId { EventSource = typeof(<Definition>), EventStream = "<stream>" }`;
+the source and stream types come from the definition and contradicting explicit
+`EventSourceType`/`EventStreamType` values are rejected. The stream id stays with the caller
+(`EventStreamId`, or `ICanProvideEventStreamId.GetEventStreamId()` on a reactor or command).
+
+```csharp
+[EventSource("Account")]
+[EventStream("Transactions")]
+public class Account : IEventSource;
+
+await eventStore.EventLog.AppendMany(
+[
+    new EventForEventSourceId(<accountId>, new <Deposited>(<amount>))
+    {
+        EventSource = typeof(Account),
+        EventStream = "Transactions",
+        EventStreamId = <streamId>
+    }
+]);
+```
+
 ```csharp
 var result = await eventStore.EventLog.Append(<eventSourceId>, new <EventName>(<value>));
 if (!result.IsSuccess)
@@ -266,18 +212,24 @@ if (!result.IsSuccess)
 
 - `EventSourceId` is a `record EventSourceId(string Value) : ConceptAs<string>`
   with implicit conversion from `string` and `Guid`
-  (`Source/Clients/DotNET/Events/EventSourceId.cs:12`, `:37`, `:44`).
+  (`Source/Clients/DotNET/Events/EventSourceId.cs`).
 - `AppendResult` carries `SequenceNumber`, `IsSuccess`,
   `HasConstraintViolations`, `HasConcurrencyViolations`, `HasErrors`,
   `ConstraintViolations`, `ConcurrencyViolation`, `Errors`, and the routing facts
-  (`Source/Clients/DotNET/EventSequences/AppendResult.cs:13-59`).
+  (`Source/Clients/DotNET/EventSequences/AppendResult.cs`).
 - The `IEnumerable<EventForEventSourceId>` overload is the way to append across
   several event sources in one batch.
 - **There is no `AppendAnonymous`.** It does not exist anywhere in the product.
 
-Reading back is on the same interface: `GetForEventSourceIdAndEventTypes` (`:51`),
-`HasEventsFor` (`:58`), `GetFromSequenceNumber` (`:67`), `GetNextSequenceNumber`
-(`:73`), `GetTailSequenceNumber` (`:84`). Erasure is `Redact` (`:191`, `:200`).
+Reading back is on `IEventSequence`: `GetForEventSourceIdAndEventTypes`,
+`HasEventsFor`, `GetFromSequenceNumber`, `GetNextSequenceNumber`, and
+`GetTailSequenceNumber`. Redaction is `Redact`; subject erasure is a separate
+compliance operation.
+
+Read [additional client surfaces](references/additional-surfaces.md) when using
+named tags, prepared appends, metadata-only reads, seeding or cross-cutting event
+properties. For `CompleteStream`, use **cratis-chronicle-event-constraints**;
+for guarded state-dependent decisions, use **cratis-chronicle-decision-reads**.
 
 Several appends as one unit:
 
@@ -288,122 +240,36 @@ await unitOfWork.Commit();
 ```
 
 `ITransactionalEventSequence` returns `Task`, not a result
-(`Source/Clients/DotNET/EventSequences/ITransactionalEventSequence.cs:33`); the
+(`Source/Clients/DotNET/EventSequences/ITransactionalEventSequence.cs`); the
 results live on the unit of work.
 
 ## Observing
 
 | Artifact | Shape | Source |
 | --- | --- | --- |
-| Reactor | marker `IReactor` (empty interface), `[Reactor]` optional | `Reactors/IReactor.cs:9`, `Reactors/ReactorAttribute.cs:14` |
-| Reducer | `IReducerFor<TReadModel>` | `Reducers/IReducerFor.cs:10` |
-| Projection | `IProjectionFor<TReadModel>` with `Define(IProjectionBuilderFor<TReadModel>)` | `Projections/IProjectionFor.cs:10-17` |
+| Reactor | marker `IReactor` (empty interface), `[Reactor]` optional | `Reactors/IReactor.cs`, `Reactors/ReactorAttribute.cs` |
+| Self model (.NET reducer default) | public static `Reduce(event, model? current[, EventContext])`, returns model or `Task<model>` (nullable results allowed); no marker | `Reducers/SelfReducerMethods.cs` |
+| Separate reducer | `IReducerFor<TReadModel>` for DI, replay instance behavior or separation | `Reducers/IReducerFor.cs` |
+| Plain reducer | instance handlers infer one model; nomination required | `Reducers/RegisteredReducerReadModel.cs` |
+| Projection | `IProjectionFor<TReadModel>` with `Define(IProjectionBuilderFor<TReadModel>)` | `Projections/IProjectionFor.cs` |
 | Model-bound projection | attributes on the read model | `Projections/ModelBound/` |
-| Read model reactor | marker `IReadModelReactor`, methods `Added`/`Modified`/`Removed` | `ReadModels/IReadModelReactor.cs:10-18` |
+| Read model reactor | marker `IReadModelReactor`, methods `Added`/`Modified`/`Removed` | `ReadModels/IReadModelReactor.cs` |
 
-**A reactor handler is found by its first parameter's type**, and further
-parameters are resolved as dependencies — `EventContext`, a read model, a service
-(`Source/Clients/DotNET/Reactors/EventHandlerMethods.cs:21-46`, `:89-103`). The
-return may be `Task`, `void`, or a side-effect event type.
-
-```csharp
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Reactors;
-
-public class <ReactorName>(<IDependency> <dependency>) : IReactor
-{
-    public async Task <AnyMethodName>(<EventName> @event, EventContext context)
-    {
-        await <dependency>.<DoSomething>(context.EventSourceId, @event.<Property>);
-    }
-}
-```
-
-> **There is no `[Observer]` attribute and no `IObserver` client artifact.**
-> "Observer" is the kernel's umbrella term for a projection, reducer, or reactor;
-> it is not something you write. `Source/Clients/DotNET/Observation/` holds
-> `ObserverId`, `ObserverRunningState`, and failed-partition types only.
-
-Read models are queried through `eventStore.ReadModels`
-(`Source/Clients/DotNET/ReadModels/IReadModels.cs`):
-`GetInstanceById<TReadModel>(ReadModelKey, ReadModelSessionId?)` (`:38`),
-`GetInstances<TReadModel>(EventCount?)` (`:55`),
-`GetSnapshotsById<TReadModel>` (`:63`),
-`IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()` (`:70`).
+Read [observer handlers and reads](references/discovery.md#observer-handlers-and-reads)
+for reactor dispatch, an instance-handler example and `eventStore.ReadModels` APIs.
+There is no `[Observer]` attribute or `IObserver` client artifact.
 
 ## Discovery
 
-Artifacts are found by **assembly scanning**, with no registration call and no DI
-container required. `DefaultClientArtifactsProvider.Default` composes the
-project-referenced and package-referenced assemblies
-(`Source/Clients/DotNET/DefaultClientArtifactsProvider.cs:37`), and the
-predicates are exactly (`:242-251`):
+Default scanning finds marked/interface artifacts and complete self shapes.
+Plain instance reducers require nomination before store creation. Self models
+need no activation or fold-time DI. See the [read-model ladder](../cratis-chronicle-read-model/SKILL.md#step-3--choose-a-projection-or-a-reducer)
+and [reducer contract](../cratis-chronicle-reducer/SKILL.md) for placement,
+upgrades, warnings and conflicts. Self reduction is
+.NET-only, not an other-client or Stage contract.
 
-| Kind | Predicate |
-| --- | --- |
-| event types | `HasAttribute<EventTypeAttribute>()` or `HasAttribute<EventTypeGenerationForAttribute>()` |
-| projections | `HasInterface(typeof(IProjectionFor<>))` |
-| model-bound projections | `HasModelBoundProjectionAttributes()` |
-| reactors | `HasInterface<IReactor>()` and not generic |
-| read model reactors | `HasInterface<IReadModelReactor>()` and not generic |
-| reducers | `HasInterface(typeof(IReducerFor<>))` and not generic |
-
-Explicit registration is available per family as an alternative —
-`IEventTypes.Register`, `IConstraints.Register`, `IProjections.Register`,
-`IReducers.Register`, `IReactors.Register<TReactor>()`,
-`IReadModels.Register<TReadModel>()` — and is what you use with
-`AutoDiscoverAndRegister = false`.
-
-## Lifecycle
-
-- **Registration is wired to the connection, not called by you.**
-  `EventStore.cs:265-268` subscribes `RegisterAll` to `Connection.Lifecycle.OnConnected`
-  when `autoDiscoverAndRegister` is on, so a reconnect re-registers everything.
-- `DiscoverAll()` does event types first, then constraints, reactors, reducers,
-  projections, and seeding in parallel (`EventStore.cs:349-362`). `RegisterAll()`
-  is single-flighted with jittered backoff and a background retry loop (`:373-379`).
-- **Wait with `WaitForRegistration`, not by polling `IsConnected`.**
-  `RegistrationWaitExtensions.WaitForRegistration(this IEventStore, TimeSpan? timeout = default)`
-  (`Source/Clients/DotNET/Registrations/RegistrationWaitExtensions.cs:42`, default
-  5 seconds) exists precisely for this, and its own remarks warn against the
-  `IConnectionLifecycle.IsConnected` alternative (`:34-39`). Connected is not
-  registered.
-- **Keepalive is a bidirectional stream plus a watchdog.** The watchdog monitors
-  every `MonitorIntervalMilliseconds = 1000`
-  (`Source/Clients/Connections/ConnectionWatchdog.cs:34`) and a keepalive that
-  falls more than 5 seconds behind is treated as a lost connection, with
-  reconnect backoff capped at 30 seconds. **The failure mode is silence, not an
-  exception** — appends keep working while observers go quiet.
-- `Dispose()` disposes read model reactors for created stores, cancels the owned
-  connection, and disposes the connection
-  (`Source/Clients/DotNET/ChronicleClient.cs:225-246`).
-
-## What a standalone app owns that a host would have supplied
-
-Every one of these has a silent default. Read them as a checklist, because the
-defaults are reasonable for a sample and wrong for a service
-(`ChronicleClient.cs:121-127`):
-
-| Concern | Default when you pass nothing |
-| --- | --- |
-| `IClientArtifactsProvider` | `DefaultClientArtifactsProvider.Default` — full assembly scan |
-| `IServiceProvider` | `DefaultServiceProvider`, which activates everything through `Activator.CreateInstance` (`DefaultServiceProvider.cs:41`) |
-| `IIdentityProvider` | `BaseIdentityProvider` |
-| `ICorrelationIdAccessor` | `CorrelationIdAccessor` |
-| `IEventStoreNamespaceResolver` | `DefaultEventStoreNamespaceResolver` — always `"Default"` |
-| `ILoggerFactory` | `new LoggerFactory()` — **a silent one** |
-| Configuration binding | none; there is no `Cratis:Chronicle` section without a host |
-
-The `IServiceProvider` default is the sharp one: **a reactor or reducer with
-constructor dependencies is default-constructed** unless you pass a real
-container. Pass one, or keep observers dependency-free.
-
-The AspNetCore package additionally registers `AddUnitOfWork()`,
-`AddCompliance()`, `AddCausation()`, `AddChronicleHealthCheck()`, and
-`UseCratisChronicle()` — none of which the base package gives you.
-
-**Keep the process alive.** Observation is a live gRPC duplex stream; a console
-app that appends and returns from `Main` never sees a reactor run.
+Read [discovery and nomination](references/discovery.md) for missing artifacts,
+plain-class registration or `AutoDiscoverAndRegister = false`.
 
 ## Common pitfalls
 
@@ -418,8 +284,8 @@ app that appends and returns from `Main` never sees a reactor run.
 | Polling `IsConnected` to know it is ready | Connected is not registered; use `WaitForRegistration` |
 | Treating a quiet reactor as "no events yet" | Keepalive loss stops observers while appends keep succeeding |
 | Returning from `Main` after appending | The observation stream dies with the process |
-| Expecting the analyzers | `Cratis.Chronicle.CodeAnalysis` is a separate opt-in package |
-| Copying a version out of the repository | It is a `1.0.0` placeholder; take it from nuget.org |
+| Assuming no CHR analyzers without an explicit reference | The client brings `Cratis.Chronicle.CodeAnalysis` transitively |
+| Copying a version out of the repository | It is a placeholder; take it from nuget.org |
 
 ## Verify
 
@@ -430,7 +296,10 @@ app that appends and returns from `Main` never sees a reactor run.
 - A production connection string sets `skipTlsValidation=false`.
 - An `ILoggerFactory` is supplied, and client logs are visible.
 - Observers that take dependencies get a real `IServiceProvider`.
-- Readiness is established with `WaitForRegistration`, not with `IsConnected`.
+- Projection readiness inspects the `WaitForRegistration` outcome, not `IsConnected`;
+  reactor/reducer readiness waits for their observer state.
+- CHR0054–CHR0057 are clean: dispatchable returns, valid typed stream filters,
+  and one projection/reducer target per class.
 - The process stays alive for as long as observation is expected.
 - The build is clean and the specifications pass against the verified package
   version.

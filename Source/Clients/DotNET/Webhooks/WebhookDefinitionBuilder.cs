@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Webhooks;
@@ -19,6 +20,14 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> _authorization = default(OneOf.Types.None);
     bool _isReplayable = true;
     bool _isActive = true;
+    EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery)
+    {
+        _generationDelivery = generationDelivery;
+        return this;
+    }
 
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId)
@@ -38,6 +47,13 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     public IWebhookDefinitionBuilder WithBearerToken(string token)
     {
         _authorization = new BearerTokenAuthorization(token);
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope = "")
+    {
+        _authorization = new OAuthAuthorization(authority, clientId, clientSecret) { Scope = scope };
         return this;
     }
 
@@ -89,6 +105,9 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
             Target: target,
             EventSequenceId: _eventSequenceId,
             IsReplayable: _isReplayable,
-            IsActive: _isActive);
+            IsActive: _isActive)
+        {
+            GenerationDelivery = _generationDelivery
+        };
     }
 }

@@ -14,7 +14,8 @@ public class and_signature_has_invalid_context_parameter : given.a_reducer_metho
     {
     }
 
-    public class Reducer : Cratis.Chronicle.Reducers.IReducer
+    public class Model {}
+    public class Reducer : Cratis.Chronicle.Reducers.IReducerFor<Model>
     {
         public void {|#0:On|}(KnownEvent @event, string context)
         {

@@ -1,0 +1,61 @@
+---
+title: Event sources and streams
+description: Declare a Chronicle event source and its event streams as a C# type, append through it, and derive the concurrency guard from its dimensions.
+---
+
+An event source definition is a C# type that names a kind of event source, lists the event streams it owns and declares which dimensions its appends are guarded by. You use it to stop passing routing strings around and to get a consistent concurrency guard for every append.
+
+Without a definition, every append and every observer repeats strings such as `eventSourceType: "account"` and `eventStreamType: "Transactions"`. A typo routes events to a stream nobody reads, and the concurrency scope is something each caller builds by hand. With a definition, the names live in one place, the client checks them before it sends anything, the kernel checks them again, and an append without an explicit scope gets a guard that matches what you declared.
+
+## A minimal example
+
+<ChronicleClientTabs snippet="event-sources/index/minimal" variants="csharp" />
+
+The definition is `AccountEventSource`. It is never instantiated: it carries attributes only. The deposit goes to the `Transactions` stream of one account, with the month as the stream id. Because `Transactions` declares the event source id, the stream type and the stream id as its dimensions, two deposits to the same account in the same month conflict, and a deposit to another month does not.
+
+## The vocabulary
+
+Chronicle has long stored four values on every event. A definition gives three of them a declared home.
+
+| Term | What it is | Where it comes from |
+|---|---|---|
+| `EventSourceId` | The instance, such as one account | The caller, on every append |
+| Event source type (`EventSourceType`) | The kind of event source, such as `Account` | The definition's name |
+| Event stream type (`EventStreamType`) | A named process of the event source, such as `Transactions` | The name of a stream the definition declares |
+| Event stream id (`EventStreamId`) | One instance of a stream, such as `2026-04` | The caller. Chronicle imposes no format |
+
+Each event also records the name of the definition it was appended through, in `EventContext.EventSource`. It is empty for events that were appended without a definition.
+
+A definition is not an aggregate, and it is not a set of tags. The guard it derives does cover a whole event source or stream, whatever the event type, so it behaves like an aggregate boundary: choose it when the stream is the consistency boundary, and use a [decision read](../read-models/decision-reads.mdx) when a rule needs a narrower condition. It does not list the event types that belong to it, and it does not own an event type: the same event type can be appended through any definition. Each event has exactly one event source and at most one stream.
+
+## When to use a definition
+
+Use one when:
+
+- Events of one kind of entity are written from several places and the routing strings must agree.
+- An entity has independent sub-histories, such as one stream per month, per author or per process step, and you want writers on different sub-histories not to conflict.
+- You want [observers](./filtering.mdx) that handle only one stream.
+- You want to close one stream and keep the rest of the entity open. See [Close a stream](./closing.mdx).
+
+Skip it when every event of an entity can share one history and one guard. The plain append APIs are still valid and need no definition. See [Questions and pitfalls](./faq.mdx#when-should-i-not-use-a-definition).
+
+## Client support
+
+Event source definitions are supported by the .NET, [Kotlin](https://github.com/Cratis/Chronicle.Kotlin), [TypeScript](https://github.com/Cratis/Chronicle.TypeScript) and [Elixir](https://github.com/Cratis/Chronicle.Elixir) clients. The [Python client](https://github.com/Cratis/Chronicle.Python) has no definition API. The Kotlin, TypeScript, Elixir and Python packages under `Source/Clients` in this repository only hold generated kernel contracts. The examples in this section are .NET; the other clients express the same concepts in their own API, so see their repositories for the syntax. The kernel contract that registers definitions is language neutral, and the Workbench lists what is registered. [Where the clients differ](../clients/where-the-clients-differ.md) covers the append and concurrency differences that exist today.
+
+## In this section
+
+| You want to | Read |
+|---|---|
+| Declare an event source and its streams | [Define an event source](./defining.mdx) |
+| Write events through a definition | [Append through a definition](./appending.mdx) |
+| Choose what conflicts with what | [Concurrency](./concurrency.mdx) |
+| End a stream | [Close a stream](./closing.mdx) |
+| Let a reactor or reducer see one stream | [Filter observers](./filtering.mdx) |
+| Move from `[EventSourceType]` and `[EventStreamType]` strings | [Migrate from string routing](./migrating.mdx) |
+| See complete examples | [Scenarios](./scenarios.mdx) |
+| Understand registration, metadata and scope production | [How it works](./how-it-works.mdx) |
+| Use a definition with a decision model and an append condition | [Dynamic Consistency Boundary](./dcb.mdx) |
+| Find a quick answer or a pitfall | [Questions and pitfalls](./faq.mdx) |
+
+For the concept behind these terms, read [Event source](../concepts/event-source.md). For how definitions relate to decision models and append conditions, and what Chronicle does and does not share with DCB, read [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).

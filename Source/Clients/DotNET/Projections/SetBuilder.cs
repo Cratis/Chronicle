@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.Engine.Expressions;
@@ -37,7 +36,7 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
     /// <inheritdoc/>
     public TParentBuilder To(PropertyPath propertyPath)
     {
-        _expression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(propertyPath));
+        _expression = new EventContentPropertyExpression(ProjectionPropertyPaths.Resolve(propertyPath, namingPolicy, ProjectionPathRole.Source));
         return parent;
     }
 
@@ -56,6 +55,15 @@ public class SetBuilder<TReadModel, TEvent, TParentBuilder>(TParentBuilder paren
 
         return _expression!.Build();
     }
+
+    /// <summary>
+    /// Converts an accessor using this builder's serialization naming policy.
+    /// </summary>
+    /// <param name="expression">The member expression.</param>
+    /// <param name="description">The description of the property being configured.</param>
+    /// <returns>The serialized property path.</returns>
+    private protected PropertyPath ResolvePropertyPath(LambdaExpression expression, string description) =>
+        ProjectionPropertyPaths.FromExpression(expression, namingPolicy, ProjectionPathRole.Source, description);
 
     void ThrowIfMissingToExpression()
     {
@@ -92,71 +100,26 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     : SetBuilder<TReadModel, TEvent, TParentBuilder>(parent, targetProperty, namingPolicy, forceEventProperty), ISetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>
 {
     readonly TParentBuilder _parent = parent;
-    readonly INamingPolicy _namingPolicy = namingPolicy;
 
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
-        if (value is null)
-        {
-            _expression = NullExpression.Instance;
-            return _parent;
-        }
-
-        object actualValue = value!;
-
-        if (actualValue.IsConcept())
-        {
-            actualValue = actualValue.GetConceptValue();
-        }
-
-        if (actualValue.GetType().IsEnum)
-        {
-            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
-            if (underlyingType == typeof(int))
-            {
-                actualValue = Convert.ChangeType(actualValue, underlyingType);
-            }
-            else
-            {
-                actualValue = actualValue.ToString()!;
-            }
-        }
-
-        var invariantString = actualValue switch
-        {
-            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
-            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
-            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => actualValue.ToString()!
-        };
-
-        _expression = new ValueExpression(invariantString);
+        _expression = ConstantValueExpression.From(value);
         return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder To(Expression<Func<TEvent, TProperty>> eventPropertyAccessor)
     {
-        if (!eventPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventPropertyAccessor);
-        }
-
-        _expression = new EventContentPropertyExpression(_namingPolicy.GetPropertyName(propertyPath));
+        var propertyPath = ResolvePropertyPath(eventPropertyAccessor, $"property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
+        _expression = new EventContentPropertyExpression(propertyPath);
         return _parent;
     }
 
     /// <inheritdoc/>
     public TParentBuilder ToEventContextProperty(Expression<Func<EventContext, object>> eventContextPropertyAccessor)
     {
-        if (!eventContextPropertyAccessor.TryGetPropertyPath(out var propertyPath))
-        {
-            throw new InvalidPropertyExpression($"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'", eventContextPropertyAccessor);
-        }
-
+        var propertyPath = ResolvePropertyPath(eventContextPropertyAccessor, $"the event context value for property '{TargetProperty}' on read model '{typeof(TReadModel).FullName}'");
         _expression = new EventContextPropertyExpression(propertyPath);
         return _parent;
     }

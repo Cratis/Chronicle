@@ -1,7 +1,15 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/proxy-generation.md -->
 # Proxy generation
 
-Verified against `Cratis.Arc.ProxyGenerator.Build` `22.16.0`.
+## Contents
+
+- Wiring
+- MSBuild properties
+- What the generator extracts for client-side validation
+- Failure modes
+- Blocking severity
+
+Source: `Cratis.Arc.ProxyGenerator.Build`.
 
 ## Wiring
 
@@ -9,7 +17,7 @@ Reference the build package from the project that contains the commands,
 queries and read models, and set an output path:
 
 ```xml
-<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.16.0" />
+<PackageReference Include="Cratis.Arc.ProxyGenerator.Build" Version="22.75.0" />
 
 <PropertyGroup>
   <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../<Web>/src/api</CratisProxiesOutputPath>
@@ -26,9 +34,15 @@ That is the first thing to check when a build succeeds but no proxies appear.
 Output folders mirror the C# **namespace**, not the file path. A command in
 `<Root>.<Feature>` lands in `<output>/<Feature>/`.
 
+Requires Arc 22.82.0 for collection command responses to generate array types
+in `Command<...>` and `useCommand<...>` (for example `IEnumerable<ProjectSummary>`
+becomes `ProjectSummary[]`). Check the generator package version and regenerate;
+older proxies can type the already-array runtime response incorrectly.
+
 ## MSBuild properties
 
-The first nine properties below are declared with the default shown in the package's `.props`; the last three are read by the `.targets` only when set to `true` (absent means off).
+Properties below are forwarded by the package's `.props`/`.targets`; boolean
+switches without a declared default are off when absent.
 
 | Property | Default | Effect |
 | --- | --- | --- |
@@ -43,11 +57,19 @@ The first nine properties below are declared with the default shown in the packa
 | `CratisProxiesSkipFileIndexTracking` | `false` | Disables tracking which files the generator owns |
 | `CratisProxiesSkipIndexGeneration` | `false` | Does not write the per-folder `index.ts` barrels |
 | `CratisProxiesUseSourceFileAsOutputFile` | `false` | Names the generated file after the C# source file rather than the type |
-| `CratisProxiesEmitInterfaces` | off | **Arc ≥ 22.15.0** (the underlying `--emit-interfaces` flag exists from 22.14.0; the MSBuild property from 22.15.0). Emits plain TypeScript `interface`s instead of `@field`-decorated classes — no `@cratis/fundamentals` import in the output. Only for consumers that never reconstruct instances from JSON; command and query proxies need the classes |
+| `CratisProxiesUseProxyFileSuffix` | off | Emits `Name.proxy.ts` and matching barrels; avoids `.ts`/`.tsx` basename collisions |
+| `CratisProxiesEmitInterfaces` | off | Emits plain TypeScript `interface`s instead of `@field`-decorated classes — no `@cratis/fundamentals` import in the output. Only for consumers that never reconstruct instances from JSON; command and query proxies need the classes. Needs Arc 22.15.0 or later. |
 
 ⚠️ `CratisProxiesSkipOutputDeletion` defaults to `true`. Guidance that tells you
 to set it to `true` "so the generator does not delete your hand-written files"
 is describing the default, not a fix.
+
+The generator preserves hand-written `index.ts` exports, and generated files
+follow the Cratis ESLint configuration. Named concepts live only in the backend
+model: generated TypeScript erases them to primitives; nullable concept properties
+are optional. Sources:
+`Tools/ProxyGenerator.Build/build/Cratis.Arc.ProxyGenerator.Build.targets` under
+`Source/DotNET`.
 
 Item groups the target also forwards: `AssemblyToPackageMapping`,
 `ExcludeType`, `ExcludeNamespace`, `NamespaceRoot`, and `TypeToTsType`.
@@ -75,6 +97,9 @@ Rules declared on a `ConceptValidator<T>` are projected onto every property
 typed as that concept, so declaring a value's format once validates it in the
 browser too.
 
+Conditional `When`/`Unless` rules are not projected to the client. Extracted
+rules retain severity (`withSeverity`); command blocking thresholds still apply.
+
 ⚠️ **`Must(...)` is not extracted.** Neither is any rule that needs an injected
 dependency. Those run on the server only, which means
 `validateClientSide()` can pass while `execute()` still fails validation.
@@ -89,3 +114,10 @@ property.
 | Files appear under an unexpected folder | The folder mirrors the namespace; change the namespace or use `NamespaceRoot`/`CratisProxiesSegmentsToSkip` |
 | Stale proxies after a rename | `dotnet clean` then `dotnet build`; the generator does not delete by default |
 | A rule validates on the server but not in the browser | The rule is not in the extractable set above |
+
+## Blocking severity
+
+`[BlockOnValidationSeverity(ValidationResultSeverity.Warning)]` declares the
+lowest blocking severity for validation, `Provide` and execution. Caller
+`allowedSeverity`/`X-Allowed-Severity` can only make it stricter; `Unknown` blocks.
+The proxy carries `blockOnValidationSeverity` and honors it client-side.

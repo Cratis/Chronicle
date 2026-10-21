@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
@@ -61,6 +62,15 @@ public interface IDatabase
     Task<DbContextScope<UniqueConstraintDbContext>> UniqueConstraintTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName);
 
     /// <summary>
+    /// Gets a database context scope for a per-value unique constraint table.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <param name="constraintName">The table name.</param>
+    /// <returns>The database context scope.</returns>
+    Task<DbContextScope<UniqueConstraintValuesDbContext>> UniqueConstraintValuesTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName);
+
+    /// <summary>
     /// Gets a database context scope for a specific event sequence table within a namespace.
     /// </summary>
     /// <param name="eventStore">The name of the event store.</param>
@@ -78,8 +88,9 @@ public interface IDatabase
     /// <param name="namespace">The name of the namespace.</param>
     /// <param name="containerName">The container name of the read model (table name).</param>
     /// <param name="columns">The columns derived from the read model's <see cref="Schemas.JsonSchema"/>.</param>
+    /// <param name="purpose">The <see cref="ConnectionPurpose"/> the returned context connects for; <see cref="ConnectionPurpose.Schema"/> for changing tables.</param>
     /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the specified read model table.</returns>
-    Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns);
+    Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime);
 
     /// <summary>
     /// Clears all cached table-migration state that was recorded for the given connection string prefix.

@@ -56,9 +56,33 @@ public class ChronicleOptions : IValidatableObject
     public int? DedicatedHealthPort => Health.Port is { } port && port != Port ? port : null;
 
     /// <summary>
+    /// Gets the maximum size, in bytes, of a gRPC message the kernel accepts from a client. Defaults to 100 MB.
+    /// </summary>
+    /// <remarks>
+    /// Matches what the Chronicle clients allow themselves to send by default. ASP.NET Core would otherwise limit this to
+    /// 4 MB, which fails any append of a large event, and any client-side reducer whose read model has grown past it,
+    /// with a <c language="csharp">ResourceExhausted</c> status. Set to <see langword="null"/> to remove the limit.
+    /// Configure through <c language="csharp">Cratis__Chronicle__MaxReceiveMessageSize</c> in the environment.
+    /// </remarks>
+    public int? MaxReceiveMessageSize { get; init; } = 100 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets the maximum size, in bytes, of a gRPC message the kernel sends to a client. Defaults to unlimited.
+    /// </summary>
+    /// <remarks>
+    /// Configure through <c language="csharp">Cratis__Chronicle__MaxSendMessageSize</c> in the environment.
+    /// </remarks>
+    public int? MaxSendMessageSize { get; init; }
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();
+
+    /// <summary>
+    /// Gets the shared shutdown drain configuration.
+    /// </summary>
+    public Shutdown Shutdown { get; init; } = new();
 
     /// <summary>
     /// Feature toggles for Chronicle.
@@ -85,6 +109,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
+
+    /// <summary>
+    /// Gets the durable occurrence delivery configuration.
+    /// </summary>
+    public Occurrences Occurrences { get; init; } = new();
 
     /// <summary>
     /// Gets the alerts configuration.
@@ -146,6 +175,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the pattern detection configuration.
     /// </summary>
     public PatternDetection PatternDetection { get; init; } = new PatternDetection();
+
+    /// <summary>
+    /// Gets or inits the configuration for how the Workbench is served.
+    /// </summary>
+    public WorkbenchOptions Workbench { get; init; } = new WorkbenchOptions();
 
     /// <summary>
     /// Gets or inits the TLS configuration.

@@ -41,8 +41,26 @@ internal static class DecisionReadScopes
             boundary = first.SequenceNumber.Value < second.SequenceNumber.Value ? first.SequenceNumber : second.SequenceNumber;
         }
         var types = first.EventTypes!.Concat(second.EventTypes!).DistinctBy(_ => _.Id).ToArray();
-        return first with { SequenceNumber = boundary, EventTypes = types };
+        var sameStream = first.EventStreamType == second.EventStreamType && first.EventStreamId == second.EventStreamId;
+        return first with
+        {
+            SequenceNumber = boundary,
+            EventTypes = types,
+            EventStreamType = sameStream ? first.EventStreamType : null,
+            EventStreamId = sameStream ? first.EventStreamId : null,
+            EventSourceType = first.EventSourceType == second.EventSourceType ? first.EventSourceType : null
+        };
     }
+
+    /// <summary>Matches read guards to caller IDs by wire identity without changing event payloads or legacy grouping.</summary>
+    /// <param name="scopes">The read guards.</param>
+    /// <param name="events">The events being guarded.</param>
+    /// <returns>The guards keyed by the original event IDs, retaining independent read labels.</returns>
+    internal static Dictionary<EventSourceId, ConcurrencyScope> ForEvents(IReadOnlyDictionary<EventSourceId, ConcurrencyScope> scopes, IReadOnlyList<EventForEventSourceId> events) =>
+        scopes.SelectMany(pair => events.Select(_ => _.EventSourceId)
+                .Where(label => label.Value == pair.Key.Value).Distinct().DefaultIfEmpty(pair.Key)
+                .Select(label => new KeyValuePair<EventSourceId, ConcurrencyScope>(label, pair.Value)))
+            .ToDictionary(_ => _.Key, _ => _.Value);
 
     /// <summary>Collects and validates detached reads for one target.</summary>
     /// <param name="reads">The reads.</param>
@@ -55,7 +73,7 @@ internal static class DecisionReadScopes
         foreach (var read in reads)
         {
             Validate(read, store, @namespace, EventSequenceId.Log);
-            var label = (EventSourceId)read.Key;
+            var label = new EventSourceId(read.Scope.EventSourceId!.Value);
             scopes[label] = scopes.TryGetValue(label, out var existing) ? Merge(existing, read.Scope) : read.Scope;
         }
         return scopes;

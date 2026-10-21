@@ -23,6 +23,8 @@ static class JoinDefinitionExtensions
     /// <param name="eventType">The event type to join from.</param>
     /// <param name="memberName">The member name on the projection model.</param>
     /// <param name="propertyName">The property name on the projection model.</param>
+    /// <param name="childIdentity">The serialized identifying property of the enclosing child collection, if any.</param>
+    /// <exception cref="MissingChildIdentityForJoin">The join omits its target and the child has no identifying property.</exception>
     internal static void ProcessJoinAttribute(
         this IDictionary<EventType, JoinDefinition> targetJoin,
         Func<Type, EventType> getOrCreateEventType,
@@ -30,7 +32,8 @@ static class JoinDefinitionExtensions
         Attribute attr,
         Type eventType,
         string memberName,
-        string propertyName)
+        string propertyName,
+        string? childIdentity = null)
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var onProperty = attr.GetType().GetProperty(nameof(JoinAttribute<object>.On));
@@ -39,13 +42,22 @@ static class JoinDefinitionExtensions
         var on = onProperty?.GetValue(attr) as string;
         var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
 
+        // Scalar [Nested] objects also use a children definition, but have no collection identity (NotSet).
+        // They keep the property-name fallback, including nested objects inside child collections.
+        if (childIdentity == PropertyPath.NotSetValue)
+        {
+            childIdentity = null;
+        }
+
         if (!targetJoin.TryGetValue(eventTypeId, out var joinDef))
         {
-            // Normalize the join-on property to the read model's serialized naming (as every other property
-            // path here is) so it matches the stored document field. The fallback propertyName is already
-            // normalized; an explicit `on` (e.g. from nameof(...)) still carries the CLR casing and must be
-            // converted, otherwise a root-level join fails to locate the document to enrich.
-            var normalizedOn = on is not null ? namingPolicy.GetPropertyName(new PropertyPath(on)) : propertyName;
+            if (on is null && childIdentity == WellKnownExpressions.EventSourceId)
+            {
+                throw new MissingChildIdentityForJoin(eventType, memberName);
+            }
+
+            // Explicit targets carry CLR casing; the child identity and fallback property are already serialized.
+            var normalizedOn = on is not null ? (string)ProjectionPropertyPaths.Resolve(on, namingPolicy, ProjectionPathRole.Target) : childIdentity ?? propertyName;
             joinDef = new JoinDefinition
             {
                 On = normalizedOn,
@@ -57,7 +69,6 @@ static class JoinDefinitionExtensions
 
         var eventPropertyToUse = eventPropertyName ?? memberName;
         PropertyValidator.ValidatePropertyExists(eventType, eventPropertyToUse);
-        var eventPropPath = new PropertyPath(eventPropertyToUse);
-        joinDef.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropPath);
+        joinDef.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyToUse, namingPolicy, ProjectionPathRole.Source);
     }
 }

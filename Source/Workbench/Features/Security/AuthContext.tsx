@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         } catch {
             clearAntiforgeryToken();
             setIsAuthenticated(false);
-            navigate(absolutePath('/login'));
+            navigate('/login');
         } finally {
             setIsLoading(false);
         }
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!response.ok) throw new Error('Logout failed. Please try again.');
         clearAntiforgeryToken();
         setIsAuthenticated(false);
-        navigate(absolutePath('/login'));
+        navigate('/login');
     };
 
     useEffect(() => { checkAuth(); }, []);

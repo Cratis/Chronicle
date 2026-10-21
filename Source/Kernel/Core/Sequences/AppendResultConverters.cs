@@ -39,6 +39,35 @@ internal static class AppendResultConverters
         {
             EventSourceId = violation.EventSourceId,
             ExpectedSequenceNumber = violation.ExpectedSequenceNumber,
-            ActualSequenceNumber = violation.ActualSequenceNumber
+            ActualSequenceNumber = violation.ActualSequenceNumber,
+            ConflictingEventTypeId = violation.ConflictingEventTypeId?.Value,
+            ConflictingSequenceNumber = violation.ConflictingSequenceNumber?.Value,
+            ScopeIndex = violation.ScopeIndex,
+            Scope = violation.Scope is { } scope ? new()
+            {
+                SequenceNumber = scope.SequenceNumber,
+                EventSourceId = scope.EventSourceId,
+                EventStreamType = scope.EventStreamType,
+                EventStreamId = scope.EventStreamId,
+                EventSourceType = scope.EventSourceType,
+                EventTypes = scope.EventTypes?.Select(_ => new Contracts.Sequences.EventType { Id = _.Id, Generation = _.Generation, Tombstone = _.Tombstone }).ToList(),
+                ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent
+            } : null
+        };
+
+    /// <summary>
+    /// Converts an <see cref="IdempotencyKeyConflict"/> to its <see cref="Contracts.Sequences.IdempotencyKeyConflict"/> representation.
+    /// </summary>
+    /// <param name="conflict">The <see cref="IdempotencyKeyConflict"/> to convert.</param>
+    /// <returns>The converted <see cref="Contracts.Sequences.IdempotencyKeyConflict"/>.</returns>
+    public static Contracts.Sequences.IdempotencyKeyConflict ToContract(this IdempotencyKeyConflict conflict) =>
+        new()
+        {
+            Key = conflict.Key,
+            ExistingSequenceNumber = conflict.ExistingSequenceNumber,
+            StoredEventTypeId = conflict.StoredEventTypeId,
+            StoredEventTypeGeneration = conflict.StoredEventTypeGeneration,
+            RequestedGeneration = conflict.RequestedGeneration,
+            Reason = (Contracts.EventSequences.IdempotencyConflictReason)conflict.Reason
         };
 }

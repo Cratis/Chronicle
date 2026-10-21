@@ -35,7 +35,7 @@ public record CapturedEvent(string Id, Contracts.Events.EventContext Context, st
     /// <param name="storage">The <see cref="IStorage"/> holding the event sequence.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> the event content is rendered with.</param>
     /// <returns>A collection of captured events.</returns>
-    internal static async Task<IEnumerable<CapturedEvent>> CapturedEvents(
+    public static async Task<IEnumerable<CapturedEvent>> CapturedEvents(
         EventStoreName eventStore,
         string captureName,
         EventStoreNamespaceName @namespace,

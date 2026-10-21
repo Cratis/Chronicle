@@ -26,6 +26,6 @@ public class when_reindexing_events_for_two_subjects_with_the_same_value : given
         await ReindexConstraintsStep.ReindexEvent(_definition, EventFor(_secondSubject), ContentWith(Value), _seen, _validator, _storage);
     }
 
-    [Fact] void should_index_the_shared_hash_for_the_first_subject() => _storage.Received(1).Save(_firstSubject, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
-    [Fact] void should_index_the_same_shared_hash_for_the_second_subject() => _storage.Received(1).Save(_secondSubject, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
+    [Fact] void should_index_the_shared_hash_for_the_first_subject() => _storage.Received(1).Save(_firstSubject, _definition, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
+    [Fact] void should_index_the_same_shared_hash_for_the_second_subject() => _storage.Received(1).Save(_secondSubject, _definition, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, Arg.Any<string>());
 }

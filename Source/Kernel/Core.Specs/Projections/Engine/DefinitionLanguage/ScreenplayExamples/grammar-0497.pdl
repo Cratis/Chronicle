@@ -1,0 +1,5 @@
+projection User => UserReadModel    # Level 0
+  from UserCreated                  # Level 1 (INDENT)
+    Name = name                     # Level 2 (INDENT)
+    Email = email                   # Level 2
+                                    # (DEDENT, DEDENT)

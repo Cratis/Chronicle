@@ -37,17 +37,19 @@ public class ReducerCurrentReadModelMustBeNullableAnalyzer : DiagnosticAnalyzer
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
 
-        if (methodSymbol.MethodKind != MethodKind.Ordinary || methodSymbol.IsStatic)
+        var self = SelfReducerPolicy.CanBeSelf(methodSymbol.ContainingType, context.Compilation) &&
+            SelfReducerPolicy.IsNearMiss(methodSymbol, methodSymbol.ContainingType, context.Compilation);
+        if (methodSymbol.MethodKind != MethodKind.Ordinary || (methodSymbol.IsStatic && !self))
         {
             return;
         }
 
-        if (!WellKnownTypes.ImplementsIReducer(methodSymbol.ContainingType, context.Compilation))
+        if (!self && !WellKnownTypes.ImplementsIReducer(methodSymbol.ContainingType, context.Compilation))
         {
             return;
         }
 
-        var readModelType = GetReadModelType(methodSymbol.ContainingType, context.Compilation);
+        var readModelType = self ? methodSymbol.ContainingType : GetReadModelType(methodSymbol.ContainingType, context.Compilation);
         if (readModelType is null)
         {
             return;
@@ -59,7 +61,7 @@ public class ReducerCurrentReadModelMustBeNullableAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (!WellKnownTypes.HasEventTypeAttribute(parameters[0].Type))
+        if (!self && !WellKnownTypes.HasEventTypeAttribute(parameters[0].Type))
         {
             return;
         }

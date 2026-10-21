@@ -32,7 +32,8 @@ public static class WebhookDefinitionConverters
                 et => "$eventSourceId"),
             Target = definition.Target.ToMongoDB(),
             IsReplayable = definition.IsReplayable,
-            IsActive = definition.IsActive
+            IsActive = definition.IsActive,
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -47,7 +48,11 @@ public static class WebhookDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
-            definition.IsReplayable);
+            definition.IsReplayable,
+            definition.IsActive)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
@@ -66,7 +71,7 @@ public static class WebhookDefinitionConverters
             authorization = new Concepts.Security.OAuthAuthorization(
                 target.OAuthAuthorization.Authority,
                 target.OAuthAuthorization.ClientId,
-                target.OAuthAuthorization.ClientSecret);
+                target.OAuthAuthorization.ClientSecret) { Scope = target.OAuthAuthorization.Scope };
         }
         else
         {
@@ -101,7 +106,8 @@ public static class WebhookDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             },
             none => { });
 

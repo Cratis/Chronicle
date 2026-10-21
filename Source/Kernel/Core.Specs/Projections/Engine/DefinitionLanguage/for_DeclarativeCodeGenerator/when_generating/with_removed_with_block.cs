@@ -67,5 +67,5 @@ public class with_removed_with_block : given.a_declarative_code_generator
 
     [Fact] void should_contain_removed_with_block() => _result.ShouldContain(".RemovedWith<AccountClosed>");
 
-    [Fact] void should_contain_event_source_id_in_removed_with() => _result.ShouldContain("e => e.EventSourceId");
+    [Fact] void should_use_default_event_source_id_for_removal() => _result.ShouldContain(".RemovedWith<AccountClosed>()");
 }

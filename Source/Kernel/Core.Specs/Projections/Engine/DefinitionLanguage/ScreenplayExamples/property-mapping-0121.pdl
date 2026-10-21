@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    OrderNumber = orderNumber
+    CustomerId = customerId
+    Total = total
+    Status = "New"
+    PlacedAt = $eventContext.occurred
+    TaxRate = 0.08

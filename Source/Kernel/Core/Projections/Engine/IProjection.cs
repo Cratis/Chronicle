@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -23,9 +24,19 @@ public interface IProjection
     EventSequenceId EventSequenceId { get; }
 
     /// <summary>
+    /// Gets the generation delivery policy for this projection tree.
+    /// </summary>
+    EventGenerationDelivery GenerationDelivery => EventGenerationDelivery.Compatibility;
+
+    /// <summary>
     /// Gets the unique identifier of the <see cref="IProjection"/>.
     /// </summary>
     ProjectionId Identifier { get; }
+
+    /// <summary>
+    /// Gets the normalized definition fingerprint used to validate process-local pipelines.
+    /// </summary>
+    string DefinitionFingerprint { get; }
 
     /// <summary>
     /// Gets the initial state used for each model instance.
@@ -142,6 +153,14 @@ public interface IProjection
     IEnumerable<IProjection> ChildProjections { get; }
 
     /// <summary>
+    /// Selects and releases a stored event for a key or join clause.
+    /// </summary>
+    /// <param name="pin">The clause's event type and generation.</param>
+    /// <param name="event">The stored event.</param>
+    /// <returns>The event released at the clause's generation.</returns>
+    Task<AppendedEvent> ReleaseEvent(EventType pin, AppendedEvent @event) => Task.FromResult(@event);
+
+    /// <summary>
     /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
     /// </summary>
     /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
@@ -160,6 +179,17 @@ public interface IProjection
     /// </summary>
     /// <param name="context"><see cref="ProjectionEventContext"/> to work with.</param>
     void OnNext(ProjectionEventContext context);
+
+    /// <summary>
+    /// Provides the projection with an event handled by one of its descendants, without projecting it at this level.
+    /// </summary>
+    /// <param name="context"><see cref="ProjectionEventContext"/> to work with.</param>
+    /// <remarks>
+    /// Only the mappings this level applies to its descendants' events run - every-event mappings that include children.
+    /// Used when a descendant's event is projected outside the normal top-down handling, such as when a deferred future
+    /// resolves.
+    /// </remarks>
+    void OnDescendantEvent(ProjectionEventContext context);
 
     /// <summary>
     /// Checks whether the projection will accept a specific event type.

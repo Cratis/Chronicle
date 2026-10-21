@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
@@ -37,9 +38,13 @@ public class NestedBuilder<TParentReadModel, TNestedReadModel>(
     /// <summary>
     /// Build the <see cref="ChildrenDefinition"/> representing the nested object.
     /// </summary>
+    /// <param name="generationDelivery">The root projection's effective generation delivery policy.</param>
     /// <returns>A new <see cref="ChildrenDefinition"/>.</returns>
-    internal ChildrenDefinition Build() =>
-        new()
+    internal ChildrenDefinition Build(EventGenerationDelivery? generationDelivery = null)
+    {
+        BuildDefinitions(generationDelivery ?? GenerationDelivery);
+
+        return new()
         {
             IdentifiedBy = PropertyPath.NotSet,
             From = _fromDefinitions,
@@ -52,4 +57,5 @@ public class NestedBuilder<TParentReadModel, TNestedReadModel>(
             NoAutoMapProperties = [.. _noAutoMapProperties],
             Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
+    }
 }

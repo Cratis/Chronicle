@@ -34,6 +34,7 @@ public class and_the_run_itself_fails : given.an_event_store_with_a_projection_t
         _outcome = _eventStore.Registration;
     }
 
+    [Fact] void should_clear_registering_after_failure() => _outcome.IsRegistering.ShouldBeFalse();
     [Fact] void should_still_surface_the_failure_to_the_caller() => _thrown.ShouldEqual(_failure);
     [Fact] void should_report_that_registration_ran() => _outcome.HasRun.ShouldBeTrue();
     [Fact] void should_not_report_it_as_successful() => _outcome.IsSuccess.ShouldBeFalse();

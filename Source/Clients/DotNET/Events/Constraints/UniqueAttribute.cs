@@ -7,10 +7,16 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Attribute to adorn types and properties on event types to indicate uniqueness.
 /// </summary>
 /// <remarks>
+/// Property constraints default to one value per event source, unique across event sources. Claiming a new value
+/// releases the previous one. Set <see cref="Mode"/> to <see cref="UniqueConstraintMode.PerValue"/> to retain every
+/// value until a removal event releases it; reclaiming a value by the same source is accepted in both modes.
+/// Class-level uniqueness remains one event of that type per event source, regardless of this setting.
+/// <para>
 /// An attribute argument is a compile-time constant, so a message written here is fixed in one language. A
 /// consumer that localizes wants the fluent <c language="csharp">IConstraint</c> form instead, whose
 /// <c language="csharp">WithMessage(ConstraintViolationMessageProvider)</c> resolves per access and so can follow the current
 /// culture.
+/// </para>
 /// </remarks>
 /// <param name="name">Optional name of the constraint to use.</param>
 /// <param name="message">Optional message to use when the unique constraint is violated.</param>
@@ -26,6 +32,11 @@ public sealed class UniqueAttribute(string? name = default, string? message = de
     /// Gets the message to use when the unique constraint is violated.
     /// </summary>
     public string? Message { get; } = message;
+
+    /// <summary>
+    /// Gets or sets how a property constraint retains values.
+    /// </summary>
+    public UniqueConstraintMode Mode { get; set; } = UniqueConstraintMode.PerEventSource;
 
     /// <summary>
     /// Gets or sets the identifiers of the event sequences the constraint applies to.

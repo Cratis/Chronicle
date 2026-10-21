@@ -11,6 +11,6 @@ public class UniqueNameInEventLog : IConstraint
         .ForEventLog()
         .Unique(b => b
             .On<NameClaimed>(e => e.Name)
-            .On<NameClaimedInOutbox>(e => e.Name)
+            .On<PublicNameClaimed>(e => e.Name)
             .WithName(nameof(UniqueNameInEventLog)));
 }

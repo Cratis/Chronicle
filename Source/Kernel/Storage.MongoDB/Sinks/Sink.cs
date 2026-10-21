@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -21,7 +22,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
-#pragma warning disable SA1201, SA1204 // Member ordering
+#pragma warning disable SA1201, SA1202, SA1204 // Member ordering
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in MongoDB.
@@ -43,7 +44,7 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
-    ILogger<Sink> logger) : ISink
+    ILogger<Sink> logger) : ISink, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
@@ -78,8 +79,11 @@ public class Sink(
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
     readonly object _bulkLock = new();
+    readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
-    readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    readonly List<BulkBatch> _inFlight = [];
+    readonly Dictionary<BulkBatch, BulkOutcome> _unreportedBulkOutcomes = [];
+    readonly Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
 
@@ -106,12 +110,15 @@ public class Sink(
     /// the unguarded, upserting write that re-creates it — and incidentally stops the caller merging onto state
     /// that a queued delete has logically discarded.
     /// </remarks>
-    readonly ConcurrentDictionary<string, byte> _bulkPendingDeletes = new();
+    readonly ConcurrentDictionary<string, long> _bulkPendingDeletes = new();
+    long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
+    BulkWindowId? _bulkWindowId;
+    bool _bulkWindowHasFailedWrites;
 
     /// <summary>
-    /// Completes when the bulk window that <see cref="EndBulk"/> is closing has been flushed and left; set while it is.
+    /// Completes when the bulk window that <see cref="EndBulk()"/> is closing has been flushed and left; set while it is.
     /// </summary>
     /// <remarks>
     /// Guarded by <see cref="_bulkLock"/>. While it is set, no write is admitted into the window: a write accepted after
@@ -124,20 +131,14 @@ public class Sink(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public void Dispose() => _bulkCancellation.Dispose();
+
+    /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        if (_isBulkMode)
+        if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
         {
-            var cacheKey = converter.ToBsonValue(key).ToString()!;
-            if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
-            {
-                return cachedState;
-            }
-
-            if (_bulkPendingDeletes.ContainsKey(cacheKey))
-            {
-                return default;
-            }
+            return bulkAnswer;
         }
 
         var collection = Collection;
@@ -146,17 +147,37 @@ public class Sink(
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
-            if (_isBulkMode &&
-                instance.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var watermark) &&
-                watermark.IsNumeric)
-            {
-                RecordBulkWatermark(converter.ToBsonValue(key).ToString()!, (ulong)watermark.ToInt64());
-            }
-
+            SeedBulkWatermark(key, instance);
             return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
         }
 
         return default;
+    }
+
+    bool TryAnswerFromBulk(Key key, out ExpandoObject? answer)
+    {
+        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
+        {
+            answer = cachedState;
+            return true;
+        }
+
+        answer = default;
+        return _bulkPendingDeletes.ContainsKey(cacheKey);
+    }
+
+    void SeedBulkWatermark(Key key, BsonDocument instance)
+    {
+        if (!_isBulkMode)
+        {
+            return;
+        }
+
+        if (instance.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var watermark) && watermark.IsNumeric)
+        {
+            RecordBulkWatermark(converter.ToBsonValue(key).ToString()!, (ulong)watermark.ToInt64());
+        }
     }
 
     /// <inheritdoc/>
@@ -167,16 +188,149 @@ public class Sink(
         ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<FailedPartition>> ApplyChanges(
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteMode mode) => ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode));
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber,
         SinkWriteMode mode)
     {
-        var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
-            change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
-        var hasConstructiveChanges = changeset.Changes.Any(change =>
-            change is ChildAdded or ChildRemoved);
+        if (!_isBulkMode)
+        {
+            return await ApplyChanges(key, changeset, eventSequenceNumber, mode);
+        }
+
+        var drain = await DrainBulk();
+        var drainedBatches = new HashSet<BulkBatch>(drain.Batches);
+        var failures = new List<FailedPartition>();
+        try
+        {
+            failures.AddRange(await ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode, drainedBatches)));
+        }
+        catch (MongoWriteException exception) when (exception.WriteError is not null && exception.WriteConcernError is null)
+        {
+            EvictBulkState(key);
+            var error = exception.WriteError;
+            failures.Add(new FailedPartition(PartitionFor(key, changeset), eventSequenceNumber) { Reason = $"MongoDB write error {error.Code} ({error.Category}): {error.Message}" });
+        }
+
+        // Claim only on a returning path. Exceptional exits leave the drained outcomes
+        // in the ledger for the next drain or EndBulk.
+        return TakeBulkFailures(drainedBatches).Concat(failures).ToArray();
+    }
+
+    async Task<IEnumerable<FailedPartition>> ApplyChangesCore(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteOptions options)
+    {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
+        options = options with { Partition = PartitionFor(key, changeset) };
+        var plan = PlanWrite(key, changeset);
+
+        if (changeset.HasBeenRemoved())
+        {
+            return await ApplyRemoval(key, eventSequenceNumber, plan.Filter, options);
+        }
+
+        // A guarded write is a conditional UPDATE of a document the caller already observed, never an insert:
+        // narrowing the filter to documents whose watermark is behind this event turns a crash-recovery
+        // redelivery into a no-op. Upsert is switched off because a filter that matches nothing would otherwise
+        // attempt an insert on an _id that already exists, which raises a duplicate key error and — inside an
+        // ordered bulk write — would discard every operation queued behind it.
+        var guardedPlan = GuardWithWatermark(plan, key, options.Mode, eventSequenceNumber);
+        if (guardedPlan is null)
+        {
+            return [];
+        }
+
+        // A dropped join flush reports every partition of its batch, not just this writer's, and the write still runs.
+        // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
+        var joinBatch = await FlushBeforeJoin(changeset, options);
+        var failures = await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
+        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
+    }
+
+    static Key PartitionFor(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) =>
+        changeset.Incoming is { } incoming ? (Key)incoming.Context.EventSourceId : key;
+
+    async Task<IEnumerable<FailedPartition>> WriteAfterJoin(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        WritePlan plan,
+        SinkWriteOptions options)
+    {
+        // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
+        // removes from all has to find the documents still holding it, so the children are removed only afterwards.
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        await RemoveChildrenFromAll(changeset);
+
+        // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
+        // Any remaining direct root PropertiesChanged have no single _id target, so issuing the follow-up
+        // UpdateOne would pick an arbitrary document (Filter.Empty) and corrupt it.
+        if (!converted.hasChanges || plan.ShouldSuppressRootUpdateAfterRootLevelJoin)
+        {
+            return [];
+        }
+
+        var write = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
+        if (!plan.UsesJoinTargetsOnlyFilter)
+        {
+            await UnsetNullParents(write, options);
+        }
+
+        return await WriteUpdate(write, changeset, options);
+    }
+
+    async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    {
+        // Flush pending operations before a join reads committed data. The batch is taken under the bulk lock.
+        if (!_isBulkMode || !changeset.HasJoined())
+        {
+            return null;
+        }
+
+        if (options.DrainedBatches is { } drainedBatches)
+        {
+            var drain = await DrainBulk();
+            drainedBatches.UnionWith(drain.Batches);
+            EvictDrainedCache(drain.Batches);
+            return null;
+        }
+
+        return await CompleteNextBulkBatch();
+    }
+
+    WritePlan? GuardWithWatermark(WritePlan plan, Key key, SinkWriteMode mode, EventSequenceNumber eventSequenceNumber)
+    {
+        if (!IsGuardedWrite(mode, plan, eventSequenceNumber))
+        {
+            return plan;
+        }
+
+        if (IsAlreadyApplied(key, eventSequenceNumber))
+        {
+            return null;
+        }
+
+        return plan with { Filter = Builders<BsonDocument>.Filter.And(plan.Filter, BelowWatermark(eventSequenceNumber)), IsUpsert = false };
+    }
+
+    static bool IsGuardedWrite(SinkWriteMode mode, WritePlan plan, EventSequenceNumber eventSequenceNumber) =>
+        mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !plan.UsesJoinTargetsOnlyFilter && eventSequenceNumber.IsActualValue;
+
+    WritePlan PlanWrite(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        var hasDirectKeyScopedChanges = changeset.Changes.Any(IsDirectKeyScopedChange);
+        var hasConstructiveChanges = changeset.Changes.Any(IsConstructiveChange);
 
         // When the event was consumed by a Join (Children Join<TEvent>) AND the only direct
         // key-scoped changes are PropertiesChanged (no ChildAdded / ChildRemoved that would
@@ -213,159 +367,241 @@ public class Sink(
         // coerces it back to the key type ("Unrecognized Guid format"). A CHILD join (has array indexers)
         // still upserts so it can construct the child structure regardless of seed order.
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
-        var isUpsert = !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
 
-        if (changeset.HasBeenRemoved())
+        return new(filter, IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom), usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
+    }
+
+    static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLevelJoin, bool hasKeyedFrom) =>
+        !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
+
+    async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumber eventSequenceNumber, FilterDefinition<BsonDocument> filter, SinkWriteOptions options)
+    {
+        if (options.CanBuffer(_isBulkMode))
         {
-            if (_isBulkMode)
+            var cacheKey = converter.ToBsonValue(key).ToString()!;
+            if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () => ForgetBulkState(cacheKey)))
             {
-                var cacheKey = converter.ToBsonValue(key).ToString()!;
-                void ForgetState()
-                {
-                    _bulkStateCache.TryRemove(cacheKey, out _);
-                    _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
-                    _bulkWatermarks.TryRemove(cacheKey, out _);
-
-                    // Marked after the operation is queued, never before: a flush that observes the mark without the
-                    // operation would clear it while the delete is still pending, which is the failure this prevents.
-                    _bulkPendingDeletes[cacheKey] = 0;
-                }
-
-                if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber, ForgetState))
-                {
-                    return await FlushBulkIfNeeded();
-                }
+                return await FlushBulkIfNeeded();
             }
-
-            await Collection.DeleteOneAsync(filter);
-            return [];
         }
 
-        // A guarded write is a conditional UPDATE of a document the caller already observed, never an insert:
-        // narrowing the filter to documents whose watermark is behind this event turns a crash-recovery
-        // redelivery into a no-op. Upsert is switched off because a filter that matches nothing would otherwise
-        // attempt an insert on an _id that already exists, which raises a duplicate key error and — inside an
-        // ordered bulk write — would discard every operation queued behind it.
-        if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark && !usesJoinTargetsOnlyFilter && eventSequenceNumber.IsActualValue)
+        await Collection.DeleteOneAsync(filter);
+        if (options.IsImmediate)
         {
-            if (_isBulkMode &&
-                _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
-                applied >= eventSequenceNumber.Value)
+            EvictBulkState(key);
+        }
+
+        return [];
+    }
+
+    void EvictBulkState(Key key) => EvictBulkState(converter.ToBsonValue(key).ToString()!);
+
+    void EvictBulkState(string cacheKey)
+    {
+        _bulkPendingDeletes.TryRemove(cacheKey, out _);
+        EvictBulkCache(cacheKey);
+    }
+
+    void EvictBulkCache(string cacheKey)
+    {
+        _bulkStateCache.TryRemove(cacheKey, out _);
+        _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
+        _bulkWatermarks.TryRemove(cacheKey, out _);
+    }
+
+    void EvictDrainedCache(IEnumerable<BulkBatch> batches)
+    {
+        lock (_bulkLock)
+        {
+            foreach (var key in batches.SelectMany(batch => batch.Metadata.Values).Select(metadata => metadata.ReadModelKey).Distinct())
             {
-                return [];
+                EvictBulkCache(converter.ToBsonValue(key).ToString()!);
             }
-
-            filter = Builders<BsonDocument>.Filter.And(filter, BelowWatermark(eventSequenceNumber));
-            isUpsert = false;
         }
+    }
 
-        // Run through and remove all children affected by ChildRemovedFromAll
-        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAll(childRemoved);
-        }
+    void ForgetBulkState(string cacheKey)
+    {
+        EvictBulkState(cacheKey);
 
-        // For join events in bulk mode, flush pending operations first so that the join
-        // can read committed data. Skip the Count check outside the lock to avoid reading
-        // the list without synchronization.
-        if (_isBulkMode && changeset.HasJoined())
-        {
-            await ExecuteBulk();
-        }
+        // Marked after the operation is queued, never before: a flush that observes the mark without the
+        // operation would clear it while the delete is still pending, which is the failure this prevents.
+        _bulkPendingDeletes[cacheKey] = ++_pendingDeleteVersion;
+    }
 
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
-        if (!converted.hasChanges) return [];
+    bool IsAlreadyApplied(Key key, EventSequenceNumber eventSequenceNumber) =>
+        _isBulkMode &&
+        _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
+        applied >= eventSequenceNumber.Value;
 
-        // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
-        // Any remaining direct root PropertiesChanged have no single _id target, so issuing the follow-up
-        // UpdateOne would pick an arbitrary document (Filter.Empty) and corrupt it.
-        if (shouldSuppressRootUpdateAfterRootLevelJoin)
-        {
-            return [];
-        }
+    async Task UnsetNullParents(UpdateWrite write, SinkWriteOptions options)
+    {
+        var (_, _, converted, filter, _) = write;
 
         // Reads omit BSON nulls, so a missing parent in the initial state can still be
         // present as null in an older document. Unset only that legacy null (not an
         // existing object) before dotted leaf sets. Keep these ordered with the main
         // write in bulk mode, and preserve the watermark guard on redelivery.
-        if (!usesJoinTargetsOnlyFilter)
+        var parents = converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
+            .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
+            .OrderBy(_ => _.Path.Count(ch => ch == '.'));
+
+        foreach (var parent in parents)
         {
-            foreach (var parent in converted.NullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
-                         .Concat(converted.NullArrayParents.Select(_ => (_.Path, Filters: _.ArrayFilters)))
-                         .OrderBy(_ => _.Path.Count(ch => ch == '.')))
+            var nullFilter = parent.Filters.Count == 0
+                ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
+                : filter;
+            var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
+            var operation = new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters };
+            if (!await TryBufferOperation(operation, write, options))
             {
-                var nullFilter = parent.Filters.Count == 0
-                    ? Builders<BsonDocument>.Filter.And(filter, Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null))
-                    : filter;
-                var unset = Builders<BsonDocument>.Update.Unset(parent.Path);
-                if (!_isBulkMode || !await AddToBulk(new UpdateOneModel<BsonDocument>(nullFilter, unset) { ArrayFilters = parent.Filters }, key, eventSequenceNumber))
-                {
-                    await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
-                }
+                await Collection.UpdateOneAsync(nullFilter, unset, new UpdateOptions { ArrayFilters = parent.Filters });
             }
         }
+    }
 
-        if (_isBulkMode)
+    async Task<bool> TryBufferOperation(WriteModel<BsonDocument> operation, UpdateWrite write, SinkWriteOptions options)
+    {
+        if (!options.CanBuffer(_isBulkMode))
         {
-            var updateModel = new UpdateOneModel<BsonDocument>(filter, converted.UpdateDefinition)
-            {
-                IsUpsert = isUpsert,
-                ArrayFilters = converted.ArrayFilters
-            };
-            Action? cacheState = null;
-            if (!changeset.HasJoined())
-            {
-                var cacheKey = converter.ToBsonValue(key).ToString()!;
-                cacheState = () =>
-                {
-                    _bulkStateCache[cacheKey] = changeset.CurrentState;
-                    _bulkKeysByCacheKey[cacheKey] = key;
-                    _bulkPendingDeletes.TryRemove(cacheKey, out _);
-                    if (eventSequenceNumber.IsActualValue)
-                    {
-                        RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
-                    }
-                };
-            }
+            return false;
+        }
 
-            if (await AddToBulk(updateModel, key, eventSequenceNumber, cacheState))
-            {
-                if (changeset.HasJoined())
-                {
-                    return await ExecuteBulk();
-                }
+        return await AddToBulk(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+    }
 
-                return await FlushBulkIfNeeded();
-            }
+    async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    {
+        if (await TryBufferUpdate(write, changeset, options) is { } failures)
+        {
+            return failures;
         }
 
         await Collection.UpdateOneAsync(
-            filter,
-            converted.UpdateDefinition,
+            write.Filter,
+            write.Converted.UpdateDefinition,
             new UpdateOptions
             {
-                IsUpsert = isUpsert,
-                ArrayFilters = converted.ArrayFilters
+                IsUpsert = write.IsUpsert,
+                ArrayFilters = write.Converted.ArrayFilters
             });
+        CacheImmediateWrite(write, changeset, options);
+
         return [];
+    }
+
+    async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    {
+        if (!options.CanBuffer(_isBulkMode))
+        {
+            return null;
+        }
+
+        var updateModel = new UpdateOneModel<BsonDocument>(write.Filter, write.Converted.UpdateDefinition)
+        {
+            IsUpsert = write.IsUpsert,
+            ArrayFilters = write.Converted.ArrayFilters
+        };
+        var hasJoined = changeset.HasJoined();
+        var cacheState = hasJoined ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
+
+        if (await AddToBulk(updateModel, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber, cacheState))
+        {
+            return hasJoined ? await ExecuteBulk() : await FlushBulkIfNeeded();
+        }
+
+        return null;
+    }
+
+    void CacheImmediateWrite(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    {
+        if (!options.IsImmediate)
+        {
+            return;
+        }
+
+        if (_isBulkMode && !changeset.HasJoined())
+        {
+            CreateCacheState(write.Key, changeset, write.EventSequenceNumber)();
+        }
+    }
+
+    Action CreateCacheState(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    {
+        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        return () =>
+        {
+            _bulkStateCache[cacheKey] = changeset.CurrentState;
+            _bulkKeysByCacheKey[cacheKey] = key;
+            _bulkPendingDeletes.TryRemove(cacheKey, out _);
+            if (eventSequenceNumber.IsActualValue)
+            {
+                RecordBulkWatermark(cacheKey, eventSequenceNumber.Value);
+            }
+        };
     }
 
     /// <inheritdoc/>
     public Task BeginBulk()
     {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
         lock (_bulkLock)
         {
             _isBulkMode = true;
-            _bulkOperations.Clear();
-            _bulkOperationMetadata.Clear();
-            _currentBulkSize = 0;
+            _bulkWindowId = new(Guid.NewGuid());
+            _bulkWindowHasFailedWrites = false;
+            _inFlight.Clear();
+            ClearBulkOperations();
         }
 
+        ClearBulkState();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushBulk()
+    {
+        BulkWindowId? windowId;
+        lock (_bulkLock)
+        {
+            windowId = _bulkWindowId;
+        }
+
+        var drain = await DrainBulk();
+        lock (_bulkLock)
+        {
+            // Never confirm a window that was replaced or closed while its writes were draining.
+            if (windowId != _bulkWindowId)
+            {
+                throw new BulkWindowLost();
+            }
+
+            var failures = TakeBulkFailures(drain.Batches);
+
+            // Claiming an outcome is not proof that its failed partitions have been recorded durably.
+            // Keep the window tainted for its lifetime, independently of exclusive failure reporting.
+            if (_bulkWindowHasFailedWrites && failures.Count == 0)
+            {
+                throw new BulkWindowHasFailedWrites();
+            }
+
+            return new(windowId, failures);
+        }
+    }
+
+    void ClearBulkOperations()
+    {
+        _bulkOperations.Clear();
+        _bulkOperationMetadata.Clear();
+        _currentBulkSize = 0;
+    }
+
+    void ClearBulkState()
+    {
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
         _bulkPendingDeletes.Clear();
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -374,7 +610,83 @@ public class Sink(
     /// closing finishes however many writers keep arriving. A write arriving while the window closes waits for it to
     /// finish and is then written directly, after the flushed batch.
     /// </remarks>
-    public async Task<IEnumerable<FailedPartition>> EndBulk()
+    public Task<IEnumerable<FailedPartition>> EndBulk() => EndBulk(isShutdown: false, throwOnFinalFlushError: false, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk(isShutdown: true, throwOnFinalFlushError: false, cancellationToken);
+
+    async Task<IEnumerable<FailedPartition>> EndBulk(bool isShutdown, bool throwOnFinalFlushError, CancellationToken cancellationToken)
+    {
+        FailedPartition[] pending;
+        lock (_bulkLock)
+        {
+            pending = _inFlight.SelectMany(batch => batch.Metadata.Values).Concat(_bulkOperationMetadata.Values)
+                .GroupBy(metadata => metadata.EventSourceId)
+                .Select(partition => new FailedPartition(partition.Key, partition.MinBy(metadata => metadata.SequenceNumber.Value).SequenceNumber)
+                {
+                    Reason = "MongoDB bulk write outcome unknown (shutdown deadline)",
+                    OutcomeUnknown = true
+                }).ToArray();
+        }
+
+        // Cancellation is terminal for this sink by design: this path runs while its silo is stopping.
+        await using var cancellation = cancellationToken.Register(_bulkCancellation.Cancel);
+        TaskCompletionSource closing;
+        try
+        {
+            closing = await BeginClosing(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _bulkCancellation.Cancel();
+            return pending;
+        }
+
+        // Bulk mode ends whatever the final flush does: a sink left in bulk mode would hold every later
+        // write back until a thousand of them had queued up.
+        try
+        {
+            var drain = await DrainBulk(cancellationToken);
+
+            // A final flush whose outcome is unknown reports every partition it held. Only a replay throws instead,
+            // because it abandons the rebuilt collection those partitions would have been recorded against.
+            if (throwOnFinalFlushError && drain.Queued is { } queued && TakeBatchError(queued) is { } error)
+            {
+                ExceptionDispatchInfo.Throw(error);
+            }
+
+            return TakeBulkFailures(drain.Batches, logErrors: isShutdown);
+        }
+        finally
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // WaitAsync can finish before the deadline's cancellation callback runs. Disposing the
+                // registration would then remove that callback, so cancel the driver explicitly too.
+                _bulkCancellation.Cancel();
+            }
+
+            lock (_bulkLock)
+            {
+                _isBulkMode = false;
+                _bulkWindowId = null;
+                _bulkWindowHasFailedWrites = false;
+                _inFlight.Clear();
+                ClearBulkOperations();
+            }
+
+            ClearBulkState();
+
+            lock (_bulkLock)
+            {
+                _closing = null;
+            }
+
+            closing.SetResult();
+        }
+    }
+
+    async Task<TaskCompletionSource> BeginClosing(CancellationToken cancellationToken)
     {
         var closing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         while (true)
@@ -385,42 +697,13 @@ public class Sink(
                 if (_closing is null)
                 {
                     _closing = closing;
-                    break;
+                    return closing;
                 }
 
                 previousClosing = _closing.Task;
             }
 
-            await previousClosing;
-        }
-
-        // Bulk mode ends whatever the final flush does: a sink left in bulk mode would hold every later
-        // write back until a thousand of them had queued up.
-        try
-        {
-            return await ExecuteBulk();
-        }
-        finally
-        {
-            lock (_bulkLock)
-            {
-                _isBulkMode = false;
-                _bulkOperations.Clear();
-                _bulkOperationMetadata.Clear();
-                _currentBulkSize = 0;
-            }
-
-            _bulkStateCache.Clear();
-            _bulkKeysByCacheKey.Clear();
-            _bulkWatermarks.Clear();
-            _bulkPendingDeletes.Clear();
-
-            lock (_bulkLock)
-            {
-                _closing = null;
-            }
-
-            closing.SetResult();
+            await previousClosing.WaitAsync(cancellationToken);
         }
     }
 
@@ -468,7 +751,7 @@ public class Sink(
         FailedPartition[] failedPartitions;
         try
         {
-            failedPartitions = (await EndBulk()).ToArray();
+            failedPartitions = (await EndBulk(isShutdown: false, throwOnFinalFlushError: true, CancellationToken.None)).ToArray();
         }
         catch
         {
@@ -492,7 +775,11 @@ public class Sink(
         // Whatever is still held back belongs to a replay that has been promoted without it. Writing it to the replay
         // collection would lose it, so it goes to the read model's own collection once replay mode is left.
         collections.AbandonReplay();
-        await EndBulk();
+        var failedPartitions = (await EndBulk()).ToArray();
+        if (failedPartitions.Length > 0)
+        {
+            logger.LeavingReplayWithFailedPartitions(readModel.Identifier, failedPartitions.Length, failedPartitions.Count(partition => partition.OutcomeUnknown));
+        }
     }
 
     /// <inheritdoc/>
@@ -566,25 +853,16 @@ public class Sink(
         var collection = Collection;
         using var cursor = await collection.Indexes.ListAsync();
         var existingIndexes = await cursor.ToListAsync();
-        BsonValue? collation = null;
+        var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
         foreach (var indexDefinition in readModel.Indexes)
         {
             var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
             var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
-            if (candidates.Exists(index => index.GetValue("name", BsonNull.Value) == indexName))
+            if (await IsIndexPresent(candidates, indexName, collation))
             {
                 continue;
-            }
-
-            if (candidates.Count > 0)
-            {
-                collation ??= await GetCollectionCollation(collection);
-                if (candidates.Exists(index => GetCollation(index).Equals(collation)))
-                {
-                    continue;
-                }
             }
 
             var indexModel = new CreateIndexModel<BsonDocument>(
@@ -593,6 +871,22 @@ public class Sink(
 
             await collection.Indexes.CreateOneAsync(indexModel);
         }
+    }
+
+    static async Task<bool> IsIndexPresent(List<BsonDocument> candidates, string indexName, Lazy<Task<BsonValue>> collation)
+    {
+        if (candidates.Exists(index => index.GetValue("name", BsonNull.Value) == indexName))
+        {
+            return true;
+        }
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        var effectiveCollation = await collation.Value;
+        return candidates.Exists(index => GetCollation(index).Equals(effectiveCollation));
     }
 
     /// <inheritdoc/>
@@ -644,13 +938,14 @@ public class Sink(
             .Observe(
                 collection.Database,
                 containerName,
-                cancellationToken => ReadObservedPage(collection, containerName, isPrimary, skip, take, cancellationToken))
+                cancellationToken => ReadObservedPage(new(collection, containerName, isPrimary, skip, take), cancellationToken))
             .Where(page => page is not null)
             .Select(page => page!);
     }
 
-    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(IMongoCollection<BsonDocument> collection, string containerName, bool isPrimary, int skip, int take, CancellationToken cancellationToken)
+    async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(PageRequest request, CancellationToken cancellationToken)
     {
+        var (collection, containerName, isPrimary, skip, take) = request;
         if (!isPrimary)
         {
             return await ReadPage(collection, skip, take, cancellationToken);
@@ -699,6 +994,32 @@ public class Sink(
         var schema = readModel.GetSchemaForLatestGeneration();
         return documents.Select(document => expandoObjectConverter.ToExpandoObject(document, schema)).ToArray();
     }
+
+    /// <summary>
+    /// Narrows a write positioned in an array by array filters to the documents holding that array. Against a document
+    /// without it — a root whose children were all removed, or one the write would upsert — MongoDB fails the whole update
+    /// with error 2 and the partition fails on every retry. Such a write is a no-op instead, exactly as when the array
+    /// exists and no element matches.
+    /// </summary>
+    /// <param name="write">The write to narrow.</param>
+    /// <returns>The narrowed write.</returns>
+    static UpdateWrite ScopeToExistingArrays(UpdateWrite write)
+    {
+        var requiredArrayPaths = write.Converted.RequiredArrayPaths;
+        if (requiredArrayPaths.Count == 0)
+        {
+            return write;
+        }
+
+        var filter = Builders<BsonDocument>.Filter.And([write.Filter, .. requiredArrayPaths.Select(path => Builders<BsonDocument>.Filter.Exists(path))]);
+        return write with { Filter = filter, IsUpsert = false };
+    }
+
+    static bool IsDirectKeyScopedChange(Change change) =>
+        change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved;
+
+    static bool IsConstructiveChange(Change change) =>
+        change is ChildAdded or ChildRemoved;
 
     static bool HasActualRootLevelJoin(IEnumerable<Change> changes) =>
         changes
@@ -759,14 +1080,15 @@ public class Sink(
     /// </summary>
     /// <param name="operation">The <see cref="WriteModel{TDocument}"/> to queue.</param>
     /// <param name="key">The <see cref="Key"/> the operation is for.</param>
+    /// <param name="partition">The event source id of the partition the operation is reported under if its batch fails.</param>
     /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> the operation applies.</param>
     /// <param name="whenQueued">Optional update of the bulk state, made atomically with queueing the operation.</param>
     /// <returns>True if the operation was queued; false if no bulk window is open and the caller must write directly.</returns>
     /// <remarks>
-    /// Checking the window and queueing happen under one lock, so <see cref="EndBulk"/> either flushes the operation or
+    /// Checking the window and queueing happen under one lock, so <see cref="EndBulk()"/> either flushes the operation or
     /// never admits it. While a window is closing, the caller waits for it to finish before it is told to write directly.
     /// </remarks>
-    async Task<bool> AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber, Action? whenQueued = null)
+    async Task<bool> AddToBulk(WriteModel<BsonDocument> operation, Key key, Key partition, EventSequenceNumber eventSequenceNumber, Action? whenQueued = null)
     {
         while (true)
         {
@@ -782,7 +1104,7 @@ public class Sink(
                 {
                     var operationIndex = _bulkOperations.Count;
                     _bulkOperations.Add(operation);
-                    _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
+                    _bulkOperationMetadata[operationIndex] = (key, partition, eventSequenceNumber);
                     _currentBulkSize += EstimateOperationSize(operation);
                     whenQueued?.Invoke();
                     return true;
@@ -813,107 +1135,295 @@ public class Sink(
 
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()
     {
-        List<WriteModel<BsonDocument>> snapshot;
-        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
-        string[] flushedPendingDeletes;
+        // A batch whose outcome is unknown reports every partition it held, whichever writer queued them,
+        // instead of throwing to the one writer that happened to fill it. It is never sent again.
+        var batch = await CompleteNextBulkBatch();
+        return batch is null ? [] : TakeBulkFailures([batch]);
+    }
 
-        lock (_bulkLock)
+    async Task<BulkBatch?> CompleteNextBulkBatch()
+    {
+        var batch = TakeBulkBatch();
+        if (batch is not null)
         {
-            if (_bulkOperations.Count == 0)
-            {
-                return [];
-            }
-
-            snapshot = [.._bulkOperations];
-            metadataSnapshot = new(_bulkOperationMetadata);
-
-            // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
-            // belongs to a delete still queued and must survive the flush.
-            flushedPendingDeletes = [.._bulkPendingDeletes.Keys];
-            _bulkOperations.Clear();
-            _bulkOperationMetadata.Clear();
-            _currentBulkSize = 0;
+            await CompleteBulkBatch(batch);
         }
 
-        var failedPartitions = new Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)>();
+        return batch;
+    }
+
+    async Task<BulkDrain> DrainBulk(CancellationToken cancellationToken = default)
+    {
+        BulkBatch? queued;
+        BulkBatch[] pending;
+        lock (_bulkLock)
+        {
+            queued = TakeBulkBatch();
+            pending = _unreportedBulkOutcomes.Keys.Concat(_inFlight).Distinct().ToArray();
+        }
+
+        if (queued is not null)
+        {
+            // CompleteBulkBatch observes every driver failure, even if the driver ignores cancellation.
+            _ = CompleteBulkBatch(queued);
+        }
+
         try
         {
-            var remainingIndexes = Enumerable.Range(0, snapshot.Count).ToList();
-            while (remainingIndexes.Count > 0)
+            // Completions never fault: failures belong to the outcome ledger.
+            await Task.WhenAll(pending.Select(batch => batch.Completion.Task)).WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            foreach (var batch in pending.Where(batch => !batch.Completion.Task.IsCompleted))
             {
-                var remaining = remainingIndexes.ConvertAll(index => snapshot[index]);
-                try
-                {
-                    await Collection.BulkWriteAsync(remaining);
-                    break;
-                }
-                catch (MongoBulkWriteException<BsonDocument> ex)
-                {
-                    var reasons = ReportBulkWriteErrors(ex, remainingIndexes, metadataSnapshot);
-
-                    // ProcessedRequests includes the failed request, not just the successful writes.
-                    // An ordered write can resume only when it identifies an exact processed prefix and
-                    // an unprocessed suffix. A write concern error leaves the outcome uncertain.
-                    if (ex.WriteConcernError is not null ||
-                        ex.WriteErrors.Count != 1 ||
-                        ex.Result?.IsAcknowledged != true ||
-                        ex.WriteErrors[0].Index < 0 ||
-                        ex.WriteErrors[0].Index >= remaining.Count ||
-                        ex.Result.ProcessedRequests.Count != ex.WriteErrors[0].Index + 1 ||
-                        !ex.Result.ProcessedRequests.SequenceEqual(remaining.Take(ex.Result.ProcessedRequests.Count)) ||
-                        !ex.UnprocessedRequests.SequenceEqual(remaining.Skip(ex.Result.ProcessedRequests.Count)))
-                    {
-                        AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions, reasons);
-                        break;
-                    }
-
-                    var failedOffset = ex.WriteErrors[0].Index;
-                    AddFailedPartitions([remainingIndexes[failedOffset]], metadataSnapshot, failedPartitions, reasons);
-
-                    // The observer will replay a failed partition from its earliest failed sequence number.
-                    // Do not write any later changes for that partition ahead of the replayed change.
-                    remainingIndexes = remainingIndexes.Skip(failedOffset + 1)
-                        .Where(index => !metadataSnapshot.TryGetValue(index, out var metadata) ||
-                            !failedPartitions.ContainsKey(metadata.EventSourceId))
-                        .ToList();
-                }
-                catch (MongoBulkWriteException ex)
-                {
-                    var reasons = ReportBulkWriteErrors(ex, remainingIndexes, metadataSnapshot);
-                    AddFailedPartitions(remainingIndexes, metadataSnapshot, failedPartitions, reasons);
-                    break;
-                }
+                RecordBulkOutcome(batch, UnknownBatchOutcome(batch, exception));
             }
+        }
+        return new(queued, pending);
+    }
 
-            return failedPartitions
-                .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
-                .ToArray();
+    async Task CompleteBulkBatch(BulkBatch batch)
+    {
+        BulkOutcome outcome;
+        try
+        {
+            await Task.WhenAll(batch.Predecessors).WaitAsync(_bulkCancellation.Token);
+            outcome = new((await WriteBatch(batch, _bulkCancellation.Token)).ToArray(), null);
+        }
+        catch (Exception exception)
+        {
+            outcome = UnknownBatchOutcome(batch, exception);
+        }
+
+        try
+        {
+            RecordBulkOutcome(batch, outcome);
+            foreach (var pendingDelete in batch.FlushedPendingDeletes)
+            {
+                // A newer mark belongs to a delete queued after this batch was detached.
+                ((ICollection<KeyValuePair<string, long>>)_bulkPendingDeletes).Remove(pendingDelete);
+            }
         }
         finally
         {
-            foreach (var cacheKey in flushedPendingDeletes)
+            // The batch runs detached, so whoever awaits its completion must never be left waiting.
+            batch.Completion.TrySetResult();
+        }
+    }
+
+    void RecordBulkOutcome(BulkBatch batch, BulkOutcome outcome)
+    {
+        lock (_bulkLock)
+        {
+            if (batch.HasOutcome)
             {
-                _bulkPendingDeletes.TryRemove(cacheKey, out _);
+                return;
+            }
+
+            batch.HasOutcome = true;
+            _unreportedBulkOutcomes.Add(batch, outcome);
+            _bulkWindowHasFailedWrites |= outcome.Failures.Length > 0 || outcome.Error is not null;
+            _inFlight.Remove(batch);
+            var failedPartitions = outcome.Failures.Select(failure => failure.EventSourceId).ToHashSet();
+            var failedReadModels = batch.Metadata.Values
+                .Where(metadata => failedPartitions.Contains(metadata.EventSourceId))
+                .Select(metadata => metadata.ReadModelKey)
+                .Distinct();
+            foreach (var readModelKey in failedReadModels)
+            {
+                EvictBulkCache(converter.ToBsonValue(readModelKey).ToString()!);
             }
         }
     }
 
+    static BulkOutcome UnknownBatchOutcome(BulkBatch batch, Exception error)
+    {
+        var failures = batch.Metadata.Values.GroupBy(metadata => metadata.EventSourceId)
+            .Select(partition => new FailedPartition(partition.Key, partition.MinBy(metadata => metadata.SequenceNumber.Value).SequenceNumber)
+            {
+                Reason = $"MongoDB bulk write outcome unknown ({error.GetType().Name})",
+                OutcomeUnknown = true
+            }).ToArray();
+        return new(failures, error);
+    }
+
+    Exception? TakeBatchError(BulkBatch batch)
+    {
+        lock (_bulkLock)
+        {
+            if (!_unreportedBulkOutcomes.TryGetValue(batch, out var outcome))
+            {
+                return null;
+            }
+
+            if (outcome.Error is null)
+            {
+                return null;
+            }
+
+            _unreportedBulkOutcomes.Remove(batch);
+            return outcome.Error;
+        }
+    }
+
+    List<FailedPartition> TakeBulkFailures(IEnumerable<BulkBatch> batches, bool logErrors = false)
+    {
+        var failures = new List<FailedPartition>();
+        lock (_bulkLock)
+        {
+            foreach (var batch in batches)
+            {
+                if (_unreportedBulkOutcomes.Remove(batch, out var outcome))
+                {
+                    // An unclaimed exception becomes failures for its affected keys. Its owner may
+                    // instead claim and throw it, but never both: each entry is handed out once.
+                    if (logErrors && outcome.Error is not null)
+                    {
+                        logger.ShutdownBulkWriteOutcomeUnknown(Collection.CollectionNamespace.CollectionName, readModel.Identifier, outcome.Error.GetType().Name, outcome.Failures.Length);
+                    }
+
+                    failures.AddRange(outcome.Failures);
+                }
+            }
+        }
+
+        return failures;
+    }
+
+    BulkBatch? TakeBulkBatch()
+    {
+        lock (_bulkLock)
+        {
+            if (_bulkOperations.Count == 0)
+            {
+                return null;
+            }
+
+            // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
+            // belongs to a delete still queued and must survive the flush.
+            var batch = new BulkBatch([.._bulkOperations], new(_bulkOperationMetadata), [.._bulkPendingDeletes], _inFlight.Select(batch => batch.Completion.Task).ToArray());
+            ClearBulkOperations();
+            _inFlight.Add(batch);
+            return batch;
+        }
+    }
+
+    async Task<IEnumerable<FailedPartition>> WriteBatch(BulkBatch batch, CancellationToken cancellationToken)
+    {
+        var remainingIndexes = Enumerable.Range(0, batch.Operations.Count).ToList();
+        while (remainingIndexes.Count > 0)
+        {
+            var remaining = remainingIndexes.ConvertAll(index => batch.Operations[index]);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await Collection.BulkWriteAsync(remaining, cancellationToken: cancellationToken).WaitAsync(cancellationToken);
+                break;
+            }
+            catch (MongoBulkWriteException<BsonDocument> ex)
+            {
+                var resumeFrom = ResumeAfterFailure(batch, ex, remaining, remainingIndexes);
+                if (resumeFrom is null)
+                {
+                    break;
+                }
+
+                remainingIndexes = resumeFrom;
+            }
+            catch (MongoBulkWriteException ex)
+            {
+                var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
+                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+                break;
+            }
+        }
+
+        return batch.FailedPartitions
+            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Records the failure of an ordered bulk write and works out which operations can still be written.
+    /// </summary>
+    /// <returns>The indexes still to write, or null when the write cannot be resumed.</returns>
+    List<int>? ResumeAfterFailure(
+        BulkBatch batch,
+        MongoBulkWriteException<BsonDocument> exception,
+        List<WriteModel<BsonDocument>> remaining,
+        List<int> remainingIndexes)
+    {
+        var reasons = ReportBulkWriteErrors(exception, remainingIndexes, batch.Metadata);
+
+        if (!CanResumeAfter(exception, remaining))
+        {
+            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+            return null;
+        }
+
+        var failedOffset = exception.WriteErrors[0].Index;
+        AddFailedPartitions([remainingIndexes[failedOffset]], batch.Metadata, batch.FailedPartitions, reasons);
+
+        // The observer will replay a failed partition from its earliest failed sequence number.
+        // Do not write any later changes for that partition ahead of the replayed change.
+        return remainingIndexes.Skip(failedOffset + 1)
+            .Where(index => !batch.Metadata.TryGetValue(index, out var metadata) ||
+                !batch.FailedPartitions.ContainsKey(metadata.EventSourceId))
+            .ToList();
+    }
+
+    static bool CanResumeAfter(MongoBulkWriteException<BsonDocument> exception, List<WriteModel<BsonDocument>> remaining)
+    {
+        // ProcessedRequests includes the failed request, not just the successful writes.
+        // An ordered write can resume only when it identifies an exact processed prefix and
+        // an unprocessed suffix. A write concern error leaves the outcome uncertain.
+        if (exception.WriteConcernError is not null || exception.WriteErrors.Count != 1)
+        {
+            return false;
+        }
+
+        if (exception.Result?.IsAcknowledged != true)
+        {
+            return false;
+        }
+
+        var failedIndex = exception.WriteErrors[0].Index;
+        if (failedIndex < 0 || failedIndex >= remaining.Count)
+        {
+            return false;
+        }
+
+        var processed = exception.Result.ProcessedRequests;
+        if (processed.Count != failedIndex + 1)
+        {
+            return false;
+        }
+
+        return processed.SequenceEqual(remaining.Take(processed.Count)) &&
+            exception.UnprocessedRequests.SequenceEqual(remaining.Skip(processed.Count));
+    }
+
     static void AddFailedPartitions(
         IEnumerable<int> indexes,
-        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
+        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
         Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions,
         BulkWriteFailureReasons reasons)
     {
         foreach (var index in indexes)
         {
-            if (metadata.TryGetValue(index, out var operationMetadata) &&
-                (!failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
-                    operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value))
+            if (metadata.TryGetValue(index, out var operationMetadata) && IsEarliestFailure(operationMetadata, failedPartitions))
             {
                 failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index));
             }
         }
     }
+
+    static bool IsEarliestFailure(
+        (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber) operationMetadata,
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions) =>
+        !failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
+        operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value;
 
     /// <summary>
     /// Logs every error a bulk write reported and describes them so they can travel with the failed partitions.
@@ -929,7 +1439,7 @@ public class Sink(
     BulkWriteFailureReasons ReportBulkWriteErrors(
         MongoBulkWriteException exception,
         List<int> remainingIndexes,
-        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
+        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
     {
         var collection = collections.GetCollection().CollectionNamespace?.CollectionName ?? readModel.ContainerName.Value;
         var byOperation = new Dictionary<int, string>();
@@ -937,11 +1447,7 @@ public class Sink(
 
         foreach (var error in exception.WriteErrors)
         {
-            var operationIndex = error.Index >= 0 && error.Index < remainingIndexes.Count ? remainingIndexes[error.Index] : -1;
-            var partition = metadata.TryGetValue(operationIndex, out var operation) ? operation.EventSourceId.Value.ToString() ?? string.Empty : string.Empty;
-            logger.BulkWriteErrorOccurred(collection, readModel.Identifier, partition, operationIndex, error.Code, error.Category, error.Message);
-
-            var reason = $"MongoDB write error {error.Code} ({error.Category}): {error.Message}";
+            var (operationIndex, reason) = ReportWriteError(collection, error, remainingIndexes, metadata);
             byOperation.TryAdd(operationIndex, reason);
             if (first.Length == 0)
             {
@@ -949,16 +1455,37 @@ public class Sink(
             }
         }
 
-        if (exception.WriteConcernError is { } writeConcernError)
+        var concernReason = ReportWriteConcernError(collection, exception, remainingIndexes.Count);
+        if (first.Length == 0 && concernReason is not null)
         {
-            logger.BulkWriteConcernErrorOccurred(collection, readModel.Identifier, writeConcernError.Code, writeConcernError.CodeName, writeConcernError.Message, remainingIndexes.Count);
-            if (first.Length == 0)
-            {
-                first = $"MongoDB write concern error {writeConcernError.Code} ({writeConcernError.CodeName}): {writeConcernError.Message}";
-            }
+            first = concernReason;
         }
 
         return new(byOperation, first);
+    }
+
+    (int OperationIndex, string Reason) ReportWriteError(
+        string collection,
+        BulkWriteError error,
+        List<int> remainingIndexes,
+        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
+    {
+        var operationIndex = error.Index >= 0 && error.Index < remainingIndexes.Count ? remainingIndexes[error.Index] : -1;
+        var partition = metadata.TryGetValue(operationIndex, out var operation) ? operation.EventSourceId.Value.ToString() ?? string.Empty : string.Empty;
+        logger.BulkWriteErrorOccurred(collection, readModel.Identifier, partition, operationIndex, error.Code, error.Category, error.Message);
+
+        return (operationIndex, $"MongoDB write error {error.Code} ({error.Category}): {error.Message}");
+    }
+
+    string? ReportWriteConcernError(string collection, MongoBulkWriteException exception, int remainingCount)
+    {
+        if (exception.WriteConcernError is not { } writeConcernError)
+        {
+            return null;
+        }
+
+        logger.BulkWriteConcernErrorOccurred(collection, readModel.Identifier, writeConcernError.Code, writeConcernError.CodeName, writeConcernError.Message, remainingCount);
+        return $"MongoDB write concern error {writeConcernError.Code} ({writeConcernError.CodeName}): {writeConcernError.Message}";
     }
 
     bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
@@ -976,28 +1503,18 @@ public class Sink(
             return false;
         }
 
-        if (segmentIndex == pathSegments.Length - 1)
-        {
-            return ValuesAreEqual(value, targetValue);
-        }
-
-        if (value is IEnumerable<object> collection)
-        {
-            foreach (var itemExpando in collection.OfType<ExpandoObject>())
-            {
-                if (TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
-                {
-                    return true;
-                }
-            }
-        }
-        else if (value is ExpandoObject nestedExpando)
-        {
-            return TryFindValueInDocument(nestedExpando, pathSegments, segmentIndex + 1, targetValue);
-        }
-
-        return false;
+        return segmentIndex == pathSegments.Length - 1
+            ? ValuesAreEqual(value, targetValue)
+            : TryFindValueInChildren(value, pathSegments, segmentIndex, targetValue);
     }
+
+    bool TryFindValueInChildren(object value, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue) =>
+        value switch
+        {
+            IEnumerable<object> collection => collection.OfType<ExpandoObject>().Any(item => TryFindValueInDocument(item, pathSegments, segmentIndex + 1, targetValue)),
+            ExpandoObject nestedExpando => TryFindValueInDocument(nestedExpando, pathSegments, segmentIndex + 1, targetValue),
+            _ => false
+        };
 
     static bool ValuesAreEqual(object value, object targetValue)
     {
@@ -1026,9 +1543,26 @@ public class Sink(
         };
     }
 
+    async Task RemoveChildrenFromAll(IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            await RemoveChildFromAll(childRemoved);
+        }
+    }
+
     async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
     {
-        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
+        var (path, arrayFilters, filter) = BuildChildPath(childRemoved.ChildrenProperty.Segments.ToArray());
+
+        var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
+        var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
+        var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
+        await Collection.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+    }
+
+    static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)
+    {
         var names = segments.Select(segment => segment.Value.ToMongoDBPropertyName()).ToArray();
         var path = new List<string>();
         var arrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
@@ -1049,12 +1583,7 @@ public class Sink(
 
             // Each parent element must contain the next array. Missing/null branches are skipped rather
             // than making MongoDB reject the positional update for the entire document.
-            var nextArray = index + 1;
-            while (nextArray < segments.Length - 1 && segments[nextArray] is not ArrayProperty)
-            {
-                nextArray++;
-            }
-
+            var nextArray = FindNextArray(segments, index);
             var identifier = $"a{index}";
             var nextArrayPath = string.Join('.', names.Skip(index + 1).Take(nextArray - index));
             arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument($"{identifier}.{nextArrayPath}", new BsonDocument("$type", "array"))));
@@ -1066,10 +1595,18 @@ public class Sink(
             filter = Builders<BsonDocument>.Filter.Type(string.Join('.', path), BsonType.Array);
         }
 
-        var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
-        var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
-        var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
-        await Collection.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+        return (path, arrayFilters, filter);
+    }
+
+    static int FindNextArray(IPropertyPathSegment[] segments, int index)
+    {
+        var nextArray = index + 1;
+        while (nextArray < segments.Length - 1 && segments[nextArray] is not ArrayProperty)
+        {
+            nextArray++;
+        }
+
+        return nextArray;
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
@@ -1084,6 +1621,45 @@ public class Sink(
     {
         public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
     }
+
+    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null)
+    {
+        public bool IsImmediate => DrainedBatches is not null;
+
+        public Key PartitionOr(Key key) => Partition ?? key;
+
+        public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate;
+    }
+
+    sealed record WritePlan(
+        FilterDefinition<BsonDocument> Filter,
+        bool IsUpsert,
+        bool UsesJoinTargetsOnlyFilter,
+        bool ShouldSuppressRootUpdateAfterRootLevelJoin);
+
+    sealed record UpdateWrite(
+        Key Key,
+        EventSequenceNumber EventSequenceNumber,
+        UpdateDefinitionAndArrayFilters Converted,
+        FilterDefinition<BsonDocument> Filter,
+        bool IsUpsert);
+
+    sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take);
+
+    sealed record BulkBatch(
+        List<WriteModel<BsonDocument>> Operations,
+        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> Metadata,
+        KeyValuePair<string, long>[] FlushedPendingDeletes,
+        Task[] Predecessors)
+    {
+        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> FailedPartitions { get; } = [];
+        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool HasOutcome { get; set; }
+    }
+
+    sealed record BulkOutcome(FailedPartition[] Failures, Exception? Error);
+
+    sealed record BulkDrain(BulkBatch? Queued, BulkBatch[] Batches);
 
     sealed record CollectionState(bool PromotingExists, bool PrimaryExists, BsonValue? PrimaryId)
     {

@@ -25,4 +25,10 @@ public record ReducerDefinition(
     bool IsActive,
     IEnumerable<string> Tags,
     ObserverFilters? Filters = default,
-    string Hash = "");
+    string Hash = "")
+{
+    /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+}

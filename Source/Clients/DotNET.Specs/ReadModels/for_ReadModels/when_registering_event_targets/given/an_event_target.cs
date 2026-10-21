@@ -19,7 +19,9 @@ public abstract class an_event_target<TTarget> : for_ReadModels.given.all_depend
     void Establish()
     {
         _eventTypes.HasFor(Arg.Any<EventTypeId>()).Returns(true);
+        _eventTypes.GetEventTypeFor(typeof(TTarget)).Returns(typeof(TTarget).GetEventType());
         _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new JsonSchema());
+        _schemaGenerator.GenerateLegacyEventType(Arg.Any<Type>()).Returns(new JsonSchema());
         _reducers.GetAllHandlers().Returns([]);
         _projections.GetAllHandlers().Returns([]);
 

@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    CustomerEmail = order.customer.contactInfo.email
+    ShippingCity = order.shipping.address.city
+    BillingStreet = billing.address.line1

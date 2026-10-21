@@ -30,6 +30,8 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             // the IProjection grain's _definitionObservers list is cleared. When the
             // definition is then changed and the subscriber re-activates during replay,
             // it must pick up the new definition rather than its stale stored state.
+            await WaitForClientRegistration();
+
             await DeactivateAllGrains();
 
             MaterializedProjection.MapBothProperties = true;

@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  from AccountCreated
+    AccountNumber = accountNumber
+    Balance = 0.0
+    IsActive = true
+    AccountType = "Standard"
+    OpenedAt = $eventContext.occurred
+    OpenedBy = $eventContext.eventSourceId

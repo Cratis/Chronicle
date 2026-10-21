@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-writing-voice-and-cadence/references/ai-tells.md -->
 # AI-associated writing patterns
 
+## Contents
+
+- How much weight each entry carries
+- Running the checks
+- Lexical
+- Syntactic
+- Structural
+- Tonal
+- Sources
+
 This is the full catalog behind the **cratis-writing-voice-and-cadence** skill: patterns that
 make writing read as machine-produced, how a script can find each one, and what a person
 would usually write instead. Sources were checked in September 2026. Bracketed IDs such as

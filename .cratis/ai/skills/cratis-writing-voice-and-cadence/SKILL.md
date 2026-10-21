@@ -20,7 +20,7 @@ It revises existing material. For drafting, use the skill for the content type:
 samples (both profiles), **cratis-social-feed-post** for feed posts (`cratis/content`) and
 **cratis-documentation-writing** for pages (`cratis/documentation`).
 
-The full catalog of patterns is in [references/ai-tells.md](references/ai-tells.md), with a
+Read the full catalog in [references/ai-tells.md](references/ai-tells.md) before running single-piece or batch checks, with a
 word list or regex and a batch threshold for each, and the studies behind them. IDs such as
 HV-02 below point to that file's Sources table.
 
@@ -48,6 +48,44 @@ So these rules hold for every use of the skill:
 - Contractions, "I", humor, short sentences and typos prove nothing about who wrote a text
   (HV-02). Adding them so copy passes as human is the same mistake in reverse.
 - A construction that carries a real distinction stays, however often the catalog lists it.
+
+## Never trade a claim for a smoother sentence
+
+This is the part that makes a voice pass dangerous, and the reason to do one carefully
+instead of quickly.
+
+The risk is not an obvious rewrite. It is a hedge dissolving into nicer phrasing. "There is
+no need to" becomes "without needing to", and a limit quietly widens. "Not its meaning"
+becomes "and leaves its meaning alone", and a distinction softens. Both read better. Both
+changed what the text asserts.
+
+Before accepting any rewrite, confirm that:
+
+- every identifier and every number present before is still present, and none was invented;
+- every hedging word (not, never, only, may, unless, until) survives in substance;
+- every stated limitation survives, including one that reads as an awkward caveat, because it
+  is a caveat and it is deliberate;
+- the closing limitation or evidence statement is not thinned, relocated into a subordinate
+  clause, or dropped because it spoiled the ending.
+
+A mechanical before-and-after check over identifiers, numbers and hedge words catches most of
+this before anyone reads a word. The catalog describes one. A person still reads every
+flagged pair, because a count can't tell a widened limit from a harmless rephrase.
+
+## Stop conditions
+
+Stop and hand back when:
+
+- a rewrite would change what the material claims;
+- the named author hasn't supplied or accepted a perspective, detail or opinion being put in
+  their mouth;
+- the material is under an approval the rewrite would invalidate, and nobody has authorized a
+  refresh;
+- the request is to judge whether a person used AI, or to gate their work on a flag count;
+- the copy is for Hacker News.
+
+Reviewing or revising copy never includes publishing, scheduling, posting or replying. An
+agent hands the text back; a person decides what goes out.
 
 ## The constructions
 
@@ -132,7 +170,7 @@ this piece different from the last one:
 - a reason the author owns, in words they would say out loud, supplied by them;
 - the limit, placed in the sentence it limits: "On macOS and Linux, the installer…".
 
-Where a sentence has nothing to add, cut it. Concreteness has a ceiling too. In historical
+Where a sentence has nothing to add, cut it. Concreteness has a ceiling too. In past
 headline experiments, extra concreteness helped headlines that were too vague and hurt ones
 that were already very concrete (HC-03). Packing identifiers into an opening won't rescue it.
 
@@ -225,29 +263,6 @@ everything it posts there: nothing Cratis posts to Hacker News is written or edi
 whether title, text or comment. Don't run a voice pass on HN copy. You can help the person
 check facts and links.
 
-## Never trade a claim for a smoother sentence
-
-This is the part that makes a voice pass dangerous, and the reason to do one carefully
-instead of quickly.
-
-The risk is not an obvious rewrite. It is a hedge dissolving into nicer phrasing. "There is
-no need to" becomes "without needing to", and a limit quietly widens. "Not its meaning"
-becomes "and leaves its meaning alone", and a distinction softens. Both read better. Both
-changed what the text asserts.
-
-Before accepting any rewrite, confirm that:
-
-- every identifier and every number present before is still present, and none was invented;
-- every hedging word (not, never, only, may, unless, until) survives in substance;
-- every stated limitation survives, including one that reads as an awkward caveat, because it
-  is a caveat and it is deliberate;
-- the closing limitation or evidence statement is not thinned, relocated into a subordinate
-  clause, or dropped because it spoiled the ending.
-
-A mechanical before-and-after check over identifiers, numbers and hedge words catches most of
-this before anyone reads a word. The catalog describes one. A person still reads every
-flagged pair, because a count can't tell a widened limit from a harmless rephrase.
-
 ## Work in tranches that can be read
 
 Rewriting is not a batch operation. Any body of material large enough to have a detectable
@@ -257,18 +272,3 @@ detectable format with another. Rewrite a tranche, read it, and only then contin
 Where material carries a recorded approval, a rewrite invalidates it. Recording a fresh
 approval over copy nobody has read makes the record assert something false, after which every
 downstream check agrees with it. Size the tranche to what its owner will actually read.
-
-## Stop conditions
-
-Stop and hand back when:
-
-- a rewrite would change what the material claims;
-- the named author hasn't supplied or accepted a perspective, detail or opinion being put in
-  their mouth;
-- the material is under an approval the rewrite would invalidate, and nobody has authorized a
-  refresh;
-- the request is to judge whether a person used AI, or to gate their work on a flag count;
-- the copy is for Hacker News.
-
-Reviewing or revising copy never includes publishing, scheduling, posting or replying. An
-agent hands the text back; a person decides what goes out.

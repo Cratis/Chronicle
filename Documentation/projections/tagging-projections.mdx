@@ -1,3 +1,6 @@
+---
+description: Label Chronicle projections with the [Tag] attribute to organize and find them; tags describe the projection and do not filter the events it observes.
+---
 # Tagging Projections
 
 Tags provide a way to organize and tag your projections for better discoverability and management. By applying the `[Tag]` attribute to your projection classes, you can assign one or more tags that describe the purpose or domain of the projection.
@@ -5,7 +8,7 @@ Tags provide a way to organize and tag your projections for better discoverabili
 `[Tag]` and `[Tags]` on projections label the projection definition. They do not filter which appended events the projection observes. Use projection event declarations and event sequence selection to control projection input, and use reducer or reactor filters when you need metadata-based filtering for appended events. See [Filter reducers and reactors by appended event metadata](../events/filtering/index.md).
 
 :::note[Client coverage]
-Tagging a projection with `[Tag]`/`[Tags]` is currently C#-only — none of the other clients' projection registration mechanisms (Kotlin's `@FromEvent`/`IProjectionFor`, Elixir's `use Chronicle.ReadModels.ReadModel`/`Chronicle.Projections.Projection`, TypeScript's `@fromEvent`/`IProjectionFor`) expose a way to attach descriptive tags to the projection itself.
+C# supports `[Tag]`/`[Tags]`, and TypeScript supports `@tag`/`@tags` on projection classes and model-bound read models. Kotlin and Elixir do not support projection tags yet. The kernel stores and returns these tags with the projection definition; changing only tags does not trigger a replay or replay recommendation.
 :::
 
 ## Adding Tags

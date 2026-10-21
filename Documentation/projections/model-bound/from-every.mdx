@@ -1,3 +1,6 @@
+---
+description: Use an every-event mapping in a model-bound Chronicle projection to update a property after any processed event, such as last-modified audit metadata.
+---
 # From Every Event
 
 Use an every-event mapping when a read model property should update whenever any event in the projection is processed. This is usually audit metadata such as the last modification time, the latest event sequence number, or the correlation id of the operation that last touched the read model.
@@ -52,8 +55,18 @@ Every-event mappings are part of the projection definition Chronicle receives. C
 
 Prefer context properties for audit metadata. Use payload properties only when the event contracts are intentionally consistent. If a property should update only for selected event types, use an event-specific mapping instead.
 
+## Child Events
+
+The kernel now honors child inclusion in every-event mappings. In .NET, `[FromEvery]` includes events handled only by child projections, including nested child collections. A child's event updates the containing parent's audit fields using the child's resolved parent key; it does not create a root document keyed by the child identifier.
+
+A child-only event advances a root `[FromEvery]` timestamp even without a root `[FromEvent]` for that event. In the declaration language, `every` includes child events by default; use `exclude children` to keep mappings local to their level.
+
+Put `[FromEvery]` on a child's own property to update that child instead. The mapping applies on the child's creating event as well as later events handled by that child. The same ownership rule applies to nested objects and `[FromAll]`: a mapping belongs to the object that declares it. Parent fields are never copied into a newly added child.
+
+For compatibility with clients that still put child mappings at the root, see [Child and nested properties](./from-all.mdx#child-and-nested-properties). A property declared on both root and child cannot be disambiguated until the client is upgraded.
+
 ## Limitations
 
 - Only one every-event mapping can target the same read model property.
-- Payload-property mappings are skipped for events that do not carry the source property.
-- Child-projection inclusion is client-specific; check the client-specific projection API if you need every-event mappings to include or exclude child projections.
+- Payload-property mappings are skipped for events that do not carry the source property. A source property that is present with a null value still maps null.
+- The .NET model-bound `[FromEvery]` attribute has no child-exclusion option today. Use a [declarative projection](../declarative/from-every) with `ExcludeChildProjections()` when you need that opt-out.

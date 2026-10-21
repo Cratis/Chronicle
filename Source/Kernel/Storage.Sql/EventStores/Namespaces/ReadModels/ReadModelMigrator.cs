@@ -100,34 +100,38 @@ public class ReadModelMigrator(
         if (missingColumns.Count > 0)
         {
             logger.AddingMissingColumns(missingColumns.Count, tableName, string.Join(',', missingColumns.Select(c => c.Name)));
-
-            foreach (var column in missingColumns)
-            {
-                // Each addition has its own transaction so a duplicate cannot roll back or skip other columns.
-                var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-                var op = BuildAddColumnOperation(column, migrationBuilder.GetDatabaseType(), tableName);
-                if (column.Name != WellKnownProperties.ReadModelInstanceInitialized)
-                {
-                    op.IsNullable = true;
-                }
-                migrationBuilder.Operations.Add(op);
-
-                try
-                {
-                    await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-                }
-                catch (Exception exception) when (IsDuplicateColumn(exception))
-                {
-                    // Another kernel added the column after our schema snapshot. Adopt only that column.
-                    if (!await tableMigrator.ColumnExists(context, tableName, column.Name))
-                    {
-                        throw;
-                    }
-                }
-            }
+            await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
         _columnMigrations.TryAdd(cacheKey, true);
+    }
+
+    async Task AddMissingColumns(string tableName, ReadModelDbContext context, IEnumerable<ProjectedColumn> missingColumns)
+    {
+        foreach (var column in missingColumns)
+        {
+            // Each addition has its own transaction so a duplicate cannot roll back or skip other columns.
+            var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+            var op = BuildAddColumnOperation(column, migrationBuilder.GetDatabaseType(), tableName);
+            if (column.Name != WellKnownProperties.ReadModelInstanceInitialized)
+            {
+                op.IsNullable = true;
+            }
+            migrationBuilder.Operations.Add(op);
+
+            try
+            {
+                await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+            }
+            catch (Exception exception) when (IsDuplicateColumn(exception))
+            {
+                // Another kernel added the column after our schema snapshot. Adopt only that column.
+                if (!await tableMigrator.ColumnExists(context, tableName, column.Name))
+                {
+                    throw;
+                }
+            }
+        }
     }
 
     static bool IsDuplicateTable(Exception exception) => exception switch
@@ -157,12 +161,12 @@ public class ReadModelMigrator(
 
             if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{tableName}'";
+                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}'";
                 nameOrdinal = 0;
             }
             else if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}'";
+                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
                 nameOrdinal = 0;
             }
             else
@@ -281,7 +285,7 @@ public class ReadModelMigrator(
             return databaseType switch
             {
                 DatabaseType.PostgreSql => column.IsKey ? "VARCHAR(200)" : "TEXT",
-                DatabaseType.SqlServer => column.IsKey ? "NVARCHAR(200)" : "NVARCHAR(MAX)",
+                DatabaseType.SqlServer => column.SqlServerStringType,
                 _ => "TEXT"
             };
         }
@@ -358,7 +362,7 @@ public class ReadModelMigrator(
                 nameof(UInt64) => "NUMERIC(20,0)",
                 nameof(Single) => "REAL",
                 nameof(Double) => "DOUBLE PRECISION",
-                nameof(Decimal) => "DECIMAL",
+                nameof(Decimal) => "NUMERIC",
                 _ => "TEXT"
             },
             DatabaseType.SqlServer => unwrapped.Name switch
@@ -370,12 +374,13 @@ public class ReadModelMigrator(
                 nameof(UInt64) => "DECIMAL(20,0)",
                 nameof(Single) => "REAL",
                 nameof(Double) => "FLOAT",
-                nameof(Decimal) => "DECIMAL(18,2)",
+                nameof(Decimal) => "DECIMAL(38,18)",
                 _ => "NVARCHAR(MAX)"
             },
             _ => unwrapped.Name switch
             {
-                nameof(Single) or nameof(Double) or nameof(Decimal) => "REAL",
+                nameof(Single) or nameof(Double) => "REAL",
+                nameof(Decimal) => "TEXT",
                 _ => "INTEGER"
             }
         };

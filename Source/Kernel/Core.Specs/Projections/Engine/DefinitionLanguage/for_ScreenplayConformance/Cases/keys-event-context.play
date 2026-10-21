@@ -1,0 +1,17 @@
+// A key read from the event context
+// Screenplay documentation: Documentation/screenplay/projections/keys.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        label String
+      readmodel OrderView
+        correlationId Uuid
+        label String
+      query OrderViewById => OrderView?
+        by correlationId Uuid
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced key $eventContext.correlationId
+          label = label

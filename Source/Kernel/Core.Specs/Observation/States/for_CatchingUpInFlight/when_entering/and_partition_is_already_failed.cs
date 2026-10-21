@@ -29,4 +29,6 @@ public class and_partition_is_already_failed : given.a_catching_up_in_flight_sta
             Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == _partition));
 
     [Fact] void should_transition_to_routing() => _stateMachine.Received(1).TransitionTo<Routing>();
+    [Fact] void should_keep_only_markers_still_needing_recovery() => _resultingStoredState.InFlightPartitions.ShouldBeEmpty();
+    [Fact] void should_not_mutate_the_handed_markers() => _storedState.InFlightPartitions.ShouldContain(_partition);
 }

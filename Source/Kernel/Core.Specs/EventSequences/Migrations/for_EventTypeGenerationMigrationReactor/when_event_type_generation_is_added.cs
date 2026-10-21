@@ -35,13 +35,13 @@ public class when_event_type_generation_is_added : given.a_reactor
             new CorrelationId(Guid.NewGuid()));
 
         _jobsManager
-            .Start<IMigrateExistingEventsForType, MigrateExistingEventsForTypeRequest>(Arg.Any<MigrateExistingEventsForTypeRequest>())
+            .Start<IBackfillEventTypeGenerations, BackfillEventTypeGenerationsRequest>(Arg.Any<BackfillEventTypeGenerationsRequest>())
             .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
     }
 
     async Task Because() => await _reactor.EventTypeGenerationAdded(_event, _context);
 
     [Fact] void should_start_migration_job() =>
-        _jobsManager.Received(1).Start<IMigrateExistingEventsForType, MigrateExistingEventsForTypeRequest>(
-            Arg.Is<MigrateExistingEventsForTypeRequest>(r => r.EventTypeId == _eventTypeId));
+        _jobsManager.Received(1).Start<IBackfillEventTypeGenerations, BackfillEventTypeGenerationsRequest>(
+            Arg.Is<BackfillEventTypeGenerationsRequest>(r => r.EventTypeId == _eventTypeId));
 }

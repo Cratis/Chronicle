@@ -1,8 +1,9 @@
+---
+description: Use built-in Chronicle projection functions such as Count, Increment, Decrement, Add and Subtract to calculate values without custom logic.
+---
 # Projection functions
 
 Projections support several built-in functions for mathematical operations and counting. These functions allow you to perform calculations directly within projections without needing custom logic.
-
-> **TypeScript note:** of these, only `Increment()`/`Decrement()` are implemented in TypeScript's fluent builder today. `Count()`, `Add()`, and `Subtract()` type-check but throw `Error('... is not implemented yet.')` at runtime (`FromBuilder.ts`), so those examples below are C#-only.
 
 ## Counting events
 

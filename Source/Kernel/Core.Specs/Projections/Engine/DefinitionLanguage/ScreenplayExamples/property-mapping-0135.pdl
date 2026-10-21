@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  from ProductCreated
+    Name = name              # string
+    Price = price            # decimal/number
+    IsAvailable = true       # boolean
+    Stock = 0                # integer
+    Category = null          # nullable

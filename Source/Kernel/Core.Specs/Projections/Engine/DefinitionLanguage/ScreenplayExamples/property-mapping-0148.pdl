@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  from UserProfileUpdated
+    FirstName = firstName
+    LastName = lastName
+    Email = email
+    Bio = bio
+    UpdatedAt = $eventContext.occurred

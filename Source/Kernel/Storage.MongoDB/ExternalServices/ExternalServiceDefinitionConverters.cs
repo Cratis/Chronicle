@@ -71,7 +71,8 @@ public static class ExternalServiceDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             },
             none => { });
 
@@ -95,7 +96,7 @@ public static class ExternalServiceDefinitionConverters
             authorization = new OAuthAuthorization(
                 configuration.OAuthAuthorization.Authority,
                 configuration.OAuthAuthorization.ClientId,
-                configuration.OAuthAuthorization.ClientSecret);
+                configuration.OAuthAuthorization.ClientSecret) { Scope = configuration.OAuthAuthorization.Scope };
         }
         else
         {

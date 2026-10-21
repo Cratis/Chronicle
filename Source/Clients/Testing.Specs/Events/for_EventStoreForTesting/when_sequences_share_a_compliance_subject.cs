@@ -52,7 +52,7 @@ public class when_sequences_share_a_compliance_subject : Specification
     {
         // Kernel assemblies are private package implementation details. Inspect only in harness specs,
         // without adding a consumer-facing API for raw content or encryption keys.
-        var compliance = typeof(EventStoreForTesting).GetField("_compliance", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(store)!;
+        var compliance = store.TestingStore.Compliance;
         var storage = compliance.GetType().GetProperty("KeyStorage")!.GetValue(compliance)!;
         return (IDictionary)storage.GetType().GetField("_keys", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(storage)!;
     }

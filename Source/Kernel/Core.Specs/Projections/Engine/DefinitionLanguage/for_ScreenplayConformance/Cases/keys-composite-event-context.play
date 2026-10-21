@@ -1,0 +1,24 @@
+// A composite key with an event-context part
+// Screenplay documentation: Documentation/screenplay/projections/keys.md
+
+type OrderKey
+  orderId String
+  sequence Int
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        label String
+      readmodel OrderView
+        id OrderKey
+        label String
+      query OrderViewById => OrderView?
+        by id OrderKey
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          key OrderKey
+            orderId = orderId
+            sequence = $eventContext.sequenceNumber
+          label = label

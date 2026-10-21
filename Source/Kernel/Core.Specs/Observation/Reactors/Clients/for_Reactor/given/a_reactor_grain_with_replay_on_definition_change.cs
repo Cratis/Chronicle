@@ -18,6 +18,7 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
     protected Reactor _grain;
     protected TestKitSilo _silo;
     protected ReactorDefinition _definition;
+    protected IObserver _observerProbe;
 
     async Task Establish()
     {
@@ -42,7 +43,8 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
         namespacesGrain.GetAll().Returns([]);
         _silo.AddProbe(_ => namespacesGrain);
         _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
-        _silo.AddProbe(_ => Substitute.For<IObserver>());
+        _observerProbe = Substitute.For<IObserver>();
+        _silo.AddProbe(_ => _observerProbe);
 
         _definition = CreateDefinition(EventSequenceId.Log);
 

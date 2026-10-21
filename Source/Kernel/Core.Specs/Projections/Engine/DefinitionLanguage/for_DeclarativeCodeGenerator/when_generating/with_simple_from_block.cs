@@ -50,7 +50,7 @@ public class with_simple_from_block : given.a_declarative_code_generator
 
     [Fact] void should_contain_from_block() => _result.ShouldContain(".From<PersonCreated>");
 
-    [Fact] void should_contain_using_key() => _result.ShouldContain(".UsingKey(e => e.EventSourceId)");
+    [Fact] void should_use_the_default_event_source_key() => _result.ShouldNotContain(".UsingKey(");
 
     [Fact] void should_contain_set_operation() => _result.ShouldContain(".Set(m => m.Name)");
 }

@@ -112,6 +112,7 @@ public class ConstraintDefinitionSerializer : SerializerBase<IConstraintDefiniti
         {
             ConstraintType.Unique => typeof(UniqueConstraintDefinition),
             ConstraintType.UniqueEventType => typeof(UniqueEventTypeConstraintDefinition),
+            ConstraintType.ClosesStream => typeof(ClosesStreamConstraintDefinition),
             _ => throw new UnknownConstraintTypeString(constraintTypeString)
         };
     }

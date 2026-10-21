@@ -21,6 +21,9 @@ public static class TestingReadModelScenarioPreseedingInstances
             .ForEventSourceId("order-1")
             .ReadModel(new TestingReadModelScenarioOrderSummary("order-1", 99.99m));
 
+        // This key exists even without events. Any later events fold on top of this seed.
+        scenario.InstanceForEventSourceId("order-1")!.Total.ShouldEqual(99.99m);
+
         // Pass scenario.ReadModels to production code under test
         var sut = new TestingReadModelScenarioOrderService(scenario.ReadModels);
         var result = await sut.GetOrderTotal("order-1");

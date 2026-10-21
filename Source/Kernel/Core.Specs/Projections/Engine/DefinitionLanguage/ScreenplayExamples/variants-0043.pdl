@@ -1,0 +1,6 @@
+projection WorkItem
+  variant PullRequestItem
+    enters on PullRequestCreated
+
+    from BuildCompleted
+      buildStatus = status

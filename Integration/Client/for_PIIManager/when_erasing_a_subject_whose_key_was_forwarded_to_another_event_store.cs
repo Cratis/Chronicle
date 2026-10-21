@@ -65,7 +65,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         public string PiiOfTheErasedEventAfterAuthorizing { get; private set; } = string.Empty;
         public string PiiOfTheNewEventAfterAuthorizing { get; private set; } = string.Empty;
 
-        public override IEnumerable<Type> EventTypes => [typeof(PersonRegisteredInOutbox)];
+        public override IEnumerable<Type> EventTypes => [typeof(PublicPersonRegistered)];
 
         async Task Because()
         {
@@ -80,10 +80,9 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
 
             // The subject's key is minted in the source store by the append, and the forwarding
             // subscriber copies it into the target store before it appends to the target's inbox.
-            var appendResult = await sourceEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
+            await sourceEventStore.GetEventSequence(EventSequenceId.Outbox).Append(
                 EventSourceId,
-                new PersonRegisteredInOutbox(Subject, "Jane Doe", SocialSecurityNumber));
-            appendResult.IsSuccess.ShouldBeTrue();
+                new PublicPersonRegistered(Subject, "Jane Doe", SocialSecurityNumber));
             await WaitForInboxTail(TargetEventStoreName, SourceEventStoreName);
 
             var sourceKey = await keys.TryGetFor(SourceEventStoreName, Concepts.EventStoreNamespaceName.Default, Subject.Value);
@@ -126,7 +125,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         {
             var events = await eventStore.GetEventSequence(sequenceId).GetFromSequenceNumber(EventSequenceNumber.First);
             var appended = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
-            return appended is null ? string.Empty : ((PersonRegisteredInOutbox)appended.Content).SocialSecurityNumber;
+            return appended is null ? string.Empty : ((PublicPersonRegistered)appended.Content).SocialSecurityNumber;
         }
 
         async Task<bool> TryAppendPersonalData(IEventStore eventStore, string socialSecurityNumber)
@@ -138,7 +137,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             {
                 var result = await eventStore.GetEventSequence(EventSequenceId.Outbox).Append(
                     EventSourceId,
-                    new PersonRegisteredInOutbox(Subject, "Jane Doe", socialSecurityNumber));
+                    new PublicPersonRegistered(Subject, "Jane Doe", socialSecurityNumber));
                 succeeded = result.IsSuccess;
             });
 
@@ -150,7 +149,7 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
             await targetEventStore.Subscriptions.Subscribe(
                 new EventStoreSubscriptionId(subscriptionId),
                 sourceEventStoreName,
-                builder => builder.WithEventType<PersonRegisteredInOutbox>());
+                builder => builder.WithEventType<PublicPersonRegistered>());
 
             var systemLog = targetEventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();

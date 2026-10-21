@@ -25,4 +25,16 @@ public interface IEventTypeMigrations
     /// <param name="onMigrating">Optional inspection of each migration's operations together with the document they are applied to.</param>
     /// <returns>A dictionary mapping each generation to its corresponding content.</returns>
     Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null);
+
+    /// <summary>
+    /// Migrates with an already-loaded definition so provenance identifies exactly the definitions applied.
+    /// </summary>
+    /// <param name="definition">The immutable definition snapshot.</param>
+    /// <param name="eventType">The source type and generation.</param>
+    /// <param name="content">The plaintext JSON.</param>
+    /// <param name="contentAsExpandoObject">The plaintext converted with the source schema.</param>
+    /// <param name="onConverted">Optional inspection of converted generations.</param>
+    /// <param name="onMigrating">Optional inspection of applied migration expressions.</param>
+    /// <returns>The migrated content per generation.</returns>
+    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventTypeDefinition definition, EventType eventType, JsonObject content, ExpandoObject contentAsExpandoObject, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted = null, Action<JsonObject, JsonObject>? onMigrating = null);
 }

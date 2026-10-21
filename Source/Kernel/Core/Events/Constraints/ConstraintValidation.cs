@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -13,6 +14,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) : IConstraintValidation
 {
     /// <inheritdoc/>
+    public IEnumerable<IConstraintDefinition> IndexedDefinitions => validators.Where(validator => validator is IHaveUpdateConstraintIndex).Select(validator => validator.Definition);
+
+    /// <inheritdoc/>
     public ConstraintValidationContext Establish(
         EventSourceId eventSourceId,
         EventTypeId eventTypeId,
@@ -20,6 +24,12 @@ public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) 
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        ConstraintBatchClaims? batchClaims = default) =>
-        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+        ConstraintBatchClaims? batchClaims = default,
+        Subject? subject = default,
+        IReadOnlyCollection<string>? personalProperties = default) =>
+        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId, batchClaims)
+        {
+            Subject = subject,
+            PersonalProperties = personalProperties ?? []
+        };
 }

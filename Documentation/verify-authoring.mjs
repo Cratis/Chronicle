@@ -98,10 +98,14 @@ function selfTestClientFences(directClientFenceLines) {
     console.log(`Client fence self-test detected ${found} planted fences across ${clientFenceLanguages.size} languages and passed ${containerCases.length} container cases.`);
 }
 
+// site-concepts/ snippets are rendered by the Concepts guides on cratis.io, which live in
+// Cratis/Documentation rather than in this repository, so no page here references them.
+const externallyConsumedSnippetPrefixes = ['legacy/', 'site-concepts/'];
+
 function unusedClientSnippets(snippetFiles, referencedIds) {
     return snippetFiles.filter(file => {
         const id = path.relative(path.join(documentationRoot, 'client-snippets'), file).split(path.sep).join('/').replace(/\.mdx?$/i, '');
-        return !id.startsWith('legacy/') && !referencedIds.has(id);
+        return !externallyConsumedSnippetPrefixes.some(prefix => id.startsWith(prefix)) && !referencedIds.has(id);
     });
 }
 
@@ -111,14 +115,14 @@ function selfTestSnippetReferences(snippetReferences) {
     for (const id of snippetReferences('<ChronicleClientTabs snippet="example/clients" />', true)) referenced.add(id);
     // A tab restricted to other clients renders no C# tab, so it does not use the C# snippet.
     for (const id of snippetReferences('<ChronicleClientTabs snippet="example/other-clients" variants="kotlin,java" />\n\n<ChronicleClientTabs snippet="example/mixed" variants="kotlin, csharp" />\n\n<ChronicleClientTabs snippet="example/empty-variants" variants="" />', true)) referenced.add(id);
-    const snippetFiles = ['example/referenced.md', 'example/clients.md', 'example/mixed.md', 'example/empty-variants.md', 'example/other-clients.md', 'example/unused.mdx', 'example/fenced.md', 'example/inline.md', 'legacy/old.md']
+    const snippetFiles = ['example/referenced.md', 'example/clients.md', 'example/mixed.md', 'example/empty-variants.md', 'example/other-clients.md', 'example/unused.mdx', 'example/fenced.md', 'example/inline.md', 'legacy/old.md', 'site-concepts/page/example.md']
         .map(file => path.join(documentationRoot, 'client-snippets', file));
     const unused = unusedClientSnippets(snippetFiles, referenced).map(file => path.basename(file));
     if (referenced.size !== 4 || !referenced.has('example/referenced') || !referenced.has('example/clients') || !referenced.has('example/mixed') || !referenced.has('example/empty-variants') || unused.join(',') !== 'other-clients.md,unused.mdx,fenced.md,inline.md') {
         console.error(`Client snippet self-test failed: references ${[...referenced]}; unused ${unused}.`);
         process.exit(1);
     }
-    console.log(`Client snippet self-test detected ${unused.length} planted unused snippets and excluded four referenced and one legacy snippet.`);
+    console.log(`Client snippet self-test detected ${unused.length} planted unused snippets and excluded four referenced, one legacy and one site-concepts snippet.`);
 }
 
 function validateContent(file, content) {
@@ -352,4 +356,4 @@ if (errors.length > 0) {
 
 const markdownCount = markdownFiles.filter(file => path.extname(file).toLowerCase() === '.md').length;
 const mdxCount = markdownFiles.length - markdownCount;
-console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences; ${snippetFiles.length} client snippets checked for references (${referencedIds.size} IDs referenced, legacy/ excluded).`);
+console.log(`Documentation authoring validation passed for ${markdownFiles.length} files (${markdownCount} .md, ${mdxCount} .mdx) and ${tocFiles.length} toc files; ${sharedPages.length} shared pages checked for client-language fences; ${snippetFiles.length} client snippets checked for references (${referencedIds.size} IDs referenced, legacy/ and site-concepts/ excluded).`);

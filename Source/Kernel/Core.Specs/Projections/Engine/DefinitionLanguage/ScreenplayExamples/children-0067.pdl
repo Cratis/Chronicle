@@ -1,0 +1,10 @@
+projection Doc => DocReadModel
+  children members identified by userId
+    from UserAddedToGroup key userId
+      parent groupId
+      Name = userName
+      Role = role
+
+    from UserRoleChanged key userId
+      parent groupId
+      Role = role

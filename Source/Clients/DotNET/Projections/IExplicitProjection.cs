@@ -31,6 +31,14 @@ internal interface IExplicitProjection
     bool IsModelBound { get; }
 
     /// <summary>
+    /// Gets the container name the projection declared for its read model, or null when it left it to the naming policy.
+    /// </summary>
+    /// <remarks>
+    /// Only known once <see cref="Build"/> has run.
+    /// </remarks>
+    string? ContainerNameOverride { get; }
+
+    /// <summary>
     /// Build the projection definition.
     /// </summary>
     /// <param name="context">The <see cref="ExplicitProjectionContext"/> to build within.</param>

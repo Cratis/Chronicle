@@ -16,4 +16,16 @@ public interface IUpdateConstraintIndex
     /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> of the event.</param>
     /// <returns>Awaitable task.</returns>
     public Task Update(EventSequenceNumber eventSequenceNumber);
+
+    /// <summary>
+    /// Updates the index with cancellation propagated to storage.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The event's position.</param>
+    /// <param name="cancellationToken">Cancellation of the update.</param>
+    /// <returns>The update task.</returns>
+    Task Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Update(eventSequenceNumber);
+    }
 }

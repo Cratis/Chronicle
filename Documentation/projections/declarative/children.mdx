@@ -1,10 +1,9 @@
+---
+description: Build read models with child collections in a declarative Chronicle projection by declaring how children are identified, added, updated and removed.
+---
 # Projection with children
 
 Projections can manage hierarchical data by defining child collections. This allows you to build read models that contain arrays or lists of related data.
-
-:::note[Client coverage]
-Declarative child-collection builders (`Children()`/`IdentifiedBy()`/`RemovedWith()`) are currently a C#-only mechanism. Kotlin and Java have no fluent child-collection API at all, TypeScript's builder throws `not implemented yet` for this method, and Elixir has no verified, working pattern for embedding a child collection into a parent read model. The examples on this page are shown in C# only until child projection scopes are implemented for the other clients.
-:::
 
 ## Defining a projection with children
 

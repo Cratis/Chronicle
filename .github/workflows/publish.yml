@@ -1,21 +1,18 @@
 name: Publish
 
-# Publish runs are grouped per pull request, and never cancelled.
+# Publish runs never cancel each other and queue in FIFO order.
 #
-# Under the pull_request trigger github.ref is refs/pull/<N>/merge, so this group is unique to one
-# pull request: simultaneous merges never cancel one another's publish run, and with
-# cancel-in-progress off a run that has started always finishes and cuts its version. It does not
-# serialize releases. Choosing the next version is a read then a create, so two runs still read the
-# same latest version and race to create it - merging eleven pull requests in two minutes on
-# 2026-08-18 gave five runs all computing v16.35.7 and four 403s from secondary rate limiting.
-# A constant group would not fix that and must not be introduced: GitHub keeps only one pending run
-# per group and cancels the earlier pending one, so a third merge silently drops the second's
-# release, which is worse than a noisy 403. The real fix is to stop deriving the version from a
-# read-then-create race - retry the create with backoff, or decouple release from merge so only one
-# release run exists at a time (task 2.2 in PLAN-reliability-program.md).
+# A merged pull request runs with github.ref set to the base branch (refs/heads/main), so every merge
+# shares this group.
+#
+# GitHub keeps only one pending run per concurrency group by default and cancels the earlier pending one
+# when another run joins the group, which silently dropped releases when several pull requests merged
+# while a Publish was running (Cratis/Chronicle#4857 and #4859 lost their own releases on 2026-10-18).
+# `queue: max` keeps up to 100 pending runs in order instead. Runs that have started always finish and
+# cut their version. `cancel-in-progress` is omitted because GitHub rejects it together with `queue: max`.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  queue: max
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
@@ -477,6 +474,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -485,12 +488,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -561,6 +558,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -569,12 +572,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -628,6 +625,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -636,12 +639,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags
@@ -710,6 +707,12 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
         with:
@@ -718,12 +721,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags
         id: docker-tags

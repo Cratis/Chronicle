@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Webhooks;
 
@@ -10,6 +11,15 @@ namespace Cratis.Chronicle.Webhooks;
 /// </summary>
 public interface IWebhookDefinitionBuilder
 {
+    /// <summary>
+    /// Sets the generation delivery policy. Compatibility is the default.
+    /// </summary>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="WebhookGenerationDeliveryNotSupported">The builder does not support pinned delivery.</exception>
+    IWebhookDefinitionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery) =>
+        generationDelivery == EventGenerationDelivery.Compatibility ? this : throw new WebhookGenerationDeliveryNotSupported();
+
     /// <summary>
     /// Sets the <see cref="EventSequenceId"/> that the webhook observer should be registered on.
     /// </summary>
@@ -31,6 +41,18 @@ public interface IWebhookDefinitionBuilder
     /// <param name="token">The bearer token.</param>
     /// <returns>The <see cref="IWebhookDefinitionBuilder"/> builder for continuation.</returns>
     IWebhookDefinitionBuilder WithBearerToken(string token);
+
+    /// <summary>
+    /// Uses OAuth client credentials, optionally requesting a scope.
+    /// </summary>
+    /// <param name="authority">The authority.</param>
+    /// <param name="clientId">The client identifier.</param>
+    /// <param name="clientSecret">The client secret.</param>
+    /// <param name="scope">The optional scope.</param>
+    /// <returns>The builder continuation.</returns>
+    /// <exception cref="NotSupportedException">The builder does not support scoped OAuth configuration.</exception>
+    IWebhookDefinitionBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope = "") =>
+        throw new NotSupportedException("This builder does not support OAuth.");
 
     /// <summary>
     /// Adds a header to the webhook requests.

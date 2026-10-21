@@ -132,6 +132,8 @@ public class EventSequenceMigrator(
                 Causation = table.StringColumn(migrationBuilder),
                 CausedBy = table.StringColumn(migrationBuilder),
                 Type = table.StringColumn(migrationBuilder, maxLength: 200),
+                AppendedGeneration = table.Column<uint>(nullable: true),
+                RevisedGeneration = table.Column<uint>(nullable: true),
                 Occurred = table.Column<DateTimeOffset>(nullable: false),
                 EventSourceType = table.StringColumn(migrationBuilder, maxLength: 200),
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200),
@@ -139,6 +141,7 @@ public class EventSequenceMigrator(
                 EventStreamId = table.StringColumn(migrationBuilder, maxLength: 200),
                 Content = table.StringColumn(migrationBuilder),
                 ContentHashes = table.StringColumn(migrationBuilder),
+                DerivedGenerations = table.StringColumn(migrationBuilder, nullable: true),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
                 EventSource = table.StringColumn(migrationBuilder, nullable: true),
@@ -180,6 +183,27 @@ public class EventSequenceMigrator(
 
     async Task UpgradeTable(EventSequenceDbContext context, string tableName)
     {
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.RevisedGeneration)))
+        {
+            var revisionMigration = new MigrationBuilder(context.Database.ProviderName);
+            revisionMigration.AddColumn<uint>(nameof(EventEntry.RevisedGeneration), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, revisionMigration);
+        }
+
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.DerivedGenerations)))
+        {
+            var provenanceMigration = new MigrationBuilder(context.Database.ProviderName);
+            provenanceMigration.AddColumn<string>(nameof(EventEntry.DerivedGenerations), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, provenanceMigration);
+        }
+
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.AppendedGeneration)))
+        {
+            var generationMigration = new MigrationBuilder(context.Database.ProviderName);
+            generationMigration.AddColumn<uint>(nameof(EventEntry.AppendedGeneration), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, generationMigration);
+        }
+
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.PublicationIdentityHash)))
         {
             var publicationMigration = new MigrationBuilder(context.Database.ProviderName);

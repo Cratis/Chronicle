@@ -66,7 +66,7 @@ public record BehaviorPatternDetails(
     /// <param name="minimumConfidence">The lowest confidence a returned pattern may hold.</param>
     /// <param name="maximumResults">The largest number of patterns to return.</param>
     /// <returns>The matching patterns.</returns>
-    internal static async Task<IEnumerable<BehaviorPatternDetails>> MatchingPatterns(
+    public static async Task<IEnumerable<BehaviorPatternDetails>> MatchingPatterns(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         PatternGroupingKey groupingKey,
@@ -125,7 +125,7 @@ public record BehaviorPatternDetails(
     /// rather than the query: an itemset only reaches storage by holding MinimumSupport of everything the scope
     /// did, so a scope holds patterns in the hundreds no matter how many events it produced.
     /// </remarks>
-    internal static async Task<IEnumerable<BehaviorPatternDetails>> UsualActions(
+    public static async Task<IEnumerable<BehaviorPatternDetails>> UsualActions(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         PatternGroupingKey groupingKey,
@@ -164,7 +164,7 @@ public record BehaviorPatternDetails(
     /// <param name="groupingKey">The scope to get patterns for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the mined patterns.</param>
     /// <returns>The patterns the scope has established.</returns>
-    internal static async Task<IEnumerable<BehaviorPatternDetails>> PatternsForScope(
+    public static async Task<IEnumerable<BehaviorPatternDetails>> PatternsForScope(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         PatternGroupingKey groupingKey,
@@ -193,7 +193,7 @@ public record BehaviorPatternDetails(
     /// reason to add a kernel-side read if a deployment ever has enough scopes for the fan-out to hurt.
     /// </para>
     /// </remarks>
-    internal static async Task<IEnumerable<BehaviorPatternDetails>> AllPatterns(
+    public static async Task<IEnumerable<BehaviorPatternDetails>> AllPatterns(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         IStorage storage)

@@ -40,6 +40,7 @@ public record RedactForEventSource(
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to append the redaction request through.</param>
     /// <param name="causation">The <see cref="RequestCausation"/> describing the request behind the append.</param>
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is redacting.</param>
+    /// <param name="correlationId">The server-generated correlation identifier for the redaction request.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// A reactor picks up the resulting <see cref="EventsRedactedForEventSource"/> and performs the actual
@@ -48,7 +49,8 @@ public record RedactForEventSource(
     public Task Handle(
         IGrainFactory grainFactory,
         RequestCausation causation,
-        ICurrentPrincipalAccessor principalAccessor)
+        ICurrentPrincipalAccessor principalAccessor,
+        [GeneratedValue] CorrelationId correlationId)
     {
         var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
         return systemEventSequence.Append(
@@ -58,7 +60,7 @@ public record RedactForEventSource(
                 EventSourceId,
                 EventTypes.Select(eventType => new Concepts.Events.EventType(eventType, 1)),
                 Reason),
-            correlationId: Guid.NewGuid(),
+            correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
     }

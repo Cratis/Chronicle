@@ -18,10 +18,13 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Seeding;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle;
 
@@ -30,6 +33,7 @@ namespace Cratis.Chronicle;
 /// </summary>
 public class ChronicleClient : IChronicleClient, IDisposable
 {
+    const string DefaultSoftwareVersion = "1.0.0";
     const string VersionMetadataKey = "softwareVersion";
     const string CommitMetadataKey = "softwareCommit";
     const string DotNetClientVersionMetadataKey = ".NET Client Version";
@@ -53,6 +57,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly INamingPolicy _namingPolicy;
     readonly CancellationTokenSource? _ownedConnectionCancellation;
+    readonly GlobalSeedRegistration _globalSeedRegistration = new();
 
     /// <summary>
     /// The event stores handed out, keyed on the name and namespace that identify one.
@@ -169,6 +174,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             skipKeepAlive: options.SkipKeepAlive,
             loadBalancerStrategy: options.LoadBalancerStrategy);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
+        _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
 
     /// <summary>
@@ -211,6 +217,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
+        _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
 
     /// <inheritdoc/>
@@ -234,7 +241,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         foreach (var eventStore in CreatedEventStores())
         {
+            // Disposing the connection raises no disconnect, so the background registration retry must be stopped here.
+            (eventStore as EventStore)?.StopBackgroundRegistrationRetry();
             eventStore.ReadModelReactors.Dispose();
+            if (eventStore.Occurrences is IDisposable occurrences) occurrences.Dispose();
         }
 
         try
@@ -245,6 +255,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         {
         }
         _ownedConnectionCancellation?.Dispose();
+        _connection.Lifecycle.OnDisconnected -= _globalSeedRegistration.Reset;
         _connection.Dispose();
     }
 
@@ -265,7 +276,16 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         try
         {
-            return await lazyEventStore.Value;
+            var eventStore = await lazyEventStore.Value;
+            if (eventStore is EventStore { IsRetired: true })
+            {
+                // Its namespace was removed while this client was disconnected. Start over with a new one, which
+                // registers - and so creates the namespace - only because it is being used again.
+                _eventStores.TryRemove(new KeyValuePair<EventStoreKey, Lazy<Task<IEventStore>>>(key, lazyEventStore));
+                return await GetEventStore(name, @namespace);
+            }
+
+            return eventStore;
         }
         catch
         {
@@ -281,7 +301,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
-        var eventStores = await _servicesAccessor.Services.EventStores.AllEventStores().EnsureSuccess();
+        var eventStores = await (await _servicesAccessor.GetServices(cancellationToken)).EventStores.AllEventStores(new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
         return eventStores.Select(_ => (EventStoreName)_.Name).ToArray();
     }
 
@@ -290,18 +310,29 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         foreach (var eventStore in CreatedEventStores())
         {
-            // Drop the RegisterAll handler the EventStore constructor wired up so the shared
-            // connection's OnConnected event no longer fans out into this evicted instance.
-            // Without this, the next reconnect would still run RegisterAll for every event
-            // store created in the lifetime of the client, including those the caller no
-            // longer cares about.
-            eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
+            // Drop the lifecycle handlers the EventStore constructor wired up so the shared
+            // connection no longer fans out into this evicted instance. Without this, the next
+            // reconnect would still run RegisterAll for every event store created in the lifetime
+            // of the client, including those the caller no longer cares about.
+            if (eventStore is EventStore store)
+            {
+                store.DetachAutomaticRegistration();
+            }
+            else
+            {
+                eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
+            }
         }
         _eventStores.Clear();
     }
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()
     {
+        if (Options.SoftwareVersion == DefaultSoftwareVersion)
+        {
+            _loggerFactory.CreateLogger<ChronicleClient>().SoftwareVersionIsDefault(Options.SoftwareVersion);
+        }
+
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
         {
@@ -323,7 +354,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new InstancesOf<ICanProvideSecurityMetadataForType>(types, _serviceProvider),
             new InstancesOf<ICanProvideSecurityMetadataForProperty>(types, _serviceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, securityMetadataResolver, _namingPolicy);
-        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
+        var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider, _loggerFactory);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);
 
         InitializeJsonSerializationOptions();
@@ -406,14 +437,30 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.EnableEventTypeGenerationValidation,
             Microsoft.Extensions.Options.Options.Create(Options),
             _loggerFactory);
+        eventStore.UseGlobalSeedRegistration(_globalSeedRegistration);
 
-        if (Options.AutoDiscoverAndRegister)
+        try
         {
-            await eventStore.DiscoverAll();
-        }
+            if (Options.AutoDiscoverAndRegister)
+            {
+                await eventStore.DiscoverAll();
+            }
 
-        await _connection.Connect();
-        return eventStore;
+            await _connection.Connect();
+            if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
+            {
+                // Only a connected transport can register; the first connect may still be waiting on its watchdog.
+                // Connect may have reused an already-connected transport without firing the new store's callback.
+                await eventStore.RegisterAll();
+            }
+
+            return eventStore;
+        }
+        catch
+        {
+            eventStore.DetachAutomaticRegistration();
+            throw;
+        }
     }
 
     /// <summary>

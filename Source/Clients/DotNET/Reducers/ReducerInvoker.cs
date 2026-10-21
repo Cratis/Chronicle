@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public class ReducerInvoker : IReducerInvoker
 {
-    static readonly ConcurrentDictionary<(Type TargetType, Type ReadModelType), FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
+    static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = new();
     readonly FrozenDictionary<Type, MethodInfo> _methodsByEventType;
     readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
@@ -41,10 +40,7 @@ public class ReducerInvoker : IReducerInvoker
         _targetType = targetType;
         ReadModelType = readModelType;
         ContainerName = containerName;
-        _methodsByEventType = _methodsByEventTypeCache.GetOrAdd(
-            (targetType, readModelType),
-            static (key, eventTypes) => BuildMethodsByEventType(key.TargetType, key.ReadModelType, eventTypes),
-            eventTypes.AllClrTypes);
+        _methodsByEventType = GetMethodsFor(eventTypes, targetType, readModelType);
 
         EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
@@ -74,6 +70,7 @@ public class ReducerInvoker : IReducerInvoker
         await using var activatedReducer = activatedReducerResult.AsT0;
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
         var currentModelState = initialReadModelContent;
+        var dispatched = 0;
 
         foreach (var eventAndContext in eventsAndContexts)
         {
@@ -121,6 +118,7 @@ public class ReducerInvoker : IReducerInvoker
                     }
 
                     lastSuccessfulObservedEventAndContext = eventAndContext;
+                    ++dispatched;
                 }
             }
             catch (Exception ex)
@@ -137,8 +135,21 @@ public class ReducerInvoker : IReducerInvoker
                 currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
-                string.Empty);
+                string.Empty) { DispatchedEvents = dispatched };
     }
+
+    /// <summary>
+    /// Gets the registered event identities from the same dispatch map used by reducer invocation.
+    /// </summary>
+    /// <param name="eventTypes">The owning event registry.</param>
+    /// <param name="targetType">The reducer CLR type.</param>
+    /// <param name="readModelType">The registered reducer's model type.</param>
+    /// <returns>The accepted event identities.</returns>
+    internal static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
+        GetMethodsFor(eventTypes, targetType, readModelType).Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+
+    static FrozenDictionary<Type, MethodInfo> GetMethodsFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
+        _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -54,4 +55,7 @@ internal static partial class HandleEventsForObserverLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step failed, but it had successfully handled some events. Last successfully handled event was: {LastHandledEventSequenceNumber}")]
     internal static partial void FailedWithPartialSuccess(this ILogger<HandleEventsForObserver> logger, Exception error, EventSequenceNumber lastHandledEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForObserver job step stopped checkpointing because its run no longer admits callbacks ({Reason}). The last durable event sequence number is {LastDurableEventSequenceNumber}; the next run resumes from it")]
+    internal static partial void CheckpointCallbackRejected(this ILogger<HandleEventsForObserver> logger, ActivationCallbackRejected reason, EventSequenceNumber lastDurableEventSequenceNumber);
 }

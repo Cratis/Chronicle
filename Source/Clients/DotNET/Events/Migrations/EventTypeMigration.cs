@@ -13,8 +13,10 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// </summary>
 /// <typeparam name="TUpgrade">The upgraded (newer generation) event type.</typeparam>
 /// <typeparam name="TPrevious">The previous (older generation) event type.</typeparam>
-public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrationFor<TUpgrade, TPrevious>
+public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrationFor<TUpgrade, TPrevious>, IRegistryBoundEventTypeMigration
 {
+    readonly IEventTypes? _registry;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypeMigration{TUpgrade, TPrevious}"/> class.
     /// </summary>
@@ -27,10 +29,25 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
     /// than <typeparamref name="TPrevious"/>'s generation.
     /// </exception>
     protected EventTypeMigration()
+        : this(typeof(TPrevious).GetEventType(), typeof(TUpgrade).GetEventType(), null)
     {
-        var previousEventType = typeof(TPrevious).GetEventType();
-        var upgradeEventType = typeof(TUpgrade).GetEventType();
+    }
 
+    /// <summary>
+    /// Resolves and validates adjacent migration endpoints in the owning store's registry.
+    /// </summary>
+    /// <param name="eventTypes">The owning store's finalized event registry.</param>
+    /// <exception cref="TypeIsNotAnEventType">Either endpoint is not registered in the owning store.</exception>
+    /// <exception cref="MigrationGenerationsMustShareEventTypeId">The registered endpoints have different identifiers.</exception>
+    /// <exception cref="InvalidMigrationGenerationGap">The registered endpoints are not adjacent generations.</exception>
+    protected EventTypeMigration(IEventTypes eventTypes)
+        : this(eventTypes.GetEventTypeFor(typeof(TPrevious)), eventTypes.GetEventTypeFor(typeof(TUpgrade)), eventTypes)
+    {
+    }
+
+    EventTypeMigration(EventType previousEventType, EventType upgradeEventType, IEventTypes? registry)
+    {
+        _registry = registry;
         if (previousEventType.Id != upgradeEventType.Id)
         {
             throw new MigrationGenerationsMustShareEventTypeId(typeof(TPrevious), typeof(TUpgrade), previousEventType.Id, upgradeEventType.Id);
@@ -50,6 +67,9 @@ public abstract class EventTypeMigration<TUpgrade, TPrevious> : IEventTypeMigrat
 
     /// <inheritdoc/>
     public EventTypeGeneration To { get; }
+
+    /// <inheritdoc/>
+    IEventTypes? IRegistryBoundEventTypeMigration.Registry => _registry;
 
     /// <summary>
     /// Define the type-safe upcast migration from <typeparamref name="TPrevious"/> to <typeparamref name="TUpgrade"/>.

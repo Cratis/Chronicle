@@ -1,3 +1,6 @@
+---
+description: "The event metadata tags Chronicle uses to identify and categorize events: event source type and id, and event stream type and id."
+---
 # Event Metadata Tags
 
 Event metadata tags provide a structured way to categorize and identify events within the Chronicle system. Below are the formalized tags available:
@@ -17,3 +20,5 @@ Event metadata tags provide a structured way to categorize and identify events w
 ## EventStreamId
 
 - **Description**: A marker that can be used to separate independent streams for a stream type (e.g., Monthly, Yearly).
+
+You can declare the event source type and the stream types once, as an event source definition. See [Event sources and streams](../event-sources/index.mdx). All four values can narrow a concurrency scope, which is how Chronicle expresses an append condition for a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). Custom tags cannot.

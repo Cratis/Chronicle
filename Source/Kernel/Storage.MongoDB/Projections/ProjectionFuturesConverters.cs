@@ -38,7 +38,10 @@ public static class ProjectionFuturesConverters
             future.IdentifiedByProperty,
             future.ParentIdentifiedByProperty,
             future.ParentKey.Value,
-            future.Created);
+            future.Created)
+        {
+            Context = EventContentBson.FromJson(JsonSerializer.Serialize(future.Event.Context, jsonSerializerOptions))
+        };
     }
 
     /// <summary>
@@ -52,14 +55,15 @@ public static class ProjectionFuturesConverters
         var contentJson = EventContentBson.ToJson(document.Event.Content);
         var content = JsonSerializer.Deserialize<System.Dynamic.ExpandoObject>(contentJson, jsonSerializerOptions)!;
 
-        var appendedEvent = new AppendedEvent(
-            EventContext.Empty with
+        var context = document.Context is not null
+            ? JsonSerializer.Deserialize<EventContext>(EventContentBson.ToJson(document.Context), jsonSerializerOptions)!
+            : EventContext.Empty with
             {
                 SequenceNumber = document.Event.EventSequenceId,
                 EventType = new(document.Event.EventType.Id, document.Event.EventType.Generation),
                 EventSourceId = document.Event.EventSourceId
-            },
-            content);
+            };
+        var appendedEvent = new AppendedEvent(context, content);
 
         return new Concepts.Projections.ProjectionFuture(
             document.Id,

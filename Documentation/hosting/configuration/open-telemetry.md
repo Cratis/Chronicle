@@ -1,3 +1,6 @@
+---
+description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+---
 # Open Telemetry
 
 Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.
@@ -98,6 +101,19 @@ The Prometheus names are what the OpenTelemetry Collector's Prometheus exporter 
 An observer has a series on these instruments from its first failure, not before: Chronicle records nothing when an observer starts, so healthy observers add no series and the number of series follows the number of observers that fail. The first value a backend receives for an observer is therefore already `1`, and alerts on these counters should not depend on seeing a `0` first. The [alerting guide](../alerting-on-observer-failures.md) shows how.
 
 The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
+
+### Suspected skipped events
+
+Two counters on the `Cratis.Chronicle` meter show how often an observer's position moved past a live event without any delivery path covering it. The first has the observer tags `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`, and no others. The second has the appended-events queue tags `EventStore`, `Namespace`, `EventSequenceId` and `QueueId`, plus `ObserverId`.
+
+| Instrument | Prometheus name | Counts |
+| --- | --- | --- |
+| `chronicle-observer-events-suspected-skipped` | `chronicle_observer_events_suspected_skipped_total` | Live events an observer's position moved past without the observer seeing any delivery path cover them. |
+| `chronicle-appended-events-queue-suspected-undelivered-events` | `chronicle_appended_events_queue_suspected_undelivered_events_total` | Event deliveries to an observer whose dispatch failed. One event counts once for each observer it was dispatched to. |
+
+These counters show suspicions, not proof. A catch-up job may have delivered an event without reporting it, and a dispatch that failed may still have reached the observer before it failed. Counting changes nothing about delivery. The counters count every suspicion, while the matching warnings are rate-limited to 10 per observer, or per queue, per minute, with a summary of how many were not logged. Like the failure counters, they only have a series once something is suspected.
+
+When one of them increases, see [An observer may have skipped events](/chronicle/troubleshooting/#an-observer-may-have-skipped-events).
 
 ### Open alert incident metrics
 

@@ -9,5 +9,5 @@ public class an_observer_debouncing_progress_persistence : an_observer_with_subs
 {
     protected const int PersistenceInterval = 3;
 
-    protected override Observers CreateObserversConfig() => new() { StatePersistenceBatchInterval = PersistenceInterval };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, StatePersistenceBatchInterval = PersistenceInterval };
 }

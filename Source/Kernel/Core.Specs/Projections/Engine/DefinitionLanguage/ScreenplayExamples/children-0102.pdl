@@ -1,0 +1,14 @@
+projection Doc => DocReadModel
+  children members identified by userId
+    from UserAddedToGroup key userId
+      parent groupId
+      UserId = userId
+      Role = role
+
+    join User on UserId
+      with UserCreated
+        Name = name
+        Email = email
+      with UserUpdated
+        Name = name
+        Email = email

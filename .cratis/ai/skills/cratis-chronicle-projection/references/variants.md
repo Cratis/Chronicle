@@ -1,9 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/references/variants.md -->
 # Variants — mutually exclusive read models for one entity
 
-Verified against `Cratis.Chronicle` `19.1.0` (first version carrying this
-feature; the skill's own baseline in `SKILL.md` is `18.3.0` — variants need at
-least `19.1.0`).
+## Contents
+
+- Declaring a group — model-bound
+- Declaring a group — fluent (`IProjectionFor<T>`)
+- Only the entering event can create a variant
+- Sharing handlers across variants
+- Startup-crash trap
+- Best practices
+
+Requires `Cratis.Chronicle` 19.1.0 or later.
 
 Reach for variants when a single logical entity has genuinely different shapes
 across its lifecycle — a work item that is a backlog entry, then a pull
@@ -123,6 +130,13 @@ public class PullRequestItemProjection : IProjectionFor<PullRequestItem>
         .From<BuildCompleted>(); // update-only, same reason
 }
 ```
+
+A non-entering event appended before creation is retained as an early join:
+it cannot create the variant, but its value is applied when the entering event
+creates it. Requires Chronicle 19.57.1 for `ReadModelScenario` to reproduce this
+and fluent-variant removal of peers, and for CHR0024 to recognize entering/shared
+mapping sources. Check the testing/analyzer versions; older scenarios can miss
+these states. Specify both early-join admission and mutually exclusive variants.
 
 **Why this matters:** without the reclassification, an out-of-order or
 replayed `BuildCompleted` could resurrect a `PullRequestItem` for an entity

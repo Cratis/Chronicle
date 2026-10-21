@@ -1,12 +1,13 @@
 ```csharp
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Projections;
 
 public record ChoosingStyleBookStatusFluent(
     string Id,
-    string Title,
-    string Isbn,
+    string? Title,
+    string? Isbn,
     bool IsBorrowed,
-    string? BorrowedBy);
+    [PII] string? BorrowedBy);
 
 public class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBookStatusFluent>
 {
@@ -16,9 +17,11 @@ public class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBoo
             .Set(m => m.IsBorrowed).ToValue(false)
             .Clear(m => m.BorrowedBy))
         .From<ChoosingStyleBookBorrowed>(_ => _
+            .Set(m => m.Id).ToEventSourceId()
             .Set(m => m.IsBorrowed).ToValue(true)
             .Set(m => m.BorrowedBy).To(e => e.MemberName))
         .From<ChoosingStyleBookReturned>(_ => _
+            .Set(m => m.Id).ToEventSourceId()
             .Set(m => m.IsBorrowed).ToValue(false)
             .Clear(m => m.BorrowedBy));
 }

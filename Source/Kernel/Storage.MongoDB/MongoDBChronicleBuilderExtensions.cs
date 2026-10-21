@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
@@ -31,8 +32,16 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options) =>
+    /// <remarks>
+    /// <see cref="Configuration.Storage.ConnectionResolution"/> resolves where the cluster, event store, namespace and
+    /// read model databases are. Orleans membership, reminders and the jobs storage keep using the configured server.
+    /// </remarks>
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options)
+    {
         builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
+        builder.ConfigureServices(services => services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution));
+        return builder;
+    }
 
     /// <summary>
     /// Configure Chronicle to use MongoDB.
@@ -80,6 +89,12 @@ public static class MongoDBChronicleBuilderExtensions
 
         builder.ConfigureServices(services =>
         {
+            services.AddConnectionResolution();
+            services.TryAddSingleton<IStorageConnectionResolution>(sp => new StorageConnectionResolution(
+                WellKnownConnectionStorage.MongoDB,
+                new(),
+                sp.GetRequiredService<IConnectionResolverFactory>()));
+            services.AddSingleton<IMongoDBStorageConnections, MongoDBStorageConnections>();
             services.AddSingleton<IDatabase, Database>();
 
             // One process-wide registry of the change streams read models are observed through, so every observer
@@ -115,6 +130,7 @@ public static class MongoDBChronicleBuilderExtensions
 
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
+            services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
 
             services.AddHealthChecks().AddMongoDb(
                 _ => new MongoClient(settings),

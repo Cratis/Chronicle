@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -12,60 +11,190 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 /// Represents an in-memory implementation of <see cref="IUniqueConstraintsStorage"/>.
 /// </summary>
 /// <remarks>
-/// The index holds at most one entry per event source for a given constraint and scope, mirroring the
-/// document-per-event-source shape of the MongoDB and SQL implementations. Saving a new value for an event source
-/// therefore replaces its previous claim and releases the value it held, making that value claimable by others.
+/// Each value has one owner per constraint and scope. Per-event-source mode replaces the source's previous claim
+/// only after the new value is available. Per-value mode retains each value until a removal event releases it.
 /// </remarks>
 public class UniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    /// <summary>
-    /// Index keyed by (EventSourceId, ConstraintName, ScopeKey) to the claimed value and its <see cref="EventSequenceNumber"/>.
-    /// </summary>
-    readonly ConcurrentDictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
+    readonly object _lock = new();
+    readonly Dictionary<(string EventSourceId, string ConstraintName, string ScopeKey), (string Value, EventSequenceNumber SequenceNumber)> _index = [];
+    readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber, string? Subject)> _values = [];
 
     /// <inheritdoc/>
-    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(
-        EventSourceId eventSourceId,
-        UniqueConstraintDefinition definition,
-        UniqueConstraintValue value,
-        string scopeKey = "")
+    public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
     {
-        // Note: Case-insensitive comparison is handled by hashing the value with case normalization
-        // before it reaches the storage layer, so we can use a simple equality check here.
-        foreach (var (key, entry) in _index)
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
         {
-            if (key.ConstraintName != definition.Name.Value ||
-                key.ScopeKey != scopeKey ||
-                entry.Value != value.Value)
+            foreach (var key in _index.Keys.Where(_ => _.ConstraintName == definition.Name.Value && _.ScopeKey == scopeKey).ToArray())
             {
-                continue;
+                _index.Remove(key);
             }
 
-            return Task.FromResult((key.EventSourceId == eventSourceId.Value, entry.SequenceNumber));
+            foreach (var key in _values.Keys.Where(_ => _.ConstraintName == definition.Name.Value && _.ScopeKey == scopeKey).ToArray())
+            {
+                _values.Remove(key);
+            }
         }
 
-        return Task.FromResult((true, EventSequenceNumber.Unavailable));
-    }
-
-    /// <inheritdoc/>
-    public Task Save(
-        EventSourceId eventSourceId,
-        ConstraintName name,
-        EventSequenceNumber sequenceNumber,
-        UniqueConstraintValue value,
-        string scopeKey = "")
-    {
-        _index[(eventSourceId.Value, name.Value, scopeKey)] = (value.Value, sequenceNumber);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task Remove(
-        EventSourceId eventSourceId,
-        ConstraintName name,
-        string scopeKey = "")
+    public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
-        _index.TryRemove((eventSourceId.Value, name.Value, scopeKey), out _);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            return Task.FromResult(_values.TryGetValue((definition.Name.Value, scopeKey, value.Value), out var entry)
+                ? (entry.EventSourceId == eventSourceId.Value, entry.SequenceNumber)
+                : (true, EventSequenceNumber.Unavailable));
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<UniqueConstraintValue>> GetFor(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            return Task.FromResult(ValuesOwnedBy(eventSourceId, definition, scopeKey).AsEnumerable());
+        }
+    }
+
+    /// <inheritdoc/>
+    public IAsyncEnumerable<UniqueConstraintValue> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            return new UniqueConstraintValues(ValuesOwnedBy(eventSourceId, definition, scopeKey), cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Saves a claim using the definition's retention mode.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="sequenceNumber">The claim's sequence number.</param>
+    /// <param name="value">The hashed value.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="subject">The subject whose personal data the value derives from, or null.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
+    public Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", Subject? subject = default, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            var key = (definition.Name.Value, scopeKey, value.Value);
+            if (_values.TryGetValue(key, out var owner))
+            {
+                if (owner.EventSourceId != eventSourceId.Value)
+                {
+                    throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
+                }
+
+                _values[key] = owner with { Subject = subject?.Value };
+                return Task.CompletedTask;
+            }
+
+            if (definition.Mode != UniqueConstraintMode.PerValue)
+            {
+                var sourceKey = (eventSourceId.Value, definition.Name.Value, scopeKey);
+                if (_index.TryGetValue(sourceKey, out var previous))
+                {
+                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+                }
+
+                _index[sourceKey] = (value.Value, sequenceNumber);
+            }
+
+            _values[key] = (eventSourceId.Value, sequenceNumber, subject?.Value);
+        }
+
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Releases every value held by the event source in the selected scope.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task Remove(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            if (definition.Mode != UniqueConstraintMode.PerValue)
+            {
+                if (_index.Remove((eventSourceId.Value, definition.Name.Value, scopeKey), out var previous))
+                {
+                    _values.Remove((definition.Name.Value, scopeKey, previous.Value));
+                }
+            }
+            else
+            {
+                foreach (var key in _values.Where(_ => _.Key.ConstraintName == definition.Name.Value && _.Key.ScopeKey == scopeKey && _.Value.EventSourceId == eventSourceId.Value).Select(_ => _.Key).ToArray())
+                {
+                    _values.Remove(key);
+                }
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Releases one value only if the source owns it.
+    /// </summary>
+    /// <param name="eventSourceId">The owner.</param>
+    /// <param name="definition">The constraint.</param>
+    /// <param name="value">The value to release.</param>
+    /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            var key = (definition.Name.Value, scopeKey, value.Value);
+            if (definition.Mode == UniqueConstraintMode.PerValue && _values.TryGetValue(key, out var entry) && entry.EventSourceId == eventSourceId.Value)
+            {
+                _values.Remove(key);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_lock)
+        {
+            foreach (var (key, entry) in _values.Where(_ => _.Value.Subject == subject.Value).ToArray())
+            {
+                _values.Remove(key);
+                var sourceKey = (entry.EventSourceId, key.ConstraintName, key.ScopeKey);
+                if (_index.TryGetValue(sourceKey, out var held) && held.Value == key.Value)
+                {
+                    _index.Remove(sourceKey);
+                }
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    UniqueConstraintValue[] ValuesOwnedBy(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey) =>
+        _values.Where(entry => entry.Key.ConstraintName == definition.Name.Value && entry.Key.ScopeKey == scopeKey && entry.Value.EventSourceId == eventSourceId.Value)
+            .Select(entry => new UniqueConstraintValue(entry.Key.Value)).ToArray();
 }

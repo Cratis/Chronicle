@@ -29,9 +29,17 @@ public static class UniqueConstraintDefinitionExtensions
     /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to get for.</param>
     /// <param name="context">The <see cref="ConstraintValidationContext"/> to get it relative to.</param>
     /// <returns>Tuple with property and value.</returns>
-    public static IEnumerable<UniqueConstraintPropertyAndValue> GetPropertiesAndValues(this UniqueConstraintDefinition definition, ConstraintValidationContext context)
+    public static IEnumerable<UniqueConstraintPropertyAndValue> GetPropertiesAndValues(this UniqueConstraintDefinition definition, ConstraintValidationContext context) =>
+        definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventTypeId).GetPropertiesAndValues(context);
+
+    /// <summary>
+    /// Resolves the properties carrying a claimed or released value.
+    /// </summary>
+    /// <param name="eventDefinition">The event and its ordered properties.</param>
+    /// <param name="context">The content and metadata of the event.</param>
+    /// <returns>The properties with values present in the content.</returns>
+    public static IEnumerable<UniqueConstraintPropertyAndValue> GetPropertiesAndValues(this UniqueConstraintEventDefinition eventDefinition, ConstraintValidationContext context)
     {
-        var eventDefinition = definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventTypeId);
         return eventDefinition.Properties
                 .ToDictionary(
                     _ => _,

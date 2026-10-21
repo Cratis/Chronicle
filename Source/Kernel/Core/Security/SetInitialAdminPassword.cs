@@ -33,13 +33,14 @@ public record SetInitialAdminPassword(UserId UserId, Password Password, Password
     /// <param name="storage">The <see cref="IStorage"/> to load the user record from.</param>
     /// <param name="options">The configured administrator.</param>
     /// <param name="eventSerializer">The event serializer.</param>
+    /// <param name="correlationId">The server-generated correlation identifier for the password change.</param>
     /// <returns>Awaitable task, completing only when the credentials are persisted.</returns>
     /// <exception cref="PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
     /// <exception cref="UserNotFound">Thrown when the specified user does not exist.</exception>
     /// <exception cref="InitialAdminPasswordAlreadyUsed">Thrown when the user has already logged in and has an initial password set.</exception>
     /// <exception cref="InitialPasswordCanOnlyBeSetForAdministrator">Thrown for a different administrator identity.</exception>
     /// <exception cref="InitialPasswordCouldNotBeSet">Thrown when appending fails.</exception>
-    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IOptions<Configuration.ChronicleOptions> options, IEventSerializer eventSerializer)
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IOptions<Configuration.ChronicleOptions> options, IEventSerializer eventSerializer, [GeneratedValue] CorrelationId correlationId)
     {
         if (Password != ConfirmedPassword)
         {
@@ -72,7 +73,7 @@ public record SetInitialAdminPassword(UserId UserId, Password Password, Password
             EventStreamId.Default,
             eventType,
             eventSerializer.Serialize(@event),
-            CorrelationId.New(),
+            correlationId,
             [],
             Identity.System,
             [],

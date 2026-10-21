@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  children items identified by itemId
+    from ItemAdded key itemId
+      parent orderId                        # Event property
+      # or
+      parent $eventContext.eventSourceId    # Event source ID
+      # or
+      parent order.id                       # Nested property

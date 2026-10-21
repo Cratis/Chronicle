@@ -1,8 +1,12 @@
+---
+description: Subscribe a Chronicle reducer to events from external event stores through automatic inbox routing based on event-store metadata.
+---
 # Subscribe Reducers to External Event Stores
 
-:::note[Client coverage]
-External event store inbox routing is currently C#-only — it depends on the `[EventStore]` attribute on event types or reducers, which doesn't exist in Kotlin, Elixir, or TypeScript.
-:::
+This page shows automatic inbox selection and subscription from event-store metadata on events or
+observers. For a subscription you configure explicitly, use [explicit event-store subscriptions](../subscriptions/explicit-subscriptions.mdx).
+
+[Self reducers](self-reducing-read-models) use the same inbox routing. Their subscription event set comes from the owning registry's selected static transitions; query methods and other helpers do not add subscription events.
 
 ## Automatic Inbox Routing
 
@@ -45,6 +49,10 @@ This is invalid and fails:
 
 - At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`.
 - At compile time with analyzer rule `CHR0014`.
+
+## Forwarded metadata
+
+Inbox forwarding now preserves append tags along with event-source and stream-route metadata. Tag filters can select forwarded events for classic and self reducers alike. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
 
 ## See Also
 

@@ -53,6 +53,16 @@ public record UniqueConstraintDefinition(
     }
 
     /// <summary>
+    /// Gets how claimed values are retained.
+    /// </summary>
+    public UniqueConstraintMode Mode { get; init; } = UniqueConstraintMode.PerEventSource;
+
+    /// <summary>
+    /// Gets the removal events and properties identifying the value to release.
+    /// </summary>
+    public IEnumerable<UniqueConstraintEventDefinition> RemovalEventDefinitions { get; init; } = [];
+
+    /// <summary>
     /// Gets the <see cref="EventSequenceId"/> values of the event sequences the constraint applies to.
     /// </summary>
     /// <remarks>

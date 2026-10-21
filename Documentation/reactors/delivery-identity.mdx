@@ -1,3 +1,6 @@
+---
+description: Declare a ReactorDelivery parameter on a Chronicle reactor handler to get a stable identity for each delivery and detect redelivered events.
+---
 # Delivery identity
 
 A reactor can be handed the same event more than once, and nothing in the event itself says whether this is the
@@ -85,6 +88,18 @@ namespace all change the identity — and every receipt written under the old on
 effects they covered run again. Give any reactor whose deliveries you record an explicit id.
 :::
 
+## Keys for returned events
+
+The delivery identity does one more job without any code from you. When a C# handler [returns events](side-effects#duplicate-protection-for-returned-events), Chronicle appends each one with an idempotency key built from the delivery identity, the reactor's effect epoch and the event's position in the returned value. A redelivery, a catch-up or a failed partition recovering therefore appends the returned events once, not again. Appending explicitly with `AppendOnce` gives the same protection; see [Appending events](../events/appending). To key an effect you append yourself, call `delivery.IdempotencyKeyFor("effect-name")`.
+
+This protects the **events in the event log** only. An external side effect still needs a receipt under `delivery.Id`, as above.
+
+## When to bump the effect epoch
+
+`EffectEpoch` is a number on the reactor attribute, `0` by default. Set it with `[Reactor("id", effectEpoch: 1)]`, or `[Reactor("id", "sequence", effectEpoch: 1)]` when you also name the event sequence. It is part of the derived keys but **not** of `delivery.Id`, so your receipts keep matching when you change it.
+
+Bump it when you changed what the handler returns for an event it has already handled, and you want a replay to append the new shape. Without a bump the kernel sees the same key with different content and refuses the append; the partition fails and the message tells you the remedy. Keep the reactor's id and event sequence unchanged, raise the epoch, and recover the partition. Do not bump it just to run a handler again for events it already handled correctly: that appends the output a second time.
+
 ## What it does and does not guarantee
 
 It is an identity. It is not exactly-once delivery, and it does not make your reactor idempotent — it gives you the
@@ -106,6 +121,6 @@ If the integration you are calling is already idempotent, you do not need any of
 idempotency key and stop there.
 
 :::note[Client coverage]
-`ReactorDelivery` is a .NET client feature. Elixir and TypeScript reactors have no equivalent parameter yet; make
+`ReactorDelivery` is a .NET client feature. Elixir carries the same identity as `delivery_id` on the event context, built from the same parts. TypeScript reactors have no equivalent parameter yet; make
 those integrations self-idempotent instead.
 :::

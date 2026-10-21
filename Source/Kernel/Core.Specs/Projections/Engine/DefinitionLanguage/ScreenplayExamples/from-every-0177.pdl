@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  every
+    LastUpdated = $eventContext.occurred
+    exclude children

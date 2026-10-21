@@ -24,4 +24,6 @@ public class and_a_single_partition_is_in_flight : given.a_catching_up_in_flight
         .Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
             Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == _partition));
+    [Fact] void should_keep_only_markers_still_needing_recovery() => _resultingStoredState.InFlightPartitions.ShouldBeEmpty();
+    [Fact] void should_not_mutate_the_handed_markers() => _storedState.InFlightPartitions.ShouldContain(_partition);
 }

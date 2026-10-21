@@ -1,0 +1,15 @@
+projection Account => AccountReadModel
+  from AccountOpened
+    AccountNumber = accountNumber
+    Balance = initialBalance
+
+  from DepositMade
+    add Balance by amount
+    LastDeposit = $eventContext.occurred
+
+  from WithdrawalMade
+    subtract Balance by amount
+    LastWithdrawal = $eventContext.occurred
+
+  from InterestApplied
+    add Balance by interestAmount

@@ -3,10 +3,10 @@
 
 using System.Collections;
 using System.Dynamic;
-using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -31,6 +31,8 @@ public class ResolveFutures(
     IObjectComparer objectComparer,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
+    readonly HashSet<ProjectionFutureId> _failedFutures = [];
+
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
@@ -49,6 +51,7 @@ public class ResolveFutures(
         // Attempt to resolve any pending futures now that we've processed a new event
         var futures = await projectionFutures.GetFutures();
 
+        _failedFutures.IntersectWith(futures.Select(future => future.Id));
         if (!futures.Any())
         {
             futuresTracker.HasPending = false;
@@ -61,12 +64,13 @@ public class ResolveFutures(
         // This handles the case where resolving one future creates the parent data needed by another future
         var resolvedAny = true;
         var latestResolvedEvent = context.Event;
+        var queuedFutures = new HashSet<ProjectionFutureId>();
         while (resolvedAny)
         {
             resolvedAny = false;
             futures = await projectionFutures.GetFutures();
 
-            foreach (var future in futures)
+            foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)))
             {
                 try
                 {
@@ -89,7 +93,7 @@ public class ResolveFutures(
                     var childProjection = FindChildProjectionByPath(projection, future.ChildPath);
                     if (childProjection is null)
                     {
-                        logger.FailedToResolveFuture(new InvalidOperationException($"Could not find child projection for path '{future.ChildPath}'"), future.Id, future.ProjectionId);
+                        LogFailure(new InvalidOperationException($"Could not find child projection for path '{future.ChildPath}'"), future);
                         continue;
                     }
 
@@ -173,33 +177,53 @@ public class ResolveFutures(
                         JoinKey = childKey ?? key.Value
                     };
 
+                    ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
 
-                    // Successfully resolved the future
-                    await projectionFutures.ResolveFuture(future.Id);
+                    await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
+                    _failedFutures.Remove(future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                     if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
                     {
                         latestResolvedEvent = future.Event;
                     }
-
-                    if (futureChangeset.HasChanges)
-                    {
-                        context.AddPendingFutureSave(key, futureChangeset);
-                    }
                 }
                 catch (Exception ex)
                 {
-                    logger.FailedToResolveFuture(ex, future.Id, future.ProjectionId);
+                    LogFailure(ex, future);
                 }
             }
         }
 
-        // The final pass resolved nothing, so the last fetch reflects the futures still awaiting a parent
+        // Queued writes remain persisted too, so a failed save keeps the tracker pending.
         futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
+    }
+
+    /// <summary>
+    /// Provides a resolved future's event to every ancestor of the projection it belongs to, root first.
+    /// </summary>
+    /// <param name="childProjection">The projection the future belongs to.</param>
+    /// <param name="context">The <see cref="ProjectionEventContext"/> for the resolved future.</param>
+    /// <remarks>
+    /// Top-down handling runs an ancestor's mappings for its descendants' events on the way to the child. Deferring the
+    /// event discarded that changeset, so without this a child event arriving before its parent would leave the
+    /// ancestors' every-event mappings unapplied, and the read model would differ from one built in replay order.
+    /// </remarks>
+    static void ProvideToAncestors(IProjection childProjection, ProjectionEventContext context)
+    {
+        var ancestors = new List<IProjection>();
+        for (var current = childProjection.Parent; current is not null; current = current.ChildrenPropertyPath.IsRoot ? null : current.Parent)
+        {
+            ancestors.Insert(0, current);
+        }
+
+        foreach (var ancestor in ancestors)
+        {
+            ancestor.OnDescendantEvent(context with { OperationType = ancestor.GetOperationTypeFor(context.Event.Context.EventType) });
+        }
     }
 
     static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)
@@ -266,7 +290,7 @@ public class ResolveFutures(
             // parent key comes from its event source names the child in the root collection.
             // Neither may resolve against a child-created placeholder before the root's FROM.
             if (!IsRootInitialized(currentState, changeset)) return false;
-            if (KeysMatch(rootKey, parentKey)) return true;
+            if (KeyValueEquality.AreEqual(rootKey, parentKey)) return true;
 
             var directCollection = AsExpandoCollection(childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers));
             return directCollection?.ToList().Contains(parentIdentifiedByProperty, parentKey) == true;
@@ -302,45 +326,6 @@ public class ResolveFutures(
         }
 
         return ((IDictionary<string, object?>)state).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is true;
-    }
-
-    static bool KeysMatch(object rootKey, object parentKey)
-    {
-        if (Equals(rootKey, parentKey)) return true;
-
-        // Futures and resolved keys can be independently materialized composite objects;
-        // SQL can also supply the same composite key as JSON text.
-        if (rootKey is string rootText && rootText.StartsWith('{'))
-        {
-            return MatchesJson(rootText, parentKey);
-        }
-        if (parentKey is string parentText && parentText.StartsWith('{'))
-        {
-            return MatchesJson(parentText, rootKey);
-        }
-
-        return JsonElement.DeepEquals(JsonSerializer.SerializeToElement(rootKey), JsonSerializer.SerializeToElement(parentKey)) ||
-            (rootKey is not ExpandoObject && parentKey is not ExpandoObject &&
-             string.Equals(rootKey.ToString(), parentKey.ToString(), StringComparison.Ordinal));
-    }
-
-    static bool MatchesJson(string json, object other)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (other is string otherJson && otherJson.StartsWith('{'))
-            {
-                using var otherDocument = JsonDocument.Parse(otherJson);
-                return JsonElement.DeepEquals(document.RootElement, otherDocument.RootElement);
-            }
-
-            return JsonElement.DeepEquals(document.RootElement, JsonSerializer.SerializeToElement(other));
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
     }
 
     /// <summary>
@@ -456,4 +441,30 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    void LogFailure(Exception exception, ProjectionFuture future)
+    {
+        if (_failedFutures.Add(future.Id))
+        {
+            logger.FailedToResolveFuture(exception, future.Id, future.ProjectionId);
+        }
+        else
+        {
+            logger.FutureStillUnresolved(exception, future.Id, future.ProjectionId);
+        }
+    }
+
+    async Task QueueFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave, HashSet<ProjectionFutureId> queuedFutures)
+    {
+        var futureId = pendingSave.FutureId!;
+        if (pendingSave.Changeset.HasChanges)
+        {
+            context.AddPendingFutureSave(pendingSave.Key, pendingSave.Changeset, futureId);
+            queuedFutures.Add(futureId);
+        }
+        else
+        {
+            await projectionFutures.ResolveFuture(futureId);
+        }
+    }
 }

@@ -37,6 +37,14 @@ public class ObserverRemover(
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var namespaces = (await grainFactory.GetGrain<INamespaces>(eventStore).GetAll()).ToArray();
 
+        // Projection subscriptions are kernel-owned even for client-declared definitions. Their
+        // liveness guard and teardown belong to the manager turn that also serializes registration.
+        var projectionId = (ProjectionId)observerId.Value;
+        if (await eventStoreStorage.Projections.Has(projectionId))
+        {
+            return await grainFactory.GetGrain<IProjectionsManager>(eventStore).Remove(projectionId);
+        }
+
         var isRegistered = await eventStoreStorage.Observers.Has(observerId);
         if (!isRegistered && !await HasStateInAnyNamespace(eventStore, observerId, namespaces))
         {
@@ -58,7 +66,6 @@ public class ObserverRemover(
         }
 
         await eventStoreStorage.Observers.Delete(observerId);
-        await ForgetProjection(eventStore, observerId);
 
         logger.RemovedObserver(observerId, eventStore);
         return ObserverRemovalResult.Removed;
@@ -115,27 +122,5 @@ public class ObserverRemover(
         }
 
         return ObserverRemovalResult.Removed;
-    }
-
-    /// <summary>
-    /// Drops the projection definition an observer of type projection has, and tells the projections manager to forget it.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the observer belongs to.</param>
-    /// <param name="observerId">The <see cref="ObserverId"/> of the observer being removed.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <remarks>
-    /// Deleting the stored definition alone is not enough: the manager keeps its own registered set, and its next
-    /// activation subscribes everything in that set - recreating the observer records this removal just deleted.
-    /// </remarks>
-    async Task ForgetProjection(EventStoreName eventStore, ObserverId observerId)
-    {
-        var projectionId = (ProjectionId)observerId.Value;
-        if (!await storage.GetEventStore(eventStore).Projections.Has(projectionId))
-        {
-            return;
-        }
-
-        await grainFactory.GetGrain<IProjectionsManager>(eventStore).Forget(projectionId);
-        await storage.GetEventStore(eventStore).Projections.Delete(projectionId);
     }
 }

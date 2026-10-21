@@ -24,6 +24,7 @@ public class when_targeting_the_configured_administrator : Specification
     IEventSerializer _eventSerializer;
     SetInitialAdminPassword _command;
     Exception _exception;
+    readonly CorrelationId _correlationId = new(Guid.Parse("1b3b4aa8-a587-447e-bbe1-d6a9814c8e24"));
 
     void Establish()
     {
@@ -76,7 +77,8 @@ public class when_targeting_the_configured_administrator : Specification
             {
                 Authentication = new() { AdminUser = new() { Username = "chronicle-root" } }
             }),
-            _eventSerializer));
+            _eventSerializer,
+            _correlationId));
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
     [Fact] void should_serialize_password_changed() => _eventSerializer.Received(1).Serialize(Arg.Any<UserPasswordChanged>());
@@ -87,7 +89,7 @@ public class when_targeting_the_configured_administrator : Specification
         Arg.Any<EventStreamId>(),
         Arg.Is<EventType>(eventType => eventType == typeof(UserPasswordChanged).GetEventType()),
         Arg.Any<JsonObject>(),
-        Arg.Any<CorrelationId>(),
+        _correlationId,
         Arg.Any<IEnumerable<Causation>>(),
         Arg.Any<Identity>(),
         Arg.Any<IEnumerable<Tag>>(),

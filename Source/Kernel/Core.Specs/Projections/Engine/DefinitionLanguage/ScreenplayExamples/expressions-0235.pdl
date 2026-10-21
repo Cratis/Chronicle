@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from DocEvent
+    Name = name                              # string
+    LoginCount = 0                          # number
+    IsActive = true                         # boolean
+    CreatedAt = $eventContext.occurred      # timestamp

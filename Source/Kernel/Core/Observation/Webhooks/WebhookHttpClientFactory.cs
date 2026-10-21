@@ -10,7 +10,8 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Represents an implementation of <see cref="IWebhookHttpClientFactory"/>.
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
-public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IWebhookHttpClientFactory
+/// <param name="oAuthClient">The shared OAuth token provider.</param>
+public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient) : IWebhookHttpClientFactory
 {
     /// <summary>
     /// The name of the <see cref="HttpClient"/> to use.
@@ -34,13 +35,7 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory) : IW
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", value);
             },
             bearer => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token),
-            oAuth =>
-            {
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                }
-            },
+            oAuth => client = OAuthHttpMessageHandler.CreateClient(client, oAuth, oAuthClient),
             none => { });
 
         foreach (var header in webhookTarget.Headers)

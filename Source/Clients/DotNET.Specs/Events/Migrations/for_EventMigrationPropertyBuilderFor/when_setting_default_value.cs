@@ -19,4 +19,5 @@ public class when_setting_default_value : Specification
     [Fact] void should_have_property_keyed_by_target_name() => _inner.Properties.ContainsKey("Age").ShouldBeTrue();
 
     [Fact] void should_have_default_value_expression() => _inner.Properties["Age"].ToString().ShouldContain("$defaultValue");
+    [Fact] void should_emit_the_primitive_default() => _inner.Properties["Age"]["$defaultValue"]!.ToJsonString().ShouldEqual("42");
 }

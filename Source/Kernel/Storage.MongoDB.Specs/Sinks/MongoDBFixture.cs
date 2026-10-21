@@ -29,7 +29,7 @@ public sealed class MongoDBFixture : IAsyncLifetime
             return;
         }
 
-        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
+        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo:8.2";
         _container = new ContainerBuilder(image)
             .WithMongoDBKernelCompatibility()
             .WithPortBinding(MongoDBPort, assignRandomHostPort: true)

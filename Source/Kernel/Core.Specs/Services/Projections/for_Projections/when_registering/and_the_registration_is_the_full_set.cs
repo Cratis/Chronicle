@@ -23,7 +23,9 @@ public class and_the_registration_is_the_full_set : Specification
             Substitute.For<IExpandoObjectConverter>(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
-            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>());
+            Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
+            Substitute.For<ILocalSiloDetails>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
     }
 
     async Task Because() => await _service.Register(new RegisterRequest
@@ -31,6 +33,7 @@ public class and_the_registration_is_the_full_set : Specification
         EventStore = "event-store",
         Owner = ProjectionOwner.Client,
         FullSet = true,
+        Registrant = "the-app",
         Projections =
         [
             new ProjectionDefinition
@@ -48,5 +51,6 @@ public class and_the_registration_is_the_full_set : Specification
     void should_register_as_the_full_set_for_the_owner() =>
         _projectionsManager.Received(1).Register(
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
-            Concepts.Projections.ProjectionOwner.Client);
+            Concepts.Projections.ProjectionOwner.Client,
+            "the-app");
 }

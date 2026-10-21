@@ -28,7 +28,7 @@ public class with_created_response : given.a_webhook_mediator
         _httpClientFactory.Create(_target).Returns(httpClient);
     }
 
-    async Task Because() => _result = await _mediator.OnNext(_target, new Key("test-partition", ArrayIndexers.NoIndexers), []);
+    async Task Because() => _result = await _mediator.OnNext("orders", _target, new Key("test-partition", ArrayIndexers.NoIndexers), []);
 
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
 }

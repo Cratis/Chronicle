@@ -1,3 +1,6 @@
+---
+description: Use Join in a declarative Chronicle projection to combine data from events with a different event source id into one read model.
+---
 # Projection with joins
 
 Joins allow projections to incorporate data from events that don't share the same event source ID. This enables building read models that combine data from different streams.
@@ -50,11 +53,7 @@ A projection can join with multiple streams:
 
 ### Joining children
 
-Joins can also be used within child collections:
-
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
+Joins can also be used within child collections. Inside `Children` a join always matches the joined event's event source against the child's identity (`IdentifiedBy`), so `.On()` is not used there. Identify the children by the id of the stream you join; here each member on a project board gets its name from the member's own `MemberRegistered` event:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/children-join" />
 

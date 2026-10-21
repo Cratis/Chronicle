@@ -28,7 +28,8 @@ public static class WebhookDefinitionConverters
                 et => "$eventSourceId"),
             Target = definition.Target.ToSql(),
             IsReplayable = definition.IsReplayable,
-            IsActive = definition.IsActive
+            IsActive = definition.IsActive,
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -43,7 +44,11 @@ public static class WebhookDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
-            definition.IsReplayable);
+            definition.IsReplayable,
+            definition.IsActive)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
@@ -62,7 +67,7 @@ public static class WebhookDefinitionConverters
             authorization = new OAuthAuthorization(
                 target.OAuthAuthority,
                 target.OAuthClientId,
-                target.OAuthClientSecret);
+                target.OAuthClientSecret) { Scope = target.OAuthScope ?? string.Empty };
         }
         else
         {
@@ -95,6 +100,7 @@ public static class WebhookDefinitionConverters
                 sqlTarget.OAuthAuthority = oauth.Authority;
                 sqlTarget.OAuthClientId = oauth.ClientId;
                 sqlTarget.OAuthClientSecret = oauth.ClientSecret;
+                sqlTarget.OAuthScope = oauth.Scope;
             },
             none => { });
 

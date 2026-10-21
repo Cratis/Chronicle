@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ClosedStreamConstraintValidator.when_validating;
 
@@ -24,7 +25,7 @@ public class and_stream_is_not_closed : given.a_closed_stream_constraint_validat
             eventStreamType: _streamType,
             eventStreamId: _streamId);
 
-        _storage.IsStreamClosed(_streamType, _streamId).Returns(false);
+        _storage.GetCovering(Arg.Any<ClosedStreamScope>(), Arg.Any<IEnumerable<ClosedStreamDimensions>>()).Returns([]);
     }
 
     async Task Because() => _result = await _validator.Validate(_context);

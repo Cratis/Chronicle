@@ -3,7 +3,11 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
@@ -30,6 +34,9 @@ public class ChronicleOptions(
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5)
 {
+    ReactorOptions _reactors = new();
+    ReducerOptions _reducers = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
@@ -46,6 +53,22 @@ public class ChronicleOptions(
     /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
     public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
+
+    /// <summary>
+    /// Gets or sets the logical lifecycle identity shared by instances of one rollout.
+    /// Required for lifecycle handlers unless ActivationScope is PerProcess.
+    /// </summary>
+    public Occurrences.ActivationId? ActivationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the host supplies a logical activation or explicitly opts into per-process lifecycle.
+    /// </summary>
+    public Occurrences.ActivationScope ActivationScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lifecycle delivery boundary. Application scope is the default.
+    /// </summary>
+    public Occurrences.LifecycleScope LifecycleScope { get; set; }
 
     /// <summary>
     /// Gets or sets the software version.
@@ -91,6 +114,12 @@ public class ChronicleOptions(
     /// Strict will become the default in the next major version.
     /// </summary>
     public UnitOfWorkLifecyclePolicy UnitOfWorkLifecyclePolicy { get; set; } = UnitOfWorkLifecyclePolicy.Compatibility;
+
+    /// <summary>
+    /// Gets or sets how client reactors, reducers, and typed materialized projections receive event generations.
+    /// Defaults to Compatibility; Pinned requests kernel selection and release of the subscribed generation.
+    /// </summary>
+    public EventGenerationDelivery EventGenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
@@ -207,6 +236,39 @@ public class ChronicleOptions(
     /// Gets or sets how registering the client's artifacts is retried when the kernel does not accept them.
     /// </summary>
     public RegistrationRetryOptions RegistrationRetry { get; set; } = new RegistrationRetryOptions();
+
+    /// <summary>
+    /// Gets or sets how likely artifact renames or moves are handled before registration. Defaults to Warn.
+    /// Fail escalates only Warning-level reactor and event type findings, not Information-level read model findings.
+    /// Snapshot failures never prevent registration, even under Fail.
+    /// </summary>
+    public ArtifactIdentityDriftPolicy ArtifactIdentityDrift { get; set; } = ArtifactIdentityDriftPolicy.Warn;
+
+    /// <summary>
+    /// Gets or sets how reactors are run, such as how many partitions are handled at the same time.
+    /// </summary>
+    public ReactorOptions Reactors
+    {
+        get => _reactors;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _reactors = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets how reducers are run, such as how many partitions are handled at the same time.
+    /// </summary>
+    public ReducerOptions Reducers
+    {
+        get => _reducers;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _reducers = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the TLS configuration.

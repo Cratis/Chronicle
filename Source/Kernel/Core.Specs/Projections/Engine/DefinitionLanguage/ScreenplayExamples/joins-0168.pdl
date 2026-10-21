@@ -1,0 +1,13 @@
+projection Product => ProductReadModel
+  from ProductCreated
+    ProductId = productId
+    Name = name
+    CategoryId = categoryId
+
+  join Category on CategoryId
+    with CategoryCreated
+      CategoryName = name
+      CategoryDescription = description
+    with CategoryRenamed
+      CategoryName = name
+      CategoryDescription = description

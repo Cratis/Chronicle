@@ -1,3 +1,6 @@
+---
+description: Use ClearWith in a model-bound Chronicle projection to declare the event that empties a nullable read model member without replacing its value.
+---
 # Clearing Values
 
 Some facts take a value away without putting anything in its place. A note is deleted, a due date is dropped, a shift is released. `ClearWith` declares which event does that, and the projection writes the member back to `null` every time the event is observed — including when the read model is rebuilt from the beginning of the stream.
@@ -56,7 +59,7 @@ Declaring it on the holding member rather than on the nested type is worth prefe
 `clear` is a statement of its own, alongside `increment`, `decrement` and `count`. It names the member the event empties:
 
 ```text
-projection Notes => MbClearingProjectNotes
+projection Notes => MyApp.ReadModels.MbClearingProjectNotes
     from MbClearingProjectNoted
         note = note
     from MbClearingProjectNoteCleared
@@ -66,7 +69,7 @@ projection Notes => MbClearingProjectNotes
 A clear reaches a member of a nested object through its path — the same clear the `MbClearingContract` example above declares with an attribute:
 
 ```text
-projection Employees => MbClearingEmployee
+projection Employees => MyApp.ReadModels.MbClearingEmployee
     from MbClearingNoticeWithdrawn
         clear contract.noticeGiven
 ```

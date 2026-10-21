@@ -1,3 +1,6 @@
+---
+description: AutoMap maps event properties to read model properties with compatible names and types, and is on by default in declarative projections.
+---
 # Projection AutoMap
 
 AutoMap maps event properties to read model properties when their names and types are compatible. It is the default behavior for declarative projections, so the usual projection only needs to say which events it consumes.
@@ -32,10 +35,6 @@ Disable AutoMap when a projection should map only the properties you name explic
 ## Re-enable AutoMap In A Child Scope
 
 Calling the AutoMap enable method is redundant at the top level. It is useful in a child builder scope when the parent projection has disabled AutoMap and the child scope should opt back in.
-
-:::note[Client coverage]
-This scoped re-enable is C#-only. Kotlin and Java have child collections in their projection builders, but the child builder has no AutoMap switch, so there is no child scope to re-enable AutoMap on. Elixir and TypeScript do not yet support declarative child collections (see [Children](./children)).
-:::
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" />
 

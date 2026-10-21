@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -44,10 +45,39 @@ public class ProjectionCatchupHandler(
         {
             var failedPartitions = (await pipeline.EndBulk()).ToArray();
             await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
-            return failedPartitions.Length > 0
+
+            // An ordinary write failure is recorded and retried from the event that failed, so catch-up still completes.
+            // Only a final flush whose outcome is unknown fails it: writes before the failure may have been lost.
+            return failedPartitions.Any(partition => partition.OutcomeUnknown)
                 ? ICanHandleCatchupForObserver.Error.Unknown
                 : Result<ICanHandleCatchupForObserver.Error>.Success();
         });
+
+    /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
+    {
+        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        {
+            return new(null, []);
+        }
+
+        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+        var result = await pipeline.FlushBulk();
+        await ProjectionBulkFailures.Record(grainFactory, observerDetails, result.FailedPartitions);
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
+    {
+        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+        {
+            return [];
+        }
+
+        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+        return await pipeline.EndBulk(cancellationToken);
+    }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
@@ -62,9 +92,11 @@ public class ProjectionCatchupHandler(
                 return ICanHandleCatchupForObserver.Error.CannotHandle;
             }
 
-            if (!projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            var projection = await projections.GetCurrent(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
+            if (projection is null)
             {
-                return Result<ICanHandleCatchupForObserver.Error>.Success();
+                logger.ProjectionMissing(observerDetails.Key);
+                return ICanHandleCatchupForObserver.Error.Unknown;
             }
 
             var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);

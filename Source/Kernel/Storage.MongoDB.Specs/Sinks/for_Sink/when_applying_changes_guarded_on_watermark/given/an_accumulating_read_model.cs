@@ -27,6 +27,7 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
 
     protected Sink _sink = default!;
     protected Key _key = default!;
+    protected ReadModelDefinition _readModel = default!;
 
     void Establish()
     {
@@ -35,13 +36,13 @@ public abstract class an_accumulating_read_model(MongoDBFixture fixture) : Speci
         var database = _client.GetDatabase(_databaseName);
         _key = new Key("counter-1", ArrayIndexers.NoIndexers);
 
-        var readModel = CreateReadModelDefinition();
+        _readModel = CreateReadModelDefinition();
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
-        var collections = new SinkCollections(readModel, database);
-        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
-        var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
-        _sink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
+        var collections = new SinkCollections(_readModel, database);
+        var mongoDBConverter = new MongoDBConverter(expandoObjectConverter, typeFormats, _readModel, NullLogger<MongoDBConverter>.Instance);
+        var changesetConverter = new ChangesetConverter(_readModel, mongoDBConverter, collections, expandoObjectConverter);
+        _sink = new Sink(_readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
     }
 
     async Task Destroy()

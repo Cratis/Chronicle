@@ -17,7 +17,7 @@ public class and_the_constraint_applies_to_every_event_sequence(context context)
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueNameEverywhere)];
-        public override IEnumerable<Type> EventTypes => [typeof(NameClaimedEverywhere)];
+        public override IEnumerable<Type> EventTypes => [typeof(NameClaimedEverywhere), typeof(PublicNameClaimedEverywhere)];
 
         public IAppendResult FirstInOutbox { get; private set; }
         public IAppendResult SecondInOutbox { get; private set; }
@@ -25,7 +25,7 @@ public class and_the_constraint_applies_to_every_event_sequence(context context)
         public async Task Because()
         {
             var outbox = EventStore.GetEventSequence(EventSequenceId.Outbox);
-            var @event = new NameClaimedEverywhere("globex");
+            var @event = new PublicNameClaimedEverywhere("globex");
 
             FirstInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);
             SecondInOutbox = await outbox.Append(Guid.NewGuid().ToString(), @event);

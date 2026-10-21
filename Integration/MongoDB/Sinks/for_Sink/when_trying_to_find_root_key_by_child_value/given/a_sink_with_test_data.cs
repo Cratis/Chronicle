@@ -113,6 +113,12 @@ public class a_sink_with_test_data(ChronicleInProcessFixture fixture) : Integrat
         await _database.Client.DropDatabaseAsync(_database.DatabaseNamespace.DatabaseName);
     }
 
+    public override void Dispose()
+    {
+        _sink?.Dispose();
+        base.Dispose();
+    }
+
     class TestCollections(IMongoDatabase database, string collectionName) : ISinkCollections
     {
         public string PromotingCollectionName => $"replay-{collectionName}-promoting";

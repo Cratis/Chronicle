@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Registrations;
 /// discovery.
 /// </para>
 /// </remarks>
-public class ExplicitArtifacts
+public partial class ExplicitArtifacts
 {
 #if NET8_0
     readonly object _lock = new();
@@ -39,6 +39,9 @@ public class ExplicitArtifacts
 #endif
     readonly List<IExplicitProjection> _projections = [];
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _reactors = [];
+    readonly List<EventTypeRegistration> _eventTypes = [];
+    readonly List<ExplicitArtifactRegistration> _types = [];
+    int _ordinal;
 
     /// <summary>
     /// Gets the explicitly registered projections.
@@ -82,7 +85,7 @@ public class ExplicitArtifacts
     public ExplicitArtifacts RegisterProjection<TReadModel>(Action<IProjectionBuilderFor<TReadModel>> define, ProjectionId? id = null)
     {
         ArgumentNullException.ThrowIfNull(define);
-        return Add(new DeclarativeExplicitProjection<TReadModel>(define, id ?? new ProjectionId(typeof(TReadModel).FullName!)));
+        return Add(new DeclarativeExplicitProjection<TReadModel>(define, id ?? ArtifactIdentity.ModelProjectionIdFor(typeof(TReadModel))));
     }
 
     /// <summary>
@@ -116,6 +119,30 @@ public class ExplicitArtifacts
         }
 
         return this;
+    }
+
+    /// <summary>
+    /// Applies projection recipes to a store before discovery.
+    /// </summary>
+    /// <param name="projections">The store's projections.</param>
+    internal void ApplyTo(Projections.Projections projections)
+    {
+        foreach (var projection in Projections)
+        {
+            projections.Add(projection);
+        }
+    }
+
+    /// <summary>
+    /// Applies reactor recipes to a store before discovery.
+    /// </summary>
+    /// <param name="reactors">The store's reactors.</param>
+    internal void ApplyTo(Reactors.Reactors reactors)
+    {
+        foreach (var (id, define) in Reactors)
+        {
+            reactors.Add(id, define);
+        }
     }
 
     ExplicitArtifacts Add(IExplicitProjection projection)

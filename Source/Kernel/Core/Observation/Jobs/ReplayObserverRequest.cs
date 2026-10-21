@@ -15,4 +15,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public record ReplayObserverRequest(
     ObserverKey ObserverKey,
     ObserverType ObserverType,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest;
+    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+{
+    /// <inheritdoc/>
+    public ObserverReaderScope? ReaderScope { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? Revision { get; init; }
+}

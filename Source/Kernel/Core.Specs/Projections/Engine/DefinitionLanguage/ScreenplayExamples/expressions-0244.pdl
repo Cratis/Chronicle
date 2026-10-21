@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from DocEvent
+    Name = 123                              # number to string (invalid)
+    LoginCount = "five"                     # string to number (invalid)
+    IsActive = "yes"                        # string to boolean (invalid)

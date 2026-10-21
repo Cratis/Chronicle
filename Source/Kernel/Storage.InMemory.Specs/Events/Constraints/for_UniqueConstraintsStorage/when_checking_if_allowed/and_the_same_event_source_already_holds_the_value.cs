@@ -20,7 +20,7 @@ public class and_the_same_event_source_already_holds_the_value : given.a_unique_
 
     async Task Because()
     {
-        await _storage.Save(_holder, ConstraintNameValue, _claimedAt, _value);
+        await _storage.Save(_holder, _definition, _claimedAt, _value);
         (_isAllowed, _sequenceNumber) = await _storage.IsAllowed(_holder, _definition, _value);
     }
 

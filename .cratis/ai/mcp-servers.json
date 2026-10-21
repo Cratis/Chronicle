@@ -12,8 +12,17 @@
         "screenplay",
         "mcp"
       ],
-      "defaultRoot": ".cratis/screenplay",
       "description": "Understand and safely author one Screenplay application through typed AST operations, reviewed proposals, durable identities, and explicit recovery."
+    },
+    {
+      "id": "codescene",
+      "profiles": [
+        "cratis/codescene"
+      ],
+      "transport": "stdio",
+      "command": "cs-mcp",
+      "args": [],
+      "description": "Review Code Health changes and prioritize maintainability risks with CodeScene; requires a CodeScene account and OAuth login."
     }
   ],
   "$cratisAiManaged": "mcp-servers.json"

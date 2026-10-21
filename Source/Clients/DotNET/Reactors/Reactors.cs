@@ -3,7 +3,7 @@
 
 using System.Collections.Frozen;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents an implementation of <see cref="IReactors"/>.
 /// </summary>
-public class Reactors : IReactors, IReactorPartitionRecovery
+public partial class Reactors : IReactors, IReactorPartitionRecovery
 {
 #if NET8_0
     static readonly object _registerLock = new();
@@ -115,6 +115,21 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
+    /// <summary>
+    /// Gets the generation delivery policy supplied by the event store.
+    /// </summary>
+    internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets how many partitions of one reactor are handled at the same time.
+    /// </summary>
+    internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
+
+    /// <summary>
+    /// Gets the current discovered and runtime reactor handlers.
+    /// </summary>
+    internal IEnumerable<IReactorHandler> Handlers => _handlers.Values.Select(_ => _.Handler);
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -126,11 +141,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             var pendingDefinitions = _pendingDefinitions.Select(_ => Define(_.Id, _.Define)).ToArray();
             var ids = runtimeRegistrations.Select(_ => _.Handler.Id)
                 .Concat(pendingDefinitions.Select(_ => _.Id))
-                .Concat(reactorTypes.Select(_ => _.GetReactorId()));
+                .Concat(reactorTypes.Select(ResolveId));
             var duplicate = ids.GroupBy(_ => _).FirstOrDefault(_ => _.Count() > 1);
             if (duplicate is not null)
             {
-                var collidingTypes = reactorTypes.Where(_ => _.GetReactorId() == duplicate.Key).Take(2).ToArray();
+                var collidingTypes = reactorTypes.Where(_ => ResolveId(_) == duplicate.Key).Take(2).ToArray();
                 if (collidingTypes.Length == 2)
                 {
                     throw new ReactorAlreadyRegistered(duplicate.Key, collidingTypes[0], collidingTypes[1]);
@@ -259,7 +274,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
     /// <inheritdoc/>
     public IReactorHandler GetHandlerFor<TReactor>()
-        where TReactor : IReactor => _handlers[typeof(TReactor).GetReactorId()].Handler;
+        where TReactor : IReactor => GetHandlerFor(typeof(TReactor));
 
     /// <inheritdoc/>
     public IReactorHandler GetHandlerById(ReactorId id)
@@ -298,14 +313,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public Task<IEnumerable<Observation.FailedPartition>> GetFailedPartitionsFor(Type reactorType)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return handler.GetFailedPartitions();
     }
 
     /// <inheritdoc/>
     public async Task<ReactorPartitionRetryOutcome> RetryFailedPartitionFor(Type reactorType, Partition partition)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         var response = await _servicesAccessor.Services.Observers.RetryPartition(new RetryPartition
         {
             EventStore = _eventStore.Name,
@@ -321,7 +336,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public async Task<ReactorPartitionQuarantineClearResult> ClearFailedPartitionQuarantineFor(Type reactorType, Partition partition, bool retryImmediately = true)
     {
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         var response = await _servicesAccessor.Services.Observers.ClearPartitionQuarantine(new ClearPartitionQuarantine
         {
             EventStore = _eventStore.Name,
@@ -340,7 +355,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return handler.GetState();
     }
 
@@ -349,7 +364,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
-        var handler = _handlers[reactorType.GetReactorId()].Handler;
+        var handler = GetHandlerFor(reactorType);
         return Replay(handler.Id);
     }
 
@@ -365,6 +380,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         });
         return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward<TReactor>()
+        where TReactor : IReactor => FastForward(GetHandlerFor<TReactor>().Id);
+
+    /// <inheritdoc/>
+    public Task<FastForwardResult> FastForward(ReactorId reactorId) =>
+        ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, _eventStore.Name, _eventStore.Namespace, reactorId);
 
     /// <summary>
     /// Add a fluent reactor definition that is built and registered by the next <see cref="Discover"/>.
@@ -393,12 +416,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
     ReactorRegistration CreateRegistrationFor(Type reactorType)
     {
+        var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers);
+        ObserverHasOnlyGenerationHandlers.ThrowIfEmpty(reactorType, eventTypes);
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
         var handler = CreateHandler(
-            reactorType.GetReactorId(),
+            ResolveId(reactorType),
             reactorType,
-            reactorType.GetEventSequenceId(_eventStore.Name?.Value),
-            ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType, _sideEffectHandlers));
+            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers),
+            eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
         return new(
@@ -408,7 +433,8 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             [.. reactorType.GetFilterTags()],
             eventSourceFilter.EventSourceType,
             eventSourceFilter.EventStreamType,
-            null);
+            null,
+            reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false));
     }
 
     ReactorRegistration CreateRegistrationFor(IReactorDefinition definition)
@@ -529,6 +555,11 @@ public class Reactors : IReactors, IReactorPartitionRecovery
     void RegisterReactor(ReactorRegistration registration)
     {
         var handler = registration.Handler;
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
         _logger.RegisteringReactor(handler.Id);
         var request = new RegisterReactor
         {
@@ -537,11 +568,13 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             Namespace = _eventStore.Namespace,
             Reactor = new ReactorDefinition
             {
+                GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 IsReplayable = registration.IsReplayable,
                 IsNotReplayable = !registration.IsReplayable,
+                StartAtTail = registration.StartAtTail,
                 Tags = registration.Tags,
                 Filters = new()
                 {
@@ -553,10 +586,13 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         };
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        var messages = new BehaviorSubject<ReactorMessage>(new(new(request)));
+        var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var cancellationToken = handler.CancellationToken;
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages, cancellationToken);
+        #pragma warning disable CA2000 // Dispose objects before losing scope
+        var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -575,6 +611,7 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             {
                 try
                 {
+                    await scheduler.DrainAndDispose();
                     await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
@@ -588,21 +625,29 @@ public class Reactors : IReactors, IReactorPartitionRecovery
 
         // https://github.com/dotnet/reactive/issues/459
         eventsToObserve
-            .Select(events => Observable.FromAsync(async () =>
+            .Select(events =>
             {
-                await ObserverMethod(messages, registration, events, cancellationToken);
-                _logger.EventHandlingCompleted(handler.Id);
-            }))
-            .Concat()
+                async Task Deliver()
+                {
+                    await ObserverMethod(messages, registration, events, cancellationToken);
+                    _logger.EventHandlingCompleted(handler.Id);
+                }
+
+                var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
+                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+            })
+            .Merge()
             .Subscribe(
                 _ => { },
                 ex =>
                 {
+                    scheduler.Stop();
                     var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
                     if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                         messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
                         return;
                     }
 
@@ -616,6 +661,17 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                         return;
                     }
 
+                    // The kernel lost this client's registration. Retrying the same stream with the same connection id
+                    // can never work, so reconnect the whole client, which re-registers every reactor.
+                    if (errorKind == KernelConnectionErrorKind.SessionLost)
+                    {
+                        _logger.ReactorStreamLostConnection(handler.Id, ex);
+                        messages.Dispose();
+                        _ = scheduler.DrainAndDispose();
+                        _eventStore.Connection.RequestReconnect();
+                        return;
+                    }
+
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
@@ -623,13 +679,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
                 },
                 () =>
                 {
+                    scheduler.Stop();
                     _logger.RegisteringReactorStreamCompleted(handler.Id);
                     messages.Dispose();
                     ScheduleReconnect();
                 });
     }
 
-    async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
+    async Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
         if (events.ReplayState != ReplayState.None)
@@ -722,7 +779,9 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             _argumentsResolver,
             serviceProviderScope.ServiceProvider)
         {
-            StoppingToken = cancellationToken
+            StoppingToken = cancellationToken,
+            RegisteredId = handler.Id,
+            RegisteredEventSequenceId = handler.EventSequenceId
         };
 
         foreach (var @event in events.Events)
@@ -820,13 +879,14 @@ public class Reactors : IReactors, IReactorPartitionRecovery
             var result = new ReactorResult
             {
                 Partition = events.Partition,
+                DeliveryId = events.DeliveryId,
                 State = state,
                 LastSuccessfulObservation = lastSuccessfullyObservedEvent,
                 ExceptionMessages = exceptionMessages.ToList(),
                 ExceptionStackTrace = exceptionStackTrace
             };
 
-            messages.OnNext(new(new(result)));
+            messages.Publish(new(new(result)));
         }
     }
 
@@ -868,7 +928,8 @@ public class Reactors : IReactors, IReactorPartitionRecovery
         string[] FilterTags,
         EventSourceType EventSourceType,
         EventStreamType EventStreamType,
-        Func<ReactorEvent, CancellationToken, Task>? Handle)
+        Func<ReactorEvent, CancellationToken, Task>? Handle,
+        bool StartAtTail = false)
     {
         /// <summary>
         /// Gets or sets whether the subscription has been sent on the current connection.

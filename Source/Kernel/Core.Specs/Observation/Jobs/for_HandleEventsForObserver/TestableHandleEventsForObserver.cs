@@ -23,7 +23,9 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains.</param>
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
+/// <param name="observerServiceClient">The client for confirming buffered writes.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class TestableHandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -33,18 +35,28 @@ public class TestableHandleEventsForObserver(
     IGrainFactory grainFactory,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
-    ILogger<HandleEventsForObserver> logger)
-    : HandleEventsForObserver(state, throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, logger), IGrainType
+    IObserverServiceClient observerServiceClient,
+    ILogger<HandleEventsForObserver> logger,
+    IEventGenerationRelease? eventGenerationRelease = null)
+    : HandleEventsForObserver(GuardedState(state), throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
-    readonly IHandleEventsForObserver _selfReference = Substitute.For<IHandleEventsForObserver>();
+    static readonly AsyncLocal<bool> _guardStateAccess = new();
+    static readonly AsyncLocal<StepRunForTesting?> _stepRun = new();
+
+    /// <summary>
+    /// Gets or sets whether persistent state access outside the step's activation callbacks is rejected.
+    /// </summary>
+    public bool GuardStateAccess { get; set; }
 
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForObserver);
 
-    /// <inheritdoc/>
-    protected override IHandleEventsForObserver GetSelfGrainReference() => _selfReference;
+    /// <summary>
+    /// Gets the run the step performs in, once <see cref="InvokePerformStep"/> has started it.
+    /// </summary>
+    public StepRunForTesting? Run { get; private set; }
 
     /// <summary>
     /// Sets up internal fields for testing, bypassing the full grain preparation flow.
@@ -63,6 +75,25 @@ public class TestableHandleEventsForObserver(
     /// <param name="currentState">The current state of the job step.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The result of the step.</returns>
-    public Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken = default) =>
-        PerformStep(currentState, cancellationToken);
+    public async Task<Catch<JobStepResult>> InvokePerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken = default)
+    {
+        _guardStateAccess.Value = GuardStateAccess;
+        Run = StepRunForTesting.Begin(this);
+        _stepRun.Value = Run;
+        return await PerformStep(currentState, cancellationToken);
+    }
+
+    static IPersistentState<HandleEventsForObserverState> GuardedState(IPersistentState<HandleEventsForObserverState> inner)
+    {
+        var guarded = Substitute.For<IPersistentState<HandleEventsForObserverState>>();
+        guarded.State.Returns(_ => !_guardStateAccess.Value || _stepRun.Value?.IsOnActivation == true
+            ? inner.State
+            : throw new given.StateAccessOutsideActivation());
+        guarded.Etag.Returns(_ => inner.Etag);
+        guarded.RecordExists.Returns(_ => inner.RecordExists);
+        guarded.WriteStateAsync().Returns(_ => inner.WriteStateAsync());
+        guarded.ReadStateAsync().Returns(_ => inner.ReadStateAsync());
+        guarded.ClearStateAsync().Returns(_ => inner.ClearStateAsync());
+        return guarded;
+    }
 }

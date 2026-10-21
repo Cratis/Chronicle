@@ -49,7 +49,7 @@ public class a_migrated_namespace_database : Specification, IDisposable
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new NamespaceDbContext(options);

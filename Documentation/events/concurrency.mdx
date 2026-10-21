@@ -1,9 +1,28 @@
 ---
 uid: Chronicle.ConcurrencyScope
+description: Chronicle concurrency control uses scopes and expected positions to keep operations from interfering when appending events to the same event source.
 ---
 # Concurrency
 
 Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on formalized event metadata tags.
+
+:::caution[A scope guards a decision only if its position is captured before you read]
+The default scope is built when you append: the client reads the tail then and uses it as the expected position. That covers only the moment between that read and the write. It does not cover the time you spent reading state and deciding. To guard a decision, capture the position before you read the facts, or use a [decision read](../read-models/decision-reads.mdx), which does it for you. A read model you read through `IReadModels` captures nothing. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+:::
+
+A concurrency scope is how Chronicle expresses the append condition of a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md). To derive the scope from a declared event source and its streams instead of building it by hand, see [Concurrency per event source and stream](../event-sources/concurrency.mdx).
+
+## Choose between a scope and a decision read
+
+| You want to guard | Use | Why |
+|---|---|---|
+| A rule over state you read from a projection (a count, a stock, a status) | A [decision read](../read-models/decision-reads.mdx) | It captures the position before it folds, and builds the scope for you |
+| A change the user saw at a revision | An explicit scope built from that revision | The position is the revision the user saw, not what the server read |
+| Events you read yourself, not through a projection | An explicit scope, with the tail captured before you read | You own the capture-then-read order |
+| Every writer of a stream or source seeing every other | Dimensions declared on an [event source definition](../event-sources/concurrency.mdx) | The guard covers the whole range, whatever the event type |
+| A value that must be unique | A [constraint](../constraints/index.md) | The kernel checks it for every writer, with no read |
+
+What a guard covers, and how scopes and reads merge, is in [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
 
 ## Understanding ConcurrencyScope
 
@@ -33,6 +52,22 @@ For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently constr
 
 <ChronicleClientTabs snippet="events/concurrency/builder" />
 
+## Incomplete explicit scopes
+
+Caller-supplied scopes fail closed when they have narrowing but no expected position. A scope built with an unavailable tail, using either `ConcurrencyScopeBuilder` or `new ConcurrencyScope`, becomes a "no matching event may exist" expectation. This includes `with` copies and every append variant, including named tags and labelled batches.
+
+| Supplied scope | Default behavior |
+|---|---|
+| Incomplete, with a source, stream, source type or nonempty event-type filter | Expect no matching event |
+| Empty builder, empty event-type list or wildcard dimensions only | No check, with a client warning |
+| `ConcurrencyScope.None` | No check |
+| `ConcurrencyScope.NotSet` | Resolve through the configured strategy |
+| Strategy-issued scope, including a `with` copy | Keep the strategy's first-append policy |
+
+An empty event-type list means any type; it does not mean "the whole log must be empty". Use `ExpectingNoMatchingEvent()` explicitly when that is the expectation you intend.
+
+`ConcurrencyOptions.SkipIncompleteExplicitScopes = true` restores legacy skipping of incomplete explicit scopes. It is separate from `CheckFirstAppendIntoAScope`, which controls strategy-issued scopes. These correctness changes apply even when read protection is off.
+
 ## Scoping by Event Metadata Tags
 
 ### EventSourceType and EventStreamType
@@ -59,6 +94,12 @@ When appending multiple events, you can specify different concurrency scopes for
 
 <ChronicleClientTabs snippet="events/concurrency/append-many" />
 
+In .NET, the ordered-scope overload `AppendMany(events, correlationId, tags, concurrencyScopes)` also accepts several `KeyValuePair<EventSourceId, ConcurrencyScope>` entries with the same label and different predicates. Use this for a decision that reads several streams of one source, even if it appends only one event. Every predicate must hold; none is replaced by another. The kernel must advertise `concurrency-scope-conjunctions`, or the client refuses before sending the batch. A unit of work and an `EventsWithConcurrencyScopes` reactor result preserve the same conjunction. Use the result's `Entries` property rather than its single-scope-per-label dictionary accessor.
+
+A reported violation includes `ScopeIndex`, the zero-based position in the submitted scope list, and `Scope`, the failed predicate and expected position. Either may be absent with older kernels or single-scope RPCs.
+
+Every scope in the batch is checked once, against the state of the event store *before* the batch. A scope never sees events that the same batch is about to write, so two events for one event source do not trip over each other. The batch is also all-or-nothing: if any scope reports a violation, Chronicle appends none of the events and returns every violation it found.
+
 ## Event Source Operations with Concurrency
 
 You can also use concurrency scopes with event source operations:
@@ -84,6 +125,8 @@ This strategy gets the current tail sequence number and uses it as the expected 
 > **Note**: `[EventStreamType]` on a reactor or reducer scopes which events an *observer* receives (see [Filter by event stream type](filtering/by-event-stream-type)) — it does not set the `EventStreamType` used for concurrency scoping on an *append* call. Set `eventStreamType` explicitly on `Append`/`AppendMany`, or through `ConcurrencyScopeBuilder.WithEventStreamType(...)`, when you need concurrency scoped to a specific stream type.
 
 ## The First Append Into a Scope Is Not Checked by Default
+
+This section describes **strategy-issued** scopes. Caller-supplied scopes follow [Incomplete explicit scopes](#incomplete-explicit-scopes).
 
 A concurrency check needs something to compare against, and the optimistic strategy gets one by reading the tail *through the scope's own narrowing*. When nothing matching that narrowing has been appended yet there is no tail to read, so the strategy reports `EventSequenceNumber.Unavailable` — the same value that means "no expected sequence number was supplied at all". The kernel cannot act on that, so it skips the check, notes it in a debug-level log line, and lets the append through — the skip is the designed default, so it is not logged as a warning.
 
@@ -125,14 +168,59 @@ That is the point — it is the race the check exists to catch — but adopt it 
 :::
 
 :::note[The default is scheduled to change]
-`CheckFirstAppendIntoAScope` defaults to `false` so that upgrading within this major version changes nothing. **It is planned to become `true` in the next major version**, where the first append into a scope will be checked unless you opt out. Turning it on now — one behavior at a time — is how you get there without a surprise at the major boundary. To keep the unchecked behavior past that point, ask for no check explicitly with `ConcurrencyScope.None`.
+`CheckFirstAppendIntoAScope` defaults to `false` so the strategy's first-append policy is unchanged within this major version. The separate explicit-scope correctness changes have their own compatibility switches. **It is planned to become `true` in the next major version**, where the first append into a scope will be checked unless you opt out. Turning it on now — one behavior at a time — is how you get there without a surprise at the major boundary. To keep the unchecked behavior past that point, ask for no check explicitly with `ConcurrencyScope.None`.
 :::
 
 ### Expressing "This Must Not Exist Yet"
 
-By default a concurrency scope protects a sequence you are *extending*. With the check opted into, `EventSequenceNumber.BeforeFirst` means *before the first event*, so a scope can also say "no event matching this narrowing may exist" — which makes "only one writer may open this partition" expressible as a concurrency concern.
+By default a concurrency scope protects a sequence you are *extending*. With the check opted into, `EventSequenceNumber.BeforeFirst` means *before the first event*, so a scope can also say "no event matching this narrowing may exist". That makes "only one writer may open this partition" expressible as a concurrency concern, and it gives you something more useful: proof that an identifier you just generated is new.
 
-Reach for a [constraint](../constraints/index.md) instead when the rule has to hold for *every* writer forever, regardless of what any client asked for: a unique event type constraint permits exactly one event of a given type per event source, and the kernel enforces it whether or not the append declared a scope.
+#### Why a generated identifier needs proof
+
+Picture a small shop. Customers get a `CustomerId` (`cus_` plus a ULID). Orders get an `OrderId`, a TypeID with a time part and no tenant. Invitations get an `InviteCode`, a short NanoId. Support staff issue an `ApiKey`: 32 random bytes that are a secret. The key itself never becomes an identifier. Its stream is identified by a separate, non-sensitive `ApiKeyId`. The `CustomerId`, `OrderId`, `InviteCode` and `ApiKeyId` are minted by your code, and each one becomes the event source of a new stream.
+
+A well-chosen generator makes a collision astronomically unlikely, but "unlikely" is a property of the generator, not of your event store. Nothing stops the same value from being produced twice by a bug, a replayed request, a seeded test generator or a clock that stepped back. If it happens, the second "new" stream silently appends onto the first, and two customers share one history.
+
+A `BeforeFirst` scope closes that gap. The append says: "this identifier is new, and if it is not, refuse to write". Chronicle checks it for you, and the answer comes from the event store rather than from your generator.
+
+#### Place an order
+
+Placing an order writes `OrderPlaced` and one `OrderLineAdded` per line, all for a brand-new `OrderId`. The scope asks that no event exists for that `OrderId` yet:
+
+<ChronicleClientTabs snippet="events/concurrency/fresh-identifier" />
+
+Chronicle checks the scope once against the state before the batch, so the `OrderLineAdded` events do not count against the `OrderPlaced` event that arrives with them. Then it appends the whole batch as one operation. The scope names no event types, so *any* event for that `OrderId` is a collision; narrow it with `WithEventType` if only certain events should count.
+
+Arc's [generated values](/arc/backend/csharp/commands/generated-values/) (`[GeneratedValue]`) mint identifiers inside a command handler. Arc does not prove a generated value is absent from your storage, so a handler that appends for a generated identifier is where this scope belongs.
+
+#### When the identifier is taken
+
+If an event already exists for the identifier, or another append for the same identifier lands between your check and your write, the result carries a `ConcurrencyViolation` and **nothing is appended**. `IsSuccess` is `false` and `HasConcurrencyViolations` is `true`, as shown in [Handling Concurrency Violations](#handling-concurrency-violations).
+
+Chronicle numbers events as it writes them, and a storage write can collide with another writer that took the same sequence number. Chronicle then renumbers the append and tries again. Since version 19.40.1 it checks your scope again on **every** renumbered attempt, so a competing write that created the stream during the collision is reported as a violation instead of being written on top. Older kernels renumbered without checking again.
+
+The fix on your side is short: generate a new identifier and append again, as the example does. Do not retry with the same identifier. The scope is telling you the stream is not yours.
+
+#### Why low-entropy identifiers depend on it
+
+A ULID or a TypeID carries enough randomness that you will probably never see a collision. An `InviteCode` does not: a NanoId of six or eight characters is meant to be typed by a person, and at that size collisions are a matter of when. For identifiers like that, the freshness check is how you find out, and the retry loop is part of the design rather than an edge case.
+
+The `ApiKey` shows the limit of this check. Freshness applies to the stream's identifier, here the `ApiKeyId`, and says nothing about keeping a value private. **Never use a secret as an event source id.** Event source ids, like the rest of event metadata, are stored in plaintext and cannot be encrypted, and marking one `[PII]` is rejected. Keep the raw key out of events entirely and record only a fingerprint such as a hash of it, or, when you must store the secret itself, mark the payload property `[Encrypted]` (see [encrypted values](../security/encrypted-values.mdx)). Don't use `[PII]` for a secret: it is for personal data and enrolls the value in erasure. [Personal data in events](../compliance/pii.mdx) explains the surrogate-identifier pattern. Arc's `[NotAudited]` only keeps a value out of a command's causation; it does not protect the value anywhere else.
+
+#### Choosing a guard
+
+| What you need | Reach for |
+|---|---|
+| Prove a generated identifier is not already in use, at the moment you append | A `BeforeFirst` scope with `ExpectingNoMatchingEvent()` |
+| Every writer, forever, may produce at most one event of a type for a source | A [unique event type constraint](../constraints/index.md) |
+| The identifier is a natural key from outside, such as an email address or a national number | A unique constraint on that value, or a deterministic event source id derived from it |
+| Extending an existing stream without overwriting a concurrent change | A sequence-number scope from the [optimistic strategy](#optimistic-concurrency-strategy) |
+
+#### When not to use it
+
+- **The identifier is a natural key that is already unique.** Do not generate a value just to prove it is new. Derive the event source id from the key, so a second use lands on the same stream by design, or declare a unique constraint so the event store refuses duplicates for every writer.
+- **The rule has to hold for writers that never declared a scope.** A scope only protects the appends that carry it. A constraint is enforced by the kernel for everyone.
+- **You want a retry to succeed after an error.** A write can commit and still report an error, for example when a connection drops after the event store accepted it. Retrying with the same identifier then reports a violation, because the stream now exists: your own earlier write. Make the retry idempotent: when you retry after an error, first check whether the stream you attempted to create already holds your own events before you generate a new identifier.
 
 ### Telling a Skipped Check From a Passing One
 
@@ -140,7 +228,7 @@ A skipped concurrency check and a passing one produce the same successful append
 
 - the append asked for no check (`ConcurrencyScope.None`), or carried no scope at all;
 - the append was a first append into a scope and the check is not turned on — the default;
-- the append declared a scope that narrows but names no expectation, built by hand without resolving one. That is always skipped, because `EventSequenceNumber.Unavailable` is the same value `ConcurrencyScope.None` carries and cannot be read as an expectation.
+- an incomplete explicit scope has no narrowing, or `SkipIncompleteExplicitScopes` restores legacy skipping. A narrowed explicit scope otherwise expects no matching event.
 
 Assert on it in a test when a command's correctness depends on the check running. It is also how you confirm an opt-in actually took effect.
 
@@ -158,6 +246,14 @@ A skew therefore degrades to the same skip you get with the check off, and says 
 
 One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` is sent by the kernel, so a **current client against an older kernel always reads `false`** — the older kernel does not send the field. That is correct for a skipped first append and conservative for every other append (it under-reports a check that did run). It never over-reports.
 
+## Revisions and redactions are outside append conditions
+
+Append conditions detect matching **appended** events after a boundary. Revisions and redactions rewrite existing history without advancing that append boundary. They are not detected by concurrency scopes, decision reads, read protection or constraints.
+
+For example, a decision reads through position 100 and sees a credit of 100 at position 80. An administrator revises that credit to 0. A withdrawal appended at 101 can still pass its condition: the revision did not append a matching event above 100. A fresh fold can see the revised value, but a decision that already read it has no mutation guard.
+
+[Read protection](../read-models/read-protection.mdx#limits) has the same limit. Coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap. An atomic mutation-epoch check is not part of the current contract.
+
 ## Best Practices
 
 1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking — but note that the narrower the scope, the more scopes there are, and [the first append into each one is not checked unless you ask for it](#the-first-append-into-a-scope-is-not-checked-by-default)
@@ -167,3 +263,4 @@ One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` i
 5. **Use concurrency scope strategies**: Inject `IConcurrencyScopeStrategies` to get a built-in strategy (such as optimistic concurrency) instead of hand-rolling sequence-number lookups
 6. **Assert the check ran**: Read `IAppendResult.ConcurrencyCheckPerformed` when a behavior depends on serialization — [a skipped check looks exactly like a passing one](#telling-a-skipped-check-from-a-passing-one)
 7. **Adopt the first-append check per behavior**: Turn on [the first-append check](#checking-it--opt-in) where two writers must not both open the same partition, ahead of it becoming the default in the next major version
+8. **Capture the position before you read**: A scope protects a decision only if its position was taken before the facts were read. Read the facts from the event log or a fresh fold, not from a materialized read model that may lag: otherwise the captured position covers events the decision never saw. See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) and the [editing conflict scenario](../dynamic-consistency-boundary/scenarios.mdx#an-editing-conflict)

@@ -2,14 +2,9 @@
 # Contract, precedence and conflicting evidence
 
 ## Which contract
-First the opt-in decision (master: `cratis-screenplay-modeling-lifecycle`, "Decide the level
-first"; `SKILL.md` step 1 suffices when it is not installed): an accepted model under the model
-root covers the slice (accepted means the `.play` file is in the committed tree:
-`git ls-tree -r --name-only HEAD -- <root>` lists it), or the root holds a committed `.play`
-file or was explicitly set in `.cratis/ai.json` (even if empty). Staged or untracked files under
-the root are drafts. A committed file with uncommitted working-tree edits is a model change
-in progress; its HEAD version is the contract until the change is committed. An empty directory, install
-output, an uncommitted `.play` draft or a `.play` file outside the root does not count. Otherwise stay code-first.
+Decide opt-in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, model root and drafts. SKILL.md step 1 suffices when the Screenplay skills are not installed.
+Staged or untracked `.play` files are drafts, not the contract; a `.play` outside the model root is not a contract.
+For a committed model with working-tree edits, HEAD remains the contract until the change is committed.
 
 | Situation | Contract | Code's role |
 | --- | --- | --- |
@@ -24,11 +19,11 @@ or the unmanaged extension code.
 
 ## Precedence (highest first)
 1. Executable parts: specifications, mappings, constraints, authorization, rules.
-2. The slice `description` and realization notes: they explain intent and never license a
-   contradiction or an undocumented default. Realization notes are the explicit realization
-   requirements stated in a description: they bind adapters and fallback code, cannot contradict
-   executable parts, and are never supplemented with inferred rules; other description prose is
-   only a hint.
+2. The slice `description`, its fenced `documentation`, and realization notes: they explain intent
+   and never license a contradiction or an undocumented default. Realization notes are the explicit
+   realization requirements stated in the `description` or `documentation`: they bind adapters and
+   fallback code, cannot contradict executable parts, and are never supplemented with inferred
+   rules; other prose is only a hint.
 3. Issue or ticket text.
 4. Existing code: no authority.
 

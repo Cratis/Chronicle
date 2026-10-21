@@ -82,10 +82,11 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
         SetField("_logger", Substitute.For<ILogger<EventStore>>());
         SetField("_projections", projections);
         SetField("_registrationRetry", _registrationRetry);
+        SetField("_preparation", new StorePreparationGate());
 
         // Zero delays: a specification about retrying asserts on how many attempts were made, never on the clock.
         SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.Zero, TimeSpan.Zero));
-        SetAutoProperty("Registration", Registrations.RegistrationOutcome.NotRun);
+        SetField("_registration", Registrations.RegistrationOutcome.NotRun);
 
         // A real lifecycle (not a mock) so a specification can drive Disconnected()/Connected() directly and have
         // the event store's own OnDisconnected subscription observe it exactly as it would in production.
@@ -125,9 +126,9 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
     static void SetField(EventStore eventStore, string fieldName, object value) =>
         typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(eventStore, value);
 
-    void SetField(string fieldName, object value) => SetField(_eventStore, fieldName, value);
+    protected void SetField(string fieldName, object value) => SetField(_eventStore, fieldName, value);
 
-    void SetAutoProperty(string propertyName, object value) => SetField(_eventStore, $"<{propertyName}>k__BackingField", value);
+    protected void SetAutoProperty(string propertyName, object value) => SetField(_eventStore, $"<{propertyName}>k__BackingField", value);
 
     public record BuildableModel();
 

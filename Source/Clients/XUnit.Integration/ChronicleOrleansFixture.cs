@@ -34,12 +34,18 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override async Task OnBeforeInitializeAsync()
     {
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await BootstrapKernel();
+            return;
+        }
+
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
         DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
 
         // Bootstrap before the first client registration as well as after every storage reset.
-        if (_webApplicationFactory is null)
+        if (CurrentWebApplicationFactory is null)
         {
             await BootstrapKernel();
             return;
@@ -87,6 +93,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     multicast event.
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
+
+        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
+        // their background queues must settle before either storage or projection pipelines can be reset.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
@@ -265,6 +275,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <returns>A task that completes when grain deactivation has stabilized.</returns>
     protected async Task DeactivateAllGrains()
     {
+        // Do not swallow a failed KeepAlive reset. Continuing to the final storage wipe would leak old live delivery.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
@@ -32,6 +33,10 @@ public static class StorageProviderExtensions
         {
             context.EnableReloads<ResilientStorageOptions>();
             var options = context.GetOptions<ResilientStorageOptions>();
+
+            // A refusal below the observer downgrade floor is a property of this kernel, so retrying cannot change it.
+            options.Retry.ShouldHandle = new PredicateBuilder().Handle<Exception>(exception =>
+                exception is not OperationCanceledException and not ObserverKernelBelowDowngradeFloor);
             builder.AddRetry(options.Retry);
             builder.AddTimeout(options.Timeout);
 

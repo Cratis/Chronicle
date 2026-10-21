@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -115,7 +115,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
@@ -212,6 +212,7 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
 - **Connection Encryption**: Use TLS for all connections in production
 - **Client certificate validation**: The clients connect over TLS but accept *any* server certificate unless the connection string sets `skipTlsValidation=false`. Set it for every client that reaches a production kernel. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
+- **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
 - **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
@@ -225,11 +226,11 @@ Chronicle supports horizontal scaling through Orleans clustering:
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
-4. **Shared Storage**: All instances must connect to the same MongoDB cluster. Only MongoDB storage supports more than one node; with PostgreSQL, SQL Server or SQLite, run a single instance (see [Clustering](configuration/clustering.md))
+4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]
-> Every multi-node deployment **must** set the clustering type to `MongoDB`. The default is `Localhost`,
-> which is single-node membership. Two containers left on the default that share one MongoDB do **not**
+> Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage. The default is `Localhost`,
+> which is single-node membership. Two containers left on the default that share one database do **not**
 > join as one cluster - each forms its own isolated single-node cluster over the same data, a split-brain
 > topology reported by no error at startup. The server logs a warning when it detects localhost clustering
 > against non-local storage, but it does not refuse to start.
@@ -294,7 +295,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -304,7 +305,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
@@ -339,3 +340,7 @@ Each container reaches the others over the Compose network by service name, so t
 address works. When you instead run multiple nodes directly on one host, set
 `Cratis__Chronicle__Clustering__AdvertisedIP` and distinct `SiloPort`/`GatewayPort` values per node - see
 [Clustering](configuration/clustering.md).
+
+## See also
+
+- [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.

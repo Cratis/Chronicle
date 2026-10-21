@@ -1,0 +1,25 @@
+// AutoMap fills same-named read-model properties from the event
+// Screenplay documentation: Documentation/screenplay/projections/auto-map.mdx
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+        label String
+        region String
+        total Decimal
+      event OrderRenamed
+        orderRef String
+        label String
+      event OrderTouched
+        label String
+      readmodel OrderView
+        orderId String
+        label String
+        region String
+        total Decimal
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        from OrderPlaced key orderId

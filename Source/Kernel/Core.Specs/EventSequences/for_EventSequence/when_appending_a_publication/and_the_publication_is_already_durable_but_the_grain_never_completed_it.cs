@@ -25,5 +25,5 @@ public class and_the_publication_is_already_durable_but_the_grain_never_complete
     [Fact] void should_advance_the_sequence_number_past_the_durable_slot() => _stateStorage.State.SequenceNumber.ShouldEqual(DurableSlot.Next());
     [Fact] void should_record_the_tail_of_the_event_type() => _stateStorage.State.TailSequenceNumberPerEventType[_eventType.Id].ShouldEqual(DurableSlot);
     [Fact] void should_hand_the_event_to_the_observers() => _appendedEventsQueues.Received(1).Enqueue(Arg.Is<IEnumerable<AppendedEvent>>(_ => _.Single().Context.SequenceNumber == DurableSlot));
-    [Fact] void should_update_the_constraint_index_with_the_durable_slot() => _constraintIndexSequenceNumbers.ShouldContainOnly(DurableSlot);
+    [Fact] void should_not_reapply_the_retry_content_to_the_constraint_index() => _constraintIndexSequenceNumbers.ShouldBeEmpty();
 }

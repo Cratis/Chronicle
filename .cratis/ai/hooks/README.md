@@ -13,6 +13,7 @@ Three layers:
 | Hard block | `PreToolUse` on a write | `scripts/cratis-guard-writes.sh` | zero | exits **2** — the write does not happen |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-store-mutations.sh` | zero; parses only commands that mention `cratis` | exits **2** — the store-changing `cratis chronicle` command does not run |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-pr-body.sh` | fetches shared rules only for `gh pr create/edit` | exits **2** for inline bodies, invalid notes or conflicting release labels; warns and allows when offline with no cache |
+| Cleanup of delivered work | `PostToolUse` on `Bash` (`gh pr merge`, `git pull/merge/worktree`) and `SessionStart` (Pi: `tool_result` and `session_start`) | `scripts/cratis-cleanup-worktrees.sh --hook` | zero when the command is unrelated | never blocks; removes delivered worktrees and branches, reports what it kept |
 | Quality gate (Claude) | `Stop` | `scripts/cratis-quality-gate.sh` | one build/test run, only when relevant files changed | exits **2** — the turn does not end |
 | Quality gate (Pi) | explicit `cratis_quality_gate` tool | same script | only at a requested verification checkpoint | error on failure; no turn-end hook |
 
@@ -61,6 +62,35 @@ conversion and Git's assume-unchanged or skip-worktree settings can hide raw dis
 use those settings, independently verify raw file contents or remove the hiding settings before
 relying on this check.
 
+## Cleanup of delivered work
+
+`scripts/cratis-cleanup-worktrees.sh` is the one place that removes linked worktrees and local
+branches after their work shipped; worktrees pile up otherwise (`gh pr merge --delete-branch`
+cannot delete a branch that a worktree still has checked out, so the pair is left behind) and eat disk.
+It removes only on **evidence of delivery**, never on a guess: the tip is merged into `origin/<default>`
+and was integrated rather than merely sitting on the default branch's first-parent history (where a
+brand-new empty branch sits), or it is merged and its upstream is gone, or GitHub reports a merged pull
+request whose head is exactly that tip. It never forces: a dirty, locked or current worktree is kept, as
+is anything undelivered, and every kept item is reported with its reason. Worktrees with non-empty
+`.ai-work/` directories are kept as "has untracked work records (.ai-work/)" by default, including
+ignored records. Other ignored files (`node_modules`, build output) go with a delivered worktree.
+
+- **When it runs.** After a Bash command that delivers or integrates work, and at the start of every
+  session, so orphans left by any earlier session, crash or harness are collected too.
+  Claude Code and Pi are wired (`settings.template.json`, the `cratis-hooks` Pi extension).
+  Harnesses with no hook wiring (Copilot, Cursor, OpenCode) rely on the **ship-changes** prompt, whose
+  final step runs the same script, and on running it by hand.
+- **By hand.** `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh [--dry-run]` from any worktree;
+  run from the main checkout to also collect the worktree you are standing in. Add
+  `--include-work-records` only after preserving any records you still need: it permits deleting
+  `.ai-work/` content, but never overrides locks or other safety checks. Hook mode ignores this flag;
+  automatic hooks never opt in.
+- **Pin a long-lived worktree.** Use `git worktree lock <path>` to keep it out of cleanup; release the
+  pin with `git worktree unlock <path>` when ready.
+- **Self-test.** `--self-test` plants delivered, dirty, unmerged, brand-new, work-record and locked cases
+  (including detached locks), checks manual opt-in and hook protection, and fails if any is handled wrongly.
+- **Opt out.** `CRATIS_HOOKS_SKIP_CLEANUP=1`.
+
 ## What is enforced
 
 Rule numbers refer to the numbered list in [`../rules/general.md`](../rules/general.md).
@@ -69,12 +99,54 @@ Rule numbers refer to the numbered list in [`../rules/general.md`](../rules/gene
 
 - Editing a file whose header marks it as Cratis-generated output — rule 15 `[contract]`
 - Writing content that opens with such a header (hand-authoring a "generated" proxy)
-- `Directory.Packages.props`, `global.json`, `NuGet.config`, `yarn.lock`, `package-lock.json`,
-  `pnpm-lock.yaml`, `packages.lock.json` — the Source-of-Truth Discipline rule
+- `Directory.Packages.props`, `global.json`, `NuGet.config` (also `NuGet.Config` and `nuget.config`),
+  `yarn.lock`, `package-lock.json`, `pnpm-lock.yaml`, `packages.lock.json` — unless the
+  repository's dependency-manifest policy allows them (see below)
 - `.env`, `.env.*`, `*.env` — secrets
+- Agent controls: `.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`,
+  `.pi/settings.json` and `.pi/extensions/**`
+- With `.cratis/ai.manifest.json` present, the installed `.cratis/ai/**`, `.claude/**` and `.pi/**`
+  trees. Both addressed paths and symlink destinations are checked, including the Claude settings
+  link to the hook template. The uninstalled Cratis/AI source repository is exempt from this
+  agent-control category so its authored corpus and harness adapters remain editable.
+
+For agent controls, report the intended change rather than rewriting permissions or hooks.
+A person edits settings; `cratis ai update` replaces managed files using the CLI's filesystem
+operations, not agent Write/Edit calls. This guard checks **Write/Edit targets only**: shell
+redirection, `cp`, another tool or process can still write them. It is a guardrail, not a sandbox;
+do not use those routes to work around a block.
 
 The generated-file check is anchored: the marker must be a comment opener at the start of one of
 the first five lines. A rule file or a document that merely *mentions* the marker is not blocked.
+
+### Dependency-manifest writes
+
+Manifest writes are allowed **silently by default** when Git's `origin` points to
+`github.com/Cratis/<repo>` over HTTPS or SSH (including `git@github.com:Cratis/<repo>.git`;
+host and owner are case-insensitive). The hook resolves the policy repository from the write
+target, resolving relative paths against the tool's working directory, lexically collapsing
+repeated separators, `.` and `..`, then walking up to the nearest existing directory for new
+files. That directory is resolved physically before Git lookup, so symlinked directories use
+the repository they actually point into. Nested directories and linked worktrees work too.
+A missing or non-Cratis origin keeps the block; targets outside any Git repository are blocked. Installed corpus files and selected profiles do **not** prove organization
+ownership: consumer applications can have exactly the same installation and profiles.
+
+Set a repository-owned boolean in `.cratis/ai.json` to override that default in both Claude Code
+and Pi:
+
+```json
+{ "allowDependencyManifestWrites": false }
+```
+
+`false` re-enables the manifest block in a Cratis repository; `true` allows manifest writes
+in any repository. Merge this property into the existing configuration. An absent, malformed,
+or non-boolean setting uses the origin-based default. This setting never permits generated
+output or `.env` writes. The protected basename list is unchanged; `package.json` is not
+part of this guard's manifest category.
+
+This allowance is not authorization for unrelated upgrades: keep changes task-focused and
+call out version bumps in the PR description. Other repositories retain the rule requiring
+an explicit request; their setting is a mechanical opt-out, not a change to that rule.
 
 **Blocked outright** (`PreToolUse` on `Bash`, exit 2): a `cratis chronicle` command that is not
 read-only. The **cratis-chronicle-cli-operations** skill makes `--yes` the authorization boundary for
@@ -181,11 +253,36 @@ The two `within_type_attribute` patterns are not line greps — the scanner trac
 blocks and type scope (positional record, multi-line declaration, or braced body), so a nullable
 property is only reported when it really sits inside an `[EventType]`.
 
+### Advisory slice scope and migration review
+
+The quality gate calls `scripts/cratis-slice-scope-report.sh` with its changed paths on stdin.
+It recognizes only `Source/<Module>/<Feature>/<Slice>/<Slice>.cs` carrying a model-bound
+`[Command]` or `[ReadModel]` attribute. For each recognized slice it lists changed paths outside
+that folder as **seam or out of scope**; use that list for the delivery record's shared seams.
+For a changed anchor it notes a missing `when_*` specification under the slice. It does not
+judge whether a seam is authorized or whether existing specifications cover the contract.
+Unrecognized layouts are skipped silently; report failures never fail or bypass the real gates.
+The output is advisory in normal and dry-run modes, never verification evidence.
+
+The PostToolUse `cratis-append-only-migration` reminder likewise only asks for review of
+`Source/**/Migrations/*.cs` carrying `[Migration(`, excluding model snapshots. It cannot tell
+whether a migration is committed or applied, so it never blocks a legitimate uncommitted edit.
+Read `cratis-arc-ef-core-migration` for migration generation and application.
+
+The slice-scope and specification-presence report takes the idea of node Build-Kits
+`check-commit-scope` checks, with original wording. The migration reminder is copied and
+translated from classic `build-state-change` and node `append-only-migrations` to EF Core.
+Both credit Martin Dilger and Nebulit GmbH's
+[Eventmodelers Build-Kits](https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits), used with
+their explicit consent. Slice-only scope checks do not replace the repository's completion gate.
+
 ### Project-specific gate configuration
 
 The shipped gates discover the repository's own solution and package, so most repositories need no
-configuration at all. A repository whose project is not where discovery lands — several packages, a
-frontend under `Source/<App>` — states only what differs in its own
+configuration at all. An eligible root workspace or solution keeps repository-wide dispatch. Without
+one, discovery uses only each gate's matching, non-excluded changes and runs it once per affected
+project directory, choosing the deepest containing project for each path. A repository
+that needs a different location or has changes outside several candidate projects states only what differs in its own
 `.cratis/ai/quality-gates.project.json`, which the gate merges over the managed file by gate id:
 
 ```json
@@ -403,7 +500,10 @@ A gate whose `requires.commands` are not on `PATH`, whose `requires.paths` do no
 script may instead be defined in the root `package.json` — this assumes Yarn Berry, where a
 root-defined `g:` script runs from every workspace, and no workspace `package.json` is inspected), or whose `workingDirectoryFrom` matches
 nothing in the repository, is a **no-op with a message on stderr**
-rather than a failure — that is how a repository with no .NET solution or no frontend stays quiet.
+rather than a failure — a repository with no .NET solution or no frontend runs no corresponding gate.
+With no working-tree changes the script exits silently. An empty plan for a changed tree reports
+`cratis-quality-gate: no gates selected — product verification was not performed.` on stderr; this
+is not evidence of product verification.
 
 An override in `.cratis/ai/quality-gates.project.json` is merged shallowly: a field it states
 replaces the managed one. The one exception is `requires.packageScripts`: an override that sets
@@ -422,10 +522,31 @@ gates it needs in `.cratis/ai/quality-gates.project.json`.
 repository and silently no-op in every other, which is the worst of both: it looks configured and
 checks nothing. So the .NET and frontend gates state *what kind of project* they build and let the
 gate script find it — `workingDirectoryFrom: ["*.slnx", "*.sln", "**/*.slnx", "**/*.sln"]` runs
-`dotnet build` in whichever directory holds the repository's own solution, preferring one at the
-root because the globs are tried in order. The frontend gates discover `package.json` the same way.
-The same shipped file therefore activates in an application repository, activates in a framework
-repository, and stays quiet in a repository that has no project at all.
+`dotnet build` in the directories holding the affected solutions. The frontend gates discover
+`package.json` the same way. For each changed path surviving the gate's `changed`/`excludeChanged`
+filters, discovery preserves an eligible root project and otherwise selects its deepest containing
+project within the first glob holding eligible candidates, running once per affected directory.
+The default root-first glob order retains dependent-workspace coverage; explicit glob preferences
+remain honored. Unrelated
+README edits and excluded `dist`, `bin`, or `obj` changes never influence that selection. A single
+eligible project may own source outside its directory; multiple candidates with an uncontained
+trigger report `UNVERIFIED` and exit 2, requiring explicit configuration rather than checking one
+arbitrary package.
+
+When `.cratis/ai.manifest.json` exists, discovery excludes the installed `.cratis/ai/` tree and
+symlinks resolving into it. Without the install manifest, authored corpus packages remain eligible.
+Containment resolves paths physically with `cd -P`, including directory symlinks followed by `..`;
+both the project-file target and the execution directory must be inside the task-owning repository
+and outside the managed tree. This depends on actual targets, not a global exclusion of similarly
+named authored directories. Candidate resolution is cached across gates, and path filtering and
+prefix selection use batch passes rather than per-path subprocesses.
+
+Gate commands read from `/dev/null`, never the remaining directory list. If some affected directories
+run while others have unmet requirements, the gate reports `UNVERIFIED` and exits 2; a wholly
+inapplicable gate remains a no-op. Pi preserves the script's diagnostics when planning fails.
+
+The same shipped file therefore activates in application and framework repositories, and reports
+an empty plan without running gates in a repository that has no project at all.
 
 **Overriding it, in order of increasing force.** Set `workingDirectory` on a gate to pin one of
 several candidate projects; drop a `quality-gates.json` of your own in place of the shipped one; or
@@ -447,13 +568,28 @@ two configurations the way the shipped gates do: Release clears the path, Debug 
 `general.md` makes the Debug build the canonical trigger for regenerating the TypeScript proxies
 the frontend phase depends on.
 
+## Unattended runs
+
+Keep hooks active and do not use blanket permission bypass. Prefer a permission allowlist that
+refuses unknown calls instead of waiting for a person who is not present. A blocked run reports
+the intended action and the permitted alternative; it does not loosen its own controls.
+Supply credentials through the environment, never echo them or place them in committed files.
+A missing or disabled hook is not evidence that a protected action is safe.
+
+## Method lineage
+
+| Idea | Used in | Credit |
+| --- | --- | --- |
+| Protect agent permissions and hook configuration from its own file tools | Write guard agent-control category | Martin Dilger / Nebulit GmbH, Eventmodelers build kits (`agent-permissions`); idea, our own wording |
+| Refuse unknown unattended calls and keep credentials out of output | Unattended runs | Martin Dilger / Nebulit GmbH, Eventmodelers build kits (`agent-permissions`, `bash-guard`); idea, our own wording |
+
 ## Escape hatches
 
 Each is an explicit, auditable opt-out — none of them is a default.
 
 | Variable | Effect |
 |---|---|
-| `CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1` | allows one protected write; this is the "unless explicitly asked" case for dependency manifests |
+| `CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1` | bypasses all write protection, including generated files, `.env`, agent controls and installed trees, while set in the harness environment; use only for an explicitly requested protected write. Repository-scoped manifest allowance uses `.cratis/ai.json` instead and never bypasses those protections |
 | `CRATIS_HOOKS_SKIP_SCAN=1` | disables the pattern pass |
 | `CRATIS_HOOKS_SKIP_GATE=1` | disables the quality gate |
 | `CRATIS_HOOKS_GATE_DRYRUN=1` | prints which gates would run, and why, then exits 0 |

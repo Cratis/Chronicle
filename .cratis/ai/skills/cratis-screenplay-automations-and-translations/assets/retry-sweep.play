@@ -1,0 +1,12 @@
+# cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/assets/retry-sweep.play
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// Minimal parent for the retry sweep excerpt; it checks source, not opaque code execution.
+module Certificates
+  feature Sending
+    slice StateView CertificatesToSend
+      readmodel PendingCertificate
+        enrolmentId Uuid
+    slice Automation SendCertificates
+      // @excerpt

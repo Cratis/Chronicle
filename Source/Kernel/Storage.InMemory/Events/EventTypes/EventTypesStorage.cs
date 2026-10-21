@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 /// event content without schema-driven type coercion.
 /// </para>
 /// </remarks>
-public class EventTypesStorage : IEventTypesStorage, IDisposable
+public partial class EventTypesStorage : IEventTypesStorage, IDisposable
 {
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitions = new();
     readonly ConcurrentDictionary<EventTypeId, EventTypeSource> _sources = new();

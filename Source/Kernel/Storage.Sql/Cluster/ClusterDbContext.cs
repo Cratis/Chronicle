@@ -63,4 +63,41 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     /// Gets or sets the DbSet for OAuth scopes.
     /// </summary>
     public DbSet<ScopeEntity> Scopes { get; set; }
+
+    /// <summary>
+    /// Gets the permanent logical database bindings.
+    /// </summary>
+    internal DbSet<DatabaseNameBinding> DatabaseNames => Set<DatabaseNameBinding>();
+
+    /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+
+    /// <inheritdoc/>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        MembershipModel.Configure(modelBuilder, Database.ProviderName);
+        modelBuilder.Entity<DatabaseNameBinding>(entity =>
+        {
+            entity.ToTable("DatabaseNames");
+            entity.HasKey(row => new { row.Kind, row.EventStore, row.Namespace });
+            entity.Property(row => row.EventStore).HasMaxLength(200);
+            entity.Property(row => row.Namespace).HasMaxLength(200);
+            entity.Property(row => row.PhysicalName).HasMaxLength(128);
+            entity.HasIndex(row => row.PhysicalName).IsUnique();
+            var collation = Database.ProviderName switch
+            {
+                "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+                "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+                _ => "BINARY"
+            };
+            entity.Property(row => row.EventStore).UseCollation(collation);
+            entity.Property(row => row.Namespace).UseCollation(collation);
+            if (Database.IsNpgsql())
+            {
+                entity.Property(row => row.PhysicalName).UseCollation("C");
+            }
+        });
+    }
 }

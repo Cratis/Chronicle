@@ -36,7 +36,6 @@ public partial class EventSequenceStorage
                 return new DuplicateEventSequenceNumber((EventSequenceNumber)(_events.Max(_ => _.Context.SequenceNumber.Value) + 1));
             }
 
-            var hash = @event.ContentHashes.TryGetValue(@event.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
             var appended = BuildAppendedEvent(
                 @event.SequenceNumber,
                 @event.EventSourceType,
@@ -50,17 +49,38 @@ public partial class EventSequenceStorage
                 @event.Tags,
                 @event.Occurred,
                 @event.GenerationalContent,
-                hash,
+                @event.ContentHashes,
                 @event.Subject,
                 @event.NamedTags,
                 @event.EventSource);
             var receipt = new EventPublicationReceipt(@event.SequenceNumber);
             _events.Add(appended);
             _originalCausedByChains[@event.SequenceNumber] = @event.CausedByChain.ToArray();
+            TrackMetadata(appended, _originalCausedByChains[@event.SequenceNumber]);
+            _appendedGenerations[@event.SequenceNumber] = @event.EventType.Generation.Value;
+            _generationHashes[@event.SequenceNumber] = new Dictionary<EventTypeGeneration, EventHash>(@event.ContentHashes);
             _publications.Add(publication.Id, (publication.Fingerprint, receipt));
             return receipt;
         }
     }
+
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>> AppendManyWithIdentities(IEnumerable<EventToAppendToStorage> events) => AppendBatch(events, true);
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<string, StoredEventPublication>> TryGetPublications(IEnumerable<string> identities)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult<IReadOnlyDictionary<string, StoredEventPublication>>(FindPublications(identities));
+        }
+    }
+
+    Dictionary<string, StoredEventPublication> FindPublications(IEnumerable<string> identities) =>
+        identities.Distinct(StringComparer.Ordinal).Where(_publications.ContainsKey).ToDictionary(
+            id => id,
+            id => new StoredEventPublication(_publications[id].Receipt.SequenceNumber, _publications[id].Fingerprint),
+            StringComparer.Ordinal);
 
     Option<EventPublicationReceipt> FindPublication(EventPublication publication)
     {

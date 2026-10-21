@@ -102,6 +102,7 @@ public partial class Observer
             // stuck in whatever state it happened to be in when the flag came down.
             logger.WatchdogRescuingStrandedCatchupPreparation();
             _isPreparingCatchup = false;
+            NotePreparationEnded();
             await TransitionTo<Routing>();
             return true;
         }
@@ -114,6 +115,7 @@ public partial class Observer
 
         logger.WatchdogRescuingStrandedCatchupPreparation();
         _isPreparingCatchup = false;
+        NotePreparationEnded();
         _catchupRecoveryAttempts++;
         if (_catchupRecoveryAttempts > config.MaxCatchupRecoveryAttempts)
         {
@@ -157,6 +159,7 @@ public partial class Observer
 
         _recoverSubscriptionAfterQuarantine = false;
         _isPreparingCatchup = false;
+        NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         await TransitionTo<Routing>();
     }
@@ -182,6 +185,7 @@ public partial class Observer
         }
 
         _isPreparingCatchup = false;
+        NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
 
         // Only a leave the subscription flow itself initiated is a revival; an operator's clear has already

@@ -1,3 +1,6 @@
+---
+description: Subscribe a Chronicle reactor to events from an external event store through automatic inbox routing driven by [EventStore] metadata, in C#.
+---
 # Subscribe Reactors to External Event Stores
 
 :::note[Client coverage]
@@ -45,6 +48,10 @@ This is invalid and fails:
 
 - At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`.
 - At compile time with analyzer rule `CHR0013`.
+
+## Forwarded metadata
+
+Inbox forwarding now preserves append tags along with event-source and stream-route metadata, so tag filters can select forwarded events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
 
 ## See Also
 

@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
+using Cratis.Chronicle.Testing.Events;
+
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 
 public class when_a_generation_was_not_discovered : Specification
@@ -9,13 +12,15 @@ public class when_a_generation_was_not_discovered : Specification
 
     void Because()
     {
-        var defaults = Defaults.Instance;
-        var storage = new InMemoryEventTypesStorage(() => defaults.EventTypes, defaults.JsonSchemaGenerator);
+        using var store = new EventStoreForTesting();
+        var root = store.TestingStore;
+        var kernelStore = root.GetType().GetProperty("Store", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(root)!;
+        var storage = kernelStore.GetType().GetProperty("EventTypes")!.GetValue(kernelStore)!;
 
         // The kernel's concept types are private package dependencies, not part of the consumer API.
-        var method = typeof(InMemoryEventTypesStorage).GetMethods().Single(method => method.Name == "GetFor" && method.GetParameters().Length == 2);
+        var method = storage.GetType().GetMethods().Single(method => method.Name == "GetFor" && method.GetParameters().Length == 2);
         var parameters = method.GetParameters();
-        var id = Activator.CreateInstance(parameters[0].ParameterType, defaults.EventTypes.GetEventTypeFor(typeof(ContactReclassified)).Id.Value);
+        var id = Activator.CreateInstance(parameters[0].ParameterType, store.EventTypes.GetEventTypeFor(typeof(ContactReclassified)).Id.Value);
         var generation = Activator.CreateInstance(parameters[1].ParameterType, 999U);
         _error = Catch.Exception(() => method.Invoke(storage, [id, generation]))?.GetBaseException();
     }

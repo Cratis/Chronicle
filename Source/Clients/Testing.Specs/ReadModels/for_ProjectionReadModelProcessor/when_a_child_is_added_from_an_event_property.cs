@@ -44,9 +44,7 @@ public class when_a_child_is_added_from_an_event_property : Specification
         var (_, instances) = await ProjectionReadModelProcessor.Process<Shelf>(
             definition,
             [(_shelfId, new BookShelved(new ShelfBook("978-1", "Event Modeling")))],
-            _store.EventTypes,
-            _store.EventSerializer,
-            _store.JsonSchemaGenerator);
+            new ReadModelFoldContext(_store, _store.EventTypes, _store.JsonSchemaGenerator, _store.ServiceProvider, typeof(Shelf)));
         instances.TryGetValue(_shelfId, out _instance);
     }
 
