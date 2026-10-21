@@ -18,7 +18,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
         "Generated Elixir gRPC contracts for Cratis Chronicle - the open-source event-sourcing database",
       package: package(),
       source_url: @source_url,
-      homepage_url: @source_url
+      homepage_url: "https://www.cratis.io/chronicle/"
     ]
   end
 
