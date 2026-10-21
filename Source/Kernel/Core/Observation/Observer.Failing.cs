@@ -28,7 +28,7 @@ public partial class Observer
         FailureKind kind = FailureKind.Unknown,
         FailedPartitionId? episodeId = null,
         Guid? deferralId = null,
-        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry)
+        PartitionFailureContext context = default)
     {
         if (IsRetired || _removed)
         {
@@ -47,6 +47,7 @@ public partial class Observer
             logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            await RecordAbandonedDeliveryFence(failure, kind, context.DeliveryFence);
             if (!partitionWasAlreadyFailed)
             {
                 State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
@@ -63,8 +64,8 @@ public partial class Observer
 
             if (!IsQuarantined)
             {
-                quarantineObserver = webhook ? failurePolicy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
-                if (webhook && failurePolicy == WebhookDeliveryFailurePolicy.ParkPartition)
+                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
+                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
                 {
                     logger.QuarantiningFailedPartition(partition);
                     failures.State.Quarantine(partition);

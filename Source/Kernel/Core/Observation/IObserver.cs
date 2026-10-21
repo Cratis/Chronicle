@@ -83,6 +83,22 @@ public interface IObserver : IGrainWithStringKey
     Task<ObserverSubscription> GetSubscription();
 
     /// <summary>
+    /// Gets active abandoned-delivery fences independently of failure state.
+    /// </summary>
+    /// <returns>The current fences.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<DeliveryFence>> GetDeliveryFences();
+
+    /// <summary>
+    /// Releases the exact version whose original targets have drained.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <param name="releaseBy">The captured fence deadline.</param>
+    /// <returns>A task representing the release.</returns>
+    [AlwaysInterleave]
+    Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy);
+
+    /// <summary>
     /// Checks whether a subscription is installed.
     /// </summary>
     /// <returns>True if a subscription is installed, including while its setup is in progress.</returns>
@@ -416,9 +432,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="kind">What kind of thing went wrong. Defaults to <see cref="FailureKind.Unknown"/>.</param>
     /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
     /// <param name="deferralId">The deferral that owned the recovery.</param>
-    /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
+    /// <param name="context">The internal recovery policy and optional original delivery identity.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, PartitionFailureContext context = default);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.
