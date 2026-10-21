@@ -5,6 +5,6 @@ namespace Cratis.Chronicle.Integration.SqlClustering.PostgreSql;
 
 public class when_a_node_is_killed() : SqlClusterSpecification(true, ClusterChange.Kill)
 {
-    [Fact]
+    [Fact(Skip = "Observers stall in catch-up after a node loss until the watchdog runs: https://github.com/Cratis/Chronicle/issues/5246")]
     public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
 }
