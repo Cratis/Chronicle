@@ -11,6 +11,7 @@ public class with_legacy_state : Specification
 
     void Because() => _saved = JsonSerializer.Deserialize<JsonElement>(new Concepts.Observation.FailedPartition().ToEntity().StateJson);
 
+    [Fact] void should_not_write_a_deferral() => _saved.TryGetProperty("Deferral", out _).ShouldBeFalse();
     [Fact] void should_not_write_a_recovery_cursor() => _saved.TryGetProperty("RecoveryCursor", out _).ShouldBeFalse();
     [Fact] void should_not_write_a_recovery_owner() => _saved.TryGetProperty("RecoveryOwner", out _).ShouldBeFalse();
     [Fact] void should_not_write_a_hold() => _saved.TryGetProperty("Hold", out _).ShouldBeFalse();

@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
@@ -49,6 +50,10 @@ public class PIIManager(
         // been cleared. With the fence recorded first there is no interval in which any store accepts the key.
         await ForEach(eventStores, failures, eventStore => keyStore.RecordErasureFor(eventStore, key.Namespace, identifier));
         await ForEach(eventStores, failures, eventStore => keyStore.DeleteFor(eventStore, key.Namespace, identifier));
+
+        // A unique-index claim derived from the subject's personal data still holds its value and a hash that confirms
+        // it. The fence above stops a new key, and therefore a new claim, so deleting the claims now is final.
+        await ForEach(eventStores, failures, eventStore => RemoveUniqueClaimsFor(eventStore, key.Namespace, identifier));
 
         // The eviction is not conditional on the erase succeeding. A composite key store attempts every store and
         // then reports a partial failure, so the key can be durably destroyed and the call still fail - and a
@@ -148,6 +153,16 @@ public class PIIManager(
             // and the failure is reported so a partial reach is never mistaken for a complete one.
             failures.Add(error);
             return [key.EventStore];
+        }
+    }
+
+    async Task RemoveUniqueClaimsFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier)
+    {
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var subject = new Subject(identifier.Value);
+        foreach (var eventSequence in await namespaceStorage.GetEventSequences())
+        {
+            await namespaceStorage.GetUniqueConstraintsStorage(eventSequence).RemoveForSubject(subject);
         }
     }
 

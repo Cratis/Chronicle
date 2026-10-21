@@ -34,7 +34,7 @@ public record User(
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to observe users from.</param>
     /// <returns>An observable subject emitting collections of users.</returns>
-    internal static ISubject<IEnumerable<User>> AllUsers(IStorage storage) =>
+    public static ISubject<IEnumerable<User>> AllUsers(IStorage storage) =>
         storage.System.Users
             .ObserveAll()
             .TransformSubject(users => users.Select(UserConverters.ToUser));

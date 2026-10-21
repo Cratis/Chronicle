@@ -1,3 +1,6 @@
+---
+description: Model-bound constraints declare Chronicle uniqueness rules with [Unique] and [RemoveConstraint] attributes directly on event types.
+---
 # Model-bound constraints
 
 Model-bound constraints let you declare uniqueness rules directly on event types using attributes. No separate constraint class is needed — adorn the event type or its properties with attributes, and Chronicle registers the constraints automatically when the client starts.

@@ -596,10 +596,13 @@ public class Projection(
             if (addedEventTypes.Length > 0)
             {
                 var eventSequence = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(currentDefinition.EventSequenceId);
+
+                // Historical writes into the live container can be rejected by its watermark or applied twice.
+                // Definition evolution must rebuild the projection instead of replaying selected mappings in place.
                 plan = await DefinitionEvolutionPlan.ForAddedEventTypes(
                     eventSequence,
                     addedEventTypes,
-                    ProjectionReplayRecommendationEvaluator.CanPartiallyReplay(previousDefinition, currentDefinition, addedEventTypes));
+                    canReplayPerEventSource: false);
             }
             namespacePlans.Add((@namespace, plan));
         }
@@ -612,10 +615,7 @@ public class Projection(
                 case DefinitionEvolutionOperation.NoAction:
                     logger.ProjectionEvolutionNeedsNoAction(key.ProjectionId, @namespace);
                     break;
-                case DefinitionEvolutionOperation.PartialReplay when policy.Allows(plan.Operation):
-                    this.ScheduleInSeparateTurn(() => ReplayProjectionPartitions(key, @namespace, plan.AffectedEventSources, plan.AffectedEventTypes));
-                    break;
-                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation):
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
                     this.ScheduleInSeparateTurn(() => ReplayProjection(key, @namespace));
                     break;
                 default:
@@ -632,21 +632,6 @@ public class Projection(
         await observer.Replay();
     }
 
-    async Task ReplayProjectionPartitions(
-        ProjectionKey key,
-        EventStoreNamespaceName @namespace,
-        IEnumerable<EventSourceId> eventSourceIds,
-        IEnumerable<EventType> eventTypes)
-    {
-        var affectedEventSources = eventSourceIds.ToArray();
-        logger.PartiallyReplayingProjection(key.ProjectionId, @namespace, affectedEventSources.Length);
-        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
-        foreach (var eventSourceId in affectedEventSources)
-        {
-            await observer.ReplayPartition(eventSourceId, eventTypes);
-        }
-    }
-
     async Task AddReplayRecommendation(
         ProjectionKey key,
         EventStoreNamespaceName @namespace,
@@ -658,6 +643,9 @@ public class Projection(
 
         (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
         {
+            _ when currentDefinition.Scope == ProjectionScope.Global => (
+                GlobalProjectionReplay.RefusalReason,
+                new ProjectionDefinitionChangedReplayCandidateReason()),
             ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
                 "Projection definition has changed. Update available.",
                 new ProjectionUpdateAvailableReplayCandidateReason()),

@@ -202,6 +202,11 @@ export const AddWebhookDialog = () => {
                             type="password"
                             required={false}
                         />
+                        <InputTextField<AddWebhook>
+                            value={c => c.OAuthScope}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.oauthScope}
+                            required={false}
+                        />
                     </>
                 )}
                 {validationErrors.length > 0 && (

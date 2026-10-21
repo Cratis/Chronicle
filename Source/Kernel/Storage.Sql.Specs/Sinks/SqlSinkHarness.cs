@@ -58,11 +58,16 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
+    /// <summary>
+    /// Gets the logger for sink diagnostics.
+    /// </summary>
+    public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _definition = definition;
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
+        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (_connection is null)
         {
             _connection = new SqliteConnection(ConnectionString);
@@ -90,7 +95,7 @@ public class SqlSinkHarness : ISqlSinkHarness
             database,
             new ExpandoObjectConverter(new TypeFormats()),
             _replayingTables,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<SqlSink>.Instance,
+            Logger,
             CompositeKeyReplayRecommender);
     }
 
@@ -148,7 +153,7 @@ public class SqlSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport()
+        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(Interceptors)
             .Options;
 

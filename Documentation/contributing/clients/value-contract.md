@@ -1,3 +1,6 @@
+---
+description: The value contract every Chronicle client in C#, TypeScript, Kotlin, Java and Elixir must honor so values read and write identically on the wire.
+---
 # The Value Contract
 
 Every Chronicle client — C#, TypeScript, Kotlin, Java, Elixir — writes and reads the same values over the

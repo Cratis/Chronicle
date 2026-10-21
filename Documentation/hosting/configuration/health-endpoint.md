@@ -1,3 +1,6 @@
+---
+description: Configure Chronicle's health check endpoint, served on the main port by default or on an optional dedicated port for orchestrator probes.
+---
 # Health Endpoint
 
 By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. The main port uses TLS by default, multiplexing HTTP/2 and HTTP/1.1 via ALPN. In development that TLS certificate is self-signed and generated automatically. If `tls.enabled=false`, the main port instead serves cleartext HTTP/2 only; probes on it must support HTTP/2.
@@ -103,3 +106,4 @@ gRPC clients keep using the main port — gRPC is never served on the dedicated 
 - [TLS Configuration (Server)](tls.md) for configuring the main port's certificate.
 - [Port Reference](port-reference.md) for the full list of ports Chronicle exposes.
 - [Root Properties](root-properties.md) for the `healthCheckEndpoint` path.
+- [Run Chronicle on Azure](../azure.md) for what the health check covers on Azure SQL and PostgreSQL.

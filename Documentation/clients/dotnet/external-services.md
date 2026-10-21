@@ -18,3 +18,8 @@ await eventStore.ExternalServices.Register("CustomersDb", _ => _
 ```
 
 The builder also exposes `WithBasicAuth`, `WithOAuth`, `MsSql`, and `WithOption`.
+For scoped client credentials, use `WithOAuth(authority, clientId, clientSecret, scope)`.
+The existing three-argument overload requests no scope. For Microsoft Entra, the
+scope is typically `api://<application-id>/.default`. OAuth tokens are shared by the
+kernel and applied on every HTTP request, so long-lived clients refresh expired
+tokens without needing to be recreated. A `401` triggers one token refresh and retry.

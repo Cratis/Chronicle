@@ -66,6 +66,21 @@ public class Observers
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
 
     /// <summary>
+    /// Gets the webhook retry delays in seconds. After the last entry, that delay repeats.
+    /// When empty, webhooks use <see cref="Webhooks.DefaultBackoffScheduleSeconds"/>. Only used by Webhooks:Retry.
+    /// </summary>
+    /// <remarks>
+    /// The default stays empty because configuration binding appends configured entries to an existing collection.
+    /// </remarks>
+    public IReadOnlyList<int> BackoffScheduleSeconds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the webhook retry budget from the first attempt since quarantine was cleared.
+    /// Zero disables the elapsed-time limit. Only used by Webhooks:Retry.
+    /// </summary>
+    public TimeSpan RetryBudget { get; init; }
+
+    /// <summary>
     /// Gets the threshold for quarantining an observer based on the number of failed partitions.
     /// A value of 0 disables observer quarantine based on failed partition count.
     /// </summary>

@@ -88,6 +88,20 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// </summary>
     public DbSet<ClosedStreamEntry> ClosedStreams { get; set; } = null!;
 
+    /// <summary>
+    /// Gets or sets the in-flight events DbSet.
+    /// </summary>
+    public DbSet<InFlightEvents.InFlightEventEntry> InFlightEvents { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the observer handled counts DbSet.
+    /// </summary>
+    public DbSet<ObserverHandledCounts.ObserverHandledCountEntry> ObserverHandledCounts { get; set; } = null!;
+
+    /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -117,6 +131,19 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.ToTable(WellKnownTableNames.ClosedStreams);
                 entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
                 entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
+            })
+            .Entity<InFlightEvents.InFlightEventEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.InFlightEvents);
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.EventSequenceNumber).HasPrecision(20, 0);
+                entity.HasIndex(e => new { e.ObserverId, e.Partition, e.EventSequenceNumber });
+            })
+            .Entity<ObserverHandledCounts.ObserverHandledCountEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ObserverHandledCounts);
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.ObserverId, e.Partition, e.EventTypeId }).IsUnique();
             })
             .Entity<Patterns.BehaviorPattern>(entity =>
             {

@@ -49,11 +49,11 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]) { Mode = UniqueMode };
         _closingDefinition = new("closing", [_eventType.Id], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
         var unique = _unique = Substitute.For<IUniqueConstraintsStorage>();
-        unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 _claimWrites++;
-                return _failWrites && call.ArgAt<UniqueConstraintDefinition>(1).Name == _uniqueDefinition.Name ? Task.FromException(new SimulatedStateWriteError()) : _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<CancellationToken>(5));
+                return _failWrites && call.ArgAt<UniqueConstraintDefinition>(1).Name == _uniqueDefinition.Name ? Task.FromException(new SimulatedStateWriteError()) : _claims.Save(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<UniqueConstraintValue>(3), call.ArgAt<string>(4), call.ArgAt<Subject?>(5), call.ArgAt<CancellationToken>(6));
             });
         unique.GetFor(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => _claims.GetFor(call.ArgAt<EventSourceId>(0), call.ArgAt<UniqueConstraintDefinition>(1), call.ArgAt<string>(2), call.ArgAt<CancellationToken>(3)));

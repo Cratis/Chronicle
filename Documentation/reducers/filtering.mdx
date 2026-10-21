@@ -1,3 +1,6 @@
+---
+description: Restrict which events a Chronicle reducer receives by placing tag, event source type and event stream type filter attributes on the reducer class.
+---
 # Filter reducers by appended event metadata
 
 A reducer observes all events that match its handler method signatures by default. You can restrict which events a reducer receives by placing filter attributes on the reducer class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reducer.

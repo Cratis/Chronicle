@@ -28,7 +28,7 @@ public abstract class an_accumulating_sql_read_model<THarness> : Contract.an_acc
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(connectionString ?? _sqlHarness.ConnectionString);
         return new ReadModelDbContext(
-            builder.AddConceptAsSupport().Options,
+            builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options,
             definition.ContainerName.Value,
             ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration()),
             Substitute.For<IReadModelMigrator>());

@@ -117,6 +117,10 @@ public class ReducerObserverSubscriber(
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
+        catch (ReducerSinkWriteFailed failed)
+        {
+            return await RecordSinkWriteFailures(partition, failed, tcs.Task);
+        }
     }
 
     /// <summary>
@@ -136,6 +140,39 @@ public class ReducerObserverSubscriber(
         result.State == ObserverSubscriberState.Failed
             ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
             : result;
+
+    /// <summary>
+    /// Records every partition a sink write reported as failed.
+    /// </summary>
+    /// <remarks>
+    /// A bulk flush can drop other partitions' writes along with this one's. Those are recorded as failed so they are
+    /// retried; this partition fails only when its own write is among them, otherwise its result stands.
+    /// </remarks>
+    /// <param name="partition">The partition being reduced.</param>
+    /// <param name="failed">The <see cref="ReducerSinkWriteFailed"/> carrying the failures.</param>
+    /// <param name="result">The result the client reported for this partition.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
+    async Task<ObserverSubscriberResult> RecordSinkWriteFailures(Key partition, ReducerSinkWriteFailed failed, Task<ObserverSubscriberResult> result)
+    {
+        var others = failed.FailedPartitions.Where(failure => !Equals(failure.EventSourceId.Value, partition.Value)).ToArray();
+        if (others.Length > 0)
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+            foreach (var failure in others)
+            {
+                await observer.PartitionFailed(
+                    failure.EventSourceId,
+                    failure.EventSequenceNumber,
+                    [ReducerSinkWriteFailed.MessageFor(failure)],
+                    string.Empty,
+                    FailureKind.Handling);
+            }
+        }
+
+        return others.Length == failed.FailedPartitions.Count && result.IsCompleted
+            ? await result
+            : ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, failed.Message);
+    }
 
     async Task HandlePipeline()
     {

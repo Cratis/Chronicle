@@ -31,6 +31,23 @@ public interface IConnectedClients : IGrainWithStringKey
     Task OnClientConnected(ConnectionId connectionId, string version, bool isRunningWithDebugger, int processId, string processPath, string machineName, string clientType);
 
     /// <summary>
+    /// Put back a client the registry lost while its connection stayed open and the client kept responding.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="OnClientConnected"/> this is not a new connection: it fulfils no reservation, and a client the
+    /// registry already knows is left exactly as it is.
+    /// </remarks>
+    /// <param name="connectionId">The connection identifier.</param>
+    /// <param name="version">The version of the client.</param>
+    /// <param name="isRunningWithDebugger">Whether or not the client is running with debugger.</param>
+    /// <param name="processId">The identifier of the client process.</param>
+    /// <param name="processPath">The full path of the client process executable.</param>
+    /// <param name="machineName">The name of the machine the client process is running on.</param>
+    /// <param name="clientType">The type of the client (for example, <c language="csharp">.NET</c>).</param>
+    /// <returns>Awaitable task.</returns>
+    Task OnClientRestored(ConnectionId connectionId, string version, bool isRunningWithDebugger, int processId, string processPath, string machineName, string clientType);
+
+    /// <summary>
     /// Report that a client was disconnected.
     /// </summary>
     /// <param name="connectionId">The connection identifier.</param>

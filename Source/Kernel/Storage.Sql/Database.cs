@@ -254,6 +254,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
+        {
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
+
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
@@ -519,20 +524,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }
 #endif
 
-    static bool IsAlreadyExistsException(Exception? ex)
-    {
-        while (ex is not null)
-        {
-            if (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            ex = ex.InnerException;
-        }
-
-        return false;
-    }
+    static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
 
 #if DEVELOPMENT
     async Task<string[]> BoundDatabases()

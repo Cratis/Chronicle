@@ -143,6 +143,10 @@ public class ReadModelDbContext(
                     // the sink serializes to JSON before SetValue and deserializes on read.
                     propertyBuilder.HasColumnType(GetJsonColumnType(databaseType));
                 }
+                else if (column.ClrType == typeof(string) && databaseType == DatabaseType.SqlServer)
+                {
+                    propertyBuilder.HasColumnType(column.SqlServerStringType);
+                }
                 else if ((Nullable.GetUnderlyingType(column.ClrType) ?? column.ClrType) == typeof(decimal))
                 {
                     propertyBuilder.HasColumnType(databaseType switch

@@ -52,6 +52,11 @@ public record AddWebhook(
     bool IsActive)
 {
     /// <summary>
+    /// Gets the optional OAuth scope.
+    /// </summary>
+    public string OAuthScope { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the policy for delivering event generations.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
@@ -93,7 +98,7 @@ public record AddWebhook(
         {
             AuthorizationType.Basic => new(new BasicAuthorization { Username = BasicUsername, Password = BasicPassword }),
             AuthorizationType.Bearer => new(new BearerTokenAuthorization { Token = BearerToken }),
-            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret }),
+            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret, Scope = OAuthScope }),
             _ => null
         };
 }

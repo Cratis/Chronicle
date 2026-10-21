@@ -30,6 +30,42 @@ message AppendManyForEventSourcesWithNamedTagsRequest {
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
    EffectReceipt EffectReceipt = 10;
 }
+message AppendManyOnceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated KeyedEventForEventSourceId Events = 4;
+   .bcl.Guid CorrelationId = 5;
+   repeated string Tags = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+}
+message AppendManyOnceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated uint64 SequenceNumbers = 2 [packed = false];
+   repeated AppendOutcome Outcomes = 3 [packed = false];
+   bool IsSuccess = 4;
+   bool HasConstraintViolations = 5;
+   bool HasConcurrencyViolations = 6;
+   bool HasErrors = 7;
+   bool ConcurrencyCheckPerformed = 8;
+   repeated ConstraintViolation ConstraintViolations = 9;
+   repeated string Errors = 10;
+   repeated ConcurrencyViolation ConcurrencyViolations = 11;
+   repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
+}
+message AppendManyOnceWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   repeated KeyedEventForEventSourceIdWithNamedTags Events = 4;
+   .bcl.Guid CorrelationId = 5;
+   repeated string Tags = 6;
+   repeated Causation Causation = 7;
+   Identity CausedBy = 8;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+}
 message AppendManyRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -71,6 +107,66 @@ message AppendManyWithNamedTagsRequest {
    Identity CausedBy = 10;
    ConcurrencyScope ConcurrencyScope = 11;
    EffectReceipt EffectReceipt = 12;
+}
+message AppendOnceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+   EventType EventType = 8;
+   string Content = 9;
+   string IdempotencyKey = 10;
+   .bcl.Guid CorrelationId = 11;
+   repeated string Tags = 12;
+   SerializableDateTimeOffset Occurred = 13;
+   string Subject = 14;
+   repeated Causation Causation = 15;
+   Identity CausedBy = 16;
+   ConcurrencyScope ConcurrencyScope = 17;
+   string EventSource = 18;
+}
+message AppendOnceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   uint64 SequenceNumber = 2;
+   AppendOutcome Outcome = 3;
+   bool IsSuccess = 4;
+   bool HasConstraintViolations = 5;
+   bool HasConcurrencyViolations = 6;
+   bool HasErrors = 7;
+   bool ConcurrencyCheckPerformed = 8;
+   repeated ConstraintViolation ConstraintViolations = 9;
+   repeated string Errors = 10;
+   ConcurrencyViolation ConcurrencyViolation = 11;
+   repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
+}
+message AppendOnceWithNamedTagsRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
+   EventType EventType = 8;
+   string Content = 9;
+   string IdempotencyKey = 10;
+   repeated NamedTag NamedTags = 11;
+   .bcl.Guid CorrelationId = 12;
+   repeated string Tags = 13;
+   SerializableDateTimeOffset Occurred = 14;
+   string Subject = 15;
+   repeated Causation Causation = 16;
+   Identity CausedBy = 17;
+   ConcurrencyScope ConcurrencyScope = 18;
+   string EventSource = 19;
+}
+enum AppendOutcome {
+   Committed = 0;
+   AlreadyAppended = 1;
+   AlreadyAppendedAfterErasure = 2;
 }
 message AppendRequest {
    string EventStore = 1;
@@ -178,6 +274,15 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
+message CommandResult_AppendManyOnceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AppendManyOnceResponse Response = 7;
+}
 message CommandResult_AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -186,6 +291,15 @@ message CommandResult_AppendManyResponse {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
    AppendManyResponse Response = 7;
+}
+message CommandResult_AppendOnceResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   AppendOnceResponse Response = 7;
 }
 message CommandResult_AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -477,6 +591,19 @@ enum HistogramResolution {
    Week = 3;
    Month = 4;
 }
+enum IdempotencyConflictReason {
+   Content = 0;
+   Generation = 1;
+   Unverifiable = 2;
+}
+message IdempotencyKeyConflict {
+   string Key = 1;
+   uint64 ExistingSequenceNumber = 2;
+   string StoredEventTypeId = 3;
+   uint32 StoredEventTypeGeneration = 4;
+   uint32 RequestedGeneration = 5;
+   IdempotencyConflictReason Reason = 6;
+}
 message Identity {
    string Subject = 1;
    string Name = 2;
@@ -508,6 +635,14 @@ message IsStreamScopeCompletedRequest {
 message KeyValuePair_Int32_String {
    int32 Key = 1;
    string Value = 2;
+}
+message KeyedEventForEventSourceId {
+   EventForEventSourceId Event = 1;
+   string IdempotencyKey = 2;
+}
+message KeyedEventForEventSourceIdWithNamedTags {
+   EventForEventSourceIdWithNamedTags Event = 1;
+   string IdempotencyKey = 2;
 }
 message MetadataAtRequest {
    string EventStore = 1;
@@ -780,7 +915,11 @@ service EventSequences {
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyOnce (AppendManyOnceRequest) returns (CommandResult_AppendManyOnceResponse);
+   rpc AppendManyOnceWithNamedTags (AppendManyOnceWithNamedTagsRequest) returns (CommandResult_AppendManyOnceResponse);
    rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendOnce (AppendOnceRequest) returns (CommandResult_AppendOnceResponse);
+   rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
    rpc ClosedStreams (ClosedStreamsRequest) returns (QueryResult_IEnumerable_ClosedStreamResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);

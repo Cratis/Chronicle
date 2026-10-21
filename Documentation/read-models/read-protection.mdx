@@ -1,6 +1,6 @@
 ---
 title: Read protection (.NET)
-description: Make the Chronicle .NET client refuse unguarded reads and immediate appends inside one invocation, so every decision read is enrolled in the unit of work that commits.
+description: Make the Chronicle .NET client refuse unguarded reads and immediate appends in one invocation, so every decision read joins the committing unit of work.
 ---
 
 Use read protection when you own the code that begins and completes a [unit of work](../events/transactions.mdx), such as a command pipeline or a request host, and you want Chronicle to refuse a decision that is not guarded. Inside a protected invocation, a read either becomes a guard for the commit or is refused. If you only need to guard one append, a [decision read](decision-reads.mdx) passed to the append is enough. If the rule is uniqueness, use a [constraint](../constraints/index.md).

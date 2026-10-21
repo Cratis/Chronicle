@@ -40,6 +40,8 @@ dev = [
 ]
 
 [project.urls]
+Homepage = "https://www.cratis.io/chronicle/"
+Documentation = "https://www.cratis.io/chronicle/"
 Repository = "https://github.com/Cratis/Chronicle.git"
 Issues = "https://github.com/Cratis/Chronicle/issues"
 

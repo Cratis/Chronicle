@@ -1,3 +1,6 @@
+---
+description: Chronicle Server loads its settings from a chronicle.json file in the application root, typically mounted at /app/chronicle.json in containers.
+---
 # Configuration File
 
 Chronicle Server loads configuration from a `chronicle.json` file in the application root directory. In containers, this file is typically mounted at `/app/chronicle.json`.

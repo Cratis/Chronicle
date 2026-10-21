@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -17,7 +18,8 @@ internal class AddWebhooksValidator : CommandValidator<AddWebhooks>
     /// <summary>
     /// Initializes a new instance of the <see cref="AddWebhooksValidator"/> class.
     /// </summary>
-    public AddWebhooksValidator()
+    /// <param name="policy">The shared webhook and OAuth target policy.</param>
+    public AddWebhooksValidator(IWebhookTargetPolicy policy)
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.Webhooks).NotEmpty().WithMessage("At least one webhook is required.");
@@ -25,6 +27,20 @@ internal class AddWebhooksValidator : CommandValidator<AddWebhooks>
         {
             webhook.RuleFor(_ => _.Identifier).NotEmpty().WithMessage("Webhook identifier is required.");
             webhook.RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
+        });
+        RuleFor(_ => _).CustomAsync(async (command, context, cancellationToken) =>
+        {
+            if (command.Webhooks is null) return;
+            foreach (var definition in command.Webhooks)
+            {
+                var target = await policy.Evaluate(definition.Target.Url, command.EventStore, cancellationToken);
+                if (!target.IsAllowed) context.AddFailure("Webhooks.Target.Url", target.Reason);
+                if (definition.Target.Authorization?.Value2 is { } oauth)
+                {
+                    var authority = await policy.Evaluate(oauth.Authority, command.EventStore, cancellationToken);
+                    if (!authority.IsAllowed) context.AddFailure("Webhooks.Target.Authorization", authority.Reason);
+                }
+            }
         });
     }
 }

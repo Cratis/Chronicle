@@ -1,3 +1,6 @@
+---
+description: A Chronicle observer listens for events appended to an event sequence; this covers failed partitions, quarantine, fast-forwarding and removal.
+---
 # Observers
 
 An observer is a part of your system that is "listening" to events.
@@ -8,13 +11,44 @@ Every observer decides what events they are interested in during the subscriptio
 This information is stored in the [event store](./event-store.md).
 
 Adding event types does not always rewind an observer. Definition evolution depends on the observer
-kind and its configuration: projections can use a partial replay when the change is independent,
-or a full replay when it is not. Reactors do not replay on definition changes by default.
+kind and its configuration: projections require a full replay for historical backfills and mapping
+changes. Reactors do not replay on definition changes by default.
 See [Observer configuration](../hosting/configuration/observers.md) and
 [Projection registration lifecycle](../projections/registration-lifecycle.md).
 
 During a full replay, the observer is inactive. When replay completes, it routes again to catch up
 with remaining events and resume live observation, unless it is quarantined.
+
+Kernel projection declarations support only namespaced materialization. Store-wide event statistics read
+each namespace's statistics and concatenate the rows instead of maintaining a shared global sink. The row
+limit applies per namespace; a failed namespace read fails the query rather than returning partial totals.
+
+Full and partition replay of a persisted **global-scope projection** are refused before resetting observer
+progress, admitting a replay job, or changing its shared sink. Replaying only one namespace cannot safely rebuild data shared with other namespaces
+that are still writing. A definition change that would require an automatic full replay retains an
+explanatory recommendation instead; performing it also refuses the namespace-local replay. A coordinated
+rebuild across all namespaces is not currently supported. Namespace-scoped projections are unaffected.
+
+For an upgrade with a global replay already in flight, stop replay workers and contributing writes
+before upgrading all silos together; do not mix versions that can still start global replay with
+versions that refuse it. Preserve the served model, replay containers, backups, contexts and occurrences
+for investigation. Resume, flush, end and legacy cleanup refuse an uncoordinated global replay rather
+than promoting its shadow. A source namespace's completion does not establish that a global model or
+backup is complete. There is no automatic in-place repair: keep the affected model out of service until
+an operator can restore a known-good model and reconcile every contributing sequence offline. Do not
+delete a replay container or backup merely because a namespace-local replay has ended.
+
+Full-set kernel registration retires the former global statistics observers and deletes their jobs, but
+leaves the orphaned shared container intact. New statistics queries do not read it. Once the
+ProjectionsManager grain runs new code, it skips incoming global kernel definitions with a warning,
+including those in an old silo's full set. That full set still retires stored global kernel definitions
+and registers the other kernel projections. The remaining re-registration window is only while the grain
+itself is hosted on an old silo; new silos still refuse global replay. Complete the upgrade and run
+full-set kernel registration on the updated grain. Retirement is not a cross-silo drain guarantee for
+work already executing on an old silo.
+
+Global materialization requires coordinated generation ownership before it can return; see
+[the scope decision](https://github.com/Cratis/Chronicle/blob/main/decisions/0015-global-projection-scope-is-restricted.md).
 
 There are three kinds of observer, each turning events into something different — queryable state, or
 an action:

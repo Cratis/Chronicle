@@ -28,7 +28,7 @@ public class and_a_faulted_threshold_precedes_queued_writes(MongoDBFixture fixtu
         _endError = await Catch.Exception(_sink.EndBulk);
     }
 
-    [Fact] void should_surface_the_threshold_exception_once() => _thresholdError.ShouldEqual(_unavailable);
+    [Fact] void should_report_every_partition_of_the_failed_threshold_batch() => _thresholdFailures.Select(failure => failure.EventSourceId).Distinct().Count().ShouldEqual(1000);
     [Fact] void should_write_the_independent_queued_root_before_returning() => _queuedWriteWasCommitted.ShouldBeTrue();
     [Fact] void should_commit_the_immediate_write() => _futureWasCommitted.ShouldBeTrue();
     [Fact] void should_not_rethrow_a_reported_threshold_exception() => _immediateError.ShouldBeNull();

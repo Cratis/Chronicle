@@ -57,6 +57,13 @@ public class ExternalServiceBuilder : IExternalServiceBuilder
     }
 
     /// <inheritdoc/>
+    public IExternalServiceBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope)
+    {
+        _authorization = new(new OAuthAuthorization { Authority = authority, ClientId = clientId, ClientSecret = clientSecret, Scope = scope });
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IExternalServiceBuilder WithHeader(string key, string value)
     {
         _headers[key] = value;

@@ -57,6 +57,8 @@ Or skip the plumbing with **side effects**: return the event from the handler, a
 
 <ChronicleClientTabs snippet="tutorial/reacting/side-effect" />
 
+In C#, the returned event is appended with an idempotency key derived from the reactor delivery, so the retry described above does not append it a second time; the notification call itself still runs again, so keep it idempotent. See [Duplicate protection for returned events](/chronicle/reactors/side-effects/#duplicate-protection-for-returned-events).
+
 Returning an event for Chronicle to auto-append works in C#, Kotlin, Java, and Elixir (`{:ok, event}` from `handle/2`); TypeScript reactors append explicitly (as above) instead.
 
 :::

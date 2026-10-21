@@ -1,3 +1,6 @@
+---
+description: A Chronicle unit of work groups event appends in the client and commits them as one append batch with a single commit point.
+---
 # Transactions and Unit of Work
 
 A unit of work groups event appends in the client and commits them as one append batch. Use it when one logical operation must produce multiple events and the operation should have one commit point, one correlation id, and one success or failure outcome.

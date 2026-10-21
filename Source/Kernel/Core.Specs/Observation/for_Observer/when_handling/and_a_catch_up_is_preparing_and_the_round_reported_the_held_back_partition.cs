@@ -45,7 +45,7 @@ public class and_a_catch_up_is_preparing_and_the_round_reported_the_held_back_pa
         await _observer.FailedPartitionRecovered("P", 103UL);
         _measurementsBeforeHandover = _metrics.For(EventsSuspectedSkipped).Count();
         _warningsBeforeHandover = _recordedLogs.SuspectedSkipWarnings.Count();
-        await _observer.ReportHandledEvents("Q", new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 1 });
+        await _observer.ReportHandledEvents("Q", new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 1 }, JobStepId.New(), 1UL);
         await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
         _heldStart.SetResult(Result<JobId, StartJobError>.Success(JobId.New()));
         await _catchUp;

@@ -6,12 +6,14 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Services.Observation.Reactors.for_Reactors.given;
 
@@ -38,6 +40,7 @@ public class an_observation_stream : Specification
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
+            Options.Create(new ChronicleOptions()),
             NullLogger<Reactors>.Instance);
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReactor

@@ -25,7 +25,7 @@ public class a_cursor_over_a_context_whose_async_disposal_suspends : Specificati
 
         var options = new DbContextOptionsBuilder<EventSequenceDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         var context = new suspending_event_sequence_db_context(options);

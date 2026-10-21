@@ -24,6 +24,7 @@ using Cratis.Orleans.StateMachines;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
@@ -58,6 +60,7 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory,
+    IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -140,6 +143,7 @@ public partial class Observer(
     TimeSpan _writeCoalescingInterval = TimeSpan.Zero;
     Dictionary<Key, Dictionary<EventTypeId, EventCount>> _pendingHandledCounts = [];
     IGrainTimer? _coalescedWriteTimer;
+    bool _coalescedWriteBroughtForward;
     bool _failureStateWritePending;
     Dictionary<FailedPartitionId, TimeSpan> _pendingRetryReminders = [];
     int _debouncedProgressWrites;
@@ -171,6 +175,8 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await ReconcilePartitionDeferrals();
+        RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
     }
 
@@ -540,7 +546,11 @@ public partial class Observer(
             return;
         }
 
-        await UnregisterReminderNamed(reminderName);
+        if (!Failures.Partitions.Any(_ => IsRetryReminderFor(_, reminderName) && _.Deferral is not null))
+        {
+            await UnregisterReminderNamed(reminderName);
+        }
+
         if (CannotRecoverFromReminder())
         {
             return;

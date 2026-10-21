@@ -1,3 +1,6 @@
+---
+description: "The event metadata tags Chronicle uses to identify and categorize events: event source type and id, and event stream type and id."
+---
 # Event Metadata Tags
 
 Event metadata tags provide a structured way to categorize and identify events within the Chronicle system. Below are the formalized tags available:

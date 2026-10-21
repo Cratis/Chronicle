@@ -87,9 +87,9 @@ mavenPublishing {
     coordinates("io.cratis", "chronicle-contracts", version.toString())
 
     pom {
-        name.set("Chronicle Kotlin Client")
-        description.set("Event sourcing Kotlin client for Chronicle")
-        url.set("https://github.com/cratis/chronicle")
+        name.set("Cratis Chronicle gRPC Contracts for Kotlin and Java")
+        description.set("Generated gRPC contracts for Cratis Chronicle, the open-source event-sourcing database and runtime.")
+        url.set("https://www.cratis.io/chronicle/")
         licenses {
             license {
                 name.set("MIT License")

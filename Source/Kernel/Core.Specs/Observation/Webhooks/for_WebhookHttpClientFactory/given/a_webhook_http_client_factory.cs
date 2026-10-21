@@ -14,6 +14,6 @@ public class a_webhook_http_client_factory : Specification
         var mockHttpClient = new HttpClient();
         _httpClientFactory.CreateClient(Arg.Any<string>()).Returns(mockHttpClient);
 
-        _factory = new WebhookHttpClientFactory(_httpClientFactory);
+        _factory = new WebhookHttpClientFactory(_httpClientFactory, Substitute.For<IOAuthClient>());
     }
 }

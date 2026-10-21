@@ -16,7 +16,7 @@ public class and_the_catch_up_was_interrupted : given.a_catching_up_sequence
         await Seed(0, "first", email: "a");
         await Seed(1, "second", email: "b");
         await Seed(2, "third", email: "c");
-        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 _claimWrites++;

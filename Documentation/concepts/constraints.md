@@ -1,4 +1,7 @@
-# Constraints
+---
+title: Constraints at append time
+description: Chronicle constraints are rules enforced at the database level that allow or reject an event on append, such as a unique value across keys.
+---
 
 To keep integrity within typically an [event source](./event-source.md) when appending events to an [event sequence](./event-sequence.md),
 you can leverage constraints. Constraints are rules that run on a database level within Chronicle, allowing or not allowing an event to be
@@ -11,6 +14,8 @@ flowchart LR
     C -->|rule holds| OK["Appended to the event sequence"]
     C -->|rule violated| NO["Rejected — constraint violation"]
 ```
+
+For model-bound and declarative definitions, see [Define constraints](../constraints/index.md).
 
 ## Unique Constraint
 
