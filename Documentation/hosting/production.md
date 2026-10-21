@@ -226,11 +226,11 @@ Chronicle supports horizontal scaling through Orleans clustering:
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
-4. **Shared Storage**: All instances must connect to the same MongoDB cluster. Only MongoDB storage supports more than one node; with PostgreSQL, SQL Server or SQLite, run a single instance (see [Clustering](configuration/clustering.md))
+4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]
-> Every multi-node deployment **must** set the clustering type to `MongoDB`. The default is `Localhost`,
-> which is single-node membership. Two containers left on the default that share one MongoDB do **not**
+> Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage. The default is `Localhost`,
+> which is single-node membership. Two containers left on the default that share one database do **not**
 > join as one cluster - each forms its own isolated single-node cluster over the same data, a split-brain
 > topology reported by no error at startup. The server logs a warning when it detects localhost clustering
 > against non-local storage, but it does not refuse to start.
@@ -340,3 +340,7 @@ Each container reaches the others over the Compose network by service name, so t
 address works. When you instead run multiple nodes directly on one host, set
 `Cratis__Chronicle__Clustering__AdvertisedIP` and distinct `SiloPort`/`GatewayPort` values per node - see
 [Clustering](configuration/clustering.md).
+
+## See also
+
+- [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.

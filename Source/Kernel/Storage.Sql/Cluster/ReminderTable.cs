@@ -82,15 +82,16 @@ public class ReminderTable(IDatabase database) : IReminderTable
     {
         await using var scope = await database.Cluster();
         var dbContext = scope.DbContext;
-        var reminder = await FindReminder(dbContext, grainId, reminderName);
-        if (reminder is null || reminder.ETag != eTag)
+        var key = ReminderEntryConverters.GetRowKey(grainId, reminderName);
+        if (await dbContext.Reminders.Where(r => r.Id == key && r.ETag == eTag).ExecuteDeleteAsync() == 1)
         {
-            return false;
+            return true;
         }
 
-        dbContext.Reminders.Remove(reminder);
-        await dbContext.SaveChangesAsync();
-        return true;
+        var legacyKey = ReminderEntryConverters.GetLegacyRowKey(grainId, reminderName);
+        return key != legacyKey && await dbContext.Reminders
+            .Where(r => r.Id == legacyKey && r.GrainId == grainId.ToString() && r.ReminderName == reminderName && r.ETag == eTag)
+            .ExecuteDeleteAsync() == 1;
     }
 
     /// <inheritdoc/>

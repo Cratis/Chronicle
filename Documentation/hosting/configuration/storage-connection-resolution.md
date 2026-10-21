@@ -265,6 +265,8 @@ Caching, expiry and credential handling follow [Arc's rules](/arc/backend/csharp
 
 ## Limits
 
+For a task-oriented walkthrough, see [Run Chronicle on Azure](../azure.md).
+
 - On SQL Server and PostgreSQL, the health check connects to the cluster database through the same resolution as the storage, with the identity resolved for the cluster.
 - On MongoDB, the health check, Orleans membership, reminders and the jobs storage connect with `connectionDetails`. Give it an identity that works on its own.
 - On SQL, the jobs storage of a namespace migrates its own tables with the `Runtime` resolution.

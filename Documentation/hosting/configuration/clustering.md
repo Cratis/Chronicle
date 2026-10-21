@@ -6,20 +6,16 @@ description: Configure how multiple Chronicle Server nodes form one Orleans clus
 Clustering configuration controls how multiple Chronicle Server nodes form one Orleans cluster and how grain workloads are distributed across them. This enables horizontal scale out and assigning specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
 
 > [!WARNING]
-> The clustering type defaults to `Localhost`, which is single-node membership. Any production deployment
-> that runs more than one node **must** set the type to `MongoDB` on every node. Two nodes left on the
-> default that share the same MongoDB do **not** join as one cluster - each forms its own isolated
-> single-node cluster over the same data, a split-brain topology reported by no error at startup. Set it
-> with the `Cratis__Chronicle__Clustering__Type=MongoDB` environment variable (or `clustering.type` in
-> `chronicle.json`), and give every node the same `clusterId` and `serviceId`. The server logs a warning
-> when it detects localhost clustering against non-local storage, but it does not refuse to start.
+> The clustering type defaults to `Localhost`, which is single-node membership, regardless of storage
+> type. A deployment with multiple nodes must explicitly select `MongoDB` with MongoDB storage, or `Sql`
+> with SQL Server or PostgreSQL storage, on every node. Nodes left on `Localhost` do not join one cluster,
+> even when they share storage. The localhost-clustering warning is only logged for non-local MongoDB
+> storage; it is not a safeguard for SQL deployments.
 >
-> Running more than one node requires MongoDB storage. The `MongoDB` clustering type keeps membership in
-> the MongoDB storage backend, and it is the only backend that registers a cluster membership table. With
-> `PostgreSql`, `MsSql` or `Sqlite` storage Chronicle registers no membership provider, so there is no
-> supported way to run more than one node on those backends, and setting `clustering.type` to `MongoDB`
-> alongside one of them does not add one. `InMemory` storage is scoped to a single process. Run a single node
-> on SQL storage. The localhost-clustering warning is not logged for SQL storage.
+> All nodes must share the same cluster database, `clusterId` and `serviceId`. Configure the type through
+> `clustering.type` in `chronicle.json` or `Cratis__Chronicle__Clustering__Type`. Unsupported combinations
+> fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB` requires MongoDB storage.
+> SQLite and in-memory storage do not support multi-node clustering.
 
 ## Use cases
 
@@ -45,20 +41,61 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
 }
 ```
 
+### SQL clustering
+
+For SQL Server or PostgreSQL storage, explicitly set `clustering.type` to `Sql`:
+
+```json
+{
+  "storage": {
+    "type": "PostgreSql",
+    "connectionDetails": "Host=database;Database=chronicle;Username=chronicle;Password=secret"
+  },
+  "clustering": {
+    "type": "Sql",
+    "clusterId": "chronicle",
+    "serviceId": "chronicle",
+    "defunctSiloCleanupPeriod": "01:00:00",
+    "defunctSiloExpiration": "03:00:00"
+  }
+}
+```
+
+For SQL Server, use `storage.type: MsSql` and its connection details instead. Every node must connect to
+one shared cluster database (including the same configured SQL schema), not a per-node database.
+Membership uses Chronicle's SQL connection resolution and schema provisioning. Silo and gateway ports
+must be reachable between nodes; use `advertisedIP` when the default address is not reachable.
+
+The defunct-silo cleanup settings apply to both `Sql` and `MongoDB`: the sweep runs hourly by default
+and removes defunct entries older than three hours. Set the cleanup period to `00:00:00` to disable it.
+The development kernel state reset is refused under `Sql` clustering because it would erase live
+membership. Use an isolated `Localhost` cluster for development resets. To replace nodes of a SQL cluster, see the [rolling-deploy runbook](../rolling-deploy.md).
+
 ## Properties
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in the configured MongoDB storage - all nodes sharing the same storage and cluster id form one cluster. |
+| type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
 | gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
 | clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
 | serviceId | string | chronicle | The service id - all nodes that should form one cluster must share it. |
 | advertisedIP | string | | The IP address the silo advertises to other cluster members. Resolved from the machine's host name when not set; set it explicitly (e.g. `127.0.0.1`) when running multiple nodes on one machine. |
-| defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
+| defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` or `Sql` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
 | defunctSiloExpiration | timespan | 03:00:00 | The age at which a defunct membership entry is removed by the sweep. A node never reuses a silo identity, so dead entries only have diagnostic value. |
+| probeTimeout | timespan | Orleans default | Interval between liveness probes and the timeout for each probe. Applies to `MongoDB` and `Sql` clustering. |
+| numMissedProbesLimit | number | Orleans default | Missed probes before a silo is suspected to be down. Applies to `MongoDB` and `Sql` clustering. |
+| numVotesForDeathDeclaration | number | Orleans default | Non-expired votes needed to declare a silo down. Must not exceed `numProbedSilos`. Applies to `MongoDB` and `Sql` clustering. |
+| tableRefreshTimeout | timespan | Orleans default | Interval between fetching membership table updates. Applies to `MongoDB` and `Sql` clustering. |
+| iAmAliveTablePublishTimeout | timespan | Orleans default | Interval between publishing this silo's heartbeat to the membership table. Applies to `MongoDB` and `Sql` clustering. |
+| numProbedSilos | number | Orleans default | Number of other silos each silo probes for liveness. Applies to `MongoDB` and `Sql` clustering. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
+
+The optional membership settings above keep the Orleans defaults when omitted. Time spans use
+`hh:mm:ss` format. Configure the same values on every node. Shorter timeouts detect failures sooner,
+but can also mark healthy nodes as failed during network delays or heavy load. Orleans validates the
+membership options at startup; these settings do not change localhost clustering.
 
 ## Configuration examples
 
@@ -121,7 +158,7 @@ Role-based placement is applied by custom Orleans placement directors - one for 
 
 ## Deploying a single node
 
-With localhost clustering, which is the only option with SQL storage today, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`.
+With localhost clustering, including SQL deployments that have not opted into `Sql` clustering, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`.
 
 ## Architecture
 

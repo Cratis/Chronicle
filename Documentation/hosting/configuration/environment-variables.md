@@ -60,12 +60,14 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
 | Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin | Force a password change on the admin's first login |
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
-| Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default) or `MongoDB` |
+| Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
+| Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
+| Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |
@@ -232,7 +234,7 @@ See [Data Protection Key Encryption](../encryption-certificate.md) for generatin
 ## Clustering
 
 ```bash
-# Clustering provider - must be MongoDB for every multi-node deployment
+# Clustering provider - explicitly use MongoDB for MongoDB storage, Sql for SQL Server/PostgreSQL
 Cratis__Chronicle__Clustering__Type=MongoDB
 
 # Identical on every node so they join the same cluster
@@ -240,7 +242,7 @@ Cratis__Chronicle__Clustering__ClusterId=chronicle
 Cratis__Chronicle__Clustering__ServiceId=chronicle
 ```
 
-See [Clustering](clustering.md) for the full set of clustering properties.
+See [Clustering](clustering.md) for the full set of clustering properties. All nodes must share one cluster database and cluster identity. SQL clustering is opt-in and does not support SQLite; the default remains `Localhost` for every storage type.
 
 ## Open Telemetry
 

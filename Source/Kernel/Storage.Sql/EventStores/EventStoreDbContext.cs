@@ -117,6 +117,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<EventSeedsEntity> EventSeeds { get; set; }
 
     /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // WebhookTarget and ObserverFilters are value objects serialized as JSON columns.

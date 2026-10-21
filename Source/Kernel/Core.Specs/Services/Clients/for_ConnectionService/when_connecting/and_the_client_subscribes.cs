@@ -42,6 +42,7 @@ public class and_the_client_subscribes : Specification
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, Options.Create(options)),
+            new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(options));
     }

@@ -106,3 +106,4 @@ gRPC clients keep using the main port — gRPC is never served on the dedicated 
 - [TLS Configuration (Server)](tls.md) for configuring the main port's certificate.
 - [Port Reference](port-reference.md) for the full list of ports Chronicle exposes.
 - [Root Properties](root-properties.md) for the `healthCheckEndpoint` path.
+- [Run Chronicle on Azure](../azure.md) for what the health check covers on Azure SQL and PostgreSQL.

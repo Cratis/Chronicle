@@ -61,6 +61,7 @@
         <Project Path="Integration/Api/Api.csproj" />
         <Project Path="Integration/Client/Client.csproj" />
         <Project Path="Integration/Clustering/Clustering.csproj" />
+        <Project Path="Integration/SqlClustering/SqlClustering.csproj" />
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>
