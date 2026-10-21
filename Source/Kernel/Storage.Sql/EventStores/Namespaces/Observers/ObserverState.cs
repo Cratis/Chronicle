@@ -49,6 +49,9 @@ public class ObserverState
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
 
+    /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
+    public string? WebhookProbe { get; set; }
+
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
     /// </summary>

@@ -17,6 +17,11 @@ public class Webhooks
     public static readonly IReadOnlyList<int> DefaultBackoffScheduleSeconds = [1, 5, 30, 120, 600, 1800, 3600];
 
     /// <summary>
+    /// Gets the automatic quarantine probe policy, independent of delivery retry budgets.
+    /// </summary>
+    public WebhookProbe Probe { get; init; } = new();
+
+    /// <summary>
     /// Gets the validation rollout mode. Enforce will become the default in the next major release.
     /// </summary>
     public WebhookValidationMode Validation { get; init; } = WebhookValidationMode.Warn;

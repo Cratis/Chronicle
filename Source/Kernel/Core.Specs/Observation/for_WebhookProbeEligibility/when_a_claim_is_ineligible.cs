@@ -1,0 +1,24 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.Observation;
+
+namespace Cratis.Chronicle.Observation.for_WebhookProbeEligibility;
+
+public class when_a_claim_is_ineligible : Specification
+{
+    FailedPartition _first;
+    FailedPartition _second;
+    FailedPartition? _selected;
+
+    void Establish()
+    {
+        _first = new() { Id = new Guid("00000000-0000-0000-0000-000000000001"), WebhookDisposition = WebhookFailureDisposition.Retryable, RecoveryCursor = new(10UL, FailedPartitionRecoveryMode.Live, null) };
+        _second = new() { Id = new Guid("00000000-0000-0000-0000-000000000002"), WebhookDisposition = WebhookFailureDisposition.Configuration, RecoveryCursor = new(20UL, FailedPartitionRecoveryMode.Live, null), IsResolved = true };
+    }
+
+    void Because() => _selected = WebhookProbeEligibility.Select([_second, _first], new WebhookProbeState(Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow, 0) { EpisodeId = _second.Id });
+
+    [Fact] void should_not_replace_the_claim() => _selected.ShouldBeNull();
+}

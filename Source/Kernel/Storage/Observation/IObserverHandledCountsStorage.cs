@@ -33,6 +33,16 @@ public interface IObserverHandledCountsStorage
     Task Increment(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType);
 
     /// <summary>
+    /// Sets absolute counts during fenced recovery. The caller must exclude concurrent partition writers.
+    /// Repeating the operation after a crash does not count the delivery twice.
+    /// </summary>
+    /// <param name="observerId">The observer.</param>
+    /// <param name="partition">The exclusively owned partition.</param>
+    /// <param name="countsPerEventType">The desired absolute counts.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetForRecovery(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType);
+
+    /// <summary>
     /// Get the handled-event counts recorded for a partition, broken down by event type identifier.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to get for.</param>

@@ -91,6 +91,22 @@ internal static partial class ObserverMetrics
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
     internal static void ZeroWorkCatchUp(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ZeroWorkCatchUp);
 
+    internal static void WebhookProbeScheduled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeScheduled);
+
+    internal static void WebhookProbeAttempt(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeAttempt);
+
+    internal static void WebhookProbeFailure(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeFailure);
+
+    internal static void WebhookProbeSuccess(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeSuccess);
+
+    internal static void WebhookProbeResumed(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeResumed);
+
+    internal static void WebhookProbeDeferred(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeDeferred);
+
+    internal static void WebhookProbeSkipped(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeSkipped);
+
+    internal static void WebhookProbeCancelled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeCancelled);
+
     static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int count = 1)
     {
         var counters = GetFailureCounters(meter);
@@ -129,6 +145,22 @@ internal static partial class ObserverMetrics
 
     sealed class FailureCounters(Meter meter)
     {
+        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-deferred");
+
+        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-skipped");
+
+        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-cancelled");
+
+        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-scheduled");
+
+        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-attempts");
+
+        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-failures");
+
+        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-successes");
+
+        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-resumes");
+
         public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(PartitionFailedName, unit: null, description: PartitionFailedDescription);
 
         public Counter<int> PartitionRetryAttempt { get; } = meter.CreateCounter<int>(PartitionRetryAttemptName, unit: null, description: PartitionRetryAttemptDescription);
