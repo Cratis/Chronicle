@@ -26,8 +26,6 @@ on:
     branches: [ "main" ]
     # Documentation-only pull requests have nothing for CodeQL to analyze.
     paths-ignore:
-      # Markdown-only changes do not need this build or analysis.
-      - "**/*.md"
       - "Documentation/**"
       - "**.md"
       - "**.mdx"
