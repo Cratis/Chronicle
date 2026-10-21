@@ -26,6 +26,7 @@ public static class ObserverStateConverters
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
             QuarantineEpisodeId = definition.QuarantineEpisodeId,
+            WebhookProbe = definition.WebhookProbe is null ? null : JsonSerializer.Serialize(definition.WebhookProbe, ObserverStateJson.Options),
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -44,6 +45,8 @@ public static class ObserverStateConverters
                 fp.IsResolved)
             {
                 IsQuarantined = fp.IsQuarantined,
+                WebhookDisposition = fp.WebhookDisposition,
+                WebhookRecoveryId = fp.WebhookRecoveryId,
                 AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
@@ -80,6 +83,8 @@ public static class ObserverStateConverters
                 }),
                 IsResolved = fp.IsResolved,
                 IsQuarantined = fp.IsQuarantined,
+                WebhookDisposition = fp.WebhookDisposition,
+                WebhookRecoveryId = fp.WebhookRecoveryId,
                 AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
@@ -95,6 +100,7 @@ public static class ObserverStateConverters
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber
         };

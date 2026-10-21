@@ -58,6 +58,20 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
     }
 
     /// <inheritdoc/>
+    public async Task SetForRecovery(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        var id = new ObserverPartitionCountsId(observerId, partition.ToString());
+        await _collection.ReplaceOneAsync(
+            _ => _.Id == id,
+            new ObserverPartitionCounts
+        {
+            Id = id,
+            Counts = countsPerEventType.ToDictionary(_ => _.Key.Value, _ => (long)_.Value.Value)
+        },
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveFor(ObserverId observerId, Key partition)
     {
         var id = new ObserverPartitionCountsId(observerId, partition.ToString());

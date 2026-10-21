@@ -50,6 +50,27 @@ public class ObserverHandledCountsStorage(EventStoreName eventStore, EventStoreN
     }
 
     /// <inheritdoc/>
+    public async Task SetForRecovery(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observer = observerId.Value;
+        var partitionValue = partition.ToString();
+        var rows = await scope.DbContext.ObserverHandledCounts.AsTracking()
+            .Where(_ => _.ObserverId == observer && _.Partition == partitionValue).ToListAsync();
+        foreach (var (eventTypeId, count) in countsPerEventType)
+        {
+            var row = rows.SingleOrDefault(_ => _.EventTypeId == eventTypeId.Value);
+            if (row is null)
+            {
+                row = new ObserverHandledCountEntry { ObserverId = observer, Partition = partitionValue, EventTypeId = eventTypeId.Value };
+                scope.DbContext.ObserverHandledCounts.Add(row);
+            }
+            row.Count = (long)count.Value;
+        }
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveFor(ObserverId observerId, Key partition)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);

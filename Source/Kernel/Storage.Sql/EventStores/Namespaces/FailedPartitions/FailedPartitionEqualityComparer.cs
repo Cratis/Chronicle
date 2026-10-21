@@ -28,6 +28,8 @@ public sealed class FailedPartitionEqualityComparer :
             x.Partition == y.Partition &&
             x.IsResolved == y.IsResolved &&
             x.IsQuarantined == y.IsQuarantined &&
+            x.WebhookDisposition == y.WebhookDisposition &&
+            x.WebhookRecoveryId == y.WebhookRecoveryId &&
             x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset &&
             x.RecoveryCursor == y.RecoveryCursor &&
             x.RecoveryOwner == y.RecoveryOwner &&
