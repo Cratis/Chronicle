@@ -332,3 +332,84 @@ jobs:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+  sql-clustering-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [PostgreSql, SqlServer]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # See client-integration-specs for the single-SDK rationale.
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.build-output-artifact }}
+
+      - name: Extract build output
+        env:
+          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore SQL clustering project
+        run: dotnet restore Integration/SqlClustering/SqlClustering.csproj
+
+      - name: Pre-pull images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: |
+            docker pull "${{ inputs.chronicle-image }}"
+            if [ "${{ matrix.provider }}" = "PostgreSql" ]; then
+              docker pull postgres:16
+            else
+              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+            fi
+
+      # Three kernel containers from the image the Client shards use. No retries: an append that
+      # fails during a membership transition is part of the availability measurement.
+      - name: Run SQL clustering specifications (${{ matrix.provider }})
+        env:
+          CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+          TESTCONTAINERS_RYUK_DISABLED: true
+        run: >-
+          dotnet test Integration/SqlClustering/SqlClustering.csproj --no-build -c Release
+          -p:DisableDockerBuild=true
+          --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
+          --logger "trx;LogFileName=sql-clustering-${{ matrix.provider }}.trx"
+          --logger "console;verbosity=normal"
+          --results-directory coverage-results
+
+      - name: Assert SQL clustering specifications ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: This SQL clustering provider
+
+      - name: Upload SQL clustering results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-clustering-${{ matrix.provider }}-results
+          path: coverage-results/
+          retention-days: 7

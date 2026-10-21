@@ -139,6 +139,6 @@ public abstract class a_sql_read_model : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>();
         Configure(options, _connection);
-        return new ReadModelDbContext(options.AddConceptAsSupport().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+        return new ReadModelDbContext(options.AddConceptAsSupport().WithoutServiceProviderCaching().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
     }
 }

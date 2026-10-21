@@ -27,7 +27,9 @@ public class and_appending_an_event_that_violates_it : given.an_event_sequence
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(callInfo => new ConstraintValidationContext(
                 [rejectingValidator],
                 callInfo.ArgAt<EventSourceId>(0),

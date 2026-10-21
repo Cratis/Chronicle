@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using ConnectionService = KernelGrpc::Cratis.Chronicle.Services.Clients.ConnectionService;
 using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
 using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
+using OpenConnections = KernelGrpc::Cratis.Chronicle.Services.Clients.OpenConnections;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -110,6 +111,7 @@ internal class ChronicleConnection(
             grainFactory,
             localSiloDetails,
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
+            new OpenConnections(),
             loggerFactory.CreateLogger<ConnectionService>(),
             chronicleOptions);
         _connectionService.Connect(new()

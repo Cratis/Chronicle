@@ -51,6 +51,7 @@ public class Projections(
 #endif
     readonly Dictionary<Type, IExplicitProjection> _explicitProjections = [];
     readonly HashSet<Type> _registeredAtRuntime = [];
+    readonly HashSet<Type> _warnedAboutRootRemovalViaJoin = [];
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
     Dictionary<Type, IProjectionHandler> _modelBoundHandlers = new();
@@ -361,6 +362,16 @@ public class Projections(
             jsonSerializerOptions);
         _definitionsByType = definitionsByType;
 
+        foreach (var (projectionType, definition) in definitionsByType)
+        {
+            WarnAboutRootRemovalViaJoin(projectionType.GetReadModelType(), definition);
+        }
+
+        foreach (var (readModelType, definition) in modelBoundDefinitions)
+        {
+            WarnAboutRootRemovalViaJoin(readModelType, definition);
+        }
+
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
                 kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
@@ -521,10 +532,30 @@ public class Projections(
         _explicitFailures = failures;
     }
 
+    void WarnAboutRootRemovalViaJoin(Type readModelType, ProjectionDefinition definition)
+    {
+        var removedWithJoin = RootRemovalViaJoin.EventTypesFor(definition);
+        if (removedWithJoin.Count == 0)
+        {
+            return;
+        }
+
+        lock (_warnedAboutRootRemovalViaJoin)
+        {
+            if (!_warnedAboutRootRemovalViaJoin.Add(readModelType))
+            {
+                return;
+            }
+        }
+
+        logger.RootRemovalViaJoinNotSupported(definition.Identifier, readModelType, string.Join(", ", removedWithJoin));
+    }
+
     ExplicitProjectionRegistration Build(IExplicitProjection projection)
     {
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
+        WarnAboutRootRemovalViaJoin(projection.ReadModelType, definition);
         var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
         return new(definition, handler, projection.ContainerNameOverride);
     }

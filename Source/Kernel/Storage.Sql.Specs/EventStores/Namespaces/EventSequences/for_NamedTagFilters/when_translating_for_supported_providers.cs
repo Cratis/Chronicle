@@ -30,7 +30,7 @@ public partial class when_translating_for_supported_providers : Specification
     static string Translate(Func<DbContextOptionsBuilder<EventSequenceDbContext>, DbContextOptionsBuilder<EventSequenceDbContext>> configure)
     {
         var builder = configure(new DbContextOptionsBuilder<EventSequenceDbContext>());
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         using var context = new EventSequenceDbContext(builder.Options, "events", Substitute.For<IEventSequenceMigrator>());
         return NamedTagFilters.Apply(context.Events, context.NamedTags, "events", [new(new TagName("account"), ["one", "two"])]).ToQueryString();
     }

@@ -25,7 +25,7 @@ public sealed class KernelCapabilitiesForTesting
     /// </summary>
     public void Current()
     {
-        Advertised = [KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences];
+        Advertised = [KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.IdempotentAppends];
         AreKnown = true;
     }
 

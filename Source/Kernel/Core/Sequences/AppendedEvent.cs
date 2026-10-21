@@ -157,7 +157,7 @@ public record AppendedEvent(
     /// The total is the sequence tail rather than a count of the page, so the caller can page without a second
     /// round trip.
     /// </remarks>
-    internal static async Task<IEnumerable<AppendedEvent>> AppendedEvents(
+    public static async Task<IEnumerable<AppendedEvent>> AppendedEvents(
         IStorage storage,
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
@@ -209,7 +209,7 @@ public record AppendedEvent(
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
     /// <param name="eventSourceType">Optional event source type to narrow to.</param>
     /// <returns>Every matching event, unpaged.</returns>
-    internal static Task<IEnumerable<AppendedEvent>> ForEventSourceIdAndEventTypes(
+    public static Task<IEnumerable<AppendedEvent>> ForEventSourceIdAndEventTypes(
         IStorage storage,
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,
@@ -249,7 +249,7 @@ public record AppendedEvent(
     /// <param name="eventSourceId">Optional event source to narrow to.</param>
     /// <param name="eventTypeIds">Optional comma separated event type identifiers to narrow to.</param>
     /// <returns>Every matching event, unpaged.</returns>
-    internal static Task<IEnumerable<AppendedEvent>> FromSequenceNumber(
+    public static Task<IEnumerable<AppendedEvent>> FromSequenceNumber(
         IStorage storage,
         IEventCompliance eventCompliance,
         JsonSerializerOptions jsonSerializerOptions,

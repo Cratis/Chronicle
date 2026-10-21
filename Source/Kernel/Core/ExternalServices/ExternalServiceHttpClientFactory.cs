@@ -24,7 +24,7 @@ public class ExternalServiceHttpClientFactory(
     public const string HttpClientName = "external-service";
 
     /// <inheritdoc/>
-    public async Task<HttpClient> Create(ExternalServiceDefinition externalService)
+    public Task<HttpClient> Create(ExternalServiceDefinition externalService)
     {
         if (externalService.Endpoint.Http is not { } http)
         {
@@ -38,30 +38,21 @@ public class ExternalServiceHttpClientFactory(
             client.BaseAddress = uri;
         }
 
-        await http.Authorization.Match(
+        http.Authorization.Switch(
             basic =>
             {
                 var value = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{basic.Username}:{basic.Password}"));
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", value);
-                return Task.CompletedTask;
             },
-            bearer =>
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token);
-                return Task.CompletedTask;
-            },
-            async oAuth =>
-            {
-                var accessToken = await oAuthClient.AcquireToken(oAuth);
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.AccessToken);
-            },
-            _ => Task.CompletedTask);
+            bearer => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token),
+            oAuth => client = OAuthHttpMessageHandler.CreateClient(client, oAuth, oAuthClient),
+            _ => { });
 
         foreach (var header in http.Headers)
         {
             client.DefaultRequestHeaders.Add(header.Key, header.Value);
         }
 
-        return client;
+        return Task.FromResult(client);
     }
 }

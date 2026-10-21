@@ -1,3 +1,6 @@
+---
+description: Run initialization or shutdown work once across instances with Chronicle lifecycle occurrences, using the built-in Startup and Shutdown triggers.
+---
 # Run work at application activation boundaries
 
 Use lifecycle occurrences for initialization or shutdown work that must be deduplicated across instances. `Startup` and `Shutdown` are built-in trigger records in `Cratis.Chronicle.Occurrences`. Implement `IOccurrenceHandler<Startup>` or `IOccurrenceHandler<Shutdown>` as you would an [application trigger handler](triggers-and-handlers.mdx).

@@ -35,7 +35,9 @@ public class and_a_constraint_was_registered_after_activation : given.an_event_s
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(callInfo => new ConstraintValidationContext(
                 [rejectingValidator],
                 callInfo.ArgAt<EventSourceId>(0),

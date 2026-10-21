@@ -90,7 +90,7 @@ public partial class ConstraintIndexReplay
 
     async Task Include(IConstraintDefinition definition, AppendedEvent @event, ExpandoObject plaintext, CancellationToken cancellationToken)
     {
-        var context = new ConstraintValidationContext([], @event.Context.EventSourceId, @event.Context.EventType.Id, plaintext, @event.Context.EventSourceType, @event.Context.EventStreamType, @event.Context.EventStreamId);
+        var context = ConstraintPersonalData.ContextFor(@event, plaintext, await content.PersonalPropertiesOf(@event, cancellationToken), []);
         if (definition is UniqueConstraintDefinition uniqueDefinition)
         {
             await IncludeUnique(uniqueDefinition, context, @event.Context.SequenceNumber, cancellationToken);
@@ -133,7 +133,7 @@ public partial class ConstraintIndexReplay
         }
         var claim = new UniqueConstraintValue(values.GetValue(definition.IgnoreCasing));
         var retained = definition.Mode == UniqueConstraintMode.PerValue ? claim : null;
-        SetUnique(new(definition.Name, context.EventSourceId, scope, retained), new(definition, claim, position));
+        SetUnique(new(definition.Name, context.EventSourceId, scope, retained), new(definition, claim, position, definition.SubjectFor(context)));
     }
 
     void SetUniqueRemoved(UniqueConstraintDefinition definition, EventSourceId source, string scope, UniqueConstraintValue? retained, EventSequenceNumber position) =>
@@ -222,7 +222,7 @@ public partial class ConstraintIndexReplay
     }
 
     sealed record UniqueKey(ConstraintName Name, EventSourceId Source, string Scope, UniqueConstraintValue? Retained);
-    sealed record UniqueState(UniqueConstraintDefinition Definition, UniqueConstraintValue? Value, EventSequenceNumber Position);
+    sealed record UniqueState(UniqueConstraintDefinition Definition, UniqueConstraintValue? Value, EventSequenceNumber Position, Subject? Subject = null);
     sealed record ClosingKey(ConstraintName Name, ClosedStreamScope Scope);
     sealed record ClosingState(ClosedStream? Closure, EventSequenceNumber Position);
 }

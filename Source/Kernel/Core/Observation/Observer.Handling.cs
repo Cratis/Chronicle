@@ -7,13 +7,20 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
     const int MaxPendingHandledCountPartitions = 512;
+
+    readonly HandledEventsReportDeduplication _handledEventsReports = new();
 
     /// <inheritdoc/>
     public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
@@ -23,6 +30,7 @@ public partial class Observer
         {
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
+        RecordedHandlingState();
 
         return WriteStateAsync();
     }
@@ -32,12 +40,17 @@ public partial class Observer
     /// The counts are merged into what is pending for the partition and event type and the call returns, so a burst of
     /// reports from many job steps does not turn into a burst of storage writes inside this non-reentrant grain. They
     /// are made durable together by <see cref="FlushPendingHandledCounts"/> after at most
-    /// <see cref="Cratis.Chronicle.Configuration.Observers.WriteCoalescingInterval"/> seconds.
+    /// <see cref="Cratis.Chronicle.Configuration.Observers.WriteCoalescingInterval"/> seconds, or sooner once
+    /// <see cref="MaxPendingHandledCountPartitions"/> partitions are pending. The call never waits for the flush; only
+    /// when write coalescing is turned off does it make the counts durable before returning.
+    /// A report a step sends again after a timeout is recognized by <see cref="HandledEventsReportDeduplication"/>
+    /// and not taken twice.
     /// </remarks>
-    public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo)
     {
         Skips.JobReported(partition);
         if (IsRetired || _removed || !_observerExists) return;
+        if (!_handledEventsReports.TryTake(reportedBy, partition, handledUpTo)) return;
 
         if (countsPerEventType.Count > 0)
         {
@@ -53,9 +66,15 @@ public partial class Observer
             }
         }
 
-        if (_writeCoalescingInterval <= TimeSpan.Zero || _pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
+        if (_writeCoalescingInterval <= TimeSpan.Zero)
         {
             await FlushPendingHandledCounts();
+            return;
+        }
+
+        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
+        {
+            BringCoalescedWriteForward();
             return;
         }
 
@@ -190,6 +209,7 @@ public partial class Observer
                 return;
             }
 
+            _handledEventsReports.ForgetQuietSteps();
             var pending = _pendingHandledCounts;
             _pendingHandledCounts = [];
             var written = new HashSet<Key>();
@@ -217,6 +237,20 @@ public partial class Observer
         {
             _alertMutationLock.Release();
         }
+    }
+
+    void BringCoalescedWriteForward()
+    {
+        if (_coalescedWriteBroughtForward)
+        {
+            return;
+        }
+
+        _coalescedWriteTimer?.Dispose();
+        _coalescedWriteBroughtForward = true;
+        _coalescedWriteTimer = this.RegisterGrainTimer(
+            FlushCoalescedWritesFromTimer,
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
     }
 
     void EnsureCoalescedWriteTimer()
@@ -287,6 +321,7 @@ public partial class Observer
         cancellationToken.ThrowIfCancellationRequested();
         _coalescedWriteTimer?.Dispose();
         _coalescedWriteTimer = null;
+        _coalescedWriteBroughtForward = false;
         await FlushPendingHandledCounts();
         await FlushPendingFailures();
     }
@@ -322,6 +357,7 @@ public partial class Observer
                 NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
+            RecordedHandlingState();
             await WriteProgressStateDebounced();
             return;
         }
@@ -337,6 +373,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -350,6 +387,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -362,6 +400,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -369,6 +408,7 @@ public partial class Observer
 
         var failed = false;
         var failureKind = FailureKind.Unknown;
+        var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
@@ -402,7 +442,13 @@ public partial class Observer
                     while (true)
                     {
                         var target = subscriberSelector.Select(_subscription, partition);
-                        var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
+
+                        // A webhook partition has one non-interleavable activation across live delivery and jobs,
+                        // independent of which silo owns the observer or executes the job.
+                        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+                            ? SiloAddress.Zero
+                            : target.SiloAddress;
+                        var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
@@ -426,10 +472,16 @@ public partial class Observer
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
 
-                    if (result.State == ObserverSubscriberState.Failed)
+                    if (result.State == ObserverSubscriberState.Deferred)
+                    {
+                        await PartitionDeferred(partition, result.Deferral!);
+                        stateChanged = true;
+                    }
+                    else if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
                         failureKind = FailureKind.Handling;
+                        failurePolicy = result.FailurePolicy;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
@@ -490,7 +542,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy);
                 }
                 else
                 {
@@ -590,6 +642,7 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+        RecordedHandlingState();
     }
 
     /// <summary>
@@ -628,5 +681,12 @@ public partial class Observer
         {
             await WriteStateAsync();
         }
+    }
+
+    void RememberHandledEventsReportsForTheResponseTimeout()
+    {
+        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
+        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
+        _handledEventsReports.Window = HandledEventsReportDeduplication.WindowFor(responseTimeout);
     }
 }

@@ -38,7 +38,7 @@ public record IdentityDetails(
     /// <param name="namespace">Namespace within the event store to get identities for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read identities from.</param>
     /// <returns>A collection of identities.</returns>
-    internal static async Task<IEnumerable<IdentityDetails>> GetIdentities(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
+    public static async Task<IEnumerable<IdentityDetails>> GetIdentities(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
         var identities = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Identities.GetAll();
         return identities.ToDetails();
@@ -51,6 +51,6 @@ public record IdentityDetails(
     /// <param name="namespace">Namespace within the event store to observe identities for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe identities from.</param>
     /// <returns>An observable subject emitting collections of identities.</returns>
-    internal static ISubject<IEnumerable<IdentityDetails>> AllIdentities(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage) =>
+    public static ISubject<IEnumerable<IdentityDetails>> AllIdentities(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage) =>
         storage.GetEventStore(eventStore).GetNamespace(@namespace).Identities.ObserveAll().TransformSubject(_ => _.ToDetails());
 }

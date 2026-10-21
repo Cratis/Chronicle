@@ -20,4 +20,15 @@ public record RetryFailedPartitionRequest(
     ObserverType ObserverType,
     Key Key,
     EventSequenceNumber FromSequenceNumber,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
+{
+    /// <summary>
+    /// Gets the failure episode that owns the recovery, or null for a legacy job.
+    /// </summary>
+    public FailedPartitionId? EpisodeId { get; init; }
+
+    /// <summary>
+    /// Gets the deferral that owns the recovery, or null when not deferred.
+    /// </summary>
+    public Guid? DeferralId { get; init; }
+}

@@ -3,7 +3,13 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Transactions;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Transactions;
+using Cratis.Traces;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -20,11 +26,11 @@ public static class UnitOfWorkServiceCollectionExtensions
     public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
         services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
-        services.AddScoped(sp =>
-        {
-            var eventStore = sp.GetRequiredService<IEventStore>();
-            return eventStore.UnitOfWorkManager;
-        });
+        services.AddScoped<IUnitOfWorkManager>(sp => new UnitOfWorkManager(
+            () => sp.GetRequiredService<IEventStore>(),
+            sp.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
+            sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UnitOfWorkLifecyclePolicy,
+            sp.GetRequiredService<ILogger<UnitOfWork>>()));
 
         return services;
     }

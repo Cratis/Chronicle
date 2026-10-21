@@ -22,7 +22,7 @@ public partial class UnitOfWork
             ThrowIfMutatedDuringEnrollment();
             ThrowIfEnrollmentNotificationFailed();
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing) throw new UnitOfWorkIsCompleting(correlationId);
+            if (_completing) throw new UnitOfWorkIsCompleting(CorrelationId);
             if (_immediateAppendRefusalLease is not null) return _immediateAppendRefusalLease();
             _immediateAppendRefusalOwnsCompletion = _commitOwner is null && !IsEnforcingReadProtection;
             var frame = new ImmediateAppendRefusal(
@@ -58,8 +58,8 @@ public partial class UnitOfWork
             }
             RequireImmediateAppendOwner(owner);
             if (IsCompleted) return;
-            if (_completing) throw new UnitOfWorkIsCompleting(correlationId);
-            using var span = _activitySource.Rollback(correlationId.ToString());
+            if (_completing) throw new UnitOfWorkIsCompleting(CorrelationId);
+            using var span = _activitySource.Rollback(CorrelationId.ToString());
             CompleteRollback();
         }
         _onCompleted(this);

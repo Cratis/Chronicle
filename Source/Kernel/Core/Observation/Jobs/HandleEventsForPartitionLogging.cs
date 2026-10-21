@@ -61,4 +61,7 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} stopped checkpointing because its run no longer admits callbacks ({Reason}). Progress to event sequence number {EventSequenceNumber} was not recorded; the next run resumes from the last persisted checkpoint")]
     internal static partial void CheckpointCallbackRejected(this ILogger<HandleEventsForPartition> logger, Key partition, ActivationCallbackRejected reason, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step could not report partition {Partition} as failed at event sequence number {FailedAt}; the job runs the step again and reports it when the attempts run out")]
+    internal static partial void FailedReportingPartitionFailed(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition, EventSequenceNumber failedAt);
 }

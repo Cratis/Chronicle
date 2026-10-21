@@ -188,6 +188,12 @@ public class AddExternalServiceRequest
     /// </summary>
     [ProtoMember(19)]
     public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the OAuthScope.
+    /// </summary>
+    [ProtoMember(20)]
+    public string OAuthScope { get; set; } = string.Empty;
 }
 
 /// <summary>

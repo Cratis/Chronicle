@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintIndexReplay.when_folding;
@@ -17,7 +18,7 @@ public class and_the_budget_expires_during_a_write : given.a_replay
         Event(1, "second", "Claimed", "second");
         _budget = new();
         _hung = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _unique.Configure().Save("second", _definition, 1, Hash("second"), string.Empty, Arg.Any<CancellationToken>()).Returns(async _ =>
+        _unique.Configure().Save("second", _definition, 1, Hash("second"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>()).Returns(async _ =>
         {
             await _budget.CancelAsync();
             await _hung.Task;
@@ -28,7 +29,7 @@ public class and_the_budget_expires_during_a_write : given.a_replay
     async Task Because()
     {
         _result = await _replay.Continue(cancellationToken: _budget.Token);
-        _unique.Configure().Save("second", _definition, 1, Hash("second"), string.Empty, Arg.Any<CancellationToken>()).Returns(_ => _claims.Save("second", _definition, 1, Hash("second")));
+        _unique.Configure().Save("second", _definition, 1, Hash("second"), string.Empty, Arg.Any<Subject?>(), Arg.Any<CancellationToken>()).Returns(_ => _claims.Save("second", _definition, 1, Hash("second")));
         _resumed = await _replay.Continue();
     }
 

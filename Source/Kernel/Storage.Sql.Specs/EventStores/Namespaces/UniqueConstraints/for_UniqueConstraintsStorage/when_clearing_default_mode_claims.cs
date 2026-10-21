@@ -29,7 +29,7 @@ public class when_clearing_default_mode_claims : Specification
         database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>()).Returns(async call =>
         {
             var context = new UniqueConstraintDbContext(
-                new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+                new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
                 call.ArgAt<string>(2),
                 migrator);
             await context.EnsureTableExists();
@@ -38,7 +38,7 @@ public class when_clearing_default_mode_claims : Specification
         database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>()).Returns(async call =>
         {
             var context = new UniqueConstraintValuesDbContext(
-                new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+                new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
                 call.ArgAt<string>(2),
                 migrator);
             await context.EnsureTableExists();

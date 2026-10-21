@@ -62,6 +62,8 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
             entity.ToTable(tableName);
             entity.HasKey(e => e.EventSourceId);
             entity.HasIndex(e => e.Value).IsUnique().HasDatabaseName($"IX_{tableName}_Value");
+            entity.Property(e => e.Subject).HasMaxLength(UniqueConstraintMigrator.SubjectMaxLength);
+            entity.HasIndex(e => e.Subject).HasDatabaseName(UniqueConstraintMigrator.SubjectIndexName(tableName));
             entity.Property(e => e.EventSourceId).IsRequired();
             var value = entity.Property(e => e.Value).IsRequired();
             if (Database.IsSqlServer())

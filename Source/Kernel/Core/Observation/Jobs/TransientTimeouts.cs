@@ -146,30 +146,68 @@ internal static class TransientTimeouts
     }
 
     /// <summary>
-    /// Reports the handled counts to the observer without letting a timeout fail the step.
+    /// Reports the handled counts to the observer without letting the report fail the step, sending it again when it
+    /// does not get through.
     /// </summary>
     /// <param name="observer">The <see cref="IObserver"/> to report to.</param>
-    /// <param name="partition">The partition the counts are for.</param>
-    /// <param name="counts">The counts per event type.</param>
-    /// <param name="logger">The logger to record a skipped report with.</param>
+    /// <param name="report">The <see cref="HandledEventsReport"/> to send.</param>
+    /// <param name="retryDelay">How long to wait before sending the report again.</param>
+    /// <param name="logger">The logger to record retries and an abandoned report with.</param>
+    /// <param name="cancellationToken">Cancels waiting to send the report again.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The counts are statistics. Failing a step - and every step that follows it - because the observer was too busy
-    /// to take a count would trade the statistics being a little behind for work not being done at all.
+    /// <para>
+    /// The events are already handled when this runs, so failing the step - and every step that follows it - because
+    /// the observer did not take a count would trade the statistics being behind for work not being done at all.
+    /// </para>
+    /// <para>
+    /// A report that timed out may still have been taken, so it is sent again with the same identity and the observer
+    /// recognizes a repeat; the counts are taken exactly once either way. Only when every attempt fails, or the step is
+    /// stopped while waiting, are the counts given up, and that is logged as an error rather than skipped quietly.
+    /// </para>
     /// </remarks>
     internal static async Task ReportHandledEventsWithoutFailing(
         IObserver observer,
-        Concepts.Keys.Key partition,
-        IReadOnlyDictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount> counts,
-        ILogger logger)
+        HandledEventsReport report,
+        TimeSpan retryDelay,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await observer.ReportHandledEvents(report.Partition, report.Counts, report.ReportedBy, report.HandledUpTo);
+                return;
+            }
+            catch (Exception ex) when (attempt < MaximumAttempts && !cancellationToken.IsCancellationRequested)
+            {
+                logger.RetryingHandledCountsReport(report.Partition, attempt, ShortMessageFor(ex));
+            }
+            catch (Exception ex)
+            {
+                logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, ShortMessageFor(ex));
+                return;
+            }
+
+            if (!await DelayUnlessCancelled(retryDelay, cancellationToken))
+            {
+                logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, "the step was stopped");
+                return;
+            }
+        }
+    }
+
+    static async Task<bool> DelayUnlessCancelled(TimeSpan delay, CancellationToken cancellationToken)
     {
         try
         {
-            await observer.ReportHandledEvents(partition, counts);
+            await Task.Delay(delay, cancellationToken);
+            return true;
         }
-        catch (Exception ex) when (IsTimeout(ex))
+        catch (OperationCanceledException)
         {
-            logger.HandledCountsReportTimedOut(partition, ShortMessageFor(ex));
+            return false;
         }
     }
 }

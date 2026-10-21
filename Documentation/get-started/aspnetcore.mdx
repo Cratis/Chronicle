@@ -45,6 +45,22 @@ flowchart LR
 
 [!INCLUDE [common](./_includes/common.mdx)]
 
+## Authentication and tenant namespaces
+
+Chronicle installs its unit of work and causation middleware automatically through startup filters. These wrap your application's middleware, including authentication. Starting the request unit of work does **not** resolve its event store or namespace: it binds on the first operation that needs the store. Resolving the scoped `IEventStore`, `IEventLog`, or read models also resolves the namespace at that point. A successful resolution is reused for the rest of the request, including the unit of work's commit.
+
+For a claim-based [namespace resolver](../namespaces/aspnetcore), run authentication before any middleware or endpoint that uses Chronicle. Read the tenant claim from `IHttpContextAccessor.HttpContext.User` in the resolver. For HTTP requests, reject missing or invalid tenant claims rather than falling back to a shared namespace. Handle off-request resolution separately: client startup and background work have no HTTP principal. Unauthenticated requests rejected by authorization, and requests that never use Chronicle, do not need a namespace merely to start or complete their request unit of work. Using Chronicle inside an authentication handler still requires a namespace to be available at that point.
+
+If you need explicit control over ordering, set `UseAutomaticMiddleware = false` in the options passed to `builder.AddCratisChronicle(...)`. Then configure the pipeline in this order:
+
+1. `app.UseRouting()`
+2. `app.UseAuthentication()`
+3. `app.UseAuthorization()`
+4. `app.UseCratisChronicle()`
+5. Map your endpoints.
+
+In this mode, `UseCratisChronicle()` installs both the unit of work and causation middleware at that position, in addition to its normal client startup configuration. Leave automatic middleware enabled for existing applications that do not need explicit placement. Calling `UseCratisChronicle()` more than once on the same application builder does not install duplicate middleware. Automatic and explicit placement retain the same commit-on-success, rollback-on-failure, and request completion-feature behavior.
+
 ## Append from an endpoint
 
 In a web app you usually append events from a route handler rather than inline. Take `IEventLog` as a dependency and append — the container injects it:

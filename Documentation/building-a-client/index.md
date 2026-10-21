@@ -1,3 +1,6 @@
+---
+description: Building a Chronicle client in a new language means solving gRPC bindings, token authentication and server discovery; this section shows how.
+---
 # Building a Chronicle Client
 
 Chronicle speaks gRPC. In theory that means any language with a gRPC implementation can talk to

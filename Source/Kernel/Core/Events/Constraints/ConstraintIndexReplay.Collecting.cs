@@ -87,7 +87,7 @@ public partial class ConstraintIndexReplay
             release = token => unique.Remove(key.Source, state.Definition, key.Scope, token);
         }
         Func<CancellationToken, Task>? claim = state.Value is { } value
-            ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, token)
+            ? token => unique.Save(key.Source, state.Definition, state.Position, value, key.Scope, state.Subject, token)
             : null;
         return new(key.Name, state.Position, release, claim, key.Scope, state.Value, current, key.Source, key.Retained);
     }

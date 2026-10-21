@@ -26,6 +26,13 @@ public class ChronicleAspNetCoreOptions : Cratis.Chronicle.ChronicleClientOption
     }
 
     /// <summary>
+    /// Gets or sets a value indicating whether startup filters install Chronicle's unit of work and causation middleware.
+    /// Defaults to <see langword="true"/>. Set to <see langword="false"/> to place them explicitly with
+    /// <see cref="ChronicleClientWebApplicationBuilderExtensions.UseCratisChronicle(IApplicationBuilder)"/> after authentication and authorization.
+    /// </summary>
+    public bool UseAutomaticMiddleware { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the name of the HTTP header to use for resolving the namespace.
     /// </summary>
     [Required]

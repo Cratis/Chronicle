@@ -11,7 +11,7 @@ public enum AppendOutcome
     /// <summary>
     /// This attempt committed the event.
     /// </summary>
-    Appended = 0,
+    Committed = 0,
 
     /// <summary>
     /// The same intent was already durable.

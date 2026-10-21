@@ -55,7 +55,7 @@ public record EventMetadata(
     /// <param name="eventSequenceId">The sequence.</param>
     /// <param name="sequenceNumbers">The sequence locators.</param>
     /// <returns>The matching metadata with current identity names.</returns>
-    internal static Task<IEnumerable<EventMetadata>> MetadataAt(
+    public static Task<IEnumerable<EventMetadata>> MetadataAt(
         IStorage storage,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,

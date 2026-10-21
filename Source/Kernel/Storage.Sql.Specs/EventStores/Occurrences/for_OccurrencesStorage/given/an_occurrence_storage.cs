@@ -74,7 +74,7 @@ public class an_occurrence_storage : Specification, IDisposable
                 break;
         }
 
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return new NamespaceDbContext(builder.Options);
     }
 }

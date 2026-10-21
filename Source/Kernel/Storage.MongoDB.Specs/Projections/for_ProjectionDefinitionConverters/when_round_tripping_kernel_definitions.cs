@@ -29,14 +29,16 @@ public class when_round_tripping_kernel_definitions : Specification
         storage.GetEventStore(Arg.Any<EventStoreName>()).Projections.Returns(definitions);
         definitions.Has(Arg.Any<ProjectionId>()).Returns(true);
         var comparer = new ProjectionDefinitionComparer(storage, new ObjectComparer(), NullLogger<ProjectionDefinitionComparer>.Instance);
-        foreach (var declaration in KernelProjectionDeclarations.Discover(typeof(EventTypeStatisticsProjection).Assembly.GetTypes()))
+        var namespaced = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single();
+        var legacy = namespaced with { Identifier = $"{namespaced.Identifier.Value}.global", Scope = ProjectionScope.Global };
+        var kernelDefinitions = KernelProjectionDeclarations.Discover(typeof(EventTypeStatisticsProjection).Assembly.GetTypes())
+            .SelectMany(declaration => KernelProjectionDeclarations.Lower(declaration).Projections)
+            .Append(legacy);
+        foreach (var definition in kernelDefinitions)
         {
-            foreach (var definition in KernelProjectionDeclarations.Lower(declaration).Projections)
-            {
-                var restored = BsonSerializer.Deserialize<StoredDefinition>(definition.ToMongoDB().ToBsonDocument()).ToKernel();
-                _scopes.Add(restored.Scope);
-                _results.Add(await comparer.Compare(new(definition.Identifier, "test-store"), definition, restored));
-            }
+            var restored = BsonSerializer.Deserialize<StoredDefinition>(definition.ToMongoDB().ToBsonDocument()).ToKernel();
+            _scopes.Add(restored.Scope);
+            _results.Add(await comparer.Compare(new(definition.Identifier, "test-store"), definition, restored));
         }
     }
 
