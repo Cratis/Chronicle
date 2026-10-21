@@ -21,8 +21,17 @@ public record WebhookProbeState(Guid Id, Guid QuarantineId, DateTimeOffset Due, 
     /// <summary>Gets the claimed failure episode, if delivery might be in flight.</summary>
     public FailedPartitionId? EpisodeId { get; init; }
 
+    /// <summary>Gets the claimed subscriber partition, even if its failure episode is subsequently removed.</summary>
+    public EventSourceId? Partition { get; init; }
+
+    /// <summary>Gets whether this stable subscriber still owes a completion acknowledgement.</summary>
+    public bool DrainPending { get; init; }
+
     /// <summary>Gets the inclusive cursor captured by the claim.</summary>
     public EventSequenceNumber? Position { get; init; }
+
+    /// <summary>Gets whether an operator invalidated this control while local progress still needs preservation.</summary>
+    public bool Cancelled { get; init; }
 
     /// <summary>Gets whether delivery succeeded and only local recovery remains.</summary>
     public bool ResumePending { get; init; }

@@ -22,6 +22,9 @@ public class with_webhook_probe : Specification
             {
                 EpisodeId = new(Guid.NewGuid()),
                 Position = new(42),
+                Partition = "partition",
+                DrainPending = true,
+                Cancelled = true,
                 ResumePending = true,
                 ResumePosition = new(43),
                 DefinitionFingerprint = "opaque-hash",
@@ -39,4 +42,7 @@ public class with_webhook_probe : Specification
     [Fact] void should_keep_the_next_undelivered_event() => _restored.WebhookProbe.ResumePosition.ShouldEqual(_expected.WebhookProbe.ResumePosition);
     [Fact] void should_keep_absolute_counts_for_idempotent_recovery() => _restored.WebhookProbe.PartitionCounts.Single().Count.Value.ShouldEqual(7UL);
     [Fact] void should_not_authorize_legacy_quarantine() => _legacy.WebhookProbe.ShouldBeNull();
+    [Fact] void should_keep_the_stable_pending_subscriber() => _restored.WebhookProbe.Partition.ShouldEqual(_expected.WebhookProbe.Partition);
+    [Fact] void should_keep_the_unacknowledged_barrier() => _restored.WebhookProbe.DrainPending.ShouldBeTrue();
+    [Fact] void should_keep_operator_invalidation() => _restored.WebhookProbe.Cancelled.ShouldBeTrue();
 }

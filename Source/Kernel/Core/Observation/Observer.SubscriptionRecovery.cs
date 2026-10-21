@@ -81,17 +81,17 @@ public partial class Observer
     {
         // Unlike explicit registration, this serialized operation has no authority to release quarantine,
         // replace recovery owed to an operator clearance, or reload a stored cursor over live progress.
-        if (CannotReconcileSubscription()) return;
+        if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var types = subscribesToAllEvents ? [] : eventTypes.ToArray();
         await ValidateGenerationDelivery(types, generationDelivery);
-        if (CannotReconcileSubscription()) return;
+        if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(types);
-        if (CannotReconcileSubscription()) return;
+        if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
 
         try
         {
             await BeginAlertLifecycle();
-            if (CannotReconcileSubscription()) return;
+            if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
             _eventTypeSchemas = schemas.ToDictionary(schema => schema.Type);
             _subscriptionSetupFailed = true;
 
@@ -106,9 +106,15 @@ public partial class Observer
 
             // Keep the current state through awaited setup so failure callbacks can still establish quarantine.
             // Disconnected deliberately refuses ordinary quarantine transitions.
-            if (CannotReconcileSubscription()) return;
+            if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+            if (IsQuarantined)
+            {
+                _subscriptionSetupFailed = false;
+                await ReconcileWebhookProbe();
+                return;
+            }
             await TransitionTo<Disconnected>();
-            if (CannotReconcileSubscription()) return;
+            if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
             await RecoverAfterSubscribing(leavesQuarantine: false);
 
             // Do not clear a stranded entry merely because recovery returned without throwing.
@@ -122,9 +128,9 @@ public partial class Observer
         }
     }
 
-    bool CannotReconcileSubscription() =>
+    bool CannotReconcileSubscription(bool allowQuarantinedWebhook = false) =>
         _removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired ||
-        IsQuarantined || State.RunningState == ObserverRunningState.Quarantined ||
+        (!allowQuarantinedWebhook && (IsQuarantined || State.RunningState == ObserverRunningState.Quarantined)) ||
         _recoverSubscriptionAfterQuarantine || _retryRecoveryAfterQuarantine;
 
     EventType[] MergeSubscribedEventTypes(IEnumerable<EventType> eventTypes) => eventTypes.Concat(_subscription.EventTypes)

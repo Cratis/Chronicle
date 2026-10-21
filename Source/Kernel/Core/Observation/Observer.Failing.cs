@@ -56,6 +56,15 @@ public partial class Observer
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
             if (webhook)
             {
+                failure.WebhookDisposition = failurePolicy switch
+                {
+                    WebhookDeliveryFailurePolicy.ParkPartition => WebhookFailureDisposition.Gone,
+                    WebhookDeliveryFailurePolicy.PauseObserver => WebhookFailureDisposition.Configuration,
+                    _ => WebhookFailureDisposition.Retryable
+                };
+            }
+            if (webhook)
+            {
                 // This deadline belongs to the attempt that just ran, not the next retry.
                 failure.Deferral = null;
                 failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
@@ -135,6 +144,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
+            _armWebhookProbe = IsWebhookSubscription && failurePolicy != WebhookDeliveryFailurePolicy.ParkPartition;
             await TransitionTo<QuarantinedObserver>();
         }
     }
@@ -195,6 +205,7 @@ public partial class Observer
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (IsQuarantined)
         {
@@ -238,6 +249,7 @@ public partial class Observer
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         FailedPartition? failure;
         await _alertMutationLock.WaitAsync();
@@ -365,6 +377,7 @@ public partial class Observer
         await RemoveReminder(failure);
         if (quarantineObserver)
         {
+            _armWebhookProbe = failure.WebhookDisposition == WebhookFailureDisposition.Retryable;
             await TransitionTo<QuarantinedObserver>();
         }
 
@@ -430,6 +443,7 @@ public partial class Observer
     /// </remarks>
     async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
+        await CancelWebhookProbe();
         await _alertMutationLock.WaitAsync();
         try
         {
