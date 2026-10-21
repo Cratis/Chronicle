@@ -41,7 +41,7 @@ internal static class WebhookProbeOutcome
     /// <returns>The persisted disposition.</returns>
     internal static WebhookFailureDisposition Disposition(WebhookDeliveryFailurePolicy policy) => policy switch
     {
-        WebhookDeliveryFailurePolicy.ParkPartition => WebhookFailureDisposition.Gone,
+        WebhookDeliveryFailurePolicy.ParkPartition or WebhookDeliveryFailurePolicy.RetireWebhook => WebhookFailureDisposition.Gone,
         WebhookDeliveryFailurePolicy.PauseObserver => WebhookFailureDisposition.Configuration,
         _ => WebhookFailureDisposition.Retryable
     };

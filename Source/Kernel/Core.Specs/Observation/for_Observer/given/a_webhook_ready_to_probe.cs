@@ -39,6 +39,7 @@ public class a_webhook_ready_to_probe : a_webhook_observer
         _webhookDefinitions = Substitute.For<IWebhookDefinitionsStorage>();
         _webhookDefinition = new(new(_observerId.Value), WebhookOwner.Kernel, EventSequenceId.Log, ["Event1", "Event2"], new("https://receiver.example/hook", WebhookAuthorization.None, new Dictionary<string, string>()), true);
         _webhookDefinitions.Get(_observerId).Returns(_webhookDefinition);
+        _webhookDefinitions.Has(_observerId).Returns(true);
         _eventStoreStorage.Webhooks.Returns(_webhookDefinitions);
         _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(ObserverSubscriberResult.Ok(42UL));
         await _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.PauseObserver);

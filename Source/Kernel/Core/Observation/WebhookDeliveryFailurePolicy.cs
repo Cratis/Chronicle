@@ -21,5 +21,8 @@ public enum WebhookDeliveryFailurePolicy
     /// <summary>
     /// Park the affected partition immediately for manual intervention.
     /// </summary>
-    ParkPartition = 2
+    ParkPartition = 2,
+
+    /// <summary>The endpoint is permanently gone; stop the whole webhook.</summary>
+    RetireWebhook = 3
 }

@@ -47,8 +47,11 @@ public record ObserverSubscription(
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
 
+    /// <summary>Gets the admitted webhook lifecycle, used to reject obsolete delivery results.</summary>
+    public Guid WebhookLifecycleId { get; init; }
+
     /// <summary>
-    /// Check whether the subscription is subscribed.
+    /// Gets whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
 

@@ -29,6 +29,9 @@ public record AlertConditionKind(string Value) : ConceptAs<string>(Value)
     /// </summary>
     public static readonly AlertConditionKind ObserverQuarantined = new("observer-quarantined");
 
+    /// <summary>The webhook endpoint returned HTTP 410 and delivery was stopped.</summary>
+    public static readonly AlertConditionKind WebhookEndpointGone = new("webhook-gone");
+
     /// <summary>
     /// Implicitly convert from a string to <see cref="AlertConditionKind"/>.
     /// </summary>

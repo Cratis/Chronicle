@@ -95,6 +95,15 @@ public record ObserverState(
     /// </summary>
     public WebhookProbeState? WebhookProbe { get; init; }
 
+    /// <summary>Gets the terminal endpoint episode, absent for ordinary retirement.</summary>
+    public WebhookRetirement? WebhookRetirement { get; init; }
+
+    /// <summary>Gets the last explicitly accepted registration token.</summary>
+    public Guid? WebhookRegistrationId { get; init; }
+
+    /// <summary>Gets the opaque definition fingerprint awaiting explicit reactivation.</summary>
+    public string? WebhookRegistrationFingerprint { get; init; }
+
     /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>

@@ -322,7 +322,7 @@ public partial class Observer(
 
         if (_observerExists)
         {
-            await CommitRetired();
+            await CommitRetired(removing: true);
             await RequireAlertReconciliation();
         }
 
@@ -429,7 +429,7 @@ public partial class Observer(
         await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
-        if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+        if (IsRetiredAndNotReactivating(reactivateRetired)) return;
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -551,6 +551,7 @@ public partial class Observer(
         }
         if (reminderName == AlertReminderName)
         {
+            await ReconcileWebhookRetirement();
             await ReconcileAlertsIfNeeded();
             return;
         }
@@ -724,7 +725,10 @@ public partial class Observer(
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
-                WebhookProbe = _webhookProbe
+                WebhookProbe = _webhookProbe,
+                WebhookRetirement = _webhookRetirement,
+                WebhookRegistrationId = _webhookRegistrationId,
+                WebhookRegistrationFingerprint = _webhookRegistrationFingerprint
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();
@@ -940,7 +944,8 @@ public partial class Observer(
         }
     }
 
-    bool IsRetiredAndNotReactivating(bool reactivateRetired) => !reactivateRetired && State.AlertDisposition == AlertDisposition.Retired;
+    bool IsRetiredAndNotReactivating(bool reactivateRetired) =>
+        _webhookRetirement is not null || _webhookReactivationPending || (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired);
 
     bool IsAdditiveSubscriptionBlocked(bool additive) => additive && (_removed || IsRetired);
 
@@ -1015,7 +1020,7 @@ public partial class Observer(
             typeof(TObserverSubscriber),
             siloAddress,
             subscriberArgs,
-            isReplayable);
+            isReplayable) { WebhookLifecycleId = _alertLifecycleId };
         ForgetSupersededRegistrations();
 
         State = State with { SubscribesToAllEvents = true };
@@ -1058,7 +1063,8 @@ public partial class Observer(
                 isReplayable,
                 filters)
             {
-                GenerationDelivery = generationDelivery
+                GenerationDelivery = generationDelivery,
+                WebhookLifecycleId = _alertLifecycleId
             };
             return;
         }
@@ -1149,16 +1155,18 @@ public partial class Observer(
 
     /// <summary>
     /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.
-    /// Replay jobs are excluded because they are managed independently of the observer's subscription lifecycle.
+    /// Replay jobs are normally excluded; terminal endpoint retirement also stops replay work.
     /// </summary>
-    async Task PauseJobs()
+    /// <param name="includeReplay">Whether terminal retirement must also pause replay jobs.</param>
+    /// <returns>An awaitable task.</returns>
+    async Task PauseJobs(bool includeReplay = false)
     {
         var allJobs = await _jobsManager.GetUnfinishedJobs();
 
-        // Explicitly do not pause replay jobs.
+        // Ordinary retirement preserves independently managed replay jobs.
         var pauseTasks = allJobs
             .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
-                          observerJobRequest is not ReplayObserverRequest &&
+                          (includeReplay || observerJobRequest is not ReplayObserverRequest) &&
                           ShouldPauseJob(job.Status) &&
                           observerJobRequest.ObserverKey == _observerKey)
             .Select(job => _jobsManager.Stop(job.Id));

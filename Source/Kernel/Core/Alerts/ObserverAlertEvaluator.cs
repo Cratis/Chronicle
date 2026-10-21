@@ -60,6 +60,11 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         IReadOnlyCollection<OpenIncident> openIncidents,
         DateTimeOffset now)
     {
+        if (snapshot.Disposition == AlertDisposition.Retired && snapshot.WebhookRetirement is not null)
+        {
+            return EvaluateEndpointGone(snapshot, openIncidents);
+        }
+
         if (snapshot.Disposition != AlertDisposition.Active)
         {
             return new([.. openIncidents.Select(incident => Cleared(snapshot, incident, AlertClearedReason.Removed))], null);
@@ -98,6 +103,15 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         return new(transitions, nextRaiseDue);
     }
 
+    static string EndpointGoneMessage(string authority)
+    {
+        const string prefix = "HTTP 410 Gone: ";
+        const string suffix = ". Delivery stopped. Re-register the webhook to resume.";
+        var available = AlertEvidence.MaxMessageLength - prefix.Length - suffix.Length;
+        var display = authority.Length > available ? authority[..(available - 1)] + "…" : authority;
+        return prefix + display + suffix;
+    }
+
     static DateTimeOffset? Earliest(DateTimeOffset? current, DateTimeOffset? candidate) =>
         (current, candidate) switch
         {
@@ -130,7 +144,11 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
         var failedPartitionIds = snapshot.FailedPartitions.Select(partition => (IncidentId)partition.Id).ToHashSet();
         foreach (var incident in openIncidents)
         {
-            if (incident.Condition == AlertConditionKind.ObserverQuarantined)
+            if (incident.Condition == AlertConditionKind.WebhookEndpointGone)
+            {
+                yield return Cleared(snapshot, incident, snapshot.Endings.GetValueOrDefault(incident.Id.Value, AlertClearedReason.Cleared));
+            }
+            else if (incident.Condition == AlertConditionKind.ObserverQuarantined)
             {
                 if (!snapshot.IsQuarantined || snapshot.QuarantineEpisodeId != incident.Id.Value)
                 {
@@ -207,4 +225,24 @@ public class ObserverAlertEvaluator(IAlertConditions conditions)
 
     bool IsLeftOut(ObserverId observerId) =>
         observerId.Value.StartsWith(AlertObservers.Prefix, StringComparison.Ordinal) || conditions.IsExcluded(observerId);
+
+    ObserverAlertEvaluation EvaluateEndpointGone(ObserverAlertSnapshot snapshot, IReadOnlyCollection<OpenIncident> openIncidents)
+    {
+        var retirement = snapshot.WebhookRetirement!;
+        var transitions = openIncidents
+            .Where(incident => incident.Condition != AlertConditionKind.WebhookEndpointGone || incident.Id.Value != retirement.Id)
+            .Select(incident => (object)Cleared(snapshot, incident, AlertClearedReason.Removed)).ToList();
+        var condition = conditions.For(AlertConditionKind.WebhookEndpointGone);
+        if (!IsLeftOut(snapshot.Observer.ObserverId) && condition.Enabled && !openIncidents.Any(incident => incident.Condition == condition.Kind && incident.Id.Value == retirement.Id))
+        {
+            transitions.Add(new AlertRaised(
+                new IncidentId(retirement.Id),
+                condition.Kind,
+                condition.Severity,
+                AlertTarget.For(snapshot.Observer, AlertPartition.None),
+                AlertEvidence.Create(1, retirement.Occurred, retirement.Occurred, FailureKind.Handling, EndpointGoneMessage(retirement.Authority))));
+        }
+
+        return new(transitions, null);
+    }
 }

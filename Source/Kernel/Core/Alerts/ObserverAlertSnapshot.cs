@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Alerts;
 
@@ -13,7 +14,8 @@ namespace Cratis.Chronicle.Alerts;
 /// <remarks>
 /// Open incidents converge to this level. Unobserved intermediate episodes may be omitted. Ending hints are
 /// activation-local: after a crash an unknown partition ending defaults to Recovered and quarantine to Cleared.
-/// The Retired desired level always clears as Removed, whether or not resource cleanup has completed.
+/// The Retired desired level clears as Removed unless HTTP 410 retirement retains its terminal incident.
+/// Resource cleanup does not determine the desired alert level.
 /// </remarks>
 /// <param name="Observer">The observer key.</param>
 /// <param name="FailedPartitions">Current partition episodes.</param>
@@ -31,6 +33,9 @@ public record ObserverAlertSnapshot(
     /// Gets the lifecycle token persisted by the observer.
     /// </summary>
     public Guid LifecycleId { get; init; }
+
+    /// <summary>Gets the durable terminal endpoint episode, if retirement was caused by HTTP 410.</summary>
+    public WebhookRetirement? WebhookRetirement { get; init; }
 
     /// <summary>
     /// Gets the committed alert revision in that lifecycle.

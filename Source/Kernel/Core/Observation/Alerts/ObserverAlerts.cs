@@ -142,7 +142,8 @@ public class ObserverAlerts(
             source.AlertLifecycleId == snapshot.LifecycleId &&
             source.AlertRevision == snapshot.Revision &&
             source.AlertDisposition == snapshot.Disposition &&
-            source.QuarantineEpisodeId == snapshot.QuarantineEpisodeId;
+            source.QuarantineEpisodeId == snapshot.QuarantineEpisodeId &&
+            source.WebhookRetirement == snapshot.WebhookRetirement;
     }
 
     async Task RefreshHistory()

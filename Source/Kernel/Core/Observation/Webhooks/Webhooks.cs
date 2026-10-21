@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Namespaces;
@@ -188,6 +189,21 @@ public class Webhooks(
         static Task OnError(Exception exception) => Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public async Task AcceptRegistration(WebhookId webhookId, EventSequenceId eventSequenceId, string definitionFingerprint)
+    {
+        var registrationId = Guid.NewGuid();
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        foreach (var @namespace in namespaces)
+        {
+            var observerKey = new ObserverKey(webhookId.Value, _eventStoreName, @namespace, eventSequenceId);
+            var observer = GrainFactory.GetGrain<IObserver>(observerKey);
+            await observer.AcceptWebhookRegistration(registrationId, definitionFingerprint);
+            var definition = State.Webhooks.FirstOrDefault(webhook => webhook.Identifier == webhookId);
+            if (definition is not null) await SubscribeIfNotSubscribed(definition, @namespace, automatic: true);
+        }
+    }
+
     async Task OnNamespaceAdded(NamespaceAdded added)
     {
         var tasks = State.Webhooks.ToList().Select(definition => SubscribeIfNotSubscribed(definition, added.Namespace));
@@ -230,6 +246,7 @@ public class Webhooks(
         }
 
         var observer = GetObserver(definition, namespaceName);
+        await observer.ReconcileWebhookRegistration();
 
         // Always call Subscribe — for [KeepAlive] grains the in-memory
         // subscription state can be stale after databases are dropped.

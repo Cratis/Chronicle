@@ -5,7 +5,9 @@ import { Column } from '@cratis/components/DataTables';
 import { DataTableCore } from '@cratis/components/DataTables';
 import { Tabs, TabPanel } from 'Components/Tabs';
 import { ObserverInformation } from 'Features/Observation';
-import { ObserverOwner } from 'Features/Contracts/Observation';
+import { GetOpenIncidents } from 'Features/Alerts/GetOpenIncidents';
+import { isWebhookGone, webhookGoneCondition } from './webhookGone';
+import { ObserverOwner, ObserverType } from 'Features/Contracts/Observation';
 import { ConnectedClientDetails, ConnectedClientsForObserver } from 'Features/Clients';
 import strings from 'Strings';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
@@ -43,6 +45,15 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
         eventSequenceId: observer.eventSequenceId
     });
 
+    const [incidents] = GetOpenIncidents.when(observer.type === ObserverType.external).use({
+        eventStore,
+        namespace,
+        observerId: observer.id,
+        condition: webhookGoneCondition
+    });
+    const webhookGone = observer.type === ObserverType.external &&
+        isWebhookGone(incidents.data?.items ?? [], observer.eventSequenceId);
+
     const detailStrings = strings.eventStore.namespaces.observers.details;
     const clientStrings = detailStrings.connectedClients;
 
@@ -63,6 +74,11 @@ export const ObserverDetails = ({ observer, eventStore, namespace }: ObserverDet
             <h2 className={css.title}>{observer.id}</h2>
             <Tabs className={css.tabs} panelContainerClassName={css.tabPanelContainer}>
                 <TabPanel header={detailStrings.tabs.summary}>
+                    {webhookGone && (
+                        <div className={css.webhookGone} role='status'>
+                            {detailStrings.webhookGone}
+                        </div>
+                    )}
                     <dl className={css.properties}>
                         {properties.map(property => (
                             <div key={property.label} className={css.property}>

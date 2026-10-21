@@ -31,6 +31,7 @@ public class with_a_gone_receiver : given.a_webhook_mediator
 
     [Fact] void should_send_only_one_request() => _handler.RequestsSent.ShouldEqual(1);
     [Fact] void should_not_report_success() => _result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_park_without_automatic_retries() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.ParkPartition);
+    [Fact] void should_retire_without_automatic_retries() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.RetireWebhook);
+    [Fact] void should_preserve_the_numeric_status() => _result.HttpStatusCode.ShouldEqual(410);
     [Fact] void should_not_schedule_a_deadline() => _result.Deferral.ShouldBeNull();
 }

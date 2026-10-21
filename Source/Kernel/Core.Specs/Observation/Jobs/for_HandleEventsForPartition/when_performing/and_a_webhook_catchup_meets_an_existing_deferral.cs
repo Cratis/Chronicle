@@ -17,7 +17,7 @@ public class and_a_webhook_catchup_meets_an_existing_deferral : given.a_performi
     void Establish()
     {
         _performState.EventObservationState = EventObservationState.None;
-        _observer.CanResumeFailedPartition("some-partition", null, null).Returns(false);
+        _observer.CanResumeFailedPartition("some-partition", null, null, Guid.Empty).Returns(false);
         _webhook = Substitute.For<IWebhookObserverSubscriber>();
         _jobStep.SetupForTesting(_observer, _webhook, "some-partition");
     }

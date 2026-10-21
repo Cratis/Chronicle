@@ -33,9 +33,8 @@ internal static partial class WebhookMediatorLogging
     /// Records a permanent rejection, requiring operator intervention rather than more retries.
     /// </summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="authority">The normalized target authority.</param>
-    [LoggerMessage(LogLevel.Error, "Webhook target {Authority} returned 410 Gone: parking partition immediately; no automatic retries")]
-    internal static partial void TargetGone(this ILogger<WebhookMediator> logger, string authority);
+    [LoggerMessage(LogLevel.Error, "Webhook endpoint returned HTTP 410 Gone: retiring the webhook; re-registration is required")]
+    internal static partial void TargetGone(this ILogger<WebhookMediator> logger);
 
     /// <summary>
     /// Records a configuration error that pauses observer delivery.

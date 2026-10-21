@@ -409,6 +409,7 @@ public partial class Observer
         var failed = false;
         var failureKind = FailureKind.Unknown;
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
+        WebhookDeliveryAttempt? deliveryAttempt = null;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
@@ -451,7 +452,7 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
+                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments) { WebhookLifecycleId = _subscription.WebhookLifecycleId });
 
                         // A disconnected result from one client instance only removes that instance —
                         // the batch is retried against the remaining instances. Only when the last
@@ -468,6 +469,8 @@ public partial class Observer
                         break;
                     }
 
+                    if (IsRetired || _removed || (result.DeliveryAttempt is { } attempt && attempt.LifecycleId != _alertLifecycleId)) return;
+
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
@@ -482,6 +485,7 @@ public partial class Observer
                         failed = true;
                         failureKind = FailureKind.Handling;
                         failurePolicy = result.FailurePolicy;
+                        deliveryAttempt = result.DeliveryAttempt;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
@@ -542,7 +546,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy, deliveryAttempt: deliveryAttempt);
                 }
                 else
                 {
