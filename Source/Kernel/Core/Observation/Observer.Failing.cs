@@ -54,21 +54,7 @@ public partial class Observer
 
             _metrics?.PartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-            if (webhook)
-            {
-                failure.WebhookDisposition = failurePolicy switch
-                {
-                    WebhookDeliveryFailurePolicy.ParkPartition => WebhookFailureDisposition.Gone,
-                    WebhookDeliveryFailurePolicy.PauseObserver => WebhookFailureDisposition.Configuration,
-                    _ => WebhookFailureDisposition.Retryable
-                };
-            }
-            if (webhook)
-            {
-                // This deadline belongs to the attempt that just ran, not the next retry.
-                failure.Deferral = null;
-                failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
-            }
+            if (webhook) SetWebhookFailureMetadata(failure, failurePolicy, sequenceNumber);
 
             if (!IsQuarantined)
             {
@@ -144,7 +130,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
-            _armWebhookProbe = IsWebhookSubscription && failurePolicy != WebhookDeliveryFailurePolicy.ParkPartition;
+            ArmWebhookProbeAfterFailure(failurePolicy);
             await TransitionTo<QuarantinedObserver>();
         }
     }
@@ -305,6 +291,15 @@ public partial class Observer
         }
 
         ScheduleAlertReport();
+    }
+
+    static void SetWebhookFailureMetadata(FailedPartition failure, WebhookDeliveryFailurePolicy failurePolicy, EventSequenceNumber sequenceNumber)
+    {
+        failure.WebhookDisposition = WebhookProbeOutcome.Disposition(failurePolicy);
+
+        // This deadline belongs to the attempt that just ran, not the next retry.
+        failure.Deferral = null;
+        failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
     }
 
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
@@ -562,4 +557,7 @@ public partial class Observer
 
         return false;
     }
+
+    void ArmWebhookProbeAfterFailure(WebhookDeliveryFailurePolicy failurePolicy) =>
+        _armWebhookProbe = IsWebhookSubscription && failurePolicy != WebhookDeliveryFailurePolicy.ParkPartition;
 }

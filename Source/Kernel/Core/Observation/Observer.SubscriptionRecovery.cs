@@ -104,28 +104,33 @@ public partial class Observer
                 await SetUpSubscription<TObserverSubscriber>(type, types, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery, reconcile: true);
             }
 
-            // Keep the current state through awaited setup so failure callbacks can still establish quarantine.
-            // Disconnected deliberately refuses ordinary quarantine transitions.
-            if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
-            if (IsQuarantined)
-            {
-                _subscriptionSetupFailed = false;
-                await ReconcileWebhookProbe();
-                return;
-            }
-            await TransitionTo<Disconnected>();
-            if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
-            await RecoverAfterSubscribing(leavesQuarantine: false);
-
-            // Do not clear a stranded entry merely because recovery returned without throwing.
-            // Healthy catch-up and deferred routing need not have finished for setup to be established.
-            _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
+            await RecoverReconciledSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)));
         }
         catch
         {
             _subscriptionSetupFailed = true;
             throw;
         }
+    }
+
+    async Task RecoverReconciledSubscription(bool allowQuarantinedWebhook)
+    {
+        // Keep the current state through awaited setup so failure callbacks can still establish quarantine.
+        // Disconnected deliberately refuses ordinary quarantine transitions.
+        if (CannotReconcileSubscription(allowQuarantinedWebhook)) return;
+        if (IsQuarantined)
+        {
+            _subscriptionSetupFailed = false;
+            await ReconcileWebhookProbe();
+            return;
+        }
+        await TransitionTo<Disconnected>();
+        if (CannotReconcileSubscription(allowQuarantinedWebhook)) return;
+        await RecoverAfterSubscribing(leavesQuarantine: false);
+
+        // Do not clear a stranded entry merely because recovery returned without throwing.
+        // Healthy catch-up and deferred routing need not have finished for setup to be established.
+        _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
     }
 
     bool CannotReconcileSubscription(bool allowQuarantinedWebhook = false) =>

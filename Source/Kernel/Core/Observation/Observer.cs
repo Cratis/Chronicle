@@ -872,9 +872,9 @@ public partial class Observer(
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
         var leavesQuarantine = !automatic && !recovering;
-        if (leavesQuarantine) await CancelWebhookProbe();
         if (leavesQuarantine)
         {
+            await CancelWebhookProbe();
             SupersedeRecoveryAfterQuarantine();
         }
 

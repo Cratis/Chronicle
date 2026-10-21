@@ -46,24 +46,17 @@ internal static class ObserverEventPreparation
         var count = 0;
         foreach (var @event in events)
         {
-            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
-            {
-                filtered[count++] = @event;
-                continue;
-            }
-
-            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
-            {
-                continue;
-            }
-
-            var originalEventTypeId = originalEventTypeObj?.ToString();
-            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
-            {
-                filtered[count++] = @event;
-            }
+            if (IsSubscribedEvent(@event, nonRedactionEventTypeIds)) filtered[count++] = @event;
         }
 
         return count == filtered.Length ? filtered : filtered[..count];
+    }
+
+    static bool IsSubscribedEvent(AppendedEvent @event, HashSet<EventTypeId> nonRedactionEventTypeIds)
+    {
+        if (@event.Context.EventType.Id != GlobalEventTypes.Redaction) return true;
+        if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj)) return false;
+        var originalEventTypeId = originalEventTypeObj?.ToString();
+        return originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId));
     }
 }
