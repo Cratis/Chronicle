@@ -9,7 +9,7 @@ public class when_a_parked_webhook_reaches_the_failed_partition_threshold : give
 {
     protected override Configuration.Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, QuarantineOnFailedPartitionCount = 1 };
 
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.ParkPartition);
+    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.ParkPartition));
 
     [Fact] void should_pause_the_observer() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] void should_keep_the_partition_parked() => _failedPartitionsState.Partitions.Single().IsQuarantined.ShouldBeTrue();

@@ -41,7 +41,11 @@ public static class ObserverStateConverters
                     a.Occurred,
                     a.SequenceNumber.Value,
                     a.Messages,
-                    a.StackTrace)),
+                    a.StackTrace)
+                {
+                    Kind = a.Kind,
+                    DeliveryFence = a.DeliveryFence
+                }),
                 fp.IsResolved)
             {
                 IsQuarantined = fp.IsQuarantined,
@@ -79,7 +83,9 @@ public static class ObserverStateConverters
                     Occurred = a.Occurred,
                     SequenceNumber = a.SequenceNumber,
                     Messages = a.Messages,
-                    StackTrace = a.StackTrace
+                    StackTrace = a.StackTrace,
+                    Kind = a.Kind,
+                    DeliveryFence = a.DeliveryFence
                 }),
                 IsResolved = fp.IsResolved,
                 IsQuarantined = fp.IsQuarantined,

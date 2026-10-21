@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 
 /// <summary>
@@ -14,4 +16,16 @@ public record FailedPartitionAttempt(
     DateTimeOffset Occurred,
     ulong SequenceNumber,
     IEnumerable<string> Messages,
-    string StackTrace);
+    string StackTrace)
+{
+    /// <summary>
+    /// Gets the failure kind, defaulting to unknown for existing JSON.
+    /// </summary>
+    public Concepts.Observation.FailureKind Kind { get; init; }
+
+    /// <summary>
+    /// Gets the optional original delivery identity and deadline.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Concepts.Observation.DeliveryFenceContext? DeliveryFence { get; init; }
+}

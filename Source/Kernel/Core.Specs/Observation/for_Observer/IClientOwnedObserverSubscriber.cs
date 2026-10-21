@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 /// <summary>
 /// A client-owned observer subscriber interface used for testing watchdog behavior.
 /// </summary>
-public interface IClientOwnedObserverSubscriber : IObserverSubscriber, IAmOwnedByClient;
+public interface IClientOwnedObserverSubscriber : IDrainableObserverSubscriber, IAmOwnedByClient;

@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="observerServiceClient">The client for confirming buffered writes.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 public class TestableHandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -37,8 +38,9 @@ public class TestableHandleEventsForObserver(
     IConfigurationForObserverProvider configurationProvider,
     IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForObserver> logger,
-    IEventGenerationRelease? eventGenerationRelease = null)
-    : HandleEventsForObserver(GuardedState(state), throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease), IGrainType
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null)
+    : HandleEventsForObserver(GuardedState(state), throttle, storage, eventCompliance, grainFactory, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease, timeProvider), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForObserver).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;

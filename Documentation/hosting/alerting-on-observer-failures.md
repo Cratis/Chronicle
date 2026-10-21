@@ -184,6 +184,31 @@ The same command works from a Kubernetes CronJob or any cron-style scheduler wit
 `diagnose` currently counts a check it could not run — for example a failed-partitions query that returned an error — as zero failures, and it does not treat a quarantined observer as unhealthy unless that observer also has failed partitions. Treat a green run as "no failed partitions were reported", and rely on the `ChronicleObserverQuarantined` alert or `cratis chronicle observers list` for quarantined observers.
 :::
 
+## Abandoned client deliveries
+
+A subscriber timeout is still a `Timeout` failed-partition attempt, not a successful recovery when a late answer
+arrives. These kernel log messages identify what happened after the caller stopped waiting:
+
+- `Delivery expired before dispatch`: the batch waited past its deadline and was never sent to the client mediator.
+- `Late result for abandoned delivery`: the client answered after the deadline; the result was discarded. The log
+  includes the observer, partition, result state and lateness.
+- `Abandoned delivery hold expired`: the subscriber released its turn at the configured maximum hold without an answer.
+- `Fence released by maximum hold`: recovery reached that deadline without proving the original target drained.
+  Remote user code may still be running. A replacement subscription is not evidence that it stopped.
+
+The `Cratis.Chronicle` meter also exports these instruments:
+
+| Instrument | Kind | Tags / unit | Meaning |
+| --- | --- | --- | --- |
+| `abandoned-delivery-late-results` | Counter | `state` | Results discarded after the caller's deadline, by result state |
+| `abandoned-delivery-hold-expirations` | Counter | None | Subscriber turns released by the maximum hold |
+| `abandoned-delivery-fence-duration` | Histogram | Seconds | Time the subscriber remained held after the delivery deadline |
+
+Sustained late results suggest a slow client or a timeout that is too short. Hold expirations warrant checking
+client connectivity and stuck handlers before retrying. These instruments deliberately omit connection and
+partition tags to avoid unbounded metric cardinality. See [configuration](configuration/observers.md#abandoned-client-deliveries)
+for hold limits, disabled behavior and restart limitations.
+
 ## When an alert fires
 
 1. See which partitions failed and why: `cratis chronicle failed-partitions list -e <store> -n <namespace>`, then `failed-partitions show` for the error and the failing sequence number. The Workbench shows the same under the event store's failed partitions.

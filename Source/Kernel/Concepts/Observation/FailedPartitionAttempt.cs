@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Concepts.Observation;
@@ -43,4 +44,10 @@ public record FailedPartitionAttempt
     /// carried a kind reads back as.
     /// </remarks>
     public FailureKind Kind { get; set; } = FailureKind.Unknown;
+
+    /// <summary>
+    /// Gets or sets the optional original delivery identity and hold deadline.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DeliveryFenceContext? DeliveryFence { get; set; }
 }
