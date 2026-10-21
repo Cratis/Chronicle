@@ -48,8 +48,8 @@ public class and_the_provider_is_sqlite : Specification
 
     void Destroy() => _harness.Dispose();
 
-    [Fact] void should_use_numeric_storage() => _storageType.ShouldEqual("real");
+    [Fact] void should_use_text_storage() => _storageType.ShouldEqual("text");
     [Fact] void should_preserve_amount_bits() => decimal.GetBits((decimal)_read["amount"]!).ShouldEqual(decimal.GetBits(193.58m));
-    [Fact] void should_round_scalar_decimals_to_sqlite_floating_point_precision() => ((decimal)_read["precise"]!).ShouldEqual(1234567890.12346m);
+    [Fact] void should_preserve_all_significant_digits() => decimal.GetBits((decimal)_read["precise"]!).ShouldEqual(decimal.GetBits(1234567890.123456789012345678m));
     [Fact] void should_preserve_nested_json_decimals() => decimal.GetBits((decimal)((IDictionary<string, object?>)_read["nested"]!)["amount"]!).ShouldEqual(decimal.GetBits(1234567890.123456789012345678m));
 }

@@ -380,7 +380,7 @@ public class ReadModelMigrator(
             _ => unwrapped.Name switch
             {
                 nameof(Single) or nameof(Double) => "REAL",
-                nameof(Decimal) => "NUMERIC",
+                nameof(Decimal) => "TEXT",
                 _ => "INTEGER"
             }
         };
