@@ -17,7 +17,7 @@ public class when_the_client_never_answers : Specification
     void Establish()
     {
         var context = new ObserverSubscriberContext(null).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), _clock);
-        _delivery = ClientDeliveryWait.For(_completion.Task, result => result, context, _clock, NullLogger.Instance, ObserverKey.NotSet, "partition");
+        _delivery = new ClientDeliveryWait(_clock, NullLogger.Instance, ObserverKey.NotSet, "partition").For(_completion.Task, result => result, context);
     }
 
     async Task Because()

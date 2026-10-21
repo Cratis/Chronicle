@@ -29,5 +29,5 @@ public class a_captured_delivery : Specification
         _factory.GetGrain(typeof(IReactorObserverSubscriber), _fence.Targets[0].SubscriberKey).Returns(_subscriber);
     }
 
-    protected Task Drain() => AbandonedDeliveryDrain.Until(_fence, _factory, _clock, NullLogger.Instance, CancellationToken.None);
+    protected Task Drain() => new AbandonedDeliveryDrain(_factory, _clock, NullLogger.Instance).Until(_fence, CancellationToken.None);
 }

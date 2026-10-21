@@ -418,16 +418,11 @@ public partial class Observer
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
-        if (eventsToHandle.Length != 0)
+        if (await CanDispatchDelivery(partition, eventsToHandle))
         {
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
-            if (_deliveryFences.IsHeld(partition, _clock.GetUtcNow()))
-            {
-                await PartitionFailed(partition, eventsToHandle[0].Context.SequenceNumber, ["Previous abandoned delivery is still fenced"], string.Empty);
-                return;
-            }
             DeliveryFenceContext? deliveryFence = null;
             var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
             State = State with { InFlightPartitions = inFlightPartitions };
@@ -443,9 +438,7 @@ public partial class Observer
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
                     var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
-                    var hold = _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
-                        ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(_observerKey)
-                        : TimeSpan.Zero;
+                    var hold = await GetClientDeliveryHold();
 
                     ObserverSubscriberResult result;
                     while (true)
@@ -553,7 +546,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy, deliveryFence: deliveryFence);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, context: new(failurePolicy, deliveryFence));
                 }
                 else
                 {

@@ -18,7 +18,7 @@ public class when_half_of_a_webhooks_partitions_are_parked : given.a_webhook_obs
         }
     }
 
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.ParkPartition);
+    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.ParkPartition));
 
     [Fact] void should_pause_the_observer_at_the_default_threshold() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
 }

@@ -70,14 +70,10 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        if (ClientDeliveryWait.Expired(context, _clock, logger, _key, partition))
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        if (!await PrepareDelivery(deliveryWait, context))
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
-        }
-
-        if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
-        {
-            await HandlePipeline();
         }
 
         foreach (var @event in events)
@@ -103,26 +99,7 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            await (_pipeline?.Reduce(reducerContext, async (events, initialState) =>
-            {
-                // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
-                if (ClientDeliveryWait.Expired(context, _clock, logger, _key, partition))
-                {
-                    throw new AbandonedDeliveryDiscarded();
-                }
-                var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-                reducerMediator.OnNext(
-                    _key.ObserverId,
-                    connectedClient.ConnectionId,
-                    _key.EventStore,
-                    _key.Namespace,
-                    new(partition, events, initialState),
-                    reducerSubscriberResultTCS);
-
-                var result = await ClientDeliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context, _clock, logger, _key, partition);
-                tcs.SetResult(AsHandledByThePipeline(result.ObserverResult));
-                return result;
-            }) ?? Task.CompletedTask);
+            await (_pipeline?.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs)) ?? Task.CompletedTask);
 
             return await tcs.Task;
         }
@@ -157,6 +134,40 @@ public class ReducerObserverSubscriber(
         result.State == ObserverSubscriberState.Failed
             ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
             : result;
+
+    async Task<bool> PrepareDelivery(ClientDeliveryWait deliveryWait, ObserverSubscriberContext context)
+    {
+        if (deliveryWait.Expired(context)) return false;
+        if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
+        {
+            await HandlePipeline();
+        }
+        return true;
+    }
+
+    ReducerDelegate CreateReducerDelegate(ReducerContext reduction, ConnectedClient client, ObserverSubscriberContext context, TaskCompletionSource<ObserverSubscriberResult> completion) =>
+        async (events, initialState) =>
+        {
+            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key);
+
+            // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
+            if (deliveryWait.Expired(context))
+            {
+                throw new AbandonedDeliveryDiscarded();
+            }
+            var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            reducerMediator.OnNext(
+                _key.ObserverId,
+                client.ConnectionId,
+                _key.EventStore,
+                _key.Namespace,
+                new(reduction.Key, events, initialState),
+                reducerSubscriberResultTCS);
+
+            var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
+            completion.SetResult(AsHandledByThePipeline(result.ObserverResult));
+            return result;
+        };
 
     /// <summary>
     /// Records every partition a sink write reported as failed.

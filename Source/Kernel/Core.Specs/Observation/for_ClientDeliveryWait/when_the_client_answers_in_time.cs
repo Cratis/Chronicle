@@ -15,7 +15,7 @@ public class when_the_client_answers_in_time : Specification
     {
         var clock = new DeliveryClock();
         var context = new ObserverSubscriberContext(null).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), clock);
-        _result = await ClientDeliveryWait.For(Task.FromResult(ObserverSubscriberResult.Ok(42)), result => result, context, clock, NullLogger.Instance, ObserverKey.NotSet, "partition");
+        _result = await new ClientDeliveryWait(clock, NullLogger.Instance, ObserverKey.NotSet, "partition").For(Task.FromResult(ObserverSubscriberResult.Ok(42)), result => result, context);
     }
 
     [Fact] void should_preserve_the_result() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);

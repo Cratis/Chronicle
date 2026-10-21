@@ -18,7 +18,7 @@ public class when_the_result_arrives_after_the_deadline : Specification
     void Establish()
     {
         var context = new ObserverSubscriberContext(null).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), _clock);
-        _delivery = ClientDeliveryWait.For(_completion.Task, result => result, context, _clock, NullLogger.Instance, ObserverKey.NotSet, "partition");
+        _delivery = new ClientDeliveryWait(_clock, NullLogger.Instance, ObserverKey.NotSet, "partition").For(_completion.Task, result => result, context);
     }
 
     async Task Because()

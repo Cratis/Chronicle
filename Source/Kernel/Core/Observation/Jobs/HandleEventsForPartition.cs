@@ -215,22 +215,9 @@ public class HandleEventsForPartition(
                 eventTypesToRead,
                 cancellationToken: cancellationToken);
 
-            var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
-                ? _deliveryTarget
-                : subscriberSelector.Select(subscription, currentState.Partition);
-            var subscriberContext = new ObserverSubscriberContext(deliveryTarget.ConnectedClient ?? subscription.Arguments);
+            var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
-            _abandonedDeliveryHold = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
-                ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(currentState.ObserverKey)
-                : TimeSpan.Zero;
-            if (_abandonedDeliveryHold > TimeSpan.Zero)
-            {
-                foreach (var fence in (await _observer.GetDeliveryFences()).Where(fence => fence.Partition == currentState.Partition))
-                {
-                    await AbandonedDeliveryDrain.Until(fence, _grainFactory, _clock, logger, cancellationToken);
-                    await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
-                }
-            }
+            await DrainAbandonedDeliveryBeforeHandling(subscription, currentState, cancellationToken);
 
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
@@ -367,7 +354,7 @@ public class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, new(failurePolicy));
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -558,6 +545,28 @@ public class HandleEventsForPartition(
     JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
         JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
+    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, Key partition)
+    {
+        var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? _deliveryTarget
+            : subscriberSelector.Select(subscription, partition);
+        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments);
+    }
+
+    async Task DrainAbandonedDeliveryBeforeHandling(ObserverSubscription subscription, HandleEventsForPartitionState state, CancellationToken cancellationToken)
+    {
+        _abandonedDeliveryHold = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(state.ObserverKey)
+            : TimeSpan.Zero;
+        if (_abandonedDeliveryHold <= TimeSpan.Zero) return;
+        var drain = new AbandonedDeliveryDrain(_grainFactory, _clock, logger);
+        foreach (var fence in (await _observer.GetDeliveryFences()).Where(fence => fence.Partition == state.Partition))
+        {
+            await drain.Until(fence, cancellationToken);
+            await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
+        }
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
@@ -589,7 +598,7 @@ public class HandleEventsForPartition(
         {
             if (TransientTimeouts.IsTimeout(ex) && _deliveryFence?.ReleaseBy is { } releaseBy)
             {
-                await AbandonedDeliveryDrain.Until(new(state.Partition, releaseBy, _deliveryFence.Targets ?? []), _grainFactory, _clock, logger, CancellationToken.None);
+                await new AbandonedDeliveryDrain(_grainFactory, _clock, logger).Until(new(state.Partition, releaseBy, _deliveryFence.Targets ?? []), CancellationToken.None);
             }
             logger.ErrorHandling(ex, state.Partition);
             return ex;

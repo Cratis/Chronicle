@@ -14,7 +14,7 @@ public class and_a_timeout_fence_is_reactivated : given.an_observer_with_a_super
     {
         var key = _observerKey;
         var original = new DeliveryFenceTarget(typeof(IClientOwnedObserverSubscriber).AssemblyQualifiedName!, new ObserverSubscriberKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId, "partition", _supersededSiloAddress.ToParsableString()).ToString(), _supersededClient.ConnectionId, _supersededSiloAddress.ToParsableString());
-        await _observer.PartitionFailed("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, deliveryFence: new(DateTimeOffset.UtcNow.AddSeconds(300), [original]));
+        await _observer.PartitionFailed("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, context: new(DeliveryFence: new(DateTimeOffset.UtcNow.AddSeconds(300), [original])));
         await Reactivate();
         _fences = await _observer.GetDeliveryFences();
     }

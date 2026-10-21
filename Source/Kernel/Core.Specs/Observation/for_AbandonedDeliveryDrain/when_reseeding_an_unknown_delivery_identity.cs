@@ -19,7 +19,7 @@ public class when_reseeding_an_unknown_delivery_identity : given.a_captured_deli
         var fences = new DeliveryFences();
         fences.SeedFrom(failures, TimeSpan.FromSeconds(300));
         var fence = fences.Active(_clock.GetUtcNow()).Single();
-        var drain = AbandonedDeliveryDrain.Until(fence, _factory, _clock, NullLogger.Instance, CancellationToken.None);
+        var drain = new AbandonedDeliveryDrain(_factory, _clock, NullLogger.Instance).Until(fence, CancellationToken.None);
         _clock.Advance(TimeSpan.FromSeconds(299));
         _held = !drain.IsCompleted;
         _clock.Advance(TimeSpan.FromSeconds(1));

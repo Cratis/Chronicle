@@ -44,7 +44,8 @@ public class ReactorObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        if (ClientDeliveryWait.Expired(context, _clock, logger, _key, partition))
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        if (deliveryWait.Expired(context))
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
         }
@@ -68,7 +69,7 @@ public class ReactorObserverSubscriber(
         try
         {
             reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
-            return await ClientDeliveryWait.For(tcs.Task, result => result, context, _clock, logger, _key, partition);
+            return await deliveryWait.For(tcs.Task, result => result, context);
         }
         catch (AbandonedDeliveryDiscarded)
         {

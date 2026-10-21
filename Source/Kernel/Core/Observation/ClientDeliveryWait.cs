@@ -10,16 +10,16 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Bounds the subscriber turn, independently of the caller abandoning its wait.
 /// </summary>
-internal static class ClientDeliveryWait
+/// <param name="clock">The clock.</param>
+/// <param name="logger">The logger.</param>
+/// <param name="observer">The observer.</param>
+/// <param name="partition">The partition.</param>
+internal class ClientDeliveryWait(TimeProvider clock, ILogger logger, ObserverKey observer, Key partition)
 {
     /// <summary>Rejects a delivery that waited in the grain queue past its deadline.</summary>
     /// <param name="context">The dispatch context.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="observer">The observer.</param>
-    /// <param name="partition">The partition.</param>
     /// <returns>Whether dispatch must be skipped.</returns>
-    internal static bool Expired(ObserverSubscriberContext context, TimeProvider clock, ILogger logger, ObserverKey observer, Key partition)
+    internal bool Expired(ObserverSubscriberContext context)
     {
         if (context.DeliverBy is not { } deliverBy || clock.GetUtcNow() < deliverBy) return false;
         logger.DeliveryExpiredBeforeDispatch(observer, partition);
@@ -31,13 +31,9 @@ internal static class ClientDeliveryWait
     /// <param name="resultTask">The client completion.</param>
     /// <param name="observerResult">Extracts the observer result.</param>
     /// <param name="context">The delivery context.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="observer">The observer.</param>
-    /// <param name="partition">The partition.</param>
     /// <returns>The timely result.</returns>
     /// <exception cref="AbandonedDeliveryDiscarded">The result is late or the hold expired.</exception>
-    internal static async Task<T> For<T>(Task<T> resultTask, Func<T, ObserverSubscriberResult> observerResult, ObserverSubscriberContext context, TimeProvider clock, ILogger logger, ObserverKey observer, Key partition)
+    internal async Task<T> For<T>(Task<T> resultTask, Func<T, ObserverSubscriberResult> observerResult, ObserverSubscriberContext context)
     {
         try
         {

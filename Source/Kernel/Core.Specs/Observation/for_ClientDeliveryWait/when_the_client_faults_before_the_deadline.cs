@@ -18,7 +18,7 @@ public class when_the_client_faults_before_the_deadline : Specification
         var context = new ObserverSubscriberContext(null).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), clock);
         try
         {
-            await ClientDeliveryWait.For(Task.FromException<ObserverSubscriberResult>(_original), result => result, context, clock, NullLogger.Instance, ObserverKey.NotSet, "partition");
+            await new ClientDeliveryWait(clock, NullLogger.Instance, ObserverKey.NotSet, "partition").For(Task.FromException<ObserverSubscriberResult>(_original), result => result, context);
         }
         catch (Exception exception)
         {

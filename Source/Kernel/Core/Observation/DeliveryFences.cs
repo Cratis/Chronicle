@@ -78,12 +78,17 @@ public class DeliveryFences
         {
             var attempt = failure.Attempts.LastOrDefault(attempt => attempt.Kind == FailureKind.Timeout);
             if (attempt is null) continue;
-            var context = attempt.DeliveryFence;
-            var known = context?.Targets is { Count: > 0 } targets && targets.All(AbandonedDeliveryDrain.IsValid);
-            Hold(new(
-                failure.Partition,
-                known && context!.ReleaseBy is { } releaseBy ? releaseBy : attempt.Occurred + hold,
-                known ? context!.Targets! : []));
+            Hold(RestoreFence(failure.Partition, attempt, hold));
         }
+    }
+
+    static DeliveryFence RestoreFence(Key partition, FailedPartitionAttempt attempt, TimeSpan hold)
+    {
+        var context = attempt.DeliveryFence;
+        var known = context?.Targets is { Count: > 0 } targets && targets.All(AbandonedDeliveryDrain.IsValid);
+        return new(
+            partition,
+            known && context!.ReleaseBy is { } releaseBy ? releaseBy : attempt.Occurred + hold,
+            known ? context!.Targets! : []);
     }
 }

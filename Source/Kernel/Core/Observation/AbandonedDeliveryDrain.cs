@@ -10,7 +10,10 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Drains only original delivery identities, holding until the deadline when they cannot be proven drained.
 /// </summary>
-internal static class AbandonedDeliveryDrain
+/// <param name="grainFactory">The grain factory.</param>
+/// <param name="clock">The clock.</param>
+/// <param name="logger">The logger.</param>
+internal class AbandonedDeliveryDrain(IGrainFactory grainFactory, TimeProvider clock, ILogger logger)
 {
     /// <summary>Captures the selected original activation and connection before dispatch.</summary>
     /// <param name="subscription">The dispatched subscription.</param>
@@ -45,18 +48,15 @@ internal static class AbandonedDeliveryDrain
 
     /// <summary>Waits for original targets to drain or for the maximum hold to expire.</summary>
     /// <param name="fence">The captured fence.</param>
-    /// <param name="grainFactory">The grain factory.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="logger">The logger.</param>
     /// <param name="cancellationToken">Cancels waiting without releasing the fence.</param>
     /// <returns>A task representing the bounded wait.</returns>
-    internal static async Task Until(DeliveryFence fence, IGrainFactory grainFactory, TimeProvider clock, ILogger logger, CancellationToken cancellationToken)
+    internal async Task Until(DeliveryFence fence, CancellationToken cancellationToken)
     {
         var drained = fence.Targets.Count > 0 && fence.Targets.All(IsValid);
         if (drained)
         {
             // Start every original target's barrier before waiting. Never resolve from a new subscription.
-            var drains = fence.Targets.Select(target => DrainOriginal(target, fence.ReleaseBy, grainFactory, clock, logger, cancellationToken)).ToArray();
+            var drains = fence.Targets.Select(target => DrainOriginal(target, fence.ReleaseBy, cancellationToken)).ToArray();
             drained = (await Task.WhenAll(drains)).All(result => result);
         }
         if (!drained && clock.GetUtcNow() < fence.ReleaseBy)
@@ -69,7 +69,7 @@ internal static class AbandonedDeliveryDrain
         }
     }
 
-    static async Task<bool> DrainOriginal(DeliveryFenceTarget target, DateTimeOffset releaseBy, IGrainFactory grainFactory, TimeProvider clock, ILogger logger, CancellationToken cancellationToken)
+    async Task<bool> DrainOriginal(DeliveryFenceTarget target, DateTimeOffset releaseBy, CancellationToken cancellationToken)
     {
         if (clock.GetUtcNow() >= releaseBy) return false;
         while (clock.GetUtcNow() < releaseBy)

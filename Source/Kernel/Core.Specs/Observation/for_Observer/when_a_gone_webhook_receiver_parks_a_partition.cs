@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_a_gone_webhook_receiver_parks_a_partition : given.a_webhook_observer
 {
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410 Gone"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.ParkPartition);
+    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["410 Gone"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.ParkPartition));
 
     [Fact] void should_park_immediately() => _failedPartitionsState.Partitions.Single().IsQuarantined.ShouldBeTrue();
     [Fact] void should_record_only_one_attempt() => _failedPartitionsState.Partitions.Single().Attempts.Count().ShouldEqual(1);
