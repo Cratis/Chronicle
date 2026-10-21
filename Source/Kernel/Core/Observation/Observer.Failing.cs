@@ -55,7 +55,7 @@ public partial class Observer
 
             _metrics?.PartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-            if (webhook) SetWebhookFailureMetadata(failure, failurePolicy, sequenceNumber);
+            if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
 
             if (!IsQuarantined)
             {

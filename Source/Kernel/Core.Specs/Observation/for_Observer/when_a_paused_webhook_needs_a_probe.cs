@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_a_paused_webhook_needs_a_probe : given.a_webhook_observer
 {
-    Task Because() => _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.PauseObserver);
+    Task Because() => _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.PauseObserver));
 
     [Fact] void should_arm_a_durable_probe() => _silo.ReminderRegistry.Mock.Verify(registry => registry.RegisterOrUpdateReminder(It.IsAny<GrainId>(), "webhook-quarantine-probe", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()), Times.AtLeastOnce());
     [Fact] void should_remain_quarantined() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);

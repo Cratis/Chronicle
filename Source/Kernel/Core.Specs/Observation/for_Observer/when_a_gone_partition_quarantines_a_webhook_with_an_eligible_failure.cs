@@ -17,7 +17,7 @@ public class when_a_gone_partition_quarantines_a_webhook_with_an_eligible_failur
         _stateBeforeGone = _stateStorage.State.RunningState;
     }
 
-    Task Because() => _observer.PartitionFailed("gone", 42UL, ["410"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.ParkPartition);
+    Task Because() => _observer.PartitionFailed("gone", 42UL, ["410"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.ParkPartition));
 
     [Fact] void should_be_active_before_the_gone_failure() => _stateBeforeGone.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_quarantine_the_observer() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);

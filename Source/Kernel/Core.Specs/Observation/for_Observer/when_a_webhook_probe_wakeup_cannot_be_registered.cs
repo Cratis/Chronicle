@@ -10,7 +10,7 @@ public class when_a_webhook_probe_wakeup_cannot_be_registered : given.a_webhook_
 {
     void Establish() => _silo.ReminderRegistry.Mock.Setup(registry => registry.RegisterOrUpdateReminder(It.IsAny<GrainId>(), "webhook-quarantine-probe", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>())).ThrowsAsync(new InvalidOperationException("Reminder storage unavailable"));
 
-    Task Because() => _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.PauseObserver);
+    Task Because() => _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.PauseObserver));
 
     [Fact] void should_preserve_durable_eligibility_for_later_reconciliation() => _stateStorage.State.WebhookProbe.ShouldNotBeNull();
     [Fact] void should_keep_the_observer_quarantined() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);

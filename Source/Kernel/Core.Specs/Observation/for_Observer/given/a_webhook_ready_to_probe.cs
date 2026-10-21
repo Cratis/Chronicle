@@ -41,7 +41,7 @@ public class a_webhook_ready_to_probe : a_webhook_observer
         _webhookDefinitions.Get(_observerId).Returns(_webhookDefinition);
         _eventStoreStorage.Webhooks.Returns(_webhookDefinitions);
         _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(ObserverSubscriberResult.Ok(42UL));
-        await _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.PauseObserver);
+        await _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.PauseObserver));
         _now = _stateStorage.State.WebhookProbe.Due;
         _observer.ProbeTimeProvider = new ProbeClock(() => _now);
         _webhook.ClearReceivedCalls();
