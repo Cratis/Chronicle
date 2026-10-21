@@ -22,7 +22,8 @@ public class a_connected_client : Specification
     static readonly TimeSpan _patience = TimeSpan.FromSeconds(10);
 
     protected IConnectedClients _connectedClients;
-    readonly SemaphoreSlim _registryCalled = new(0);
+    readonly SemaphoreSlim _somethingHappened = new(0);
+    int _keepAlivesSent;
     IConnectionService _connectionService;
     IDisposable _subscription;
 
@@ -30,9 +31,9 @@ public class a_connected_client : Specification
     {
         var silo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1);
         _connectedClients = Substitute.For<IConnectedClients>();
-        _connectedClients.WhenForAnyArgs(_ => _.OnClientConnected(default!, default!, default, default, default!, default!, default!)).Do(_ => _registryCalled.Release());
-        _connectedClients.WhenForAnyArgs(_ => _.OnClientRestored(default!, default!, default, default, default!, default!, default!)).Do(_ => _registryCalled.Release());
-        _connectedClients.WhenForAnyArgs(_ => _.IsConnected(default!)).Do(_ => _registryCalled.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.OnClientConnected(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.OnClientRestored(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.IsConnected(default!)).Do(_ => _somethingHappened.Release());
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
@@ -53,13 +54,17 @@ public class a_connected_client : Specification
     void Destroy()
     {
         _subscription?.Dispose();
-        _registryCalled.Dispose();
+        _somethingHappened.Dispose();
     }
 
     protected void Connect(bool isRunningWithDebugger = false) =>
         _subscription = _connectionService
             .Connect(new ConnectRequest { ConnectionId = TheConnection, IsRunningWithDebugger = isRunningWithDebugger })
-            .Subscribe(_ => { });
+            .Subscribe(_ =>
+            {
+                Interlocked.Increment(ref _keepAlivesSent);
+                _somethingHappened.Release();
+            });
 
     protected async Task ConnectAndWaitForRegistration(bool isRunningWithDebugger = false)
     {
@@ -67,11 +72,16 @@ public class a_connected_client : Specification
         await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientConnected)) >= 1);
     }
 
+    /// <summary>
+    /// Gets how many keep-alives the connection service has sent to the client.
+    /// </summary>
+    protected int KeepAlivesSent => Volatile.Read(ref _keepAlivesSent);
+
     protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 
     /// <summary>
     /// Waits until <paramref name="condition"/> holds, re-checking it each time the connection service calls the
-    /// registry rather than on a clock, and gives up after the patience runs out.
+    /// registry or sends a keep-alive rather than on a clock, and gives up after the patience runs out.
     /// </summary>
     /// <param name="condition">The condition to wait for.</param>
     /// <returns>Awaitable task.</returns>
@@ -81,7 +91,7 @@ public class a_connected_client : Specification
         while (!condition())
         {
             var remaining = deadline - DateTimeOffset.UtcNow;
-            if (remaining <= TimeSpan.Zero || !await _registryCalled.WaitAsync(remaining))
+            if (remaining <= TimeSpan.Zero || !await _somethingHappened.WaitAsync(remaining))
             {
                 return;
             }

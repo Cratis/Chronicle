@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a_connection_alive;
@@ -18,9 +17,10 @@ public class and_the_registry_lost_a_client_that_does_not_respond : given.a_conn
     {
         await ConnectAndWaitForRegistration();
 
-        // More than one keep-alive has checked the registry and found the client gone.
-        await WaitUntil(() => CallsTo(nameof(IConnectedClients.IsConnected)) >= 2);
+        // The first keep-alive and at least one periodic keep-alive have been sent.
+        await WaitUntil(() => KeepAlivesSent >= 2);
     }
 
+    [Fact] void should_have_kept_the_connection_alive() => KeepAlivesSent.ShouldBeGreaterThanOrEqual(2);
     [Fact] Task should_not_put_the_client_back() => WasRestored(0);
 }
