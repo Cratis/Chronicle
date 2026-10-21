@@ -22,6 +22,7 @@ public class a_connected_client : Specification
     static readonly TimeSpan _patience = TimeSpan.FromSeconds(10);
 
     protected IConnectedClients _connectedClients;
+    readonly SemaphoreSlim _registryCalled = new(0);
     IConnectionService _connectionService;
     IDisposable _subscription;
 
@@ -29,6 +30,9 @@ public class a_connected_client : Specification
     {
         var silo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1);
         _connectedClients = Substitute.For<IConnectedClients>();
+        _connectedClients.WhenForAnyArgs(_ => _.OnClientConnected(default!, default!, default, default, default!, default!, default!)).Do(_ => _registryCalled.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.OnClientRestored(default!, default!, default, default, default!, default!, default!)).Do(_ => _registryCalled.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.IsConnected(default!)).Do(_ => _registryCalled.Release());
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
@@ -46,7 +50,11 @@ public class a_connected_client : Specification
             options);
     }
 
-    void Destroy() => _subscription?.Dispose();
+    void Destroy()
+    {
+        _subscription?.Dispose();
+        _registryCalled.Dispose();
+    }
 
     protected void Connect(bool isRunningWithDebugger = false) =>
         _subscription = _connectionService
@@ -61,12 +69,22 @@ public class a_connected_client : Specification
 
     protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 
+    /// <summary>
+    /// Waits until <paramref name="condition"/> holds, re-checking it each time the connection service calls the
+    /// registry rather than on a clock, and gives up after the patience runs out.
+    /// </summary>
+    /// <param name="condition">The condition to wait for.</param>
+    /// <returns>Awaitable task.</returns>
     protected async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTimeOffset.UtcNow + _patience;
-        while (!condition() && DateTimeOffset.UtcNow < deadline)
+        while (!condition())
         {
-            await Task.Delay(20);
+            var remaining = deadline - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero || !await _registryCalled.WaitAsync(remaining))
+            {
+                return;
+            }
         }
     }
 

@@ -17,8 +17,8 @@ public class and_the_registry_lost_a_client_that_does_not_respond : given.a_conn
     {
         await ConnectAndWaitForRegistration();
 
-        // Long enough for more than one keep-alive to be sent.
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        // More than one keep-alive has checked the registry and found the client gone.
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.IsConnected)) >= 2);
     }
 
     [Fact] Task should_not_put_the_client_back() => WasRestored(0);

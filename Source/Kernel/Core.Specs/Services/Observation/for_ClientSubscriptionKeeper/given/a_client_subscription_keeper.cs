@@ -37,6 +37,14 @@ public class a_client_subscription_keeper : Specification
             NullLogger.Instance,
             _streamClosed.Token);
 
-        _completed = await Task.WhenAny(keeping, Task.Delay(_patience)) == keeping;
+        try
+        {
+            await keeping.WaitAsync(_patience);
+            _completed = true;
+        }
+        catch (TimeoutException)
+        {
+            _completed = false;
+        }
     }
 }
