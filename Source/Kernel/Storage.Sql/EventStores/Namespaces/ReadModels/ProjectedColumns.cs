@@ -54,7 +54,7 @@ public static class ProjectedColumns
         {
             var property = schema.Properties[name];
             var isKey = string.Equals(name, keyName, StringComparison.Ordinal);
-            columns.Add(BuildColumn(name, property, isKey));
+            columns.Add(BuildColumn(name, property, isKey) with { MaxLength = property.MaxLength });
         }
 
         // If the schema does not declare an Id, synthesize one. Reads/writes inject the key value
@@ -109,6 +109,18 @@ public static class ProjectedColumns
         }
 
         return columns;
+    }
+
+    /// <summary>
+    /// Derives table columns including the declared scalar indexes.
+    /// </summary>
+    /// <param name="schema">The read-model schema.</param>
+    /// <param name="indexes">The declared indexes.</param>
+    /// <returns>The ordered columns.</returns>
+    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<Cratis.Chronicle.Concepts.ReadModels.IndexDefinition> indexes)
+    {
+        var indexed = indexes.Select(index => index.PropertyPath.Path).ToHashSet(StringComparer.Ordinal);
+        return ForSchema(schema).Select(column => column with { IsIndexed = indexed.Contains(column.Name) }).ToArray();
     }
 
     static ProjectedColumn BuildColumn(string name, JsonSchemaProperty property, bool isKey)

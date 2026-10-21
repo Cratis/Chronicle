@@ -62,7 +62,7 @@ public class SqlSinkHarness : ISqlSinkHarness
     public ISink CreateSink(ReadModelDefinition definition)
     {
         _definition = definition;
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
+        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (_connection is null)
         {
             _connection = new SqliteConnection(ConnectionString);

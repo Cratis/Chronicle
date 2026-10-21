@@ -62,8 +62,8 @@ Adding protection metadata affects future appends, not historical plaintext; see
 
 Use a decimal-formatted event property for amounts and other values that must retain decimal digits.
 Chronicle carries these values as decimals through event storage, projections and read-model sinks;
-it does not route them through a binary floating-point value. A concept wrapping a decimal has the
-same representation as the decimal itself.
+except that SQLite scalar read-model columns use binary floating point for numeric query semantics.
+A concept wrapping a decimal has the same representation as the decimal itself.
 
 ### Storage representation
 
@@ -72,7 +72,7 @@ same representation as the decimal itself.
 | MongoDB | Decimal128 | Decimal128 |
 | PostgreSQL | JSON decimal literal | NUMERIC |
 | SQL Server | JSON decimal literal | DECIMAL(38,18) |
-| SQLite | JSON decimal literal | Invariant decimal text in a TEXT column |
+| SQLite | JSON decimal literal | NUMERIC affinity (binary floating point) |
 | In-memory | CLR decimal | CLR decimal |
 
 The JSON payload on the wire remains a number, not an extended JSON object or a floating-point
@@ -105,13 +105,16 @@ when reading them. Numerical precision is retained, but arbitrary input trailing
 
 The SQL migrator adds missing columns; it does not alter existing column types. Replay existing
 SQL read models before relying on exact decimal writes. Replay creates a fresh table with the new
-mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
-REAL columns and SQL Server's former DECIMAL(18,2) columns.
+mapping and replaces the old table when the replay succeeds. This is required for SQL Server's
+former DECIMAL(18,2) columns. On SQLite, replay existing TEXT decimal columns to obtain numeric
+ordering and comparisons instead of lexicographic behavior.
 
-SQLite's new TEXT columns preserve decimal digits but compare and sort lexicographically, not
-numerically: `"10"` sorts before `"9"`. Do not use their native ordering or range comparisons as
-numeric decimal operations. Existing REAL-affinity columns can coerce invariant decimal text back
-to a binary floating-point value until replay replaces the table.
+Existing SQLite TEXT decimal columns keep invariant-text conversion until replay replaces the table.
+New SQLite scalar decimal columns use NUMERIC affinity and binary floating-point conversion for numeric
+ordering, equality, and range filters, including decimal keys and nullable decimal properties. This
+trades exact decimal precision for numeric query semantics (approximately 15 significant digits).
+Use PostgreSQL, SQL Server, or MongoDB when exact decimal precision is required. SQLite event content
+and decimal values inside JSON columns retain their decimal representation.
 
 Replay cannot undo precision already lost from the original event content. Check the source events
 before assuming that a replay will recover an amount.

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Text.Json;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Json;
@@ -27,7 +26,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// <param name="tableName">The name of the table (read model container name).</param>
 /// <param name="columns">The columns derived from the read model's schema.</param>
 /// <param name="migrator">The <see cref="IReadModelMigrator"/> for managing table migrations.</param>
-public class ReadModelDbContext(
+public partial class ReadModelDbContext(
     DbContextOptions<ReadModelDbContext> options,
     string tableName,
     IReadOnlyList<ProjectedColumn> columns,
@@ -51,13 +50,11 @@ public class ReadModelDbContext(
         value => DecimalColumnValues.ForSqlServer(value),
         value => DecimalColumnValues.FromSqlServer(value));
 
-    static readonly ValueConverter<decimal, string> _sqliteDecimalConverter = new(
-        value => value.ToString(CultureInfo.InvariantCulture),
-        value => decimal.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture));
-
     static readonly ValueConverter<Guid, string> _sqliteGuidConverter = new(
         v => v.ToString("D"),
         v => Guid.Parse(v));
+
+    readonly DbContextOptions _mappingOptions = options;
 
     /// <summary>
     /// Gets the JSON serializer options used to round-trip JSON column values.
@@ -87,6 +84,7 @@ public class ReadModelDbContext(
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
+        await PrepareColumnMappings();
         await migrator.EnsureTableMigrated(tableName, this);
     }
 
@@ -143,17 +141,22 @@ public class ReadModelDbContext(
                     // the sink serializes to JSON before SetValue and deserializes on read.
                     propertyBuilder.HasColumnType(GetJsonColumnType(databaseType));
                 }
+                else if (column.ClrType == typeof(string) && databaseType == DatabaseType.SqlServer)
+                {
+                    propertyBuilder.HasColumnType(column.SqlServerStringType);
+                }
                 else if ((Nullable.GetUnderlyingType(column.ClrType) ?? column.ClrType) == typeof(decimal))
                 {
                     propertyBuilder.HasColumnType(databaseType switch
                     {
                         DatabaseType.PostgreSql => "NUMERIC",
                         DatabaseType.SqlServer => "DECIMAL(38,18)",
-                        _ => "TEXT"
+                        _ => TextDecimalColumns.Contains(column.Name) ? "TEXT" : "NUMERIC"
                     });
                     if (databaseType == DatabaseType.Sqlite)
                     {
-                        propertyBuilder.HasConversion(_sqliteDecimalConverter);
+                        if (TextDecimalColumns.Contains(column.Name)) propertyBuilder.HasConversion(_sqliteTextDecimalConverter);
+                        else propertyBuilder.HasConversion(_sqliteDecimalConverter);
                     }
                     if (databaseType == DatabaseType.SqlServer)
                     {

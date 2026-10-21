@@ -43,7 +43,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
+        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (ConnectionString.Length == 0)
         {
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();

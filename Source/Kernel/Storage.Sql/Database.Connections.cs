@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -173,6 +174,7 @@ public partial class Database
         var context = create(OptionsFor(cache, $"{key}:{purpose}", target));
         try
         {
+            if (context is ReadModelDbContext readModel) await readModel.PrepareColumnMappings();
             if (!_resolution.IsConfigured || purpose == ConnectionPurpose.Schema)
             {
                 await prepare(context, target);
@@ -181,6 +183,7 @@ public partial class Database
 
             var schemaTarget = await Target(identity, ConnectionPurpose.Schema);
             await using var schemaContext = create(OptionsFor(cache, $"{key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget));
+            if (schemaContext is ReadModelDbContext schemaReadModel) await schemaReadModel.PrepareColumnMappings();
             await prepare(schemaContext, schemaTarget);
             return context;
         }

@@ -34,6 +34,7 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
+        await context.PrepareColumnMappings();
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }
@@ -285,7 +286,7 @@ public class ReadModelMigrator(
             return databaseType switch
             {
                 DatabaseType.PostgreSql => column.IsKey ? "VARCHAR(200)" : "TEXT",
-                DatabaseType.SqlServer => column.IsKey ? "NVARCHAR(200)" : "NVARCHAR(MAX)",
+                DatabaseType.SqlServer => column.SqlServerStringType,
                 _ => "TEXT"
             };
         }
@@ -380,7 +381,7 @@ public class ReadModelMigrator(
             _ => unwrapped.Name switch
             {
                 nameof(Single) or nameof(Double) => "REAL",
-                nameof(Decimal) => "TEXT",
+                nameof(Decimal) => "NUMERIC",
                 _ => "INTEGER"
             }
         };
