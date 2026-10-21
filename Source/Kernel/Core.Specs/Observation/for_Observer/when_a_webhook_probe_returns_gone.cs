@@ -9,7 +9,13 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_a_webhook_probe_returns_gone : given.a_webhook_ready_to_probe
 {
-    void Establish() => _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "410") with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition });
+    long _revision;
+
+    void Establish()
+    {
+        _revision = _stateStorage.State.AlertRevision;
+        _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "410") with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition });
+    }
 
     async Task Because()
     {
@@ -18,6 +24,7 @@ public class when_a_webhook_probe_returns_gone : given.a_webhook_ready_to_probe
         await Tick();
     }
 
+    [Fact] void should_advance_the_alert_revision() => _stateStorage.State.AlertRevision.ShouldBeGreaterThan(_revision);
     [Fact] void should_park_the_episode() => _failedPartitionsState.Partitions.Single().WebhookDisposition.ShouldEqual(WebhookFailureDisposition.Gone);
     [Fact] void should_not_probe_the_gone_episode_again() => _webhook.Received(1).OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>());
     [Fact] void should_keep_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);

@@ -130,7 +130,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
-            ArmWebhookProbeAfterFailure(failurePolicy);
+            ArmWebhookProbeAfterFailure();
             await TransitionTo<QuarantinedObserver>();
         }
     }
@@ -558,6 +558,6 @@ public partial class Observer
         return false;
     }
 
-    void ArmWebhookProbeAfterFailure(WebhookDeliveryFailurePolicy failurePolicy) =>
-        _armWebhookProbe = IsWebhookSubscription && failurePolicy != WebhookDeliveryFailurePolicy.ParkPartition;
+    void ArmWebhookProbeAfterFailure() =>
+        _armWebhookProbe = IsWebhookSubscription && Failures.Partitions.Any(WebhookProbeEligibility.IsEligible);
 }

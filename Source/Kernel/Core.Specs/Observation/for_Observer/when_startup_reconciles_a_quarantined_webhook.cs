@@ -12,7 +12,7 @@ public class when_startup_reconciles_a_quarantined_webhook : given.a_webhook_rea
 
     void Establish() => _probe = _stateStorage.State.WebhookProbe.Id;
 
-    Task Because() => _observer.ReconcileSubscription<IWebhookObserverSubscriber>(ObserverType.External, ["Event1", "Event2"], SiloAddress.Zero, false);
+    Task Because() => _observer.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, ["Event1", "Event2"], SiloAddress.Zero, reactivateRetired: false, automatic: true);
 
     [Fact] void should_preserve_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] void should_keep_the_same_probe_generation() => _stateStorage.State.WebhookProbe.Id.ShouldEqual(_probe);

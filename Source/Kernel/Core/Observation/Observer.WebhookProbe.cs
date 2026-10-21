@@ -357,9 +357,7 @@ public partial class Observer
     {
         if (result.FailurePolicy == WebhookDeliveryFailurePolicy.ParkPartition)
         {
-            failure.WebhookDisposition = WebhookFailureDisposition.Gone;
-            failure.IsQuarantined = true;
-            await failures.WriteStateAsync();
+            await ParkWebhookProbeFailure(control, failure);
         }
         await RescheduleWebhookProbe(control, result.Deferral?.Until, WebhookProbeOutcome.FailureReason(result));
     }
@@ -417,6 +415,23 @@ public partial class Observer
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).ObserverHandledCounts.SetForRecovery(_observerId, failure.Partition, control.PartitionCounts.ToDictionary(_ => _.EventTypeId, _ => _.Count));
         if (!await ResetWebhookProbeFailures(control, failure, next)) return;
         await ResumeAfterWebhookProbe(control, failure);
+    }
+
+    async Task ParkWebhookProbeFailure(WebhookProbeState control, FailedPartition failure)
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (!CurrentWebhookProbe(control, failure)) return;
+            failure.WebhookDisposition = WebhookFailureDisposition.Gone;
+            failure.IsQuarantined = true;
+            ChangeAlertState();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
     }
 
     async Task<bool> ResetWebhookProbeFailures(WebhookProbeState control, FailedPartition failure, EventSequenceNumber next)
