@@ -31,8 +31,13 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options, IDat
     }
 
     /// <inheritdoc/>
+    /// <exception cref="SqlClusteringPreventsKernelStateReset">A SQL cluster cannot be reset while running.</exception>
     public Task Reset()
     {
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
+        {
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
 #if DEVELOPMENT
         return database.Wipe();
 #else

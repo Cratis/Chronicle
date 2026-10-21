@@ -40,7 +40,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// only touch the modified columns — matching MongoDB's <c language="csharp">$set</c> semantics and removing the
 /// stale-snapshot overwrite class of bug that whole-document upserts suffered from.
 /// </summary>
-public partial class Sink : ISink
+public partial class Sink : ISink, ICanReconcileIndexes
 {
     static readonly IEnumerable<FailedPartition> _noFailedPartitions = [];
 
@@ -118,7 +118,7 @@ public partial class Sink : ISink
         _indexes = readModel.Indexes;
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
-        _columns = ProjectedColumns.ForSchema(_schema);
+        _columns = ProjectedColumns.ForSchema(_schema, _indexes);
     }
 
     /// <inheritdoc/>
@@ -429,7 +429,7 @@ public partial class Sink : ISink
         }
 
         await using var scope = await OpenActiveScope();
-        var entries = await scope.DbContext.Entries.AsNoTracking().ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, rootColumn, childValue, tracking: false);
         foreach (var entry in entries)
         {
             var keyValue = ContainsChildValue(entry, rootColumn, pathSegments, childValue) ? entry[keyColumn.Name] : null;
@@ -532,7 +532,7 @@ public partial class Sink : ISink
             return;
         }
 
-        var entries = await scope.DbContext.Entries.ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, rootColumn, joinValue);
         var modified = false;
         foreach (var entry in entries.Where(entry => EntryMatchesJoin(entry, rootColumn, segments, joinValue)))
         {
@@ -556,7 +556,7 @@ public partial class Sink : ISink
         }
 
         var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty, childRemoved.Key);
-        var entries = await scope.DbContext.Entries.ToListAsync();
+        var entries = await CandidateEntries(scope.DbContext, column, childRemoved.Key);
         var modified = false;
         foreach (var entry in entries)
         {

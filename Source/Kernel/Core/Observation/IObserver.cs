@@ -215,6 +215,47 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Checks whether this activation knows a client, as a subscription target or as a superseded registration.
+    /// </summary>
+    /// <remarks>
+    /// An interleaved, read-only hint for the grain holding a client registration. A new activation - after the
+    /// silo that hosted the previous one was lost - starts out knowing no client.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
+    /// <returns>True if the client is known; otherwise false.</returns>
+    [AlwaysInterleave]
+    Task<bool> KnowsClient(ConnectionId connectionId);
+
+    /// <summary>
+    /// Restore the subscription of a connected client that this activation does not know about.
+    /// </summary>
+    /// <remarks>
+    /// The subscription is activation-only state. When the silo hosting an observer is lost, the observer comes back
+    /// on another silo with no subscription while the client stays connected and its registration grain survives.
+    /// The registration grain calls this to put the client back. It does nothing if the client is already known,
+    /// the observer is sealed, retired or quarantined, operator-cleared recovery is still owed, or the namespace no
+    /// longer exists. Like <see cref="ReconcileSubscription"/>, it never ends quarantine or resets live progress.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The client-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types the client registered.</param>
+    /// <param name="siloAddress">The silo address of the client's connection.</param>
+    /// <param name="connectedClient">The client to restore.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RestoreClientSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        ConnectedClient connectedClient,
+        bool isReplayable = true,
+        ObserverFilters? filters = default,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Reconcile a kernel subscription in a serialized request without ending quarantine or resetting live progress.
     /// </summary>
     /// <remarks>

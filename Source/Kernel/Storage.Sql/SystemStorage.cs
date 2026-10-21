@@ -7,7 +7,6 @@ using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Cluster.Patching;
 using Cratis.Chronicle.Storage.Sql.Cluster.Security;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
 

@@ -8376,9 +8376,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:8.2.2":
-  version: 8.2.2
-  resolution: "vite@npm:8.2.2"
+"vite@npm:8.2.4":
+  version: 8.2.4
+  resolution: "vite@npm:8.2.4"
   dependencies:
     fsevents: "npm:~2.3.3"
     lightningcss: "npm:^1.33.0"
@@ -8429,7 +8429,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10/65cd73267ea2fd49736e51e91681ddc5cbee3af880f20ce5c8df3d4c97d811a11e3ca62d3899fc8ac98ec442b5bc6f55a5d7625ac574ab68c7e3e541e543f264
+  checksum: 10/7b82d1d22a186006aaae83e9c7cd1d8271cc1dc09d85422aa129b14f5ddb4c476ed4445f2ba61b053d4b7cfeaaf4753a70dbb8eccbc2121128310e667ed15d3f
   languageName: node
   linkType: hard
 
@@ -8752,7 +8752,7 @@ __metadata:
     typescript-eslint: "npm:8.68.0"
     typescript-for-eslint: "npm:typescript@6.0.3"
     usehooks-ts: "npm:3.1.1"
-    vite: "npm:8.2.2"
+    vite: "npm:8.2.4"
     vite-plugin-commonjs: "npm:0.10.4"
     vite-tsconfig-paths: "npm:6.1.1"
     vitest: "npm:4.1.11"
