@@ -3,4 +3,8 @@
 
 namespace Cratis.Chronicle.Integration.SqlClustering.PostgreSql;
 
-public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(true, ClusterChange.Restart);
+public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(true, ClusterChange.Restart)
+{
+    [Fact]
+    public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
+}

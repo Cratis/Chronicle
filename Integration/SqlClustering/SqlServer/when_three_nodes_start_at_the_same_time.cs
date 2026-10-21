@@ -3,4 +3,8 @@
 
 namespace Cratis.Chronicle.Integration.SqlClustering.SqlServer;
 
-public class when_three_nodes_start_at_the_same_time() : SqlClusterSpecification(false, ClusterChange.Join);
+public class when_three_nodes_start_at_the_same_time() : SqlClusterSpecification(false, ClusterChange.Join)
+{
+    [Fact]
+    public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
+}

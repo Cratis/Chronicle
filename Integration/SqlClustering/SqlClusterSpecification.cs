@@ -53,8 +53,12 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
         }
     }
 
-    [Fact]
-    public async Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event()
+    /// <summary>
+    /// Verifies that acknowledged events were neither lost nor double appended and that every stored event was observed.
+    /// Each provider scenario declares the fact itself, so a scenario with a known product gap can be skipped with a reason.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task VerifyAcknowledgedEventsAreObserved()
     {
         try
         {

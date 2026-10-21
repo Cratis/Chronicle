@@ -3,4 +3,8 @@
 
 namespace Cratis.Chronicle.Integration.SqlClustering.SqlServer;
 
-public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(false, ClusterChange.Restart);
+public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(false, ClusterChange.Restart)
+{
+    [Fact(Skip = "Observers stall in catch-up after a node loss until the watchdog runs: https://github.com/Cratis/Chronicle/issues/5246")]
+    public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
+}

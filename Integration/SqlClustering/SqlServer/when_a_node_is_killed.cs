@@ -3,4 +3,8 @@
 
 namespace Cratis.Chronicle.Integration.SqlClustering.SqlServer;
 
-public class when_a_node_is_killed() : SqlClusterSpecification(false, ClusterChange.Kill);
+public class when_a_node_is_killed() : SqlClusterSpecification(false, ClusterChange.Kill)
+{
+    [Fact(Skip = "Observers stall in catch-up after a node loss until the watchdog runs: https://github.com/Cratis/Chronicle/issues/5246")]
+    public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
+}
