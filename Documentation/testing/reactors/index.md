@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.Testing.Reactors
+description: Test Chronicle reactors by putting logic in pure functions and proving the framework contract with ReactorScenario.
 ---
 # Testing Reactors
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
@@ -24,4 +25,19 @@ public record ReactorContext(EventContext EventContext, object Reactor, ReactorC
     /// deconstruction shape remain binary compatible.
     /// </remarks>
     public IEventStore? EventStore { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="ReactorDelivery"/> of the event that triggered the reactor, when the context was produced
+    /// by the Chronicle invocation pipeline.
+    /// </summary>
+    /// <remarks>
+    /// Built-in handlers derive the idempotency keys of the events a reactor returns from this. It is
+    /// <see langword="null"/> for contexts built outside the invocation pipeline, whose events are then appended without keys.
+    /// </remarks>
+    public ReactorDelivery? Delivery { get; init; }
+
+    /// <summary>
+    /// Gets the logger the invocation pipeline offers side-effect handlers.
+    /// </summary>
+    internal ILogger? Logger { get; init; }
 }

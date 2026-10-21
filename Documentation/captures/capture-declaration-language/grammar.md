@@ -1,3 +1,6 @@
+---
+description: The formal EBNF grammar of the Capture Declaration Language (CDL) for Chronicle captures, with the compiler's semantic validation rules.
+---
 # Grammar (EBNF)
 
 This document defines the formal grammar for the Capture Declaration Language (CDL).

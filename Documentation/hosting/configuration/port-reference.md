@@ -1,3 +1,6 @@
+---
+description: Reference of the ports Chronicle Server exposes, with TLS defaults and an optional dedicated health port.
+---
 # Port Reference
 
 Chronicle Server exposes the following ports:

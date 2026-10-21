@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Configuration;
 using Grpc.AspNetCore.Server;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Server;
 
@@ -40,6 +41,7 @@ public static class GrpcServiceRegistrations
         // streaming services, whose server-to-client lifetime no command or query describes.
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
+        services.TryAddSingleton<Services.Clients.OpenConnections>();
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
         services.AddSingleton<Contracts.Observation.IFailedPartitions, Services.Observation.FailedPartitions>();

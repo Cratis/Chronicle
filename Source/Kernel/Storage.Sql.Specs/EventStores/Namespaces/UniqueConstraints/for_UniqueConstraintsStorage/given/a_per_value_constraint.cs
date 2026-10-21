@@ -48,7 +48,7 @@ public class a_per_value_constraint : Specification
     void Destroy() => _connection.Dispose();
 
     UniqueConstraintValuesDbContext CreateContext(string tableName) => new(
-        new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options,
+        new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options,
         tableName,
         _migrator);
 }

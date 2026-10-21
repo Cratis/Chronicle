@@ -1,3 +1,6 @@
+---
+description: Best practices for configuring Chronicle Server in production, such as pinning image version tags and mounting configuration as read-only.
+---
 # Best Practices
 
 ## Example configuration

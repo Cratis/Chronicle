@@ -38,7 +38,7 @@ public partial class UnitOfWork
             {
                 throw new ReadProtectionMustBeginBeforeEnrollment();
             }
-            var frame = new ReadProtectionFrame(this, () => eventStore.GetEventSequence(_eventSequenceId ?? EventSequenceId.Log), GetReadProtectionTarget);
+            var frame = new ReadProtectionFrame(this, () => _eventStore.Value.GetEventSequence(_eventSequenceId ?? EventSequenceId.Log), GetReadProtectionTarget);
             _readProtectionFrameLease = frame.Borrow;
             return frame;
         }
@@ -111,7 +111,7 @@ public partial class UnitOfWork
         }
     }
 
-    ReadProtectionTarget GetReadProtectionTarget() => new(eventStore.Name, eventStore.Namespace, _eventSequenceId ?? EventSequenceId.Log);
+    ReadProtectionTarget GetReadProtectionTarget() => new(_eventStore.Value.Name, _eventStore.Value.Namespace, _eventSequenceId ?? EventSequenceId.Log);
 
     void AddEnforcedDecisionRead(IDecisionRead read)
     {
@@ -119,7 +119,7 @@ public partial class UnitOfWork
         if (!read.IsProtected) throw new UnprotectedDecisionRead();
         var label = new EventSourceId(read.Scope.EventSourceId?.Value ?? EventSourceId.Unspecified.Value);
         var item = new ReadProtectionContribution(label, ReadProtectionContributionKind.ProtectedRead, read.Scope, new(read.EventStore, read.Namespace, read.EventSequenceId), $"{read.ReadModelType.Name} '{read.Key}'", ReadProtectionContributionIntent.ReadEnrolled);
-        ReadProtectionMerge.ValidateTargetsAndLabels(new(eventStore.Name, eventStore.Namespace, EventSequenceId.Log), [item]);
+        ReadProtectionMerge.ValidateTargetsAndLabels(new(_eventStore.Value.Name, _eventStore.Value.Namespace, EventSequenceId.Log), [item]);
         EnrolProtectedContribution(item);
         BindToEventSequence(EventSequenceId.Log);
         if (!_decisionConflicts.TryGetValue(label, out var conflicts))
@@ -148,15 +148,15 @@ public partial class UnitOfWork
     {
         var routing = @event.EventSource is null
             ? null
-            : ResolvedEventRouting.Resolve(eventStore.EventSources, @event.EventSource, @event.EventStream, @event.EventSourceType, @event.EventStreamType);
+            : ResolvedEventRouting.Resolve(_eventStore.Value.EventSources, @event.EventSource, @event.EventStream, @event.EventSourceType, @event.EventStreamType);
         var effectiveEvent = ResolvedEventRouting.ResolveMetadata(@event, routing);
-        return ReadProtectionPredicate.Matches(scope, effectiveEvent, eventStore.EventTypes.GetEventTypeFor(@event.Event.GetType()));
+        return ReadProtectionPredicate.Matches(scope, effectiveEvent, _eventStore.Value.EventTypes.GetEventTypeFor(@event.Event.GetType()));
     }
 
     void ValidateReadProtectionTarget(ReadProtectionContribution contribution)
     {
         var sequence = _eventSequenceId ?? contribution.Target.EventSequence;
-        ReadProtectionMerge.ValidateTargetsAndLabels(new(eventStore.Name, eventStore.Namespace, sequence), [contribution]);
+        ReadProtectionMerge.ValidateTargetsAndLabels(new(_eventStore.Value.Name, _eventStore.Value.Namespace, sequence), [contribution]);
         EnsureEventSequenceCanBeUsed(contribution.Target.EventSequence);
     }
 

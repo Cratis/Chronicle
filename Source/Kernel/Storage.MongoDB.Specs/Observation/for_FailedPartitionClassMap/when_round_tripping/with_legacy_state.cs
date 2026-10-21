@@ -27,6 +27,8 @@ public class with_legacy_state : Specification
         _saved = _restored.ToBsonDocument();
     }
 
+    [Fact] void should_not_invent_a_deferral() => _restored.Deferral.ShouldBeNull();
+    [Fact] void should_not_write_a_deferral() => _saved.Names.Any(name => name.Equals("deferral", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
     [Fact] void should_not_initialize_a_cursor() => _restored.RecoveryCursor.ShouldBeNull();
     [Fact] void should_not_assign_an_owner() => _restored.RecoveryOwner.ShouldBeNull();
     [Fact] void should_not_invent_a_hold() => _restored.Hold.ShouldBeNull();

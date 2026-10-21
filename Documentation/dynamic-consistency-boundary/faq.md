@@ -135,7 +135,7 @@ When a rule is about one stream of an entity, such as one account in one month, 
 
 ## What does Arc's read protection On add?
 
-Arc's read protection has three modes: Off, Measure and On. Off is the default. With On, Arc reads each read-model parameter of a command's `Handle()` and of its validators as a decision read, appends the events the command returns as one guarded commit, and refuses plain reads and immediate appends in the command. Measure reports what On would do and changes no result. Arc uses the same Chronicle API described in [Read protection](../read-models/read-protection.mdx#how-arc-uses-this-api). See [Choosing how a command's rule holds](https://cratis.io/arc/backend/csharp/chronicle/consistency/).
+Arc's read protection has three modes: Off, Measure and On. Off is the default. With On, Arc reads each read-model parameter of a command's `Handle()` and of its validators as a decision read, appends the events the command returns as one guarded commit, and refuses plain reads and immediate appends in the command. Measure reports what On would do and changes no result. Arc uses the same Chronicle API described in [Read protection](../read-models/read-protection.mdx#how-arc-uses-this-api). See [Choosing how a command's rule holds](https://www.cratis.io/arc/backend/csharp/chronicle/consistency/).
 
 ## Where do I go if I use Arc commands?
 

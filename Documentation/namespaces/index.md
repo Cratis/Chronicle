@@ -1,7 +1,8 @@
 ---
+title: Manage namespaces
 uid: Chronicle.Namespaces
+description: Chronicle namespaces provide logical segregation inside one event store, isolating events, projections, reducers and read models per tenant.
 ---
-# Namespaces
 
 Namespaces provide logical segregation within a single event store. They allow Chronicle to keep events, projections, reducers, and read models isolated per namespace while still sharing the same physical infrastructure.
 
@@ -12,6 +13,8 @@ Use namespaces to:
 - Split business domains that share an event store
 
 Namespaces are resolved for every operation. If no namespace is explicitly provided, the default namespace is used.
+
+For data isolation and database naming, see [Namespaces and data isolation](../concepts/namespaces.md).
 
 ## Namespaces and tenancy
 

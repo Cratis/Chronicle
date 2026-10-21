@@ -1,3 +1,6 @@
+---
+description: How Chronicle clients hide internal dependencies from consumers with runtime-only packaging so the public API surface stays clear.
+---
 # Internalization
 
 Clients must present a single, clear, and idiomatic API surface. Any dependencies required to implement this API should remain hidden from consumers.

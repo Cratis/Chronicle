@@ -1,3 +1,6 @@
+---
+description: The kinds of Chronicle clients, where they live in the repository, and the project dependencies and building blocks they share.
+---
 
 # Client Types
 

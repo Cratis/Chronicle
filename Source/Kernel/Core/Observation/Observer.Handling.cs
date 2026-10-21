@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public partial class Observer
         {
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
+        RecordedHandlingState();
 
         return WriteStateAsync();
     }
@@ -355,6 +357,7 @@ public partial class Observer
                 NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
+            RecordedHandlingState();
             await WriteProgressStateDebounced();
             return;
         }
@@ -370,6 +373,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -383,6 +387,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -395,6 +400,7 @@ public partial class Observer
                     NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
+                RecordedHandlingState();
                 await WriteProgressStateDebounced();
                 return;
             }
@@ -402,6 +408,7 @@ public partial class Observer
 
         var failed = false;
         var failureKind = FailureKind.Unknown;
+        var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
@@ -435,7 +442,13 @@ public partial class Observer
                     while (true)
                     {
                         var target = subscriberSelector.Select(_subscription, partition);
-                        var key = _subscription.GetSubscriberKeyFor(partition, target.SiloAddress);
+
+                        // A webhook partition has one non-interleavable activation across live delivery and jobs,
+                        // independent of which silo owns the observer or executes the job.
+                        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+                            ? SiloAddress.Zero
+                            : target.SiloAddress;
+                        var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, new(target.ConnectedClient ?? _subscription.Arguments));
@@ -459,10 +472,16 @@ public partial class Observer
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
 
-                    if (result.State == ObserverSubscriberState.Failed)
+                    if (result.State == ObserverSubscriberState.Deferred)
+                    {
+                        await PartitionDeferred(partition, result.Deferral!);
+                        stateChanged = true;
+                    }
+                    else if (result.State == ObserverSubscriberState.Failed)
                     {
                         failed = true;
                         failureKind = FailureKind.Handling;
+                        failurePolicy = result.FailurePolicy;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
                         tailEventSequenceNumber = result.HandledAnyEvents
@@ -523,7 +542,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind);
+                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy: failurePolicy);
                 }
                 else
                 {
@@ -623,6 +642,7 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+        RecordedHandlingState();
     }
 
     /// <summary>

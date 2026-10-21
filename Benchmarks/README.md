@@ -109,6 +109,70 @@ dotnet run -c Release --project Chronicle.Benchmarks.Clustering -- --filter '*'
 Silos share one machine, so two silos will not show ideal scaling. The question these answer is whether
 clustering helps, is neutral, or costs — not whether it scales linearly.
 
+## Rebuild under live load (MongoDB)
+
+The clustering suite also has a standalone, single-silo diagnostic scenario (not a BenchmarkDotNet
+microbenchmark). It uses the existing EphemeralMongo replica set and in-process kernel; no Docker is
+required. It runs once, validates the seeded and rebuilt data, prints one JSON measurement object,
+and disposes the cluster. Normal suite filters are unchanged.
+
+From the repository root:
+
+```bash
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering \
+  -p:CratisProxiesOutputPath= -- --rebuild-live
+```
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `REBUILD_EVENTS` | 10000 | Historical value updates, plus one marker seed and one catalog event |
+| `REBUILD_LIVE_RATE` | 10 | Target marker appends/second |
+| `REBUILD_SAMPLE_MS` | 100 | Minimum pause between samples |
+| `REBUILD_TIMEOUT_SECONDS` | 240 | Deadline covering seed and measurement (not cluster startup) |
+
+Historical updates cycle across 40 keys. A separate live marker key shares their catalog join, so
+this exercises `From` **and** `Join`, not just a single-From copy. Key cardinality stays bounded even
+with a large event corpus; the list probe reads all 41 models in one page and selects the marker.
+Both before and after replay, every historical key's last revision and joined value are checked.
+The run fails on failed partitions, an incomplete dataset, deadline expiry, or no measured live/rebuild
+overlap. For a faster smoke run, lower `REBUILD_EVENTS`; if it becomes too fast to sample, increase it.
+
+For a large local run (not CI), allow sufficient seed time; seeding uses sequential acknowledged appends:
+
+```bash
+REBUILD_EVENTS=1000000 REBUILD_LIVE_RATE=20 REBUILD_TIMEOUT_SECONDS=7200 \
+  dotnet run -c Release --no-build --project Benchmarks/Chronicle.Benchmarks.Clustering -- --rebuild-live
+```
+
+### Measurement boundaries
+
+- `RebuildThroughSwapSeconds`: replay request through the **observed served collection UUID change**.
+  This includes replay preparation and MongoDB promotion; it is not pure fold CPU time. The UUID probe
+  detects the swap independently of observer catch-up, avoiding the old folded replay-plus-catch-up number.
+- `PostSwapCatchUpSeconds`: observed swap through both read paths seeing the frozen live acknowledgement
+  fence. The producer stops at the observed swap; an in-flight append is acknowledged before freezing.
+  `Phases` contains named timestamps so later promote/rollback work can add boundaries to this runner.
+- `HistoricalEventsPerSecond`: historical corpus size divided by request-to-swap time. Replay may also
+  process live events, so this is a conservative historical-prefix rate, not total folded events/second.
+- `ServedList`: materialized list read of the served container. `KernelKeyLookup`: client
+  `GetInstanceById`, which reaches the kernel materialized store's `FindByKey` path. Each samples against
+  acknowledgements captured **before** its read. Reports include revision lag, oldest missing acknowledgement
+  age, missing/regressing reads, and acknowledgement-to-first-observed-visibility latency. Full timestamped
+  samples carry phase labels; the two paths are not assumed to have identical freshness during replay.
+- The sampling interval plus read/UUID request latency bounds temporal resolution. Visibility latencies
+  are observed upper bounds, not exact processing latency. The producer uses a periodic timer and sequential
+  acknowledged appends: overloaded ticks coalesce rather than generating unbounded concurrent load.
+  Compare requested and observed rates; the latter is reported rather than claiming the target was sustained.
+- Working set is the maximum sampled during measurement; allocation bytes are a process-wide GC counter
+  delta. The kernel, client, probes and Orleans share the process, so these are **not kernel-only** values.
+  They exclude setup/seed but include measurement overhead; MongoDB memory is not included.
+
+The diagnostic JSON is separate from the BenchmarkDotNet JSON consumed by the CI benchmark publisher.
+Remaining baseline coverage includes SQL, three silos, million-event CI datasets, more projection shapes,
+comparative historical runs, and generation-specific promote/rollback timing; this increment adds none of them.
+There is no benchmark specs project. These scenario-local helpers are verified by the bounded real-kernel
+smoke run and its non-empty overlap/data checks, not by introducing a new specs infrastructure.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
@@ -118,4 +182,4 @@ https://cratis.github.io/Chronicle/benchmarks/
 
 ## CI/CD
 
-Benchmarks are automatically run on push to `main` branch via the `.github/workflows/benchmarks.yml` workflow.
+Benchmarks run nightly and on manual dispatch via `.github/workflows/benchmarks.yml`, not on every push to `main`.

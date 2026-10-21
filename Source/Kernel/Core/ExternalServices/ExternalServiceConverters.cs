@@ -100,7 +100,7 @@ public static class ExternalServiceConverters
             }
             else if (auth.Value2 is { } oauth)
             {
-                authorization = new OAuthAuthorization(oauth.Authority, oauth.ClientId, oauth.ClientSecret);
+                authorization = new OAuthAuthorization(oauth.Authority, oauth.ClientId, oauth.ClientSecret) { Scope = oauth.Scope };
             }
         }
 
@@ -129,7 +129,8 @@ public static class ExternalServiceConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
             none => { });
 

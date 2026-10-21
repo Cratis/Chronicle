@@ -166,6 +166,12 @@ public class AddWebhookRequest
     public bool IsActive { get; set; }
 
     /// <summary>
+    /// Gets or sets the OAuthScope.
+    /// </summary>
+    [ProtoMember(17)]
+    public string OAuthScope { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the GenerationDelivery.
     /// </summary>
     [ProtoMember(16)]

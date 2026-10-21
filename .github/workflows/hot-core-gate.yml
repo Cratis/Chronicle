@@ -136,7 +136,7 @@ jobs:
       - name: Pack hot-core build output
         run: |
           set -euo pipefail
-          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -

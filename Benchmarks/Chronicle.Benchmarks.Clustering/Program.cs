@@ -3,6 +3,12 @@
 
 using BenchmarkDotNet.Running;
 
+if (args.Contains("--rebuild-live", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.LiveRebuildScenario.Run();
+    return;
+}
+
 var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
 BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.Clustering.ClusteredAppendBenchmark).Assembly).Run(benchmarkArguments);
 

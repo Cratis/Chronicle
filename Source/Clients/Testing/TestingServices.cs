@@ -180,6 +180,7 @@ internal sealed class TestingServices : IServices
                 storage,
                 jsonSerializerOptions,
                 new ActivitySource<KernelReactorsService>(),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 NullLogger<KernelReactorsService>.Instance));
 
         _reducers = new(() =>
@@ -189,6 +190,7 @@ internal sealed class TestingServices : IServices
                 new ExpandoObjectConverter(new TypeFormats()),
                 jsonSerializerOptions,
                 new ActivitySource<KernelReducersService>(),
+                Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
                 NullLogger<KernelReducersService>.Instance));
 
         _projections = new(() =>
@@ -411,5 +413,6 @@ internal sealed class TestingServices : IServices
             null!,
             new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-            storage);
+            storage,
+            NullLogger<KernelWebhookRegistrar>.Instance);
 }

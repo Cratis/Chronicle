@@ -1,3 +1,6 @@
+---
+description: The Chronicle REST API client is exposed by the kernel container behind a feature flag, mainly for the Workbench; this covers its internals.
+---
 # API
 
 The REST API client is exposed in the Kernel when packaged as a Docker container, hidden behind a feature flag

@@ -28,7 +28,7 @@ public record EventSequenceNames(string Id, string Name)
     /// The namespace is nullable rather than defaulted: a concept is not a compile-time constant, so it cannot be a
     /// default parameter value. Absent still means the default namespace.
     /// </remarks>
-    internal static async Task<IEnumerable<EventSequenceNames>> AllEventSequences(
+    public static async Task<IEnumerable<EventSequenceNames>> AllEventSequences(
         IGrainFactory grainFactory,
         EventStoreName eventStore,
         EventStoreNamespaceName? @namespace = null)

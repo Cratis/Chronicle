@@ -34,7 +34,9 @@ public class when_comparing_legacy_statistics_definitions : Specification
         storage.GetEventStore(Arg.Any<EventStoreName>()).Projections.Returns(cache);
         inner.Has(Arg.Any<ProjectionId>()).Returns(true);
         var comparer = new ProjectionDefinitionComparer(storage, new ObjectComparer(), NullLogger<ProjectionDefinitionComparer>.Instance);
-        var definitions = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections;
+        var namespaced = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single();
+        var global = namespaced with { Identifier = $"{namespaced.Identifier.Value}.global", Scope = ProjectionScope.Global };
+        var definitions = new[] { namespaced, global };
         var persisted = definitions.ToDictionary(definition => definition.Identifier, For);
         inner.Get(Arg.Any<ProjectionId>()).Returns(call => Restore(persisted[call.Arg<ProjectionId>()]));
         inner.GetAll().Returns(_ => persisted.Values.Select(Restore).ToArray());
@@ -59,11 +61,10 @@ public class when_comparing_legacy_statistics_definitions : Specification
             await cache.Save(definition);
             _resaved.Add(await comparer.Compare(key, Restore(persisted[definition.Identifier]), definition));
         }
-        var global = definitions.Single(definition => definition.Scope == ProjectionScope.Global);
         _changedScope = await comparer.Compare(new(global.Identifier, "store"), Restore(persisted[global.Identifier]), global with { Scope = ProjectionScope.Namespaced });
     }
 
-    [Fact] void should_cover_both_statistics_projections() => _scopes.Count.ShouldEqual(2);
+    [Fact] void should_cover_both_legacy_statistics_scopes() => _scopes.Count.ShouldEqual(2);
     [Fact] void should_cover_namespaced_statistics() => _scopes.ShouldContain(ProjectionScope.Namespaced);
     [Fact] void should_cover_global_statistics() => _scopes.ShouldContain(ProjectionScope.Global);
     [Fact] void should_not_evolve_legacy_statistics_on_first_registration() => _direct.ShouldEachConformTo(result => result == ProjectionDefinitionCompareResult.Same);

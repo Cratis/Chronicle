@@ -1,3 +1,6 @@
+---
+description: Use UsingConstantKey in a declarative Chronicle projection so all events of a type accumulate into one read model instance.
+---
 # Constant Keys
 
 A constant key allows all events of a given type to accumulate into a **single** read model instance, regardless of which event source the events originate from. This is useful for global aggregates, system-wide counters, and singleton read models.

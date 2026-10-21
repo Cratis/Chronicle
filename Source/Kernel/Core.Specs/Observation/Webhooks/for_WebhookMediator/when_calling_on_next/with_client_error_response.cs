@@ -33,7 +33,7 @@ public class with_client_error_response : given.a_webhook_mediator
         _httpClientFactory.Create(_target).Returns(httpClient);
     }
 
-    async Task Because() => _result = await _mediator.OnNext(_target, new Key("test-partition", ArrayIndexers.NoIndexers), []);
+    async Task Because() => _result = await _mediator.OnNext("orders", _target, new Key("test-partition", ArrayIndexers.NoIndexers), []);
 
     [Fact] void should_fail() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_report_the_status_and_webhook_target()

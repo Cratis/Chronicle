@@ -41,6 +41,11 @@ public class JsonSchemaProperty : JsonSchema
     public new JsonSchema ActualSchema => ActualTypeSchema;
 
     /// <summary>
+    /// Gets the explicitly declared maximum string length, if any.
+    /// </summary>
+    public int? MaxLength => Node["maxLength"]?.GetValue<int>() ?? ActualSchema.Node["maxLength"]?.GetValue<int>();
+
+    /// <summary>
     /// Gets whether any of the OneOf schemas has a $ref.
     /// </summary>
     public bool HasOneOfSchemaReference => OneOf.Any(s => s.HasReference);

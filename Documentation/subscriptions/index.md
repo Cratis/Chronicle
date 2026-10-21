@@ -3,6 +3,8 @@ title: Subscriptions
 description: Move events reliably between event stores with persistent outbox and inbox subscriptions.
 ---
 
+A Chronicle subscription is a persistent link that moves events from one event store's outbox into another's inbox.
+
 Chronicle supports subscriptions between event stores, allowing events to flow between them in a controlled, persistent, and observable way. This is particularly useful in distributed systems where different services own separate event stores but need to react to each other's events.
 
 ## Core Concepts

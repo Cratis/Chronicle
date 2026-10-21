@@ -116,6 +116,24 @@ public class FailedPartitions
     }
 
     /// <summary>
+    /// Defer delivery of a partition without registering a failure attempt.
+    /// </summary>
+    /// <param name="partition">The partition whose delivery is deferred.</param>
+    /// <param name="deferral">The durable deadline and inclusive resume position.</param>
+    /// <returns>The unresolved partition episode.</returns>
+    public FailedPartition Defer(Key partition, PartitionDeferral deferral)
+    {
+        if (!TryGet(partition, out var failure))
+        {
+            failure = new() { Partition = partition };
+            Add(failure);
+        }
+
+        failure.Deferral = deferral;
+        return failure;
+    }
+
+    /// <summary>
     /// Remove a failed partition.
     /// </summary>
     /// <param name="partition"><see cref="Key"/> to remove.</param>

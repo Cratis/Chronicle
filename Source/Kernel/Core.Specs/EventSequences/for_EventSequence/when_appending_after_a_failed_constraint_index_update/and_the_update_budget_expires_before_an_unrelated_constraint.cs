@@ -14,7 +14,7 @@ public class and_the_update_budget_expires_before_an_unrelated_constraint : give
     async Task Establish()
     {
         _eventSequence.ConstraintIndexTimeProvider = _clock;
-        _unique.When(storage => storage.Save(Arg.Any<EventSourceId>(), _uniqueDefinition, Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>()))
+        _unique.When(storage => storage.Save(Arg.Any<EventSourceId>(), _uniqueDefinition, Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>()))
             .Do(_ =>
             {
                 if (_expired) return;
@@ -33,5 +33,5 @@ public class and_the_update_budget_expires_before_an_unrelated_constraint : give
 
     [Fact] void should_admit_the_other_event() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_write_the_other_claim_exactly_once() => _claimWrites.ShouldEqual(1);
-    [Fact] async Task should_not_repair_the_unrelated_claim() => await _unique.DidNotReceive().Save(Arg.Any<EventSourceId>(), _uniqueDefinition, Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    [Fact] async Task should_not_repair_the_unrelated_claim() => await _unique.DidNotReceive().Save(Arg.Any<EventSourceId>(), _uniqueDefinition, Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<Subject?>(), Arg.Any<CancellationToken>());
 }

@@ -99,7 +99,7 @@ public partial class EventSequence
                 content = expandoObjectConverter.ToExpandoObject(released, schema.Schema);
             }
 
-            updates.Add((_constraints!.Establish(context.EventSourceId, context.EventType.Id, content, context.EventSourceType, context.EventStreamType, context.EventStreamId), number));
+            updates.Add((_constraints!.Establish(context.EventSourceId, context.EventType.Id, content, context.EventSourceType, context.EventStreamType, context.EventStreamId, subject: ConstraintPersonalData.SubjectOf(context), personalProperties: ConstraintPersonalData.PropertiesOf(schema.Schema)), number));
         }
 
         State.SequenceNumber = last.Next();

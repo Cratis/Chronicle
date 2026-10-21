@@ -18,5 +18,5 @@ public record EventSeedingSupport(bool RoutingSupported)
     /// Gets the seeding features supported by this kernel.
     /// </summary>
     /// <returns>The supported seeding features.</returns>
-    internal static Task<EventSeedingSupport> GetSeedingSupport() => Task.FromResult(new EventSeedingSupport(true));
+    public static Task<EventSeedingSupport> GetSeedingSupport() => Task.FromResult(new EventSeedingSupport(true));
 }

@@ -73,6 +73,12 @@ public class FailedPartition
     public FailedPartitionHold? Hold { get; set; }
 
     /// <summary>
+    /// Gets or sets the durable deadline for the next delivery, independently of attempts.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PartitionDeferral? Deferral { get; set; }
+
+    /// <summary>
     /// Gets the recovery cursor, interpreting a legacy entry as live from its last attempt without initializing it.
     /// </summary>
     [JsonIgnore]

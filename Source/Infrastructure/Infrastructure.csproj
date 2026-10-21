@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <Description>Cratis Chronicle infrastructure library for the event-sourcing database and runtime.</Description>
+        <PackageTags>cratis;chronicle;event-sourcing;event-store;cqrs;dotnet;grpc</PackageTags>
         <AssemblyName>Cratis.Chronicle.Infrastructure</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
     </PropertyGroup>

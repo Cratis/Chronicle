@@ -57,9 +57,11 @@ To share an explicit clock with event scenarios, construct `new Defaults(artifac
 
 ## Lose a reply after commit
 
-Queue a fault with `scenario.Replies.DropNext(DroppedReply.Append);` before delivery. The next successful **receipted** append commits, then throws `Grpc.Core.RpcException` with `StatusCode.Unavailable`. The handler attempt fails, but its receipt survives. On retry with the same effect key, the original outcome wins and no duplicate events are appended.
+Queue a fault with `scenario.Replies.DropNext(DroppedReply.Append);` before delivery. The next successful **receipted or keyed** append (any append shape) commits, then throws `Grpc.Core.RpcException` with `StatusCode.Unavailable`. For a receipted handler append, the handler attempt fails, but its receipt survives. On retry with the same effect key, the original outcome wins and no duplicate events are appended.
 
-Other fault points are `RecordEffectReceipt`, `RecordOccurrence`, `ClaimOccurrences`, `CompleteOccurrence` and `FailOccurrence`. For example, `store.Replies.DropNext(DroppedReply.RecordEffectReceipt, 2);` discards two successful receipt-only replies. `Dropped` counts replies actually discarded, not faults queued. Refused mutations and ordinary unreceipted appends do not consume these faults.
+For keyed appends through `store.EventLog`, queue the same fault with `store.Replies.DropNext(DroppedReply.Append);`. Retry `AppendOnce` or `AppendManyOnce` with the same `IdempotencyKey` after reply loss; the retry reports `AlreadyAppended` without duplicating events. The named-tag variants behave the same way.
+
+Other fault points are `RecordEffectReceipt`, `RecordOccurrence`, `ClaimOccurrences`, `CompleteOccurrence` and `FailOccurrence`. For example, `store.Replies.DropNext(DroppedReply.RecordEffectReceipt, 2);` discards two successful receipt-only replies. `Dropped` counts replies actually discarded, not faults queued. Refused mutations and ordinary appends without a receipt or idempotency key do not consume these faults.
 
 An unknown outcome is not permission to execute an unrelated replacement. Inspect durable state or retry with the same identity. A lost claim remains leased until expiry. A repeated completion at the same epoch returns `AlreadyCompleted`.
 

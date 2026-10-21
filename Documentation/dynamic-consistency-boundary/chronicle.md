@@ -1,6 +1,6 @@
 ---
 title: Dynamic Consistency Boundary in Chronicle
-description: How Chronicle supports DCB-style decision models and append conditions within its event-source model, what maps well, what DCB does that Chronicle cannot, and what Chronicle adds.
+description: How Chronicle supports DCB-style decision models and append conditions in its event-source model, what maps well, what it cannot do and what it adds.
 ---
 
 Use this page if you know the DCB pattern and want to see how Chronicle maps to it. For the idea itself, read [Dynamic Consistency Boundary](./index.md).
