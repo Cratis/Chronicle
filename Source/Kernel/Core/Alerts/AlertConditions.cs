@@ -32,7 +32,8 @@ public class AlertConditions(IOptionsMonitor<ChronicleOptions> options, ILogger<
     {
         [AlertConditionKind.PartitionFailing] = AlertSeverity.Warning,
         [AlertConditionKind.PartitionRetriesExhausted] = AlertSeverity.Critical,
-        [AlertConditionKind.ObserverQuarantined] = AlertSeverity.Critical
+        [AlertConditionKind.ObserverQuarantined] = AlertSeverity.Critical,
+        [AlertConditionKind.WebhookEndpointGone] = AlertSeverity.Critical
     };
 
     readonly ConcurrentDictionary<string, byte> _warnedUnknownConditions = new(StringComparer.OrdinalIgnoreCase);

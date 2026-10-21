@@ -58,6 +58,19 @@ public class ObserverState
     [BsonIgnoreIfNull]
     public WebhookProbeState? WebhookProbe { get; set; }
 
+    /// <summary>Gets or sets the terminal endpoint episode, absent for ordinary retirement.</summary>
+    [BsonIgnoreIfNull]
+    public WebhookRetirement? WebhookRetirement { get; set; }
+
+    /// <summary>Gets or sets the last explicitly accepted registration token.</summary>
+    public Guid? WebhookRegistrationId { get; set; }
+
+    /// <summary>Gets or sets the opaque definition fingerprint awaiting explicit reactivation.</summary>
+    public string? WebhookRegistrationFingerprint { get; set; }
+
+    /// <summary>Gets or sets whether terminal recovery must resume existing replay work without resetting progress.</summary>
+    public bool WebhookReplayRetained { get; set; }
+
     /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>

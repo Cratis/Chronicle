@@ -47,14 +47,20 @@ rather than spending the normal retry budget on unchanged credentials or URLs. C
 configuration; the quarantined observer checks for recovery at a separate low rate. An
 operator can still clear observer quarantine to resume immediately.
 
-A `410 Gone` immediately parks the partition with no automatic retries and logs the target
-authority. It does **not** retire the webhook in this release. Operator intervention is
-required; retirement with a retained alert is a follow-up capability.
+A `410 Gone` retires the **whole webhook**, across partitions. Live delivery, catch-up, replay,
+partition retries and quarantine probes stop. The stopped state survives restart and retains
+a `webhook-gone` incident until a successful explicit re-registration (even an unchanged
+definition) or removal. Startup, watchdogs, definition replay, Retry and Clear quarantine cannot
+resume it. Correct the endpoint and re-register the webhook to start a new delivery lifecycle;
+a later `410` creates a separate incident. Checkpoints, handled counts and failure history are
+retained: the rejected event is not acknowledged and may be redelivered after re-registration.
+The terminal record and incident contain only HTTP status, sanitized target authority and recovery
+guidance: no user information, path, query, fragment, credentials, response body or payload.
 
 Backoff deadlines, receiver deadlines, retry counts, and the inclusive resume position
 survive reactivation. A failed automatic retry replaces its expired deadline with a fresh
 `RetryBackoff` deadline; reactivation never resamples jitter or burns another attempt.
-Structured logs distinguish configuration rejection, `410` parking, circuit-open rejection,
+Structured logs distinguish configuration rejection, `410` retirement, circuit-open rejection,
 receiver back-pressure, and backoff attempt/deadline. Non-webhook observer retry behavior
 is unchanged.
 
@@ -83,10 +89,11 @@ Probe failures do not add partition attempts, consume the normal retry budget, o
 failure history. Only one probe may run for an observer, and cancellation must drain its
 HTTP operation before a later delivery can begin.
 
-Configuration failures and exhausted transient-failure budgets are eligible. `410 Gone`,
-legacy failures without an explicit receiver policy, and unrelated watchdog quarantines
-remain manual-only. A healthy probe resets the eligible partitions' retry budgets while
-retaining attempt history; `410` and manual-only partitions remain parked. The successful
+Configuration failures and exhausted transient-failure budgets are eligible. Legacy failures
+without an explicit receiver policy and unrelated watchdog quarantines remain manual-only.
+A healthy probe resets the eligible partitions' retry budgets while retaining attempt history;
+manual-only partitions remain parked. A probe receiving `410 Gone` instead retires the whole
+webhook and retains the stopped-endpoint incident, just like ordinary delivery. The successful
 event is checkpointed before normal recovery starts at the next undelivered position.
 HTTP delivery is still at least once: a crash before the success checkpoint can cause a
 redelivery, so endpoints must remain idempotent.

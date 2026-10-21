@@ -207,7 +207,7 @@ public class HandleEventsForPartition(
                 cancellationToken: cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(
-                subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments);
+                subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments) { WebhookLifecycleId = subscription.WebhookLifecycleId };
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
 
             var failed = false;
@@ -215,6 +215,7 @@ public class HandleEventsForPartition(
             var exceptionStackTrace = string.Empty;
             var failureKind = FailureKind.Unknown;
             var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
+            WebhookDeliveryAttempt? deliveryAttempt = null;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -227,7 +228,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
+                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId, _subscriber is IWebhookObserverSubscriber ? subscription.WebhookLifecycleId : null))
                 {
                     return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
                 }
@@ -262,6 +263,11 @@ public class HandleEventsForPartition(
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
                 {
                     var (eventObserverResult, handledEvents) = handledEventsResult;
+                    if (_subscriber is IWebhookObserverSubscriber && eventObserverResult.State != ObserverSubscriberState.Failed &&
+                        !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId, subscription.WebhookLifecycleId))
+                    {
+                        return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
+                    }
                     if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
                     {
                         handledCount = events.Current.Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
@@ -296,6 +302,7 @@ public class HandleEventsForPartition(
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
                             failureKind = FailureKind.Handling;
                             failurePolicy = eventObserverResult.FailurePolicy;
+                            deliveryAttempt = eventObserverResult.DeliveryAttempt;
                             if (eventObserverResult.HandledAnyEvents)
                             {
                                 var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
@@ -345,7 +352,7 @@ public class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy, deliveryAttempt);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),

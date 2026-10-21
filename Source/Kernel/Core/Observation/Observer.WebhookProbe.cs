@@ -171,7 +171,7 @@ public partial class Observer
         {
             // No exception bodies: transport/security errors may contain credentials or a full URL.
             logger.WebhookProbeLocalFailure();
-            if (_webhookProbe is { ResumePending: false } current)
+            if (!WebhookProbeUnavailable && _webhookProbe is { ResumePending: false } current)
             {
                 await RescheduleWebhookProbe(current, null, "local-error");
             }
@@ -311,7 +311,7 @@ public partial class Observer
         {
             _metrics?.WebhookProbeAttempt();
             logger.WebhookProbeAttempt(control.Id, failure.Id);
-            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery), cancellation.Token);
+            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery) { WebhookLifecycleId = _alertLifecycleId }, cancellation.Token);
             var result = await _webhookProbeDelivery;
 
             // Even a nominal result cannot release quarantine before the completion barrier.
@@ -339,6 +339,11 @@ public partial class Observer
             return;
         }
 
+        if (result.FailurePolicy == WebhookDeliveryFailurePolicy.RetireWebhook)
+        {
+            await RetireGoneWebhook(failure.Partition, selected.Context.SequenceNumber, result.DeliveryAttempt);
+            return;
+        }
         if (!(await GetWebhookProbeConfiguration()).Enabled)
         {
             await RescheduleWebhookProbe(control, null, "disabled");
@@ -501,7 +506,7 @@ public partial class Observer
 
     async Task PreserveSuccessfulWebhookProbeProgress(WebhookProbeState control)
     {
-        if (!control.ResumePending || control.ResumePosition is not { } next || !IsQuarantined) return;
+        if (!control.ResumePending || control.ResumePosition is not { } next || (!IsQuarantined && _webhookRetirement is null)) return;
         await _alertMutationLock.WaitAsync();
         try
         {

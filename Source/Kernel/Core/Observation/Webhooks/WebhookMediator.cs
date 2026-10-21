@@ -118,8 +118,8 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
 
         if (response.StatusCode == HttpStatusCode.Gone)
         {
-            deliveryLogger.TargetGone(authority);
-            return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
+            deliveryLogger.TargetGone();
+            return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.RetireWebhook, HttpStatusCode = 410 };
         }
 
         if ((int)response.StatusCode is >= 400 and < 500 && response.StatusCode is not HttpStatusCode.RequestTimeout and not HttpStatusCode.TooManyRequests)

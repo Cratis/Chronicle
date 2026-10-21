@@ -51,6 +51,11 @@ public class Replay(
     {
         // Cleared first, so a start that throws or fails never leaves an earlier replay's job id to be reported.
         LastStartedJobId = JobId.NotSet;
+        if (state.WebhookReplayRetained && state.IsReplaying)
+        {
+            await ResumeRetainedReplay();
+            return state;
+        }
 
         using var scope = logger.BeginReplayScope(state.Identifier, observerKey);
         logger.Entering();
@@ -92,5 +97,26 @@ public class Replay(
             HandledEventCount = EventCount.Zero,
             HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty
         };
+    }
+
+    /// <summary>
+    /// Resumes the existing replay without replacing its job or resetting handled progress.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task ResumeRetainedReplay()
+    {
+        LastStartedJobId = JobId.NotSet;
+        var jobs = await jobsManager.GetUnfinishedJobs();
+        var job = jobs.FirstOrDefault(job =>
+            job.Request is ReplayObserverRequest request && request.ObserverKey == observerKey);
+        if (job is null) return;
+
+        // A missing or refused resume is retried by the observer watchdog. Never replace retained work
+        // with a new replay from the beginning, or reset successful partitions and handled counts.
+        if (job.IsLive(DateTimeOffset.UtcNow) ||
+            (job.Status == JobStatus.Stopped && await jobsManager.Resume(job.Id)))
+        {
+            LastStartedJobId = job.Id;
+        }
     }
 }

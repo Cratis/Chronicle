@@ -39,9 +39,13 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
+    public async Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null, Guid? webhookLifecycleId = null)
     {
-        if (IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed) return false;
+        if (IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed ||
+            (webhookLifecycleId is not null && webhookLifecycleId != _alertLifecycleId))
+        {
+            return false;
+        }
         if (!Failures.TryGet(partition, out var failure)) return episodeId is null && deferralId is null;
 
         // Catch-up and replay do not own the failed episode. Even after its deadline, leave delivery to the

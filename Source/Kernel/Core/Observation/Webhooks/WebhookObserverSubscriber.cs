@@ -58,13 +58,14 @@ public class WebhookObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context, CancellationToken cancellationToken)
     {
+        var attempt = new WebhookDeliveryAttempt(context.WebhookLifecycleId, WebhookDeliveryAttempt.Fingerprint(State));
         try
         {
             events = await ReleaseMismatches(events);
         }
         catch (Exception error)
         {
-            return HandleError(error);
+            return HandleError(error) with { DeliveryAttempt = attempt };
         }
 
         var target = State.Target;
@@ -76,16 +77,16 @@ public class WebhookObserverSubscriber(
         var onNextResult = await webhookMediator.Deliver(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
         if (onNextResult.Deferral is { } deferral)
         {
-            return new(ObserverSubscriberState.Deferred, onNextResult.LastHandled, [], string.Empty) { Deferral = deferral };
+            return new(ObserverSubscriberState.Deferred, onNextResult.LastHandled, [], string.Empty) { Deferral = deferral, DeliveryAttempt = attempt };
         }
 
         if (!onNextResult.IsSuccess)
         {
-            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled, FailurePolicy = onNextResult.FailurePolicy };
+            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled, FailurePolicy = onNextResult.FailurePolicy, HttpStatusCode = onNextResult.HttpStatusCode, DeliveryAttempt = attempt };
         }
 
         logger.SuccessfullyHandledAllEvents(_key);
-        return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
+        return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable) with { DeliveryAttempt = attempt };
 
         ObserverSubscriberResult HandleError(Exception error)
         {

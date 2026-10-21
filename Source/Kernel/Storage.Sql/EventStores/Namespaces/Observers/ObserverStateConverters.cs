@@ -27,6 +27,10 @@ public static class ObserverStateConverters
             AlertDisposition = definition.AlertDisposition,
             QuarantineEpisodeId = definition.QuarantineEpisodeId,
             WebhookProbe = definition.WebhookProbe is null ? null : JsonSerializer.Serialize(definition.WebhookProbe, ObserverStateJson.Options),
+            WebhookRetirement = definition.WebhookRetirement is null ? null : JsonSerializer.Serialize(definition.WebhookRetirement, ObserverStateJson.Options),
+            WebhookRegistrationId = definition.WebhookRegistrationId,
+            WebhookRegistrationFingerprint = definition.WebhookRegistrationFingerprint,
+            WebhookReplayRetained = definition.WebhookReplayRetained,
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -101,6 +105,10 @@ public static class ObserverStateConverters
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
             WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
+            WebhookRetirement = state.WebhookRetirement is null ? null : JsonSerializer.Deserialize<Observation.WebhookRetirement>(state.WebhookRetirement, ObserverStateJson.Options),
+            WebhookRegistrationId = state.WebhookRegistrationId,
+            WebhookRegistrationFingerprint = state.WebhookRegistrationFingerprint,
+            WebhookReplayRetained = state.WebhookReplayRetained,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber
         };

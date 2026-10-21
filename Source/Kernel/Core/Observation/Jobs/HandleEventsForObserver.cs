@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -701,6 +702,11 @@ public class HandleEventsForObserver(
         EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber,
         CancellationToken cancellationToken)
     {
+        if (typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) &&
+            !await _observer.CanResumeFailedPartition(partition, webhookLifecycleId: _subscription.WebhookLifecycleId))
+        {
+            return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
+        }
         var handledCount = EventCount.Zero;
         if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
         {
@@ -794,7 +800,7 @@ public class HandleEventsForObserver(
 
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling, failurePolicy: eventObserverResult.FailurePolicy);
+        await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling, failurePolicy: eventObserverResult.FailurePolicy, deliveryAttempt: eventObserverResult.DeliveryAttempt);
         if (!Advanced(await FlushFromWork()))
         {
             return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
@@ -815,9 +821,14 @@ public class HandleEventsForObserver(
     {
         try
         {
+            if (typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) &&
+                !await _observer.CanResumeFailedPartition(partition, webhookLifecycleId: _subscription.WebhookLifecycleId))
+            {
+                return (ObserverSubscriberResult.Disconnected(), Array.Empty<AppendedEvent>());
+            }
             var decryptedEvents = await DecryptEvents(events);
             var target = subscriberSelector.Select(_subscription, partition);
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { WebhookLifecycleId = _subscription.WebhookLifecycleId };
 
             // PerformStep (and everything it calls, including this method) runs off the grain's activation
             // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property

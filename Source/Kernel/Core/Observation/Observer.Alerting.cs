@@ -31,7 +31,7 @@ public partial class Observer
     bool? _projectionDefinitionExists;
     bool _observerExists;
 
-    bool IsRetired => _alertDisposition == AlertDisposition.Retired;
+    bool IsRetired => _alertDisposition == AlertDisposition.Retired || _webhookReactivationPending;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -39,6 +39,7 @@ public partial class Observer
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
+        _webhookRetirementCleanupLock.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);
@@ -125,6 +126,7 @@ public partial class Observer
                     LifecycleId = source.AlertLifecycleId,
                     Revision = source.AlertRevision,
                     QuarantineEpisodeId = source.QuarantineEpisodeId,
+                    WebhookRetirement = source.WebhookRetirement,
                     Endings = _alertEndings.ToImmutableDictionary(_ => _.Key.Value, _ => _.Value)
                 };
             }
@@ -200,6 +202,11 @@ public partial class Observer
         _alertRevision = State.AlertRevision;
         _alertDisposition = State.AlertDisposition;
         _quarantineEpisodeId = State.QuarantineEpisodeId;
+        _webhookRetirement = State.WebhookRetirement;
+        _webhookRegistrationId = State.WebhookRegistrationId;
+        _webhookRegistrationFingerprint = State.WebhookRegistrationFingerprint;
+        _webhookReplayRetained = State.WebhookReplayRetained;
+        _webhookRetirementCleanupPending = _webhookRetirement is not null;
 
         // The state provider supplies an identifier even for missing records. Consult storage rather than
         // treating a management probe (or a shared definition in another namespace) as observer creation.
@@ -240,6 +247,11 @@ public partial class Observer
         _alertLifecycleId = State.AlertLifecycleId;
         _alertRevision = State.AlertRevision;
         _quarantineEpisodeId = State.QuarantineEpisodeId;
+        _webhookRetirement = State.WebhookRetirement;
+        _webhookRegistrationId = State.WebhookRegistrationId;
+        _webhookRegistrationFingerprint = State.WebhookRegistrationFingerprint;
+        _webhookReplayRetained = State.WebhookReplayRetained;
+        _webhookRetirementCleanupPending = _webhookRetirement is not null;
         if (IsRetired)
         {
             await DiscardFailedPartitions(AlertClearedReason.Removed);
@@ -272,12 +284,23 @@ public partial class Observer
         }
     }
 
-    async Task CommitRetired()
+    async Task CommitRetired(bool removing = false)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
             if (!_observerExists) return;
+            if (removing && _webhookRetirement is { } retirement)
+            {
+                _alertEndings[retirement.Id] = AlertClearedReason.Removed;
+                _webhookRetirement = null;
+                _webhookRegistrationId = null;
+                _webhookRegistrationFingerprint = null;
+                _webhookReplayRetained = false;
+                _webhookRetirementCleanupPending = false;
+                ChangeAlertState();
+            }
+
             if (!IsRetired)
             {
                 _alertDisposition = AlertDisposition.Retired;

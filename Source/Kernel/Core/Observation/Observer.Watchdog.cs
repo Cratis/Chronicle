@@ -44,6 +44,7 @@ public partial class Observer
     async Task Watchdog(CancellationToken cancellationToken)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        await ReconcileWebhookRetirement();
         if (!_observerExists || _removed || IsRetired)
         {
             await ReconcileAlertsIfNeeded();

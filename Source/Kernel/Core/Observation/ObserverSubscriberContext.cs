@@ -7,4 +7,8 @@ namespace Cratis.Chronicle.Observation;
 /// Represents the context for an observer subscriber.
 /// </summary>
 /// <param name="Metadata">Optional metadata associated.</param>
-public record ObserverSubscriberContext(object? Metadata);
+public record ObserverSubscriberContext(object? Metadata)
+{
+    /// <summary>Gets the webhook subscription lifecycle admitted before delivery.</summary>
+    public Guid WebhookLifecycleId { get; init; }
+}

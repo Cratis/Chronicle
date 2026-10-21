@@ -63,3 +63,11 @@
     margin: 0 0 8px 0;
     color: var(--text-color);
 }
+
+.webhookGone {
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid var(--surface-border);
+    border-left: 4px solid var(--red-500);
+    color: var(--text-color);
+}

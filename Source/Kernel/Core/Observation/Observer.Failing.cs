@@ -28,15 +28,21 @@ public partial class Observer
         FailureKind kind = FailureKind.Unknown,
         FailedPartitionId? episodeId = null,
         Guid? deferralId = null,
-        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry)
+        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry,
+        WebhookDeliveryAttempt? deliveryAttempt = null)
     {
-        if (IsRetired || _removed)
+        if (IsRetired || _removed || (deliveryAttempt is { } attempt && attempt.LifecycleId != _alertLifecycleId))
         {
             return;
         }
 
         var quarantineObserver = false;
         TimeSpan? retryDelayToRegister = null;
+        if (failurePolicy == WebhookDeliveryFailurePolicy.RetireWebhook)
+        {
+            await RetireGoneWebhook(partition, sequenceNumber, deliveryAttempt);
+            return;
+        }
         await _alertMutationLock.WaitAsync();
         try
         {

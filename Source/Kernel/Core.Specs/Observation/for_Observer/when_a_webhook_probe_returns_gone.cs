@@ -14,18 +14,20 @@ public class when_a_webhook_probe_returns_gone : given.a_webhook_ready_to_probe
     void Establish()
     {
         _revision = _stateStorage.State.AlertRevision;
-        _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "410") with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition });
+        _webhook.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>()).Returns(call => ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "410") with { FailurePolicy = WebhookDeliveryFailurePolicy.RetireWebhook, HttpStatusCode = 410, DeliveryAttempt = new(call.Arg<ObserverSubscriberContext>().WebhookLifecycleId, WebhookDeliveryAttempt.Fingerprint(_webhookDefinition)) });
     }
 
     async Task Because()
     {
         await Tick();
-        _now = _stateStorage.State.WebhookProbe.Due;
+        await _observer.RunWatchdogAsync();
         await Tick();
     }
 
     [Fact] void should_advance_the_alert_revision() => _stateStorage.State.AlertRevision.ShouldBeGreaterThan(_revision);
-    [Fact] void should_park_the_episode() => _failedPartitionsState.Partitions.Single().WebhookDisposition.ShouldEqual(WebhookFailureDisposition.Gone);
+    [Fact] void should_retire_the_whole_webhook() => _stateStorage.State.AlertDisposition.ShouldEqual(AlertDisposition.Retired);
+    [Fact] void should_keep_the_reason() => _stateStorage.State.WebhookRetirement.Authority.ShouldEqual("https://receiver.example");
     [Fact] void should_not_probe_the_gone_episode_again() => _webhook.Received(1).OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>());
-    [Fact] void should_keep_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
+    [Fact] void should_stop_the_probe() => _stateStorage.State.WebhookProbe.ShouldBeNull();
+    [Fact] void should_disconnect() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Disconnected);
 }

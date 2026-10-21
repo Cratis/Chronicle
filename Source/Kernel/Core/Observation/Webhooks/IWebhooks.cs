@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -16,6 +17,13 @@ public interface IWebhooks : IGrainWithStringKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ensure();
+
+    /// <summary>Accepts a validated explicit registration, independently of definition replay and startup.</summary>
+    /// <param name="webhookId">The webhook identifier.</param>
+    /// <param name="eventSequenceId">The accepted event sequence.</param>
+    /// <param name="definitionFingerprint">Opaque fingerprint of the accepted definition.</param>
+    /// <returns>An awaitable task.</returns>
+    Task AcceptRegistration(WebhookId webhookId, EventSequenceId eventSequenceId, string definitionFingerprint);
 
     /// <summary>
     /// Get all the <see cref="WebhookDefinition">webhook definitions</see> available.

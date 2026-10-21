@@ -82,6 +82,16 @@ public interface IObserver : IGrainWithStringKey
     [AlwaysInterleave]
     Task<ObserverSubscription> GetSubscription();
 
+    /// <summary>Accepts an explicit registration intent, never created by startup or definition replay.</summary>
+    /// <param name="registrationId">The idempotency token of the accepted registration.</param>
+    /// <param name="definitionFingerprint">The opaque fingerprint of the accepted definition.</param>
+    /// <returns>An awaitable task.</returns>
+    Task AcceptWebhookRegistration(Guid registrationId, string definitionFingerprint);
+
+    /// <summary>Applies a previously accepted registration only when its definition is authoritative.</summary>
+    /// <returns>An awaitable task.</returns>
+    Task ReconcileWebhookRegistration();
+
     /// <summary>
     /// Checks whether a subscription is installed.
     /// </summary>
@@ -376,8 +386,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
     /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
+    /// <param name="deliveryAttempt">The authority captured before webhook delivery.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry, WebhookDeliveryAttempt? deliveryAttempt = null);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.
@@ -396,9 +407,10 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition to deliver.</param>
     /// <param name="episodeId">The recovery episode, or null for a legacy job.</param>
     /// <param name="deferralId">The deferral that owns the delivery.</param>
+    /// <param name="webhookLifecycleId">The admitted webhook lifecycle, if applicable.</param>
     /// <returns>Whether delivery may resume now.</returns>
     [AlwaysInterleave]
-    Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null);
+    Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null, Guid? webhookLifecycleId = null);
 
     /// <summary>
     /// Records a projection bulk flush's failed partitions with one alert snapshot for the batch.

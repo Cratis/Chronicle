@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
@@ -48,6 +49,9 @@ public class with_existing_webhook_unchanged : given.a_webhook_registrar
     }
 
     async Task Because() => await _registrar.Add("test-event-store", _webhooks);
+
+    [Fact] void should_accept_identical_explicit_registration() =>
+        _webhooksGrain.Received(1).AcceptRegistration("test-webhook", Arg.Any<EventSequenceId>(), Arg.Is<string>(fingerprint => !string.IsNullOrEmpty(fingerprint)));
 
     [Fact] void should_not_append_any_events() =>
         _eventSequence.DidNotReceive().Append(

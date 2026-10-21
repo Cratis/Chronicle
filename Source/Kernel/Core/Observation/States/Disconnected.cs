@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Observation.States;
 public class Disconnected : BaseObserverState
 {
     bool _quarantiningUnrecoverableSubscription;
+    bool _resumingRetainedReplay;
 
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Disconnected;
@@ -23,15 +24,35 @@ public class Disconnected : BaseObserverState
     /// giving up on recovering a subscription. Anything else that asks a disconnected observer to quarantine is refused,
     /// as it always has been.
     /// </remarks>
-    protected override IImmutableList<Type> AllowedTransitions => _quarantiningUnrecoverableSubscription
-        ? [typeof(Routing), typeof(CatchingUpInFlight), typeof(QuarantinedObserver)]
-        : [typeof(Routing), typeof(CatchingUpInFlight)];
+    protected override IImmutableList<Type> AllowedTransitions => (_resumingRetainedReplay, _quarantiningUnrecoverableSubscription) switch
+    {
+        (true, _) => [typeof(Routing), typeof(CatchingUpInFlight), typeof(Replay)],
+        (_, true) => [typeof(Routing), typeof(CatchingUpInFlight), typeof(QuarantinedObserver)],
+        _ => [typeof(Routing), typeof(CatchingUpInFlight)]
+    };
 
     /// <inheritdoc/>
     public override Task<ObserverState> OnEnter(ObserverState state) => Task.FromResult(state);
 
     /// <inheritdoc/>
     public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
+
+    /// <summary>
+    /// Resumes replay retained by a terminal webhook retirement after explicit registration.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task ResumeRetainedReplay()
+    {
+        _resumingRetainedReplay = true;
+        try
+        {
+            await StateMachine.TransitionTo<Replay>();
+        }
+        finally
+        {
+            _resumingRetainedReplay = false;
+        }
+    }
 
     /// <summary>
     /// Quarantines a subscribed observer whose recovery after an earlier quarantine keeps failing, so that an operator

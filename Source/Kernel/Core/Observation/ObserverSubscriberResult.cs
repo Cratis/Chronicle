@@ -25,6 +25,12 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     /// </summary>
     public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
 
+    /// <summary>Gets the bounded HTTP failure status, without target or response content.</summary>
+    public int? HttpStatusCode { get; init; }
+
+    /// <summary>Gets the authority captured before webhook delivery.</summary>
+    public WebhookDeliveryAttempt? DeliveryAttempt { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>

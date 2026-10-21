@@ -52,6 +52,18 @@ public class ObserverState
     /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
     public string? WebhookProbe { get; set; }
 
+    /// <summary>Gets or sets the serialized terminal endpoint episode.</summary>
+    public string? WebhookRetirement { get; set; }
+
+    /// <summary>Gets or sets the last explicitly accepted registration token.</summary>
+    public Guid? WebhookRegistrationId { get; set; }
+
+    /// <summary>Gets or sets the opaque definition fingerprint awaiting explicit reactivation.</summary>
+    public string? WebhookRegistrationFingerprint { get; set; }
+
+    /// <summary>Gets or sets whether terminal recovery must resume existing replay work without resetting progress.</summary>
+    public bool WebhookReplayRetained { get; set; }
+
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
     /// </summary>

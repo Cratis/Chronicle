@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_pe
 
 public class and_a_webhook_reports_a_gone_response_without_progress : given.a_performing_job_step
 {
+    readonly WebhookDeliveryAttempt _attempt = new(Guid.NewGuid(), "opaque-definition");
+
     void Establish()
     {
         _eventCursor.Current.Returns([
@@ -17,11 +19,11 @@ public class and_a_webhook_reports_a_gone_response_without_progress : given.a_pe
             AppendedEvent.EmptyWithEventSequenceNumber(43)]);
         var subscriber = Substitute.For<IWebhookObserverSubscriber>();
         subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>(), Arg.Any<CancellationToken>())
-            .Returns(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "receiver rejected delivery") with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition });
+            .Returns(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "receiver rejected delivery") with { FailurePolicy = WebhookDeliveryFailurePolicy.RetireWebhook, HttpStatusCode = 410, DeliveryAttempt = _attempt });
         _jobStep.SetupForTesting(_observer, subscriber, "some-partition");
     }
 
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
-    [Fact] void should_forward_the_receiver_policy_at_the_first_unhandled_event() => _observer.Received(1).PartitionFailed("some-partition", 42UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, null, null, WebhookDeliveryFailurePolicy.ParkPartition);
+    [Fact] void should_forward_the_receiver_policy_at_the_first_unhandled_event() => _observer.Received(1).PartitionFailed("some-partition", 42UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, null, null, WebhookDeliveryFailurePolicy.RetireWebhook, _attempt);
 }

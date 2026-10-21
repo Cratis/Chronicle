@@ -122,7 +122,24 @@ public sealed class WebhookRegistrar(
                 }
             }
 
-            // If compareResult is Same, no event is appended
+            // Definition replay never creates explicit registration intent. Even an unchanged, validated
+            // registration is an operator request to resume a terminal webhook.
+            var accepted = existingWebhook ?? encryptedWebhook;
+            if (compareResult.Result == WebhookDefinitionCompareResult.Different && compareResult.ChangedProperties is { } changes)
+            {
+                accepted = accepted with
+                {
+                    EventTypes = changes.EventTypesChanged ? encryptedWebhook.EventTypes : accepted.EventTypes,
+                    GenerationDelivery = changes.GenerationDeliveryChanged ? encryptedWebhook.GenerationDelivery : accepted.GenerationDelivery,
+                    Target = accepted.Target with
+                    {
+                        Url = changes.TargetUrlChanged ? encryptedWebhook.Target.Url : accepted.Target.Url,
+                        Headers = changes.TargetHeadersChanged ? encryptedWebhook.Target.Headers : accepted.Target.Headers,
+                        Authorization = changes.AuthorizationChanged ? encryptedWebhook.Target.Authorization : accepted.Target.Authorization
+                    }
+                };
+            }
+            await webhooksManager.AcceptRegistration(accepted.Identifier, accepted.EventSequenceId, WebhookDeliveryAttempt.Fingerprint(accepted));
         }
     }
 

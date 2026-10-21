@@ -670,6 +670,7 @@
                     "nextEventSequenceNumber": "Next event sequence number",
                     "lastHandledEventSequenceNumber": "Last handled event sequence number",
                     "handledEventCount": "Handled events",
+                    "webhookGone": "Webhook delivery stopped after HTTP 410 Gone. Re-register the webhook to resume delivery. Retrying partitions or clearing quarantine does not reactivate it.",
                     "connectedClients": {
                         "title": "Connected Clients",
                         "empty": "No clients are connected to this observer",

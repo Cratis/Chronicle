@@ -23,4 +23,7 @@ public record WebhookDeliveryResult(EventSequenceNumber LastHandled, Exception? 
     /// Gets the failure classification used by the observer's durable retry policy.
     /// </summary>
     public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
+
+    /// <summary>Gets the bounded HTTP failure status, without target or response content.</summary>
+    public int? HttpStatusCode { get; init; }
 }
