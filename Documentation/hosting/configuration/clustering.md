@@ -71,6 +71,8 @@ and removes defunct entries older than three hours. Set the cleanup period to `0
 The development kernel state reset is refused under `Sql` clustering because it would erase live
 membership. Use an isolated `Localhost` cluster for development resets. To replace nodes of a SQL cluster, see the [rolling-deploy runbook](../rolling-deploy.md).
 
+After a node is lost, observers can lag behind the event log until the observer watchdog catches them up. This applies to every clustering type and is tracked in [Chronicle#5246](https://github.com/Cratis/Chronicle/issues/5246).
+
 ## Properties
 
 | Property | Type | Default | Description |
