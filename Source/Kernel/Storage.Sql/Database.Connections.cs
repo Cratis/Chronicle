@@ -11,6 +11,7 @@ using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,14 +34,26 @@ public partial class Database
     /// </summary>
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
 
-    static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
+    /// <summary>
+    /// Builds the options every database context of the kernel is created with.
+    /// </summary>
+    /// <typeparam name="TDbContext">Type of database context.</typeparam>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> of the application.</param>
+    /// <param name="connectionString">The connection string of the database.</param>
+    /// <returns>The options.</returns>
+    /// <remarks>
+    /// Migrations are listed in the order of their releases (<see cref="ReleaseOrderedMigrationsAssembly"/>). The replacement is part of these
+    /// shared options rather than of each context, so every context keeps sharing one internal EF service provider.
+    /// </remarks>
+    internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
         where TDbContext : DbContext
     {
         var builder = new DbContextOptionsBuilder<TDbContext>();
         builder.UseDatabaseFromConnectionString(connectionString);
         builder
             .UseApplicationServiceProvider(serviceProvider)
-            .AddConceptAsSupport();
+            .AddConceptAsSupport()
+            .ReplaceService<IMigrationsAssembly, ReleaseOrderedMigrationsAssembly>();
 
         // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
         // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
