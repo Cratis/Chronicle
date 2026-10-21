@@ -34,7 +34,6 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
-        await context.PrepareColumnMappings();
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }

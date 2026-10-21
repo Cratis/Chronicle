@@ -23,7 +23,7 @@ public class ReadModelCacheKeyFactory : IModelCacheKeyFactory
         {
             var columnsKey = string.Join(
                 '|',
-                readModelContext.Columns.Select(c => $"{c.Name}:{c.ClrType.FullName}:{c.IsKey}:{c.IsJson}:{c.IsArray}:{c.IsNullable}:{c.MaxLength}:{c.IsIndexed}:{readModelContext.TextDecimalColumns.Contains(c.Name)}"));
+                readModelContext.Columns.Select(c => $"{c.Name}:{c.ClrType.FullName}:{c.IsKey}:{c.IsJson}:{c.IsArray}:{c.IsNullable}:{c.MaxLength}:{c.IsIndexed}"));
             return (context.GetType(), readModelContext.TableName, columnsKey, designTime);
         }
 

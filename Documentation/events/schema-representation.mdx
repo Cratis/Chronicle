@@ -109,8 +109,7 @@ mapping and replaces the old table when the replay succeeds. This is required fo
 former DECIMAL(18,2) columns. On SQLite, replay existing TEXT decimal columns to obtain numeric
 ordering and comparisons instead of lexicographic behavior.
 
-Existing SQLite TEXT decimal columns keep invariant-text conversion until replay replaces the table.
-New SQLite scalar decimal columns use NUMERIC affinity and binary floating-point conversion for numeric
+SQLite scalar decimal columns use NUMERIC affinity and binary floating-point conversion for numeric
 ordering, equality, and range filters, including decimal keys and nullable decimal properties. This
 trades exact decimal precision for numeric query semantics (approximately 15 significant digits).
 Use PostgreSQL, SQL Server, or MongoDB when exact decimal precision is required. SQLite event content
