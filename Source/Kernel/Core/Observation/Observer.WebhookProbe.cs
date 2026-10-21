@@ -341,7 +341,7 @@ public partial class Observer
 
         if (result.FailurePolicy == WebhookDeliveryFailurePolicy.RetireWebhook)
         {
-            await RetireGoneWebhook(result.DeliveryAttempt);
+            await RetireGoneWebhook(failure.Partition, selected.Context.SequenceNumber, result.DeliveryAttempt);
             return;
         }
         if (!(await GetWebhookProbeConfiguration()).Enabled)
@@ -506,7 +506,7 @@ public partial class Observer
 
     async Task PreserveSuccessfulWebhookProbeProgress(WebhookProbeState control)
     {
-        if (!control.ResumePending || control.ResumePosition is not { } next || !IsQuarantined) return;
+        if (!control.ResumePending || control.ResumePosition is not { } next || (!IsQuarantined && _webhookRetirement is null)) return;
         await _alertMutationLock.WaitAsync();
         try
         {

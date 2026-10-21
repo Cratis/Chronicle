@@ -68,6 +68,9 @@ public class ObserverState
     /// <summary>Gets or sets the opaque definition fingerprint awaiting explicit reactivation.</summary>
     public string? WebhookRegistrationFingerprint { get; set; }
 
+    /// <summary>Gets or sets whether terminal recovery must resume existing replay work without resetting progress.</summary>
+    public bool WebhookReplayRetained { get; set; }
+
     /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>

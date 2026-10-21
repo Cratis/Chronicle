@@ -35,7 +35,8 @@ public class with_a_webhook_retirement : Specification
             Identifier = "observer",
             WebhookRetirement = new(Guid.NewGuid(), DateTimeOffset.UtcNow, "https://receiver.example"),
             WebhookRegistrationId = Guid.NewGuid(),
-            WebhookRegistrationFingerprint = "opaque-definition"
+            WebhookRegistrationFingerprint = "opaque-definition",
+            WebhookReplayRetained = true
         };
         _expected = _state.ToMongoDB().ToBsonDocument();
     }
@@ -43,6 +44,8 @@ public class with_a_webhook_retirement : Specification
     async Task Because() => await _storage.Save(_state);
 
     [Fact] void should_set_the_webhook_retirement() => ValueIn(_set, nameof(ObserverState.WebhookRetirement)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.WebhookRetirement)));
+
+    [Fact] void should_set_the_retained_replay_marker() => ValueIn(_set, nameof(ObserverState.WebhookReplayRetained)).ShouldEqual(BsonBoolean.True);
 
     [Fact] void should_set_the_registration_identity() => ValueIn(_set, nameof(ObserverState.WebhookRegistrationId)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.WebhookRegistrationId)));
     [Fact] void should_set_the_registration_fingerprint() => ValueIn(_set, nameof(ObserverState.WebhookRegistrationFingerprint)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.WebhookRegistrationFingerprint)));

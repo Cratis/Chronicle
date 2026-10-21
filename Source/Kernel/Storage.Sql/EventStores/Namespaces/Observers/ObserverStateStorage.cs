@@ -150,6 +150,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             WebhookRetirement = existing.WebhookRetirement,
             WebhookRegistrationId = existing.WebhookRegistrationId,
             WebhookRegistrationFingerprint = existing.WebhookRegistrationFingerprint,
+            WebhookReplayRetained = existing.WebhookReplayRetained,
             NextEventSequenceNumber = existing.NextEventSequenceNumber,
             SubscribesToAllEvents = existing.SubscribesToAllEvents,
             LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,

@@ -205,6 +205,7 @@ public partial class Observer
         _webhookRetirement = State.WebhookRetirement;
         _webhookRegistrationId = State.WebhookRegistrationId;
         _webhookRegistrationFingerprint = State.WebhookRegistrationFingerprint;
+        _webhookReplayRetained = State.WebhookReplayRetained;
         _webhookRetirementCleanupPending = _webhookRetirement is not null;
 
         // The state provider supplies an identifier even for missing records. Consult storage rather than
@@ -249,6 +250,7 @@ public partial class Observer
         _webhookRetirement = State.WebhookRetirement;
         _webhookRegistrationId = State.WebhookRegistrationId;
         _webhookRegistrationFingerprint = State.WebhookRegistrationFingerprint;
+        _webhookReplayRetained = State.WebhookReplayRetained;
         _webhookRetirementCleanupPending = _webhookRetirement is not null;
         if (IsRetired)
         {
@@ -294,6 +296,7 @@ public partial class Observer
                 _webhookRetirement = null;
                 _webhookRegistrationId = null;
                 _webhookRegistrationFingerprint = null;
+                _webhookReplayRetained = false;
                 _webhookRetirementCleanupPending = false;
                 ChangeAlertState();
             }

@@ -28,6 +28,7 @@ public class v19_105_1 : Migration
 
         migrationBuilder.AddColumn<Guid>(name: "WebhookRegistrationId", table: WellKnownTableNames.Observers, nullable: true);
         migrationBuilder.AddColumn<string>(name: "WebhookRegistrationFingerprint", table: WellKnownTableNames.Observers, nullable: true);
+        migrationBuilder.AddColumn<bool>(name: "WebhookReplayRetained", table: WellKnownTableNames.Observers, nullable: false, defaultValue: false);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -40,5 +41,6 @@ public class v19_105_1 : Migration
         migrationBuilder.DropColumn(name: "WebhookRetirement", table: WellKnownTableNames.Observers);
         migrationBuilder.DropColumn(name: "WebhookRegistrationId", table: WellKnownTableNames.Observers);
         migrationBuilder.DropColumn(name: "WebhookRegistrationFingerprint", table: WellKnownTableNames.Observers);
+        migrationBuilder.DropColumn(name: "WebhookReplayRetained", table: WellKnownTableNames.Observers);
     }
 }

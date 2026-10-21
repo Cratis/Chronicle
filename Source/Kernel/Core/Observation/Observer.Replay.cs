@@ -48,6 +48,7 @@ public partial class Observer
         {
             Skips.Reset();
             var canReplay = await CanTransitionTo<Replay>();
+            if (canReplay) _webhookReplayRetained = false;
             await TransitionTo<Replay>();
             if (State.RunningState != ObserverRunningState.Replaying)
             {
@@ -137,6 +138,7 @@ public partial class Observer
             }
         }
 
+        _webhookReplayRetained = false;
         State = State with
         {
             IsReplaying = false,
@@ -249,6 +251,14 @@ public partial class Observer
     {
         if (IsRecoverySuperseded(recovery))
         {
+            return true;
+        }
+
+        // Gone cleanup disconnects delivery without ending an in-flight replay. Accepted registration
+        // resumes that replay's existing job and steps, rather than evaluating a fresh replay or catch-up.
+        if (_webhookReplayRetained && State.IsReplaying)
+        {
+            await ResumeRetainedWebhookReplay(recovery);
             return true;
         }
 

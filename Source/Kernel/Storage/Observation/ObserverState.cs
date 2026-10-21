@@ -104,6 +104,9 @@ public record ObserverState(
     /// <summary>Gets the opaque definition fingerprint awaiting explicit reactivation.</summary>
     public string? WebhookRegistrationFingerprint { get; init; }
 
+    /// <summary>Gets whether terminal recovery must resume existing replay work without resetting progress.</summary>
+    public bool WebhookReplayRetained { get; init; }
+
     /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>

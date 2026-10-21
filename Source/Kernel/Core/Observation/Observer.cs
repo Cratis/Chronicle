@@ -728,7 +728,8 @@ public partial class Observer(
                 WebhookProbe = _webhookProbe,
                 WebhookRetirement = _webhookRetirement,
                 WebhookRegistrationId = _webhookRegistrationId,
-                WebhookRegistrationFingerprint = _webhookRegistrationFingerprint
+                WebhookRegistrationFingerprint = _webhookRegistrationFingerprint,
+                WebhookReplayRetained = _webhookReplayRetained
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();
@@ -1170,7 +1171,15 @@ public partial class Observer(
                           ShouldPauseJob(job.Status) &&
                           observerJobRequest.ObserverKey == _observerKey)
             .Select(job => _jobsManager.Stop(job.Id));
-        await Task.WhenAll(pauseTasks);
+        var results = await Task.WhenAll(pauseTasks);
+        if (!includeReplay) return;
+        foreach (var result in results)
+        {
+            if (result.TryGetError(out var error) && error is not (StopJobError.JobIsCompleted or StopJobError.JobIsNotRunning))
+            {
+                throw new InvalidOperationException($"Could not stop retired webhook work: {error}.");
+            }
+        }
         return;
 
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
@@ -1248,7 +1257,7 @@ public partial class Observer(
     /// <param name="recovery">The generation the recovery captured when it started.</param>
     /// <returns>True if the recovery must stop, false if it may carry on.</returns>
     bool IsRecoverySuperseded(int recovery) =>
-        IsQuarantined || !_subscription.IsSubscribed || recovery != _recoveryGeneration;
+        IsRetired || IsQuarantined || !_subscription.IsSubscribed || recovery != _recoveryGeneration;
 
     async Task RecoverSubscribedObserver()
     {

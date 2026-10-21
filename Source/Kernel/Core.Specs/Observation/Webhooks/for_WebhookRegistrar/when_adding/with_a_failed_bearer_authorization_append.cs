@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.when_adding
 public class with_a_failed_bearer_authorization_append : given.a_webhook_registrar
 {
     IEventSequence _eventSequence;
+    IWebhooks _webhooks;
     ContractWebhookDefinition _webhook;
     Exception? _exception;
 
@@ -20,9 +22,9 @@ public class with_a_failed_bearer_authorization_append : given.a_webhook_registr
     {
         _eventSequence = Substitute.For<IEventSequence>();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
-        var webhooks = Substitute.For<IWebhooks>();
-        webhooks.GetWebhookDefinitions().Returns([]);
-        _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(webhooks);
+        _webhooks = Substitute.For<IWebhooks>();
+        _webhooks.GetWebhookDefinitions().Returns([]);
+        _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_webhooks);
         _webhookDefinitionComparer.Compare(Arg.Any<WebhookKey>(), Arg.Any<WebhookDefinition>(), Arg.Any<WebhookDefinition>())
             .Returns(new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.New, null));
         _encryption.Encrypt(Arg.Any<string>()).Returns("synthetic-encrypted-token");
@@ -53,5 +55,6 @@ public class with_a_failed_bearer_authorization_append : given.a_webhook_registr
 
     [Fact] void should_not_report_success_after_the_authorization_append_failed() => _exception.ShouldNotBeNull();
     [Fact] void should_fail_the_registration() => _exception.ShouldBeOfExactType<WebhookRegistrationFailed>();
+    [Fact] void should_not_accept_failed_registration() => _webhooks.DidNotReceive().AcceptRegistration(Arg.Any<WebhookId>(), Arg.Any<EventSequenceId>(), Arg.Any<string>());
     [Fact] void should_keep_the_token_out_of_the_failure() => _exception!.Message.ShouldNotContain("synthetic");
 }

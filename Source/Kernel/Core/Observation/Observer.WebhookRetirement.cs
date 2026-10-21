@@ -19,6 +19,7 @@ public partial class Observer
     string? _webhookRegistrationFingerprint;
     bool _webhookRetirementCleanupPending;
     bool _webhookReactivationPending;
+    bool _webhookReplayRetained;
 
     /// <inheritdoc/>
     public async Task AcceptWebhookRegistration(Guid registrationId, string definitionFingerprint)
@@ -100,11 +101,16 @@ public partial class Observer
 
     async Task ReconcileWebhookRetirement()
     {
-        if (!_webhookRetirementCleanupPending || _webhookRetirement is null || _removed) return;
+        if (_webhookRetirement is null || _removed) return;
         await _webhookRetirementCleanupLock.WaitAsync();
         try
         {
-            if (!_webhookRetirementCleanupPending || _removed) return;
+            if (_webhookRetirement is null || _removed) return;
+            if (!_webhookRetirementCleanupPending)
+            {
+                await ReconcileRemovedWebhook();
+                return;
+            }
             await _alertMutationLock.WaitAsync();
             try
             {
@@ -132,12 +138,24 @@ public partial class Observer
             await TransitionTo<Disconnected>();
             await WriteStateAsync();
             _webhookRetirementCleanupPending = false;
+            await ReconcileRemovedWebhook();
         }
         finally
         {
             _webhookRetirementCleanupLock.Release();
         }
         await ReportAlertState();
+    }
+
+    async Task ReconcileRemovedWebhook()
+    {
+        // Definition removal is shared by every namespace. Reconcile it even after delivery cleanup,
+        // without creating a namespace observer or discarding retained progress and failure history.
+        var webhooks = storage.GetEventStore(_observerKey.EventStore).Webhooks;
+        if (!await webhooks.Has((WebhookId)_observerId.Value))
+        {
+            await CommitRetired(removing: true);
+        }
     }
 
     async Task TryApplyAcceptedWebhookRegistration()
@@ -172,6 +190,8 @@ public partial class Observer
             var retirement = _webhookRetirement;
             var fingerprint = _webhookRegistrationFingerprint;
             var lifecycle = _alertLifecycleId;
+            var replayRetained = _webhookReplayRetained;
+            _webhookReplayRetained = State.IsReplaying;
             _webhookReactivationPending = true;
             _alertEndings[retirement.Id] = AlertClearedReason.Cleared;
             _webhookRetirement = null;
@@ -189,6 +209,7 @@ public partial class Observer
                 _webhookRegistrationFingerprint = fingerprint;
                 _alertDisposition = AlertDisposition.Retired;
                 _alertLifecycleId = lifecycle;
+                _webhookReplayRetained = replayRetained;
                 _alertEndings.Remove(retirement.Id);
                 ChangeAlertState();
                 throw;
@@ -201,6 +222,28 @@ public partial class Observer
         finally
         {
             _alertMutationLock.Release();
+        }
+    }
+
+    async Task ResumeRetainedWebhookReplay(int recovery)
+    {
+        await ResumeJobs(recovery);
+        if (IsRecoverySuperseded(recovery)) return;
+        var replayState = (await GetStates()).OfType<Replay>().Single();
+        if (IsRecoverySuperseded(recovery)) return;
+        var currentState = await GetCurrentState();
+        if (IsRecoverySuperseded(recovery)) return;
+        switch (currentState)
+        {
+            case Disconnected disconnected:
+                await disconnected.ResumeRetainedReplay();
+                break;
+            case Replay:
+                await replayState.ResumeRetainedReplay();
+                break;
+            default:
+                await TransitionTo<Replay>();
+                break;
         }
     }
 

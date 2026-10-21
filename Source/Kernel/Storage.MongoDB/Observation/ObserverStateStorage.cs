@@ -88,6 +88,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.WebhookRetirement, document.WebhookRetirement)
             .Set(_ => _.WebhookRegistrationId, document.WebhookRegistrationId)
             .Set(_ => _.WebhookRegistrationFingerprint, document.WebhookRegistrationFingerprint)
+            .Set(_ => _.WebhookReplayRetained, document.WebhookReplayRetained)
             .Set(_ => _.LastHandledEventSequenceNumber, document.LastHandledEventSequenceNumber)
             .Set(_ => _.NextEventSequenceNumber, document.NextEventSequenceNumber)
             .Set(_ => _.TailEventSequenceNumber, document.TailEventSequenceNumber)
