@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a_connection_alive;
