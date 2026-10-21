@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Integration.SqlClustering.for_ClusterLoad;
 public class when_classifying_failed_appends : Specification
 {
     const string CommandFailed = "Cratis.Chronicle.Contracts.Commands.CommandFailed";
+    const string RefusedByDepartedSilo = "Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to endpoint S172.20.0.5:11111:151569171. See InnerException\n ---> Orleans.Networking.Shared.SocketConnectionException: Unable to connect to 172.20.0.5:11111. Error: ConnectionRefused";
     const string SiloUnavailableAppend = "Command failed: The target silo became unavailable for message: Request [source]->[target] Cratis.Chronicle.EventSequences.IEventSequence.Append(arguments)";
 
     [Fact]
@@ -32,4 +33,20 @@ public class when_classifying_failed_appends : Specification
     [Fact]
     public void should_keep_timeout_uncertain() =>
         ClusterLoad.IsUncertainAppend(new TimeoutException()).ShouldBeTrue();
+
+    [Fact]
+    public void should_treat_a_refused_forward_to_a_silo_the_fixture_took_down_as_uncertain() =>
+        ClusterLoad.IsAppendToDepartedSilo(CommandFailed, RefusedByDepartedSilo, [("172.20.0.5", 151569171)]).ShouldBeTrue();
+
+    [Fact]
+    public void should_not_treat_a_refused_forward_to_another_silo_as_uncertain() =>
+        ClusterLoad.IsAppendToDepartedSilo(CommandFailed, RefusedByDepartedSilo, [("172.20.0.4", 151569171)]).ShouldBeFalse();
+
+    [Fact]
+    public void should_not_treat_a_refused_forward_to_a_later_incarnation_as_uncertain() =>
+        ClusterLoad.IsAppendToDepartedSilo(CommandFailed, RefusedByDepartedSilo, [("172.20.0.5", 151569200)]).ShouldBeFalse();
+
+    [Fact]
+    public void should_not_treat_another_connection_failure_to_a_departed_silo_as_uncertain() =>
+        ClusterLoad.IsAppendToDepartedSilo(CommandFailed, RefusedByDepartedSilo.Replace("ConnectionRefused", "HostUnreachable"), [("172.20.0.5", 151569171)]).ShouldBeFalse();
 }

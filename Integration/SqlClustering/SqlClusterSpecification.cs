@@ -70,6 +70,7 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
     async Task KillOne()
     {
         var before = await _cluster.WaitForMembership(entries => entries.Count == 3, TimeSpan.FromSeconds(10));
+        _load.SiloDeparting(before.Single(entry => entry.Address == _cluster.Nodes[0].IpAddress && entry.Status == (int)SiloStatus.Active));
 
         // SIGKILL bypasses Orleans' graceful leave path. Target only the container owned by this fixture.
         using var process = Process.Start(new ProcessStartInfo("docker")
@@ -104,6 +105,7 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
             var active = previous.Single(entry => entry.Address == node.IpAddress && entry.Status == (int)SiloStatus.Active);
 
             // Docker may hand a restarted container another address, so only the old incarnation is identified exactly.
+            _load.SiloDeparting(active);
             await node.StopAsync().WaitAsync(TimeSpan.FromSeconds(90));
             await node.StartAsync().WaitAsync(TimeSpan.FromSeconds(90));
             previous = await _cluster.WaitForMembership(entries =>
