@@ -4,15 +4,19 @@
 namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 
 /// <summary>
-/// Orders a schema operation that MongoDB cannot run inside a transaction behind an epoch check, and checks the epoch again after it.
+/// Checks the owner's epoch before and after a schema operation that MongoDB cannot run inside a transaction. This is detection,
+/// not a fence.
 /// </summary>
 /// <param name="gates">The <see cref="IFenceGates"/> to read the epoch from.</param>
 /// <remarks>
-/// Dropping or renaming a collection cannot join the fenced transaction, so it cannot be made atomic with the gate. This is the
-/// weaker guarantee that remains: it refuses to start for a revoked owner, and reports a revocation that raced it so the caller can
-/// compensate. It does not stop a revoked owner's operation that was already running.
+/// Dropping or renaming a collection cannot join the fenced transaction, so nothing makes it atomic with the gate. The pre-check
+/// refuses to start for an owner that is already revoked, and the post-check reports a revocation that happened while the
+/// operation ran. Neither prevents a stale operation: a drop delayed between the pre-check and the server executing it still
+/// runs. Callers must not rely on this to protect another owner's data; destructive schema operations need exclusion (an
+/// administrative path with access revoked first) or a layout where a stale owner's operation can only touch its own
+/// generation's container.
 /// </remarks>
-public class FencedDdl(IFenceGates gates)
+public class EpochCheckedDdl(IFenceGates gates)
 {
     /// <summary>
     /// Runs a schema operation for the owner of a token.
@@ -22,7 +26,7 @@ public class FencedDdl(IFenceGates gates)
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="FenceRevoked">The epoch had moved on before the operation; it did not run.</exception>
-    /// <exception cref="FencedDdlRacedRevocation">The epoch moved on while the operation ran.</exception>
+    /// <exception cref="EpochCheckedDdlRacedRevocation">The epoch moved on while the operation ran.</exception>
     public async Task Run(FenceToken token, Func<Task> operation, CancellationToken cancellationToken = default)
     {
         if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
@@ -34,7 +38,7 @@ public class FencedDdl(IFenceGates gates)
 
         if (await gates.CurrentEpoch(token.MaterializationKey, token.Generation, cancellationToken) != token.Epoch)
         {
-            throw new FencedDdlRacedRevocation(token);
+            throw new EpochCheckedDdlRacedRevocation(token);
         }
     }
 }

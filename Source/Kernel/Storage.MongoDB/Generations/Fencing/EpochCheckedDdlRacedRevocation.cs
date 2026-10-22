@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 /// <remarks>
 /// The operation has run and cannot be undone by the fence; the caller must treat its effect as made by a revoked owner.
 /// </remarks>
-public class FencedDdlRacedRevocation(FenceToken token)
+public class EpochCheckedDdlRacedRevocation(FenceToken token)
     : Exception($"A schema operation guarded by '{token.GateId}' epoch {token.Epoch} ran while the epoch was revoked; its effect must be treated as unowned.")
 {
     /// <summary>

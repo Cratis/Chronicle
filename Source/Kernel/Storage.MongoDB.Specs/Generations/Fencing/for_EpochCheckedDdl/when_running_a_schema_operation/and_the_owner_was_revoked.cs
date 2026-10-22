@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
-namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedDdl.when_running_a_schema_operation;
+namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_EpochCheckedDdl.when_running_a_schema_operation;
 
 [Collection(ReplicaSetMongoDBCollection.Name)]
 public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given.a_fenced_writer_against_a_replica_set(fixture)
@@ -14,7 +14,7 @@ public class and_the_owner_was_revoked(ReplicaSetMongoDBFixture fixture) : given
     async Task Because()
     {
         await Revoke();
-        _error = await Catch.Exception(() => new FencedDdl(_gates).Run(_token, () =>
+        _error = await Catch.Exception(() => new EpochCheckedDdl(_gates).Run(_token, () =>
         {
             _ran = true;
             return Task.CompletedTask;
