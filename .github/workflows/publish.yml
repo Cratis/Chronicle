@@ -106,16 +106,25 @@ jobs:
     with:
       version: ${{ needs.release.outputs.version }}
 
+  # Before anything is published: a release whose silos cannot share a cluster with the previous release's silos would
+  # crash the first new pod of every rolling upgrade. See grain-compatibility.yml.
+  grain-compatibility:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release]
+    uses: ./.github/workflows/grain-compatibility.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+
   generate-protos:
     if: needs.release.outputs.publish == 'true'
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
     uses: ./.github/workflows/generate-protos.yml
 
   coverage-statistics:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
     permissions:
       contents: write
 
@@ -164,7 +173,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -194,7 +203,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -224,7 +233,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -274,7 +283,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, workbench]
+    needs: [wire-compatibility, grain-compatibility, release, workbench]
     permissions:
       contents: read
 
@@ -334,7 +343,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development, dotnet-pack]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development, dotnet-pack]
     permissions:
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
@@ -382,7 +391,7 @@ jobs:
     if: needs.release.outputs.publish == 'true' && needs.release.outputs.prerelease != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-pack-and-publish]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-pack-and-publish]
 
     steps:
       - name: Trigger Chronicle update on Arc
@@ -395,7 +404,7 @@ jobs:
 
   publish-typescript-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [wire-compatibility, release, generate-protos]
+    needs: [wire-compatibility, grain-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-typescript-client.yml
     secrets: inherit
     with:
@@ -404,7 +413,7 @@ jobs:
 
   publish-kotlin-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [wire-compatibility, release, generate-protos]
+    needs: [wire-compatibility, grain-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-kotlin-client.yml
     secrets: inherit
     with:
@@ -413,7 +422,7 @@ jobs:
 
   publish-elixir-client:
     if: needs.release.outputs.publish == 'true'
-    needs: [wire-compatibility, release, generate-protos]
+    needs: [wire-compatibility, grain-compatibility, release, generate-protos]
     uses: ./.github/workflows/publish-elixir-client.yml
     secrets: inherit
     with:
@@ -446,7 +455,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -476,7 +485,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
-    needs: [wire-compatibility, release]
+    needs: [wire-compatibility, grain-compatibility, release]
 
     steps:
       - name: Checkout code
@@ -506,7 +515,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -602,7 +611,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -657,7 +666,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -739,7 +748,7 @@ jobs:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, grain-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code

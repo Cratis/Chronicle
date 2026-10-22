@@ -240,12 +240,12 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("github.event_name != 'pull_request'", parallel["if"])
         self.assertEqual("github.event_name == 'pull_request' && inputs.integration_requested",
                          requested["if"])
-        self.assertEqual(["wire-compatibility"], parallel["needs"])
-        self.assertEqual(["wire-compatibility", "specs"], requested["needs"])
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], parallel["needs"])
+        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs"], requested["needs"])
         self.assertEqual(["specs-other", "specs-sql"], jobs["specs"]["needs"])
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], jobs[job_id]["needs"])
-        self.assertEqual(["wire-compatibility"], jobs["dotnet-build"]["needs"])
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], jobs["dotnet-build"]["needs"])
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
@@ -263,15 +263,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_development_eligibility_for_specs_success_failure_cancel_and_skip(self):
         jobs = self.build["jobs"]
         states = ("success", "failure", "cancelled", "skipped")
-        for event, requested, specs, wire in product(
-                ("pull_request", "schedule", "workflow_dispatch"), (False, True), states, states):
-            results = {"wire-compatibility": wire, "specs": specs}
+        for event, requested, specs, wire, grain in product(
+                ("pull_request", "schedule", "workflow_dispatch"), (False, True), states, states, states):
+            results = {"wire-compatibility": wire, "grain-compatibility": grain, "specs": specs}
             context = ConditionContext(event, requested, results)
-            with self.subTest(event=event, requested=requested, specs=specs, wire=wire):
-                self.assertEqual(event != "pull_request" and wire == "success",
+            with self.subTest(event=event, requested=requested, specs=specs, wire=wire, grain=grain):
+                gates = wire == "success" and grain == "success"
+                self.assertEqual(event != "pull_request" and gates,
                                  condition_allows(jobs["dotnet-build-development"], context))
                 self.assertEqual(event == "pull_request" and requested and
-                                 specs == "success" and wire == "success",
+                                 specs == "success" and gates,
                                  condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
