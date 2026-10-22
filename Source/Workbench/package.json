@@ -87,7 +87,7 @@
         "react-router-dom": "7.18.2",
         "sinon": "22.1.0",
         "sinon-chai": "4.0.1",
-        "storybook": "^10.5.10",
+        "storybook": "^10.6.2",
         "tailwindcss": "4.3.3",
         "ts-node": "10.9.2",
         "tsconfig-paths": "4.2.0",
