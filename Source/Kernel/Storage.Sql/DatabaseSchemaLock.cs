@@ -127,10 +127,17 @@ internal static class DatabaseSchemaLock
         builder.ConnectionString = configured;
         builder["Pooling"] = false;
 
-        var connection = factory.CreateConnection()!;
+        // Clone PostgreSQL authentication callbacks as well as connection settings, including the Entra password provider.
+        var connection = contextConnection is NpgsqlConnection postgres
+            ? await postgres.CloneWithAsync(builder.ConnectionString)
+            : factory.CreateConnection()!;
         try
         {
-            connection.ConnectionString = builder.ConnectionString;
+            if (contextConnection is not NpgsqlConnection)
+            {
+                connection.ConnectionString = builder.ConnectionString;
+            }
+
             var identity = options.FindExtension<CoreOptionsExtension>()?.Interceptors?.OfType<ResolvedIdentityInterceptor>().FirstOrDefault();
             if (identity is not null)
             {
