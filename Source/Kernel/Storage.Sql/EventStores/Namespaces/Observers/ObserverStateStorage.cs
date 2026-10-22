@@ -81,24 +81,11 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
         if (existing is null)
         {
-            await scope.DbContext.Observers.AddAsync(entity);
+            await scope.DbContext.Observers.Insert(entity, PreserveControl);
         }
         else
         {
-            if (state.TypeSetControl is null)
-            {
-                entity.TypeSetControl = existing.TypeSetControl;
-            }
-            else
-            {
-                var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
-                if (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value)
-                {
-                    entity.TypeSetControl = existing.TypeSetControl;
-                }
-            }
-
-            entity.Initialization ??= existing.Initialization;
+            PreserveControl(entity, existing);
 
             // The tracked control is a concurrency token: a competing write after this read
             // fails the save rather than overwriting a newer revision with this snapshot.
@@ -159,8 +146,33 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             IsReplaying = existing.IsReplaying
         };
 
-        scope.DbContext.Observers.Remove(existing);
-        await scope.DbContext.Observers.AddAsync(renamed);
+        await scope.DbContext.Observers.Upsert(renamed);
+        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
         await scope.DbContext.SaveChangesAsync();
+        if (currentId != newId)
+        {
+            await scope.DbContext.Observers.Where(observer => observer.Id == currentId).ExecuteDeleteAsync();
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    static void PreserveControl(ObserverState entity, ObserverState existing)
+    {
+        if (entity.TypeSetControl is null)
+        {
+            entity.TypeSetControl = existing.TypeSetControl;
+        }
+        else
+        {
+            var requested = ObserverTypeSetControlJson.Deserialize(entity.TypeSetControl);
+            var stored = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
+            if (stored is not null && requested is not null && requested.Revision.Value < stored.Revision.Value)
+            {
+                entity.TypeSetControl = existing.TypeSetControl;
+            }
+        }
+
+        entity.Initialization ??= existing.Initialization;
     }
 }

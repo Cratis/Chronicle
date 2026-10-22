@@ -37,19 +37,8 @@ public class EventSeedingStorage(EventStoreName eventStore, IDatabase database, 
     public async Task Save(EventSeeds data)
     {
         await using var scope = await database.EventStore(eventStore);
-        var entity = await scope.DbContext.EventSeeds.FirstOrDefaultAsync();
-
-        if (entity is null)
-        {
-            entity = EventSeedingConverters.ToEntity(data, jsonSerializerOptions);
-            scope.DbContext.EventSeeds.Add(entity);
-        }
-        else
-        {
-            var updated = EventSeedingConverters.ToEntity(data, jsonSerializerOptions);
-            entity.ByEventTypeJson = updated.ByEventTypeJson;
-            entity.ByEventSourceJson = updated.ByEventSourceJson;
-        }
+        var entity = EventSeedingConverters.ToEntity(data, jsonSerializerOptions);
+        await scope.DbContext.EventSeeds.Upsert(entity);
 
         await scope.DbContext.SaveChangesAsync();
     }

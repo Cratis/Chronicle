@@ -80,8 +80,14 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
             IsReplayable = existing.IsReplayable
         };
 
-        scope.DbContext.Reactors.Remove(existing);
-        await scope.DbContext.Reactors.AddAsync(renamed);
+        await scope.DbContext.Reactors.Upsert(renamed);
+        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
         await scope.DbContext.SaveChangesAsync();
+        if (currentId != newId)
+        {
+            await scope.DbContext.Reactors.Where(reactor => reactor.Id == currentId).ExecuteDeleteAsync();
+        }
+
+        await transaction.CommitAsync();
     }
 }

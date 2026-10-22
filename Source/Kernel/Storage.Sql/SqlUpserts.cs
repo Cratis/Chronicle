@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal static class SqlUpserts
 {
     static readonly ConditionalWeakTable<DbContext, HashSet<object>> _inserts = new();
+    static readonly ConditionalWeakTable<object, Action<object>> _collisionMerges = new();
 
     /// <summary>
     /// Stage an upsert, remembering which inserts may converge with a concurrent writer.
@@ -30,6 +31,22 @@ internal static class SqlUpserts
         {
             _inserts.GetValue(entry.Context, _ => new(ReferenceEqualityComparer.Instance)).Add(entity);
         }
+    }
+
+    /// <summary>
+    /// Stage a known-missing row, merging persisted values if another writer inserts it first.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="set">The entity set.</param>
+    /// <param name="entity">The desired values.</param>
+    /// <param name="mergeCollision">The merge to apply when an insert loses a race.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task Insert<TEntity>(this DbSet<TEntity> set, TEntity entity, Action<TEntity, TEntity> mergeCollision)
+        where TEntity : class
+    {
+        await set.AddAsync(entity);
+        _inserts.GetValue(set.Entry(entity).Context, _ => new(ReferenceEqualityComparer.Instance)).Add(entity);
+        _collisionMerges.Add(entity, existing => mergeCollision(entity, (TEntity)existing));
     }
 
     /// <summary>
@@ -62,6 +79,11 @@ internal static class SqlUpserts
                     if (existing is null)
                     {
                         continue;
+                    }
+
+                    if (_collisionMerges.TryGetValue(entry.Entity, out var merge))
+                    {
+                        merge(existing.ToObject());
                     }
 
                     entry.OriginalValues.SetValues(existing);

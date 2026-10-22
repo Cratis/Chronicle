@@ -45,7 +45,7 @@ public class SqlAuthorizationStorage(IDatabase database, JsonSerializerOptions j
         }
         else
         {
-            scope.DbContext.Authorizations.Add(ToEntity(authorization));
+            await scope.DbContext.Authorizations.Upsert(ToEntity(authorization));
             await scope.DbContext.SaveChangesAsync(cancellationToken);
         }
     }
