@@ -43,6 +43,8 @@
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility/GrainCompatibility.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator.Specs/GrpcCodeGenerator.Specs.csproj" />
