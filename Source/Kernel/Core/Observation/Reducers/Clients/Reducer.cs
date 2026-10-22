@@ -142,6 +142,38 @@ public class Reducer(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task KeepSubscription(ReducerDefinition definition)
+    {
+        if (!definition.IsActive)
+        {
+            return;
+        }
+
+        var key = new ObserverKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        _observer ??= GrainFactory.GetGrain<IObserver>(key);
+
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            {
+                return;
+            }
+
+            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
+            await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
+                ObserverType.Reducer,
+                definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                localSiloDetails.SiloAddress,
+                connectedClient,
+                filters: definition.Filters,
+                generationDelivery: definition.GenerationDelivery);
+        }
+
+        _subscribed = true;
+    }
+
     async Task EvolveForAllNamespaces(
         ReducerKey key,
         IEnumerable<EventStoreNamespaceName> namespaces,

@@ -183,14 +183,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
-        JsonSchemaGenerator = new JsonSchemaGenerator(
-            new ComplianceMetadataResolver(
-                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders))),
-            new SecurityMetadataResolver(
-                new KnownInstancesOf<ICanProvideSecurityMetadataForType>(Activate<ICanProvideSecurityMetadataForType>(ClientArtifactsProvider.SecurityForTypesProviders)),
-                new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
-            _namingPolicy);
+        var generator = ShareSchemaGenerator && ServiceProvider.GetType() == typeof(DefaultServiceProvider)
+            ? SchemaGeneratorsForTesting.GetOrCreate(_namingPolicy, ClientArtifactsProvider, CreateJsonSchemaGenerator)
+            : CreateJsonSchemaGenerator();
+        JsonSchemaGenerator = new IsolatedJsonSchemaGenerator(generator);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
         TestingStore = testingStore ?? new TestingEventStore(eventStore ?? new EventStoreName(DefaultEventStoreName), @namespace ?? new EventStoreNamespaceName(DefaultNamespaceName), () => _eventTypes!, time, capabilities);
@@ -308,6 +304,16 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _occurrences = new(CreateOccurrences);
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
+
+    /// <summary>
+    /// Gets or sets whether newly constructed stores using the exact default service provider type share the process-wide schema generator. Defaults to true.
+    /// Each store receives isolated copies of generated schemas regardless of this setting.
+    /// </summary>
+    /// <remarks>
+    /// Custom service providers, including subclasses of the default provider, always receive fresh schema generators.
+    /// Changing this setting does not affect existing stores.
+    /// </remarks>
+    public static bool ShareSchemaGenerator { get; set; } = true;
 
     /// <inheritdoc/>
     public EventStoreName Name => TestingStore.Name;
@@ -512,6 +518,15 @@ public class EventStoreForTesting : IEventStore, IDisposable
         constraints.Discover().GetAwaiter().GetResult();
         return TestingStore.CreateSequence(id, EventSerializer, constraints, _eventSources);
     }
+
+    JsonSchemaGenerator CreateJsonSchemaGenerator() => new(
+        new ComplianceMetadataResolver(
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders))),
+        new SecurityMetadataResolver(
+            new KnownInstancesOf<ICanProvideSecurityMetadataForType>(Activate<ICanProvideSecurityMetadataForType>(ClientArtifactsProvider.SecurityForTypesProviders)),
+            new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
+        _namingPolicy);
 
     T[] Activate<T>(IEnumerable<Type> artifactTypes)
         where T : class =>

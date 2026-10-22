@@ -26,6 +26,12 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
+    /// <summary>Gets or sets the durable generation floor.</summary>
+    public DbSet<Generations.GenerationFloor> GenerationFloor { get; set; }
+
+    /// <summary>Gets or sets the generation floor audit trail.</summary>
+    public DbSet<Generations.GenerationFloorHistoryEntry> GenerationFloorHistory { get; set; }
+
     /// <summary>
     /// Gets or sets the first-time initialization marker.
     /// </summary>
@@ -117,6 +123,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<EventSeedsEntity> EventSeeds { get; set; }
 
     /// <inheritdoc/>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
+        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // WebhookTarget and ObserverFilters are value objects serialized as JSON columns.
@@ -139,6 +149,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // which would default to table "ReadModels" and collide with user projection sink tables
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
+
+        modelBuilder.Entity<Generations.GenerationFloor>().ToTable("GenerationFloor").HasKey(_ => _.Id);
+        modelBuilder.Entity<Generations.GenerationFloor>().Property(_ => _.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable("GenerationFloorHistory").HasKey(_ => _.Revision);
+        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 
         base.OnModelCreating(modelBuilder);
         Occurrences.OccurrenceModel.Configure(modelBuilder);

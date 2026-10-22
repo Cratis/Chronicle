@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -21,8 +22,9 @@ internal static class ReadModelIndexes
     /// <param name="context">The read model context.</param>
     /// <param name="table">The table name.</param>
     /// <param name="column">The column name.</param>
+    /// <param name="online">Whether an online build is required.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, string table, string column)
+    internal static async Task Ensure(ReadModelDbContext context, string table, string column, bool online = false)
     {
         var database = context.Database;
         var databaseType = database.GetDatabaseType();
@@ -41,12 +43,28 @@ internal static class ReadModelIndexes
         {
             if (databaseType == DatabaseType.PostgreSql)
             {
-                await DropIfInvalid(context, name);
+                await DropIfInvalid(context, name, online);
             }
 
-            create = $"CREATE INDEX IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
+            create = $"CREATE INDEX {(online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
         }
 
+        if (online && databaseType == DatabaseType.SqlServer)
+        {
+            var edition = await database.SqlQuery<int>($"SELECT CAST(SERVERPROPERTY('EngineEdition') AS int) AS [Value]").SingleAsync();
+            if (edition is 3 or 5 or 8)
+            {
+                try
+                {
+                    await Execute(context, create + " WITH (ONLINE = ON)");
+                    return;
+                }
+                catch (SqlException exception) when (exception.Number == 1712)
+                {
+                    // The edition supports online DDL, but this index or server configuration does not.
+                }
+            }
+        }
         await Execute(context, create);
     }
 
@@ -77,6 +95,38 @@ internal static class ReadModelIndexes
         }
     }
 
+    /// <summary>
+    /// Drops undeclared Chronicle-owned indexes following a definition change.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="table">The table name.</param>
+    /// <param name="columns">The currently declared index columns.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task DropUndeclared(ReadModelDbContext context, string table, IEnumerable<string> columns)
+    {
+        var database = context.Database;
+        var type = database.GetDatabaseType();
+        var expected = columns.Select(column => ReadModelIndexNames.For(type, table, column)).ToHashSet(StringComparer.Ordinal);
+        var storedTable = PrimaryKeyNames.TableIdentifier(type, table);
+        var names = type switch
+        {
+            DatabaseType.PostgreSql => await database.SqlQuery<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND tablename={storedTable}").ToListAsync(),
+            DatabaseType.SqlServer => await database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND name IS NOT NULL").ToListAsync(),
+            _ => await database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name={storedTable}").ToListAsync()
+        };
+        var helper = context.GetService<ISqlGenerationHelper>();
+        foreach (var name in names.Where(name => name.StartsWith(ReadModelIndexNames.Prefix, StringComparison.Ordinal) && !expected.Contains(name)))
+        {
+            var drop = type switch
+            {
+                DatabaseType.PostgreSql => $"DROP INDEX CONCURRENTLY IF EXISTS {helper.DelimitIdentifier(name)}",
+                DatabaseType.SqlServer => $"DROP INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}",
+                _ => $"DROP INDEX IF EXISTS {helper.DelimitIdentifier(name)}"
+            };
+            await Execute(context, drop);
+        }
+    }
+
     static async Task Rename(ReadModelDbContext context, string table, StoredIndex index, string expected)
     {
         var helper = context.GetService<ISqlGenerationHelper>();
@@ -101,14 +151,15 @@ internal static class ReadModelIndexes
     /// </summary>
     /// <param name="context">The read model context.</param>
     /// <param name="name">The index name.</param>
+    /// <param name="online">Whether to drop concurrently.</param>
     /// <returns>Awaitable task.</returns>
-    static async Task DropIfInvalid(ReadModelDbContext context, string name)
+    static async Task DropIfInvalid(ReadModelDbContext context, string name, bool online)
     {
         var invalid = await context.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_namespace n ON n.oid = i.relnamespace WHERE i.relname = {name} AND n.nspname = current_schema() AND NOT x.indisvalid").AnyAsync();
         if (invalid)
         {
             var helper = context.GetService<ISqlGenerationHelper>();
-            await Execute(context, $"DROP INDEX IF EXISTS {helper.DelimitIdentifier(name)}");
+            await Execute(context, $"DROP INDEX {(online ? "CONCURRENTLY " : string.Empty)}IF EXISTS {helper.DelimitIdentifier(name)}");
         }
     }
 

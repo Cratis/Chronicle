@@ -23,6 +23,8 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
     internal ServiceProvider Services;
     internal string Store = "a-store";
 
+    protected SqlServerFixture Fixture => fixture;
+
     async Task Establish()
     {
         ConnectionString = await fixture.CreateDatabase();
@@ -35,6 +37,13 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
             new UniqueConstraintMigrator(new TableMigrator<UniqueConstraintDbContext>(NullLogger<TableMigrator<UniqueConstraintDbContext>>.Instance), new TableMigrator<UniqueConstraintValuesDbContext>(NullLogger<TableMigrator<UniqueConstraintValuesDbContext>>.Instance), NullLogger<UniqueConstraintMigrator>.Instance),
             migrator);
     }
+
+    protected Database CreateDatabase() => new(
+        Services,
+        Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.MsSql, ConnectionDetails = ConnectionString } }),
+        Substitute.For<IEventSequenceMigrator>(),
+        Substitute.For<IUniqueConstraintMigrator>(),
+        Substitute.For<IReadModelMigrator>());
 
     async Task Destroy()
     {

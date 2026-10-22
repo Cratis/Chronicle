@@ -47,6 +47,11 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IEventSequenceMigrator, EventSequenceMigrator>();
         builder.Services.AddSingleton<IUniqueConstraintMigrator, UniqueConstraintMigrator>();
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
+        if (options.Clustering.Type == ClusteringType.Sql)
+        {
+            builder.Services.AddSingleton<IMembershipTable, SqlMembershipTable>();
+        }
+
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
         builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
