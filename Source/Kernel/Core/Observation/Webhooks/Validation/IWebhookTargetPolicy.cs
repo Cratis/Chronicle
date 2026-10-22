@@ -21,6 +21,16 @@ public interface IWebhookTargetPolicy
     Task<WebhookTargetValidation> Evaluate(string url, EventStoreName? eventStore = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Evaluates a delivery destination without repeating activation warnings.
+    /// </summary>
+    /// <param name="url">The target URL.</param>
+    /// <param name="eventStore">The event store, or null for global policy.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The policy decision and a safe reason.</returns>
+    Task<WebhookTargetValidation> EvaluateForDelivery(string url, EventStoreName? eventStore = null, CancellationToken cancellationToken = default) =>
+        Evaluate(url, eventStore, cancellationToken);
+
+    /// <summary>
     /// Evaluates scheme and host on every request, including pooled connections.
     /// </summary>
     /// <param name="target">The target URI.</param>
