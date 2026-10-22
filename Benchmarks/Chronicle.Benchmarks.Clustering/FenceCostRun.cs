@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 internal static class FenceCostRun
 {
     const int WarmupBatches = 5;
+    static readonly TimeSpan _drainLimit = TimeSpan.FromMinutes(3);
 
     /// <summary>
     /// Runs the configuration and returns its measurements.
@@ -44,6 +45,16 @@ internal static class FenceCostRun
             var clock = Stopwatch.StartNew();
             await Task.WhenAll(writers.Select((writer, index) => Repeat(writer, configuration.BatchSize, configuration.Batches, latencies[index] = [])));
             var elapsed = clock.Elapsed.TotalSeconds;
+
+            // Fan-out work the server still owes the streams belongs to these batches, so the window closes once it is delivered.
+            var expected = (long)configuration.Batches * configuration.Writers * configuration.BatchSize * configuration.ChangeStreams;
+            var drained = Stopwatch.StartNew();
+            while (streams.Delivered < expected && drained.Elapsed < _drainLimit)
+            {
+                await Task.Delay(50);
+            }
+
+            var drainSeconds = drained.Elapsed.TotalSeconds;
             var after = await Task.WhenAll(members.Select(FenceCostServerStats.Read));
             var deltas = after.Zip(before, (later, earlier) => later.Since(earlier)).ToArray();
             var all = latencies.SelectMany(writer => writer).Order().ToArray();
@@ -72,7 +83,10 @@ internal static class FenceCostRun
                 UpdatesPerBatch = primary.Updates / batches,
                 CommandsPerBatch = primary.Commands / batches,
                 OplogBytesPerBatch = primary.OplogBytes / batches,
-                ChangeEventsDelivered = streams.Delivered
+                ChangeEventsExpected = expected,
+                ChangeEventsDelivered = streams.Delivered,
+                WriteSeconds = elapsed,
+                DrainSeconds = drainSeconds
             };
         }
         finally
