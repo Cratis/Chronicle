@@ -40,7 +40,7 @@ internal static partial class SqlMigrationTelemetry
             {
                 if (data is MigrationEventData migration)
                 {
-                    var identifier = migration.Migration.GetType().GetCustomAttribute<MigrationAttribute>()!.Id;
+                    var identifier = migration.Migration.GetType().GetCustomAttribute<MigrationAttribute>()?.Id ?? migration.Migration.GetType().Name;
                     ApplyingMigration(logger, Environment.MachineName, Environment.ProcessId, store, identifier);
                 }
             });
