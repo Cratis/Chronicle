@@ -29,7 +29,7 @@ public abstract class an_instance_with_initialization_state : all_dependencies
         _values["name"] = "First";
         _values[WellKnownProperties.ReadModelInstanceInitialized] = true;
         _values[WellKnownProperties.LastHandledEventSequenceNumber] = 42L;
-        _sink.FindOrDefault(Arg.Any<Key>()).Returns(_instance);
+        _sink.FindInPrimaryOrDefault(Arg.Any<Key>()).Returns(_instance);
         _sink.GetInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(new ReadModelInstances([_instance], 1));
         _sink.ObserveInstances(Arg.Any<ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>()).Returns(Observable.Return<IEnumerable<ExpandoObject>>([_instance]));
         var converter = new ExpandoObjectConverter(new TypeFormats());

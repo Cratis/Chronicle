@@ -68,6 +68,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         WellKnownTableNames.Scopes,
         "__EFMigrationsHistory",
         "DatabaseNames",
+        "GenerationFloor",
+        "GenerationFloorHistory",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
@@ -362,12 +364,21 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             }
         }
 
-        foreach (var table in tables)
+        var keepFloor = false;
+        if (tables.Contains("GenerationFloor", StringComparer.Ordinal))
+        {
+            await using var floor = conn.CreateCommand();
+            floor.Transaction = transaction;
+            floor.CommandText = "SELECT COUNT(*) FROM GenerationFloor";
+            keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+        }
+
+        foreach (var table in tables.Where(_ => !keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory")))
         {
             await using var dropCmd = conn.CreateCommand();
             dropCmd.Transaction = transaction;
 #pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
-            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+            dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
         }
