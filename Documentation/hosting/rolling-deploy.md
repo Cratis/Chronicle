@@ -1,17 +1,39 @@
 ---
-title: Roll out a new version to a multi-node Chronicle cluster on SQL
-description: Replace the nodes of a Chronicle kernel cluster on Azure SQL or Azure Database for PostgreSQL one at a time, know what each starting node does to the database, and see which guarantees Chronicle does not give you.
+title: Roll out a new version to a multi-node Chronicle cluster
+description: Check whether two Chronicle versions can share a cluster, replace the nodes one at a time, know what each starting node does to a SQL database, and see which guarantees Chronicle does not give you.
 ---
 
-This guide shows an operator how to replace the nodes of a Chronicle kernel cluster that uses SQL clustering, one node at a time, when the new version may change the database schema. You finish with a rollout order, probe settings and a list of things to watch while it runs.
+This guide shows an operator how to replace the nodes of a Chronicle kernel cluster one node at a time. You finish knowing whether the two versions can run side by side at all, with a rollout order, probe settings and a list of things to watch while it runs.
 
-It covers Azure SQL (`MsSql`) and Azure Database for PostgreSQL (`PostgreSql`) with `Cratis__Chronicle__Clustering__Type=Sql`. Chronicle makes no zero-downtime promise for a rollout. Read [What Chronicle does not provide](#what-chronicle-does-not-provide) before you rely on one.
+[Check that the two versions can share a cluster](#check-that-the-two-versions-can-share-a-cluster) applies to every multi-node cluster, whether it uses `MongoDB` or `Sql` clustering. The rest of the guide covers Azure SQL (`MsSql`) and Azure Database for PostgreSQL (`PostgreSql`) with `Cratis__Chronicle__Clustering__Type=Sql`, where a starting node can also change the database schema. Chronicle makes no zero-downtime promise for a rollout. Read [What Chronicle does not provide](#what-chronicle-does-not-provide) before you rely on one.
 
 ## Prerequisites
 
-- A running cluster set up as described in [Plan for availability](azure.md#plan-for-availability): `Sql` clustering on every node, one shared cluster database, and the same `clusterId` and `serviceId`.
+- A running multi-node cluster, such as one set up as described in [Plan for availability](azure.md#plan-for-availability): the same clustering type on every node, one shared cluster database, and the same `clusterId` and `serviceId`.
 - A way to replace nodes one at a time, such as a Kubernetes `Deployment` or an Azure Container Apps revision with controlled overlap.
 - A backup of the database taken before the rollout. Chronicle can apply schema migrations when a new node starts, and it has no command to roll them back.
+
+## Check that the two versions can share a cluster
+
+While nodes are being replaced, nodes of the old version and of the new one form one Orleans cluster and call each other's grains. That only works when the new version still serves every grain call the old version makes. When it does not, the first new node stops during startup, and the rollout stalls with the old nodes still running.
+
+Use this table to decide how to upgrade:
+
+| Upgrading | Within one major | How to upgrade |
+| --- | --- | --- |
+| From 19.106 or later | Yes | Replace nodes one at a time. Every release from 19.107.0 is checked in CI against the release before it. |
+| From a 19.x release before 19.106 | Yes | Stop every node, then start the new version. Grain calls changed between some of those releases. |
+| To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
+
+To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
+
+A new node that meets an incompatible version logs a critical message naming the startup step and saying a full stop is needed, then stops:
+
+```text
+Startup step 'DiscoverAndRegisterKernelProjections' failed because a silo in this cluster most likely runs a Chronicle release this one cannot exchange grain calls with.
+```
+
+The exception beneath it is a `TypeLoadException` such as `Unable to resolve type alias "("inv",[Orleans.Runtime.GrainReference],[Cratis.Chronicle.Projections.IProjectionsManager,Cratis.Chronicle.Core],"F436C56F")"`. Versions before 19.107.0 show only the exception. Either way, roll back the new node, then stop every node and start the new version.
 
 ## Know what a starting node does
 
@@ -42,7 +64,7 @@ The server writes this line when the host has finished starting, which includes 
 
 Allow one node to be unavailable at a time. In Kubernetes, set `maxUnavailable: 1` on the rolling update strategy and set `maxSurge` to a small number. Replacing nodes one at a time keeps the cluster membership changing slowly enough for the remaining silos to agree on who is alive.
 
-During the rollout, nodes on the old version and on the new version run in the same Orleans cluster and call each other's grains. Chronicle does not configure Orleans grain versioning, so nothing in the kernel rejects or protects against a mismatched pair. Keep the window short, and do not leave a cluster in a mixed state overnight. See [What Chronicle does not provide](#what-chronicle-does-not-provide).
+During the rollout, nodes on the old version and on the new version run in the same Orleans cluster and call each other's grains. When the [two versions can share a cluster](#check-that-the-two-versions-can-share-a-cluster), Orleans routes each call to a node that understands it, and a grain may move from an old node to a new one partway through the rollout. Keep the window short anyway, and do not leave a cluster in a mixed state overnight: a grain that moves is deactivated and reactivated, and every move costs time.
 
 ### 4. Give nodes time to start and stop
 
@@ -70,6 +92,7 @@ Chronicle has no separate startup or readiness endpoint. The probes above tell y
 - **`DatabaseSchemaLockNotAcquired`.** Another node held the schema lock for more than 5 minutes. Look for a migration that is still running, or a node that crashed while holding it, and let the orchestrator restart the waiting node. Do not start more nodes meanwhile.
 - **`DatabaseMigrationIncomplete`.** A concurrent run hit an already-exists error and migrations are still pending. Restart the node. If it repeats, a person has to look at the database, since a duplicate object is in the way.
 - **A startup step reports exhausted retries.** The node could not reach its siblings through five attempts. Check that ports 11111 and 30000 are reachable between nodes, and that no other node is mid-restart.
+- **A startup step reports an incompatible release, or fails with `Unable to resolve type alias`.** The old and new versions cannot share a cluster. See [Check that the two versions can share a cluster](#check-that-the-two-versions-can-share-a-cluster).
 
 If a new version cannot run against the migrated schema, restore the backup from step 1 and start the previous version. Chronicle does not downgrade a schema.
 
@@ -84,8 +107,10 @@ Each new event store and each new namespace needs a database or schema provision
 ## What Chronicle does not provide
 
 - **No zero-downtime guarantee.** Orleans reactivates the grains of a stopped node on the remaining nodes, but Chronicle does not state how long that takes or what clients see meanwhile. Test a rollout against a copy of your data before relying on it.
+- **No mixed versions across a major, or from before 19.106.** Grain calls are kept compatible within a major from 19.106 onwards. Other upgrades need every node stopped first.
+- **No rollback while mixed.** A grain that moved to a new node cannot move back to an old node that lacks what the new version added. Roll back by stopping every node and starting the previous version.
 - **No migration job and no migrate-only mode.** The nodes migrate.
-- **No version gate.** Chronicle does not restrict how far apart two running versions may be, enforce expand-then-contract migrations, or limit migrations to the newest node. A change that removes or renames a column breaks nodes still running the old version. Plan those releases as a cluster stop and start, or keep each release additive.
+- **No schema version gate.** Chronicle does not enforce expand-then-contract database migrations, or limit migrations to the newest node. A change that removes or renames a column breaks nodes still running the old version. Plan those releases as a cluster stop and start, or keep each release additive.
 - **No readiness check for membership or startup.** See step 5.
 - **No schema downgrade.** Restore from backup.
 
