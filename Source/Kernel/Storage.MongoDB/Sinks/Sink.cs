@@ -368,7 +368,12 @@ public class Sink(
         // still upserts so it can construct the child structure regardless of seed order.
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
 
-        return new(filter, IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom), usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
+        // Pulling a child from an absent root must not recreate that root. A changeset that also adds a child
+        // can still construct it, but a removal without an addition only updates an existing document.
+        var onlyRemovesChildren = changeset.Changes.Any(change => change is ChildRemoved) && !changeset.Changes.Any(change => change is ChildAdded);
+        var isUpsert = !onlyRemovesChildren && IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom);
+
+        return new(filter, isUpsert, usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
     }
 
     static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLevelJoin, bool hasKeyedFrom) =>
