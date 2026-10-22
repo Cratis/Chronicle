@@ -17,12 +17,15 @@ public class DeliveryFences
     /// Holds a partition without shortening an existing hold.
     /// </summary>
     /// <param name="fence">The captured delivery fence.</param>
-    public void Hold(DeliveryFence fence)
+    /// <returns>Whether the hold changed.</returns>
+    public bool Hold(DeliveryFence fence)
     {
         if (!_fences.TryGetValue(fence.Partition, out var current) || current.ReleaseBy < fence.ReleaseBy)
         {
             _fences[fence.Partition] = fence;
+            return true;
         }
+        return false;
     }
 
     /// <summary>
@@ -30,12 +33,14 @@ public class DeliveryFences
     /// </summary>
     /// <param name="partition">The partition.</param>
     /// <param name="releaseBy">The drained version's deadline.</param>
-    public void Release(Key partition, DateTimeOffset releaseBy)
+    /// <returns>Whether a fence was removed.</returns>
+    public bool Release(Key partition, DateTimeOffset releaseBy)
     {
         if (_fences.TryGetValue(partition, out var current) && current.ReleaseBy == releaseBy)
         {
-            _fences.Remove(partition);
+            return _fences.Remove(partition);
         }
+        return false;
     }
 
     /// <summary>

@@ -18,11 +18,30 @@ public partial class Observer
     public Task<IEnumerable<DeliveryFence>> GetDeliveryFences() => Task.FromResult(_deliveryFences.Active(_clock.GetUtcNow()));
 
     /// <inheritdoc/>
-    public Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy)
+    public async Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy)
     {
-        _deliveryFences.Release(partition, releaseBy);
-        return Task.CompletedTask;
+        if (_deliveryFences.Release(partition, releaseBy)) await WriteStateAsync();
     }
+
+    async Task RestoreDeliveryFences()
+    {
+        if (State.DeliveryFences is { } persisted)
+        {
+            foreach (var fence in persisted)
+            {
+                _deliveryFences.Hold(new(fence.Partition, fence.ReleaseBy, fence.Targets));
+            }
+        }
+        else if (observerDefinition.State.Owner == ObserverOwner.Client)
+        {
+            _deliveryFences.SeedFrom(Failures, await configurationProvider.GetAbandonedDeliveryHoldForObserver(_observerKey));
+        }
+
+        State = State with { DeliveryFences = DeliveryFenceSnapshot() };
+    }
+
+    Storage.Observation.DeliveryFenceState[] DeliveryFenceSnapshot() =>
+        _deliveryFences.Active(_clock.GetUtcNow()).Select(fence => new Storage.Observation.DeliveryFenceState(fence.Partition, fence.ReleaseBy, fence.Targets)).ToArray();
 
     async Task RecordAbandonedDeliveryFence(FailedPartition failure, FailureKind kind, DeliveryFenceContext? context)
     {
@@ -55,9 +74,12 @@ public partial class Observer
         var hold = await configurationProvider.GetAbandonedDeliveryHoldForObserver(_observerKey);
         if (hold <= TimeSpan.Zero) return;
         var known = context?.Targets is { Count: > 0 } targets && targets.All(AbandonedDeliveryDrain.IsValid);
-        _deliveryFences.Hold(new(
+        if (_deliveryFences.Hold(new(
             partition,
             known && context!.ReleaseBy is { } releaseBy ? releaseBy : _clock.GetUtcNow() + hold,
-            known ? context!.Targets! : []));
+            known ? context!.Targets! : [])))
+        {
+            await WriteStateAsync();
+        }
     }
 }

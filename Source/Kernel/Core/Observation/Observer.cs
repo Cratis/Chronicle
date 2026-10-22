@@ -198,10 +198,7 @@ public partial class Observer(
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await failures.ReadStateAsync();
-        if (observerDefinition.State.Owner == ObserverOwner.Client)
-        {
-            _deliveryFences.SeedFrom(Failures, await configurationProvider.GetAbandonedDeliveryHoldForObserver(_observerKey));
-        }
+        await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -724,7 +721,8 @@ public partial class Observer(
                 AlertLifecycleId = _alertLifecycleId,
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId
+                QuarantineEpisodeId = _quarantineEpisodeId,
+                DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();
