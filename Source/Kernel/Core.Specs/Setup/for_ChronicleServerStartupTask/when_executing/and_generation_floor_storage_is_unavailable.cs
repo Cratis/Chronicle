@@ -11,7 +11,7 @@ public class and_generation_floor_storage_is_unavailable : given.a_startup_task
     Exception _error;
     void Establish()
     {
-        _eventStoreStorage.GenerationFloor.Get().Returns(_ => Task.FromException<GenerationFloor?>(new IOException("floor unavailable")));
+        _storage.ReadGenerationFloors().Returns(_ => Task.FromException<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(new IOException("floor unavailable")));
     }
     async Task Because() => _error = await Catch.Exception(Execute);
     [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<IOException>();

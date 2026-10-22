@@ -12,9 +12,11 @@ public class and_the_system_generation_floor_is_too_high : given.a_startup_task
     Exception _error;
     void Establish()
     {
-        var system = Substitute.For<Cratis.Chronicle.Storage.IEventStoreStorage>();
-        _storage.GetEventStore(Cratis.Chronicle.Concepts.EventStoreName.System).Returns(system);
-        system.GenerationFloor.Get().Returns(new GenerationFloor(new(2), new(1), [], new(Guid.NewGuid()), 1, DateTimeOffset.UtcNow, "spec", "test"));
+        _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(
+            new Dictionary<EventStoreName, GenerationFloor>
+            {
+                [EventStoreName.System] = new(new(2), new(1), [], new(Guid.NewGuid()), 1, DateTimeOffset.UtcNow, "spec", "test")
+            }));
     }
     async Task Because() => _error = await Catch.Exception(Execute);
     [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<KernelBelowGenerationFloor>();

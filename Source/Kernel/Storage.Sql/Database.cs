@@ -261,6 +261,21 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             throw new SqlClusteringPreventsKernelStateReset();
         }
 
+        foreach (var target in (await GenerationStoreTargets()).Values)
+        {
+            await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
+            try
+            {
+                if (await context.GenerationInitializationReceipts.AnyAsync())
+                {
+                    throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+                }
+            }
+            catch (Exception error) when (MissingGenerationTable(error))
+            {
+                // The legacy store has never been initialized.
+            }
+        }
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);

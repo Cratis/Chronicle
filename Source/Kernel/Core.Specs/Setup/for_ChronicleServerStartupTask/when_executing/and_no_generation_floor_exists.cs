@@ -15,16 +15,14 @@ public class and_no_generation_floor_exists : given.a_startup_task
     {
         _systemStorage = Substitute.For<IEventStoreStorage>();
         _storage.GetEventStore(EventStoreName.System).Returns(_systemStorage);
-        _eventStoreStorage.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(null));
-        _systemStorage.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(null));
+        _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(new Dictionary<EventStoreName, GenerationFloor>()));
     }
 
     Task Because() => Execute();
 
-    [Fact] void should_admit_both_stores_before_applying_patches() => Received.InOrder(() =>
+    [Fact] void should_read_generation_floors_before_applying_patches() => Received.InOrder(() =>
     {
-        _eventStoreStorage.GenerationFloor.Get();
-        _systemStorage.GenerationFloor.Get();
+        _storage.ReadGenerationFloors();
         _patchManager.ApplyPatches();
     });
 

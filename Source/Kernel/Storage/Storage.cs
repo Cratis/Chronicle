@@ -26,6 +26,10 @@ public class Storage(
     public ISystemStorage System => systemStorage;
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
+        ((Generations.IGenerationFloorDiscovery)clusterStorage).ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventStoreName>> GetEventStores() => clusterStorage.GetEventStores();
 
     /// <inheritdoc/>

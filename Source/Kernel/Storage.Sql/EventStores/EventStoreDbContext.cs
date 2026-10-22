@@ -26,6 +26,16 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="options">The options to be used by a <see cref="DbContext"/>.</param>
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
+    /// <summary>
+    /// Gets or sets initialization receipts.
+    /// </summary>
+    public DbSet<Generations.GenerationInitializationReceiptRow> GenerationInitializationReceipts { get; set; }
+
+    /// <summary>
+    /// Gets or sets initialization blockers.
+    /// </summary>
+    public DbSet<Generations.GenerationInitializationBlockerRow> GenerationInitializationBlockers { get; set; }
+
     /// <summary>Gets or sets the durable generation floor.</summary>
     public DbSet<Generations.GenerationFloor> GenerationFloor { get; set; }
 
@@ -150,6 +160,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
+        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable("GenerationInitializationReceipts").HasKey(row => new { row.Step, row.Subject });
+        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable("GenerationInitializationBlockers").HasKey(row => new { row.Kind, row.Subject });
+        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().Property(row => row.Subject).HasMaxLength(400);
+        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().Property(row => row.Subject).HasMaxLength(400);
         modelBuilder.Entity<Generations.GenerationFloor>().ToTable("GenerationFloor").HasKey(_ => _.Id);
         modelBuilder.Entity<Generations.GenerationFloor>().Property(_ => _.Id).ValueGeneratedNever();
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable("GenerationFloorHistory").HasKey(_ => _.Revision);

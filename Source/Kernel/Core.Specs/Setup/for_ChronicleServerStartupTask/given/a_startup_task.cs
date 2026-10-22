@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
@@ -118,6 +119,7 @@ public class a_startup_task : Specification
             NullLogger<ChronicleServerStartupTask>.Instance,
             new an_immediate_time_provider());
 
+        _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(new Dictionary<EventStoreName, GenerationFloor>()));
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
         _storage.GetEventStore(_eventStore).Returns(_eventStoreStorage);
 
