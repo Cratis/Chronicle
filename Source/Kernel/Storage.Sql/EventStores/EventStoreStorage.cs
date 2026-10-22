@@ -53,6 +53,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
 
     /// <inheritdoc/>

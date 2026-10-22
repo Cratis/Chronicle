@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
+    readonly ConcurrentDictionary<EventStoreName, Generations.GenerationFloorStorage> _generationFloors = new();
     readonly Func<EventStoreName, IEventTypesStorage>? _eventTypesFactory;
 
     readonly Subject<IEnumerable<EventStoreName>> _changes = new();
@@ -108,6 +109,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
         var created = _eventTypesFactory is null
             ? new EventStoreStorage(eventStore, sinks, jobsStorage)
             : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
+        created.GenerationFloor = _generationFloors.GetOrAdd(eventStore, _ => new Generations.GenerationFloorStorage());
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
         if (ReferenceEquals(storage, created))

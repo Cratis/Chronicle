@@ -1,0 +1,146 @@
+name: Grain Compatibility
+
+# During a rolling upgrade, silos of the previous release and of this one share the Orleans cluster and call each
+# other's grains. Orleans identifies a grain method on the wire by a hash of its interface, name and parameter types,
+# so changing a signature in a minor or patch release makes the two releases unable to decode each other's calls -
+# the new silo crashes on startup and the rollout stalls. That is what happened from 19.70 to 19.106 (#5272).
+#
+# wire-compatibility.yml guards the client-to-kernel contract. This guards the silo-to-silo one: it compares the
+# grain contracts this build carries (Source/Kernel/Core/OrleansContracts.txt, kept current by the Orleans contract
+# analyzer, which fails the build when the source drifts from it) against the latest release, and fails on anything
+# that is not purely additive. Additive is transitive - nothing is ever removed and versions only rise - so passing
+# against the latest release keeps every release since the first one carrying this gate upgradable in place.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'The version being released. A new major is allowed to break grain contracts. When empty, the latest tag decides.'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      skipped:
+        description: 'Whether the check was skipped because this is a deliberate breaking change.'
+        value: ${{ jobs.grain-compatibility.outputs.skipped }}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  CONTRACTS_PATH: Source/Kernel/Core/OrleansContracts.txt
+
+jobs:
+  grain-compatibility:
+    runs-on: ubuntu-latest
+    # Building the tool and, until a release carries its contract manifest, generating the baseline from the
+    # released source takes a few minutes. This gates every build, so a hung run must not hold a pool slot for hours.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      skipped: ${{ steps.baseline.outputs.skip }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # The baseline is the latest release tag, and a shallow checkout has none.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Determine baseline release
+        id: baseline
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          # A major release is the one place grain contracts may break; it is upgraded with a full stop.
+          if [ -n "$LABELS" ] && [ "$(printf '%s' "$LABELS" | jq '[.[] | select(. == "major")] | length')" -gt 0 ]; then
+            echo "::notice title=Grain compatibility not checked::This pull request is labeled major, so silos of the previous release are not expected to share a cluster with it."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Read the whole list and take its first line rather than piping into head: under pipefail, head closing
+          # the pipe kills git with SIGPIPE and the step fails intermittently. grep reads to the end, so it does not.
+          # When publishing, the release being cut is already tagged; the baseline is the release before it.
+          ALL_TAGS="$(git tag --list 'v*' --sort=-v:refname | grep -vxF "v${RELEASE_VERSION:-none}" || true)"
+          LATEST_TAG="${ALL_TAGS%%$'\n'*}"
+          if [ -z "$LATEST_TAG" ]; then
+            echo "::notice title=Grain compatibility not checked::No release tag exists yet, so there is no released cluster to stay compatible with."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LATEST_MAJOR="${LATEST_TAG#v}"
+          LATEST_MAJOR="${LATEST_MAJOR%%.*}"
+          if [ -n "$RELEASE_VERSION" ] && [ "${RELEASE_VERSION%%.*}" != "$LATEST_MAJOR" ]; then
+            echo "::notice title=Grain compatibility not checked::$RELEASE_VERSION starts a new major after $LATEST_TAG, which is upgraded with a full stop."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Baseline release $LATEST_TAG."
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+
+      # A release carries its manifest from the first one that includes this gate. Before that, generate it from the
+      # released source with the same analyzer, which is how the manifest at HEAD was produced, so a difference in
+      # how the two were made cannot read as a difference in the contract.
+      - name: Produce the baseline contracts
+        if: steps.baseline.outputs.skip == 'false'
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/grain-compatibility"
+          BASELINE="$RUNNER_TEMP/grain-compatibility/OrleansContracts.txt"
+
+          if git cat-file -e "$TAG:$CONTRACTS_PATH" 2>/dev/null; then
+            git show "$TAG:$CONTRACTS_PATH" > "$BASELINE"
+            echo "Using the contract manifest committed in $TAG."
+          else
+            echo "$TAG carries no contract manifest; generating it from the released source."
+            WORKTREE="$RUNNER_TEMP/grain-compatibility/source"
+            git worktree add --detach "$WORKTREE" "$TAG"
+            # dotnet format takes no MSBuild properties, so the analyzer is switched on in the released project file.
+            perl -0pi -e 's|<PropertyGroup>|<PropertyGroup><EnableOrleansContractsAnalyzer>true</EnableOrleansContractsAnalyzer>|' "$WORKTREE/Source/Kernel/Core/Core.csproj"
+            dotnet format "$WORKTREE/Source/Kernel/Core/Core.csproj" analyzers \
+              --severity info \
+              --diagnostics ORLEANS0016 ORLEANS0017 ORLEANS0018 ORLEANS0019 ORLEANS0020 ORLEANS0022 ORLEANS0023 ORLEANS0024
+            cp "$WORKTREE/$CONTRACTS_PATH" "$BASELINE"
+          fi
+
+          # An empty baseline would compare nothing and pass everything.
+          if ! grep -q '^interface ' "$BASELINE"; then
+            echo "::error title=Grain compatibility baseline is empty::The baseline contracts for $TAG declare no grain interfaces, so nothing could be compared."
+            exit 1
+          fi
+
+          echo "baseline=$BASELINE" >> "$GITHUB_ENV"
+
+      - name: Build the comparison
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet build Source/Tools/GrainCompatibility/GrainCompatibility.csproj -c Release
+
+      # A gate that stopped detecting breaks would pass every change. This plants each kind of break and fails
+      # unless every one is still found.
+      - name: Prove the comparison still detects breaks
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release -- --self-test
+
+      - name: Compare grain contracts with ${{ steps.baseline.outputs.tag }}
+        if: steps.baseline.outputs.skip == 'false'
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+        run: >-
+          dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release --
+          --baseline "$baseline"
+          --current "$CONTRACTS_PATH"
+          --baseline-name "$TAG"
+          --github
