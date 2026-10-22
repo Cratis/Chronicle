@@ -403,3 +403,28 @@ approval even in Warn. Redirects are rejected in both modes.
 
 See [Webhook target validation](../webhooks#target-validation) for rollout, Docker/tunnel examples,
 DNS/address restrictions, and the distinction between warnings and blocking.
+
+### Quarantine probe policy
+
+`Cratis:Chronicle:Webhooks:Probe` controls low-rate real-event health checks independently
+of `Webhooks.Retry` and the global `Observers` retry budget:
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `Enabled` | `true` | Allow eligible webhook quarantines to recover automatically. |
+| `InitialDelaySeconds` | `60` | First health-check delay. |
+| `BackoffFactor` | `2` | Multiplier after an unsuccessful check. |
+| `MaximumDelaySeconds` | `3600` | Upper bound on the sampled backoff; receiver deadlines may be later. |
+| `JitterRatio` | `0.2` | Symmetric jitter; must be at least zero and less than one. |
+| `TimeoutSeconds` | `30` | Deadline for the real delivery; cancellation cleanup is awaited. |
+
+All timing values must be finite. Delays and timeout must be positive, the maximum delay
+must be at least the initial delay, and the multiplier must be at least one. Invalid settings
+are rejected before probe delivery. Deadlines are persisted, not resampled at startup.
+
+Checks retain observer quarantine until one pending event succeeds. A circuit-open or
+valid `Retry-After` result is not proof of health. `410 Gone`, legacy parked failures with
+no explicit receiver policy, and unrelated watchdog quarantines need an operator.
+Disable checks to keep all automatic delivery paused while investigating a receiver.
+See [automatic recovery](../webhooks/index.mdx#automatic-recovery-from-quarantine)
+for progress, at-least-once semantics, observability, and manual overrides.

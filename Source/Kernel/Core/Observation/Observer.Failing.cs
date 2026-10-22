@@ -54,12 +54,7 @@ public partial class Observer
 
             _metrics?.PartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-            if (webhook)
-            {
-                // This deadline belongs to the attempt that just ran, not the next retry.
-                failure.Deferral = null;
-                failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
-            }
+            if (webhook) SetWebhookFailureMetadata(failure, failurePolicy, sequenceNumber);
 
             if (!IsQuarantined)
             {
@@ -135,6 +130,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
+            ArmWebhookProbeAfterFailure();
             await TransitionTo<QuarantinedObserver>();
         }
     }
@@ -195,6 +191,7 @@ public partial class Observer
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (IsQuarantined)
         {
@@ -238,6 +235,7 @@ public partial class Observer
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         FailedPartition? failure;
         await _alertMutationLock.WaitAsync();
@@ -293,6 +291,15 @@ public partial class Observer
         }
 
         ScheduleAlertReport();
+    }
+
+    static void SetWebhookFailureMetadata(FailedPartition failure, WebhookDeliveryFailurePolicy failurePolicy, EventSequenceNumber sequenceNumber)
+    {
+        failure.WebhookDisposition = WebhookProbeOutcome.Disposition(failurePolicy);
+
+        // This deadline belongs to the attempt that just ran, not the next retry.
+        failure.Deferral = null;
+        failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
     }
 
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
@@ -365,6 +372,7 @@ public partial class Observer
         await RemoveReminder(failure);
         if (quarantineObserver)
         {
+            _armWebhookProbe = failure.WebhookDisposition == WebhookFailureDisposition.Retryable;
             await TransitionTo<QuarantinedObserver>();
         }
 
@@ -430,6 +438,7 @@ public partial class Observer
     /// </remarks>
     async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
+        await CancelWebhookProbe();
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -548,4 +557,7 @@ public partial class Observer
 
         return false;
     }
+
+    void ArmWebhookProbeAfterFailure() =>
+        _armWebhookProbe = IsWebhookSubscription && Failures.Partitions.Any(WebhookProbeEligibility.IsEligible);
 }

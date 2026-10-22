@@ -91,6 +91,11 @@ public record ObserverState(
     public Guid? QuarantineEpisodeId { get; init; }
 
     /// <summary>
+    /// Gets the source-owned webhook probe control, absent for legacy and non-webhook quarantines.
+    /// </summary>
+    public WebhookProbeState? WebhookProbe { get; init; }
+
+    /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>
     public EventSequenceNumber NextEventSequenceNumber

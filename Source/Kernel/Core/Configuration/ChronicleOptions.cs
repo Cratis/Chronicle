@@ -219,12 +219,19 @@ public class ChronicleOptions : IValidatableObject
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
-        ValidateSingleWriterLease().Concat(Alerts.Conditions
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var alertErrors = Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
-                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"])));
+                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
+        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        if (!Webhooks.Probe.HasValidTiming)
+        {
+            yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
 
     IEnumerable<ValidationResult> ValidateSingleWriterLease()
     {

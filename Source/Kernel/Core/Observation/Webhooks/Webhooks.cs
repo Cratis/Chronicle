@@ -35,7 +35,7 @@ public class Webhooks(
     {
         _eventStoreName = this.GetPrimaryKeyString();
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        var tasks = State.Webhooks.Select(definition => SetDefinitionAndSubscribe(namespaces, definition));
+        var tasks = State.Webhooks.Select(definition => SetDefinitionAndSubscribe(namespaces, definition, automatic: true));
         await Task.WhenAll(tasks);
     }
 
@@ -194,7 +194,7 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SetDefinitionAndSubscribe(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition)
+    async Task SetDefinitionAndSubscribe(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition, bool automatic = false)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new WebhookKey(definition.Identifier, _eventStoreName);
@@ -207,7 +207,7 @@ public class Webhooks(
             return;
         }
 
-        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName));
+        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName, automatic));
         await Task.WhenAll(tasks);
     }
 
@@ -222,7 +222,7 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
+    async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName, bool automatic = false)
     {
         if (!definition.IsActive)
         {
@@ -241,14 +241,18 @@ public class Webhooks(
                 definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress,
                 definition.GenerationDelivery,
-                subscriberArgs: EventGenerationDelivery.Pinned);
+                subscriberArgs: EventGenerationDelivery.Pinned,
+                reactivateRetired: !automatic,
+                automatic: automatic);
         }
         else
         {
             await observer.Subscribe<IWebhookObserverSubscriber>(
                 ObserverType.External,
                 definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress);
+                localSiloDetails.SiloAddress,
+                reactivateRetired: !automatic,
+                automatic: automatic);
         }
     }
 
