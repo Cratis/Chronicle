@@ -22,7 +22,7 @@ internal sealed class ReplayShapeMongoClients(IMongoDBClientManager inner, Repla
         monitored.ClusterConfigurator = cluster =>
         {
             configure?.Invoke(cluster);
-            cluster.Subscribe<CommandStartedEvent>(_ => counters.OnCommand());
+            cluster.Subscribe<CommandStartedEvent>(started => counters.OnCommand(started));
         };
         return inner.GetClientFor(monitored);
     }
