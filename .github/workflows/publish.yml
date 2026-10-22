@@ -268,24 +268,19 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
-  dotnet-pack-and-publish:
+  # Packaging consumes the Workbench assets, not the four kernel publish outputs.
+  # Keep the kernel gates on the push job below so packaging can overlap those builds.
+  dotnet-pack:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [wire-compatibility, release, workbench]
     permissions:
-      # Required for NuGet trusted publishing using OIDC tokens
-      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Download workbench output
-        uses: actions/download-artifact@v4
-        with:
-          name: workbench
-          path: ./Source/Workbench/wwwroot
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -295,16 +290,64 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        with:
+          mode: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'save' || 'restore' }}
+
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
+        with:
+          name: workbench
+          path: ./Source/Workbench/wwwroot
+
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
+      # One MSBuild invocation shares the build graph. Do not use --no-build: the
+      # private runtime dependency packaging targets require NoBuild to remain false.
       - name: Build and Create NuGet packages
-        run: |
-          find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
-          done
-          # Also pack the Contracts project from Kernel
-          dotnet pack ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+        run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+
+      - name: Upload NuGet packages
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: nuget-packages
+          path: ${{ env.NUGET_OUTPUT }}/*.nupkg
+          if-no-files-found: error
+
+  dotnet-pack-and-publish:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [wire-compatibility, release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development, dotnet-pack]
+    permissions:
+      # Required for NuGet trusted publishing using OIDC tokens
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        with:
+          mode: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'save' || 'restore' }}
+
+      - name: Download NuGet packages
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: ${{ env.NUGET_OUTPUT }}
 
       # Nothing else in this repository installs Chronicle beside the Arc packages that build on it,
       # so this is the only place the combination an application actually gets is exercised. It runs
