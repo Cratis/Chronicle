@@ -231,6 +231,11 @@ internal sealed class ChronicleServerStartupTask(
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
                 throw;
             }
+            catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+            {
+                logger.StartupStepReachedIncompatibleSilo(exception, step);
+                throw;
+            }
         }
     }
 
