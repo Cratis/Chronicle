@@ -340,7 +340,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        provider: [PostgreSql, SqlServer]
+        # RollingUpgrade starts the cluster on the latest release and replaces its nodes with this build one at a
+        # time under load, so silos of both releases call each other's grains (#5272). It runs on PostgreSQL.
+        provider: [PostgreSql, SqlServer, RollingUpgrade]
 
     steps:
       - name: Checkout code
@@ -380,7 +382,10 @@ jobs:
           retry_wait_seconds: 15
           command: |
             docker pull "${{ inputs.chronicle-image }}"
-            if [ "${{ matrix.provider }}" = "PostgreSql" ]; then
+            if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+              docker pull cratis/chronicle:latest-development-slim
+            fi
+            if [ "${{ matrix.provider }}" != "SqlServer" ]; then
               docker pull postgres:16
             else
               docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
@@ -391,6 +396,7 @@ jobs:
       - name: Run SQL clustering specifications (${{ matrix.provider }})
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+          CRATIS_CHRONICLE_PREVIOUS_IMAGE: cratis/chronicle:latest-development-slim
           TESTCONTAINERS_RYUK_DISABLED: true
         run: >-
           dotnet test Integration/SqlClustering/SqlClustering.csproj --no-build -c Release

@@ -129,9 +129,12 @@ public sealed partial class ClusterLoad : IAsyncDisposable
     // down qualify; a refused connection to any other silo is a real failure.
     internal static bool IsAppendToDepartedSilo(string? exceptionType, string message, ICollection<(string Address, int Generation)> departed)
     {
-        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" ||
-            !message.StartsWith("Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to endpoint S", StringComparison.Ordinal) ||
-            !message.Contains("ConnectionRefused", StringComparison.Ordinal))
+        // Orleans reports the refused connection itself once, then - while it backs off before trying the silo
+        // again - fails every send to it with "will retry after" instead. Both are the same departed silo.
+        const string ConnectionFailed = "Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to ";
+        var refused = message.StartsWith($"{ConnectionFailed}endpoint S", StringComparison.Ordinal) && message.Contains("ConnectionRefused", StringComparison.Ordinal);
+        var backingOff = message.StartsWith($"{ConnectionFailed}S", StringComparison.Ordinal) && message.Contains(", will retry after ", StringComparison.Ordinal);
+        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" || !(refused || backingOff))
         {
             return false;
         }
@@ -213,6 +216,6 @@ public sealed partial class ClusterLoad : IAsyncDisposable
         }
     }
 
-    [GeneratedRegex(@"Unable to connect to endpoint S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)\.", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant)]
     private static partial Regex DepartedEndpoint();
 }
