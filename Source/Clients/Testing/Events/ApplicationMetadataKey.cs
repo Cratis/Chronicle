@@ -17,7 +17,7 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
 {
     readonly JsonSchemaGenerator _generator;
     readonly Type _namingPolicy;
-    readonly string _eventStoreName;
+    readonly string? _eventStoreName;
     readonly Type[][] _catalogs;
     readonly int _hash;
 
@@ -26,9 +26,9 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
     /// </summary>
     /// <param name="generator">The shared schema generator, compared by reference.</param>
     /// <param name="namingPolicy">The naming policy.</param>
-    /// <param name="eventStoreName">The name of the event store the metadata is discovered for.</param>
+    /// <param name="eventStoreName">The name of the event store when an event type in the catalog declares it, otherwise <see langword="null"/>.</param>
     /// <param name="artifacts">The artifacts the metadata is discovered from.</param>
-    internal ApplicationMetadataKey(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string eventStoreName, IClientArtifactsProvider artifacts)
+    internal ApplicationMetadataKey(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string? eventStoreName, IClientArtifactsProvider artifacts)
     {
         _generator = generator;
         _namingPolicy = namingPolicy.GetType();
