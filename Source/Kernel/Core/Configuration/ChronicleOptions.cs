@@ -220,9 +220,22 @@ public class ChronicleOptions : IValidatableObject
 
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
-        Alerts.Conditions
+        ValidateSingleWriterLease().Concat(Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
-                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
+                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"])));
+
+    IEnumerable<ValidationResult> ValidateSingleWriterLease()
+    {
+        if (Clustering.SingleWriterLease.Ttl < TimeSpan.FromSeconds(5))
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.Ttl must be at least five seconds.", ["Clustering.SingleWriterLease.Ttl"]);
+        }
+
+        if (Clustering.SingleWriterLease.AcquireTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
+        }
+    }
 }

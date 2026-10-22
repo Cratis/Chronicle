@@ -176,3 +176,16 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 
+
+## Single-writer lease storage
+
+In `Localhost` clustering mode, persistent storage is protected by one lease per kernel system/cluster
+database. SQL providers create the additive `SingleWriterLeases` table; MongoDB uses the
+`single-writer-leases` collection. Both store the fixed `kernel` key, process owner, cluster and service
+identities, host, version, acquisition time, last renewal and expiry. Cluster and service identities are
+diagnostic metadata, not part of the lease key. Keep all nodes that share kernel data on the same
+system/cluster database; independently resolved system databases cannot protect each other's data.
+
+Released or expired records are retained for diagnostics. MongoDB does not use a TTL index. The lease
+uses the normal cluster database resolution and migration path, including SQL schemas and identities.
+See [Single-writer lease](clustering.md#single-writer-lease) for settings, shutdown and SQLite clock caveats.

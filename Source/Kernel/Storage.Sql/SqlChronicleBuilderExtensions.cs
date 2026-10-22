@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -40,6 +41,7 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
+        builder.Services.AddSingleton<ISingleWriterLeaseStorage, SqlSingleWriterLeaseStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
 

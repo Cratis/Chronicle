@@ -68,6 +68,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
 | Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
 | Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |
