@@ -93,7 +93,7 @@ public partial class Sink
             try
             {
                 var complete = await ApplyIndexes(context, table, online);
-                if (reconcile && complete) await ReadModelIndexes.DropUndeclared(context, table, _indexes.Select(index => index.PropertyPath.Path));
+                if (reconcile && complete) await ReadModelIndexes.DropUndeclared(context, table, IndexPlans(context.Database.GetDatabaseType()).Select(plan => plan.Name(context.Database.GetDatabaseType(), table)));
 
                 // A replay table name is reused after promotion, so its completion cannot be cached.
                 if (complete && table == _tableName)
@@ -123,27 +123,18 @@ public partial class Sink
     async Task<bool> ApplyIndexes(ReadModelDbContext context, string table, bool online)
     {
         var complete = true;
-        foreach (var index in _indexes)
+        foreach (var plan in IndexPlans(context.Database.GetDatabaseType()))
         {
-            var path = index.PropertyPath;
-            var column = path.Segments.Count() == 1 ? _columns.FirstOrDefault(column => column.Name == path.Path) : null;
-            if (column is not { IsJson: false, IsArray: false })
-            {
-                _logger.IndexNotCreated(_tableName, path.Path, "only top-level scalar columns are supported; nested paths, objects and arrays require SQL expression indexes");
-                continue;
-            }
-            if (context.Database.GetDatabaseType() == DatabaseType.SqlServer && column.ClrType == typeof(string))
-            {
-                var length = await context.Database.SqlQuery<int>($"SELECT CAST(CHARACTER_MAXIMUM_LENGTH AS int) AS [Value] FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=SCHEMA_NAME() AND TABLE_NAME={table} AND COLUMN_NAME={column.Name}").SingleOrDefaultAsync();
-                if (length is < 1 or > 850)
-                {
-                    _logger.IndexNotCreated(_tableName, path.Path, "the existing string column is unbounded or exceeds the SQL Server nonclustered key limit of 1700 bytes; replay to apply a supported bound");
-                    continue;
-                }
-            }
+            var path = plan.Definition.PropertyPath;
             try
             {
-                await ReadModelIndexes.Ensure(context, table, column.Name, online);
+                var rejection = await SqlServerIndexKeyBudget.RejectionReason(context, table, plan);
+                if (rejection is not null)
+                {
+                    _logger.IndexNotCreated(_tableName, path.Path, rejection);
+                    continue;
+                }
+                await ReadModelIndexes.Ensure(context, table, plan, online);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -152,5 +143,25 @@ public partial class Sink
             }
         }
         return complete;
+    }
+
+    IEnumerable<ReadModelIndexPlan> IndexPlans(DatabaseType type)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var index in _indexes.Distinct().OrderBy(index => index.Signature, StringComparer.Ordinal))
+        {
+            var plan = ReadModelIndexPlan.Resolve(index, _schema, _columns, type);
+            if (plan is null)
+            {
+                var reason = type == DatabaseType.SqlServer
+                    ? "array paths require SQL Server 2025 JSON indexes; other paths must resolve to scalar leaves, and composites cannot contain arrays"
+                    : "the path must resolve to a scalar leaf or a standalone ascending PostgreSQL JSON array; composite array indexes are not supported";
+                _logger.IndexNotCreated(_tableName, index.PropertyPath.Path, reason);
+            }
+            else if (seen.Add(plan.Signature))
+            {
+                yield return plan;
+            }
+        }
     }
 }

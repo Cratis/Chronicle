@@ -84,6 +84,11 @@ message GetOccurrencesResponse {
 }
 message IndexDefinition {
    string PropertyPath = 1;
+   repeated IndexProperty Properties = 2;
+}
+message IndexProperty {
+   string Path = 1;
+   bool Descending = 2;
 }
 message ObserveInstancesRequest {
    string EventStore = 1;

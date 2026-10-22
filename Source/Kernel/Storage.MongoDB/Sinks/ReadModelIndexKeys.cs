@@ -1,0 +1,64 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Security.Cryptography;
+using System.Text;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
+using MongoDB.Bson;
+
+namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
+
+/// <summary>
+/// Builds deterministic MongoDB keys for ordered index definitions.
+/// </summary>
+internal static class ReadModelIndexKeys
+{
+    /// <summary>
+    /// Builds the complete ordered key document.
+    /// </summary>
+    /// <param name="index">The index definition.</param>
+    /// <returns>The MongoDB key document.</returns>
+    internal static BsonDocument For(IndexDefinition index) => new(index.Properties.Select(property => new BsonElement(property.Path.Path, property.Descending ? -1 : 1)));
+
+    /// <summary>
+    /// Gets the stable managed index name.
+    /// </summary>
+    /// <param name="index">The index definition.</param>
+    /// <returns>The index name.</returns>
+    internal static string Name(IndexDefinition index)
+    {
+        if (!index.IsComposite && !index.Properties[0].Descending)
+        {
+            return "chronicle_idx_" + index.Properties[0].Path.Path.Replace('.', '_');
+        }
+        return "chronicle_idx_v2_" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(index.Signature)))[..16];
+    }
+
+    /// <summary>
+    /// Refuses compound indexes spanning multiple array paths.
+    /// </summary>
+    /// <param name="index">The index definition.</param>
+    /// <param name="schema">The read-model schema.</param>
+    /// <exception cref="InvalidOperationException">The index contains multiple array paths.</exception>
+    internal static void Validate(IndexDefinition index, JsonSchema schema)
+    {
+        if (index.Properties.Count(property => IsArrayPath(property.Path.Path, schema)) > 1)
+        {
+            throw new InvalidOperationException("A compound read-model index cannot contain multiple array paths.");
+        }
+    }
+
+    static bool IsArrayPath(string path, JsonSchema schema)
+    {
+        var current = schema.ActualSchema;
+        foreach (var segment in path.Split('.'))
+        {
+            if (current.Type.HasFlag(JsonObjectType.Array)) return true;
+            var child = current.GetFlattenedProperties().FirstOrDefault(property => property.Name == segment);
+            if (child is null) return false;
+            current = child.ActualSchema;
+        }
+        return current.Type.HasFlag(JsonObjectType.Array);
+    }
+}

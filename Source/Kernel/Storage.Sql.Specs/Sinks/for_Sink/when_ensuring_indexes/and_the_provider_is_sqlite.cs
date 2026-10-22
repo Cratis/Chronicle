@@ -14,15 +14,15 @@ public class and_the_provider_is_sqlite : given.an_indexed_sink
 
     Task Because() => EnsureAndReplay();
 
-    [Fact] void should_create_only_supported_scalar_indexes() => _indexedColumns.ShouldEqual(["name", "number]quote"]);
-    [Fact] void should_create_indexes_on_the_existing_table() => _initialCount.ShouldEqual(2);
-    [Fact] void should_be_idempotent() => _repeatedCount.ShouldEqual(2);
-    [Fact] void should_index_the_shadow() => _shadowCount.ShouldEqual(2);
-    [Fact] void should_preserve_indexes_on_promotion() => _promotedCount.ShouldEqual(2);
-    [Fact] void should_allow_a_second_indexed_shadow() => _secondShadowCount.ShouldEqual(2);
-    [Fact] void should_preserve_indexes_on_the_second_promotion() => _secondPromotedCount.ShouldEqual(2);
+    [Fact] void should_create_only_supported_scalar_indexes() => _indexedColumns.ShouldEqual(["<expression>", "name", "name", "number]quote", "number]quote"]);
+    [Fact] void should_create_indexes_on_the_existing_table() => _initialCount.ShouldEqual(5);
+    [Fact] void should_be_idempotent() => _repeatedCount.ShouldEqual(5);
+    [Fact] void should_index_the_shadow() => _shadowCount.ShouldEqual(5);
+    [Fact] void should_preserve_indexes_on_promotion() => _promotedCount.ShouldEqual(5);
+    [Fact] void should_allow_a_second_indexed_shadow() => _secondShadowCount.ShouldEqual(5);
+    [Fact] void should_preserve_indexes_on_the_second_promotion() => _secondPromotedCount.ShouldEqual(5);
 
-    [Fact] void should_warn_about_each_unsupported_path_of_the_read_model() => string.Join('\n', Warnings()).ShouldEqual(string.Join('\n', new[] { "lines", "lines.value", "missing", "nested", "nested.value" }.Select(path => $"SQL index for indexed-models at {path} was not created: only top-level scalar columns are supported; nested paths, objects and arrays require SQL expression indexes")));
+    [Fact] void should_warn_about_each_unsupported_path_of_the_read_model() => string.Join('\n', Warnings()).ShouldEqual(string.Join('\n', new[] { "lines", "lines.value", "missing", "nested" }.Select(path => $"SQL index for indexed-models at {path} was not created: the path must resolve to a scalar leaf or a standalone ascending PostgreSQL JSON array; composite array indexes are not supported")));
 
     IEnumerable<string> Warnings() => _logger.Warnings.Distinct().Order(StringComparer.Ordinal);
 
