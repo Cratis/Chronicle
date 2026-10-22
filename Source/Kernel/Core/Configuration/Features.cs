@@ -29,4 +29,14 @@ public class Features
     /// </summary>
     /// <remarks>When enabled, provides an internal OpenIdDict-based OAuth authority for authentication.</remarks>
     public bool OAuthAuthority { get; init; } = true;
+
+    /// <summary>
+    /// Whether rebuilding a projection builds its next materialization generation alongside the active one. Default false.
+    /// </summary>
+    /// <remarks>
+    /// Experimental and reserved. Rebuilding a namespaced projection is to build its next generation into its own destination
+    /// while the active generation keeps handling live events. Only the seams exist so far, so the setting has no effect yet and
+    /// rebuilds use the legacy replay path whatever its value.
+    /// </remarks>
+    public bool ProjectionGenerations { get; init; }
 }

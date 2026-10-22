@@ -48,7 +48,8 @@ public class SinkFactory(
 
         var mongoDBSinkCollections = new SinkCollections(
             readModel,
-            database.GetReadModelDatabase(eventStore, @namespace));
+            database.GetReadModelDatabase(eventStore, @namespace),
+            serviceProvider.GetRequiredService<ILogger<SinkCollections>>());
         var mongoDBChangesetConverter = new ChangesetConverter(
             readModel,
             mongoDBConverter,

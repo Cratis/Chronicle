@@ -18,7 +18,7 @@ public class and_the_sink_holds_the_instance : given.a_materialized_read_model
 
     void Establish()
     {
-        _sink.FindOrDefault(_theKey).Returns(InstanceNamed("encrypted"));
+        _sink.FindInPrimaryOrDefault(_theKey).Returns(InstanceNamed("encrypted"));
 
         _released = InstanceNamed("released");
         _compliance.Release(
@@ -31,6 +31,8 @@ public class and_the_sink_holds_the_instance : given.a_materialized_read_model
 
     async Task Because() => _result = await _store.FindByKey(EventStore, EventStoreNamespace, _definition, _theKey);
 
+    [Fact] void should_read_the_primary() => _sink.Received(1).FindInPrimaryOrDefault(_theKey);
+    [Fact] void should_not_read_projection_state() => _sink.DidNotReceive().FindOrDefault(Arg.Any<Key>());
     [Fact] void should_return_the_released_instance() => _result.ShouldEqual(_released);
     [Fact] void should_release_what_the_sink_held() => _compliance.Received(1).Release(
         EventStore,
