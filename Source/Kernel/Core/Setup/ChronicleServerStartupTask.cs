@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Generations.Admission;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -39,6 +40,7 @@ namespace Orleans.Hosting;
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
+/// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -59,7 +61,8 @@ internal sealed class ChronicleServerStartupTask(
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     ILogger<ChronicleServerStartupTask> logger,
-    TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>
+    TimeProvider? timeProvider = null,
+    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -98,6 +101,8 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
+
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
 
         // Populate the local CLR map before any grain can deserialize system events.

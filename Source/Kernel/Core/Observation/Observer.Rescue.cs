@@ -143,6 +143,8 @@ public partial class Observer
     /// </remarks>
     async Task ReviveFromQuarantine()
     {
+        if (!await ValidateStoredWebhookTarget()) return;
+
         if (_subscription.IsSubscribed)
         {
             // A leave requested during quarantine's OnEnter is only scheduled. Resume recovery from the

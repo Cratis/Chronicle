@@ -133,9 +133,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
     /// <remarks>
     /// Only the pipeline's own read-modify-write cycle follows the replay: <see cref="ApplyChanges(Key, IChangeset{AppendedEvent, ExpandoObject}, EventSequenceNumber, SinkWriteMode)"/>,
     /// the <see cref="FindOrDefault"/> that loads the state a change applies to, and the root key lookup of
-    /// <see cref="TryFindRootKeyByChildValue"/>. <see cref="FindOrDefault"/> is also how a query reads one instance
-    /// by key, and the sink cannot tell that read from the pipeline's, so it follows the replay for both. Reading
-    /// instances for queries goes to the primary table through <see cref="QueriedTableNameFor"/>, so readers keep
+    /// <see cref="TryFindRootKeyByChildValue"/>. Queries read one instance through <see cref="FindInPrimaryOrDefault"/>
+    /// and collections through <see cref="QueriedTableNameFor"/>, both from the primary table, so readers keep
     /// seeing the previous state until the replay is promoted.
     /// </remarks>
     string ActiveTableName => IsReplaying ? ReplayTableNameFor(_tableName) : _tableName;
@@ -147,6 +146,15 @@ public partial class Sink : ISink, ICanReconcileIndexes
     {
         var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
+        var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
+        return entity is null ? null : MaterializeExpando(entity);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
+    {
+        var id = GetIdString(key);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeExpando(entity);
     }

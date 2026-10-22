@@ -170,7 +170,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
 
     async Task Validate(string url, EventStoreName? eventStore, CancellationToken cancellationToken)
     {
-        var result = await policy.Evaluate(url, eventStore, cancellationToken);
+        var result = await policy.EvaluateForDelivery(url, eventStore, cancellationToken);
         if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
     }
 
