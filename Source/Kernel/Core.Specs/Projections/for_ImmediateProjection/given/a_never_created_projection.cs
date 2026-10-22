@@ -54,6 +54,7 @@ public class a_never_created_projection : an_immediate_projection
         _service = new Services.ReadModels.ReadModels(
             grainFactory,
             Substitute.For<Storage.IStorage>(),
+            Substitute.For<IReadModelReadBindings>(),
             converter,
             Substitute.For<IReducerMediator>(),
             Substitute.For<IProjectionChangesetMediator>(),
