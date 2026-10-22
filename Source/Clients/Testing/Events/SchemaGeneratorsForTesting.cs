@@ -41,10 +41,10 @@ internal static class SchemaGeneratorsForTesting
         readonly Type _namingPolicy = namingPolicy;
         readonly Type[][] _providers =
         [
-            Sorted(artifacts.ComplianceForTypesProviders),
-            Sorted(artifacts.ComplianceForPropertiesProviders),
-            Sorted(artifacts.SecurityForTypesProviders),
-            Sorted(artifacts.SecurityForPropertiesProviders)
+            artifacts.ComplianceForTypesProviders.ToArray(),
+            artifacts.ComplianceForPropertiesProviders.ToArray(),
+            artifacts.SecurityForTypesProviders.ToArray(),
+            artifacts.SecurityForPropertiesProviders.ToArray()
         ];
 
         public bool Equals(CacheKey? other) => other is not null && _namingPolicy == other._namingPolicy &&
@@ -66,7 +66,5 @@ internal static class SchemaGeneratorsForTesting
             }
             return hash.ToHashCode();
         }
-
-        static Type[] Sorted(IEnumerable<Type> types) => types.Distinct().OrderBy(type => type.AssemblyQualifiedName, StringComparer.Ordinal).ToArray();
     }
 }

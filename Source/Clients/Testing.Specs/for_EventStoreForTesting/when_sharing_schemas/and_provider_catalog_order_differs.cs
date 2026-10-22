@@ -6,7 +6,7 @@ using Cratis.Chronicle.Testing.Events;
 
 namespace Cratis.Chronicle.Testing.for_EventStoreForTesting.when_sharing_schemas;
 
-public class and_provider_catalogs_are_equivalent : given.schema_sharing
+public class and_provider_catalog_order_differs : given.schema_sharing
 {
     EventStoreForTesting _first;
 
@@ -20,11 +20,11 @@ public class and_provider_catalogs_are_equivalent : given.schema_sharing
         _other = new(null, new InMemoryClientArtifactsProvider
         {
             EventTypes = _artifacts.EventTypes,
-            ComplianceForTypesProviders = [typeof(given.IgnoredComplianceMetadataProvider), typeof(PIIMetadataProvider), typeof(PIIMetadataProvider)]
+            ComplianceForTypesProviders = [typeof(given.IgnoredComplianceMetadataProvider), typeof(PIIMetadataProvider)]
         });
     }
 
-    [Fact] void should_ignore_order_and_duplicates_in_provider_type_sets() => GeneratorFor(_first).ShouldBeSame(GeneratorFor(_other));
+    [Fact] void should_not_share_generators_for_different_provider_precedence() => ReferenceEquals(GeneratorFor(_first), GeneratorFor(_other)).ShouldBeFalse();
     [Fact] void should_generate_identical_schemas() => SchemaFor(_first).ToJson().ShouldEqual(SchemaFor(_other).ToJson());
 
     void Destroy() => _first?.Dispose();

@@ -183,7 +183,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
-        var generator = ShareSchemaGenerator
+        var generator = ShareSchemaGenerator && serviceProvider is null
             ? SchemaGeneratorsForTesting.GetOrCreate(_namingPolicy, ClientArtifactsProvider, CreateJsonSchemaGenerator)
             : CreateJsonSchemaGenerator();
         JsonSchemaGenerator = new IsolatedJsonSchemaGenerator(generator);
@@ -306,11 +306,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
     /// <summary>
-    /// Gets or sets whether newly constructed stores share the process-wide schema generator. Defaults to true.
+    /// Gets or sets whether newly constructed stores without a supplied service provider share the process-wide schema generator. Defaults to true.
     /// Each store receives isolated copies of generated schemas regardless of this setting.
     /// </summary>
     /// <remarks>
-    /// Set this to false before constructing stores whose metadata providers depend on per-store state.
+    /// Caller-supplied service providers always receive fresh schema generators.
     /// Changing this setting does not affect existing stores.
     /// </remarks>
     public static bool ShareSchemaGenerator { get; set; } = true;
