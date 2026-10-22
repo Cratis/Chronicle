@@ -29,7 +29,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         if (entity is null)
         {
             entity = ProjectionFuturesConverters.ToEntity(projectionId, future, jsonSerializerOptions);
-            scope.DbContext.ProjectionFutures.Add(entity);
+            await scope.DbContext.ProjectionFutures.Upsert(entity);
         }
         else
         {

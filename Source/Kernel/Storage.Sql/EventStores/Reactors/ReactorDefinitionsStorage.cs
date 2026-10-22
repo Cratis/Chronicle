@@ -66,7 +66,7 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
         var existing = await scope.DbContext.Reactors.FindAsync(currentId);
-        if (existing is null)
+        if (existing is null || currentId == newId)
         {
             return;
         }
@@ -80,8 +80,23 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
             IsReplayable = existing.IsReplayable
         };
 
-        scope.DbContext.Reactors.Remove(existing);
-        await scope.DbContext.Reactors.AddAsync(renamed);
-        await scope.DbContext.SaveChangesAsync();
+        try
+        {
+            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+            await scope.DbContext.Reactors.AddAsync(renamed);
+            await scope.DbContext.SaveChangesAsync();
+            await scope.DbContext.Reactors.Where(reactor => reactor.Id == currentId).ExecuteDeleteAsync();
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // The transaction is rolled back on dispose (PostgreSQL aborts it on a unique violation).
+            // Converge only when a peer completed this same rename: the source row is gone.
+            await using var fresh = await database.EventStore(eventStore);
+            if (await fresh.DbContext.Reactors.AnyAsync(reactor => reactor.Id == currentId))
+            {
+                throw;
+            }
+        }
     }
 }
