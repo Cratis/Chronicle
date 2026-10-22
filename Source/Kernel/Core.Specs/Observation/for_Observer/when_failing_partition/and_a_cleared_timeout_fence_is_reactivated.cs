@@ -20,7 +20,7 @@ public class and_a_cleared_timeout_fence_is_reactivated : given.an_observer_with
     {
         var key = _observerKey;
         _original = new(typeof(IClientOwnedObserverSubscriber).AssemblyQualifiedName!, new ObserverSubscriberKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId, "partition", _originalSilo.ToParsableString()).ToString(), _supersededClient.ConnectionId, _originalSilo.ToParsableString());
-        await _observer.PartitionFailed("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, context: new(DeliveryFence: new(_releaseBy, [_original])));
+        await _observer.PartitionFailedWithDeliveryFence("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, context: new(DeliveryFence: new(_releaseBy, [_original])));
         await _observer.ClearFailedPartitions();
         await Reactivate();
         _fences = await _observer.GetDeliveryFences();

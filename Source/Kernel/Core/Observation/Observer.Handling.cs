@@ -546,7 +546,7 @@ public partial class Observer
 
                 if (failed)
                 {
-                    await PartitionFailed(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, context: new(failurePolicy, deliveryFence));
+                    await RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
                 }
                 else
                 {

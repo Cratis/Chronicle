@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation;
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
+[Version(1)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -432,9 +434,21 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="kind">What kind of thing went wrong. Defaults to <see cref="FailureKind.Unknown"/>.</param>
     /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
     /// <param name="deferralId">The deferral that owned the recovery.</param>
-    /// <param name="context">The internal recovery policy and optional original delivery identity.</param>
+    /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, PartitionFailureContext context = default);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+
+    /// <summary>
+    /// Notify that the partition has failed with the original delivery fence.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="context">The internal recovery policy and optional original delivery identity and deadline.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailedWithDeliveryFence(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, PartitionFailureContext context);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.

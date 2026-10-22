@@ -23,5 +23,5 @@ public class and_a_webhook_reports_a_gone_response_without_progress : given.a_pe
 
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
-    [Fact] void should_forward_the_receiver_policy_at_the_first_unhandled_event() => _observer.Received(1).PartitionFailed("some-partition", 42UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, null, null, new(WebhookDeliveryFailurePolicy.ParkPartition));
+    [Fact] void should_forward_the_receiver_policy_at_the_first_unhandled_event() => _observer.Received(1).PartitionFailed("some-partition", 42UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, null, null, WebhookDeliveryFailurePolicy.ParkPartition);
 }

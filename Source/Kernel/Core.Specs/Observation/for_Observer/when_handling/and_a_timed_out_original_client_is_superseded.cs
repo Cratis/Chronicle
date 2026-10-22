@@ -28,7 +28,7 @@ public class and_a_timed_out_original_client_is_superseded : given.an_observer_w
         // A remains connected after B replaces it because their event types differ.
         var key = _observerKey;
         var original = new DeliveryFenceTarget(typeof(IClientOwnedObserverSubscriber).AssemblyQualifiedName!, new ObserverSubscriberKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId, "partition", _supersededSiloAddress.ToParsableString()).ToString(), _supersededClient.ConnectionId, _supersededSiloAddress.ToParsableString());
-        await _observer.PartitionFailed("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, context: new(DeliveryFence: new(DateTimeOffset.UtcNow.AddSeconds(300), [original])));
+        await _observer.PartitionFailedWithDeliveryFence("partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout, context: new(DeliveryFence: new(DateTimeOffset.UtcNow.AddSeconds(300), [original])));
         await _observer.ClearFailedPartitions();
         await _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(active_event_type, 42UL)]);
         _current = await _observer.GetSubscription();

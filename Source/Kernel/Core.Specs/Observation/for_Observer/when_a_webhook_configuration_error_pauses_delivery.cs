@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_a_webhook_configuration_error_pauses_delivery : given.a_webhook_observer
 {
-    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, context: new(WebhookDeliveryFailurePolicy.PauseObserver));
+    async Task Because() => await _observer.PartitionFailed("partition", 42UL, ["403"], "", FailureKind.Handling, failurePolicy: WebhookDeliveryFailurePolicy.PauseObserver);
 
     [Fact] void should_pause_the_whole_observer() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] void should_preserve_one_failure() => _failedPartitionsState.Partitions.Single().Attempts.Count().ShouldEqual(1);
