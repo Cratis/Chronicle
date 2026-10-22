@@ -68,8 +68,13 @@ jobs:
   wire-compatibility:
     uses: ./.github/workflows/wire-compatibility.yml
 
+  # Alongside it, the silo-to-silo contract: a change that stops this build's silos from sharing a cluster with the
+  # latest release's breaks every rolling upgrade. See grain-compatibility.yml.
+  grain-compatibility:
+    uses: ./.github/workflows/grain-compatibility.yml
+
   dotnet-build:
-    needs: [wire-compatibility]
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
@@ -209,7 +214,7 @@ jobs:
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
     if: github.event_name != 'pull_request'
-    needs: [wire-compatibility]
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -269,7 +274,7 @@ jobs:
   # requested PR path waits for successful specs (implicit success() also blocks cancellation).
   dotnet-build-development-requested:
     if: github.event_name == 'pull_request' && inputs.integration_requested
-    needs: [wire-compatibility, specs]
+    needs: [wire-compatibility, grain-compatibility, specs]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:

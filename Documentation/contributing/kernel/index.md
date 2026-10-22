@@ -43,4 +43,5 @@ For checks that exercise the client and kernel together, follow [integration tes
 
 - [Contracts](./contracts.mdx): protocol generation and compatibility conventions.
 - [Services](./services.md): generated implementations and the services that remain hand-written.
+- [Grain interfaces](./grain-interfaces.mdx): changing a grain so that two releases can share a cluster during a rolling upgrade.
 - [Patches](./patches/index.mdx): versioned storage changes applied during kernel startup.
