@@ -99,8 +99,8 @@ public record AppendMany(
         var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
         var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
 
-        return EffectReceipt is null
+        return (EffectReceipt is null
             ? eventSequence.AppendMany(events, correlationId, causationChain, identity, concurrencyScopes)
-            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, concurrencyScopes, EffectReceipt);
+            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, concurrencyScopes, EffectReceipt)).WithUnknownOutcome(correlationId);
     }
 }
