@@ -59,10 +59,14 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReportHandledEventsBatch(JobStepId reportedBy, IReadOnlyList<Jobs.HandledEventsReport> reports)
     {
-        if (IsRetired || _removed || !_observerExists) return;
         foreach (var report in reports)
         {
             Skips.JobReported(report.Partition);
+        }
+
+        if (IsRetired || _removed || !_observerExists) return;
+        foreach (var report in reports)
+        {
             if (_handledEventsReports.TryTake(reportedBy, report.Partition, report.HandledUpTo))
             {
                 MergeHandledCounts(report.Partition, report.Counts);

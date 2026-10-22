@@ -29,6 +29,7 @@ internal sealed class ReplayHandledEventsPage
     /// <param name="report">The handled run to aggregate.</param>
     public void Add(HandledEventsReport report)
     {
+        if (!report.HandledUpTo.IsActualValue) return;
         if (_reports.TryGetValue(report.Partition, out var previous))
         {
             var counts = previous.Counts.ToDictionary(pair => pair.Key, pair => pair.Value);

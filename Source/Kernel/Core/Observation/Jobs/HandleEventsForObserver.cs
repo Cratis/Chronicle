@@ -367,19 +367,19 @@ public class HandleEventsForObserver(
         }
         catch (TaskCanceledException)
         {
-            if (!await FlushReplayReports()) return ClosedResult();
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            if (!await FlushReplayReports()) return ClosedResult();
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
-            if (!await FlushReplayReports()) return ClosedResult();
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             var message = TransientTimeouts.ShortMessageFor(e);
             logger.StepTimedOut(message);
             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
@@ -389,7 +389,7 @@ public class HandleEventsForObserver(
         }
         catch (Exception e)
         {
-            if (!await FlushReplayReports()) return ClosedResult();
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             logger.FailedPerforming(e, nameof(HandleEventsForObserver));
             if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
             {
@@ -777,15 +777,30 @@ public class HandleEventsForObserver(
         return true;
     }
 
+    async Task<bool> FlushReplayReportsAfterFailure()
+    {
+        try
+        {
+            return await FlushReplayReports();
+        }
+        catch (Exception exception)
+        {
+            logger.FailedPerforming(exception, nameof(HandleEventsForObserver));
+            return true;
+        }
+    }
+
     async Task<bool> FlushReplayReports()
     {
         if (_replayReports?.LastHandled.IsActualValue != true) return true;
-        if (!Advanced(await ReportFromWork(_replayReports.LastHandled))) return false;
+        var lastHandled = _replayReports.LastHandled;
+        var reports = _replayReports.Reports;
+        _replayReports.Clear();
+        if (!Advanced(await ReportFromWork(lastHandled))) return false;
 
         // Events already handled before a stop still need their counts reported; cancellation only stops dispatch.
         await TransientTimeouts.ReportHandledEventsBatchWithoutFailing(
-            _observer, JobStepId, _replayReports.Reports, TransientRetryDelay, logger, CancellationToken.None);
-        _replayReports.Clear();
+            _observer, JobStepId, reports, TransientRetryDelay, logger, CancellationToken.None);
         return true;
     }
 
