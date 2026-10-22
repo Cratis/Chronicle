@@ -31,6 +31,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans.Configuration;
+using Orleans.Versions.Compatibility;
+using Orleans.Versions.Selector;
 
 namespace Orleans.Hosting;
 
@@ -48,6 +51,19 @@ public static class ChronicleServerSiloBuilderExtensions
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
         builder.AddActivityPropagation();
+
+        // Silos of two releases share the cluster during a rolling upgrade. A grain interface that gained methods
+        // raises its [Version], and these strategies make Orleans route a call needing the newer version to a silo
+        // that has it - deactivating an older activation instead of letting it fail to decode the call - while
+        // older callers keep being served by newer activations, which still have every method they know.
+        // They are the Orleans defaults, set here because rolling upgrades depend on them: see
+        // Documentation/contributing/kernel/grain-interfaces.mdx.
+        builder.Configure<GrainVersioningOptions>(options =>
+        {
+            options.DefaultCompatibilityStrategy = nameof(BackwardCompatible);
+            options.DefaultVersionSelectorStrategy = nameof(AllCompatibleVersions);
+        });
+
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
