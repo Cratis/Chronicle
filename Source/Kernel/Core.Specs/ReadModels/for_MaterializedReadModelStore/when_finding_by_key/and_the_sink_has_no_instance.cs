@@ -15,10 +15,12 @@ public class and_the_sink_has_no_instance : given.a_materialized_read_model
 
     ExpandoObject _result;
 
-    void Establish() => _sink.FindOrDefault(_theKey).Returns((ExpandoObject?)null);
+    void Establish() => _sink.FindInPrimaryOrDefault(_theKey).Returns((ExpandoObject?)null);
 
     async Task Because() => _result = await _store.FindByKey(EventStore, EventStoreNamespace, _definition, _theKey);
 
+    [Fact] void should_read_the_primary() => _sink.Received(1).FindInPrimaryOrDefault(_theKey);
+    [Fact] void should_not_read_projection_state() => _sink.DidNotReceive().FindOrDefault(Arg.Any<Key>());
     [Fact] void should_return_nothing() => _result.ShouldBeNull();
     [Fact] void should_not_release_anything() => _compliance.DidNotReceive().Release(
         Arg.Any<EventStoreName>(),
