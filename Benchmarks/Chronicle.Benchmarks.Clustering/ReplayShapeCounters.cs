@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Observation;
+extern alias KernelCore;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Bson;
@@ -26,7 +27,7 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// <inheritdoc/>
     public Task Invoke(IIncomingGrainCallContext context)
     {
-        var isFlushFor = context.InterfaceMethod?.Name == nameof(IObserverService.FlushFor);
+        var isFlushFor = context.InterfaceMethod?.Name == nameof(KernelCore::Cratis.Chronicle.Observation.IObserverService.FlushFor);
         lock (_gate)
         {
             if (_measuring)
