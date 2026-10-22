@@ -33,8 +33,9 @@ def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha
                 return True, f"Requested integration {evidence} passed for {head_sha}."
             return False, ("::error title=Integration requested::run-integration is set and no passing Requested "
                            f"Integration run exists for {head_sha}. Integration runs automatically on each push to "
-                           "a PR labeled `run-integration`. This check turns green automatically when that run "
-                           "passes; remove the label and re-run this check to drop the requirement.")
+                           "a PR labeled `run-integration`; if none started for this head, push again or re-run the "
+                           "latest Requested Integration run for this PR in the Actions tab. This check turns green "
+                           "automatically when that run passes; remove the label and re-run this check to drop the requirement.")
         return True, ("No hot-core path is touched by this pull request. The full out-of-process integration "
                       "matrix is not required here.")
     if dispatch:
