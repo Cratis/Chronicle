@@ -86,8 +86,9 @@ HTTP operation before a later delivery can begin.
 Configuration failures and exhausted transient-failure budgets are eligible. `410 Gone`,
 legacy failures without an explicit receiver policy, and unrelated watchdog quarantines
 remain manual-only. A healthy probe resets the eligible partitions' retry budgets while
-retaining attempt history; `410` and manual-only partitions remain parked. The successful
-event is checkpointed before normal recovery starts at the next undelivered position.
+retaining attempt history; `410` and manual-only partitions remain parked. Other partitions'
+durable deferral deadlines and resume positions remain in force. The successful event is
+checkpointed before normal recovery starts at the next undelivered position.
 HTTP delivery is still at least once: a crash before the success checkpoint can cause a
 redelivery, so endpoints must remain idempotent.
 

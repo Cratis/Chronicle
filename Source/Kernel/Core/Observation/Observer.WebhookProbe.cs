@@ -49,7 +49,6 @@ public partial class Observer
     {
         failure.IsQuarantined = false;
         failure.AttemptsBeforeBudgetReset = failure.Attempts.Count();
-        failure.Deferral = null;
         failure.RecoveryOwner = null;
         failure.WebhookRecoveryId = recoveryId;
     }
@@ -199,7 +198,15 @@ public partial class Observer
             await RescheduleWebhookProbe(control, null, "no-candidate");
             return;
         }
+        if (await DeferWebhookProbeUntilDeliveryDeadline(control, failure)) return;
         await ClaimWebhookProbe(control, failure);
+    }
+
+    async Task<bool> DeferWebhookProbeUntilDeliveryDeadline(WebhookProbeState control, FailedPartition failure)
+    {
+        if (failure.Deferral is not { } deferral || deferral.Until <= ProbeTimeProvider.GetUtcNow()) return false;
+        await RescheduleWebhookProbe(control, deferral.Until, "deferred");
+        return true;
     }
 
     async Task<WebhookProbeState?> DrainPendingWebhookProbe(WebhookProbeState control)
@@ -296,6 +303,7 @@ public partial class Observer
         if (!CurrentWebhookProbe(control, failure)) return;
         var options = await GetWebhookProbeConfiguration();
         if (!options.Enabled || !CurrentWebhookProbe(control, failure)) return;
+        if (await DeferWebhookProbeUntilDeliveryDeadline(control, failure)) return;
 
         var result = await InvokeWebhookProbe(delivery, options);
         await ApplyWebhookProbeResult(delivery, partitionCounts, result);
@@ -442,6 +450,8 @@ public partial class Observer
             if (!CurrentWebhookProbe(control, failure)) return false;
             var cursor = failure.EffectiveRecoveryCursor;
             failure.RecoveryCursor = new(next, cursor.Mode, cursor.ReplayBoundary);
+            // Only the delivered episode consumed its deferral. Other partitions retain their deadlines and resume positions.
+            failure.Deferral = null;
             failure.RecoveryOwner = null;
             foreach (var eligible in Failures.Partitions.Where(_ => WebhookProbeEligibility.IsEligible(_) && _.WebhookRecoveryId != control.Id))
             {
