@@ -22,4 +22,6 @@ public class and_the_event_is_revised : given.a_storage_with_stored_generations
 
     [Fact] void should_read_the_base_content() => _snapshot.Content[EventTypeGeneration.First].ShouldEqual(_observed.Content[EventTypeGeneration.First]);
     [Fact] void should_report_the_revision_count() => _snapshot.RevisionCount.ShouldEqual(1);
+    [Fact] void should_report_the_revised_generation() => _snapshot.RevisedGeneration.ShouldEqual(EventTypeGeneration.First);
+    [Fact] void should_carry_the_revised_content() => _snapshot.RevisedContent.ShouldNotBeNull();
 }

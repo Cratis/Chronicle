@@ -16,6 +16,8 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -38,6 +40,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="webhookTargetPolicy">Policy for stored webhook targets.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
@@ -56,6 +59,7 @@ public partial class Observer(
     IStorage storage,
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
+    IWebhookTargetPolicy webhookTargetPolicy,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
@@ -900,6 +904,17 @@ public partial class Observer(
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
             await BeginAlertLifecycle();
+            var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
+            if (webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+                if (!await ValidateStoredWebhookTarget())
+                {
+                    _subscriptionSetupFailed = false;
+                    return;
+                }
+            }
+
             if (recovering)
             {
                 // A failed entry write can strand the machine in CatchingUpInFlight, which cannot enter
@@ -913,7 +928,10 @@ public partial class Observer(
             }
 
             _subscriptionSetupFailed = true;
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            if (!webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            }
             await RecoverAfterSubscribing(leavesQuarantine);
 
             // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after

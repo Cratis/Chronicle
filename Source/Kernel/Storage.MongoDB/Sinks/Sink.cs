@@ -71,6 +71,7 @@ public class Sink(
     }
 
     const int MaxBulkOperations = 1000;
+    const int MaxPrimaryReadAttempts = 3;
 
     /// <summary>
     /// Maximum size in bytes for a bulk write operation.
@@ -152,6 +153,56 @@ public class Sink(
         }
 
         return default;
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ReadModelPrimaryIsChanging">Promotion prevents a reliable answer; the caller can retry.</exception>
+    public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await ReadPrimaryOrDefault(key);
+            }
+            catch (ReadModelPrimaryIsChanging) when (attempt < MaxPrimaryReadAttempts - 1)
+            {
+                await Task.Delay(attempt == 0 ? 20 : 50);
+            }
+        }
+    }
+
+    async Task<ExpandoObject?> ReadPrimaryOrDefault(Key key)
+    {
+        var collection = collections.GetCollection(readModel.ContainerName);
+        var before = await GetPrimaryState(collection.Database);
+
+        using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
+        var instance = result.SingleOrDefault();
+        if (instance is not null)
+        {
+            return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
+        }
+
+        var after = await GetPrimaryState(collection.Database);
+        if (after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId)
+        {
+            throw new ReadModelPrimaryIsChanging(readModel.ContainerName);
+        }
+
+        return null;
+    }
+
+    async Task<CollectionState> GetPrimaryState(IMongoDatabase database)
+    {
+        var state = await GetCollectionState(database, readModel.ContainerName, CancellationToken.None);
+        if (state.IsPromotionInProgress)
+        {
+            logger.PrimaryReadDuringPromotion(readModel.Identifier, readModel.ContainerName, collections.PromotingCollectionName);
+            throw new ReadModelPrimaryIsChanging(readModel.ContainerName);
+        }
+
+        return state;
     }
 
     bool TryAnswerFromBulk(Key key, out ExpandoObject? answer)
@@ -368,7 +419,12 @@ public class Sink(
         // still upserts so it can construct the child structure regardless of seed order.
         var isRootLevelJoin = hasJoined && !key.ArrayIndexers.All.Any();
 
-        return new(filter, IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom), usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
+        // Pulling a child from an absent root must not recreate that root. A changeset that also adds a child
+        // can still construct it, but a removal without an addition only updates an existing document.
+        var onlyRemovesChildren = changeset.Changes.Any(change => change is ChildRemoved) && !changeset.Changes.Any(change => change is ChildAdded);
+        var isUpsert = !onlyRemovesChildren && IsUpsertWrite(onlyPropertyUpdatesAlongsideJoin, isRootLevelJoin, hasKeyedFrom);
+
+        return new(filter, isUpsert, usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
     }
 
     static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLevelJoin, bool hasKeyedFrom) =>

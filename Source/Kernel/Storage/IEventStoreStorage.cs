@@ -25,6 +25,9 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 public interface IEventStoreStorage
 {
+    /// <summary>Gets the durable generation compatibility floor.</summary>
+    Generations.IGenerationFloorStorage GenerationFloor { get; }
+
     /// <summary>
     /// Gets the durable lifecycle fan-out intents for this event store.
     /// </summary>

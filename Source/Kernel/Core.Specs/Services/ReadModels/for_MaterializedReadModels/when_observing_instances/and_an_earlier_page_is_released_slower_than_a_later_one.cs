@@ -49,7 +49,7 @@ public class and_an_earlier_page_is_released_slower_than_a_later_one : for_ReadM
                 return Task.FromResult<IEnumerable<ExpandoObject>>(instances);
             });
 
-        _materializedService = new(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        _materializedService = new(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
     }
 
     async Task Because()

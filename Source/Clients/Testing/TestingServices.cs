@@ -64,6 +64,7 @@ using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projectio
 using KernelProjectionsService = KernelGrpc::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelReadBindings = KernelCore::Cratis.Chronicle.ReadModels.ReadModelReadBindings;
 using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
@@ -293,10 +294,12 @@ internal sealed class TestingServices : IServices
         _eventStores = new(() =>
             new KernelEventStoresService(commandPipeline.Value, storage, NullLogger<KernelEventStoresService>.Instance));
 
+        var readBindings = new KernelReadModelReadBindings(storage);
         _readModels = new(() =>
             new KernelReadModelsService(
                 grainFactory,
                 storage,
+                readBindings,
                 new ExpandoObjectConverter(new TypeFormats()),
                 new KernelReducerMediator(),
                 new KernelProjectionChangesetMediator(),
@@ -305,7 +308,7 @@ internal sealed class TestingServices : IServices
                 // object-reference lookups throw NotSupportedException), so no local silo details are needed.
                 null!,
                 compliance.CreateReadModelsCompliance(),
-                new KernelMaterializedReadModelStore(storage, compliance.CreateReadModelsCompliance()),
+                new KernelMaterializedReadModelStore(readBindings, compliance.CreateReadModelsCompliance()),
                 jsonSerializerOptions));
 
         _compliance = new(() =>
