@@ -35,6 +35,47 @@ public partial class Database
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Builds the options every database context of the kernel is created with.
+    /// </summary>
+    /// <typeparam name="TDbContext">Type of database context.</typeparam>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> of the application.</param>
+    /// <param name="connectionString">The connection string of the database.</param>
+    /// <returns>The options.</returns>
+    /// <remarks>
+    /// Migrations run in the order of their releases (<see cref="ReleaseOrderedMigrations"/>). The migrator is replaced in these shared options
+    /// rather than in each context, so every context of a database type keeps sharing one internal EF service provider.
+    /// </remarks>
+    internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
+        where TDbContext : DbContext
+    {
+        var builder = new DbContextOptionsBuilder<TDbContext>();
+        builder.UseDatabaseFromConnectionString(connectionString);
+        builder
+            .UseApplicationServiceProvider(serviceProvider)
+            .AddConceptAsSupport();
+
+        if (connectionString.GetDatabaseType() == DatabaseType.PostgreSql)
+        {
+            builder.ReplaceService<IMigrator, ReleaseOrderedNpgsqlMigrator>();
+        }
+        else
+        {
+            builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
+        }
+
+        // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
+        // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
+        // observer catch-up. The interceptor applies those pragmas on every SQLite connection.
+        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite)
+        {
+            builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
+        }
+
+        SqlMigrationTelemetry.Configure(builder, connectionString, serviceProvider.GetService<ILogger<Database>>() ?? NullLogger<Database>.Instance);
+        return builder.Options;
+    }
+
+    /// <summary>
     /// Builds options for a resolved target, including its configured authentication provider.
     /// </summary>
     /// <param name="target">The resolved database target.</param>
@@ -73,47 +114,6 @@ public partial class Database
                 break;
         }
 
-        return builder.Options;
-    }
-
-    /// <summary>
-    /// Builds the options every database context of the kernel is created with.
-    /// </summary>
-    /// <typeparam name="TDbContext">Type of database context.</typeparam>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> of the application.</param>
-    /// <param name="connectionString">The connection string of the database.</param>
-    /// <returns>The options.</returns>
-    /// <remarks>
-    /// Migrations run in the order of their releases (<see cref="ReleaseOrderedMigrations"/>). The migrator is replaced in these shared options
-    /// rather than in each context, so every context of a database type keeps sharing one internal EF service provider.
-    /// </remarks>
-    internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
-        where TDbContext : DbContext
-    {
-        var builder = new DbContextOptionsBuilder<TDbContext>();
-        builder.UseDatabaseFromConnectionString(connectionString);
-        builder
-            .UseApplicationServiceProvider(serviceProvider)
-            .AddConceptAsSupport();
-
-        if (connectionString.GetDatabaseType() == DatabaseType.PostgreSql)
-        {
-            builder.ReplaceService<IMigrator, ReleaseOrderedNpgsqlMigrator>();
-        }
-        else
-        {
-            builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
-        }
-
-        // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
-        // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
-        // observer catch-up. The interceptor applies those pragmas on every SQLite connection.
-        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite)
-        {
-            builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
-        }
-
-        SqlMigrationTelemetry.Configure(builder, connectionString, serviceProvider.GetService<ILogger<Database>>() ?? NullLogger<Database>.Instance);
         return builder.Options;
     }
 
