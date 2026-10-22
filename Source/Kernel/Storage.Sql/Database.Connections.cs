@@ -42,8 +42,8 @@ public partial class Database
     /// <param name="connectionString">The connection string of the database.</param>
     /// <returns>The options.</returns>
     /// <remarks>
-    /// Migrations are listed in the order of their releases (<see cref="ReleaseOrderedMigrationsAssembly"/>). The replacement is part of these
-    /// shared options rather than of each context, so every context keeps sharing one internal EF service provider.
+    /// Migrations run in the order of their releases (<see cref="ReleaseOrderedMigrations"/>). The migrator is replaced in these shared options
+    /// rather than in each context, so every context of a database type keeps sharing one internal EF service provider.
     /// </remarks>
     internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
         where TDbContext : DbContext
@@ -52,8 +52,16 @@ public partial class Database
         builder.UseDatabaseFromConnectionString(connectionString);
         builder
             .UseApplicationServiceProvider(serviceProvider)
-            .AddConceptAsSupport()
-            .ReplaceService<IMigrationsAssembly, ReleaseOrderedMigrationsAssembly>();
+            .AddConceptAsSupport();
+
+        if (connectionString.GetDatabaseType() == DatabaseType.PostgreSql)
+        {
+            builder.ReplaceService<IMigrator, ReleaseOrderedNpgsqlMigrator>();
+        }
+        else
+        {
+            builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
+        }
 
         // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
         // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
