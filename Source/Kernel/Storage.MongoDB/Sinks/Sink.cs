@@ -435,7 +435,7 @@ public class Sink(
         await writes.DeleteOne(Collection, filter);
         if (options.IsImmediate)
         {
-            EvictBulkState(key);
+            writes.AfterCommit(() => EvictBulkState(key));
         }
 
         return [];
@@ -570,7 +570,7 @@ public class Sink(
 
         if (_isBulkMode && !changeset.HasJoined())
         {
-            CreateCacheState(write.Key, changeset, write.EventSequenceNumber)();
+            writes.AfterCommit(CreateCacheState(write.Key, changeset, write.EventSequenceNumber));
         }
     }
 

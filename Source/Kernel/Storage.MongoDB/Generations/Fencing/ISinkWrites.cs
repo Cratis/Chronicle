@@ -30,6 +30,16 @@ public interface ISinkWrites
     Task<T> InBatch<T>(Func<Task<T>> work);
 
     /// <summary>
+    /// Runs an in-memory change that must only take effect once the writes it describes are persisted.
+    /// </summary>
+    /// <param name="change">The change, typically to a cache the sink answers reads from.</param>
+    /// <remarks>
+    /// Outside a batch the change runs at once. Inside one it runs after the batch commits, and is dropped if the attempt that
+    /// queued it aborts, so a revoked or failed batch cannot leave a cache describing state that never reached the collection.
+    /// </remarks>
+    void AfterCommit(Action change);
+
+    /// <summary>
     /// Updates one document.
     /// </summary>
     /// <param name="collection">The collection to write.</param>

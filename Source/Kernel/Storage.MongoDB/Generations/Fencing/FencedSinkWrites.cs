@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecutor executor) : ISinkWrites, IDisposable
 {
     readonly AsyncLocal<IClientSessionHandle?> _session = new();
+    readonly AsyncLocal<List<Action>?> _afterCommit = new();
     readonly SemaphoreSlim _lane = new(1, 1);
 
     /// <inheritdoc/>
@@ -26,6 +27,18 @@ public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecu
 
     /// <inheritdoc/>
     public Task<T> InBatch<T>(Func<Task<T>> work) => IsInBatch ? work() : Run(_ => work(), CancellationToken.None);
+
+    /// <inheritdoc/>
+    public void AfterCommit(Action change)
+    {
+        if (_afterCommit.Value is { } pending)
+        {
+            pending.Add(change);
+            return;
+        }
+
+        change();
+    }
 
     /// <inheritdoc/>
     public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
@@ -78,14 +91,18 @@ public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecu
     async Task<T> Run<T>(Func<IClientSessionHandle, Task<T>> work, CancellationToken cancellationToken)
     {
         var token = await tokens.Current(cancellationToken);
+        List<Action> committed = [];
         await _lane.WaitAsync(cancellationToken);
         try
         {
-            return await executor.Execute(
+            var result = await executor.Execute(
                 token,
                 async session =>
                 {
+                    // Each attempt starts from nothing: changes queued by an attempt that aborted are dropped with it.
+                    committed = [];
                     _session.Value = session;
+                    _afterCommit.Value = committed;
                     try
                     {
                         return await work(session);
@@ -93,9 +110,12 @@ public sealed class FencedSinkWrites(IFenceTokenSource tokens, IFencedBatchExecu
                     finally
                     {
                         _session.Value = null;
+                        _afterCommit.Value = null;
                     }
                 },
                 cancellationToken);
+            committed.ForEach(change => change());
+            return result;
         }
         finally
         {

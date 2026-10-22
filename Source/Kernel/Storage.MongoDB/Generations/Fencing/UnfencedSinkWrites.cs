@@ -23,6 +23,9 @@ public sealed class UnfencedSinkWrites : ISinkWrites
     public Task<T> InBatch<T>(Func<Task<T>> work) => work();
 
     /// <inheritdoc/>
+    public void AfterCommit(Action change) => change();
+
+    /// <inheritdoc/>
     public Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options) =>
         collection.UpdateOneAsync(filter, update, options);
 
