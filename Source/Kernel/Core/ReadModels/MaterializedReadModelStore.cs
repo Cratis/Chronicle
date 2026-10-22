@@ -41,7 +41,7 @@ public class MaterializedReadModelStore(
         Key key)
     {
         var sink = await GetSinkFor(eventStore, eventStoreNamespace, definition);
-        var instance = await sink.FindOrDefault(key);
+        var instance = await sink.FindInPrimaryOrDefault(key);
         if (instance is null)
         {
             return null;

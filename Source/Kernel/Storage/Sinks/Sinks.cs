@@ -59,6 +59,10 @@ public class Sinks(
     }
 
     /// <inheritdoc/>
+    public Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container) =>
+        GetFor(readModel with { ContainerName = container });
+
+    /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
 
     static bool SameDefinition(ReadModelDefinition first, ReadModelDefinition second) =>
