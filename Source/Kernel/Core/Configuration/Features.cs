@@ -29,4 +29,12 @@ public class Features
     /// </summary>
     /// <remarks>When enabled, provides an internal OpenIdDict-based OAuth authority for authentication.</remarks>
     public bool OAuthAuthority { get; init; } = true;
+
+    /// <summary>
+    /// Whether projection generations are enabled. Default false.
+    /// </summary>
+    /// <remarks>
+    /// Preview. When enabled, every write of a MongoDB sink runs in a transaction fenced by the owner epoch of its generation.
+    /// </remarks>
+    public bool ProjectionGenerations { get; init; }
 }
