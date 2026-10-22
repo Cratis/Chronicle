@@ -21,5 +21,7 @@ public class when_updating_flat_and_ordered_declarations : Specification
 
     [Fact] void should_not_flatten_composites_from_a_legacy_editor() => ReadModelIndexUpdates.Apply([new() { PropertyPath = "name" }, new() { PropertyPath = "new" }], _existing).SequenceEqual([new IndexDefinition("new"), _compound, _descending]).ShouldBeTrue();
     [Fact] void should_not_erase_ordered_definitions_from_an_empty_legacy_update() => ReadModelIndexUpdates.Apply([], _existing).SequenceEqual([_compound, _descending]).ShouldBeTrue();
+    [Fact] void should_allow_an_explicit_empty_replacement() => ReadModelIndexUpdates.Apply([], _existing, replace: true).ShouldBeEmpty();
+    [Fact] void should_not_keep_old_composites_in_an_explicit_flat_replacement() => ReadModelIndexUpdates.Apply([new() { PropertyPath = "new" }], _existing, replace: true).SequenceEqual([new IndexDefinition("new")]).ShouldBeTrue();
     [Fact] void should_allow_an_ordered_contract_to_replace_the_definitions() => ReadModelIndexUpdates.Apply([new() { PropertyPath = "replacement", Properties = [new() { Path = "replacement", Descending = true }] }], _existing).SequenceEqual([new IndexDefinition("replacement") { Properties = [new("replacement", true)] }]).ShouldBeTrue();
 }

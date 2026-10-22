@@ -182,6 +182,7 @@ message SinkDefinition {
 message UpdateDefinitionRequest {
    string EventStore = 1;
    ReadModelDefinition ReadModel = 2;
+   bool ReplaceIndexes = 3;
 }
 message WatchRequest {
    string EventStore = 1;

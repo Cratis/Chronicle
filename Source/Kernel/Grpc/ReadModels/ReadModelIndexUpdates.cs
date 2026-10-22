@@ -27,12 +27,13 @@ internal static class ReadModelIndexUpdates
     /// </summary>
     /// <param name="incoming">The incoming declarations.</param>
     /// <param name="existing">The stored definitions.</param>
+    /// <param name="replace">Whether to replace all indexes, including with an empty set.</param>
     /// <returns>The definitions to save.</returns>
-    internal static IndexDefinition[] Apply(IEnumerable<Contracts.ReadModels.IndexDefinition> incoming, IEnumerable<IndexDefinition> existing)
+    internal static IndexDefinition[] Apply(IEnumerable<Contracts.ReadModels.IndexDefinition> incoming, IEnumerable<IndexDefinition> existing, bool replace = false)
     {
         var declarations = incoming.ToArray();
         var converted = declarations.Select(Convert);
-        if (declarations.Any(index => index.Properties is { Count: > 0 })) return converted.ToArray();
+        if (replace || declarations.Any(index => index.Properties is { Count: > 0 })) return converted.ToArray();
 
         // Legacy flat-path editors cannot represent ordered definitions: keep those rather than flattening or erasing them.
         var retained = existing.Where(index => index.IsComposite || index.Properties[0].Descending).ToArray();

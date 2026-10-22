@@ -39,6 +39,35 @@ collection's element type is indexed at its full path:
 This declares an index on `lines.productId`. The path uses the naming policy the client is
 configured with, the same one that decides how the properties are stored.
 
+## Composite and descending indexes
+
+Use `[CompositeIndex]` on a read model to declare an ordered set of property names or dotted paths:
+
+<ChronicleClientTabs snippet="read-models/indexing/composite" />
+
+The order of the properties is the order of the index keys. `IsDescending` supplies one flag per
+property; omitting it, or using an empty array, makes every key ascending. A read model can declare
+multiple composite indexes. Each path segment is resolved against the CLR model and converted through
+the serialization naming policy, including nested and collection-element paths.
+
+Use `[Index(IsDescending = true)]` for a descending single-property index, on either a property or a
+record parameter:
+
+<ChronicleClientTabs snippet="read-models/indexing/descending" />
+
+Registration throws `InvalidIndexDeclaration` before sending definitions to the kernel for an empty
+composite, an unknown property, repeated properties or duplicate composite declarations, a direction
+array whose length does not match the properties, or a composite containing more than one
+collection-element path. A composite may contain one collection-element path for MongoDB; SQL sinks
+warn and skip a composite containing an array path. Unique indexes are not part of these attributes;
+use event constraints to enforce uniqueness.
+
+The definition retains its leading property as the legacy path. Older kernels can therefore create
+an ascending index on that property, but need an upgrade to honor the complete order and directions.
+Workbench schema edits carry the full structured definitions; older flat-path edits preserve existing
+composite and descending indexes instead of flattening them. A structured empty set removes all indexes,
+while an empty legacy path list continues to preserve composite and descending declarations.
+
 ## SQL storage
 
 SQL stores nested objects and arrays in JSON columns. A nested scalar declaration uses an expression
@@ -55,6 +84,7 @@ read-model data; adding them changes metadata only. The index itself still requi
 | Object without a scalar leaf | Warning; not created | Warning; not created | Warning; not created |
 
 GIN indexes support JSON containment and JSONPath predicates, not arbitrary scalar comparisons.
+They have no ascending or descending key order; directions apply to scalar indexes.
 Queries must use the indexed expression and compatible casts for the database to use an expression
 index. Chronicle does not rewrite your application queries.
 
@@ -66,9 +96,7 @@ the stored JSON. Numbers use `decimal(38,18)`. An incompatible value or unsuppor
 expression fails visibly in the kernel log; Chronicle does not fall back to
 persisted computed columns or alter the stored values.
 
-Kernel index definitions can carry multiple ordered properties and descending directions. The
-existing client `[Index]` attribute still declares a single ascending property. A composite SQL
-index is created only when every path is supported; arrays cannot be mixed into a composite.
+A composite SQL index is created only when every path is supported; arrays cannot be mixed into a composite.
 MongoDB supports compound keys but rejects multiple array paths in one definition. Legacy flat-path
 updates preserve existing ordered definitions rather than flattening or deleting them.
 
@@ -95,8 +123,8 @@ filling. An index created manually against the live collection does not survive 
 one does.
 
 It is also why this is declarative rather than store-specific. `[Index]` says *what* should be
-indexed; each sink decides *how*. On MongoDB that means an ascending index built in the background
-and named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
+indexed; each sink decides *how*. On MongoDB that means an ordered single-property or compound index. A single ascending index is
+named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
 
 ## When it takes effect
 
