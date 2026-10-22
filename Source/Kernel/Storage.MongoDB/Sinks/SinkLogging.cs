@@ -25,6 +25,9 @@ internal static partial class SinkLogging
     [LoggerMessage(LogLevel.Error, "Shutdown bulk write to collection '{Collection}' for read model '{ReadModel}' failed with {ErrorType}; the outcome of {FailedPartitionCount} partitions is unknown")]
     internal static partial void ShutdownBulkWriteOutcomeUnknown(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string errorType, int failedPartitionCount);
 
+    [LoggerMessage(LogLevel.Warning, "Primary collection '{PrimaryCollection}' for read model '{ReadModel}' is missing while promoting collection '{PromotingCollection}' exists; a primary lookup cannot currently return a reliable answer")]
+    internal static partial void PrimaryReadDuringPromotion(this ILogger<Sink> logger, ReadModelIdentifier readModel, string primaryCollection, string promotingCollection);
+
     [LoggerMessage(LogLevel.Warning, "Replay of read model '{ReadModel}' ended with {FailedPartitionCount} failed partitions in its final flush; the rebuilt collection is promoted and the failed partitions are recorded for retry")]
     internal static partial void EndingReplayWithFailedPartitions(this ILogger<Sink> logger, ReadModelIdentifier readModel, int failedPartitionCount);
 

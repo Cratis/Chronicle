@@ -31,10 +31,13 @@ public class Features
     public bool OAuthAuthority { get; init; } = true;
 
     /// <summary>
-    /// Whether projection generations are enabled. Default false.
+    /// Whether rebuilding a projection builds its next materialization generation alongside the active one. Default false.
     /// </summary>
     /// <remarks>
-    /// Preview. When enabled, every write of a MongoDB sink runs in a transaction fenced by the owner epoch of its generation.
+    /// Experimental and reserved. Rebuilding a namespaced projection is to build its next generation into its own destination
+    /// while the active generation keeps handling live events. Only the seams exist so far, so rebuilds use the legacy replay
+    /// path whatever its value. When enabled, every write of a MongoDB sink runs in a transaction fenced by the owner epoch of
+    /// its generation.
     /// </remarks>
     public bool ProjectionGenerations { get; init; }
 }

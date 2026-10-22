@@ -14,7 +14,7 @@ public class and_the_read_model_is_not_known : for_ReadModels.given.all_dependen
     void Establish()
     {
         _readModel.GetDefinition().Returns(default(Concepts.ReadModels.ReadModelDefinition)!);
-        _materializedService = new(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        _materializedService = new(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
     }
 
     async Task Because() => _result = await Catch.Exception(() => _materializedService.GetInstances(new()
@@ -25,5 +25,5 @@ public class and_the_read_model_is_not_known : for_ReadModels.given.all_dependen
     }));
 
     [Fact] void should_report_the_missing_definition() => _result.ShouldBeOfExactType<ReadModelNotFound>();
-    [Fact] void should_not_resolve_a_sink() => _sinks.DidNotReceiveWithAnyArgs().GetFor(default!);
+    [Fact] void should_not_resolve_a_sink() => _readBindings.DidNotReceiveWithAnyArgs().Resolve(default!, default!, default!);
 }

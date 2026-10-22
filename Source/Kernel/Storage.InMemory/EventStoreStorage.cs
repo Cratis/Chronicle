@@ -83,6 +83,9 @@ public sealed class EventStoreStorage(
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; internal set; } = new Generations.GenerationFloorStorage();
+
+    /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>

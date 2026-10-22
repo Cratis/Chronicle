@@ -24,4 +24,16 @@ public interface ISinks
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
     Task<ISink> GetFor(ReadModelDefinition readModel);
+
+    /// <summary>
+    /// Get a <see cref="ISink"/> that writes to an explicit destination container instead of the read model's own container.
+    /// </summary>
+    /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
+    /// <param name="container">The <see cref="ReadModelContainerName"/> the sink addresses.</param>
+    /// <returns><see cref="ISink"/> instance.</returns>
+    /// <remarks>
+    /// A distinct container yields a distinct sink instance, so no mode (replay, bulk) is shared with the sink
+    /// for the read model's own container. Used by materialization generations, each writing only to its own destination.
+    /// </remarks>
+    Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container);
 }
