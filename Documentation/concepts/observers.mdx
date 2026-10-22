@@ -20,21 +20,55 @@ During a full replay, the observer is inactive. When replay completes, it routes
 with remaining events and resume live observation, unless it is quarantined.
 
 Kernel projection declarations support only namespaced materialization. Store-wide event statistics read
-each namespace's statistics and concatenate the rows instead of maintaining a shared global sink. The row
-limit applies per namespace; a failed namespace read fails the query rather than returning partial totals.
+each namespace's statistics and concatenate the rows instead of maintaining a shared global sink.
+
+A store-wide statistics query snapshots namespace membership once, before reading rows. A namespace added
+after that snapshot is included only in a later query; a namespace removed afterward is still read for the
+current query. If that read fails, the whole query fails. The snapshot covers membership, not a simultaneous
+point-in-time view of all namespace counts.
+
+At most **8 namespace reads** run concurrently per query. This bounds pressure on storage even for stores
+with many namespaces, without serializing every contributor. The local `IStatisticsReader` cancellation
+overloads stop waiting for discovery, cancel contributing reads and stop scheduling further namespaces.
+Existing query and wire contracts are unchanged; they do not add a client cancellation field.
+
+The row limit is **10,000 per namespace**, not per store. Exactly 10,000 rows are accepted when the reported
+total confirms that the result is complete. A reported total larger than the returned row count or the limit,
+or a full page whose completeness cannot be determined, fails the query rather than returning partial totals. A structured warning identifies the event store, namespace, row limit, returned row count and reported
+total count. Any failed, canceled or capped contributor prevents a successful store-wide result; no partial
+totals are returned.
 
 Full and partition replay of a persisted **global-scope projection** are refused before resetting observer
 progress, admitting a replay job, or changing its shared sink. Replaying only one namespace cannot safely rebuild data shared with other namespaces
 that are still writing. A definition change that would require an automatic full replay retains an
 explanatory recommendation instead; performing it also refuses the namespace-local replay. A coordinated
-rebuild across all namespaces is not currently supported. Namespace-scoped projections are unaffected.
+rebuild across all namespaces is not currently supported. Persisted replay jobs refused during recovery or
+completion fail terminally and release replay markers without changing the observer's last-handled or next-event
+positions, resolving failed partitions, or finalizing or promoting the sink. This uses a refusal-specific release,
+not replay completion. Full release clears superseded partition catch-up markers, just as routing does, and
+re-evaluates from the retained cursor; quarantine remains in force. Partition replay durably records a
+`HeldBackFrom` lower bound when its marker is set, before job admission. Refusal probes partition catch-up from
+that bound, including its first event, never from the shared cursor that other partitions may have advanced.
+It claims no replay coverage and resolves no failed partition.
+
+Legacy persisted jobs have no held-back bound. Released kernels beginning with v19.7.0 could admit Global/Both
+partition replay jobs before the admission restrictions. A legacy refusal therefore releases the marker but
+records a visible **quarantined partition failure** with an unknown bound and an operator-recovery explanation.
+It preserves observer progress and existing failure history and does not schedule catch-up or automatic retries
+onto the unchanged sink. Reconcile the sink and determine a safe recovery position before clearing partition
+quarantine; do not guess from shared progress or restart at zero.
+Namespace-scoped projections are unaffected.
 
 For an upgrade with a global replay already in flight, stop replay workers and contributing writes
 before upgrading all silos together; do not mix versions that can still start global replay with
 versions that refuse it. Preserve the served model, replay containers, backups, contexts and occurrences
 for investigation. Resume, flush, end and legacy cleanup refuse an uncoordinated global replay rather
 than promoting its shadow. A source namespace's completion does not establish that a global model or
-backup is complete. There is no automatic in-place repair: keep the affected model out of service until
+backup is complete. Persisted full and partition replay jobs recheck the stored projection scope during
+preparation, resume and completion. A refused Global or Both resume ends the job as **Failed**, with the scope
+refusal retained in its failure history, before step recovery or sink finalization. Further resume attempts
+are refused as a failed job, not retried in a loop. These checks do not restrict reactors or reducers, which
+have no global projection scope. There is no automatic in-place repair: keep the affected model out of service until
 an operator can restore a known-good model and reconcile every contributing sequence offline. Do not
 delete a replay container or backup merely because a namespace-local replay has ended.
 
