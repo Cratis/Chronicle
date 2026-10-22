@@ -74,16 +74,23 @@ public partial class Database
         // event-store / namespace targets a per-database isolation name that has not
         // been provisioned yet. This mirrors MongoDB, where each event store and each
         // namespace lives in its own database that the kernel creates on first access.
-        await EnsureDatabaseExists(context, target);
-
+        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
+        var cacheKey = (migrationLock, key);
         if (VerifySchema)
         {
+            if (_migratedKeys.TryGetValue(cacheKey, out var verified) && verified == migrationLock.Generation)
+            {
+                return;
+            }
+
+            // The release-ordered migrator verifies instead of migrating; only a passing check is cached.
+            await EnsureDatabaseExists(context, target);
             await context.Database.MigrateAsync();
+            _migratedKeys[cacheKey] = migrationLock.Generation;
             return;
         }
 
-        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
-        var cacheKey = (migrationLock, key);
+        await EnsureDatabaseExists(context, target);
         if (_migratedKeys.TryGetValue(cacheKey, out var generation) && generation == migrationLock.Generation)
         {
             return;
