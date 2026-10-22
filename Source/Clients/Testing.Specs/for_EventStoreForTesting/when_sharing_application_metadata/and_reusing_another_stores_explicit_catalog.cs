@@ -12,7 +12,7 @@ public class and_reusing_another_stores_explicit_catalog : given.application_met
     void Establish()
     {
         var options = new ChronicleOptions();
-        options.ExplicitArtifacts.RegisterEventType<StoreIdentityRecorded>(_ => _.WithId("explicit-identity"));
+        options.ExplicitArtifacts.RegisterEventType<ExplicitlyRegistered>(_ => _.WithId("explicit-identity"));
         _explicit = new(null, new InMemoryClientArtifactsProvider(), options);
     }
 
@@ -26,5 +26,7 @@ public class and_reusing_another_stores_explicit_catalog : given.application_met
 
     [Fact] void should_not_share_metadata_for_the_first_reuse() => _other.Metadata.ShouldBeNull();
     [Fact] void should_not_share_metadata_for_the_second_reuse() => _third.Metadata.ShouldBeNull();
-    [Fact] void should_keep_the_explicit_event_type_identity() => _other.EventTypes.GetEventTypeFor(typeof(StoreIdentityRecorded)).Id.Value.ShouldEqual("explicit-identity");
+    [Fact] void should_keep_the_explicit_event_type_identity() => _other.EventTypes.GetEventTypeFor(typeof(ExplicitlyRegistered)).Id.Value.ShouldEqual("explicit-identity");
+
+    public record ExplicitlyRegistered(string Value);
 }
