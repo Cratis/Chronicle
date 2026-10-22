@@ -39,5 +39,5 @@ public class with_delivery_fences : given.an_observer_state_storage
     [Fact] void should_keep_the_deadline_after_rename() => _renamed.DeliveryFences.First().ReleaseBy.ShouldEqual(_releaseBy);
     [Fact] void should_distinguish_a_drained_snapshot_from_legacy_state() => _released.DeliveryFences.ShouldNotBeNull();
     [Fact] void should_persist_an_empty_snapshot() => _released.DeliveryFences.ShouldBeEmpty();
-    [Fact] void should_load_legacy_state_without_fences() => (_legacy.DeliveryFences ?? []).ShouldBeEmpty();
+    [Fact] void should_load_legacy_state_without_a_fence_snapshot() => _legacy.DeliveryFences.ShouldBeNull();
 }

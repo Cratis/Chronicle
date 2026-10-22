@@ -40,7 +40,7 @@ public class with_delivery_fences : Specification
     [Fact] void should_keep_the_targets_on_the_joined_read() => _joined.DeliveryFences.First().Targets.ShouldContainOnly(_target);
     [Fact] void should_keep_the_deadline_on_the_joined_read() => _joined.DeliveryFences.First().ReleaseBy.ShouldEqual(_releaseBy);
     [Fact] void should_not_write_a_snapshot_for_legacy_state() => _legacyDocument.Contains("deliveryFences").ShouldBeFalse();
-    [Fact] void should_load_legacy_state_without_fences() => (_legacy.DeliveryFences ?? []).ShouldBeEmpty();
+    [Fact] void should_load_legacy_state_without_a_fence_snapshot() => _legacy.DeliveryFences.ShouldBeNull();
     [Fact] void should_distinguish_a_drained_snapshot_from_legacy_state() => _released.DeliveryFences.ShouldNotBeNull();
     [Fact] void should_round_trip_an_empty_snapshot() => _released.DeliveryFences.ShouldBeEmpty();
 }
