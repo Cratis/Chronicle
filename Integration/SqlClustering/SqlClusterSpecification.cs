@@ -9,9 +9,12 @@ namespace Cratis.Chronicle.Integration.SqlClustering;
 public abstract class SqlClusterSpecification(bool postgres, ClusterChange change, string? initialImage = null) : Specification
 {
     readonly SqlCluster _cluster = new(postgres, initialImage);
-    readonly ClusterLoad _load = new();
+    readonly ClusterLoad _load = new(TransitionsFor(change));
 
     async Task Establish() => await _cluster.Start();
+
+    // A rolling upgrade replaces every node of the three-node cluster, and each replacement is a transition of its own.
+    static int TransitionsFor(ClusterChange change) => change == ClusterChange.RollingUpgrade ? 3 : 1;
 
     async Task Because()
     {

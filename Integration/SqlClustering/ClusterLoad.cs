@@ -10,8 +10,17 @@ using Grpc.Core;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public sealed partial class ClusterLoad : IAsyncDisposable
+/// <summary>
+/// Appends a steady stream of events to a cluster while its membership changes, and verifies none was lost or doubled.
+/// </summary>
+/// <param name="transitions">
+/// How many nodes the scenario takes down. Appends forwarded to a node that is going away fail until the cluster
+/// notices, so the failure budget grows with each one rather than being shared by them all.
+/// </param>
+public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
 {
+    const int FailureBudgetPerTransition = 30;
+
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _observed = new();
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _acknowledged = new();
     readonly ConcurrentQueue<Guid> _unknown = new();
@@ -210,9 +219,9 @@ public sealed partial class ClusterLoad : IAsyncDisposable
     void Failed(string reason)
     {
         Console.WriteLine($"Failed append: {reason}");
-        if (++_failures > 30)
+        if (++_failures > FailureBudgetPerTransition * transitions)
         {
-            throw new InvalidOperationException("More than 30 append attempts failed during the membership transition.");
+            throw new InvalidOperationException($"More than {FailureBudgetPerTransition * transitions} append attempts failed during {transitions} membership transition(s).");
         }
     }
 
