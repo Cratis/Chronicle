@@ -1,8 +1,8 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-# Detect hot-core changes on every PR push; ordinary PR checks report affected paths and how
-# to request the matrix. Labeled runs use requested-integration.yml, with distinct check names.
+# Detect hot-core changes on every PR push; fail the gate until requested integration passes
+# for the head commit. The refresh workflow re-runs the same gate without another push.
 # This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
@@ -46,6 +46,7 @@ jobs:
       - name: Assert the hot-core contract is intact
         run: |
           python3 .github/scripts/test-detect-hot-core-changes.py
+          python3 .github/scripts/test-evaluate-hot-core-gate.py
           python3 .github/scripts/detect-hot-core-changes.py --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
@@ -175,33 +176,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    permissions:
+      contents: read
+      actions: read
+
     steps:
+      # Re-run-failed-jobs reuses detect's outputs and re-evaluates evidence in this job.
+      - name: Checkout gate script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
       - name: Decide
         env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
           DETECT: ${{ needs.detect.result }}
           TOUCHED: ${{ needs.detect.outputs.touched }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
-          RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          if [ "$DETECT" != "success" ]; then
-            echo "::error::Hot-core detection did not complete ($DETECT), so whether this pull request reaches the hot core is unknown. Failing closed."
-            exit 1
-          fi
-
-          if [ "$TOUCHED" != "true" ]; then
-            echo "No hot-core path is touched by this pull request. The full out-of-process integration matrix is not required here."
-            exit 0
-          fi
-
-          if [ "$RUN_INTEGRATION" != "true" ]; then
-            echo "This PR touches the hot core. Run the relevant integration namespace locally, then apply the run-integration label to request the full out-of-process matrix." | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [ "$BUILD" != "success" ] || [ "$MATRIX" != "success" ]; then
-            echo "::error::This pull request changes the hot core, and the full out-of-process integration matrix did not pass (build: $BUILD, matrix: $MATRIX). See the 'Detect hot-core changes' summary for the paths that put it here."
-            exit 1
-          fi
-
-          echo "This pull request changes the hot core and the full out-of-process integration matrix is green."
+          DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
+          RUN_INTEGRATION: ${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}
+          FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 .github/scripts/evaluate-hot-core-gate.py gate
