@@ -8,7 +8,6 @@ using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.for_ColdStartStorage.given;
 
@@ -20,14 +19,15 @@ public class a_cold_start_database : Specification
     protected EventStoreDbContext _store;
     protected NamespaceDbContext _namespace;
     protected ClusterDbContext _cluster;
-    protected readonly List<IInterceptor> _interceptors = [];
+    readonly InsertWinner _insertWinner = new();
+    readonly RenameWinner _renameWinner = new();
     readonly List<SqliteConnection> _connections = [];
 
     async Task Establish()
     {
-        var storeOptions = await Options<EventStoreDbContext>();
-        var namespaceOptions = await Options<NamespaceDbContext>();
-        var clusterOptions = await Options<ClusterDbContext>();
+        var storeOptions = (await Options<EventStoreDbContext>()).AddInterceptors(_insertWinner, _renameWinner);
+        var namespaceOptions = (await Options<NamespaceDbContext>()).AddInterceptors(_insertWinner, _renameWinner);
+        var clusterOptions = (await Options<ClusterDbContext>()).AddInterceptors(_insertWinner, _renameWinner);
         _store = new(storeOptions.Options);
         _namespace = new(namespaceOptions.Options);
         _cluster = new(clusterOptions.Options);
@@ -35,9 +35,9 @@ public class a_cold_start_database : Specification
         await _namespace.Database.EnsureCreatedAsync();
         await _cluster.Database.EnsureCreatedAsync();
         _database = Substitute.For<IDatabase>();
-        _database.EventStore(Store).Returns(_ => Task.FromResult(new DbContextScope<EventStoreDbContext>(new(storeOptions.AddInterceptors(_interceptors).Options), () => { })));
-        _database.Namespace(Store, Namespace).Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(new(namespaceOptions.AddInterceptors(_interceptors).Options), () => { })));
-        _database.Cluster().Returns(_ => Task.FromResult(new DbContextScope<ClusterDbContext>(new(clusterOptions.AddInterceptors(_interceptors).Options), () => { })));
+        _database.EventStore(Store).Returns(_ => Task.FromResult(new DbContextScope<EventStoreDbContext>(new(storeOptions.Options), () => { })));
+        _database.Namespace(Store, Namespace).Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(new(namespaceOptions.Options), () => { })));
+        _database.Cluster().Returns(_ => Task.FromResult(new DbContextScope<ClusterDbContext>(new(clusterOptions.Options), () => { })));
     }
 
     protected async Task Race(Func<Task> save, Func<Task>? winner = null, bool rename = false)
@@ -53,11 +53,11 @@ public class a_cold_start_database : Specification
 
         if (rename)
         {
-            _interceptors.Add(new RenameWinner(Win));
+            _renameWinner.Arm(Win);
         }
         else
         {
-            _interceptors.Add(new InsertWinner(Win));
+            _insertWinner.Arm(Win);
         }
 
         await save().WaitAsync(TimeSpan.FromSeconds(30));

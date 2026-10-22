@@ -5,15 +5,18 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.for_ColdStartStorage.given;
 
-public sealed class InsertWinner(Func<Task> winner) : SaveChangesInterceptor
+public sealed class InsertWinner : SaveChangesInterceptor
 {
-    bool _inserted;
+    Func<Task>? _winner;
+
+    public void Arm(Func<Task> winner) => _winner = winner;
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
-        if (!_inserted)
+        var winner = _winner;
+        _winner = null;
+        if (winner is not null)
         {
-            _inserted = true;
             await winner();
         }
 

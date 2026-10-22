@@ -120,7 +120,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var existing = await scope.DbContext.Observers.FindAsync(currentId);
-        if (existing is null)
+        if (existing is null || currentId == newId)
         {
             return;
         }
@@ -146,19 +146,30 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             IsReplaying = existing.IsReplaying
         };
 
-        await scope.DbContext.Observers.Upsert(renamed);
-        await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
-        await scope.DbContext.SaveChangesAsync();
-        if (currentId != newId)
+        try
         {
+            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+            await scope.DbContext.Observers.AddAsync(renamed);
+            await scope.DbContext.SaveChangesAsync();
             await scope.DbContext.Observers.Where(observer => observer.Id == currentId).ExecuteDeleteAsync();
+            await transaction.CommitAsync();
         }
-
-        await transaction.CommitAsync();
+        catch (DbUpdateException)
+        {
+            // The transaction is rolled back on dispose (PostgreSQL aborts it on a unique violation).
+            // Converge only when a peer completed this same rename: the source row is gone.
+            await using var fresh = await database.Namespace(eventStore, @namespace);
+            if (await fresh.DbContext.Observers.AnyAsync(observer => observer.Id == currentId))
+            {
+                throw;
+            }
+        }
     }
 
     static void PreserveControl(ObserverState entity, ObserverState existing)
     {
+        // On an insert collision the progress fields take the losing writer's values, matching
+        // MongoDB's last-writer-wins upsert; the worst case is re-handling events, never losing them.
         if (entity.TypeSetControl is null)
         {
             entity.TypeSetControl = existing.TypeSetControl;

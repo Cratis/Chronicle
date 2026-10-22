@@ -6,15 +6,18 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.for_ColdStartStorage.given;
 
-public sealed class RenameWinner(Func<Task> winner) : DbTransactionInterceptor
+public sealed class RenameWinner : DbTransactionInterceptor
 {
-    bool _renamed;
+    Func<Task>? _winner;
+
+    public void Arm(Func<Task> winner) => _winner = winner;
 
     public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(DbConnection connection, TransactionStartingEventData eventData, InterceptionResult<DbTransaction> result, CancellationToken cancellationToken = default)
     {
-        if (!_renamed)
+        var winner = _winner;
+        _winner = null;
+        if (winner is not null)
         {
-            _renamed = true;
             await winner();
         }
 
