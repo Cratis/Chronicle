@@ -20,5 +20,5 @@ public class and_the_read_model_is_not_known : given.all_dependencies
     }));
 
     [Fact] void should_report_the_missing_definition() => _result.ShouldBeOfExactType<ReadModelNotFound>();
-    [Fact] void should_not_resolve_a_sink() => _sinks.DidNotReceiveWithAnyArgs().GetFor(default!);
+    [Fact] void should_not_resolve_a_sink() => _readBindings.DidNotReceiveWithAnyArgs().Resolve(default!, default!, default!);
 }
