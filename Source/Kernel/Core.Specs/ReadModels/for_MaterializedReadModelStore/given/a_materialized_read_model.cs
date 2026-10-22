@@ -19,6 +19,7 @@ public class a_materialized_read_model : Specification
 
     protected IStorage _storage;
     protected ISink _sink;
+    protected IReadModelReadBindings _readBindings;
     protected IReadModelsCompliance _compliance;
     protected ReadModelDefinition _definition;
     protected MaterializedReadModelStore _store;
@@ -67,7 +68,9 @@ public class a_materialized_read_model : Specification
                 Arg.Any<IEnumerable<ExpandoObject>>())
             .Returns(callInfo => Task.FromResult(callInfo.ArgAt<IEnumerable<ExpandoObject>>(3)));
 
-        _store = new MaterializedReadModelStore(_storage, _compliance);
+        _readBindings = Substitute.For<IReadModelReadBindings>();
+        _readBindings.Resolve(EventStore, EventStoreNamespace, _definition).Returns(new ReadModelReadBinding(_sink, null));
+        _store = new MaterializedReadModelStore(_readBindings, _compliance);
     }
 
     protected static ExpandoObject InstanceNamed(string name)
