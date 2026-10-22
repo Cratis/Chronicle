@@ -44,9 +44,9 @@ public class SystemStorage(IDatabase database) : ISystemStorage
     {
         var collection = database.GetCollection<MongoDBSystemInformation>(SystemInformationCollectionName);
         var document = new MongoDBSystemInformation(SystemInformationId, systemInformation.Version);
-        await collection.ReplaceOneAsync(
+        await DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(
             si => si.Id == SystemInformationId,
             document,
-            new ReplaceOptions { IsUpsert = true });
+            new ReplaceOptions { IsUpsert = true }));
     }
 }

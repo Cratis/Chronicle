@@ -61,7 +61,7 @@ public class UserStorage(IDatabase database) : IUserStorage
     public async Task Create(User user)
     {
         var collection = GetCollection();
-        await collection.InsertOneAsync(user);
+        await collection.InsertOnce(user, _ => _.Id == user.Id);
     }
 
     /// <inheritdoc/>
