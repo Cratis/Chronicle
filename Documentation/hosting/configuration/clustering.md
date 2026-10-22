@@ -69,7 +69,7 @@ must be reachable between nodes; use `advertisedIP` when the default address is 
 The defunct-silo cleanup settings apply to both `Sql` and `MongoDB`: the sweep runs hourly by default
 and removes defunct entries older than three hours. Set the cleanup period to `00:00:00` to disable it.
 The development kernel state reset is refused under `Sql` clustering because it would erase live
-membership. Use an isolated `Localhost` cluster for development resets. To replace nodes of a SQL cluster, see the [rolling-deploy runbook](../rolling-deploy.md).
+membership. Use an isolated `Localhost` cluster for development resets. To replace the nodes of a `MongoDB` or `Sql` cluster, see the [rolling-deploy runbook](../rolling-deploy.md), which starts with which versions can run side by side.
 
 After a node is lost, observers can lag behind the event log until the observer watchdog catches them up. This applies to every clustering type and is tracked in [Chronicle#5246](https://github.com/Cratis/Chronicle/issues/5246).
 

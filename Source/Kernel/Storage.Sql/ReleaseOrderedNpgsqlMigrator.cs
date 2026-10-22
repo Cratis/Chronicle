@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -73,6 +74,32 @@ public class ReleaseOrderedNpgsqlMigrator(
         contextOptions,
         executionStrategy)
 {
+    readonly SchemaVerification _verification = new(contextOptions, migrationsAssembly, historyRepository, databaseCreator, connection, currentContext);
+
+    /// <inheritdoc/>
+    public override void Migrate(string? targetMigration)
+    {
+        if (_verification.Required)
+        {
+            _verification.Verify();
+            return;
+        }
+
+        base.Migrate(targetMigration);
+    }
+
+    /// <inheritdoc/>
+    public override async Task MigrateAsync(string? targetMigration, CancellationToken cancellationToken = default)
+    {
+        if (_verification.Required)
+        {
+            await _verification.VerifyAsync(cancellationToken);
+            return;
+        }
+
+        await base.MigrateAsync(targetMigration, cancellationToken);
+    }
+
     /// <inheritdoc/>
     protected override void PopulateMigrations(IEnumerable<string> appliedMigrationEntries, string? targetMigration, out MigratorData parameters)
     {

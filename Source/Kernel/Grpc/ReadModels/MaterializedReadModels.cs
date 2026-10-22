@@ -6,7 +6,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
@@ -16,12 +15,12 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// Represents an implementation of <see cref="IMaterializedReadModels"/>.
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
-/// <param name="storage">The storage.</param>
+/// <param name="readBindings">The bindings for resolving materialized read destinations.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting compliance and security fields.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
-    IStorage storage,
+    IReadModelReadBindings readBindings,
     IReadModelsCompliance complianceHelper,
     ILogger<MaterializedReadModels> logger) : IMaterializedReadModels
 {
@@ -30,15 +29,11 @@ internal sealed class MaterializedReadModels(
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
-        var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-        var sink = await sinks.GetFor(definition);
+        var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
+        var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+        var sink = binding.Sink;
+        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
-
-        ReadModelContainerName? occurrence = null;
-        if (!string.IsNullOrEmpty(request.Occurrence))
-        {
-            occurrence = request.Occurrence;
-        }
 
         var (instances, totalCount) = await sink.GetInstances(
             occurrence,
@@ -69,15 +64,11 @@ internal sealed class MaterializedReadModels(
         {
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
             var definition = await readModel.GetKnownDefinition(request.ReadModel);
-            var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-            var sink = await sinks.GetFor(definition);
+            var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
+            var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+            var sink = binding.Sink;
+            occurrence = binding.Occurrence;
             var skip = Math.Max(0, request.Page * request.PageSize);
-
-            ReadModelContainerName? occurrence = null;
-            if (!string.IsNullOrEmpty(request.Occurrence))
-            {
-                occurrence = request.Occurrence;
-            }
 
             var schema = definition.GetSchemaForLatestGeneration();
             return (sink, occurrence, skip, schema);
