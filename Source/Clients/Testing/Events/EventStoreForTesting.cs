@@ -183,7 +183,8 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
-        var generator = ShareSchemaGenerator && ServiceProvider.GetType() == typeof(DefaultServiceProvider)
+        var shareGenerator = ShareSchemaGenerator && ServiceProvider.GetType() == typeof(DefaultServiceProvider);
+        var generator = shareGenerator
             ? SchemaGeneratorsForTesting.GetOrCreate(_namingPolicy, ClientArtifactsProvider, CreateJsonSchemaGenerator)
             : CreateJsonSchemaGenerator();
         JsonSchemaGenerator = new IsolatedJsonSchemaGenerator(generator);
@@ -192,10 +193,23 @@ public class EventStoreForTesting : IEventStore, IDisposable
         TestingStore = testingStore ?? new TestingEventStore(eventStore ?? new EventStoreName(DefaultEventStoreName), @namespace ?? new EventStoreNamespaceName(DefaultNamespaceName), () => _eventTypes!, time, capabilities);
         Connection = TestingStore.Connection;
 
+        // Custom providers, explicit artifacts and an unshared generator all fall back to discovering per store.
+        Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider) && clientArtifactsProvider is not StoreClientArtifactsProvider
+            ? ApplicationMetadataForTesting.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
+            : null;
+
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
         _eventTypes.UseMigrationServices(ServiceProvider);
-        _eventTypes.Discover().GetAwaiter().GetResult();
+        if (Metadata is null)
+        {
+            _eventTypes.Discover().GetAwaiter().GetResult();
+        }
+        else
+        {
+            Metadata.DiscoverEventTypes(_eventTypes);
+        }
+
         EventTypeMigrators = _eventTypes.PreparedMigrators;
 
         // The in-memory event log validates appends against the same definitions a real Kernel would hold.
@@ -214,6 +228,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
+        if (Metadata is not null)
+        {
+            _projections.ModelBoundSource = Metadata.ModelBoundSource;
+        }
+
         ExplicitSnapshot.ApplyTo(_projections);
         _projections.Discover().GetAwaiter().GetResult();
 
@@ -315,6 +334,18 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// </remarks>
     public static bool ShareSchemaGenerator { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether newly constructed stores over equivalent artifact catalogs reuse the
+    /// discovered application metadata - event types, model-bound projection definitions and the seeded event type
+    /// definitions - instead of discovering them again. Each store receives its own copies of every mutable object
+    /// regardless of this setting.
+    /// </summary>
+    /// <remarks>
+    /// Custom service providers, explicit artifacts and <see cref="ShareSchemaGenerator"/> set to <see langword="false"/>
+    /// always disable sharing. Changing this setting does not affect existing stores.
+    /// </remarks>
+    public static bool ShareApplicationMetadata { get; set; } = true;
+
     /// <inheritdoc/>
     public EventStoreName Name => TestingStore.Name;
 
@@ -415,6 +446,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal ChronicleOptions ClientOptions { get; }
 
     /// <summary>
+    /// Gets the application metadata shared with equivalent stores, or <see langword="null"/> when this store discovers its own.
+    /// </summary>
+    internal ApplicationMetadata? Metadata { get; }
+
+    /// <summary>
     /// Gets the original immutable recipes for this scenario store.
     /// </summary>
     internal ExplicitArtifactsSnapshot ExplicitSnapshot { get; }
@@ -506,7 +542,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     {
         if (scenarioStorage is null)
         {
-            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All, Metadata).GetAwaiter().GetResult();
         }
 
         return new ReadModelsForTesting(inner, EventLog, this, foldReads: _scenarioEventLog is not null);
