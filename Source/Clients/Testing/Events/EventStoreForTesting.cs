@@ -194,7 +194,9 @@ public class EventStoreForTesting : IEventStore, IDisposable
         Connection = TestingStore.Connection;
 
         // Custom providers, explicit artifacts and an unshared generator all fall back to discovering per store.
-        Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider) && clientArtifactsProvider is not StoreClientArtifactsProvider
+        // A catalog that already carries explicit artifacts, from these options or from another store, is never shared.
+        Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
+            && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog)
             ? ApplicationMetadataForTesting.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
             : null;
 

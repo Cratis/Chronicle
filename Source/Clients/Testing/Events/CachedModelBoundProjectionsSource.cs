@@ -30,6 +30,8 @@ internal sealed class CachedModelBoundProjectionsSource : IModelBoundProjections
         ILogger<Projections.Projections> logger,
         string? currentEventStoreName)
     {
+        Dictionary<Type, byte[]> definitions;
+        Dictionary<Type, Exception> knownFailures;
         lock (_sync)
         {
             if (_definitions is null || _failures is null)
@@ -39,8 +41,12 @@ internal sealed class CachedModelBoundProjectionsSource : IModelBoundProjections
                 _failures = new Dictionary<Type, Exception>(failures);
             }
 
-            return (_definitions.ToDictionary(_ => _.Key, _ => Deserialize(_.Value)), new Dictionary<Type, Exception>(_failures));
+            definitions = _definitions;
+            knownFailures = _failures;
         }
+
+        // The cached dictionaries are never mutated once assigned, so every store copies them without the lock.
+        return (definitions.ToDictionary(_ => _.Key, _ => Deserialize(_.Value)), new Dictionary<Type, Exception>(knownFailures));
     }
 
     static byte[] Serialize(ProjectionDefinition definition)
