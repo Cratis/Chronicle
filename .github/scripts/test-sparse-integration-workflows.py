@@ -5,6 +5,7 @@
 
 from dataclasses import dataclass
 from itertools import product
+import importlib.util
 from pathlib import Path
 import re
 import subprocess
@@ -85,6 +86,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         cls.hot_core = workflow("hot-core-gate.yml")
         cls.requested = workflow("requested-integration.yml")
         cls.integration = workflow("integration.yml")
+        cls.refresh = workflow("hot-core-gate-refresh.yml")
 
     def test_ordinary_checks_never_run_for_any_label_event(self):
         for ordinary in (self.build, self.hot_core):
@@ -186,6 +188,57 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         step = next(step for step in self.hot_core["jobs"]["detect"]["steps"]
                     if step.get("name") == "Assert the hot-core contract is intact")
         self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
+        self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+
+    def test_refresh_is_default_branch_only_and_least_privilege(self):
+        self.assertEqual({"workflow_run": {"workflows": [self.requested["name"]], "types": ["completed"]}},
+                         self.refresh["on"])
+        self.assertEqual("Requested Integration", self.requested["name"])
+        self.assertEqual({}, self.refresh["permissions"])
+        job = self.refresh["jobs"]["refresh"]
+        self.assertEqual({"contents": "read", "actions": "write", "pull-requests": "read"}, job["permissions"])
+        for guard in ("github.event.workflow_run.event == 'pull_request'",
+                      "github.event.workflow_run.conclusion == 'success'",
+                      "github.event.workflow_run.head_repository.full_name == github.repository"):
+            self.assertIn(guard, job["if"])
+        for step in job["steps"]:
+            if step.get("uses", "").startswith("actions/checkout@"):
+                self.assertNotIn("ref", step["with"])
+                self.assertEqual("false", step["with"]["persist-credentials"])
+            self.assertNotIn("${{", step.get("run", ""))
+        self.assertNotIn("pull_request_target", self.refresh["on"])
+        refresh_step = job["steps"][-1]
+        self.assertEqual("${{ github.event.workflow_run.head_sha }}", refresh_step["env"]["HEAD_SHA"])
+        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
+        self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
+
+    def test_hot_core_gate_reports_on_every_pull_request(self):
+        trigger = self.hot_core["on"]["pull_request"]
+        self.assertNotIn("paths", trigger)
+        self.assertNotIn("paths-ignore", trigger)
+        self.assertEqual(["**"], trigger["branches"])
+        self.assertNotIn("branches-ignore", trigger)
+        job = self.hot_core["jobs"]["hot-core-gate"]
+        self.assertEqual("always()", job["if"])
+        self.assertEqual("hot-core-gate", job.get("name", "hot-core-gate"))
+
+    def test_gate_keeps_check_name_and_evaluates_the_pr_head(self):
+        job = self.hot_core["jobs"]["hot-core-gate"]
+        self.assertEqual("hot-core-gate", job.get("name", "hot-core-gate"))
+        self.assertEqual("read", job["permissions"]["actions"])
+        step = next(step for step in job["steps"] if step.get("name") == "Decide")
+        self.assertEqual("${{ github.event.pull_request.head.sha || github.sha }}", step["env"]["HEAD_SHA"])
+        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py gate", step["run"])
+        self.assertEqual("always()", job["if"])
+
+    def test_evidence_job_name_matches_the_requested_workflow(self):
+        spec = importlib.util.spec_from_file_location("evaluate_hot_core_gate",
+                                                      WORKFLOWS.parent / "scripts/evaluate-hot-core-gate.py")
+        evaluator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(evaluator)
+        name = self.requested["jobs"]["hot-core-gate-requested"]["name"]
+        self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ github.event.label.name }}", "run-integration"))
+        self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
     def test_pull_request_integration_waits_for_passing_specs(self):
         jobs = self.build["jobs"]
