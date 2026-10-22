@@ -23,7 +23,7 @@ def has_green_evidence(runs, head_sha):
                        for job in run.get("jobs", [])) for run in runs)
 
 
-def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha="", repo="Cratis/Chronicle"):
+def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha="", repo="Cratis/Chronicle", run_integration=False):
     if detect != "success":
         return False, (f"::error::Hot-core detection did not complete ({detect}), so whether this pull request "
                        "reaches the hot core is unknown. Failing closed.")
@@ -42,9 +42,11 @@ def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha
                        "and merge with bypass.")
     if evidence:
         return True, f"Requested integration {evidence} passed for {head_sha}."
+    request = ("Integration runs automatically on each push to a PR labeled `run-integration`; "
+               "there is no need to remove and re-add the label." if run_integration else
+               "Add the `run-integration` label to start integration.")
     return False, ("::error title=Hot core needs integration::This PR changes the hot core and no passing "
-                   f"Requested Integration run exists for {head_sha}. Apply the `run-integration` label "
-                   "(remove and re-add it if it is already present - a new push does not re-run integration). "
+                   f"Requested Integration run exists for {head_sha}. {request} "
                    "This check turns green automatically when that run passes; no new push needed.")
 
 
@@ -99,7 +101,8 @@ def evidence_runs(repo, head_sha, runs_json):
 def gate(arguments):
     state = {name: os.environ.get(name.upper(), "") for name in ("detect", "touched", "build", "matrix")}
     state.update(dispatch=os.environ.get("DISPATCH") == "true", fork=os.environ.get("FORK") == "true",
-                 head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None)
+                 head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None,
+                 run_integration=os.environ.get("RUN_INTEGRATION") == "true")
     if state["detect"] == "success" and state["touched"] == "true" and not state["dispatch"] and not state["fork"]:
         runs = evidence_runs(state["repo"], state["head_sha"], arguments.runs_json)
         green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)

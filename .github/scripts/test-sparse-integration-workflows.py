@@ -14,6 +14,9 @@ import unittest
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
+EFFECTIVE_LABEL = ("(github.event.action == 'labeled' && github.event.label.name || "
+                   "contains(github.event.pull_request.labels.*.name, 'run-integration') && "
+                   "'run-integration' || 'none')")
 
 
 def workflow(filename):
@@ -104,11 +107,11 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("workflow_dispatch", self.build["on"])
         self.assertIn("workflow_dispatch", self.hot_core["on"])
 
-    def test_requested_workflow_is_label_only_with_no_path_filter(self):
-        self.assertEqual(["labeled"], self.requested["on"]["pull_request"]["types"])
+    def test_requested_workflow_runs_on_labels_pushes_and_reopening_without_path_filter(self):
+        self.assertEqual(["labeled", "synchronize", "reopened"], self.requested["on"]["pull_request"]["types"])
         self.assertNotIn("paths", self.requested["on"]["pull_request"])
-        self.assertEqual("${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.label.name || 'none' }}",
-                         self.requested["concurrency"]["group"])
+        self.assertEqual("${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-"
+                         + "${{ " + EFFECTIVE_LABEL + " }}", self.requested["concurrency"]["group"])
         self.assertEqual("true", self.requested["concurrency"]["cancel-in-progress"])
 
     def test_unrelated_label_skips_distinctly_named_checks(self):
@@ -116,8 +119,28 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for job_id, job in self.requested["jobs"].items():
             with self.subTest(job=job_id):
                 self.assertNotIn(job_id, ordinary_names)
-                self.assertIn("github.event.label.name == 'run-integration'", job["if"])
-                self.assertEqual(f"{job_id}-${{{{ github.event.label.name }}}}", job["name"])
+                self.assertIn(EFFECTIVE_LABEL + " == 'run-integration'", job["if"])
+                self.assertEqual(job_id + "-${{ " + EFFECTIVE_LABEL + " }}", job["name"])
+
+    def test_effective_label_preserves_evidence_names_and_job_eligibility(self):
+        for (action, label), carries_label, same_repo, cancelled in product(
+                (("labeled", "run-integration"), ("labeled", "patch"), ("synchronize", ""), ("reopened", "")),
+                (False, True), (False, True), (False, True)):
+            with self.subTest(action=action, label=label, carries_label=carries_label,
+                              same_repo=same_repo, cancelled=cancelled):
+                bindings = {"github.event.action": action, "github.event.label.name": label,
+                            "contains(github.event.pull_request.labels.*.name, 'run-integration')": carries_label,
+                            "github.event.pull_request.head.repo.full_name == github.repository": same_repo,
+                            "cancelled()": cancelled}
+                expected = label if action == "labeled" else "run-integration" if carries_label else "none"
+                self.assertEqual(expected, evaluate_boolean_condition(EFFECTIVE_LABEL, bindings))
+                for job_id, job in self.requested["jobs"].items():
+                    expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
+                    eligible = expected == "run-integration" and (
+                        not cancelled if job_id == "hot-core-gate-requested" else same_repo)
+                    self.assertEqual(eligible, evaluate_boolean_condition(expression, bindings))
+                    self.assertEqual(job_id + "-" + expected,
+                                     job["name"].replace("${{ " + EFFECTIVE_LABEL + " }}", expected))
 
     def test_hot_core_detection_precedes_one_requested_matrix(self):
         jobs = self.requested["jobs"]
@@ -211,6 +234,15 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("${{ github.event.workflow_run.head_sha }}", refresh_step["env"]["HEAD_SHA"])
         self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
+        # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
+        self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
+                         "github.event.workflow_run.conclusion == 'success' && "
+                         "github.event.workflow_run.head_repository.full_name == github.repository", job["if"])
+        self.assertTrue(evaluate_boolean_condition(job["if"], {
+            "github.event.workflow_run.event": "pull_request",
+            "github.event.workflow_run.conclusion": "success",
+            "github.event.workflow_run.head_repository.full_name == github.repository": True,
+        }))
 
     def test_hot_core_gate_reports_on_every_pull_request(self):
         trigger = self.hot_core["on"]["pull_request"]
@@ -228,6 +260,12 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("read", job["permissions"]["actions"])
         step = next(step for step in job["steps"] if step.get("name") == "Decide")
         self.assertEqual("${{ github.event.pull_request.head.sha || github.sha }}", step["env"]["HEAD_SHA"])
+        self.assertEqual("${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}",
+                         step["env"]["RUN_INTEGRATION"])
+        # All three pull_request actions build/detect the merge commit; evidence is keyed to the PR head.
+        detect = next(step for step in self.requested["jobs"]["requested-detect-hot-core"]["steps"]
+                      if step.get("id") == "detect")
+        self.assertEqual("${{ github.sha }}", detect["env"]["HEAD_SHA"])
         self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py gate", step["run"])
         self.assertEqual("always()", job["if"])
 
@@ -237,7 +275,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         evaluator = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(evaluator)
         name = self.requested["jobs"]["hot-core-gate-requested"]["name"]
-        self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ github.event.label.name }}", "run-integration"))
+        self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"))
         self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
     def test_pull_request_integration_waits_for_passing_specs(self):

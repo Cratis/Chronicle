@@ -32,7 +32,8 @@ SKIPPED = {"id": 39837419547, "head_sha": SKIPPED_SHA, "event": "pull_request", 
 FAILED_GATE = {"id": 42, "head_sha": SHA, "event": "pull_request", "status": "completed",
                "jobs": [{"name": gate.GATE_JOB, "conclusion": "failure"}]}
 ENV = {"DETECT": "success", "TOUCHED": "true", "DISPATCH": "false", "FORK": "false",
-       "REPO": "Cratis/Chronicle", "HEAD_SHA": SHA, "BUILD": "skipped", "MATRIX": "skipped"}
+       "REPO": "Cratis/Chronicle", "HEAD_SHA": SHA, "BUILD": "skipped", "MATRIX": "skipped",
+       "RUN_INTEGRATION": "false"}
 
 
 def arguments(**overrides):
@@ -74,12 +75,33 @@ class GateDecisions(unittest.TestCase):
         self.assertIn(GREEN["html_url"], message)
         self.assertIn(SHA, message)
 
-    def test_no_evidence_fails_with_request_and_sha(self):
+    def test_no_evidence_without_label_fails_with_request_and_sha(self):
         with patch.dict(os.environ, ENV, clear=True), patch.object(gate, "evidence_runs", return_value=[]):
             ok, message = gate.gate(arguments())
         self.assertFalse(ok)
-        self.assertIn("run-integration", message)
+        self.assertIn("Add the `run-integration` label", message)
         self.assertIn(SHA, message)
+        self.assertNotIn("re-add", message)
+
+    def test_no_evidence_with_label_explains_automatic_push_runs_and_sha(self):
+        with patch.dict(os.environ, dict(ENV, RUN_INTEGRATION="true"), clear=True), \
+                patch.object(gate, "evidence_runs", return_value=[]):
+            ok, message = gate.gate(arguments())
+        self.assertFalse(ok)
+        self.assertIn("automatically on each push", message)
+        self.assertIn("no need to remove and re-add", message)
+        self.assertIn("turns green automatically when that run passes", message)
+        self.assertIn(SHA, message)
+        self.assertNotIn("Add the", message)
+
+    def test_evidence_lookup_uses_pr_head_not_merge_commit(self):
+        with patch.dict(os.environ, dict(ENV, GITHUB_SHA="merge-commit", RUN_INTEGRATION="true"), clear=True), \
+                patch.object(gate, "collection", return_value=[GREEN]) as collect, \
+                patch.object(gate, "with_jobs", return_value=GREEN):
+            self.assertTrue(gate.gate(arguments())[0])
+        collect.assert_called_once_with(
+            f"repos/Cratis/Chronicle/actions/workflows/requested-integration.yml/runs"
+            f"?head_sha={SHA}&event=pull_request&per_page=100", "workflow_runs")
 
     def test_api_error_fails_closed_in_cli(self):
         output = io.StringIO()
@@ -155,7 +177,10 @@ def recorded_checks():
             Path(paths[name]).write_text(json.dumps(data), encoding="utf-8")
         cases = [("green", ["gate", "--runs-json", paths["green"]], {}, 0, SHA),
                  ("skipped-label", ["gate", "--runs-json", paths["skipped"]], {"HEAD_SHA": SKIPPED_SHA}, 1, "run-integration"),
-                 ("new-push", ["gate", "--runs-json", paths["green"]], {"HEAD_SHA": "new-push"}, 1, "new-push")]
+                 ("new-push", ["gate", "--runs-json", paths["green"]], {"HEAD_SHA": "new-push"}, 1,
+                  "Add the `run-integration` label"),
+                 ("labeled-new-push", ["gate", "--runs-json", paths["green"]],
+                  {"HEAD_SHA": "new-push", "RUN_INTEGRATION": "true"}, 1, "automatically on each push")]
         for name in ("current", "stale"):
             cases.append(("refresh-" + name, ["refresh", "--dry-run", "--runs-json", paths["green"],
                                              "--gate-runs-json", paths["gate"], "--pr-json", paths[name]],
