@@ -99,6 +99,7 @@ public partial class Observer
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
         if (IsRetired || _removed) return;
+        await FlushPendingHandledCounts();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Reset();
 
