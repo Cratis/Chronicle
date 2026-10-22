@@ -20,7 +20,7 @@ applies-to:
 
 Accepted by woksin on 2026-10-20; not implemented or provider-verified. This is the publication protocol for [decision 0014](0014-projection-generations.md), subject to [decision 0017](0017-generation-enablement-compatibility-and-recovery.md)'s initialization/floor. [Decision 0015](0015-global-projection-scope-is-restricted.md)'s global restriction remains in force.
 
-### Amendment 2026-10-22: measured MongoDB fence and DDL rules
+**Amendment 2026-10-22: measured MongoDB fence and DDL rules**
 
 This banner adds measured evidence and records how the MongoDB and DDL rows below are met. It does not change the decision text. Tracked in Cratis/Chronicle#5225.
 
