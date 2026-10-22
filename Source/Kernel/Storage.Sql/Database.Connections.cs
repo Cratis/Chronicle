@@ -6,15 +6,19 @@ using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Arc.EntityFrameworkCore.Connections;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -35,15 +39,31 @@ public partial class Database
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Builds the options every database context of the kernel is created with.
+    /// </summary>
+    /// <typeparam name="TDbContext">Type of database context.</typeparam>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> of the application.</param>
+    /// <param name="connectionString">The connection string of the database.</param>
+    /// <returns>The options.</returns>
+    /// <remarks>
+    /// Migrations run in the order of their releases (<see cref="ReleaseOrderedMigrations"/>). The migrator is replaced in these shared options
+    /// rather than in each context, so every context of a database type keeps sharing one internal EF service provider.
+    /// </remarks>
+    internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
+        where TDbContext : DbContext => BuildOptions<TDbContext>(serviceProvider, connectionString, serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value.Storage.SchemaMode ?? SchemaMode.Migrate);
+
+    /// <summary>
     /// Builds options for a resolved target, including its configured authentication provider.
     /// </summary>
     /// <param name="target">The resolved database target.</param>
+    /// <param name="schemaMode">An optional schema-policy override for read-only probes.</param>
     /// <typeparam name="TDbContext">The database context type.</typeparam>
     /// <returns>The configured context options.</returns>
-    internal DbContextOptions<TDbContext> BuildOptions<TDbContext>(SqlTarget target)
+    internal DbContextOptions<TDbContext> BuildOptions<TDbContext>(SqlTarget target, SchemaMode? schemaMode = null)
         where TDbContext : DbContext
     {
-        var built = BuildOptions<TDbContext>(serviceProvider, target.ConnectionString);
+        var mode = schemaMode ?? options.Value.Storage.SchemaMode;
+        var built = BuildOptions<TDbContext>(serviceProvider, target.ConnectionString, mode);
         var builder = new DbContextOptionsBuilder<TDbContext>(built);
         if (target.ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql && _resolution.PostgreSqlEntra is { } authentication)
         {
@@ -76,18 +96,7 @@ public partial class Database
         return builder.Options;
     }
 
-    /// <summary>
-    /// Builds the options every database context of the kernel is created with.
-    /// </summary>
-    /// <typeparam name="TDbContext">Type of database context.</typeparam>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> of the application.</param>
-    /// <param name="connectionString">The connection string of the database.</param>
-    /// <returns>The options.</returns>
-    /// <remarks>
-    /// Migrations run in the order of their releases (<see cref="ReleaseOrderedMigrations"/>). The migrator is replaced in these shared options
-    /// rather than in each context, so every context of a database type keeps sharing one internal EF service provider.
-    /// </remarks>
-    internal static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
+    static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString, SchemaMode mode)
         where TDbContext : DbContext
     {
         var builder = new DbContextOptionsBuilder<TDbContext>();
@@ -105,10 +114,12 @@ public partial class Database
             builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
         }
 
+        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode));
+
         // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
         // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
-        // observer catch-up. The interceptor applies those pragmas on every SQLite connection.
-        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite)
+        // observer catch-up. Verification skips it because changing journal_mode writes to the file.
+        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite && mode != SchemaMode.Verify)
         {
             builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
         }
@@ -122,6 +133,7 @@ public partial class Database
     /// </summary>
     /// <param name="identity">The <see cref="DatabaseIdentity"/>.</param>
     /// <param name="purpose">The <see cref="ConnectionPurpose"/>.</param>
+    /// <param name="readOnly">Whether binding resolution must avoid writes.</param>
     /// <returns>The <see cref="SqlTarget"/>.</returns>
     /// <remarks>
     /// When the resolution places the database — with a connection string or a database name — that placement is used
@@ -129,7 +141,7 @@ public partial class Database
     /// bindings where the provider uses them. The cluster database is always the configured one; only its identity and
     /// schema are resolved.
     /// </remarks>
-    async Task<SqlTarget> Target(DatabaseIdentity identity, ConnectionPurpose purpose)
+    async Task<SqlTarget> Target(DatabaseIdentity identity, ConnectionPurpose purpose, bool readOnly = false)
     {
         if (identity.Kind == DatabaseKind.Cluster)
         {
@@ -139,7 +151,7 @@ public partial class Database
         var resolved = await _resolution.Resolve(identity, purpose);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
             ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
-            : await ResolveConnectionString(identity);
+            : await ResolveConnectionString(identity, readOnly);
 
         return TargetFor(identity, purpose, connectionString, resolved);
     }
@@ -227,7 +239,14 @@ public partial class Database
         }
     }
 
-    Task<string> ResolveConnectionString(DatabaseIdentity identity) => UsesBindings
+    Task<string> ResolveConnectionString(DatabaseIdentity identity, bool readOnly = false)
+    {
+        if (UsesBindings && (VerifySchema || readOnly))
+        {
+            return Task.FromResult(KnownConnectionString(identity));
+        }
+
+        return UsesBindings
         ? _databaseNames.Resolve(
             identity,
             Cluster,
@@ -235,6 +254,19 @@ public partial class Database
             connection => new NamespaceDbContext(BuildOptions<NamespaceDbContext>(MetadataTarget(connection))),
             serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance)
         : Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
+    }
+
+    string KnownConnectionString(DatabaseIdentity identity)
+    {
+        try
+        {
+            return _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Schema))));
+        }
+        catch (DatabaseNameBindingFailure)
+        {
+            throw new SchemaNotCurrent(identity.LogicalName(string.Empty), identity.ToString(), ["database binding missing"]);
+        }
+    }
 
     /// <summary>
     /// Target a candidate database the binding inspects before it is bound, as the cluster's schema identity.
