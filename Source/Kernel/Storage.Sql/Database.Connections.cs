@@ -35,6 +35,48 @@ public partial class Database
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Builds options for a resolved target, including its configured authentication provider.
+    /// </summary>
+    /// <param name="target">The resolved database target.</param>
+    /// <typeparam name="TDbContext">The database context type.</typeparam>
+    /// <returns>The configured context options.</returns>
+    internal DbContextOptions<TDbContext> BuildOptions<TDbContext>(SqlTarget target)
+        where TDbContext : DbContext
+    {
+        var built = BuildOptions<TDbContext>(serviceProvider, target.ConnectionString);
+        var builder = new DbContextOptionsBuilder<TDbContext>(built);
+        if (target.ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql && _resolution.PostgreSqlEntra is { } authentication)
+        {
+            builder.UseNpgsql(target.ConnectionString, _ => _.ConfigureDataSource(authentication.Configure));
+        }
+
+        if (target.Request is null)
+        {
+            return builder.Options;
+        }
+
+        if (_resolution.PostgreSqlEntra is null || target.ConnectionString.GetDatabaseType() != DatabaseType.PostgreSql)
+        {
+            builder.AddInterceptors(new ResolvedIdentityInterceptor(_resolution.Resolver, target.Request));
+        }
+
+        // A failed login drops the cached resolution, so retrying it resolves the identity again — picking up a rotated
+        // password or a refreshed token instead of failing the operation on the first attempt.
+        switch (target.ConnectionString.GetDatabaseType())
+        {
+            case DatabaseType.SqlServer:
+                builder.UseSqlServer(target.ConnectionString, _ => _.EnableRetryOnFailure(MaxRetryCount, _maxRetryDelay, [ConnectionResolutionInterceptor.SqlServerLoginFailed]));
+                break;
+
+            case DatabaseType.PostgreSql:
+                builder.UseNpgsql(target.ConnectionString, _ => _.EnableRetryOnFailure(MaxRetryCount, _maxRetryDelay, [.. ConnectionResolutionInterceptor.PostgreSqlAuthenticationFailed]));
+                break;
+        }
+
+        return builder.Options;
+    }
+
+    /// <summary>
     /// Builds the options every database context of the kernel is created with.
     /// </summary>
     /// <typeparam name="TDbContext">Type of database context.</typeparam>
@@ -72,34 +114,6 @@ public partial class Database
         }
 
         SqlMigrationTelemetry.Configure(builder, connectionString, serviceProvider.GetService<ILogger<Database>>() ?? NullLogger<Database>.Instance);
-        return builder.Options;
-    }
-
-    DbContextOptions<TDbContext> BuildOptions<TDbContext>(SqlTarget target)
-        where TDbContext : DbContext
-    {
-        var built = BuildOptions<TDbContext>(serviceProvider, target.ConnectionString);
-        if (target.Request is null)
-        {
-            return built;
-        }
-
-        var builder = new DbContextOptionsBuilder<TDbContext>(built);
-        builder.AddInterceptors(new ResolvedIdentityInterceptor(_resolution.Resolver, target.Request));
-
-        // A failed login drops the cached resolution, so retrying it resolves the identity again — picking up a rotated
-        // password or a refreshed token instead of failing the operation on the first attempt.
-        switch (target.ConnectionString.GetDatabaseType())
-        {
-            case DatabaseType.SqlServer:
-                builder.UseSqlServer(target.ConnectionString, _ => _.EnableRetryOnFailure(MaxRetryCount, _maxRetryDelay, [ConnectionResolutionInterceptor.SqlServerLoginFailed]));
-                break;
-
-            case DatabaseType.PostgreSql:
-                builder.UseNpgsql(target.ConnectionString, _ => _.EnableRetryOnFailure(MaxRetryCount, _maxRetryDelay, [.. ConnectionResolutionInterceptor.PostgreSqlAuthenticationFailed]));
-                break;
-        }
-
         return builder.Options;
     }
 

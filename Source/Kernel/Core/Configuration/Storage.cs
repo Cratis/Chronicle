@@ -45,6 +45,11 @@ public class Storage
     public bool CreateIfMissing { get; init; } = true;
 
     /// <summary>
+    /// Gets native Microsoft Entra authentication for PostgreSQL. Disabled by default.
+    /// </summary>
+    public PostgreSqlEntra PostgreSqlEntra { get; init; } = new();
+
+    /// <summary>
     /// Gets how connections are resolved per event store, namespace and purpose.
     /// </summary>
     /// <remarks>
