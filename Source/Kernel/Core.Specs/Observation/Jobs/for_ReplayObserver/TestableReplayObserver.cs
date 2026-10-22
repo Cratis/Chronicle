@@ -27,6 +27,14 @@ public class TestableReplayObserver(
     public Type GrainType => typeof(IReplayObserver);
 
     /// <summary>
+    /// Gets or sets a value indicating whether preparation errors should be awaited by Start in the specification.
+    /// </summary>
+    public bool PrepareSynchronouslyForTesting { get; set; }
+
+    /// <inheritdoc/>
+    protected override bool StartStepsInBackground => !PrepareSynchronouslyForTesting && base.StartStepsInBackground;
+
+    /// <summary>
     /// Invokes <see cref="ReplayObserver.PrepareSteps"/> for testing.
     /// </summary>
     /// <param name="request">The request to prepare steps for.</param>
@@ -73,4 +81,16 @@ public class TestableReplayObserver(
     /// </summary>
     /// <returns>True if the job can be resumed.</returns>
     public Task<bool> CanResumeForTesting() => CanResume();
+
+    /// <summary>
+    /// Revalidates replay admission before starting prepared job steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task StartPreparedStepsForTesting() => OnBeforeStartingJobSteps();
+
+    /// <summary>
+    /// Invokes replay cleanup after a preparation failure.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public Task FailPreparationForTesting() => OnFailedToPrepare();
 }
