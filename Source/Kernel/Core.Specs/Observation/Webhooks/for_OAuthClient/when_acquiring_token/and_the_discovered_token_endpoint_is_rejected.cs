@@ -13,7 +13,7 @@ public class and_the_discovered_token_endpoint_is_rejected : given.an_oauth_clie
     void Establish()
     {
         SetupSuccessfulDiscoveryResponse("https://unapproved.example/token");
-        _policy.Evaluate("https://unapproved.example/token", Arg.Any<Concepts.EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(new WebhookTargetValidation(false, "Token endpoint is not approved."));
+        _policy.EvaluateForDelivery("https://unapproved.example/token", Arg.Any<Concepts.EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(new WebhookTargetValidation(false, "Token endpoint is not approved."));
     }
 
     async Task Because()
