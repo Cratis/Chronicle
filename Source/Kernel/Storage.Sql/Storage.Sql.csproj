@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Cratis.Orleans.Storage.Sql" />
     </ItemGroup>

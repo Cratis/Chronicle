@@ -71,6 +71,7 @@ public partial class Database
             builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
         }
 
+        SqlMigrationTelemetry.Configure(builder, connectionString, serviceProvider.GetService<ILogger<Database>>() ?? NullLogger<Database>.Instance);
         return builder.Options;
     }
 
