@@ -301,6 +301,17 @@ jobs:
           name: workbench
           path: ./Source/Workbench/wwwroot
 
+      # The filter replaces a find over Source/Clients; fail when a new client project is not in it.
+      - name: Verify package solution filter is complete
+        run: |
+          expected=$( (find Source/Clients -name '*.csproj' ! -name '*.Specs.csproj'; echo Source/Kernel/Contracts/Contracts.csproj) | sed 's|^\./||' | sort)
+          actual=$(jq -r '.solution.projects[]' Source/Clients/Packages.slnf | sort)
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::Source/Clients/Packages.slnf does not match the packable projects"
+            diff <(echo "$expected") <(echo "$actual") || true
+            exit 1
+          fi
+
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
