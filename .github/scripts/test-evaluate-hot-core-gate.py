@@ -94,6 +94,48 @@ class GateDecisions(unittest.TestCase):
         self.assertIn(SHA, message)
         self.assertNotIn("Add the", message)
 
+    def labelled_not_touched(self, pr, runs):
+        env = dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")
+        with patch.dict(os.environ, env, clear=True), patch.object(gate, "api", return_value=pr) as api, \
+                patch.object(gate, "evidence_runs", return_value=runs) as evidence:
+            result = gate.gate(arguments())
+        api.assert_called_once_with("repos/Cratis/Chronicle/pulls/7")
+        return result, evidence
+
+    def test_labelled_pr_without_hot_core_needs_evidence_for_its_head(self):
+        labelled = {"head": {"sha": SHA}, "labels": [{"name": "run-integration"}]}
+        (ok, message), _ = self.labelled_not_touched(labelled, [])
+        self.assertFalse(ok)
+        self.assertIn("title=Integration requested", message)
+        self.assertIn(SHA, message)
+        self.assertIn("remove the label and re-run this check", message)
+        (ok, message), _ = self.labelled_not_touched(labelled, [GREEN])
+        self.assertTrue(ok)
+        self.assertIn(GREEN["html_url"], message)
+
+    def test_labelled_pr_keeps_old_behaviour_when_label_removed_or_head_moved(self):
+        for pr in ({"head": {"sha": SHA}, "labels": []},
+                   {"head": {"sha": "new-push"}, "labels": [{"name": "run-integration"}]}):
+            with self.subTest(pr=pr):
+                (ok, message), evidence = self.labelled_not_touched(pr, [])
+                self.assertTrue(ok)
+                self.assertIn("not required", message)
+                evidence.assert_not_called()
+
+    def test_labelled_pr_api_error_fails_closed_in_cli(self):
+        output = io.StringIO()
+        env = dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")
+        with patch.dict(os.environ, env, clear=True), patch.object(sys, "argv", [str(SCRIPT), "gate"]), \
+                patch.object(gate, "api", side_effect=subprocess.CalledProcessError(1, "gh", stderr="HTTP 500")), \
+                redirect_stdout(output):
+            self.assertEqual(1, gate.main())
+        self.assertIn("failing closed: HTTP 500", output.getvalue())
+
+    def test_unlabelled_untouched_pr_never_reads_the_current_pr(self):
+        with patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                patch.object(gate, "api", side_effect=AssertionError("must not call")):
+            self.assertTrue(gate.gate(arguments())[0])
+
     def test_evidence_lookup_uses_pr_head_not_merge_commit(self):
         with patch.dict(os.environ, dict(ENV, GITHUB_SHA="merge-commit", RUN_INTEGRATION="true"), clear=True), \
                 patch.object(gate, "collection", return_value=[GREEN]) as collect, \

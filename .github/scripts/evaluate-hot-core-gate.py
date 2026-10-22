@@ -28,6 +28,14 @@ def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha
         return False, (f"::error::Hot-core detection did not complete ({detect}), so whether this pull request "
                        "reaches the hot core is unknown. Failing closed.")
     if touched != "true":
+        if run_integration and not dispatch and not fork:
+            if evidence:
+                return True, f"Requested integration {evidence} passed for {head_sha}."
+            return False, ("::error title=Integration requested::run-integration is set and no passing Requested "
+                           f"Integration run exists for {head_sha}. Integration runs automatically on each push to "
+                           "a PR labeled `run-integration`; if none started for this head, push again or re-run the "
+                           "latest Requested Integration run for this PR in the Actions tab. This check turns green "
+                           "automatically when that run passes; remove the label and re-run this check to drop the requirement.")
         return True, ("No hot-core path is touched by this pull request. The full out-of-process integration "
                       "matrix is not required here.")
     if dispatch:
@@ -98,12 +106,22 @@ def evidence_runs(repo, head_sha, runs_json):
             if run["conclusion"] == "success"]
 
 
+def still_requested(repo, head_sha):
+    """The payload labels can be stale; honor the request only while the current PR head still carries it."""
+    pr = api(f"repos/{repo}/pulls/{os.environ['PR_NUMBER']}")
+    return (pr["head"]["sha"] == head_sha
+            and any(label["name"] == "run-integration" for label in pr.get("labels", [])))
+
+
 def gate(arguments):
     state = {name: os.environ.get(name.upper(), "") for name in ("detect", "touched", "build", "matrix")}
     state.update(dispatch=os.environ.get("DISPATCH") == "true", fork=os.environ.get("FORK") == "true",
                  head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None,
                  run_integration=os.environ.get("RUN_INTEGRATION") == "true")
-    if state["detect"] == "success" and state["touched"] == "true" and not state["dispatch"] and not state["fork"]:
+    ordinary = state["detect"] == "success" and not state["dispatch"] and not state["fork"]
+    if ordinary and state["touched"] != "true" and state["run_integration"]:
+        state["run_integration"] = still_requested(state["repo"], state["head_sha"])
+    if ordinary and (state["touched"] == "true" or state["run_integration"]):
         runs = evidence_runs(state["repo"], state["head_sha"], arguments.runs_json)
         green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
         if green:
