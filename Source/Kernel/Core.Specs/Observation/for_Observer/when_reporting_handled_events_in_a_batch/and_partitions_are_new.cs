@@ -22,5 +22,5 @@ public class and_partitions_are_new : given.an_observer
     [Fact] void should_aggregate_the_totals() => _stateStorage.State.HandledEventCount.ShouldEqual((EventCount)3UL);
     [Fact] void should_aggregate_per_type() => _stateStorage.State.HandledEventCountPerEventType[(EventTypeId)"event"].ShouldEqual((EventCount)3UL);
     [Fact] void should_write_observer_state_once() => _storageStats.Writes.ShouldEqual(1);
-    [Fact] void should_store_each_partition_count() => _observerHandledCountsStorage.Received(2).Increment(_observerId, Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_store_each_partition_count() => _observerHandledCountsStorage.Received(1).Increment(_observerId, Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts => counts.Count == 2));
 }

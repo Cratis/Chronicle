@@ -46,9 +46,8 @@ public class and_handled_events_are_reported_repeatedly : given.an_observer_coal
     [Fact] void should_not_increment_storage_while_the_reports_are_coalesced() => _incrementsBeforeFlush.ShouldEqual(0);
     [Fact] void should_increment_the_partition_once_with_the_sum_of_the_reports() => _observerHandledCountsStorage.Received(1).Increment(
         _observerId,
-        _partition,
-        Arg.Is<IReadOnlyDictionary<EventTypeId, EventCount>>(counts => counts[TypeA] == 20UL && counts[TypeB] == 10UL));
-    [Fact] void should_increment_the_other_partition_once() => _observerHandledCountsStorage.Received(1).Increment(_observerId, _otherPartition, Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+        Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts => counts.Count == 2 && counts.Single(_ => _.Key == _partition).Value[TypeA] == 20UL && counts.Single(_ => _.Key == _partition).Value[TypeB] == 10UL));
+    [Fact] void should_increment_the_other_partition_once() => _observerHandledCountsStorage.Received(1).Increment(_observerId, Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts => counts.Single(_ => _.Key == _otherPartition).Value[TypeA] == 5UL));
     [Fact] void should_write_the_state_once_for_all_of_them() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_have_the_exact_total_in_state() => _stateStorage.State.HandledEventCount.Value.ShouldEqual(35UL);
 }

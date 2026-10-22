@@ -245,12 +245,17 @@ public partial class Observer
             try
             {
                 var countsStorage = GetObserverHandledCountsStorage();
-                foreach (var (partition, counts) in pending)
+                foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
                 {
-                    await countsStorage.Increment(_observerId, partition, counts);
-                    written.Add(partition);
-                    State = WithIncrementedRunningTotals(State, counts);
-                    RecordedHandlingState();
+                    await countsStorage.Increment(_observerId, chunk
+                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
+                        .ToArray());
+                    foreach (var (partition, counts) in chunk)
+                    {
+                        written.Add(partition);
+                        State = WithIncrementedRunningTotals(State, counts);
+                        RecordedHandlingState();
+                    }
                 }
 
                 await WriteStateAsync();

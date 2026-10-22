@@ -22,7 +22,7 @@ public class and_one_batch_fills_the_pending_partition_buffer : given.an_observe
     }
 
     [Fact] void should_not_wait_for_the_scheduled_flush() => _writesBeforeFlush.ShouldEqual(0);
-    [Fact] void should_store_each_partition_once() => _observerHandledCountsStorage.Received(600).Increment(_observerId, Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_store_the_partitions_in_two_chunks() => _observerHandledCountsStorage.Received(2).Increment(_observerId, Arg.Any<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>());
     [Fact] void should_flush_the_total() => _stateStorage.State.HandledEventCount.ShouldEqual((EventCount)600UL);
     [Fact] void should_write_the_state_once() => _storageStats.Writes.ShouldEqual(1);
 }

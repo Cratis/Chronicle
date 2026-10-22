@@ -38,5 +38,5 @@ public class and_the_observer_is_retired : given.an_observer_with_skip_detection
 
     [Fact] void should_not_suspect_the_reported_partitions() => _suspectedSkips.ShouldEqual(0);
     [Fact] void should_not_warn_about_reported_events() => _recordedLogs.SuspectedSkipWarnings.ShouldBeEmpty();
-    [Fact] void should_not_persist_the_retired_observers_counts() => _observerHandledCountsStorage.DidNotReceive().Increment(_observerId, Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_not_persist_the_retired_observers_counts() => _observerHandledCountsStorage.DidNotReceive().Increment(_observerId, Arg.Any<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>());
 }

@@ -20,5 +20,5 @@ public class and_a_partition_repeats_an_earlier_report : given.an_observer
     }
 
     [Fact] void should_take_each_partition_report_only_once() => _stateStorage.State.HandledEventCount.ShouldEqual((EventCount)3UL);
-    [Fact] void should_keep_deduplication_per_partition() => _observerHandledCountsStorage.Received(2).Increment(_observerId, Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_keep_deduplication_per_partition() => _observerHandledCountsStorage.Received(2).Increment(_observerId, Arg.Any<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>());
 }
