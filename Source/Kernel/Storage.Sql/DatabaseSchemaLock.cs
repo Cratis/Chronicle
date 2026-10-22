@@ -91,7 +91,9 @@ internal static class DatabaseSchemaLock
 
         var resource = ResourceFor(contextConnection.Database);
         await using var connection = await OpenDedicatedConnection(context, contextConnection);
-        await schemaLock.Acquire(connection, resource, timeout);
+        await SqlStorageTelemetry.WaitForSchemaLock(
+            () => schemaLock.Acquire(connection, resource, timeout),
+            context.Database.ProviderName ?? "unknown");
         _held.Value = held.Add(key);
         try
         {

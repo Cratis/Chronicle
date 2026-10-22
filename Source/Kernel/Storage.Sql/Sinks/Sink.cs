@@ -292,6 +292,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
             ApplyChangesToEntity(reloadedEntry, write.Changes);
             AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
+            SqlStorageTelemetry.RecoveredCollision("read-model");
         }
     }
 

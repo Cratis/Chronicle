@@ -41,11 +41,18 @@ internal static class SqlUpserts
     /// <returns>The number of saved entries.</returns>
     internal static async Task<int> SaveChanges(DbContext context, Func<Task<int>> save, CancellationToken cancellationToken)
     {
+        var collisions = 0;
         while (true)
         {
             try
             {
-                return await save();
+                var saved = await save();
+                if (collisions > 0)
+                {
+                    SqlStorageTelemetry.RecoveredCollision("tracked-upsert", collisions);
+                }
+
+                return saved;
             }
             catch (DbUpdateException error) when (StorageWriteConflicts.IsUnique(error))
             {
@@ -76,6 +83,8 @@ internal static class SqlUpserts
                 {
                     throw;
                 }
+
+                collisions++;
             }
         }
     }
