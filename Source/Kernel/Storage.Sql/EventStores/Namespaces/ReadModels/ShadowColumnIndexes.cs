@@ -50,7 +50,7 @@ internal static class ShadowColumnIndexes
     {
         var name = ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column);
         var exists = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({context.TableName}) WHERE \"unique\" = 0 AND name = {name}").AnyAsync();
-        if (exists) await Execute(context, $"DROP INDEX IF EXISTS {context.GetService<ISqlGenerationHelper>().DelimitIdentifier(name)}");
+        if (exists) await ReadModelIndexOperations.Drop(context, context.TableName, name, online: true);
     }
 
     static async Task EnsureIndexes(ReadModelDbContext context)
