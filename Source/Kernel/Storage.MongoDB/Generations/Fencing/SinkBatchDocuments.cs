@@ -149,7 +149,9 @@ internal sealed class SinkBatchDocuments(int cap)
     {
         if (filter.TryGetValue("_id", out var id))
         {
-            return id is BsonDocument condition ? condition.GetValue("$eq", null) : id;
+            return id is BsonDocument condition && condition.ElementCount > 0 && condition.GetElement(0).Name.StartsWith('$')
+                ? condition.GetValue("$eq", null)
+                : id;
         }
         return filter.TryGetValue("$and", out var clauses)
             ? clauses.AsBsonArray.Select(clause => Key(clause.AsBsonDocument)).FirstOrDefault(id => id is not null)
