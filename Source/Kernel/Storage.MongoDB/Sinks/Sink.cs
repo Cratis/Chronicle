@@ -143,6 +143,7 @@ public class Sink(
     volatile bool _isBulkMode;
     volatile CollectionState? _primaryState;
     BulkWindowId? _bulkWindowId;
+    bool _bulkWindowIsReplay;
     bool _bulkWindowHasFailedWrites;
 
     /// <summary>
@@ -658,12 +659,19 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk()
+    public Task BeginBulk() => BeginBulk(isReplay: false);
+
+    Task BeginBulk(bool isReplay)
     {
         _bulkCancellation.Token.ThrowIfCancellationRequested();
+        if (_bulkWindowIsReplay && !isReplay)
+        {
+            collections.AbandonReplay();
+        }
+
         lock (_bulkLock)
         {
-            OpenBulkWindow();
+            OpenBulkWindow(isReplay);
         }
 
         ClearBulkState();
@@ -671,28 +679,37 @@ public class Sink(
     }
 
     /// <inheritdoc/>
-    public Task ResumeBulk()
+    public Task ResumeBulk() => ResumeBulk(isReplay: false);
+
+    Task ResumeBulk(bool isReplay)
     {
         _bulkCancellation.Token.ThrowIfCancellationRequested();
+        if (_bulkWindowIsReplay && !isReplay)
+        {
+            collections.AbandonReplay();
+        }
+
         lock (_bulkLock)
         {
-            // The writers of an open window may still be running; replacing it would discard what they queued.
-            if (_isBulkMode && _bulkWindowId is not null)
+            // Preserve queued writes only when they belong to the collection this mode will flush to.
+            var hasOpenWindow = _isBulkMode && _bulkWindowId is not null;
+            if (hasOpenWindow && _bulkWindowIsReplay == isReplay)
             {
                 return Task.CompletedTask;
             }
 
-            OpenBulkWindow();
+            OpenBulkWindow(isReplay);
         }
 
         ClearBulkState();
         return Task.CompletedTask;
     }
 
-    void OpenBulkWindow()
+    void OpenBulkWindow(bool isReplay)
     {
         _isBulkMode = true;
         _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowIsReplay = isReplay;
         _bulkWindowHasFailedWrites = false;
         _inFlight.Clear();
         ClearBulkOperations();
@@ -811,6 +828,7 @@ public class Sink(
             {
                 _isBulkMode = false;
                 _bulkWindowId = null;
+                _bulkWindowIsReplay = false;
                 _bulkWindowHasFailedWrites = false;
                 _inFlight.Clear();
                 ClearBulkOperations();
@@ -862,7 +880,7 @@ public class Sink(
         // none of them until something rebuilds the sink. Recreating them is exactly what the declaration on the
         // read model is for (#3942).
         await EnsureIndexes();
-        await BeginBulk();
+        await BeginBulk(isReplay: true);
     }
 
     /// <inheritdoc/>
@@ -870,7 +888,7 @@ public class Sink(
     {
         await collections.ResumeReplay(context);
         await EnsureIndexes();
-        await BeginBulk();
+        await ResumeBulk(isReplay: true);
     }
 
     /// <inheritdoc/>
