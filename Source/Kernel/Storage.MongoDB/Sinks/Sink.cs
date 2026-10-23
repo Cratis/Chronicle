@@ -141,6 +141,7 @@ public class Sink(
     long _pendingDeleteVersion;
     int _currentBulkSize;
     volatile bool _isBulkMode;
+    volatile CollectionState? _primaryState;
     BulkWindowId? _bulkWindowId;
     bool _bulkWindowHasFailedWrites;
 
@@ -191,8 +192,15 @@ public class Sink(
             {
                 return await ReadPrimaryOrDefault(key);
             }
-            catch (ReadModelPrimaryIsChanging) when (attempt < MaxPrimaryReadAttempts - 1)
+            catch (ReadModelPrimaryIsChanging)
             {
+                _primaryState = null;
+                if (attempt == MaxPrimaryReadAttempts - 1)
+                {
+                    logger.PrimaryReadAttemptsExhausted(readModel.Identifier, readModel.ContainerName, collections.PromotingCollectionName, MaxPrimaryReadAttempts);
+                    throw;
+                }
+
                 await Task.Delay(attempt == 0 ? 20 : 50);
             }
         }
@@ -201,7 +209,10 @@ public class Sink(
     async Task<ExpandoObject?> ReadPrimaryOrDefault(Key key)
     {
         var collection = collections.GetCollection(readModel.ContainerName);
-        var before = await GetPrimaryState(collection.Database);
+
+        // A hit under the primary name is complete even after a rename. Keep its identity for misses,
+        // which must still detect a primary created, removed or replaced while the read was in flight.
+        var before = _primaryState ??= await GetPrimaryState(collection.Database);
 
         using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
@@ -871,7 +882,16 @@ public class Sink(
             logger.EndingReplayWithFailedPartitions(readModel.Identifier, failedPartitions.Length);
         }
 
-        await collections.EndReplay(context);
+        _primaryState = null;
+        try
+        {
+            await collections.EndReplay(context);
+        }
+        finally
+        {
+            _primaryState = null;
+        }
+
         return failedPartitions;
     }
 
