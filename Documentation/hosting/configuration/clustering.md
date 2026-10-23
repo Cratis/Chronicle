@@ -78,8 +78,8 @@ After a node is lost, observers can lag behind the event log until the observer 
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| jobsFallback | string | AnySilo | Fallback when no Jobs silo is available. Only `AnySilo` is currently supported; `Wait` is rejected at startup until durable waiting is supported. This option does not change placement yet. |
 | type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
+| jobsFallback | string | AnySilo | Fallback when no Jobs silo is available. Only `AnySilo` is currently supported; `Wait` is rejected at startup until durable waiting is supported. This option does not change placement yet. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
 | gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
 | clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
@@ -165,6 +165,12 @@ Silos advertise version `1` under `cratis.chronicle.roles.v` and Boolean strings
 `cratis.chronicle.role.jobs` in Orleans silo metadata. Chronicle merges these namespaced keys with
 host-provided metadata; unrelated keys are preserved. A silo without recognized, complete metadata
 has unknown roles. Advertising roles does not change the placement behavior described below.
+
+Chronicle enables Orleans silo metadata itself, so hosts should not call `UseSiloMetadata` after
+`AddChronicleToSilo`. When the host has already enabled it before Chronicle, Chronicle only merges its keys.
+
+During a rolling upgrade, silos on the new version log errors when fetching metadata from older silos.
+This is expected and harmless: those silos' roles are read as unknown.
 
 `clustering.jobsFallback` defaults to `AnySilo`. `Wait` is reserved and rejected at startup until
 durable waiting support is available (Cratis/Orleans#129). Do not configure `Wait` yet.

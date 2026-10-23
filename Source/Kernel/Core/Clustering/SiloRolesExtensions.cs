@@ -37,6 +37,21 @@ public static class SiloRolesExtensions
             metadata[SiloRoles.ObserversKey] = roles.Observers ? "true" : "false";
             metadata[SiloRoles.JobsKey] = roles.Jobs ? "true" : "false";
         });
+
+        // The host already enabled silo metadata: do not register the Orleans metadata services again,
+        // only merge Chronicle's keys into the options.
+        if (builder.Services.Any(_ => _.ServiceType == typeof(ISiloMetadataCache)))
+        {
+            builder.Services.AddOptions<SiloMetadata>().Configure(siloMetadata =>
+            {
+                foreach (var (key, value) in metadata)
+                {
+                    siloMetadata.Metadata[key] = value;
+                }
+            });
+            return builder;
+        }
+
         return builder.UseSiloMetadata(metadata);
     }
 }
