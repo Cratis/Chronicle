@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Cluster;
 
 /// <summary>
 /// Configures role advertisement and validation for Chronicle silos.

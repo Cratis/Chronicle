@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.Clustering.for_SiloRolesExtensions;
+namespace Cratis.Chronicle.Cluster.for_SiloRolesExtensions;
 
 public class when_starting_without_roles : Specification
 {

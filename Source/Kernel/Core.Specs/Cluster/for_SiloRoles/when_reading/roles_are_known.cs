@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
-namespace Cratis.Chronicle.Clustering.for_SiloRoles.when_reading;
+namespace Cratis.Chronicle.Cluster.for_SiloRoles.when_reading;
 
 public class roles_are_known : Specification
 {

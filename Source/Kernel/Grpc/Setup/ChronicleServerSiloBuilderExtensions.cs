@@ -6,7 +6,7 @@ using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
-using Cratis.Chronicle.Clustering;
+using Cratis.Chronicle.Cluster;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;

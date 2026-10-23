@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
-namespace Cratis.Chronicle.Clustering.for_SiloRolesExtensions;
+namespace Cratis.Chronicle.Cluster.for_SiloRolesExtensions;
 
 public class when_publishing_roles : Specification
 {

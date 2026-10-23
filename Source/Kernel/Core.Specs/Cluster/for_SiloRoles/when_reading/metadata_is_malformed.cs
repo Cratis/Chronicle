@@ -7,9 +7,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
-namespace Cratis.Chronicle.Clustering.for_SiloRoles.when_reading;
+namespace Cratis.Chronicle.Cluster.for_SiloRoles.when_reading;
 
-public class the_version_is_unknown : Specification
+public class metadata_is_malformed : Specification
 {
     IHost _host;
     SiloRoles _siloRoles;
@@ -18,7 +18,7 @@ public class the_version_is_unknown : Specification
 
     void Establish()
     {
-        _host = new HostBuilder().UseOrleans(silo => silo.UseSiloMetadata(new Dictionary<string, string> { ["cratis.chronicle.roles.v"] = "2" })).Build();
+        _host = new HostBuilder().UseOrleans(silo => silo.UseSiloMetadata(new Dictionary<string, string> { ["cratis.chronicle.roles.v"] = "1", ["cratis.chronicle.role.eventSequences"] = "true", ["cratis.chronicle.role.observers"] = "false", ["cratis.chronicle.role.jobs"] = "invalid" })).Build();
         _address = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1);
         var cache = Substitute.For<ISiloMetadataCache>();
         cache.GetSiloMetadata(_address).Returns(_host.Services.GetRequiredService<IOptions<SiloMetadata>>().Value);

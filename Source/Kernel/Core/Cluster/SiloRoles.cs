@@ -5,7 +5,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Monads;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Cluster;
 
 /// <summary>
 /// Reads Chronicle roles from the Orleans silo metadata cache.

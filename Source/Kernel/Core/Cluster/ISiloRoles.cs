@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Cluster;
 
 /// <summary>
 /// Provides the advertised roles of a silo without exposing Orleans metadata details.
