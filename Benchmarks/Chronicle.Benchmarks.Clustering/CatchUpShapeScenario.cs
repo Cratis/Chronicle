@@ -37,6 +37,7 @@ internal static class CatchUpShapeScenario
         if (tail <= marker) throw new InvalidOperationException("Seeding did not create a backlog beyond the marker.");
         await observer.VerifyBehind(marker).WaitAsync(timeout);
 
+        observer.PrintSubscription(settings.ObserverType);
         var allocationsBefore = GC.GetTotalAllocatedBytes(true);
         var collectionsBefore = new[] { GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2) };
         counters.Start();

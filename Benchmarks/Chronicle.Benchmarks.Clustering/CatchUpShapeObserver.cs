@@ -73,8 +73,17 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
     /// <param name="observerType">The observer type, projection or reactor.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public Task Reconnect(string observerType) => observerType == "projection"
-        ? Subscribe<KernelProjections.IProjectionObserverSubscriber>()
-        : Subscribe<KernelReactors.IReactorObserverSubscriber>();
+        ? subscription.SubscriberType == typeof(KernelProjections.ICollapsingProjectionObserverSubscriber)
+            ? Subscribe<KernelProjections.ICollapsingProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection)
+            : Subscribe<KernelProjections.IProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection)
+        : Subscribe<KernelReactors.IReactorObserverSubscriber>(KernelObserverConcepts.ObserverType.Reactor);
+
+    /// <summary>
+    /// Prints the subscriber and observer types used for the measurement.
+    /// </summary>
+    /// <param name="observerType">The observer type, projection or reactor.</param>
+    public void PrintSubscription(string observerType) => Console.WriteLine(
+        $"SubscriberType={subscription.SubscriberType.FullName}, ObserverType={(observerType == "projection" ? KernelObserverConcepts.ObserverType.Projection : KernelObserverConcepts.ObserverType.Reactor)}");
 
     /// <summary>
     /// Waits until the observer has handled the tail.
@@ -111,9 +120,9 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
         throw new TimeoutException($"Observer did not catch up to {tail} within {timeout}.");
     }
 
-    Task Subscribe<TSubscriber>()
+    Task Subscribe<TSubscriber>(KernelObserverConcepts.ObserverType observerType)
         where TSubscriber : KernelObservation.IObserverSubscriber => observer.SubscribeWithGenerationDelivery<TSubscriber>(
-            subscription.SubscriberType == typeof(KernelProjections.IProjectionObserverSubscriber) ? KernelObserverConcepts.ObserverType.Projection : KernelObserverConcepts.ObserverType.Reactor,
+            observerType,
             subscription.EventTypes,
             subscription.SiloAddress,
             subscription.GenerationDelivery,
