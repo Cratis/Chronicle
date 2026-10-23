@@ -132,6 +132,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IStorage, Storage.Storage>();
             services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
             services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
+            services.AddGenerationCatalog();
             services.AddSingleton<Cratis.Chronicle.Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Cratis.Chronicle.Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();
 
             services.AddHealthChecks().AddMongoDb(
