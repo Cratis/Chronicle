@@ -5,6 +5,8 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    bool _startAtTailWhenSubscribed;
+
     /// <inheritdoc/>
     /// <remarks>
     /// An observer that has never been persisted has no identifier in its stored state. That is the one moment the
@@ -21,19 +23,37 @@ public partial class Observer
             return false;
         }
 
-        // Starting at the tail is the first step of registering, and registering decides which event sequence the
-        // observer is on. Without the claim, a definition shared with another sequence would leave the position unwritten.
-        ClaimDefinitionForKey();
-        var tail = await _eventSequence.GetTailSequenceNumber();
-        if (tail.IsActualValue)
+        if (!KeyOwnsDefinition)
         {
-            State = State with { NextEventSequenceNumber = tail.Next(), TailEventSequenceNumber = tail };
+            // Only a subscription may claim ownership. Retain the request without creating state or reminders.
+            _startAtTailWhenSubscribed = true;
+            return false;
         }
+
+        await PositionAtTail();
 
         // State is only persisted for an observer that exists. Creating it is what makes the position stick, and
         // what stops the next registration from being treated as the first.
         await EnsureAlertState();
         await WriteStateAsync();
         return true;
+    }
+
+    async Task ApplyPendingStartAtTail(bool storageWasReset)
+    {
+        if (_startAtTailWhenSubscribed && storageWasReset)
+        {
+            await PositionAtTail();
+        }
+        _startAtTailWhenSubscribed = false;
+    }
+
+    async Task PositionAtTail()
+    {
+        var tail = await _eventSequence.GetTailSequenceNumber();
+        if (tail.IsActualValue)
+        {
+            State = State with { NextEventSequenceNumber = tail.Next(), TailEventSequenceNumber = tail };
+        }
     }
 }

@@ -433,11 +433,12 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        await ReloadObserverState();
+        var storageWasReset = await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
-        ClaimDefinitionForKey();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+        await ClaimDefinitionForKey();
+        await ApplyPendingStartAtTail(storageWasReset);
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -870,9 +871,6 @@ public partial class Observer(
         ThrowIfSealed();
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
-        // A subscription is a registration, and a registration decides which event sequence the observer is on.
-        ClaimDefinitionForKey();
-
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
         var leavesQuarantine = !automatic && !recovering;
         if (leavesQuarantine)
@@ -896,13 +894,13 @@ public partial class Observer(
             // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
             // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
             // Recovery retains live progress rather than reloading a stale persisted position.
+            var storageWasReset = false;
             if (!recovering)
             {
                 var wasQuarantined = IsQuarantined;
-                var storageWasReset = await ReloadObserverState();
+                storageWasReset = await ReloadObserverState();
 
                 await observerDefinition.ReadStateAsync();
-                ClaimDefinitionForKey();
                 await failures.ReadStateAsync();
                 if (storageWasReset && wasQuarantined && IsQuarantined)
                 {
@@ -914,6 +912,10 @@ public partial class Observer(
             }
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
+
+            // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
+            await ClaimDefinitionForKey();
+            await ApplyPendingStartAtTail(storageWasReset);
             await BeginAlertLifecycle();
             var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
             if (webhookSubscription)

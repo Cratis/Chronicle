@@ -23,8 +23,16 @@ public partial class Observer
     /// Only a registration - a subscription - may do this. Registering an observer on another event sequence is how
     /// it legitimately moves, and the subscription persists the definition on the new sequence.
     /// </remarks>
-    void ClaimDefinitionForKey() =>
+    async Task ClaimDefinitionForKey()
+    {
+        var ownershipChanged = !KeyOwnsDefinition;
         observerDefinition.State = observerDefinition.State with { EventSequenceId = _observerKey.EventSequenceId };
+        if (ownershipChanged)
+        {
+            // Failed-partition cleanup checks the stored definition, not this activation's claimed copy.
+            await observerDefinition.WriteStateAsync();
+        }
+    }
 
     /// <summary>
     /// Writes the failed partitions, unless this activation does not own the definition.
