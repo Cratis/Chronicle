@@ -663,15 +663,39 @@ public class Sink(
         _bulkCancellation.Token.ThrowIfCancellationRequested();
         lock (_bulkLock)
         {
-            _isBulkMode = true;
-            _bulkWindowId = new(Guid.NewGuid());
-            _bulkWindowHasFailedWrites = false;
-            _inFlight.Clear();
-            ClearBulkOperations();
+            OpenBulkWindow();
         }
 
         ClearBulkState();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task ResumeBulk()
+    {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
+        lock (_bulkLock)
+        {
+            // The writers of an open window may still be running; replacing it would discard what they queued.
+            if (_isBulkMode && _bulkWindowId is not null)
+            {
+                return Task.CompletedTask;
+            }
+
+            OpenBulkWindow();
+        }
+
+        ClearBulkState();
+        return Task.CompletedTask;
+    }
+
+    void OpenBulkWindow()
+    {
+        _isBulkMode = true;
+        _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowHasFailedWrites = false;
+        _inFlight.Clear();
+        ClearBulkOperations();
     }
 
     /// <inheritdoc/>
