@@ -45,9 +45,9 @@ public class when_a_shadow_index_build_times_out : for_ReadModelMigrator.given.a
             if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal))
             {
                 Attempts++;
-                if (command.CommandTimeout != 0)
+                if (command.CommandTimeout != 600)
                 {
-                    throw new TimeoutException("A large shadow index cannot complete within the default command timeout");
+                    throw new TimeoutException("The shadow index must use the finite ten-minute timeout");
                 }
             }
             return ValueTask.FromResult(result);

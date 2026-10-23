@@ -41,7 +41,7 @@ public class when_an_existing_shadow_index_is_invalid : for_ReadModelMigrator.gi
     [Fact] void should_rebuild_the_column_index_only_once() => _commands.Sql.Count(sql => sql.StartsWith("CREATE INDEX", StringComparison.Ordinal)).ShouldEqual(1);
     [Fact] void should_not_adopt_the_invalid_index_name() => _indexes.ShouldNotContain("chronicle_shx_invalid");
     [Fact] void should_leave_one_usable_shadow_index() => _indexes.Length.ShouldEqual(1);
-    [Fact] void should_use_the_dedicated_timeout_for_both_drop_and_create() => _commands.DdlTimeouts.ShouldEachConformTo(timeout => timeout == 0);
+    [Fact] void should_use_the_dedicated_timeout_for_both_drop_and_create() => _commands.DdlTimeouts.ShouldEachConformTo(timeout => timeout == 600);
     [Fact] void should_restore_a_custom_caller_timeout() => _restoredTimeout.ShouldEqual(19);
 
     sealed class Commands : DbCommandInterceptor
