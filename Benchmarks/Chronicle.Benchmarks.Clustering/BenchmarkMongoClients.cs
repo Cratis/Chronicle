@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// </summary>
 /// <param name="inner">The normal kernel client manager.</param>
 /// <param name="counters">The scenario counters.</param>
-internal sealed class ReplayShapeMongoClients(IMongoDBClientManager inner, ReplayShapeCounters counters) : IMongoDBClientManager
+internal sealed class BenchmarkMongoClients(IMongoDBClientManager inner, BenchmarkCounters counters) : IMongoDBClientManager
 {
     /// <inheritdoc/>
     public IMongoClient GetClientFor(MongoClientSettings settings)

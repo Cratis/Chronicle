@@ -13,9 +13,11 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// <summary>
 /// Counts work started only within the replay measurement window.
 /// </summary>
-internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
+/// <param name="readModelCollection">Collection-name substring for sink operation counts.</param>
+internal sealed class BenchmarkCounters(string readModelCollection) : IIncomingGrainCallFilter
 {
     readonly object _gate = new();
+    string _readModelCollection = readModelCollection;
     bool _measuring;
     long _mongoCommands;
     long _grainCalls;
@@ -52,16 +54,18 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         services.AddSingleton<IIncomingGrainCallFilter>(this);
         services.RemoveAll<Storage.MongoDB.IMongoDBClientManager>();
         services.AddSingleton<Storage.MongoDB.IMongoDBClientManager>(provider =>
-            new ReplayShapeMongoClients(new Storage.MongoDB.MongoDBClientManager(provider.GetRequiredService<Arc.MongoDB.IMongoDBClientFactory>()), this));
+            new BenchmarkMongoClients(new Storage.MongoDB.MongoDBClientManager(provider.GetRequiredService<Arc.MongoDB.IMongoDBClientFactory>()), this));
     }
 
     /// <summary>
     /// Opens a fresh measurement window.
     /// </summary>
-    internal void Start()
+    /// <param name="containerName">The resolved served collection name, or null to retain the configured match.</param>
+    internal void Start(string? containerName = null)
     {
         lock (_gate)
         {
+            _readModelCollection = containerName ?? _readModelCollection;
             _mongoCommands = 0;
             _mongoCommandsByName = new(StringComparer.Ordinal);
             _grainCallsByMethod = new(StringComparer.Ordinal);
@@ -119,7 +123,7 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     static bool IsEventLog(BsonDocument command) =>
         command.TryGetValue("collection", out var collection) && collection.IsString && collection.AsString.Contains("event-log", StringComparison.OrdinalIgnoreCase);
 
-    static long SinkOperations(CommandStartedEvent started)
+    long SinkOperations(CommandStartedEvent started)
     {
         var arrayName = started.CommandName switch
         {
@@ -130,7 +134,7 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         };
         if (arrayName is null) return 0;
         if (!started.Command.TryGetValue(started.CommandName, out var target) || !target.IsString) return 0;
-        if (!target.AsString.Contains(nameof(ReplayShapeReadModel), StringComparison.OrdinalIgnoreCase)) return 0;
+        if (!target.AsString.Contains(_readModelCollection, StringComparison.OrdinalIgnoreCase)) return 0;
         return started.Command.TryGetValue(arrayName, out var operations) && operations.IsBsonArray ? operations.AsBsonArray.Count : 0;
     }
 }

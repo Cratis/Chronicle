@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.Clustering</RootNamespace>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Specifications.XUnit" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineProbe.cs" Link="RebuildBaselineProbe.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs" Link="RebuildBaselineMath.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineComparison.cs" Link="RebuildBaselineComparison.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineSettings.cs" Link="RebuildBaselineSettings.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/ClusterTopology.cs" Link="ClusterTopology.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/ClusterRoleAssignment.cs" Link="ClusterRoleAssignment.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineActivations.cs" Link="RebuildBaselineActivations.cs" />
+  </ItemGroup>
+</Project>
