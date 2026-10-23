@@ -14,7 +14,7 @@ public class when_lowering_ordered_paths : Specification
 
     async Task Establish()
     {
-        _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"name":{"type":"string"},"details":{"type":"object","properties":{"total":{"type":"number"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"}}}},"tags":{"type":"array","items":{"type":"string"}}}}""");
+        _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"name":{"type":"string"},"details":{"type":"object","properties":{"total":{"type":"number"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"},"qty":{"type":"integer"}}}},"tags":{"type":"array","items":{"type":"string"}}}}""");
         _compound = new("name") { Properties = [new("name"), new("details.total", true)] };
     }
 
@@ -24,6 +24,7 @@ public class when_lowering_ordered_paths : Specification
     [Fact] void should_not_collide_with_a_legacy_suffix_path() => (ReadModelIndexKeys.Name(new("name") { Properties = [new("name", true)] }) == ReadModelIndexKeys.Name(new("name_desc"))).ShouldBeFalse();
     [Fact] void should_not_collapse_reversed_compound_keys() => ReadModelIndexKeys.For(_compound).Equals(ReadModelIndexKeys.For(new("details.total") { Properties = [new("details.total", true), new("name")] })).ShouldBeFalse();
     [Fact] void should_allow_one_multikey_path() => ReadModelIndexKeys.Validate(new("name") { Properties = [new("name"), new("lines.productId", true)] }, _schema);
+    [Fact] void should_allow_keys_sharing_an_array() => ReadModelIndexKeys.Validate(new("lines.productId") { Properties = [new("lines.productId"), new("lines.qty")] }, _schema);
     [Fact] void should_reject_parallel_array_paths() => Catch.Exception(() => ReadModelIndexKeys.Validate(new("lines.productId") { Properties = [new("lines.productId"), new("tags")] }, _schema)).ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_hash_overlong_compound_names() => System.Text.Encoding.UTF8.GetByteCount(ReadModelIndexKeys.Name(new("name") { Properties = [new(new string('界', 80)), new("details.total")] })).ShouldBeLessThan(127);
 }

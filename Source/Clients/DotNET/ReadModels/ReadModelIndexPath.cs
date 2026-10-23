@@ -19,11 +19,11 @@ internal static class ReadModelIndexPath
     /// <param name="namingPolicy">The serialization naming policy.</param>
     /// <returns>The serialized path and collection classification.</returns>
     /// <exception cref="InvalidIndexDeclaration">The path contains an unknown property or an invalid collection marker.</exception>
-    internal static (string Path, bool ThroughArray) Resolve(Type type, string path, INamingPolicy namingPolicy)
+    internal static (string Path, IReadOnlyList<string> ArrayPaths) Resolve(Type type, string path, INamingPolicy namingPolicy)
     {
         var declaringType = type;
         var segments = (path ?? string.Empty).Split('.');
-        var throughArray = false;
+        var arrayPaths = new List<string>();
         for (var index = 0; index < segments.Length; index++)
         {
             var segment = segments[index];
@@ -38,11 +38,11 @@ internal static class ReadModelIndexPath
             {
                 throw new InvalidIndexDeclaration(declaringType, $"property '{name}' in path '{path}' is not a collection");
             }
-            throughArray |= elementType is not null;
             type = elementType ?? Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
             segments[index] = namingPolicy.GetPropertyName(property.Name);
+            if (elementType is not null) arrayPaths.Add(string.Join('.', segments.Take(index + 1)));
         }
-        return (string.Join('.', segments), throughArray);
+        return (string.Join('.', segments), arrayPaths);
     }
 
     /// <summary>

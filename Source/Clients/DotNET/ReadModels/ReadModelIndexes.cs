@@ -21,16 +21,18 @@ internal sealed class ReadModelIndexes(INamingPolicy namingPolicy)
     internal List<IndexDefinition> For(Type type)
     {
         var indexes = new List<IndexDefinition>();
-        Collect(type, string.Empty, false, indexes, []);
-        return indexes;
+        Collect(type, string.Empty, [], indexes, []);
+        return indexes.DistinctBy(index => (index.PropertyPath, Signature(index.Properties))).ToList();
     }
+
+    static string Signature(IEnumerable<IndexProperty> properties) => string.Join('|', properties.Select(property => $"{property.Path.Length}:{property.Path}:{property.Descending}"));
 
     static string Prefix(string prefix, string path) => string.IsNullOrEmpty(prefix) ? path : $"{prefix}.{path}";
 
-    void Collect(Type type, string prefix, bool throughArray, List<IndexDefinition> indexes, HashSet<Type> visited)
+    void Collect(Type type, string prefix, IReadOnlyList<string> arrayPaths, List<IndexDefinition> indexes, HashSet<Type> visited)
     {
         if (!visited.Add(type)) return;
-        CollectComposites(type, prefix, throughArray, indexes);
+        CollectComposites(type, prefix, arrayPaths, indexes);
         var constructor = type.GetConstructors().MaxBy(candidate => candidate.GetParameters().Length);
         var parameterIndexes = constructor?.GetParameters()
             .Where(parameter => parameter.IsDefined(typeof(IndexAttribute), inherit: false))
@@ -51,14 +53,14 @@ internal sealed class ReadModelIndexes(INamingPolicy namingPolicy)
             var nestedType = elementType ?? property.PropertyType;
             if (!nestedType.IsPrimitive && nestedType != typeof(string) && (elementType is not null || !nestedType.IsValueType))
             {
-                Collect(nestedType, path, throughArray || elementType is not null, indexes, visited);
+                Collect(nestedType, path, elementType is null ? arrayPaths : [.. arrayPaths, path], indexes, visited);
             }
         }
+        visited.Remove(type);
     }
 
-    void CollectComposites(Type type, string prefix, bool throughArray, List<IndexDefinition> indexes)
+    void CollectComposites(Type type, string prefix, IReadOnlyList<string> arrayPaths, List<IndexDefinition> indexes)
     {
-        var signatures = new HashSet<string>(StringComparer.Ordinal);
         foreach (var declaration in type.GetCustomAttributes<CompositeIndexAttribute>())
         {
             if (declaration.Properties is not { Length: > 0 })
@@ -74,7 +76,7 @@ internal sealed class ReadModelIndexes(INamingPolicy namingPolicy)
             {
                 throw new InvalidIndexDeclaration(type, "a composite index cannot repeat the same property");
             }
-            if (resolved.Count(path => throughArray || path.ThroughArray) > 1)
+            if (arrayPaths.Concat(resolved.SelectMany(path => path.ArrayPaths.Select(array => Prefix(prefix, array)))).Distinct(StringComparer.Ordinal).Count() > 1)
             {
                 throw new InvalidIndexDeclaration(type, "a composite index cannot contain more than one collection-element path");
             }
@@ -83,11 +85,6 @@ internal sealed class ReadModelIndexes(INamingPolicy namingPolicy)
                 Path = Prefix(prefix, path.Path),
                 Descending = declaration.IsDescending.Length > 0 && declaration.IsDescending[index]
             }).ToArray();
-            var signature = string.Join('|', properties.Select(property => $"{property.Path.Length}:{property.Path}:{property.Descending}"));
-            if (!signatures.Add(signature))
-            {
-                throw new InvalidIndexDeclaration(type, $"duplicate composite index over '{string.Join(", ", properties.Select(property => property.Path))}'");
-            }
             indexes.Add(new() { PropertyPath = properties[0].Path, Properties = properties });
         }
     }

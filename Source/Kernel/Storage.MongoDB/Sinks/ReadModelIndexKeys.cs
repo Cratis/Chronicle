@@ -43,22 +43,29 @@ internal static class ReadModelIndexKeys
     /// <exception cref="InvalidOperationException">The index contains multiple array paths.</exception>
     internal static void Validate(IndexDefinition index, JsonSchema schema)
     {
-        if (index.Properties.Count(property => IsArrayPath(property.Path.Path, schema)) > 1)
+        if (index.Properties.SelectMany(property => ArrayPaths(property.Path.Path, schema)).Distinct(StringComparer.Ordinal).Count() > 1)
         {
             throw new InvalidOperationException("A compound read-model index cannot contain multiple array paths.");
         }
     }
 
-    static bool IsArrayPath(string path, JsonSchema schema)
+    static IEnumerable<string> ArrayPaths(string path, JsonSchema schema)
     {
         var current = schema.ActualSchema;
+        var prefix = new List<string>();
         foreach (var segment in path.Split('.'))
         {
-            if (current.Type.HasFlag(JsonObjectType.Array)) return true;
+            if (current.Type.HasFlag(JsonObjectType.Array))
+            {
+                yield return string.Join('.', prefix);
+                if (current.Item is null) yield break;
+                current = current.Item.ActualSchema;
+            }
             var child = current.GetFlattenedProperties().FirstOrDefault(property => property.Name == segment);
-            if (child is null) return false;
+            if (child is null) yield break;
+            prefix.Add(segment);
             current = child.ActualSchema;
         }
-        return current.Type.HasFlag(JsonObjectType.Array);
+        if (current.Type.HasFlag(JsonObjectType.Array)) yield return string.Join('.', prefix);
     }
 }
