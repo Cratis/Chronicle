@@ -15,6 +15,10 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <summary>
 /// Seeds discovered generations and migrations without running the system-sequence registrar.
 /// </summary>
+/// <remarks>
+/// Each event type is seeded with the visibility the client registers it with, so the in-process kernel refuses a
+/// public event type on the event log and a private one on the outbox exactly like a deployed kernel does.
+/// </remarks>
 internal static class TestingEventTypes
 {
     /// <summary>
@@ -43,9 +47,22 @@ internal static class TestingEventTypes
             var definition = new KernelEvents::EventTypeDefinition(
                 new KernelEvents::EventTypeId(group.Key.Value), KernelEvents::EventTypeOwner.Client, false, generations, migrations);
             await storage.Register(definition);
+            var latest = group.MaxBy(type => type.Generation.Value)!;
+            var latestGeneration = generations.First(generation => generation.Generation.Value == latest.Generation.Value);
+            await storage.Register(
+                new KernelEvents::EventType(definition.Id, latestGeneration.Generation, latest.Tombstone),
+                latestGeneration.Schema,
+                KernelEvents::EventTypeOwner.Client,
+                KernelEvents::EventTypeSource.Code,
+                RegistrationVisibilityFor(eventTypes, latest));
             await storage.RecordMigrationsVersion(definition.Id, KernelEvents::EventTypeMigrationsVersion.For(migrations), migrations);
         }
     }
+
+    static KernelEvents::EventTypeVisibility RegistrationVisibilityFor(IEventTypes eventTypes, EventType type) =>
+        eventTypes is EventTypes registry
+            ? (KernelEvents::EventTypeVisibility)(int)registry.GetDescriptorFor(eventTypes.GetClrTypeFor(type.Id, type.Generation)).RegistrationVisibility
+            : KernelEvents::EventTypeVisibility.Unspecified;
 
     static KernelEvents::EventTypeMigrationDefinition CreateMigration(IEventTypeMigration migration)
     {
