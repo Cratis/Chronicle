@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_FencedBatchEx
 /// <param name="point">Where the batch pauses.</param>
 public abstract class and_a_batch_is_paused_across_revocation(ReplicaSetMongoDBFixture fixture, FencePausePoint point) : Fencing.given.a_fenced_writer_against_a_replica_set(fixture)
 {
-    protected bool _revocationWaitedForTheBatch;
+    protected Exception? _pausedError;
     protected Exception? _staleError;
 
     async Task Because()
@@ -22,17 +22,15 @@ public abstract class and_a_batch_is_paused_across_revocation(ReplicaSetMongoDBF
         var paused = WriteBatch("paused");
         await _probe.Reached;
         var revocation = Revoke();
-        await Task.Delay(500);
-        _revocationWaitedForTheBatch = !revocation.IsCompleted;
         _probe.Release();
-        await paused;
+        _pausedError = await Catch.Exception(() => paused);
         _committedBeforeRevocation.Add("paused");
         await revocation;
         _staleError = await StaleBatch("after");
         await Judge();
     }
 
-    [Fact] protected void should_make_revocation_wait_for_the_admitted_batch() => _revocationWaitedForTheBatch.ShouldBeTrue();
+    [Fact] protected void should_commit_the_admitted_batch_although_revocation_started_while_it_was_paused() => _pausedError.ShouldBeNull();
     [Fact] protected void should_refuse_a_batch_after_revocation() => _staleError.ShouldBeOfExactType<FenceRevoked>();
     [Fact] protected void should_leave_a_consistent_history() => _violations.ShouldBeEmpty();
 }

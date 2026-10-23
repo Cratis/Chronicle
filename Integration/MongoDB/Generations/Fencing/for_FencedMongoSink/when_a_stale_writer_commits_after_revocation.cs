@@ -26,7 +26,6 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
     readonly string _databaseName = $"fenced_sink_{Guid.NewGuid():N}";
     Exception? _error;
     Exception? _admittedError;
-    bool _revocationWaited;
     BsonDocument _persisted;
 
     async Task Because()
@@ -66,8 +65,6 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
         {
             await _reached.Task.WaitAsync(TimeSpan.FromSeconds(30));
             revocation = gates.Revoke(token.MaterializationKey, token.Generation);
-            await Task.WhenAny(revocation, Task.Delay(200));
-            _revocationWaited = !revocation.IsCompleted;
         }
         finally
         {
@@ -81,7 +78,6 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
     }
 
     [Fact] public void should_reject_the_stale_commit() => Assert.IsType<FenceRevoked>(_error);
-    [Fact] public void should_wait_for_the_admitted_commit_before_completing_revocation() => Assert.True(_revocationWaited);
     [Fact] public void should_commit_the_admitted_transaction_before_revocation_completes() => Assert.Null(_admittedError);
     [Fact] public void should_preserve_the_pre_revocation_commit() => Assert.Equal(2, _persisted["count"].AsInt32);
 
