@@ -72,11 +72,20 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
     /// </summary>
     /// <param name="observerType">The observer type, projection or reactor.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task Reconnect(string observerType) => observerType == "projection"
-        ? subscription.SubscriberType == typeof(KernelProjections.ICollapsingProjectionObserverSubscriber)
-            ? Subscribe<KernelProjections.ICollapsingProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection)
-            : Subscribe<KernelProjections.IProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection)
-        : Subscribe<KernelReactors.IReactorObserverSubscriber>(KernelObserverConcepts.ObserverType.Reactor);
+    public Task Reconnect(string observerType)
+    {
+        if (observerType != "projection")
+        {
+            return Subscribe<KernelReactors.IReactorObserverSubscriber>(KernelObserverConcepts.ObserverType.Reactor);
+        }
+
+        if (subscription.SubscriberType == typeof(KernelProjections.ICollapsingProjectionObserverSubscriber))
+        {
+            return Subscribe<KernelProjections.ICollapsingProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
+        }
+
+        return Subscribe<KernelProjections.IProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
+    }
 
     /// <summary>
     /// Prints the subscriber and observer types used for the measurement.
