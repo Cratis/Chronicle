@@ -61,6 +61,7 @@ on:
       - ".github/workflows/**"
       - ".github/scripts/**"
       - ".github/build-affecting-paths.txt"
+      - ".github/legacy-contracts.json"
 
 jobs:
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
@@ -420,6 +421,17 @@ jobs:
           name: coverage-results-specs-sql-${{ matrix.shard }}
           path: ./coverage-results/
           retention-days: 1
+
+  legacy-contracts:
+    if: always()
+    needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+    uses: ./.github/workflows/legacy-contracts.yml
+    with:
+      jobs: ${{ toJSON(needs) }}
 
   # Preserve the required check and all existing integration/coverage dependencies.
   # A failed, skipped or cancelled shard must never turn this aggregate green.
