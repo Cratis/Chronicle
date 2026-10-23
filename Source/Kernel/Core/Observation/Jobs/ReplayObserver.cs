@@ -79,6 +79,11 @@ public class ReplayObserver(
     /// </remarks>
     public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
     {
+        if (State.Request is null)
+        {
+            return await base.Resume();
+        }
+
         try
         {
             await EnsureReplaySupported();

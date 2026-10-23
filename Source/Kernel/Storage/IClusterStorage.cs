@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage;
 /// <summary>
 /// Defines the storage for the cluster level.
 /// </summary>
-public interface IClusterStorage
+public interface IClusterStorage : Generations.IGenerationFloorDiscovery
 {
     /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.

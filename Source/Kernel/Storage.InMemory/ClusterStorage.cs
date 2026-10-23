@@ -13,6 +13,9 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class ClusterStorage(EventStoreStorages eventStoreStorages) : IClusterStorage
 {
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => eventStoreStorages.ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventStoreName>> GetEventStores() => Task.FromResult(eventStoreStorages.Names);
 
     /// <inheritdoc/>
