@@ -63,6 +63,7 @@ public static class PartitionReplayabilityClassifier
     static bool IsClosed(ProjectionDefinition definition) =>
         HasKnownShape(definition) &&
         definition.Scope == ProjectionScope.Namespaced &&
+        !definition.HasLegacyStorageFields &&
         !definition.SubscribesToAllEvents &&
         definition.Join is { Count: 0 } &&
         definition.RemovedWithJoin is { Count: 0 } &&
