@@ -1102,19 +1102,8 @@ public class ProjectionFactory(
 
     void SetAllEventsKeyResolver(Projection projection, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty)
     {
-        var allEventsKey = projectionDefinition.FromEvery.Key;
-
-        // The default key is the event source id expression, which has a resolver of its own and so comes back
-        // from GetKeyResolverFor reporting that it did not resolve to the event source id. It plainly does, and
-        // saying otherwise costs every existing from-every projection its fine-grained locking.
-        var resolvesToEventSourceId =
-            allEventsKey is null ||
-            allEventsKey.Value.Length == 0 ||
-            allEventsKey.Value == WellKnownExpressions.EventSourceId;
-
-        projection.SetAllEventsKeyResolver(
-            GetKeyResolverFor(projection, allEventsKey, actualIdentifiedByProperty).Resolver,
-            resolvesToEventSourceId);
+        var (resolver, resolvesToEventSourceId) = GetKeyResolverFor(projection, projectionDefinition.FromEvery.Key, actualIdentifiedByProperty);
+        projection.SetAllEventsKeyResolver(resolver, resolvesToEventSourceId);
     }
 
     List<(EventTypeWithKeyResolver Event, ProjectionOperationType Operation)> CollectNestedEventTypes(
@@ -1215,7 +1204,10 @@ public class ProjectionFactory(
     {
         if (CanResolveKey(key))
         {
-            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), false);
+            // The canonical event source id expression has a resolver of its own, but it still keys each
+            // document by its event source, so it must not cost the projection its fine-grained locking.
+            var resolvesToEventSourceId = string.Equals(key.Value, WellKnownExpressions.EventSourceId, StringComparison.Ordinal);
+            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), resolvesToEventSourceId);
         }
 
         return (keyResolvers.FromEventSourceId, true);
