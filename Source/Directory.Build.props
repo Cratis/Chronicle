@@ -72,10 +72,6 @@
     <PropertyGroup Condition="'$(IsTestProject)'=='true'">
         <IsPackable>false</IsPackable>
         <TargetFramework>net10.0</TargetFramework>
-        <!-- xUnit v3 test projects are executables. A project that must stay on xUnit v2 sets UseXunitV2=true. -->
-        <OutputType Condition="'$(UseXunitV2)'!='true'">Exe</OutputType>
-        <!-- Keep the original display names; the shared per-class lifecycle stays on, with narrow per-fact opt-outs where facts mutate shared state. -->
-        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
@@ -92,10 +88,13 @@
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs" />
     </ItemGroup>
 
-    <PropertyGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
+    <PropertyGroup>
         <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications' experimental resource types (see the 5.0 upgrade guide).
+             Applied to every project because IsTestProject is only set after this file evaluates.
              xUnit1051: cancellation-token propagation in existing specs is adopted incrementally, not as part of this migration. -->
         <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
+        <!-- Keep the original display names; the shared per-class lifecycle stays on. -->
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
