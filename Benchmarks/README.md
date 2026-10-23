@@ -251,6 +251,16 @@ REPLAY_EVENTS=300000 REPLAY_TIMEOUT_SECONDS=14400 dotnet run -c Release --no-bui
 - `GrainCalls` counts all incoming silo grain invocations in the same window, including readiness
   probes and background work; calls bypassing Orleans dispatch are excluded. Neither metric is
   projection-only. The JSON includes both totals, per-workload-event ratios and boundary descriptions.
+- Checkpoint-cadence fields (#5265), all counted in the same window:
+
+  | Field | Meaning |
+  |---|---|
+  | `SinkBulks`, `SinkBulkOpsMean`, `SinkBulkOpsMax` | Sink write bulks and operations per bulk. Insert, update and delete commands on read-model collections are grouped by driver `OperationId`, and array lengths are summed |
+  | `SinkBulksAtOrAbove1000` | Bulks that reached the sink's 1,000-operation limit |
+  | `SinkBulkOpsHistogram` | Bulk counts by operation count: `1`, `2-99`, `100-499`, `500-999`, `1000+` |
+  | `FlushForCalls`, `FlushForCallsPer1000Events` | Checkpoint fan-outs (`IObserverService.FlushFor`) in total and per 1,000 workload events |
+  | `EventCursorPages` | `getMore` commands on the event log plus one; how many cursor pages the readers consumed |
+
 - Seeding and content verification are outside the counter window. Both snapshots independently
   check expected root/child counts, identities, last names and removals, then compare sorted-content
   SHA-256 hashes. A missing, incorrect or changed document fails the run instead of emitting a result.

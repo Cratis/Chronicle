@@ -461,8 +461,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjection")] Crati
   EE92359E: SubscribeDefinitionsChanged(Cratis.Chronicle.Projections.INotifyProjectionDefinitionsChanged) -> Task
   47C0888D: UnsubscribeDefinitionsChanged(Cratis.Chronicle.Projections.INotifyProjectionDefinitionsChanged) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionChangesetNotifier")] Cratis.Chronicle.Projections.IProjectionChangesetNotifier [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionChangesetNotifier")] Cratis.Chronicle.Projections.IProjectionChangesetNotifier [Version(1)]
   120AA1AB: Notify(Cratis.Chronicle.Concepts.EventStoreNamespaceName, Cratis.Chronicle.Concepts.ReadModels.ReadModelKey, System.Text.Json.Nodes.JsonObject, ReadModelChangeContext) -> Task
+  DA42063C: NotifyMany(Cratis.Chronicle.Concepts.EventStoreNamespaceName, System.Collections.Generic.IReadOnlyList<ReadModelChangeNotification>) -> Task
   14CDE012: Subscribe(Cratis.Chronicle.Projections.IReadModelChangesetSubscriber) -> Task
   BA47903A: Unsubscribe(Cratis.Chronicle.Projections.IReadModelChangesetSubscriber) -> Task
 
