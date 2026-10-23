@@ -110,7 +110,18 @@ internal sealed class ChronicleServerStartupTask(
 
         // Apply patches before other grains start
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), patchManager.ApplyPatches);
+        await Step(nameof(IPatchManager.ApplyPatches), async () =>
+        {
+            for (var attempt = 0; attempt < MaxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed)
+                {
+                    return;
+                }
+            }
+            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+        });
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
