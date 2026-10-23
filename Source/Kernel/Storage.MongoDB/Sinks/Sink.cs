@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -212,7 +211,7 @@ public class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
-            answer = cachedState.Clone();
+            answer = BulkStateDocumentCopy.Copy(cachedState);
             return true;
         }
 
@@ -591,7 +590,7 @@ public class Sink(
         return () =>
         {
             // Keep changesets and returned working states independent of the cache-owned snapshot.
-            var state = changeset.CurrentState.Clone();
+            var state = BulkStateDocumentCopy.Copy(changeset.CurrentState)!;
             _bulkStateCache[cacheKey] = state;
             _bulkKeysByCacheKey[cacheKey] = key;
             _bulkChildIndex.Update(cacheKey, state);

@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
-using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_BulkStateChildIndex.given;
@@ -16,7 +15,7 @@ public class an_index : Specification
 
     protected void Set(string key, ExpandoObject document)
     {
-        var state = document.Clone();
+        var state = BulkStateDocumentCopy.Copy(document)!;
         _states[key] = state;
         _index.Update(key, state);
     }
