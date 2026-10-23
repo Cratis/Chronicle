@@ -90,8 +90,19 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             .WithMessage("A webhook with the same name already exists.");
     }
 
+    WebhookTargetValidation CheckManagedIdentity(AddWebhook command) => command.AuthorizationType == AuthorizationType.ManagedIdentity
+        ? _policy.CheckManagedIdentity(new(command.ManagedIdentityClientId, command.ManagedIdentityScope), command.Url, command.EventStore)
+        : WebhookTargetValidation.Allowed;
+
     async Task ValidateTargets(AddWebhook command, ValidationContext<AddWebhook> context, CancellationToken cancellationToken)
     {
+        var approval = CheckManagedIdentity(command);
+        if (!approval.IsAllowed)
+        {
+            context.AddFailure(approval.Reason);
+            return;
+        }
+
         if (!string.IsNullOrEmpty(command.Url))
         {
             var target = await _policy.Evaluate(command.Url, command.EventStore, cancellationToken);

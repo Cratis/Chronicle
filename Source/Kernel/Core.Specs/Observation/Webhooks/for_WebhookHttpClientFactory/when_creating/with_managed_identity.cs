@@ -3,6 +3,7 @@
 
 using System.Net;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookHttpClientFactory.when_creating;
 
@@ -24,7 +25,9 @@ public class with_managed_identity : Specification
         var transport = Substitute.For<IHttpClientFactory>();
         using var inner = new HttpClient(new Receiver(value => _sentToken = value));
         transport.CreateClient(Arg.Any<string>()).Returns(inner);
-        var factory = new WebhookHttpClientFactory(transport, Substitute.For<IOAuthClient>(), _tokens);
+        var policy = Substitute.For<IWebhookTargetPolicy>();
+        policy.CheckManagedIdentity(_authorization, Arg.Any<string>(), Arg.Any<Concepts.EventStoreName?>()).Returns(WebhookTargetValidation.Allowed);
+        var factory = new WebhookHttpClientFactory(transport, Substitute.For<IOAuthClient>(), _tokens, policy);
         using var client = factory.Create(new("https://target.example", _authorization, new Dictionary<string, string>()));
         using var response = await client.GetAsync("/");
     }

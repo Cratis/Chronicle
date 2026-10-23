@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookMediator.when_delivering;
 
@@ -16,12 +17,14 @@ public class and_managed_identity_token_fails : Specification
         var transport = Substitute.For<IHttpClientFactory>();
         using var inner = new HttpClient();
         transport.CreateClient(Arg.Any<string>()).Returns(inner);
-        var factory = new WebhookHttpClientFactory(transport, Substitute.For<IOAuthClient>(), new ManagedIdentityTokens());
+        var policy = Substitute.For<IWebhookTargetPolicy>();
+        policy.CheckManagedIdentity(Arg.Any<ManagedIdentityAuthorization>(), Arg.Any<string>(), Arg.Any<Concepts.EventStoreName?>()).Returns(WebhookTargetValidation.Allowed);
+        var factory = new WebhookHttpClientFactory(transport, Substitute.For<IOAuthClient>(), new ManagedIdentityTokens(), policy);
         var mediator = new WebhookMediator(factory, new JsonSerializerOptions());
         var target = new WebhookTarget("https://target.example", new ManagedIdentityAuthorization("", "api://resource/.default"), new Dictionary<string, string>());
         _result = await mediator.Deliver("store", target, "partition", []);
     }
 
     [Fact] void should_fail_delivery() => _result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_report_the_token_failure() => _result.Error.ShouldBeOfExactType<ManagedIdentityNotAvailable>();
+    [Fact] void should_report_the_token_failure() => _result.Error.ShouldBeOfExactType<ManagedIdentityWebhookDeliveryFailed>();
 }

@@ -3,6 +3,7 @@
 
 using System.Net.Http.Headers;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -12,7 +13,8 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
 /// <param name="oAuthClient">The shared OAuth token provider.</param>
 /// <param name="managedIdentityTokens">The managed identity token provider.</param>
-public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient, IManagedIdentityTokens managedIdentityTokens) : IWebhookHttpClientFactory
+/// <param name="targetPolicy">The operator approval policy. Without it managed identity delivery is refused.</param>
+public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient, IManagedIdentityTokens managedIdentityTokens, IWebhookTargetPolicy? targetPolicy = null) : IWebhookHttpClientFactory
 {
     /// <summary>
     /// The name of the <see cref="HttpClient"/> to use.
@@ -50,7 +52,14 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAu
             none => { },
             managedIdentity => client = TokenHttpMessageHandler.CreateClient(
                 client,
-                (_, cancellation) => managedIdentityTokens.AcquireToken(managedIdentity, cancellation),
+                (eventStore, cancellation) =>
+                {
+                    if (targetPolicy?.CheckManagedIdentity(managedIdentity, webhookTarget.Url, eventStore).IsAllowed != true)
+                    {
+                        throw new ManagedIdentityWebhookNotAllowed();
+                    }
+                    return managedIdentityTokens.AcquireToken(managedIdentity, cancellation);
+                },
                 token => managedIdentityTokens.Invalidate(managedIdentity, token)));
 
         foreach (var header in webhookTarget.Headers)

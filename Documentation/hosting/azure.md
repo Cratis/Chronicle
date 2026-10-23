@@ -101,12 +101,23 @@ Chronicle discovers the token endpoint from `<authority>/.well-known/openid-conf
 
 ### Use the kernel's managed identity instead of a secret
 
-To avoid storing a client secret, register the webhook with `WithManagedIdentity(scope, clientId)`. The kernel then requests the token with its own Azure identity, as in the [managed identity example](../webhooks/index.md#managed-identity):
+This lends the kernel's own Azure identity to the webhook receiver, not the registering client's identity. **First configure the operator allow-lists**, before registering a webhook:
+
+```bash
+Cratis__Chronicle__Webhooks__AllowedHosts__0=receiver.example
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedScopes__0=api://receiver/.default
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedClientIds__0=<managed-identity-client-id>
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowSystemAssigned=false
+```
+
+Scopes and client ids are global operator settings only. Empty `AllowedScopes` disables managed identity webhooks; non-empty client ids must match `AllowedClientIds` exactly. An empty client id requires `AllowSystemAssigned=true`, including workload identity's environment default. Scope matching is exact ignoring case. The receiver must match the existing host allow-list even in `Warn` or `Off` mode; event-store host overrides and wildcard subdomains keep their existing meaning. See [Managed identity](../webhooks/index.mdx#managed-identity) for the JSON configuration and defaults.
+
+Then register the webhook with `WithManagedIdentity(scope, clientId)`. The kernel requests the token with its own Azure identity, as in the [managed identity example](../webhooks/index.mdx#managed-identity):
 
 | Argument | Entra value |
 | --- | --- |
 | `scope` | `api://<receiver-application-id>/.default` |
-| `clientId` | Optional. The client id of a user-assigned managed identity or workload identity. Leave it out to use the system-assigned identity |
+| `clientId` | An approved user-assigned managed identity or workload identity client id. Omit only when `AllowSystemAssigned=true` |
 
 - No secret is stored with the webhook definition.
 - When the kernel runs with workload identity (for example on AKS), it sees `AZURE_FEDERATED_TOKEN_FILE` and uses the federated token. Without it, the kernel uses its managed identity. For workload identity, an empty `clientId` falls back to `AZURE_CLIENT_ID`.

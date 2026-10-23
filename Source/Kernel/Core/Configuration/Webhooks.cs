@@ -37,6 +37,11 @@ public class Webhooks
     public IReadOnlyDictionary<string, string[]> EventStoreAllowedHosts { get; init; } = new Dictionary<string, string[]>();
 
     /// <summary>
+    /// Gets the operator-approved identities and scopes. Managed identity webhooks are disabled by default.
+    /// </summary>
+    public WebhookManagedIdentity ManagedIdentity { get; init; } = new();
+
+    /// <summary>
     /// Gets the delay in seconds used as the base for the exponential backoff between webhook delivery retries.
     /// </summary>
     public int RetryDelaySeconds { get; init; } = 2;

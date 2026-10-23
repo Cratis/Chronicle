@@ -89,14 +89,45 @@ other responses do not trigger an OAuth retry. Receivers should remain idempoten
 
 ## Managed identity
 
-To call a receiver protected by Microsoft Entra without storing a secret, register the webhook with
-the .NET builder's `WithManagedIdentity(scope, clientId)` method. The kernel requests tokens with its
+**This lends the kernel's own Azure identity to the webhook receiver**, not the identity of the client registering the webhook. Only approve receivers and scopes you trust to receive that identity's access token.
+
+**First, the kernel operator must configure the global allow-lists.** Managed identity webhooks are disabled until scopes are allowed. In `chronicle.json`:
+
+```json
+{
+  "webhooks": {
+    "allowedHosts": ["receiver.example"],
+    "managedIdentity": {
+      "allowedScopes": ["api://receiver/.default"],
+      "allowedClientIds": ["<managed-identity-client-id>"],
+      "allowSystemAssigned": false
+    }
+  }
+}
+```
+
+The equivalent environment variables are:
+
+```bash
+Cratis__Chronicle__Webhooks__AllowedHosts__0=receiver.example
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedScopes__0=api://receiver/.default
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedClientIds__0=<managed-identity-client-id>
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowSystemAssigned=false
+```
+
+`AllowedScopes` defaults to empty and matches the complete scope ignoring case, without prefix or wildcard matching. `AllowedClientIds` defaults to empty and matches non-empty client ids exactly. `AllowSystemAssigned` defaults to `false`; set it to `true` only to permit an empty client id, including the `AZURE_CLIENT_ID` environment default on workload identity hosts. These identity options are global only, not per event store.
+
+The receiver host must explicitly match the existing `AllowedHosts` policy, even in `Warn` or `Off` mode. Existing `EventStoreAllowedHosts` overrides and `*.example.com` subdomain matching still apply. Other authorization types retain their validation mode behavior. Registration, including bulk client registration, refuses unapproved requests before recording changes or acquiring a token. Delivery rechecks approval before token acquisition; revoking approval blocks persisted definitions and pauses their observer instead of sending a token.
+
+Then register the approved scope, client id and receiver with the .NET builder's `WithManagedIdentity(scope, clientId)` method. The kernel requests tokens with its
 own managed identity or workload identity. `scope` is required, for example
 `api://<receiver-application-id>/.default`; `clientId` is optional and selects a user-assigned
-identity (leave it out for the system-assigned identity). The Workbench offers the same option as
+identity (leave it out for the system-assigned identity only when `AllowSystemAssigned` is enabled). The Workbench offers the same option as
 **Managed identity**.
 
 <ChronicleClientTabs snippet="webhooks/index/managed-identity" />
+
+Access tokens are not stored in webhook definitions or delivery-failure details and are not shown in the Workbench. Receiver response bodies and reason phrases are not retained as managed identity delivery errors.
 
 Tokens are cached and refreshed shortly before expiry, and a `401` triggers one refresh and retry.
 If the kernel has no managed identity, the delivery fails and is retried like any failed delivery.

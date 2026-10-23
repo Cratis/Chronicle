@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">Storage for validating registered event generations.</param>
 /// <param name="logger">The logger for probe failures, not exposed to callers.</param>
+/// <param name="targetPolicy">The operator approval policy. Without it managed identity registrations are refused.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
 /// actually changed becomes an event. Testing lives here too, because a validator has to ask the same questions
@@ -45,7 +46,8 @@ public sealed class WebhookRegistrar(
     IWebhookMediator webhookMediator,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    ILogger<WebhookRegistrar> logger)
+    ILogger<WebhookRegistrar> logger,
+    IWebhookTargetPolicy? targetPolicy = null)
 {
     const string WebhookTestPartitionKey = "test";
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
@@ -57,6 +59,7 @@ public sealed class WebhookRegistrar(
     /// <param name="webhooks">The webhook definitions to add or update.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="WebhookRegistrationFailed">Thrown when an event recording the registration could not be appended.</exception>
+    /// <exception cref="ManagedIdentityWebhookNotAllowed">The requested managed identity, scope or receiver is not approved.</exception>
     /// <exception cref="ObserverPinsMultipleGenerationsOfEventType">The webhook pins multiple generations of one type.</exception>
     /// <exception cref="EventTypeGenerationNotRegisteredForObserver">A pinned generation is not registered.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
@@ -64,6 +67,7 @@ public sealed class WebhookRegistrar(
         webhooks = webhooks.ToArray();
 
         // Validate the entire request before appending any registration changes.
+        ValidateManagedIdentities(eventStore, webhooks);
         await ValidatePins(eventStore, webhooks);
 
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
@@ -246,6 +250,18 @@ public sealed class WebhookRegistrar(
             Success = false,
             ErrorMessage = exception is WebhookTargetRejected ? exception.Message : "Unable to connect to webhook endpoint."
         };
+    }
+
+    void ValidateManagedIdentities(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        foreach (var webhook in webhooks)
+        {
+            var target = webhook.ToChronicle().Target;
+            if (target.Authorization.IsT4 && targetPolicy?.CheckManagedIdentity(target.Authorization.AsT4, target.Url, eventStore).IsAllowed != true)
+            {
+                throw new ManagedIdentityWebhookNotAllowed();
+            }
+        }
     }
 
     async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
