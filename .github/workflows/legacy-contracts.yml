@@ -1,0 +1,94 @@
+name: Legacy Contracts
+
+on:
+  workflow_call:
+    inputs:
+      jobs:
+        description: "JSON upstream job results from toJSON(needs)"
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Build run containing the existing specs TRX artifacts"
+        type: string
+        required: true
+      jobs:
+        description: "JSON upstream needs results for that run (including wire outputs.skipped)"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  issues: read
+  actions: read
+
+jobs:
+  legacy-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Deliberately build only this small tool. The proofs already ran upstream.
+      - name: Build the matrix evaluator
+        run: |
+          set -euo pipefail
+          dotnet build Source/Tools/LegacyContracts/LegacyContracts.csproj --configuration Release
+
+      - name: Prove the matrix evaluator rejects planted failures
+        run: |
+          set -euo pipefail
+          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll --self-test
+
+      - name: Fetch owner issue states
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p legacy-contract-inputs
+          jq -er '[.rows[].owners[]] | unique | .[]' .github/legacy-contracts.json > legacy-contract-inputs/owners.txt
+          : > legacy-contract-inputs/issues.ndjson
+          while IFS= read -r number; do
+            gh api "repos/$REPOSITORY/issues/$number" > legacy-contract-inputs/issue.json
+            jq -e --argjson number "$number" '
+              select(.number == $number and (.state == "open" or .state == "closed")) |
+              {number, state: (.state | ascii_upcase),
+               stateReason: (if .state_reason == null then null else (.state_reason | ascii_upcase) end),
+               isPullRequest: has("pull_request")}
+            ' legacy-contract-inputs/issue.json >> legacy-contract-inputs/issues.ndjson
+          done < legacy-contract-inputs/owners.txt
+          jq -s '.' legacy-contract-inputs/issues.ndjson > legacy-contract-inputs/issues.json
+
+      # Keep artifacts in separate directories: projects and SQL shards reuse TRX filenames.
+      - name: Download existing specs results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-results-specs*
+          path: legacy-contract-inputs/trx
+          merge-multiple: false
+          run-id: ${{ inputs.run-id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Evaluate the committed matrix
+        env:
+          JOB_RESULTS: ${{ inputs.jobs }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$JOB_RESULTS" > legacy-contract-inputs/jobs.json
+          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll \
+            --manifest .github/legacy-contracts.json \
+            --issues legacy-contract-inputs/issues.json \
+            --jobs legacy-contract-inputs/jobs.json \
+            --trx legacy-contract-inputs/trx \
+            --github

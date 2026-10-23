@@ -24,5 +24,31 @@ history. Sources: `Documentation/projections/registration-lifecycle.md`,
 `Documentation/concepts/observers.mdx`, `Observation/Jobs/{CatchUpObserver,ReplayObserver}.cs`
 and `Observation/States/Routing.cs` (under `Source/Kernel/Core/`).
 
+## Rolling deployment versions
+
+Requires Chronicle 19.79.0 on client and kernel for projection registration's
+`ChronicleOptions.SoftwareVersion`. It defaults to the entry assembly's informational version;
+`Cratis:Chronicle:SoftwareVersion` overrides it, and startup warns on `1.0.0`.
+Check `dotnet list package` and the kernel image tag; older kernels ignore it.
+
+The kernel compares semantic-version precedence, including prerelease labels.
+An older definition cannot overwrite a newer stored version, and an older
+full-set registration cannot retire newer projections. Equal, missing or
+unparseable versions retain ordinary registration behavior. An intentional
+rollback must give the older code a software version higher than the stored
+one. Changing only software version does not request a replay; definition
+evolution policy still determines that.
+
+## Namespace reconciliation
+
+Requires Chronicle 19.81.1 for projections and captures to reconcile subscriptions
+in every namespace, including runtime-created namespaces. Explicit ensure waits
+for healthy subscriptions; implicit first-append creation is reconciled within
+a watchdog interval. A broken definition does not block healthy ones or creation.
+A lost subscription is repaired, but reconciliation never lifts quarantine,
+revives a retired observer, or restarts a stopped/deleted capture. A kernel
+restart or a newly added namespace still ends projection quarantine through a
+fresh subscription; do not interpret ordinary watchdog repair as operator clear.
+
 Closing a stream does not erase its events or prevent a projection replay.
 Keep the closing fact as history; see **cratis-chronicle-event-constraints**.

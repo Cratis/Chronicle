@@ -57,9 +57,11 @@ internal static class ReplayShapeScenario
             DocumentsWritten = after.Count,
             counts.MongoCommands,
             MongoCommandsPerEvent = (double)counts.MongoCommands / settings.Events,
+            counts.MongoCommandsByName,
             MongoBoundary = "Chronicle IMongoDBClientManager clients; excludes Orleans persistence/membership and Arc clients; includes readiness probes and background work",
             counts.GrainCalls,
             GrainCallsPerEvent = (double)counts.GrainCalls / settings.Events,
+            counts.GrainCallsByMethod,
             GrainBoundary = "All incoming silo grain calls, including readiness probes and background work; excludes calls bypassing Orleans dispatch",
             Before = new { before.Count, before.Hash },
             After = new { after.Count, after.Hash }

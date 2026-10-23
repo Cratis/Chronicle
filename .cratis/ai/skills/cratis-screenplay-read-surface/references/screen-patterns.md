@@ -38,6 +38,8 @@ The person looks at where something stands and decides what to do next.
   events so far. Every field shown has a source in that read model.
 - The available actions depend on state. A static `action` line is always offered; an action that
   must differ by state is a guarded action (`references/guarded-actions.md`), never prose.
+- A list the screen renders is `query <Name> => observable <ReadModel>[]`. A snapshot list renders too, but
+  it is read once and does not follow later events; `observable` keeps the table current after a command.
 - A status screen with no incoming view is a gap; only a blank creation form is exempt.
 
 ## Error state

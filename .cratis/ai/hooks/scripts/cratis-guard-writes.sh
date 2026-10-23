@@ -19,22 +19,73 @@ set -euo pipefail
 
 # SCRIPTDIR, not a path relative to the caller: shellcheck resolves a plain relative `source=`
 # against the current working directory, and these hooks are linted from wherever CI happens to run.
+script_directory="${BASH_SOURCE[0]%/*}"
+[ "$script_directory" != "${BASH_SOURCE[0]}" ] || script_directory=.
 # shellcheck source=SCRIPTDIR/hook-lib.sh
-. "$(dirname "${BASH_SOURCE[0]}")/hook-lib.sh"
+. "$script_directory/hook-lib.sh"
 
 [ "${CRATIS_HOOKS_ALLOW_PROTECTED_WRITES:-0}" = "1" ] && exit 0
 
-input="$(hook_read_stdin)"
+# This guard runs before every write, so it avoids subprocesses where a builtin does the same job:
+# the helpers below return through REPLY instead of printing into a command substitution.
+# Read stdin with the read builtin: opening /dev/stdin fails with ENXIO when stdin is a socket (Linux, Node pipes).
+input=""
+IFS= read -r -d '' input || true
 [ -n "$input" ] || exit 0
 hook_have jq || exit 0
 
-root="$(hook_repo_root)"
-cwd="$(hook_json "$input" '.cwd')"
-[ -n "$cwd" ] || cwd="$root"
+# One jq call reads every field the guard uses. Fields are NUL-terminated (embedded NULs are dropped,
+# as a command substitution would drop them); a missing, null, false or unreadable path is empty.
+cwd="" file="" notebook="" new_content="" new_string=""
+{
+    IFS= read -r -d '' cwd
+    IFS= read -r -d '' file
+    IFS= read -r -d '' notebook
+    IFS= read -r -d '' new_content
+    IFS= read -r -d '' new_string
+} < <(jq -j '
+    def field(path): ([try (path // empty) catch empty] | first // "")
+        | if type == "string" then . else tojson end
+        | gsub("\u0000"; "");
+    [field(.cwd), field(.tool_input.file_path), field(.tool_input.notebook_path),
+     field(.tool_input.content), field(.tool_input.new_string)]
+    | .[] | ., "\u0000"
+' <<<"$input" 2>/dev/null) || true
+# Command substitution stripped trailing newlines from each field; keep that behaviour.
+for field_name in cwd file notebook new_content new_string; do
+    while [[ "${!field_name}" == *$'\n' ]]; do printf -v "$field_name" '%s' "${!field_name%$'\n'}"; done
+done
 
-file="$(hook_json "$input" '.tool_input.file_path')"
-[ -n "$file" ] || file="$(hook_json "$input" '.tool_input.notebook_path')"
+[ -n "$cwd" ] || cwd="$(hook_repo_root)"
+[ -n "$file" ] || file="$notebook"
 [ -n "$file" ] || exit 0
+
+# dir_of / base_of / relative_to mirror dirname, basename and hook_relpath for the absolute,
+# normalized paths used here. abspath mirrors hook_abspath. All return through REPLY.
+dir_of() {
+    REPLY="${1%/*}"
+    [ -n "$REPLY" ] || REPLY=/
+}
+
+base_of() {
+    REPLY="${1##*/}"
+    [ -n "$REPLY" ] || REPLY=/
+}
+
+abspath() {
+    case "$1" in
+        /*) REPLY="$1" ;;
+        *) REPLY="${2%/}/$1" ;;
+    esac
+}
+
+relative_to() {
+    local root="${2%/}"
+    case "$1" in
+        "$root"/*) REPLY="${1#"$root"/}" ;;
+        *) REPLY="$1" ;;
+    esac
+}
 
 # Lexically normalize before any Git lookup or parent walk, including nonexistent segments.
 # Component parsing preserves spaces and glob characters without depending on realpath.
@@ -53,17 +104,22 @@ normalize_target_path() {
             *) normalized="$normalized/$component" ;;
         esac
     done
-    printf '%s\n' "${normalized:-/}"
+    REPLY="${normalized:-/}"
 }
 
-file="$(hook_abspath "$file" "$cwd")"
-file="$(normalize_target_path "$file")"
-# Pi can run the bundled script in a consumer checkout; this root is only for diagnostics.
-root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$cwd")"
-rel="$(hook_relpath "$file" "$root")"
-base="$(basename "$file")"
+abspath "$file" "$cwd"
+normalize_target_path "$REPLY"
+file="$REPLY"
+base_of "$file"
+base="$REPLY"
 
 block() {
+    # Pi can run the bundled script in a consumer checkout; this root is only for diagnostics,
+    # so it is looked up only when a write is actually refused.
+    local root rel
+    root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$cwd")"
+    relative_to "$file" "$root"
+    rel="$REPLY"
     printf 'BLOCKED by cratis-guard-writes: %s\n\n%s\n\n%s\n' "$rel" "$1" "$2" >&2
     exit 2
 }
@@ -71,36 +127,70 @@ block() {
 # Check both the addressed path and its physical destination: settings may be symlinks to
 # templates, and an innocently named link may target a protected file. Preserve missing suffixes.
 physical_target_path() {
-    local target="$1" directory suffix="" link hops=0
+    local target="$1" directory suffix="" link hops=0 start="$PWD"
+    physical_file=""
     while [ -L "$target" ]; do
         hops=$((hops + 1))
         [ "$hops" -le 40 ] || return 1
         link="$(readlink "$target")" || return 1
-        target="$(hook_abspath "$link" "$(dirname "$target")")"
+        dir_of "$target"
+        abspath "$link" "$REPLY"
+        target="$REPLY"
     done
-    directory="$(dirname "$target")"
-    suffix="/$(basename "$target")"
+    dir_of "$target"
+    directory="$REPLY"
+    base_of "$target"
+    suffix="/$REPLY"
     while [ ! -d "$directory" ]; do
         [ "$directory" != "/" ] || return 1
-        suffix="/$(basename "$directory")$suffix"
-        directory="$(dirname "$directory")"
+        base_of "$directory"
+        suffix="/$REPLY$suffix"
+        dir_of "$directory"
+        directory="$REPLY"
     done
-    directory="$(cd -P "$directory" 2>/dev/null && pwd -P)" || return 1
-    printf '%s\n' "${directory%/}$suffix"
+    cd -P "$directory" 2>/dev/null || return 1
+    directory="$PWD"
+    cd "$start" 2>/dev/null || true
+    physical_file="${directory%/}$suffix"
+}
+
+# The origin URL, looked up once per repository per run.
+origin_cache_root=""
+origin_cache_value=""
+repository_origin() {
+    if [ "$origin_cache_root" != "$1" ]; then
+        origin_cache_value="$(git -C "$1" remote get-url origin 2>/dev/null || true)"
+        origin_cache_root="$1"
+    fi
+    REPLY="$origin_cache_value"
+}
+
+# Case-insensitive ASCII match of the origin URL, equivalent to grep -Eiq on a single line.
+origin_matches() {
+    # C locale, as the grep it replaced ran: a non-ASCII letter (the Kelvin sign) must not match [a-z].
+    local LC_ALL=C pattern="$1" matched=1
+    shopt -s nocasematch
+    # shellcheck disable=SC2034
+    [[ "$REPLY" =~ $pattern ]] && matched=0
+    shopt -u nocasematch
+    return "$matched"
 }
 
 # ── 4. Agent controls and installed managed trees ─────────────────────────────
 agent_control_target() {
-    local target="$1" directory policy_root target_rel origin
-    directory="$(dirname "$target")"
+    local target="$1" directory policy_root target_rel
+    dir_of "$target"
+    directory="$REPLY"
     # Keep the addressed spelling here, even when an adapter directory is a symlink.
     # .git is a directory in a checkout and a file in a linked worktree.
     while [ ! -e "$directory/.git" ]; do
         [ "$directory" != "/" ] || return 1
-        directory="$(dirname "$directory")"
+        dir_of "$directory"
+        directory="$REPLY"
     done
     policy_root="$directory"
-    target_rel="$(hook_relpath "$target" "$policy_root")"
+    relative_to "$target" "$policy_root"
+    target_rel="$REPLY"
     if [ -f "$policy_root/.cratis/ai.manifest.json" ]; then
         case "$target_rel" in
             .cratis/ai/*) return 0 ;;
@@ -123,8 +213,8 @@ agent_control_target() {
         esac
     else
         # The corpus is authored source in Cratis/AI, not a managed installation.
-        origin="$(git -C "$policy_root" remote get-url origin 2>/dev/null || true)"
-        if printf '%s\n' "$origin" | LC_ALL=C grep -Eiq '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/ai(\.git)?/?$'; then
+        repository_origin "$policy_root"
+        if origin_matches '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/ai(\.git)?/?$'; then
             return 1
         fi
     fi
@@ -135,7 +225,7 @@ agent_control_target() {
     return 1
 }
 
-physical_file="$(physical_target_path "$file" || true)"
+physical_target_path "$file" || physical_file=""
 if agent_control_target "$file" || { [ -n "$physical_file" ] && agent_control_target "$physical_file"; }; then
     block \
         "This target controls the agent's permissions or extensions, or belongs to an installed managed corpus/adapter tree. Agent Write/Edit calls may not alter their own controls or managed instructions." \
@@ -147,19 +237,30 @@ fi
 # Merely *mentioning* the string — documentation, a rule file, this corpus — is not a match.
 marker='^[[:space:]]*(//|/\*|#|<!--)[[:space:]]*@generated by Cratis'
 
+# True when one of the first five lines of stdin carries the marker (head -n 5 | grep -E, without forks).
+first_lines_carry_marker() {
+    local LC_ALL=C line count=0
+    while [ "$count" -lt 5 ] && { IFS= read -r line || [ -n "$line" ]; }; do
+        count=$((count + 1))
+        # shellcheck disable=SC2034
+        [[ "$line" =~ $marker ]] && return 0
+    done
+    return 1
+}
+
+# The cheap in-shell header test runs first; grep -I then confirms the file is text, as before.
 if [ -f "$file" ] \
-    && LC_ALL=C grep -Iq . "$file" 2>/dev/null \
-    && head -n 5 "$file" 2>/dev/null | LC_ALL=C grep -Eq "$marker"; then
+    && first_lines_carry_marker 2>/dev/null <"$file" \
+    && LC_ALL=C grep -Iq . "$file" 2>/dev/null; then
     block \
         "This file is generated output (its header marks it as generated by Cratis). Rule 15 [contract] in .cratis/ai/rules/general.md: never edit a generated file — the next build overwrites it." \
         "Instead: change the C# source it is generated from (the [Command] / [ReadModel] record) and rebuild with 'dotnet build -c Debug' to regenerate the proxy."
 fi
 
 # The same guard for authoring a *new* file that pretends to be generated output.
-new_content="$(hook_json "$input" '.tool_input.content')"
-[ -n "$new_content" ] || new_content="$(hook_json "$input" '.tool_input.new_string')"
+[ -n "$new_content" ] || new_content="$new_string"
 if [ -n "$new_content" ] \
-    && printf '%s\n' "$new_content" | head -n 5 | LC_ALL=C grep -Eq "$marker"; then
+    && first_lines_carry_marker <<<"$new_content"; then
     block \
         "The content being written opens with a Cratis generated-file header. Proxies are produced by the Cratis proxy generator, never hand-written." \
         "Instead: write the C# source and run 'dotnet build -c Debug' to generate the proxy."
@@ -167,16 +268,20 @@ fi
 
 # ── 2. Dependency manifests, lockfiles, SDK and NuGet configuration ───────────
 manifest_writes_allowed() {
-    local setting="" origin directory policy_root
+    local setting="" directory policy_root start="$PWD"
     # Authorization belongs to the write target, which may be outside the session's checkout.
     # New files can have nonexistent parents; find their nearest existing directory first.
-    directory="$(dirname "$file")"
+    dir_of "$file"
+    directory="$REPLY"
     while [ ! -d "$directory" ]; do
         [ "$directory" != "/" ] || return 1
-        directory="$(dirname "$directory")"
+        dir_of "$directory"
+        directory="$REPLY"
     done
     # Follow existing directory symlinks before asking Git which repository owns the target.
-    directory="$(cd -P "$directory" 2>/dev/null && pwd -P)" || return 1
+    cd -P "$directory" 2>/dev/null || return 1
+    directory="$PWD"
+    cd "$start" 2>/dev/null || true
     policy_root="$(git -C "$directory" rev-parse --show-toplevel 2>/dev/null)" || return 1
     if [ -f "$policy_root/.cratis/ai.json" ]; then
         # Only actual booleans override the default; jq's `// empty` would discard false.
@@ -186,9 +291,9 @@ manifest_writes_allowed() {
         true) return 0 ;;
         false) return 1 ;;
     esac
-    origin="$(git -C "$policy_root" remote get-url origin 2>/dev/null || true)"
+    repository_origin "$policy_root"
     # Anchor host, owner and the single repository segment; never infer ownership from profiles.
-    printf '%s\n' "$origin" | LC_ALL=C grep -Eiq '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/[a-z0-9_.-]+/?$'
+    origin_matches '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/[a-z0-9_.-]+/?$'
 }
 
 case "$base" in

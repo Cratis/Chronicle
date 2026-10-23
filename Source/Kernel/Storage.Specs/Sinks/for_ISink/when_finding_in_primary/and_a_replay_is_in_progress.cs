@@ -34,10 +34,10 @@ public abstract class and_a_replay_is_in_progress<THarness> : given.an_accumulat
         _missing = await _sink.FindInPrimaryOrDefault(_replayOnlyKey);
     }
 
-    [Fact] void should_not_read_buffered_replay_state() => Count(_primaryWhileBuffered).ShouldEqual(1);
-    [Fact] void should_read_the_pre_replay_state() => Count(_primary).ShouldEqual(1);
-    [Fact] void should_keep_the_projection_read_on_replay_state() => Count(_replayed).ShouldEqual(2);
-    [Fact] void should_not_find_a_key_present_only_in_the_replay() => _missing.ShouldBeNull();
+    [Fact] public void should_not_read_buffered_replay_state() => Count(_primaryWhileBuffered).ShouldEqual(1);
+    [Fact] public void should_read_the_pre_replay_state() => Count(_primary).ShouldEqual(1);
+    [Fact] public void should_keep_the_projection_read_on_replay_state() => Count(_replayed).ShouldEqual(2);
+    [Fact] public void should_not_find_a_key_present_only_in_the_replay() => _missing.ShouldBeNull();
 
     static int Count(ExpandoObject? instance) => Convert.ToInt32(((IDictionary<string, object?>)instance!)["count"], CultureInfo.InvariantCulture);
 }

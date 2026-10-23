@@ -11,3 +11,7 @@ automation: model it as one `StateChange` slice with several `produces` blocks.
 
 **Translation is workflow-specific anti-corruption.** Generic infrastructure every
 workflow needs (event persistence, message transport) is not a `Translate` slice.
+
+**Events have no optional properties for the `cratis` target.** An event property
+marked `optional` validates, but `cratis render --check` refuses it (`STAGE-ESM-005`).
+Make it required, or leave it out of the event; whether the detail is a separate fact is a modeling decision.

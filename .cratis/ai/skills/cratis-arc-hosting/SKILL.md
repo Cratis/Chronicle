@@ -14,6 +14,9 @@ Choose the host and integrations before copying a bootstrap. Arc is standalone
 CQRS; Chronicle is optional and its client connects to a separate event store.
 Nothing in `AddCratis()` runs the Chronicle engine in your application.
 
+Read references/connection-resolution.md when MongoDB or EF Core connections
+must resolve per tenant or use separate runtime and schema identities.
+
 ## Verified product sources
 
 | Package | Purpose |

@@ -60,6 +60,13 @@ module Collections
   or mixed effects (`-037`). Single-hop reaction append specs render; deeper appends and
   command specs cascading into reactions remain `-011`. Keep refused scope as gap-fill against this contract: `cratis-screenplay-render-and-gap-fill`.
 
+### A command specification states the public event its slice publishes
+
+When an outbound Translate slice publishes an event from the private events a command produces, the command's specification
+lists the public event after the private ones (`then ProductPriceChanged` after `then ProductPriceSet`). `PLAY0285` follows the
+outbound projection (decision 0098); the accepted path is proven where the command is. An exact fact count
+fails without it.
+
 ### Version skew: cascades and the false `PLAY0285`
 
 `PLAY0285` (a specification's expected event contradicts every producer of its

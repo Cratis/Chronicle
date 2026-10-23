@@ -104,7 +104,7 @@ and wrong source/stream, and unrouted input. Read [specification route forms](so
 
 ESM v10 carries reaction system identity, production route overrides and observer filters as one
 frozen contract. A consumer admitting v10 must include all three, not just identity.
-Composite **read-model** keys are separate and remain unadmitted (PLAY0268).
+Composite **read-model** keys are separate and select v27 (`language-admission.md`).
 
 The CLI/Stage pair admits through its newest version to construct checks: production overrides
 still refuse STAGE-ESM-036; reaction/reducer filters render on the semantic path,

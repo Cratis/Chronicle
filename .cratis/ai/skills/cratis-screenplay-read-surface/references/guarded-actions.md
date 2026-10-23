@@ -65,6 +65,9 @@ of executing the newly selected command.
 
 ## Guard boundaries
 
+A guard hides an offer; it does not make a command on an unknown id fail. Existence is refused in the
+command: [refuse a command on an unknown id](../../cratis-screenplay-command-surface/references/constraints-produces-concurrency.md#refuse-a-command-on-an-unknown-id).
+
 Conditions compare item paths to literals, not other paths, route/screen state,
 `$context` or `$env`. Equality/inequality, numeric ordering, string contains/starts
 with and grouped and/or are supported; and binds tighter than or. Collections

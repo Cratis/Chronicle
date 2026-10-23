@@ -11,6 +11,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 {
   "observers": {
     "subscriberTimeout": 30,
+    "abandonedDeliveryHold": 300,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -28,6 +29,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
+| abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
 | maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
@@ -63,18 +65,40 @@ Every path that hands events to an observer's subscriber — live delivery, catc
 `subscriberTimeout` seconds for an answer. When it elapses, the batch is recorded as a failed partition of kind
 `Timeout` and the partition retries with the usual backoff.
 
-Two things are worth knowing before changing it:
+Giving up abandons the wait, not the work. For gRPC reactors and reducers, Chronicle holds the subscriber turn
+open after the timeout and fences that partition before recovery can send another batch. Raising the setting past
+the transport's own response timeout does not extend the transport's wait.
 
-- **Giving up abandons the wait, not the work.** The subscriber is a grain and keeps processing the batch it was
-  handed; the events are simply redelivered when the partition retries. Observers are expected to be idempotent, so
-  that is safe — but it does mean a short timeout can have a subscriber working on a batch the kernel has already
-  written off.
-- **Raising it past the transport's own response timeout has no effect**, because that one gives up first. The
-  default deliberately matches it, so the setting bounds nothing new until you lower it. Lowering it is the point:
-  a subscriber that should always answer in a second or two gets its partition back into retry quickly instead of
-  holding a job step for half a minute.
+Set it to `0` to wait indefinitely. This also disables abandoned-delivery fencing.
 
-Set it to `0` to wait indefinitely — the escape hatch for a subscriber whose work legitimately has no upper bound.
+## Abandoned client deliveries
+
+`abandonedDeliveryHold` defaults to **300 seconds after the delivery deadline**. A positive value smaller than
+`subscriberTimeout` uses the subscriber timeout instead. Set it to `0` or less to restore immediate, unfenced
+recovery. Kernel-owned subscribers and webhooks keep their existing behavior.
+
+Live delivery records the timeout without waiting inline. Retry, catch-up and replay wait for a barrier on the
+**original subscriber activation**, not a replacement client. Superseding a connected client or removing its target
+from the subscription does not prove its work ended. Unaffected partitions can continue. A failed or timed-out
+barrier call — including an unavailable original silo — keeps the fence until the maximum hold unless a later
+barrier succeeds. Chronicle never treats a placement exception as proof that the old activation drained.
+
+Each dispatch carries optional deadlines in its internal subscriber context; no gRPC contract or client upgrade
+is required. A queued delivery that arrives after its deadline is rejected before reaching the client mediator.
+Results received after the deadline are discarded, and a late reducer result cannot write to the sink. Pending
+turns end when the client answers, disconnects, or the hold expires. Timeout failure attempts persist the original
+target identity and release deadline. After reactivation, an old or unparseable identity is held conservatively for
+`abandonedDeliveryHold` from the failure time; recovery never substitutes the current subscription target.
+
+:::caution[A maximum hold is not cancellation]
+After the maximum hold, a disconnected or wedged client might still be running user code. Fencing prevents overlap
+within this bounded window; it does not provide exactly-once side effects. Keep external side effects idempotent.
+Live fences survive an ordinary failure clearance in memory, but clearing their persisted failure history followed
+by a kernel restart loses that history. Rolling back to an older kernel also loses the fence behavior.
+:::
+
+Use the [abandoned-delivery logs and metrics](../alerting-on-observer-failures.md#abandoned-client-deliveries) to tell
+a slow client from a failed one before reducing the hold.
 
 ## What a failed partition says went wrong
 
