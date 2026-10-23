@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
@@ -37,7 +36,9 @@ public class and_the_reactor_observes_an_inbox(context context) : Given<context>
             var handler = await EventStore.Reactors.Register<InboxReplayReactor>();
             ObservedSequence = handler.EventSequenceId;
             await handler.WaitTillActive();
-            await EventStore.Subscriptions.Subscribe("inbox-replay", InboxReplayReactor.SourceEventStore,
+            await EventStore.Subscriptions.Subscribe(
+                "inbox-replay",
+                InboxReplayReactor.SourceEventStore,
                 builder => builder.WithEventType<InboxReplayEvent>());
 
             var outbox = source.GetEventSequence(EventSequenceId.Outbox);
