@@ -192,7 +192,7 @@ jobs:
       - name: Pack Release build output
         run: |
           set -euo pipefail
-          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB; do
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Api; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
@@ -514,9 +514,9 @@ jobs:
 
       - name: Run API integration tests with coverage
         working-directory: ./Integration/Api
-        # Keep build enabled for .NET 10 test projects. `--no-build` causes an
-        # invalid test assembly argument failure in this workflow context.
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        # --no-build: run the Release build from the downloaded artifact instead of recompiling
+        # the kernel. The pack step in dotnet-build fails if this project's output is missing.
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
 
       - name: Assert API integration tests ran
         uses: ./.github/actions/assert-tests-ran
