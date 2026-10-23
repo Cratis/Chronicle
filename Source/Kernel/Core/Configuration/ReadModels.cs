@@ -15,6 +15,25 @@ public class ReadModels
     public int ReplayedVersionsToKeep { get; init; } = 1;
 
     /// <summary>
+    /// Gets the snapshot retention count. This is an alias of <see cref="ReplayedVersionsToKeep"/>; either configuration key sets the same value.
+    /// </summary>
+    public int SnapshotsToKeep
+    {
+        get => ReplayedVersionsToKeep;
+        init => ReplayedVersionsToKeep = value;
+    }
+
+    /// <summary>
+    /// Gets how long retired generations keep following for rollback. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan RollbackWindow { get; init; } = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Gets the maximum number of retired generations that keep following. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public int MaxFollowingRetiredGenerations { get; init; } = 1;
+
+    /// <summary>
     /// Gets a value indicating whether a read model write is made conditional on the incoming event advancing the
     /// read model's last handled event sequence number.
     /// </summary>
