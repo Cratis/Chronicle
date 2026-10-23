@@ -54,6 +54,9 @@ public class ObserverState
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
 
+    /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
+    public string? WebhookProbe { get; set; }
+
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
     /// </summary>
@@ -113,4 +116,15 @@ public class ObserverState
     /// Gets or sets a value indicating whether the observer subscribes to all event types.
     /// </summary>
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled by the observer.
+    /// </summary>
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled per event type, or null for legacy rows.
+    /// </summary>
+    [Json]
+    public IDictionary<string, ulong>? HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
 }

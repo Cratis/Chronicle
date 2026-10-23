@@ -175,6 +175,7 @@ public partial class EventSequence(
     {
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
+        DisposeSpillRetry();
         ConstraintIndexCatchUpSlots.For(storage).Complete(this);
         _catchUpTracking = false;
         _catchUpReplay = null;
@@ -973,18 +974,6 @@ public partial class EventSequence(
         catch (Exception ex)
         {
             logger.FailedPersistingStateAfterAppends(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
-        }
-    }
-
-    async Task SpillAppendedEventsQueuesToCatchup()
-    {
-        try
-        {
-            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedSpillingAppendedEventsQueuesToCatchup(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
         }
     }
 

@@ -5,6 +5,7 @@ using System.Collections.Frozen;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -67,6 +68,15 @@ public class MongoDBKernelStateResetHandler(
             !_preservedDatabases.Contains(n)
             && !string.Equals(n, clusterDatabase, StringComparison.OrdinalIgnoreCase)
             && (string.IsNullOrEmpty(prefix) || n.StartsWith(prefix, StringComparison.Ordinal))).ToList();
+        foreach (var name in droppedNames)
+        {
+            var receipts = client.GetDatabase(name).GetCollection<BsonDocument>("generation-initialization");
+            if (await receipts.CountDocumentsAsync(Builders<BsonDocument>.Filter.Exists("receipt")) != 0)
+            {
+                throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+            }
+        }
+
         var fullyDropped = new List<string>();
         foreach (var name in droppedNames)
         {

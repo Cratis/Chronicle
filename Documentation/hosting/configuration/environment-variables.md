@@ -61,14 +61,20 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
 | Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin | Force a password change on the admin's first login |
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
+| Cratis__Chronicle__Jobs__MaxParallelStepsWithoutJobsRole | Maximum parallel job steps on a silo with the jobs role disabled |
 | Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
+| Cratis__Chronicle__Clustering__Roles__Jobs | Whether this node has the jobs role (default `true`) |
+| Cratis__Chronicle__Clustering__JobsFallback | Fallback when no Jobs silo is available (default `AnySilo`; `Wait` is rejected) |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
 | Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
 | Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |

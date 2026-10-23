@@ -6,16 +6,18 @@ description: Configure how multiple Chronicle Server nodes form one Orleans clus
 Clustering configuration controls how multiple Chronicle Server nodes form one Orleans cluster and how grain workloads are distributed across them. This enables horizontal scale out and assigning specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
 
 > [!WARNING]
-> The clustering type defaults to `Localhost`, which is single-node membership, regardless of storage
-> type. A deployment with multiple nodes must explicitly select `MongoDB` with MongoDB storage, or `Sql`
-> with SQL Server or PostgreSQL storage, on every node. Nodes left on `Localhost` do not join one cluster,
-> even when they share storage. The localhost-clustering warning is only logged for non-local MongoDB
-> storage; it is not a safeguard for SQL deployments.
+> The clustering type defaults to `Localhost`, which means **one active node per kernel storage**,
+> not one independent node per container. A single-writer lease guards this rule by default on MongoDB,
+> PostgreSQL, SQL Server and SQLite. A second node waits without activating grains or processing events,
+> then fails startup if its acquisition timeout expires. Changing `clusterId` or `serviceId` does not
+> bypass this guard. `InMemory` is process-local and never takes a lease.
 >
-> All nodes must share the same cluster database, `clusterId` and `serviceId`. Configure the type through
-> `clustering.type` in `chronicle.json` or `Cratis__Chronicle__Clustering__Type`. Unsupported combinations
-> fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB` requires MongoDB storage.
-> SQLite and in-memory storage do not support multi-node clustering.
+> A deployment with multiple active nodes must explicitly select `MongoDB` with MongoDB storage, or `Sql`
+> with SQL Server or PostgreSQL storage, on every node. These modes use cluster membership rather than
+> the single-writer lease. All nodes must share the same cluster database, `clusterId` and `serviceId`.
+> Configure the type through `clustering.type` in `chronicle.json` or `Cratis__Chronicle__Clustering__Type`.
+> Unsupported combinations fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB`
+> requires MongoDB storage. SQLite and in-memory storage do not support multi-node clustering.
 
 ## Use cases
 
@@ -35,7 +37,8 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
     "serviceId": "chronicle",
     "roles": {
       "eventSequences": true,
-      "observers": true
+      "observers": true,
+      "jobs": true
     }
   }
 }
@@ -78,6 +81,7 @@ After a node is lost, observers can lag behind the event log until the observer 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
+| jobsFallback | string | AnySilo | Fallback when no Jobs silo is available. Only `AnySilo` is currently supported; `Wait` is rejected at startup until durable waiting is supported. This option does not change placement yet. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
 | gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
 | clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
@@ -91,6 +95,9 @@ After a node is lost, observers can lag behind the event log until the observer 
 | tableRefreshTimeout | timespan | Orleans default | Interval between fetching membership table updates. Applies to `MongoDB` and `Sql` clustering. |
 | iAmAliveTablePublishTimeout | timespan | Orleans default | Interval between publishing this silo's heartbeat to the membership table. Applies to `MongoDB` and `Sql` clustering. |
 | numProbedSilos | number | Orleans default | Number of other silos each silo probes for liveness. Applies to `MongoDB` and `Sql` clustering. |
+| singleWriterLease.enabled | boolean or null | null (automatic) | Enables the lease for `Localhost` on persistent storage. Set `false` only when another mechanism guarantees one writer. Does not enable a lease for `MongoDB` or `Sql` clustering, or `InMemory` storage. |
+| singleWriterLease.ttl | timespan | 00:00:30 | Database lease lifetime; minimum five seconds. |
+| singleWriterLease.acquireTimeout | timespan | 00:02:00 | Maximum startup wait. Zero makes one acquisition attempt; negative values are invalid. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
 
@@ -98,6 +105,33 @@ The optional membership settings above keep the Orleans defaults when omitted. T
 `hh:mm:ss` format. Configure the same values on every node. Shorter timeouts detect failures sooner,
 but can also mark healthy nodes as failed during network delays or heavy load. Orleans validates the
 membership options at startup; these settings do not change localhost clustering.
+
+## Single-writer lease
+
+The node acquires the fixed `kernel` lease in the system/cluster database **before** Orleans runtime
+initialization. No grains, observer rehydration or processing start until acquisition succeeds. Waiting
+nodes are not ready. Acquisition waits at most `acquireTimeout`; the timeout error identifies the last
+known holder, host and expiry. Temporary storage failures are retried within that budget.
+
+The holder renews every TTL/3. If it cannot confirm a renewal for TTL/2 (15 seconds by default), it marks
+readiness unhealthy, logs at Critical level and requests shutdown with a nonzero process exit code. A
+watchdog forces process termination before the original TTL expires if graceful shutdown gets stuck.
+A renewal rejected because ownership was lost fences the process immediately. Set the TTL so that half
+of it comfortably exceeds the host's shutdown timeout. Your restart policy must restart failed processes.
+
+During normal shutdown, renewal continues until the silo has stopped its grains and runtime services;
+then the lease is released. After SIGKILL, a crash or a lost release, a successor waits at most the
+remaining TTL rather than requiring manual cleanup. The lease row/document remains for diagnostics;
+expiry is not driven by a MongoDB TTL index.
+
+PostgreSQL, SQL Server and MongoDB use **database server time** for acquisition, renewal and expiry, not
+the application's wall clock. MongoDB requires version 5.0 or later for server-time `$dateAdd` update pipelines.
+SQLite uses the host clock: sharing a SQLite file across hosts with unsynchronized clocks is unsupported,
+as are network shares without reliable file locking.
+
+Disabling `singleWriterLease.enabled` preserves unguarded single-node behavior. If storage is remote,
+the server warns about the risk, including for PostgreSQL and SQL Server. This is an escape hatch, not a
+way to scale out. See [Production scaling](../production.md#scaling) for safe replacement deployments.
 
 ## Configuration examples
 
@@ -152,17 +186,75 @@ The kernel binds port 35000 and any dedicated health port before starting the Or
 
 An open TCP port is not readiness. Non-health requests receive HTTP 503 with `Retry-After` or gRPC `Unavailable` until ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts: separate listener liveness from silo readiness. See [Health Endpoint](health-endpoint.md) for dedicated-port probe examples.
 
+## Jobs role and metadata
+
+All three roles (`eventSequences`, `observers` and `jobs`) default to `true`. Startup refuses a node
+with all three disabled. Existing configurations that disable both older roles remain valid because
+`jobs` defaults to `true`.
+
+Set `clustering.roles.jobs` to `false` (environment variable
+`Cratis__Chronicle__Clustering__Roles__Jobs=false`) to reduce that silo's concurrent job step budget.
+This is a foundation for dedicated job workers, not placement enforcement: job steps can still run on
+any compatible silo. Job controllers are unchanged. See [Job throttling](job-throttling.md) for the
+reduced budget and its override.
+
+Silos advertise version `1` under `cratis.chronicle.roles.v` and Boolean strings under
+`cratis.chronicle.role.eventSequences`, `cratis.chronicle.role.observers` and
+`cratis.chronicle.role.jobs` in Orleans silo metadata. Chronicle merges these namespaced keys with
+host-provided metadata; unrelated keys are preserved. A silo without recognized, complete metadata
+has unknown roles. Placement prefers silos known to have the required role over silos with unknown roles.
+
+Chronicle enables Orleans silo metadata itself, so hosts should not call `UseSiloMetadata` after
+`AddChronicleToSilo`. When the host has already enabled it before Chronicle, Chronicle only merges its keys.
+
+During a rolling upgrade, silos on the new version log errors when fetching metadata from older silos.
+This is expected and harmless: those silos' roles are read as unknown.
+
+`clustering.jobsFallback` defaults to `AnySilo`. `Wait` is reserved and rejected at startup until
+durable waiting support is available (Cratis/Orleans#129). Do not configure `Wait` yet.
+
 ## Behavior
 
-Role-based placement is applied by custom Orleans placement directors - one for event sequence grains and one for observer grains. When a grain needs to be activated, the director running on the silo that makes the placement decision:
+Role-based placement is applied by custom Orleans placement directors for event sequence and observer
+grains. The silo making the placement decision starts with the silos Orleans reports as compatible
+with the grain type, and selects the first nonempty tier:
 
-1. Starts from the silos Orleans reports as compatible with the grain type.
-2. Removes **this** silo from the candidates when this silo has the grain's role disabled.
-3. Selects one of the remaining candidates at random.
-4. Throws an `InvalidOperationException` when no candidate remains - for example, when every silo has that role disabled.
+1. Silos known to have the required role.
+2. Silos with unknown roles, including older silos without metadata.
+3. No eligible silo: placement fails with `InvalidOperationException`.
 
-> [!NOTE]
-> A placement director only sees the role configuration of the silo it runs on. It can keep a grain off the local silo when the local role is disabled, but it does not currently guarantee that a grain is never placed on a *remote* silo whose role is disabled. Role-based isolation is therefore best-effort today - treat the role settings as a scheduling hint rather than a hard cluster-wide guarantee, and run homogeneous nodes (all roles enabled, the default) when every node must accept every grain.
+Within the selected tier, placement is random. The local silo's roles come from its own configuration,
+not its cached metadata. With the default configuration (all roles enabled on every silo), every
+compatible silo remains eligible and random placement is unchanged.
+
+Observer and event sequence placement never falls back to a silo known to lack the role. If every
+compatible silo has the role disabled, the exception names the missing role and its configuration:
+
+- `No silo has the Observers role or unknown roles for observer grain placement; enable Cratis:Chronicle:Clustering:Roles:Observers on at least one compatible silo.`
+- `No silo has the EventSequences role or unknown roles for event sequence grain placement; enable Cratis:Chronicle:Clustering:Roles:EventSequences on at least one compatible silo.`
+
+This is stricter than local-only placement: if all event sequence hosts are unavailable, appends can
+fail rather than activate event sequence grains on a silo known to have that role disabled. Keep at
+least one compatible host for each required role available.
+
+The registered job worker director additionally permits silos known to lack `Jobs` as a last resort
+with `jobsFallback: AnySilo`, and warns once on each transition into or out of that fallback. It is
+not yet applied to job steps, so their placement is unchanged in this release. If no compatible silo
+is eligible, its exception says `No compatible silo is eligible for the Jobs role; enable Cratis:Chronicle:Clustering:Roles:Jobs on at least one compatible silo.`
+
+### Rolling upgrades
+
+Cluster-wide role enforcement requires every silo to run this release. Older silos retain their
+local-only directors and can still place grains on remote silos with the role disabled. Silos without
+metadata are treated as potentially having every role, but are selected only when no compatible silo
+is known to have the required role. Already-active grains are not migrated.
+
+Configure `jobsFallback` uniformly across the cluster: the deciding silo's configuration applies.
+`JobWorkerPlacementStrategy` is registered ahead of use. Applying it to job steps must ship in a later
+release, after every silo has the registration. Orleans throws for an unregistered strategy name;
+it does not fall back to its default placement strategy. Keep a two-release gap before applying the
+attribute. Clusters skipping the registration release must complete that upgrade before upgrading to
+a release that applies the attribute; a version gap alone does not make an unregistered silo safe.
 
 ## Deploying a single node
 
@@ -175,4 +267,9 @@ Chronicle uses custom Orleans placement strategies for role-based placement:
 - **EventSequencePlacementStrategy**: applied to `EventSequence` grains and resolved by `EventSequencePlacementDirector`
 - **ObserverPlacementStrategy**: applied to `Observer` grains (the base class for reactors, reducers, and projections) and resolved by `ObserverPlacementDirector`
 
-Each director consults the `Clustering.Roles` configuration of the silo it runs on and selects a compatible node using random placement, excluding the local silo when its own role for that grain type is disabled.
+- **JobWorkerPlacementStrategy**: registered with `JobWorkerPlacementDirector`, but not yet applied to job steps
+
+The directors share `IRoleEligibility`, which uses the local `Clustering.Roles` configuration and
+remote silo metadata to choose the highest available tier. Observer and event sequence directors
+exclude known role-disabled silos; the job worker director allows them only as the `AnySilo` fallback.
+All three select randomly within their eligible tier.

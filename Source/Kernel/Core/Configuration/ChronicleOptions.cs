@@ -228,11 +228,28 @@ public class ChronicleOptions : IValidatableObject
                 [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
         }
 
-        foreach (var condition in Alerts.Conditions.Where(_ => _.Value.RaiseAfter < TimeSpan.Zero))
+        var alertErrors = Alerts.Conditions
+            .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
+            .Select(_ => new ValidationResult(
+                $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
+                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
+        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        if (!Webhooks.Probe.HasValidTiming)
         {
-            yield return new ValidationResult(
-                $"Alerts.Conditions['{condition.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
-                [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{condition.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]);
+            yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateSingleWriterLease()
+    {
+        if (Clustering.SingleWriterLease.Ttl < TimeSpan.FromSeconds(5))
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.Ttl must be at least five seconds.", ["Clustering.SingleWriterLease.Ttl"]);
+        }
+
+        if (Clustering.SingleWriterLease.AcquireTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
         }
     }
 }

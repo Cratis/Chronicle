@@ -40,6 +40,10 @@ public class Storage(
     public ISystemStorage System => new SystemStorage(database);
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
+        new ClusterStorage(database, expandoObjectConverter, jsonSerializerOptions, jobsStorage, options, loggerFactory).ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
         var collection = GetCollection();

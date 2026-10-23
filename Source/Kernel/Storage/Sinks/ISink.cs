@@ -102,6 +102,16 @@ public interface ISink
     Task BeginBulk();
 
     /// <summary>
+    /// Join the open bulk window, or begin one when none is open.
+    /// </summary>
+    /// <remarks>
+    /// Resuming work whose writers may still be running must not replace their window: replacing it discards the writes
+    /// they queued in it, and a writer that has not confirmed the window yet cannot tell.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeBulk() => BeginBulk();
+
+    /// <summary>
     /// Drain buffered writes while keeping the bulk window open.
     /// </summary>
     /// <returns>The window identity and unreported buffered write failures.</returns>

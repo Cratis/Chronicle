@@ -24,4 +24,23 @@ public interface IStatisticsReader
     /// <param name="eventStore">The <see cref="EventStoreName"/> to read for.</param>
     /// <returns>The rows.</returns>
     Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Gets the per event type rows for one namespace, honoring cancellation.
+    /// </summary>
+    /// <param name="eventStore">The event store to read.</param>
+    /// <param name="namespace">The namespace to read.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The complete rows, or a failure if the row limit is reached.</returns>
+    Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatistics(EventStoreName eventStore, EventStoreNamespaceName @namespace, CancellationToken cancellationToken) =>
+        GetEventTypeStatistics(eventStore, @namespace).WaitAsync(cancellationToken);
+
+    /// <summary>
+    /// Gets rows across a snapshot of namespace membership with bounded concurrency, honoring cancellation.
+    /// </summary>
+    /// <param name="eventStore">The event store to read.</param>
+    /// <param name="cancellationToken">Cancels discovery and contributing reads.</param>
+    /// <returns>All contributing rows. A failed or capped contributor fails the entire request.</returns>
+    Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore, CancellationToken cancellationToken) =>
+        GetEventTypeStatisticsForEventStore(eventStore).WaitAsync(cancellationToken);
 }

@@ -446,55 +446,6 @@ public class HandleEventsForPartition(
             string.Empty));
     }
 
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
-    {
-        if (eventObservationState != EventObservationState.None)
-        {
-            return events.Current.Select(@event =>
-                @event with
-                {
-                    Context = @event.Context with
-                    {
-                        ObservationState = eventObservationState
-                    }
-                }).ToArray();
-        }
-
-        return events.Current.ToArray();
-    }
-
-    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
-    {
-        if (nonRedactionEventTypeIds.Count == 0)
-        {
-            return events;
-        }
-
-        var filtered = new AppendedEvent[events.Length];
-        var count = 0;
-        foreach (var @event in events)
-        {
-            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
-            {
-                filtered[count++] = @event;
-                continue;
-            }
-
-            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
-            {
-                continue;
-            }
-
-            var originalEventTypeId = originalEventTypeObj?.ToString();
-            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
-            {
-                filtered[count++] = @event;
-            }
-        }
-
-        return count == filtered.Length ? filtered : filtered[..count];
-    }
-
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
@@ -578,9 +529,7 @@ public class HandleEventsForPartition(
     {
         try
         {
-            var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
-            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
-            eventsToHandle = filters.Apply(eventsToHandle);
+            var eventsToHandle = ObserverEventPreparation.Prepare(state.EventObservationState, events.Current, nonRedactionEventTypeIds, filters);
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
