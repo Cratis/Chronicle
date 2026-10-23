@@ -24,7 +24,6 @@
         <!-- Microsoft.NET.Test.Sdk, xunit.runner.visualstudio and NSubstitute come from Source/Directory.Build.props. -->
         <PackageReference Include="xunit.v3.mtp-off" />
         <PackageReference Include="Cratis.Specifications.XUnit.v3" />
-        <PackageReference Include="Cratis.Specifications" VersionOverride="5.0.0" />
     </ItemGroup>
 
     <ItemGroup>

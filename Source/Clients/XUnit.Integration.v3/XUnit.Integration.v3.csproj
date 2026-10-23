@@ -48,7 +48,7 @@
         <PackageReference Include="SSH.NET" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit.v3" />
-        <PackageReference Include="Cratis.Specifications" VersionOverride="5.0.0" />
+        <!-- Cratis.Specifications 5 arrives transitively through Cratis.Specifications.XUnit.v3; the central pin (4.x) only binds direct references. -->
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
