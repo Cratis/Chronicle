@@ -107,6 +107,7 @@ public class Sink(
     readonly object _bulkLock = new();
     readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
+    readonly HashSet<BsonValue> _bulkDestinations = [];
     readonly List<BulkBatch> _inFlight = [];
     readonly Dictionary<BulkBatch, BulkOutcome> _unreportedBulkOutcomes = [];
     readonly Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
@@ -696,6 +697,7 @@ public class Sink(
     void ClearBulkOperations()
     {
         _bulkOperations.Clear();
+        _bulkDestinations.Clear();
         _bulkOperationMetadata.Clear();
         _currentBulkSize = 0;
     }
@@ -1196,7 +1198,8 @@ public class Sink(
     {
         while (true)
         {
-            Task closing;
+            Task? closing;
+            BulkBatch? full = null;
             lock (_bulkLock)
             {
                 if (!_isBulkMode)
@@ -1204,20 +1207,40 @@ public class Sink(
                     return false;
                 }
 
-                if (_closing is null)
+                closing = _closing?.Task;
+                if (closing is null)
                 {
-                    var operationIndex = _bulkOperations.Count;
-                    _bulkOperations.Add(operation);
-                    _bulkOperationMetadata[operationIndex] = (key, partition, eventSequenceNumber);
-                    _currentBulkSize += EstimateOperationSize(operation);
-                    whenQueued?.Invoke();
-                    return true;
+                    var destination = writes.MaxBatchSize.HasValue ? converter.ToBsonValue(key) : null;
+                    if (writes.MaxBatchSize is { } cap && _bulkDestinations.Count >= cap && !_bulkDestinations.Contains(destination!))
+                    {
+                        // Detach under the admission lock: concurrent producers cannot overfill a fenced batch.
+                        full = TakeBulkBatch();
+                    }
+                    else
+                    {
+                        var operationIndex = _bulkOperations.Count;
+                        _bulkOperations.Add(operation);
+                        if (destination is not null)
+                        {
+                            _bulkDestinations.Add(destination);
+                        }
+                        _bulkOperationMetadata[operationIndex] = (key, partition, eventSequenceNumber);
+                        _currentBulkSize += EstimateOperationSize(operation);
+                        whenQueued?.Invoke();
+                        return true;
+                    }
                 }
-
-                closing = _closing.Task;
             }
 
-            await closing;
+            if (full is not null)
+            {
+                // Leave failures in the outcome ledger for FlushBulk/EndBulk; never consume and discard them here.
+                await CompleteBulkBatch(full);
+            }
+            else
+            {
+                await closing!;
+            }
         }
     }
 
@@ -1226,7 +1249,8 @@ public class Sink(
         bool shouldFlush;
         lock (_bulkLock)
         {
-            shouldFlush = _bulkOperations.Count >= MaxBulkOperations || _currentBulkSize >= MaxBulkSizeInBytes;
+            shouldFlush = _bulkOperations.Count >= MaxBulkOperations || _currentBulkSize >= MaxBulkSizeInBytes ||
+                (writes.MaxBatchSize is { } cap && _bulkDestinations.Count >= cap);
         }
 
         if (shouldFlush)

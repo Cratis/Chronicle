@@ -33,6 +33,9 @@ public sealed partial class FencedSinkWrites(IFenceTokenSource tokens, IFencedBa
     }
 
     /// <inheritdoc/>
+    public int? MaxBatchSize => _cap;
+
+    /// <inheritdoc/>
     public bool IsInBatch => _session.Value is not null || _splitting.Value;
 
     /// <inheritdoc/>

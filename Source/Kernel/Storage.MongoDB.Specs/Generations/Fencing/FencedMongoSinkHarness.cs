@@ -39,6 +39,11 @@ public class FencedMongoSinkHarness : ISinkHarness
     public IFencedBatchProbe Probe { get; set; } = new NullFencedBatchProbe();
 
     /// <summary>
+    /// Gets or sets the maximum distinct destination documents per fenced batch.
+    /// </summary>
+    public int MaxBatchSize { get; set; } = 500;
+
+    /// <summary>
     /// Gets the <see cref="IMongoDatabase"/> the sink was created in.
     /// </summary>
     public IMongoDatabase Database { get; private set; } = default!;
@@ -56,7 +61,7 @@ public class FencedMongoSinkHarness : ISinkHarness
         Database = _client.GetDatabase(_databaseName);
         _gates = new FenceGates(Database);
         Token = _gates.Claim(MaterializationKey, definition.LatestGeneration.Value).GetAwaiter().GetResult();
-        var writes = new FencedSinkWrites(new FixedFenceTokenSource(Token), new FencedBatchExecutor(new MongoFenceStore(Database), FenceRetryPolicy.Default, Probe));
+        var writes = new FencedSinkWrites(new FixedFenceTokenSource(Token), new FencedBatchExecutor(new MongoFenceStore(Database), FenceRetryPolicy.Default, Probe), MaxBatchSize);
 
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);

@@ -17,6 +17,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 public interface ISinkWrites
 {
     /// <summary>
+    /// Gets the maximum distinct destination documents in a fenced transaction, or null for unfenced writes.
+    /// </summary>
+    int? MaxBatchSize { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the current flow is inside a batch, where writes must be executed directly rather than buffered.
     /// </summary>
     bool IsInBatch { get; }

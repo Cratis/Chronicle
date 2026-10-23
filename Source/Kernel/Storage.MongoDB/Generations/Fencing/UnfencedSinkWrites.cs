@@ -17,6 +17,9 @@ public sealed class UnfencedSinkWrites : ISinkWrites
     public static readonly UnfencedSinkWrites Instance = new();
 
     /// <inheritdoc/>
+    public int? MaxBatchSize => null;
+
+    /// <inheritdoc/>
     public bool IsInBatch => false;
 
     /// <inheritdoc/>
