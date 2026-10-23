@@ -870,7 +870,7 @@ public class Sink(
     {
         await collections.ResumeReplay(context);
         await EnsureIndexes();
-        await BeginBulk();
+        await ResumeBulk();
     }
 
     /// <inheritdoc/>
