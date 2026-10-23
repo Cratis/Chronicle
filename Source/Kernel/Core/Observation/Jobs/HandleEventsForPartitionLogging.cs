@@ -64,4 +64,6 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step could not report partition {Partition} as failed at event sequence number {FailedAt}; the job runs the step again and reports it when the attempts run out")]
     internal static partial void FailedReportingPartitionFailed(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition, EventSequenceNumber failedAt);
+    [LoggerMessage(LogLevel.Warning, "Could not release the projection subscriber after handling partition {Partition}; the step result is unchanged")]
+    internal static partial void FailedReleasingSubscriber(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition);
 }

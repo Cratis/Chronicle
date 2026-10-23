@@ -424,7 +424,8 @@ class [GrainType("patterncapturesubscriptions")] Cratis.Chronicle.Patterns.Patte
 
 class [GrainType("patternminer")] Cratis.Chronicle.Patterns.PatternMiner
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(1)]
+  C9EEF4F2: ReleaseAfterPartition() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation")] Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation [Version(0)]
 
@@ -460,7 +461,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionFutures")
   FD8C8E35: GetFutures() -> Task<System.Collections.Generic.IEnumerable<ProjectionFuture>>
   74D908B1: ResolveFuture(Cratis.Chronicle.Concepts.Projections.ProjectionFutureId) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(1)]
+  012FE865: ReleaseAfterPartition() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(0)]
   E36EB1EC: Ensure() -> Task

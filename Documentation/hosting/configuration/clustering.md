@@ -204,6 +204,24 @@ with `jobsFallback: AnySilo`, and warns once on each transition into or out of t
 not yet applied to job steps, so their placement is unchanged in this release. If no compatible silo
 is eligible, its exception says `No compatible silo is eligible for the Jobs role; enable Cratis:Chronicle:Clustering:Roles:Jobs on at least one compatible silo.`
 
+### Projection subscriber locality
+
+Kernel projection subscribers use Orleans' built-in prefer-local placement. A cold partition normally
+activates beside its live observer; during replay or catch-up it activates beside the partition job
+step instead. The subscriber key is unchanged, including the subscription's silo address. Client
+reactors and reducers retain their client-addressed routing.
+
+A partition step requests subscriber deactivation after success, failure or cancellation. Release is
+best effort: a failure is logged without changing the step result. Orleans drains the activation before
+reactivation, allowing the next delivery to choose locality again. Subscriber fields contain only
+rebuildable definitions, pipeline references and caches; delivery is awaited before release. No durable
+checkpoint or sink state is discarded.
+
+This is a preference, not a dedicated role or a migration of a warm activation. A collapsing projection
+keeps its shared all-partitions activation and its existing serialization; it does not fan out by job
+step. The built-in strategy needs no new server-side registration during rolling upgrades. Complete
+the upgrade on all silos to get the new release behavior consistently.
+
 ### Rolling upgrades
 
 Cluster-wide role enforcement requires every silo to run this release. Older silos retain their

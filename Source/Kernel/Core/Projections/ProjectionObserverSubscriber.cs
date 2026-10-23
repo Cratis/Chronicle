@@ -19,6 +19,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using Orleans.Placement;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
@@ -33,7 +34,8 @@ namespace Cratis.Chronicle.Projections;
 /// <para>
 /// Which of the two interfaces a projection subscribes as decides how its activations are keyed, and that is the
 /// whole difference between them: a projection keyed on the event source id gets an activation per partition,
-/// spread across the cluster, while a projection whose key can collapse several event sources onto one document
+/// placed next to its caller (the observer for live delivery or the job step for a rebuild), while a projection
+/// whose key can collapse several event sources onto one document
 /// gets a single activation for every partition. The latter is what makes the coarse mode of
 /// <see cref="ProjectionHandleLock"/> - which is process local - sufficient: without it, two silos would run the
 /// read-modify-write cycle against the same document without seeing each other's lock. The cost is that a
@@ -46,6 +48,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="logger">The logger.</param>
+[PreferLocalPlacement]
 public class ProjectionObserverSubscriber(
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
@@ -84,6 +87,15 @@ public class ProjectionObserverSubscriber(
     {
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+    }
+
+    /// <inheritdoc/>
+    public Task ReleaseAfterPartition()
+    {
+        // All retained fields are definitions, pipeline references or rebuildable caches. Delivery has completed
+        // before this call; Orleans drains the activation before the next caller reactivates the same key.
+        this.DeactivateOnIdle();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

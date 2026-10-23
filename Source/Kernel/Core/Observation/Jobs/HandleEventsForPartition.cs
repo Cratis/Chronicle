@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -161,6 +162,180 @@ public class HandleEventsForPartition(
 
     /// <inheritdoc/>
     protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await HandlePartition(currentState, cancellationToken);
+        }
+        finally
+        {
+            await ReleaseSubscriber(currentState.Partition);
+        }
+    }
+
+    /// <summary>
+    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
+    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
+    /// left without a failed partition to retry it.
+    /// </summary>
+    /// <param name="partition">The partition the step was handling.</param>
+    /// <param name="failedAt">The sequence number the partition failed at.</param>
+    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
+    /// <param name="error">The failure.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
+    {
+        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
+            messages,
+            string.Empty));
+    }
+
+    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
+    {
+        if (eventObservationState != EventObservationState.None)
+        {
+            return events.Current.Select(@event =>
+                @event with
+                {
+                    Context = @event.Context with
+                    {
+                        ObservationState = eventObservationState
+                    }
+                }).ToArray();
+        }
+
+        return events.Current.ToArray();
+    }
+
+    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
+    {
+        if (nonRedactionEventTypeIds.Count == 0)
+        {
+            return events;
+        }
+
+        var filtered = new AppendedEvent[events.Length];
+        var count = 0;
+        foreach (var @event in events)
+        {
+            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
+            {
+                filtered[count++] = @event;
+                continue;
+            }
+
+            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+            {
+                continue;
+            }
+
+            var originalEventTypeId = originalEventTypeObj?.ToString();
+            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
+            {
+                filtered[count++] = @event;
+            }
+        }
+
+        return count == filtered.Length ? filtered : filtered[..count];
+    }
+
+    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
+
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
+    {
+        foreach (var @event in events.Current)
+        {
+            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
+            {
+                lastScanned = @event.Context.SequenceNumber;
+            }
+        }
+
+        return lastScanned;
+    }
+
+    async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
+    {
+        try
+        {
+            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            return true;
+        }
+        catch (Exception reportError)
+        {
+            logger.FailedReportingPartitionFailed(reportError, _eventSourceId, failedAt);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Reports progress from the step's background work. The state update and the debounced write run as one
+    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
+    /// </summary>
+    /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
+    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
+    {
+        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
+        if (reported.TryGetError(out var rejection))
+        {
+            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
+            return false;
+        }
+
+        return true;
+    }
+
+    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
+        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
+
+    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
+        HandleEventsForPartitionState state,
+        IEventCursor events,
+        ObserverSubscriberContext subscriberContext,
+        TimeSpan subscriberTimeout,
+        HashSet<EventTypeId> nonRedactionEventTypeIds,
+        ObserverFilters? filters,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
+            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
+            eventsToHandle = filters.Apply(eventsToHandle);
+            if (eventsToHandle.Length != 0)
+            {
+                var decryptedEvents = await DecryptEvents(eventsToHandle);
+                var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
+                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
+                return (result, decryptedEvents);
+            }
+
+            logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
+            return default(None);
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorHandling(ex, state.Partition);
+            return ex;
+        }
+    }
+
+    void LogCancelled(EventSequenceNumber lastHandledSequenceNumber, Key partition)
+    {
+        if (!lastHandledSequenceNumber.IsActualValue)
+        {
+            logger.CancelledBeforeHandlingAnyEvents(partition);
+        }
+        else
+        {
+            logger.CancelledAfterHandlingEvents(partition, lastHandledSequenceNumber);
+        }
+    }
+
+    async Task<Catch<JobStepResult>> HandlePartition(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
@@ -418,165 +593,23 @@ public class HandleEventsForPartition(
         }
     }
 
-    /// <summary>
-    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
-    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
-    /// left without a failed partition to retry it.
-    /// </summary>
-    /// <param name="partition">The partition the step was handling.</param>
-    /// <param name="failedAt">The sequence number the partition failed at.</param>
-    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
-    /// <param name="error">The failure.</param>
-    /// <returns>The <see cref="JobStepResult"/>.</returns>
-    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
-    {
-        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
-        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
-            messages,
-            string.Empty));
-    }
-
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
-    {
-        if (eventObservationState != EventObservationState.None)
-        {
-            return events.Current.Select(@event =>
-                @event with
-                {
-                    Context = @event.Context with
-                    {
-                        ObservationState = eventObservationState
-                    }
-                }).ToArray();
-        }
-
-        return events.Current.ToArray();
-    }
-
-    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
-    {
-        if (nonRedactionEventTypeIds.Count == 0)
-        {
-            return events;
-        }
-
-        var filtered = new AppendedEvent[events.Length];
-        var count = 0;
-        foreach (var @event in events)
-        {
-            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
-            {
-                filtered[count++] = @event;
-                continue;
-            }
-
-            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
-            {
-                continue;
-            }
-
-            var originalEventTypeId = originalEventTypeObj?.ToString();
-            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
-            {
-                filtered[count++] = @event;
-            }
-        }
-
-        return count == filtered.Length ? filtered : filtered[..count];
-    }
-
-    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
-
-    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
-    {
-        foreach (var @event in events.Current)
-        {
-            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
-            {
-                lastScanned = @event.Context.SequenceNumber;
-            }
-        }
-
-        return lastScanned;
-    }
-
-    async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
+    async Task ReleaseSubscriber(Key partition)
     {
         try
         {
-            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
-            return true;
-        }
-        catch (Exception reportError)
-        {
-            logger.FailedReportingPartitionFailed(reportError, _eventSourceId, failedAt);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Reports progress from the step's background work. The state update and the debounced write run as one
-    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
-    /// </summary>
-    /// <param name="lastHandled">The last handled event sequence number.</param>
-    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
-    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
-    {
-        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
-        if (reported.TryGetError(out var rejection))
-        {
-            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
-            return false;
-        }
-
-        return true;
-    }
-
-    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
-        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
-
-    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
-        HandleEventsForPartitionState state,
-        IEventCursor events,
-        ObserverSubscriberContext subscriberContext,
-        TimeSpan subscriberTimeout,
-        HashSet<EventTypeId> nonRedactionEventTypeIds,
-        ObserverFilters? filters,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
-            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
-            eventsToHandle = filters.Apply(eventsToHandle);
-            if (eventsToHandle.Length != 0)
+            switch (_subscriber)
             {
-                var decryptedEvents = await DecryptEvents(eventsToHandle);
-                var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
-                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
-                return (result, decryptedEvents);
+                case IProjectionObserverSubscriber projection:
+                    await projection.ReleaseAfterPartition();
+                    break;
+                case ICollapsingProjectionObserverSubscriber collapsingProjection:
+                    await collapsingProjection.ReleaseAfterPartition();
+                    break;
             }
-
-            logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
-            return default(None);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            logger.ErrorHandling(ex, state.Partition);
-            return ex;
-        }
-    }
-
-    void LogCancelled(EventSequenceNumber lastHandledSequenceNumber, Key partition)
-    {
-        if (!lastHandledSequenceNumber.IsActualValue)
-        {
-            logger.CancelledBeforeHandlingAnyEvents(partition);
-        }
-        else
-        {
-            logger.CancelledAfterHandlingEvents(partition, lastHandledSequenceNumber);
+            logger.FailedReleasingSubscriber(exception, partition);
         }
     }
 
