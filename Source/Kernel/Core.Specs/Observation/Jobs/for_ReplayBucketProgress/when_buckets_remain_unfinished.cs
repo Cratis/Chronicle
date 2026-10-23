@@ -29,5 +29,5 @@ public class when_buckets_remain_unfinished : Specification
 
     [Fact] void should_take_the_minimum_durable_unfinished_position() => _position.ShouldEqual((EventSequenceNumber)10UL);
     [Fact] void should_not_count_a_partial_result_as_completion() => _steps.Single(step => step.Id == _partial).Completed.ShouldBeFalse();
-    [Fact] void should_exclude_a_completed_empty_bucket() => _steps.Last().Completed.ShouldBeTrue();
+    [Fact] void should_exclude_a_completed_empty_bucket() => _steps[^1].Completed.ShouldBeTrue();
 }

@@ -25,7 +25,7 @@ public class and_a_page_reports_an_authoritative_failure : given.a_page_job_step
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
     [Fact] void should_continue_with_only_the_unhandled_healthy_suffix() => _pageSubscriber.Received(1).OnNextPage(Arg.Is<IEnumerable<AppendedEvent>>(events => events.Select(@event => @event.Context.SequenceNumber.Value).SequenceEqual(new ulong[] { 3, 5 })), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_report_the_failed_partition() => _observer.Received(1).PartitionFailed((Key)"feature", (EventSequenceNumber)2UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, failurePolicy: Arg.Any<ObserverFailurePolicy>());
+    [Fact] void should_report_the_failed_partition() => _observer.Received(1).PartitionFailed((Key)"feature", (EventSequenceNumber)2UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, failurePolicy: Arg.Any<WebhookDeliveryFailurePolicy>());
     [Fact] void should_checkpoint_the_later_healthy_events() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)5UL);
     [Fact] void should_not_bypass_page_dispatch() => _handledBatches.ShouldBeEmpty();
 }

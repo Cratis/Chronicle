@@ -23,7 +23,7 @@ public class and_a_partition_fails : given.a_performing_job_step
 
     async Task Because() => _result = await _jobStep.InvokePerformStep(_performState);
 
-    [Fact] void should_report_the_partition_once() => _observer.Received(1).PartitionFailed((Key)"feature", (EventSequenceNumber)2UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, failurePolicy: Arg.Any<ObserverFailurePolicy>());
+    [Fact] void should_report_the_partition_once() => _observer.Received(1).PartitionFailed((Key)"feature", (EventSequenceNumber)2UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Handling, failurePolicy: Arg.Any<WebhookDeliveryFailurePolicy>());
     [Fact] void should_continue_to_the_later_partition() => _handledBatches.SelectMany(batch => batch.SequenceNumbers).ShouldContain((EventSequenceNumber)3UL);
     [Fact] void should_skip_later_events_for_the_failed_partition() => _observerSubscriber.Received(1).OnNext((Key)"feature", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_checkpoint_the_later_success() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3UL);
