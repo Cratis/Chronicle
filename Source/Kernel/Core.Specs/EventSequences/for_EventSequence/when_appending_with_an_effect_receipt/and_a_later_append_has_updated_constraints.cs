@@ -28,7 +28,7 @@ public class and_a_later_append_has_updated_constraints : given.an_event_sequenc
             content.name = "one";
             return (ExpandoObject)content;
         });
-        _constraintValidation.Establish(Arg.Any<EventSourceId>(), Arg.Any<EventTypeId>(), Arg.Any<ExpandoObject>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<ConstraintBatchClaims?>())
+        _constraintValidation.Establish(Arg.Any<EventSourceId>(), Arg.Any<EventTypeId>(), Arg.Any<ExpandoObject>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<ConstraintBatchClaims?>(), Arg.Any<Subject?>(), Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(call => new ConstraintValidationContext(
                 [new UniqueConstraintValidator(_definition, _index), _recordingValidator],
                 call.ArgAt<EventSourceId>(0),

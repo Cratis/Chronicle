@@ -24,4 +24,15 @@ public record HandleEventsForPartitionArguments(
     EventSequenceNumber StartEventSequenceNumber,
     EventSequenceNumber EndEventSequenceNumber,
     EventObservationState EventObservationState,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Partition);
+    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Partition)
+{
+    /// <summary>
+    /// Gets the failure episode that owns the recovery, or null for a legacy job.
+    /// </summary>
+    public FailedPartitionId? EpisodeId { get; init; }
+
+    /// <summary>
+    /// Gets the deferral that owns the recovery, or null when not deferred.
+    /// </summary>
+    public Guid? DeferralId { get; init; }
+}

@@ -84,7 +84,7 @@ public class an_ordered_bulk_write : Specification
             }
             else if (index == OperationCount - 2 && _missingMetadataIndex >= 0)
             {
-                var metadata = (Dictionary<int, (Key, EventSequenceNumber)>)typeof(Sink)
+                var metadata = (Dictionary<int, (Key, Key, EventSequenceNumber)>)typeof(Sink)
                     .GetField("_bulkOperationMetadata", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .GetValue(_sink)!;
                 metadata.Remove(_missingMetadataIndex);

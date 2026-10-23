@@ -16,6 +16,8 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -24,6 +26,7 @@ using Cratis.Orleans.StateMachines;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation;
@@ -37,11 +40,14 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="webhookTargetPolicy">Policy for stored webhook targets.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -54,12 +60,16 @@ public partial class Observer(
     IStorage storage,
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
+    IWebhookTargetPolicy webhookTargetPolicy,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory,
-    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IOptionsMonitor<ChronicleOptions> optionsMonitor,
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
     /// <summary>
@@ -140,6 +150,7 @@ public partial class Observer(
     TimeSpan _writeCoalescingInterval = TimeSpan.Zero;
     Dictionary<Key, Dictionary<EventTypeId, EventCount>> _pendingHandledCounts = [];
     IGrainTimer? _coalescedWriteTimer;
+    bool _coalescedWriteBroughtForward;
     bool _failureStateWritePending;
     Dictionary<FailedPartitionId, TimeSpan> _pendingRetryReminders = [];
     int _debouncedProgressWrites;
@@ -171,6 +182,8 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await ReconcilePartitionDeferrals();
+        RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
     }
 
@@ -185,6 +198,7 @@ public partial class Observer(
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await failures.ReadStateAsync();
+        await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -540,7 +554,11 @@ public partial class Observer(
             return;
         }
 
-        await UnregisterReminderNamed(reminderName);
+        if (!Failures.Partitions.Any(_ => IsRetryReminderFor(_, reminderName) && _.Deferral is not null))
+        {
+            await UnregisterReminderNamed(reminderName);
+        }
+
         if (CannotRecoverFromReminder())
         {
             return;
@@ -703,7 +721,8 @@ public partial class Observer(
                 AlertLifecycleId = _alertLifecycleId,
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId
+                QuarantineEpisodeId = _quarantineEpisodeId,
+                DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();
@@ -890,6 +909,17 @@ public partial class Observer(
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
             await BeginAlertLifecycle();
+            var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
+            if (webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+                if (!await ValidateStoredWebhookTarget())
+                {
+                    _subscriptionSetupFailed = false;
+                    return;
+                }
+            }
+
             if (recovering)
             {
                 // A failed entry write can strand the machine in CatchingUpInFlight, which cannot enter
@@ -903,7 +933,10 @@ public partial class Observer(
             }
 
             _subscriptionSetupFailed = true;
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            if (!webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            }
             await RecoverAfterSubscribing(leavesQuarantine);
 
             // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after

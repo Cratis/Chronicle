@@ -63,17 +63,7 @@ public partial class ConnectedClients(
     {
         logger.ClientConnected(connectionId);
 
-        _clients[connectionId] = new(new()
-        {
-            ConnectionId = connectionId,
-            Version = version,
-            LastSeen = DateTimeOffset.UtcNow,
-            IsRunningWithDebugger = isRunningWithDebugger,
-            ProcessId = processId,
-            ProcessPath = processPath,
-            MachineName = machineName,
-            ClientType = clientType
-        });
+        _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
 
         // The real connection just registered - if it was preceded by a reservation, that
         // reservation has now been fulfilled. Clear the oldest one rather than leave it to expire
@@ -84,6 +74,28 @@ public partial class ConnectedClients(
             _reservations.RemoveAt(0);
         }
 
+        meter.ConnectedClients(_clients.Count);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task OnClientRestored(
+        ConnectionId connectionId,
+        string version,
+        bool isRunningWithDebugger,
+        int processId,
+        string processPath,
+        string machineName,
+        string clientType)
+    {
+        if (_clients.ContainsKey(connectionId))
+        {
+            return Task.CompletedTask;
+        }
+
+        logger.ClientRestored(connectionId);
+        _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
         meter.ConnectedClients(_clients.Count);
 
         return Task.CompletedTask;
@@ -144,6 +156,25 @@ public partial class ConnectedClients(
         var entry = _clients.GetValueOrDefault(connectionId) ?? throw new ClientIsNotConnected(connectionId);
         return Task.FromResult(entry.Client);
     }
+
+    static ConnectionEntry CreateEntry(
+        ConnectionId connectionId,
+        string version,
+        bool isRunningWithDebugger,
+        int processId,
+        string processPath,
+        string machineName,
+        string clientType) => new(new()
+        {
+            ConnectionId = connectionId,
+            Version = version,
+            LastSeen = DateTimeOffset.UtcNow,
+            IsRunningWithDebugger = isRunningWithDebugger,
+            ProcessId = processId,
+            ProcessPath = processPath,
+            MachineName = machineName,
+            ClientType = clientType
+        });
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {

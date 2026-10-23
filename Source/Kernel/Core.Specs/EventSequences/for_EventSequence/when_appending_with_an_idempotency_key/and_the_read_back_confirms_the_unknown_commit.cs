@@ -14,7 +14,7 @@ public class and_the_read_back_confirms_the_unknown_commit : given.an_event_sequ
         throw new Exception("unknown commit");
     });
     async Task Because() => _result = await AppendKeyed();
-    [Fact] void should_report_our_append() => _result.Outcome.ShouldEqual(AppendOutcome.Appended);
+    [Fact] void should_report_our_append() => _result.Outcome.ShouldEqual(AppendOutcome.Committed);
     [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] async Task should_enqueue_the_confirmed_append() => await _appendedEventsQueues.Received(1).Enqueue(Arg.Any<IEnumerable<AppendedEvent>>());
     [Fact] void should_not_need_a_second_key_lookup() => _lookups.ShouldEqual(1);

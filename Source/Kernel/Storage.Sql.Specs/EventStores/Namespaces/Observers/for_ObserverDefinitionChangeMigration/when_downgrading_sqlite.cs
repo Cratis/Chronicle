@@ -21,7 +21,7 @@ public class when_downgrading_sqlite : Specification
     {
         _connection = new("DataSource=:memory:");
         await _connection.OpenAsync();
-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
+        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE Observers (Id TEXT NOT NULL PRIMARY KEY)");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO Observers (Id) VALUES ('legacy-observer')");
         _migration = new() { ActiveProvider = _context.Database.ProviderName };

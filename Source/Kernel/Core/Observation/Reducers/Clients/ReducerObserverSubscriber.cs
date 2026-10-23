@@ -58,6 +58,9 @@ public class ReducerObserverSubscriber(
     DateTimeOffset _pipelineBuiltAt = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
+    public Task Drain() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
@@ -67,9 +70,10 @@ public class ReducerObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        if (!await PrepareDelivery(deliveryWait, context))
         {
-            await HandlePipeline();
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
         }
 
         foreach (var @event in events)
@@ -95,27 +99,21 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            await (_pipeline?.Reduce(reducerContext, async (events, initialState) =>
-            {
-                var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-                reducerMediator.OnNext(
-                    _key.ObserverId,
-                    connectedClient.ConnectionId,
-                    _key.EventStore,
-                    _key.Namespace,
-                    new(partition, events, initialState),
-                    reducerSubscriberResultTCS);
-
-                var result = await reducerSubscriberResultTCS.Task;
-                tcs.SetResult(AsHandledByThePipeline(result.ObserverResult));
-                return result;
-            }) ?? Task.CompletedTask);
+            await (_pipeline?.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs)) ?? Task.CompletedTask);
 
             return await tcs.Task;
+        }
+        catch (AbandonedDeliveryDiscarded)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
         }
         catch (TaskCanceledException)
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
+        }
+        catch (ReducerSinkWriteFailed failed)
+        {
+            return await RecordSinkWriteFailures(partition, failed, tcs.Task);
         }
     }
 
@@ -136,6 +134,73 @@ public class ReducerObserverSubscriber(
         result.State == ObserverSubscriberState.Failed
             ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
             : result;
+
+    async Task<bool> PrepareDelivery(ClientDeliveryWait deliveryWait, ObserverSubscriberContext context)
+    {
+        if (deliveryWait.Expired(context)) return false;
+        if (_clock.GetUtcNow() - _pipelineBuiltAt >= PipelineRefreshInterval)
+        {
+            await HandlePipeline();
+        }
+        return true;
+    }
+
+    ReducerDelegate CreateReducerDelegate(ReducerContext reduction, ConnectedClient client, ObserverSubscriberContext context, TaskCompletionSource<ObserverSubscriberResult> completion) =>
+        async (events, initialState) =>
+        {
+            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key);
+
+            // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
+            if (deliveryWait.Expired(context))
+            {
+                throw new AbandonedDeliveryDiscarded();
+            }
+            var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            reducerMediator.OnNext(
+                _key.ObserverId,
+                client.ConnectionId,
+                _key.EventStore,
+                _key.Namespace,
+                new(reduction.Key, events, initialState),
+                reducerSubscriberResultTCS);
+
+            var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
+            completion.SetResult(AsHandledByThePipeline(result.ObserverResult));
+            return result;
+        };
+
+    /// <summary>
+    /// Records every partition a sink write reported as failed.
+    /// </summary>
+    /// <remarks>
+    /// A bulk flush can drop other partitions' writes along with this one's. Those are recorded as failed so they are
+    /// retried; this partition fails only when its own write is among them, otherwise its result stands.
+    /// </remarks>
+    /// <param name="partition">The partition being reduced.</param>
+    /// <param name="failed">The <see cref="ReducerSinkWriteFailed"/> carrying the failures.</param>
+    /// <param name="result">The result the client reported for this partition.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
+    async Task<ObserverSubscriberResult> RecordSinkWriteFailures(Key partition, ReducerSinkWriteFailed failed, Task<ObserverSubscriberResult> result)
+    {
+        var others = failed.FailedPartitions.Where(failure => !Equals(failure.EventSourceId.Value, partition.Value)).ToArray();
+        if (others.Length > 0)
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+            foreach (var failure in others)
+            {
+                await observer.PartitionFailed(
+                    failure.EventSourceId,
+                    failure.EventSequenceNumber,
+                    [ReducerSinkWriteFailed.MessageFor(failure)],
+                    string.Empty,
+                    FailureKind.Handling);
+            }
+        }
+
+        return others.Length == failed.FailedPartitions.Count && result.IsCompleted
+            ? await result
+            : ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, failed.Message);
+    }
 
     async Task HandlePipeline()
     {

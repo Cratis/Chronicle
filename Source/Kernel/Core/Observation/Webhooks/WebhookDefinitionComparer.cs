@@ -93,7 +93,8 @@ public class WebhookDefinitionComparer(
             var secondOAuth = second.AsT2;
             return firstOAuth.Authority == secondOAuth.Authority &&
                    firstOAuth.ClientId == secondOAuth.ClientId &&
-                   firstOAuth.ClientSecret == secondOAuth.ClientSecret;
+                   firstOAuth.ClientSecret == secondOAuth.ClientSecret &&
+                   firstOAuth.Scope == secondOAuth.Scope;
         }
 
         return first.IsT3 && second.IsT3;

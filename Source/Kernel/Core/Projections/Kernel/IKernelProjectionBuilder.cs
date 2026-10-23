@@ -21,9 +21,8 @@ public interface IKernelProjectionBuilder<TReadModel>
     /// <param name="scope"><see cref="ProjectionScope"/> to use.</param>
     /// <returns>The builder for continuation.</returns>
     /// <remarks>
-    /// Defaults to <see cref="ProjectionScope.Namespaced"/>. Choose <see cref="ProjectionScope.Both"/> when the
-    /// same figure is wanted for the server as a whole and per namespace - the global instance says a number is
-    /// wrong and the namespaced instances say where.
+    /// Only <see cref="ProjectionScope.Namespaced"/> is supported. Global and dual-scope kernel materialization
+    /// are refused until decision 0014 provides global generation ownership.
     /// </remarks>
     IKernelProjectionBuilder<TReadModel> ScopedTo(ProjectionScope scope);
 

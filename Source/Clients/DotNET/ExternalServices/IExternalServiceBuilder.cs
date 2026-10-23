@@ -40,6 +40,18 @@ public interface IExternalServiceBuilder
     IExternalServiceBuilder WithOAuth(string authority, string clientId, string clientSecret);
 
     /// <summary>
+    /// Configures OAuth client credentials with an optional scope.
+    /// </summary>
+    /// <param name="authority">The authority.</param>
+    /// <param name="clientId">The client identifier.</param>
+    /// <param name="clientSecret">The client secret.</param>
+    /// <param name="scope">The requested scope.</param>
+    /// <returns>The builder continuation.</returns>
+    /// <exception cref="NotSupportedException">The builder does not support scoped OAuth configuration.</exception>
+    IExternalServiceBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope) =>
+        string.IsNullOrEmpty(scope) ? WithOAuth(authority, clientId, clientSecret) : throw new NotSupportedException("This builder does not support OAuth scope.");
+
+    /// <summary>
     /// Adds a header to send with every HTTP request.
     /// </summary>
     /// <param name="key">The header key.</param>

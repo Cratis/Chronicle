@@ -35,7 +35,7 @@ Tool versions and consumer boundaries: toolchain `SKILL.md`.
 | Compliance concepts | Bare `pii`/`personal` and `secret`, qualifiers and scope bind as v13; enum/identity compliance and events combining personal or explicitly subject-scoped secret values with an explicit `subject` mark refuse PLAY0268 at binding only. A CLI bundle that admits v13 binds markers; Stage renders v13 protection, not protected identities/enums or subject lineage. Never remove protection |
 | Identity details / processing purposes / event subject | Report-only metadata; executable detail reads refuse PLAY0268, not source declaration errors |
 | Composite stream ids | v8 routing; complete named parts/canonical comparisons, PLAY0515 refuses protected keys/sources; not a legacy text split |
-| Command reads/concurrency | Legacy unprotected decisions, PLAY0271 |
+| Command reads/concurrency | Eligible reads opt into v25 with `command reads protected`; legacy reads/concurrency retain PLAY0271; the Cratis renderer renders protected reads as Arc read protection in a new enough bundle (older bundles, and shapes it cannot preserve, refuse STAGE-ESM-044); semantic Host/executor support is separate |
 | Invokes-only trigger reads | Report-only, not protected state; direct production with reads refuses |
 | Generated values/responses | v7 binding/reference execution; v15 strategies/strict fixtures/freshness. Stage renders supported UUID/String strategies, responses and fixtures; unsupported types/combinations remain -028/-038 |
 | Sources/streams and command/specification routes | v8 binding/reference execution; the CLI (toolchain `references/renderable-subset.md`) reaches Stage checks through its bundled ceiling (v16 without v17 support) |
@@ -71,8 +71,10 @@ accepted proposal or parsed node with a running application.
 - `Automation` and `Translate` slices, reactions, captures and triggers bind (ESM v6) on the
   standalone tool and a CLI bundle that admits v6. (An older bundle
   reports *Slice '<name>' of type '<type>' is not admitted by ESM v1.*) Stage renders supported event-triggered Automation, not Translate/captures or non-event triggers.
-- `reads` and `concurrency` on a command do not bind (`PLAY0271`), so no decision is
-  protected against stale state. A reaction trigger's `reads` that only `invokes` is
+- Eligible command reads bind/reference-execute with `command reads protected`
+  (v25); legacy reads and `concurrency` remain PLAY0271. Read command-surface
+  [protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md)
+  for admission, absence/conflicts and Stage refusal. A reaction trigger's `reads` that only `invokes` is
   report-only intent (`PLAY0270`); one that `produces` directly fails binding (`PLAY0268`).
 - `persona` declarations are report-only and never block; bare `pii` and `secret`
   concepts bind as ESM v13 (Requires Screenplay 4.141.0 or later); Stage renders admitted v13 protection.

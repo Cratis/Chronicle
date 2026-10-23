@@ -55,6 +55,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Warning, "Failed retiring projection '{Identifier}' - it remains registered and retirement will be retried on the next full registration")]
     internal static partial void FailedRetiringProjection(this ILogger<ProjectionsManager> logger, Exception ex, ProjectionId identifier);
 
+    [LoggerMessage(LogLevel.Warning, "Ignoring kernel projection '{Identifier}' with scope '{Scope}' in event store '{EventStore}' - global kernel materialization is restricted until projection generations provide ownership")]
+    internal static partial void IgnoringGlobalKernelRegistration(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, ProjectionId identifier, ProjectionScope scope);
+
     [LoggerMessage(LogLevel.Warning, "Ignoring the registration of projection '{Identifier}' from client version {IncomingVersion}, since it is older than version {StoredVersion} it was last registered with. The stored definition is kept")]
     internal static partial void IgnoringOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionId identifier, string incomingVersion, string storedVersion);
 

@@ -10,6 +10,6 @@ Read [authoring-skills.md](../rules/authoring-skills.md), then apply its section
 checklist to the requested skill folder under `.cratis/ai/skills/`. Check routing
 against neighboring skills and workflow correctness against the owning product.
 
-Report blocking findings separately from suggestions, with the file and concrete
-consequence. Name any evaluation runs or verification not performed. Return findings
-first, then proposed edits; do not edit during the review.
+Read and use `.cratis/ai/rules/review-reports.md` when writing the report.
+Name any evaluation runs or verification not performed on the scope line.
+Include proposed edits with the findings; do not edit during the review.

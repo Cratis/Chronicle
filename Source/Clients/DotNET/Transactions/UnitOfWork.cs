@@ -21,19 +21,7 @@ namespace Cratis.Chronicle.Transactions;
 /// <summary>
 /// Represents an implementation of <see cref="IUnitOfWork"/>.
 /// </summary>
-/// <param name="correlationId">The <see cref="CorrelationId"/> for the <see cref="IUnitOfWork"/>.</param>
-/// <param name="onCompleted">The action to call when the <see cref="IUnitOfWork"/> is completed.</param>
-/// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
-/// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
-/// <param name="lifecyclePolicy">The policy for staging events once completion begins.</param>
-/// <param name="logger">Optional logger for late staging diagnostics.</param>
-public partial class UnitOfWork(
-    CorrelationId correlationId,
-    Action<IUnitOfWork> onCompleted,
-    IEventStore eventStore,
-    IActivitySource<UnitOfWork>? activitySource,
-    UnitOfWorkLifecyclePolicy lifecyclePolicy,
-    ILogger<UnitOfWork>? logger = null) : IUnitOfWork
+public partial class UnitOfWork : IUnitOfWork
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client unit of work traces.
@@ -41,8 +29,10 @@ public partial class UnitOfWork(
     internal static readonly IActivitySource<UnitOfWork> DefaultActivitySource =
         new ActivitySource<UnitOfWork>(new ActivitySource(ClientActivity.SourceName));
 
-    readonly IActivitySource<UnitOfWork> _activitySource = activitySource ?? DefaultActivitySource;
-    readonly ILogger<UnitOfWork>? _logger = logger;
+    readonly IActivitySource<UnitOfWork> _activitySource;
+    readonly Lazy<IEventStore> _eventStore;
+    readonly UnitOfWorkLifecyclePolicy _lifecyclePolicy;
+    readonly ILogger<UnitOfWork>? _logger;
     readonly List<StagedEvents> _stagedEvents = [];
     readonly HashSet<EventSequenceId> _legacyEventSequenceIds = [];
     readonly object _decisionLock = new();
@@ -52,7 +42,7 @@ public partial class UnitOfWork(
 
     AppendManyResult _appendManyResult = new();
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
-    Action<IUnitOfWork> _onCompleted = onCompleted;
+    Action<IUnitOfWork> _onCompleted;
     bool _isCommitted;
     bool _isRolledBack;
     bool _completing;
@@ -64,6 +54,26 @@ public partial class UnitOfWork(
     DecisionReadCommitOwner? _commitOwner;
     EffectKey? _effectKey;
     Contracts.Occurrences.EffectReceipt? _effectReceipt;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnitOfWork"/> class.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="onCompleted">Called on completion.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source for tracing.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    public UnitOfWork(
+        CorrelationId correlationId,
+        Action<IUnitOfWork> onCompleted,
+        IEventStore eventStore,
+        IActivitySource<UnitOfWork>? activitySource,
+        UnitOfWorkLifecyclePolicy lifecyclePolicy,
+        ILogger<UnitOfWork>? logger = null)
+        : this(correlationId, onCompleted, () => eventStore, activitySource, lifecyclePolicy, logger)
+    {
+    }
 
     /// <summary>
     /// Initializes a unit of work with compatibility staging behavior.
@@ -90,11 +100,36 @@ public partial class UnitOfWork(
     {
     }
 
+    /// <summary>
+    /// Initializes a unit whose event store is resolved only when an operation needs it.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="onCompleted">Called on completion.</param>
+    /// <param name="eventStore">Resolves the event store in the owning scope.</param>
+    /// <param name="activitySource">Optional activity source for tracing.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    internal UnitOfWork(
+        CorrelationId correlationId,
+        Action<IUnitOfWork> onCompleted,
+        Func<IEventStore> eventStore,
+        IActivitySource<UnitOfWork>? activitySource,
+        UnitOfWorkLifecyclePolicy lifecyclePolicy,
+        ILogger<UnitOfWork>? logger)
+    {
+        CorrelationId = correlationId;
+        _onCompleted = onCompleted;
+        _eventStore = new(eventStore, LazyThreadSafetyMode.PublicationOnly);
+        _activitySource = activitySource ?? DefaultActivitySource;
+        _lifecyclePolicy = lifecyclePolicy;
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public bool IsCompleted => _isCommitted || _isRolledBack;
 
     /// <inheritdoc/>
-    public CorrelationId CorrelationId => correlationId;
+    public CorrelationId CorrelationId { get; }
 
     /// <inheritdoc/>
     public bool IsSuccess => _appendManyResult.IsSuccess;
@@ -124,8 +159,8 @@ public partial class UnitOfWork(
             ThrowIfMutatedDuringEnrollment();
             ThrowIfEnrollmentNotificationFailed();
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing) throw new UnitOfWorkIsCompleting(correlationId);
-            EffectReceiptSupport.Require(eventStore.Connection);
+            if (_completing) throw new UnitOfWorkIsCompleting(CorrelationId);
+            EffectReceiptSupport.Require(_eventStore.Value.Connection);
             if (_effectKey is not null && _effectKey != key) throw new UnitOfWorkEffectReceiptAlreadySet();
             var receipt = EffectReceiptSupport.ToContract(key, response);
             _effectKey = key;
@@ -182,6 +217,8 @@ public partial class UnitOfWork(
         lock (_decisionLock)
         {
             ThrowIfStagingAfterCompletion();
+            events = events.ToArray();
+            if (events.Any(_ => _.IdempotencyKey is not null)) throw new IdempotentAppendsNotSupported("in a unit of work");
             if (IsEnforcingReadProtection)
             {
                 AddEnforcedEvents(eventSequenceId, events, concurrencyScopes, origin);
@@ -244,7 +281,7 @@ public partial class UnitOfWork(
                 return;
             }
             if (IsCompleted || _completing) throw new DecisionReadAfterCompletion();
-            DecisionReadScopes.Validate(read, eventStore.Name, eventStore.Namespace, EventSequenceId.Log);
+            DecisionReadScopes.Validate(read, _eventStore.Value.Name, _eventStore.Value.Namespace, EventSequenceId.Log);
             ValidateLegacyEventSequenceIdsForOrderedBatch(EventSequenceId.Log);
             EnsureEventSequenceCanBeUsed(EventSequenceId.Log);
             var label = new EventSourceId(read.Scope.EventSourceId!.Value);
@@ -371,7 +408,7 @@ public partial class UnitOfWork(
             if (_completing || IsCompleted) return;
             if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
 
-            using var span = _activitySource.Rollback(correlationId.ToString());
+            using var span = _activitySource.Rollback(CorrelationId.ToString());
             CompleteRollback();
         }
         _onCompleted(this);
@@ -419,7 +456,7 @@ public partial class UnitOfWork(
     Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
-        using var span = _activitySource.Rollback(correlationId.ToString());
+        using var span = _activitySource.Rollback(CorrelationId.ToString());
 
         lock (_decisionLock)
         {
@@ -429,8 +466,8 @@ public partial class UnitOfWork(
             ThrowIfUnitOfWorkIsCompleted();
             if (_completing)
             {
-                if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(correlationId);
-                if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(correlationId);
+                if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || _lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict) throw new UnitOfWorkIsCompleting(CorrelationId);
+                if (fromOwner || (_commitOwner is not null && _hasEnrolledDecisionReads)) throw new UnitOfWorkIsCompleting(CorrelationId);
             }
             if ((IsEnforcingReadProtection || (_commitOwner is not null && _hasEnrolledDecisionReads)) && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
             CompleteRollback();
@@ -443,7 +480,7 @@ public partial class UnitOfWork(
     async Task CommitCore(bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
-        using var span = _activitySource.Commit(correlationId.ToString());
+        using var span = _activitySource.Commit(CorrelationId.ToString());
 
         KeyValuePair<EventSourceId, ConcurrencyScope>[] scopes;
         EventForEventSourceId[] events;
@@ -483,7 +520,7 @@ public partial class UnitOfWork(
                     eventSequence = null;
                 }
             }
-            if (_effectReceipt is not null) EffectReceiptSupport.Require(eventStore.Connection);
+            if (_effectReceipt is not null) EffectReceiptSupport.Require(_eventStore.Value.Connection);
             if (eventSequence is not null && (_effectReceipt is null || events.Length != 0 || scopes.Length != 0 || readProtectionCommit?.Contributions.Count > 0))
             {
                 AppendManyResult result;
@@ -547,7 +584,7 @@ public partial class UnitOfWork(
         }
         catch (Exception exception) when (appendOwner is not null || protectedCommit || _effectReceipt is not null)
         {
-            _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            _appendManyResult = AppendManyResult.Failed(CorrelationId, [new AppendError(exception.Message)]);
             throw;
         }
         finally
@@ -565,9 +602,9 @@ public partial class UnitOfWork(
 
     Task<EffectReceiptResult> RecordNoEventsReceipt(JsonNode? response)
     {
-        if (!IsEnforcingReadProtection) return eventStore.Occurrences.RecordEffectReceipt(_effectKey!, new NoEvents(), response);
+        if (!IsEnforcingReadProtection) return _eventStore.Value.Occurrences.RecordEffectReceipt(_effectKey!, new NoEvents(), response);
 
-        return eventStore.Occurrences is IOccurrencesForUnitOfWork trusted
+        return _eventStore.Value.Occurrences is IOccurrencesForUnitOfWork trusted
             ? trusted.RecordNoEvents(_effectKey!, response)
             : throw new EffectReceiptsNotSupported();
     }
@@ -593,18 +630,18 @@ public partial class UnitOfWork(
         ThrowIfEnrollmentNotificationFailed();
         if (!_completing && !IsCompleted) return;
 
-        if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
+        if (_immediateAppendRefusalOwnsCompletion || IsEnforcingReadProtection || _lifecyclePolicy == UnitOfWorkLifecyclePolicy.Strict)
         {
-            throw new UnitOfWorkIsCompleted(correlationId);
+            throw new UnitOfWorkIsCompleted(CorrelationId);
         }
 
         if (_logger is not null)
         {
-            _logger.LateStagingAttemptedAfterCompletion(correlationId);
+            _logger.LateStagingAttemptedAfterCompletion(CorrelationId);
         }
         else
         {
-            Trace.TraceError("Late event staging was attempted after unit of work '{0}' began completing; these events will not be appended by this unit of work.", correlationId);
+            Trace.TraceError("Late event staging was attempted after unit of work '{0}' began completing; these events will not be appended by this unit of work.", CorrelationId);
         }
         if (_decisionScopes.Count != 0)
         {
@@ -664,13 +701,13 @@ public partial class UnitOfWork(
             return;
         }
 
-        _eventSequence = eventStore.GetEventSequence(eventSequenceId);
+        _eventSequence = _eventStore.Value.GetEventSequence(eventSequenceId);
         _eventSequenceId = eventSequenceId;
     }
 
     void BindLegacyEventSequence(EventSequenceId eventSequenceId)
     {
-        var eventSequence = eventStore.GetEventSequence(eventSequenceId);
+        var eventSequence = _eventStore.Value.GetEventSequence(eventSequenceId);
         _legacyEventSequenceIds.Add(eventSequenceId);
         if (_eventSequence is not null)
         {

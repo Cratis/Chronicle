@@ -12,7 +12,7 @@ public class and_another_writer_has_claimed_a_failed_batch : given.a_sink_with_g
     readonly TaskCompletionSource _secondFlushStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _releaseSecondFlush = new(TaskCreationOptions.RunContinuationsAsynchronously);
     Task<IEnumerable<FailedPartition>> _writer;
-    Exception? _writerError;
+    FailedPartition[] _writerFailures;
     Exception? _flushError;
 
     async Task Establish()
@@ -50,12 +50,12 @@ public class and_another_writer_has_claimed_a_failed_batch : given.a_sink_with_g
         _releaseFirstFlush.SetResult();
         await _secondFlushStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // The size-flush caller owns the failure, but has not recorded a failed partition yet.
-        _writerError = await Catch.Exception(async () => await _writer);
+        // The size-flush caller receives the failed partitions, but has not recorded them yet.
+        _writerFailures = (await _writer).ToArray();
         _releaseSecondFlush.SetResult();
         _flushError = await Catch.Exception(async () => await flush);
     }
 
-    [Fact] void should_deliver_the_failure_to_the_writer() => _writerError.ShouldEqual(_unexpectedFailure);
+    [Fact] void should_deliver_the_failed_partition_to_the_writer() => _writerFailures.Select(failure => failure.EventSourceId).ShouldContainOnly([_firstKey]);
     [Fact] void should_not_confirm_durability_after_the_failure_is_claimed() => _flushError.ShouldNotBeNull();
 }

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Orleans.Jobs;
+using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -25,6 +26,10 @@ public partial class Observer
         {
             return JobId.NotSet;
         }
+
+        // Refuse before resetting progress, entering replay, or starting a job. The handler also guards
+        // persisted jobs that resume without coming through this observer entry point.
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
 
         while (_catchUpHandoversSettled is { } settled)
         {
@@ -92,9 +97,21 @@ public partial class Observer
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
         CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
+    static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
+
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
         if (IsRetired || _removed) return;
+        try
+        {
+            await FlushPendingHandledCounts();
+        }
+        catch (Exception exception)
+        {
+            FailedFlushingHandledCountsOnReplay(logger, exception);
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Reset();
 
@@ -209,6 +226,7 @@ public partial class Observer
             return;
         }
 
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 

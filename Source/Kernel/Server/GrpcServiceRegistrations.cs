@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Configuration;
 using Grpc.AspNetCore.Server;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Server;
 
@@ -40,6 +41,7 @@ public static class GrpcServiceRegistrations
         // streaming services, whose server-to-client lifetime no command or query describes.
         services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
         services.AddSingleton<Contracts.Events.Constraints.IConstraints, Services.Events.Constraints.Constraints>();
+        services.TryAddSingleton<Services.Clients.OpenConnections>();
         services.AddSingleton<Contracts.Clients.IConnectionService, Services.Clients.ConnectionService>();
         services.AddSingleton<Contracts.Observation.IObservers, Services.Observation.Observers>();
         services.AddSingleton<Contracts.Observation.IFailedPartitions, Services.Observation.FailedPartitions>();
@@ -47,6 +49,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
+        services.TryAddSingleton<ReadModels.IReadModelReadBindings, ReadModels.ReadModelReadBindings>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();

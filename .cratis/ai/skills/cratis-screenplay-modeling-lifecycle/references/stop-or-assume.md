@@ -56,7 +56,7 @@ revision, `propose-model-notes`, review `read-proposal view=notes`, then authori
 `apply`. If the installed bundle lacks notes, report the capability gap and carry
 an explicit note request to the owner; do not pretend a chat/description is a note.
 
-Cite the project's own decisions with `refs: [{ "id": "D123" }]`. When D123 is
+Cite the project's own decisions with `refs: [{ "id": "D123" }]`; ids follow `process.decisions.id` when the project sets it (`project-process.md`). When D123 is
 the answer, resolve with `by: "external-decision"` and required
 `ref: { "id": "D123" }`, explanatory text and a team-role author. The URL is
 optional and never fetched. Realize a resolved question as a specification for
@@ -65,7 +65,7 @@ consequential policy. Resolving is not implementation; a known refusal still
 needs `then error` or `then denied`. Reopen when the evidence ceases to answer it.
 
 Question gating is separate from V1: standalone Screenplay 4.144.0 has
-`--open-questions fail`; Cratis CLI 3.53.1 does not. Read toolchain
+`--open-questions fail`, and `cratis screenplay validate` has it from CLI 3.60.0. Read toolchain
 `references/verdicts.md` "Model notes gate" when a phase requires no open questions.
 Product evidence: Screenplay `Documentation/screenplay/model-notes.md`,
 `decisions/0045-model-notes-sidecar.md` and the model-authoring source table.

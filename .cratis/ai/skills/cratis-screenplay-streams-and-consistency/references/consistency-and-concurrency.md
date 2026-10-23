@@ -58,8 +58,8 @@ observed legacy check from verified atomic protection.
 | several command properties / constants | `require` | runs after property rules, before production |
 | a value across all sources | `unique <prop> on <Event>` | value owned by one source; same source may re-claim |
 | a fact at most once per source; mutually exclusive facts | `unique event` (+ `released by`) | covers simple lifecycle transitions |
-| state-dependent rule not reducible to the supported uniqueness/release semantics (a balance, capacity, "only if approved") | no protected decision read in `.play` today | state it as `reads` + `require … message`, mark NOT enforced, name the target enforcement (below) |
-| a view (read model) | an unguarded materialized read is not protection | views lag; `reads` is PLAY0271, `require` over views PLAY0268 at binding (expected in design mode) |
+| state-dependent rule (balance, capacity, "only if approved") | eligible `reads` + `require` under `command reads protected` (v25) | required absence rejects; matching intervening facts conflict. Payload-key fan-in, joins, reducers and other refused shapes remain target gaps |
+| a view (read model) | unguarded materialized reads are not protection | legacy command and trigger reads remain unprotected; protected-read rendering needs Stage 4.138.0 (STAGE-ESM-044 otherwise); semantic Host/executor evidence is not generated-app protection |
 
 ## 3. Record each state-dependent rule that the model cannot enforce
 Never accept the caller's copy of the state: `currentStatus Status` on the command with
@@ -68,7 +68,14 @@ input (`confirmsX == true`) standing in for the rule. Never move the rule into `
 `implementation hint` prose; a description renders only as an XML doc comment (Stage#178), so prose alone leaves
 the rule unenforced in rendered scope.
 
-Right: write the rule as stated intent and mark it unenforced.
+First inspect [protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md):
+opt eligible command reads into v25, retain absence/conflict specifications and verify
+target consistency separately. Stage admits v25 and renders protected reads from 4.138.0 (STAGE-ESM-044 otherwise).
+Semantic Host/executor support has separate severity and outside-append limits. A payload-keyed
+fan-in such as the course-capacity example remains refused; the preamble is not a
+blanket admission of arbitrary projections.
+
+For legacy models without opt-in or refused shapes, write stated intent and mark it unenforced.
 - `reads <View> as x by …` plus `require <expr over x> message "…"` on the command (the
   `StateChange` slice in `streams-example.md`). Binding reports PLAY0271 / PLAY0268; that is
   expected in design mode, so keep the lines. Do not remove them to pass a tool.
@@ -102,9 +109,11 @@ another event source) in `Provide()`/`Handle()` and returning a validation resul
 at commit is reported as a concurrency violation. Equivalently a Chronicle decision-consistency
 read with a `concurrency` scope on the event source or stream. A passive read is fresh
 computation, not an atomic read-and-append; a plain materialized view and a validator are
-advisory. Protection covers only a single projection keyed directly by the event source id (routing key
-empty or `$eventSourceId`). Reducers, joins, children, nested sources and **event-property
-routing** (fan-in from many streams by a payload reference) are refused, and a concurrency scope
+advisory under Arc read protection `Off` (the default); under `On` (Arc 22.106.0 or later) the read
+model parameters of `Handle()` and of a validator constructor are guarded. Protection covers a single
+projection keyed directly by the event source id (routing key empty or `$eventSourceId`) and an
+unfiltered reducer without constructor dependencies. Filtered reducers, reducers with dependencies,
+joins, children, nested sources and **event-property routing** (fan-in from many streams by a payload reference) are refused, and a concurrency scope
 on the referenced source does not see appends made on other sources. A rule over such a view, for
 example a course capacity computed from enrolment streams, needs option a or b: write the
 deciding fact on the source that owns the state, or give each scarce item its own identity. Sources: Arc `Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md` (limits unchanged);

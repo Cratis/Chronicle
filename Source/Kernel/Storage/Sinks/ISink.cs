@@ -31,6 +31,14 @@ public interface ISink
     Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
+    /// Finds a read model by key in the primary container, even while a replay rebuilds another container.
+    /// </summary>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <returns>The primary instance, or null if the key is absent.</returns>
+    /// <remarks>This query-side read does not use the projection's replay state or pending bulk writes.</remarks>
+    Task<ExpandoObject?> FindInPrimaryOrDefault(Key key);
+
+    /// <summary>
     /// Find the root key of a read model that contains a child with the specified value at the given property path.
     /// </summary>
     /// <param name="childPropertyPath">The property path to the child property (e.g., "configurations.configurationId").</param>

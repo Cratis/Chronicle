@@ -28,7 +28,7 @@ public record EventStatistics(
     /// <param name="reader">The <see cref="IStatisticsReader"/> to read through.</param>
     /// <param name="eventStore">The event store to get statistics for.</param>
     /// <returns>The <see cref="EventStatistics"/>.</returns>
-    internal static async Task<EventStatistics> StatisticsForEventStore(IStatisticsReader reader, EventStoreName eventStore) =>
+    public static async Task<EventStatistics> StatisticsForEventStore(IStatisticsReader reader, EventStoreName eventStore) =>
         (await reader.GetEventTypeStatisticsForEventStore(eventStore)).ToEventStatistics();
 
     /// <summary>
@@ -38,6 +38,6 @@ public record EventStatistics(
     /// <param name="eventStore">The event store to get statistics for.</param>
     /// <param name="namespace">The namespace to get statistics for.</param>
     /// <returns>The <see cref="EventStatistics"/>.</returns>
-    internal static async Task<EventStatistics> StatisticsForNamespace(IStatisticsReader reader, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+    public static async Task<EventStatistics> StatisticsForNamespace(IStatisticsReader reader, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         (await reader.GetEventTypeStatistics(eventStore, @namespace)).ToEventStatistics();
 }

@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -14,6 +16,26 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="ExceptionStackTrace">Any exception stack trace associated with the call.</param>
 public record ObserverSubscriberResult(ObserverSubscriberState State, EventSequenceNumber LastSuccessfulObservation, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace)
 {
+    /// <summary>
+    /// Gets the partition containing the first failing event in a page.
+    /// </summary>
+    public Key? FailedPartition { get; init; }
+
+    /// <summary>
+    /// Gets the sequence number of the first failing event in a page.
+    /// </summary>
+    public EventSequenceNumber FailedAt { get; init; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets the durable deadline when delivery is deferred.
+    /// </summary>
+    public PartitionDeferral? Deferral { get; init; }
+
+    /// <summary>
+    /// Gets the kernel delivery recovery policy, independently of the persisted failure classification.
+    /// </summary>
+    public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
+
     /// <summary>
     /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>

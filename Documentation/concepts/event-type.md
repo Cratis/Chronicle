@@ -1,3 +1,6 @@
+---
+description: A Chronicle event type gives every stored event an identity and generations, and clients must declare event types before appending events.
+---
 # Event Type
 
 Every [event](./event.md) stored in the [event store](./event-store.md) must have

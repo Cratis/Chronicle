@@ -41,7 +41,7 @@ public partial class UnitOfWork
             if (scope.EventSourceId is not null && scope.EventSourceId.Value != label.Value) throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(label, scope.EventSourceId);
             var kind = origin == ConcurrencyScopeOrigin.Aggregate ? ReadProtectionContributionKind.Aggregate : ReadProtectionContributionKind.Explicit;
             var intent = validateOnly && kind == ReadProtectionContributionKind.Explicit ? ReadProtectionContributionIntent.ValidateOnly : ReadProtectionContributionIntent.None;
-            var contribution = new ReadProtectionContribution(label, kind, scope, new(eventStore.Name, eventStore.Namespace, sequence), $"{origin} scope for '{label}'", intent);
+            var contribution = new ReadProtectionContribution(label, kind, scope, new(_eventStore.Value.Name, _eventStore.Value.Namespace, sequence), $"{origin} scope for '{label}'", intent);
             ValidateReadProtectionTarget(contribution);
             ValidateDistinctReadProtectionContribution(contribution, _readProtectionContributions.Concat(pending));
             pending.Add(contribution);

@@ -1,6 +1,6 @@
 ---
 title: Scoped closing
-description: Close one event source's stream, every stream of an event source, or any other combination of dimensions, and close only when nothing has landed since your last fact.
+description: Close one event source's stream, all streams of an event source, or any dimension combination in Chronicle, only when nothing landed since your last fact.
 ---
 
 The two-argument `CompleteStream(streamType, streamId)` closes a stream for every event source that uses that pair. That forces you to make stream ids globally unique just so you can close one. A `ClosedStreamScope` lets you name what you mean instead. For the scope model and its rules, see [Closing streams](index.mdx).

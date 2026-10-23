@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -16,19 +19,40 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 /// <param name="readModel">The <see cref="ReadModelDefinition"/> the context is for.</param>
 /// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
+/// <param name="logger">Optional <see cref="ILogger{T}"/> for logging refused destructive operations.</param>
+/// <param name="writes">Optional sink write executor.</param>
+/// <remarks>
+/// Every destructive operation - clearing, dropping and renaming - is guarded by <see cref="SinkCollectionGuards"/>, so it only
+/// ever touches the collection this sink owns in its current lifecycle phase, and fails loudly otherwise.
+/// </remarks>
 public class SinkCollections(
     ReadModelDefinition readModel,
-    IMongoDatabase database) : ISinkCollections
+    IMongoDatabase database,
+    ILogger<SinkCollections>? logger,
+    ISinkWrites? writes) : ISinkCollections
 {
     const int NamespaceNotFound = 26;
     const int NamespaceExists = 48;
 
+    readonly SinkCollectionNames _names = SinkCollectionNames.For(readModel.ContainerName);
+    readonly ILogger<SinkCollections> _logger = logger ?? NullLogger<SinkCollections>.Instance;
     bool _isReplaying;
 
-    /// <inheritdoc/>
-    public string PromotingCollectionName => $"replay-{readModel.ContainerName}-promoting";
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SinkCollections"/> class using unfenced writes.
+    /// </summary>
+    /// <param name="readModel">The read model definition.</param>
+    /// <param name="database">The destination database.</param>
+    /// <param name="logger">The optional diagnostic logger.</param>
+    public SinkCollections(ReadModelDefinition readModel, IMongoDatabase database, ILogger<SinkCollections>? logger = null)
+        : this(readModel, database, logger, UnfencedSinkWrites.Instance)
+    {
+    }
 
-    string ReplayCollectionName => $"replay-{readModel.ContainerName}";
+    /// <inheritdoc/>
+    public string PromotingCollectionName => _names.Promoting;
+
+    string ReplayCollectionName => _names.Replay;
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)
@@ -39,7 +63,10 @@ public class SinkCollections(
         // place leaves the claimed collection behind. It belongs to a replay that is being superseded,
         // and left there it would make this replay's own claim fail.
         await DropIfExists(PromotingCollectionName);
-        await PrepareInitialRun();
+
+        // Clear what this replay owns: the replay shadow. Should the mode have been changed underneath this call, the
+        // collection resolved would be the primary, and the guard refuses rather than wiping the live read model.
+        await Clear(GetCollection(), isReplaying: true);
     }
 
     /// <inheritdoc/>
@@ -70,15 +97,12 @@ public class SinkCollections(
     public void AbandonReplay() => _isReplaying = false;
 
     /// <inheritdoc/>
-    public async Task PrepareInitialRun()
-    {
-        var collection = GetCollection();
-        await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
-    }
+    public Task PrepareInitialRun() => Clear(GetCollection(), _isReplaying);
 
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName collectionName)
     {
+        Guard(SinkCollectionOperation.Drop, collectionName.Value, () => SinkCollectionGuards.ThrowIfCannotRemove(_names, collectionName.Value));
         var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
         if (collectionNames.Contains(collectionName.Value))
         {
@@ -87,7 +111,7 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? database.GetCollection<BsonDocument>(ReplayCollectionName) : database.GetCollection<BsonDocument>(readModel.ContainerName);
+    public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(_isReplaying ? ReplayCollectionName : _names.Primary);
 
     /// <inheritdoc/>
     public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
@@ -109,26 +133,66 @@ public class SinkCollections(
             return;
         }
 
+        Guard(SinkCollectionOperation.Rename, _names.Primary, () => SinkCollectionGuards.ThrowIfCannotMovePrimaryAside(_names, context.RevertContainerName));
+
         if (!await TryClaimReplayCollection())
         {
             return;
         }
 
-        if (await CollectionExists(readModel.ContainerName))
+        var claimed = await CollectionUuid(PromotingCollectionName);
+        if (await CollectionExists(_names.Primary))
         {
             try
             {
-                await database.RenameCollectionAsync(readModel.ContainerName, context.RevertContainerName);
+                await database.RenameCollectionAsync(_names.Primary, context.RevertContainerName);
             }
             catch
             {
-                // Hand the replay back so that a later end of the replay can still promote it.
-                await database.RenameCollectionAsync(PromotingCollectionName, ReplayCollectionName);
+                // Hand the replay back so that a later end of the replay can still promote it - but only when the
+                // promoting collection is still the one this promotion claimed, never another replay's. A refused
+                // hand-back is logged by the guard; the failure that got us here is the one rethrown.
+                try
+                {
+                    await ThrowIfPromotingCollectionChanged(claimed);
+                    await database.RenameCollectionAsync(PromotingCollectionName, ReplayCollectionName);
+                }
+                catch (SinkCollectionOperationRefused)
+                {
+                }
+
                 throw;
             }
         }
 
-        await database.RenameCollectionAsync(PromotingCollectionName, readModel.ContainerName);
+        await ThrowIfPromotingCollectionChanged(claimed);
+        await database.RenameCollectionAsync(PromotingCollectionName, _names.Primary);
+    }
+
+    async Task ThrowIfPromotingCollectionChanged(BsonValue? claimed)
+    {
+        var current = await CollectionUuid(PromotingCollectionName);
+        Guard(SinkCollectionOperation.Rename, PromotingCollectionName, () => SinkCollectionGuards.ThrowIfPromotingCollectionChanged(_names, claimed, current));
+    }
+
+    async Task Clear(IMongoCollection<BsonDocument> collection, bool isReplaying)
+    {
+        var name = collection.CollectionNamespace.CollectionName;
+        Guard(SinkCollectionOperation.Clear, name, () => SinkCollectionGuards.ThrowIfCannotClear(_names, isReplaying, name));
+        await (writes ?? UnfencedSinkWrites.Instance).DeleteMany(collection, FilterDefinition<BsonDocument>.Empty);
+    }
+
+    void Guard(SinkCollectionOperation operation, string collection, Action guard)
+    {
+        try
+        {
+            guard();
+        }
+        catch (SinkCollectionOperationRefused exception)
+        {
+            _logger.SinkCollectionOperationRefused(operation, collection, readModel.Identifier, exception);
+            throw;
+        }
     }
 
     /// <summary>
@@ -172,12 +236,22 @@ public class SinkCollections(
         return names.Count > 0;
     }
 
+    async Task<BsonValue?> CollectionUuid(string name)
+    {
+        var options = new ListCollectionsOptions { Filter = new BsonDocument("name", name) };
+        var collections = await (await database.ListCollectionsAsync(options)).ToListAsync();
+        return collections.Count > 0 && collections[0].TryGetValue("info", out var info) && info.AsBsonDocument.TryGetValue("uuid", out var uuid)
+            ? uuid
+            : null;
+    }
+
     async Task<bool> CollectionHasDocuments(string name) =>
         await CollectionExists(name) &&
         await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).Limit(1).AnyAsync();
 
     async Task DropIfExists(string name)
     {
+        Guard(SinkCollectionOperation.Drop, name, () => SinkCollectionGuards.ThrowIfCannotDropDuringReplay(_names, name));
         if (await CollectionExists(name))
         {
             await database.DropCollectionAsync(name);

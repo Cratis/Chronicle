@@ -3,6 +3,9 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -17,7 +20,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null) : ICanPerformProjectionPipelineStep
+/// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
+public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -70,20 +74,22 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             // TODO: Return the number of affected records and pass this along to the changeset storage
             var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
 
-            if (failedPartitions.Any())
+            // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
+            // of this event's own partition stops the rest of the save: the other partitions' events are retried.
+            foreach (var failedPartition in failedPartitions)
             {
-                foreach (var failedPartition in failedPartitions)
-                {
-                    context.AddFailedPartition(failedPartition);
-                }
+                context.AddFailedPartition(failedPartition);
+            }
 
+            if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key))
+            {
                 return context;
             }
 
             await ResolveSavedFutures(pendingSavesToFold);
 
             await changesetStorage.Save(
-                projection.ReadModel.ContainerName,
+                changesetContainer ?? projection.ReadModel.ContainerName,
                 context.Key,
                 context.Event.Context.EventType,
                 context.Event.Context.SequenceNumber,
@@ -94,6 +100,12 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
         await ApplyPendingFutureSaves(context);
 
         return context;
+    }
+
+    static bool HasFailedOwnPartition(IEnumerable<FailedPartition> failedPartitions, IChangeset<AppendedEvent, ExpandoObject> changeset, Key key)
+    {
+        var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
+        return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
     }
 
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
@@ -125,7 +137,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             context.AddFailedPartition(failedPartition);
         }
 
-        if (!failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, pendingSave.Key.Value)))
+        if (!HasFailedOwnPartition(failedPartitions, pendingSave.Changeset, pendingSave.Key))
         {
             await ResolveSavedFuture(pendingSave);
         }

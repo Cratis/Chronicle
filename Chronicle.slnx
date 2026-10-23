@@ -43,10 +43,14 @@
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility/GrainCompatibility.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator.Specs/GrpcCodeGenerator.Specs.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
+        <Project Path="Source/Tools/LegacyContracts/LegacyContracts.csproj" />
+        <Project Path="Source/Tools/LegacyContracts.Specs/LegacyContracts.Specs.csproj" />
         <Project Path="Source/Tools/ProtoGenerator/ProtoGenerator.csproj" />
         <Project Path="Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
@@ -61,6 +65,7 @@
         <Project Path="Integration/Api/Api.csproj" />
         <Project Path="Integration/Client/Client.csproj" />
         <Project Path="Integration/Clustering/Clustering.csproj" />
+        <Project Path="Integration/SqlClustering/SqlClustering.csproj" />
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>

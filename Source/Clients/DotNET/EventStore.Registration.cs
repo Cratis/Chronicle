@@ -23,6 +23,8 @@ public partial class EventStore
     /// </summary>
     internal bool IsRetired { get; private set; }
 
+    object BackgroundRegistrationRetrySync => LazyInitializer.EnsureInitialized(ref _backgroundRegistrationRetrySyncObject);
+
     object RegistrationSync => LazyInitializer.EnsureInitialized(ref _registrationSync);
 
     long DisconnectEpoch

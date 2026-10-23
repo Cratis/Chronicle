@@ -135,6 +135,34 @@ public class Reactor(
         _subscribed = false;
     }
 
+    /// <inheritdoc/>
+    public async Task KeepSubscription(ReactorDefinition definition)
+    {
+        var key = new ReactorKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        _observer ??= GrainFactory.GetGrain<IObserver>(key);
+
+        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            {
+                return;
+            }
+
+            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
+            await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                ObserverType.Reactor,
+                definition.EventTypes.Select(e => e.EventType).ToArray(),
+                localSiloDetails.SiloAddress,
+                connectedClient,
+                definition.IsReplayable,
+                definition.Filters,
+                definition.GenerationDelivery);
+        }
+
+        _subscribed = true;
+    }
+
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var @namespace in namespaces)

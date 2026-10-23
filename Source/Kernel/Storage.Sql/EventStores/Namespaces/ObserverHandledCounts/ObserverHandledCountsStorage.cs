@@ -1,88 +1,115 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverHandledCounts;
 
 /// <summary>
-/// Represents a transitional in-memory implementation of <see cref="IObserverHandledCountsStorage"/> for the SQL backend.
+/// Represents an implementation of <see cref="IObserverHandledCountsStorage"/> for SQL.
 /// </summary>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage is for.</param>
-/// <remarks>
-/// The SQL backend is still under construction in several areas. This implementation keeps handled-event
-/// counts in process memory only, scoped to the event store and namespace, so the observer code path compiles
-/// and runs. A migration-backed table can replace this once the SQL backend reaches feature parity with MongoDB.
-/// </remarks>
-public class ObserverHandledCountsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace) : IObserverHandledCountsStorage
+/// <param name="database">The <see cref="IDatabase"/> to use.</param>
+public class ObserverHandledCountsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverHandledCountsStorage
 {
-    static readonly ConcurrentDictionary<string, ConcurrentDictionary<(ObserverId ObserverId, string Partition), ConcurrentDictionary<EventTypeId, EventCount>>> _entries = new();
-    readonly string _scope = $"{eventStore}/{@namespace}";
+    const int MaxAttempts = 5;
 
     /// <inheritdoc/>
-    public Task Increment(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    public async Task Increment(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
-        if (countsPerEventType.Count == 0)
-        {
-            return Task.CompletedTask;
-        }
-
-        var bucket = _entries.GetOrAdd(_scope, _ => new());
-        var partitionCounts = bucket.GetOrAdd((observerId, partition.ToString()), _ => new());
         foreach (var (eventTypeId, count) in countsPerEventType)
         {
-            partitionCounts.AddOrUpdate(
-                eventTypeId,
-                static (_, addend) => addend,
-                static (_, existing, addend) => existing + addend.Value,
-                count);
+            await Increment(observerId.Value, partition.ToString(), eventTypeId.Value, (long)count.Value);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyDictionary<EventTypeId, EventCount>> GetFor(ObserverId observerId, Key partition)
+    public async Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition)
     {
-        if (_entries.TryGetValue(_scope, out var bucket) &&
-            bucket.TryGetValue((observerId, partition.ToString()), out var partitionCounts))
+        foreach (var (partition, counts) in countsPerPartition)
         {
-            return Task.FromResult<IReadOnlyDictionary<EventTypeId, EventCount>>(
-                partitionCounts.ToDictionary(_ => _.Key, _ => _.Value));
+            await Increment(observerId, partition, counts);
         }
-
-        return Task.FromResult<IReadOnlyDictionary<EventTypeId, EventCount>>(ImmutableDictionary<EventTypeId, EventCount>.Empty);
     }
 
     /// <inheritdoc/>
-    public Task RemoveFor(ObserverId observerId, Key partition)
+    public async Task<IReadOnlyDictionary<EventTypeId, EventCount>> GetFor(ObserverId observerId, Key partition)
     {
-        if (_entries.TryGetValue(_scope, out var bucket))
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observer = observerId.Value;
+        var partitionValue = partition.ToString();
+        var rows = await scope.DbContext.ObserverHandledCounts
+            .AsNoTracking()
+            .Where(_ => _.ObserverId == observer && _.Partition == partitionValue)
+            .ToListAsync();
+
+        if (rows.Count == 0)
         {
-            bucket.TryRemove((observerId, partition.ToString()), out _);
+            return ImmutableDictionary<EventTypeId, EventCount>.Empty;
         }
 
-        return Task.CompletedTask;
+        return rows.ToDictionary(_ => (EventTypeId)_.EventTypeId, _ => new EventCount((ulong)_.Count));
     }
 
     /// <inheritdoc/>
-    public Task RemoveAllFor(ObserverId observerId)
+    public async Task RemoveFor(ObserverId observerId, Key partition)
     {
-        if (_entries.TryGetValue(_scope, out var bucket))
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observer = observerId.Value;
+        var partitionValue = partition.ToString();
+        await scope.DbContext.ObserverHandledCounts
+            .Where(_ => _.ObserverId == observer && _.Partition == partitionValue)
+            .ExecuteDeleteAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task RemoveAllFor(ObserverId observerId)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observer = observerId.Value;
+        await scope.DbContext.ObserverHandledCounts
+            .Where(_ => _.ObserverId == observer)
+            .ExecuteDeleteAsync();
+    }
+
+    async Task Increment(string observer, string partition, string eventType, long addend)
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            foreach (var key in bucket.Keys.Where(_ => _.ObserverId == observerId).ToArray())
+            await using var scope = await database.Namespace(eventStore, @namespace);
+
+            // Atomic server-side increment; no read-modify-write, so concurrent writers never lose counts.
+            var updated = await scope.DbContext.ObserverHandledCounts
+                .Where(_ => _.ObserverId == observer && _.Partition == partition && _.EventTypeId == eventType)
+                .ExecuteUpdateAsync(_ => _.SetProperty(row => row.Count, row => row.Count + addend));
+            if (updated > 0)
             {
-                bucket.TryRemove(key, out _);
+                return;
+            }
+
+            try
+            {
+                scope.DbContext.ObserverHandledCounts.Add(new ObserverHandledCountEntry
+                {
+                    ObserverId = observer,
+                    Partition = partition,
+                    EventTypeId = eventType,
+                    Count = addend
+                });
+                await scope.DbContext.SaveChangesAsync();
+                return;
+            }
+            catch (DbUpdateException) when (attempt < MaxAttempts)
+            {
+                // A concurrent writer inserted the row first; loop around and increment it instead.
             }
         }
-
-        return Task.CompletedTask;
     }
 }

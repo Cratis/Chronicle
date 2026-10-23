@@ -34,6 +34,12 @@ public class Observers
     public int SubscriberTimeout { get; init; } = 30;
 
     /// <summary>
+    /// Gets the maximum time in seconds to hold an abandoned client delivery after its timeout.
+    /// A non-positive value disables fencing. Positive values are at least the subscriber timeout.
+    /// </summary>
+    public int AbandonedDeliveryHold { get; init; } = 300;
+
+    /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
     /// </summary>
     /// <remarks>
@@ -64,6 +70,21 @@ public class Observers
     /// Gets the max delay time in seconds for retrying a failed partition.
     /// </summary>
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
+
+    /// <summary>
+    /// Gets the webhook retry delays in seconds. After the last entry, that delay repeats.
+    /// When empty, webhooks use <see cref="Webhooks.DefaultBackoffScheduleSeconds"/>. Only used by Webhooks:Retry.
+    /// </summary>
+    /// <remarks>
+    /// The default stays empty because configuration binding appends configured entries to an existing collection.
+    /// </remarks>
+    public IReadOnlyList<int> BackoffScheduleSeconds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the webhook retry budget from the first attempt since quarantine was cleared.
+    /// Zero disables the elapsed-time limit. Only used by Webhooks:Retry.
+    /// </summary>
+    public TimeSpan RetryBudget { get; init; }
 
     /// <summary>
     /// Gets the threshold for quarantining an observer based on the number of failed partitions.

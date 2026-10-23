@@ -1,3 +1,6 @@
+---
+description: The Chronicle connection string format the server supports, with chronicle:// and chronicle+srv:// schemes, multiple hosts, load balancing and query parameters.
+---
 # Server support
 
 Chronicle connection strings follow this general format:

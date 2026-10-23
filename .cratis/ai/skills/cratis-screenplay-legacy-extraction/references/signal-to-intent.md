@@ -72,7 +72,7 @@ files on it. Each hop has a typical yield:
 
 | Path | Hops | What to take from it |
 |---|---|---|
-| Write | entry point (route, handler, form action), input model and validation, service, entity, repository, schema or migration, response and error mapping | the command name and inputs; `validate` rules with their exact messages; state-dependent checks (`reads` plus `require`, NOT enforced); unique indexes; the error mapping gives the `then error` text and the legacy HTTP code for the slice `documentation` |
+| Write | entry point (route, handler, form action), input model and validation, service, entity, repository, schema or migration, response and error mapping | the command name and inputs; `validate` rules with their exact messages; state-dependent checks (`reads` plus `require`, eligible protected opt-in or recorded legacy/refused shape and target gap); unique indexes; the error mapping gives the `then error` text and the legacy HTTP code for the slice `documentation` |
 | Read | entry point, query or repository, response model, paging and filter conventions | the read-model shape and query arguments (`by`, `filter`); which caller may narrow what |
 | Background | listeners, after-commit hooks, message consumers, schedulers, outbox relays | reaction or translation candidates; say "none found" when there is none |
 

@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Stored webhook target violates current policy; Warn mode allows delivery: {Reason}")]
+    internal static partial void StoredWebhookTargetWarning(this ILogger<Observer> logger, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Stored webhook target rejected by current policy; observer remains quarantined: {Reason}")]
+    internal static partial void StoredWebhookTargetRejected(this ILogger<Observer> logger, string reason);
+
     [LoggerMessage(LogLevel.Warning, "Observer may have skipped {Count} event(s) of partition {Partition}, first at sequence number {EventSequenceNumber} ({Reason}); its position is {NextEventSequenceNumber}. This is a suspicion, not proof: investigate and consider replaying the partition")]
     internal static partial void SuspectedSkippedEvents(this ILogger<Observer> logger, int count, Key partition, EventSequenceNumber eventSequenceNumber, SuspectedSkipReason reason, EventSequenceNumber nextEventSequenceNumber);
 
@@ -37,6 +43,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
+
+    [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
+    internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
+
+    [LoggerMessage(LogLevel.Information, "Webhook partition {Partition} attempt {Attempt} failed: RetryBackoff until {Deadline}")]
+    internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, Key partition, int attempt, DateTimeOffset deadline);
+
+    [LoggerMessage(LogLevel.Warning, "Webhook partition {Partition} parked after exhausting its retry budget of {Budget}")]
+    internal static partial void WebhookRetryBudgetExhausted(this ILogger<Observer> logger, Key partition, TimeSpan budget);
 
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
@@ -174,6 +189,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Debug, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
+    internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
     internal static partial void PromotingSupersededClient(this ILogger<Observer> logger, ConnectionId connectionId);

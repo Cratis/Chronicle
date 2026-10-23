@@ -44,4 +44,7 @@ public class and_the_observer_routes_while_the_subscriber_is_handling : given.an
     [Fact] void should_not_leave_the_partition_in_flight() => _stateStorage.State.InFlightPartitions.ShouldBeEmpty();
     [Fact] void should_count_the_handled_event() => _stateStorage.State.HandledEventCount.ShouldEqual((EventCount)1UL);
     [Fact] void should_count_the_handled_event_for_its_type() => _stateStorage.State.HandledEventCountPerEventType[event_type.Id].ShouldEqual((EventCount)1UL);
+    [Fact] void should_keep_the_next_position() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)43UL);
+    [Fact] void should_keep_the_last_handled_position() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
+    [Fact] void should_keep_the_tail_position() => _stateStorage.State.TailEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
 }

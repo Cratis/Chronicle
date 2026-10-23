@@ -29,12 +29,18 @@ public class BehaviorPatternStorage(EventStoreName eventStore, EventStoreNamespa
         }
 
         await using var scope = await database.Namespace(eventStore, @namespace);
-        foreach (var entity in entities)
+        await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            await scope.DbContext.BehaviorPatterns.Upsert(entity);
-        }
+            scope.DbContext.ChangeTracker.Clear();
+            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+            foreach (var entity in entities)
+            {
+                await scope.DbContext.BehaviorPatterns.Upsert(entity);
+            }
 
-        await scope.DbContext.SaveChangesAsync();
+            await scope.DbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        });
     }
 
     /// <inheritdoc/>

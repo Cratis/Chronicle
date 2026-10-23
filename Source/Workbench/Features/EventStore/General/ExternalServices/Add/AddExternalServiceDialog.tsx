@@ -151,6 +151,11 @@ export const AddExternalServiceDialog = () => {
                                     type="password"
                                     required={false}
                                 />
+                        <InputTextField<AddExternalService>
+                            value={c => c.OAuthScope}
+                            title={strings.eventStore.general.externalServices.dialogs.addExternalService.oauthScope}
+                            required={false}
+                        />
                             </>
                         )}
                     </>

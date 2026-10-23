@@ -1,3 +1,6 @@
+---
+description: How Chronicle handles projection registration when clients connect, including changed definitions, the version guard for older clients, and rollback.
+---
 # Registration lifecycle
 
 Clients register their projections on every connect — the full set of definitions the client's code
@@ -15,17 +18,16 @@ resolvers without requiring a kernel restart.
 The rebuild decision is:
 
 - **No action** when the only change adds event types and no events of those types exist yet.
-- **Partial replay** when only new event types were added, their explicit property mappings do not overlap
-  existing mappings, and every read-model instance is isolated to one event source. Chronicle applies only
-  the newly consumed event types to event sources containing those events.
-- **Full replay** for changes that can affect event ordering, keys, joins, children, removal behavior,
-  or existing mappings. Full replay is the safe fallback whenever Chronicle cannot prove independence.
+- **Full replay** when newly mapped event types have history, or when changes affect event ordering,
+  keys, joins, children, removal behavior, or existing mappings. Even independent new mappings require
+  a full rebuild: replaying selected historical events into the live container can reject writes behind
+  its watermark or apply contributions twice.
 
 The [`definitionEvolution`](../hosting/configuration/observers.md#definition-evolution) policy controls
-which plans Chronicle performs automatically. The default, `Automatic`, applies all three. `PartialOnly`
-performs safe partial work but creates a recommendation for a full replay, while `Manual` creates a
-recommendation for any replay. Chronicle reports the chosen classification in its logs, and partial and
-full replays use the existing observer job progress shown in the Workbench.
+which plans Chronicle performs automatically. The default, `Automatic`, performs the full replay.
+`PartialOnly` and `Manual` create a recommendation for a full replay instead. No-action changes do not
+create recommendations. Explicit partition replay remains available and is not changed by this policy.
+Full replays use the existing observer job progress shown in the Workbench.
 
 ## When an older client registers — the version guard
 

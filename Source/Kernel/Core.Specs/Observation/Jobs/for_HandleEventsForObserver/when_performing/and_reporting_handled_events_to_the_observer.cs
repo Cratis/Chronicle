@@ -3,14 +3,20 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_performing;
 
 public class and_reporting_handled_events_to_the_observer : given.a_performing_job_step
 {
+    void Establish() => _performState.EventObservationState = EventObservationState.None;
+
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
-    [Fact] void should_report_counts_broken_down_by_event_type_not_event_payloads() => _observer.Received(3).ReportHandledEvents(
+    [Fact]
+    void should_report_counts_broken_down_by_event_type_not_event_payloads() => _observer.Received(3).ReportHandledEvents(
         Arg.Any<Key>(),
-        Arg.Is<IReadOnlyDictionary<EventTypeId, EventCount>>(counts => counts.Values.Sum(count => (long)count.Value) == 1));
+        Arg.Is<IReadOnlyDictionary<EventTypeId, EventCount>>(counts => counts.Values.Sum(count => (long)count.Value) == 1),
+        Arg.Any<JobStepId>(),
+        Arg.Any<EventSequenceNumber>());
 }

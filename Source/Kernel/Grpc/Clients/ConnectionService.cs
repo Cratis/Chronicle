@@ -23,18 +23,32 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo terminating the client connections.</param>
 /// <param name="connectedClientsQuery"><see cref="ConnectedClientsQuery"/> for the cluster-wide view of connected clients.</param>
+/// <param name="openConnections"><see cref="OpenConnections"/> tracking the connections open on this silo.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
     ConnectedClientsQuery connectedClientsQuery,
+    OpenConnections openConnections,
     ILogger<ConnectionService> logger,
     IOptions<ChronicleOptions> options) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
     readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
+
+    /// <summary>
+    /// The longest gap between responses from a client that cannot have got it dropped as stale.
+    /// </summary>
+    /// <remarks>
+    /// The registry drops a client whose last response is older than the stale threshold when it checks. A response
+    /// reaches the registry a moment after it reaches this service, so a gap within one keep-alive of the threshold is
+    /// already treated as one that may have got the client dropped.
+    /// </remarks>
+    readonly TimeSpan _lapse = TimeSpan.FromSeconds(Math.Max(
+        options.Value.ConnectedClients.StaleThresholdSeconds - options.Value.ConnectedClients.KeepAliveIntervalSeconds,
+        options.Value.ConnectedClients.KeepAliveIntervalSeconds));
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -51,14 +65,8 @@ internal sealed class ConnectionService(
         _ = Task.Run(
             async () =>
             {
-                await connectedClients.OnClientConnected(
-                    request.ConnectionId,
-                    request.ClientVersion,
-                    request.IsRunningWithDebugger,
-                    request.ProcessId,
-                    request.ProcessPath,
-                    request.MachineName,
-                    request.ClientType);
+                await Register(connectedClients, request);
+                openConnections.Opened(request, DateTimeOffset.UtcNow);
 
                 try
                 {
@@ -80,6 +88,16 @@ internal sealed class ConnectionService(
                             break;
                         }
 
+                        if (request.IsRunningWithDebugger)
+                        {
+                            await KeepRegistered(connectedClients, request);
+                        }
+                        else if (openConnections.HasLapsed(request.ConnectionId))
+                        {
+                            subject.OnCompleted();
+                            break;
+                        }
+
                         subject.OnNext(new ConnectionKeepAlive
                         {
                             ConnectionId = request.ConnectionId
@@ -91,6 +109,7 @@ internal sealed class ConnectionService(
                     logger.FailureDuringKeepAlive(request.ConnectionId, ex);
                 }
 
+                openConnections.Closed(request.ConnectionId);
                 await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
             },
             context.CancellationToken);
@@ -107,8 +126,21 @@ internal sealed class ConnectionService(
     /// <inheritdoc/>
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
-        var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
-        await connectedClients.OnClientPing(keepAlive.ConnectionId);
+        var respondedAt = DateTimeOffset.UtcNow;
+        try
+        {
+            var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+            var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
+
+            if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
+            {
+                await Restore(connectedClients, request);
+            }
+        }
+        finally
+        {
+            openConnections.Handled(keepAlive.ConnectionId, DateTimeOffset.UtcNow);
+        }
     }
 
     /// <inheritdoc/>
@@ -139,7 +171,7 @@ internal sealed class ConnectionService(
         {
             ServerVersion = ServerVersion.Version,
             ServerProtocolVersion = Contracts.ProtocolVersion.Current,
-            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.ConcurrencyScopeConjunctions]
+            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.IdempotentAppends]
         };
 
         try
@@ -193,5 +225,71 @@ internal sealed class ConnectionService(
             .Select(group => generator.GetSchema(group.ToArray()));
 
         return string.Join('\n', schemas);
+    }
+
+    static Task Register(IConnectedClients connectedClients, ConnectRequest request) =>
+        connectedClients.OnClientConnected(
+            request.ConnectionId,
+            request.ClientVersion,
+            request.IsRunningWithDebugger,
+            request.ProcessId,
+            request.ProcessPath,
+            request.MachineName,
+            request.ClientType);
+
+    /// <summary>
+    /// Registers a client running with a debugger again if its silo's registry no longer knows it while the connection
+    /// is still open.
+    /// </summary>
+    /// <remarks>
+    /// The registry lives in a grain activation only. Orleans deactivates an activation when the silo owning its
+    /// directory entry leaves the cluster, and the new activation starts out knowing no client - so a client
+    /// connected to a surviving silo would otherwise be treated as gone by every observer it is subscribed to.
+    /// <para>
+    /// Every other client is put back only when it responds to a keep-alive - see <see cref="ConnectionKeepAlive"/>.
+    /// A client running with a debugger does not respond, and is never dropped for not responding either, so the
+    /// registry not knowing it can only mean the registry was lost.
+    /// </para>
+    /// </remarks>
+    /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
+    /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request)
+    {
+        try
+        {
+            if (await connectedClients.IsConnected(request.ConnectionId))
+            {
+                return;
+            }
+
+            await Restore(connectedClients, request);
+        }
+        catch (Exception ex)
+        {
+            // A silo that is still leaving the cluster can fail a call or two; the next keep-alive retries.
+            logger.FailedToKeepClientRegistered(request.ConnectionId, ex);
+        }
+    }
+
+    async Task Restore(IConnectedClients connectedClients, ConnectRequest request)
+    {
+        try
+        {
+            logger.RegisteringClientAgain(request.ConnectionId);
+            await connectedClients.OnClientRestored(
+                request.ConnectionId,
+                request.ClientVersion,
+                request.IsRunningWithDebugger,
+                request.ProcessId,
+                request.ProcessPath,
+                request.MachineName,
+                request.ClientType);
+        }
+        catch (Exception ex)
+        {
+            // A silo that is still leaving the cluster can fail a call or two; the next keep-alive retries.
+            logger.FailedToKeepClientRegistered(request.ConnectionId, ex);
+        }
     }
 }

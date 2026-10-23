@@ -111,14 +111,15 @@ public class ReactorMethodArgumentsResolver : IReactorMethodArgumentsResolver, I
         }
 
         var reactorType = reactor.GetType();
+        var effectEpoch = reactorType.GetCustomAttribute<ReactorAttribute>()?.EffectEpoch ?? 0;
         if (eventStore.Reactors is Reactors reactors && reactors.Handlers.FirstOrDefault(_ => _.ReactorType == reactorType) is { } handler)
         {
-            return ReactorDelivery.For(handler.Id, handler.EventSequenceId, eventContext);
+            return ReactorDelivery.For(handler.Id, handler.EventSequenceId, eventContext) with { EffectEpoch = effectEpoch };
         }
 
         // Preserve standalone declaration-based resolution when the store has no native registration for this type.
         var sequence = reactorType.GetEventSequenceId(eventStore.EventTypes, eventStore.Name);
-        return ReactorDelivery.For(reactorType.GetReactorId(), sequence, eventContext);
+        return ReactorDelivery.For(reactorType.GetReactorId(), sequence, eventContext) with { EffectEpoch = effectEpoch };
     }
 
     static bool IsReadModel(IEventStore eventStore, Type type) =>

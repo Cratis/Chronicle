@@ -68,6 +68,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         WellKnownTableNames.Scopes,
         "__EFMigrationsHistory",
         "DatabaseNames",
+        "GenerationFloor",
+        "GenerationFloorHistory",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
@@ -93,6 +95,13 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public TimeSpan LiveQueryPollingInterval { get; } = TimeSpan.FromSeconds(options.Value.Sql.LiveQueryPollIntervalSeconds);
 
+    /// <summary>
+    /// Gets whether runtime schema operations are read-only.
+    /// </summary>
+    internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
+
     bool UsesBindings => options.Value.Storage.ConnectionDetails.GetDatabaseType() is DatabaseType.PostgreSql or DatabaseType.SqlServer;
 
     /// <inheritdoc/>
@@ -114,7 +123,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 #pragma warning restore CA2000
         try
         {
-            if (UsesBindings)
+            if (UsesBindings && !VerifySchema)
             {
                 await _databaseNames.ReserveCluster(dbContext);
             }
@@ -176,11 +185,15 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         {
             connectionString = SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved);
         }
+        else if (UsesBindings)
+        {
+            connectionString = VerifySchema
+                ? KnownConnectionString(identity)
+                : _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime))));
+        }
         else
         {
-            connectionString = UsesBindings
-                ? _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime))))
-                : ConnectionStringFor($"+es+{eventStore}+{@namespace}");
+            connectionString = ConnectionStringFor($"+es+{eventStore}+{@namespace}");
         }
 
         var schema = _resolution.SchemaFor(resolved);
@@ -254,6 +267,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
+        {
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
+
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
@@ -357,12 +375,21 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             }
         }
 
-        foreach (var table in tables)
+        var keepFloor = false;
+        if (tables.Contains("GenerationFloor", StringComparer.Ordinal))
+        {
+            await using var floor = conn.CreateCommand();
+            floor.Transaction = transaction;
+            floor.CommandText = "SELECT COUNT(*) FROM GenerationFloor";
+            keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+        }
+
+        foreach (var table in tables.Where(_ => !keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory")))
         {
             await using var dropCmd = conn.CreateCommand();
             dropCmd.Transaction = transaction;
 #pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
-            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+            dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
         }
@@ -519,20 +546,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }
 #endif
 
-    static bool IsAlreadyExistsException(Exception? ex)
-    {
-        while (ex is not null)
-        {
-            if (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            ex = ex.InnerException;
-        }
-
-        return false;
-    }
+    static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
 
 #if DEVELOPMENT
     async Task<string[]> BoundDatabases()

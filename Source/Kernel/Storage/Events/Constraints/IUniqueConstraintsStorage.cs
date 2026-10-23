@@ -28,9 +28,19 @@ public interface IUniqueConstraintsStorage
     /// <param name="sequenceNumber">The claim's sequence number.</param>
     /// <param name="value">The hashed value.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="subject">The <see cref="Subject"/> whose personal data the value derives from, or null when the constrained properties carry none.</param>
     /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>The write task.</returns>
-    Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default);
+    Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", Subject? subject = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes every claim, in every constraint and scope of this event sequence, that records the subject.
+    /// </summary>
+    /// <param name="subject">The erased <see cref="Subject"/>.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>The write task.</returns>
+    /// <remarks>Claims that record no subject hold no personal data and are kept.</remarks>
+    Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Releases every value held by the source for this constraint and scope.

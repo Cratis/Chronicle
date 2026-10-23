@@ -45,6 +45,8 @@ public class a_unique_constraints_storage : Specification
         var database = Substitute.For<IDatabase>();
         database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
             .Returns(_ => Task.FromResult(new DbContextScope<UniqueConstraintDbContext>(CreateContext(), () => { })));
+        database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
+            .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateNamespaceContext(), () => { })));
 
         _definition = new(ConstraintNameValue, []);
         _storage = new UniqueConstraintsStorage(_eventStore, _namespace, EventSequenceId.Log, database);
@@ -52,11 +54,14 @@ public class a_unique_constraints_storage : Specification
 
     void Destroy() => _connection.Dispose();
 
+    NamespaceDbContext CreateNamespaceContext() =>
+        new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options);
+
     UniqueConstraintDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<UniqueConstraintDbContext>()
             .UseSqlite(_connection.ConnectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .AddInterceptors(_interceptors)
             .Options;
 

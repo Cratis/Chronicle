@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Statistics;
 using MongoDB.Bson;
@@ -19,7 +20,9 @@ public class when_writing_for_the_previous_kernel : Specification
 
     void Because()
     {
-        foreach (var definition in KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections)
+        var namespaced = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single();
+        var legacy = namespaced with { Identifier = $"{namespaced.Identifier.Value}.global", Scope = ProjectionScope.Global };
+        foreach (var definition in new[] { namespaced, legacy })
         {
             _documents.Add(definition.ToMongoDB().ToBsonDocument());
         }

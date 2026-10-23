@@ -4,30 +4,37 @@
 # Label events must not create newer skipped checks with the names of the ordinary PR build or
 # hot-core gate. Even inside this workflow, the label is part of each check name: a later semver
 # label cannot mask a failed requested integration run with a skipped check on the same SHA.
+# Effective label: the event label on labeled; otherwise run-integration if present, else none.
+# Repeat that expression in names, conditions and concurrency (env is unavailable in these contexts).
 name: Requested Integration
+
+run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
 
 concurrency:
   # A called .NET workflow uses the caller's github.workflow/ref; this extra PR/label
   # suffix keeps its concurrency group distinct from the caller's while it runs.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event.label.name || 'none' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
   cancel-in-progress: true
 
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize, reopened]
     branches:
       - "**"
 
 jobs:
   requested-integration:
-    name: requested-integration-${{ github.event.label.name }}
+    name: requested-integration-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
     needs: [requested-detect-hot-core]
-    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
     # The called build pushes the image consumed by its shards. Pass package write permission
     # and inherit secrets into the called workflow (which forwards them to integration.yml).
     permissions:
       contents: read
       packages: write
+      # The nested legacy-contracts job reads owner issue states and the run's TRX artifacts.
+      issues: read
+      actions: read
     uses: ./.github/workflows/dotnet-build.yml
     secrets: inherit
     with:
@@ -35,8 +42,8 @@ jobs:
       all_providers: ${{ needs.requested-detect-hot-core.outputs.touched == 'true' }}
 
   requested-detect-hot-core:
-    name: requested-detect-hot-core-${{ github.event.label.name }}
-    if: github.event.label.name == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
+    name: requested-detect-hot-core-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
+    if: (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -59,10 +66,10 @@ jobs:
         run: python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
   hot-core-gate-requested:
-    name: hot-core-gate-requested-${{ github.event.label.name }}
+    name: hot-core-gate-requested-${{ (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') }}
     needs: [requested-integration, requested-detect-hot-core]
-    # !cancelled(): a run superseded by re-adding the label skips the gate instead of reporting a spurious failure.
-    if: ${{ !cancelled() && github.event.label.name == 'run-integration' }}
+    # !cancelled(): a run superseded by a push or re-adding the label skips the gate instead of reporting a spurious failure.
+    if: ${{ !cancelled() && (github.event.action == 'labeled' && github.event.label.name || contains(github.event.pull_request.labels.*.name, 'run-integration') && 'run-integration' || 'none') == 'run-integration' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -73,7 +80,10 @@ jobs:
           INTEGRATION: ${{ needs.requested-integration.result }}
           ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
           FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          echo "Requested integration for PR head $HEAD_SHA (merge commit $GITHUB_SHA)." >> "$GITHUB_STEP_SUMMARY"
+
           if [ "$FORK" = "true" ]; then
             echo "::notice title=Integration unavailable for fork PR::The fork's token cannot push the integration image. Ask a maintainer to run workflow_dispatch on a trusted branch containing these changes."
             echo "Integration was not run for this fork PR. Ask a maintainer to use workflow_dispatch on a trusted branch containing the changes." >> "$GITHUB_STEP_SUMMARY"
@@ -88,6 +98,12 @@ jobs:
 
           if [ "$INTEGRATION" != "success" ]; then
             echo "::error::Requested integration did not pass ($INTEGRATION)."
+            exit 1
+          fi
+
+          # A skipped inner job leaves the reusable workflow result as success; the matrix output proves it ran.
+          if [ -z "$ALL_PROVIDERS" ]; then
+            echo "::error::The integration matrix did not run for $HEAD_SHA (skipped)."
             exit 1
           fi
 

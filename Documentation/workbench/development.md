@@ -1,3 +1,6 @@
+---
+description: The Chronicle Development and Development-slim Docker images include a built-in administrator account and serve the Workbench on port 35000.
+---
 # Development
 
 The Development and Development-slim Docker images include a built-in administrator account so you can start exploring immediately without any configuration.

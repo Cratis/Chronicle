@@ -2,6 +2,10 @@
   href: index.md
 - name: Production
   href: production.md
+- name: Azure and Entra ID
+  href: azure.md
+- name: Rolling Deploy
+  href: rolling-deploy.md
 - name: Alerting on Observer Failures
   href: alerting-on-observer-failures.md
 - name: Querying Alert Incidents

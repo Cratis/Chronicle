@@ -1,3 +1,6 @@
+---
+description: Reference for ChronicleOptions, the root configuration class of Chronicle .NET clients, set in code or bound from appsettings.json.
+---
 # ChronicleOptions Reference
 
 `ChronicleOptions` is the root configuration class for all Chronicle .NET clients. All properties can be set in code via the `configureOptions` callback on `AddCratisChronicle`, and most can be bound directly from `appsettings.json` under the `Cratis:Chronicle` section.
@@ -347,3 +350,56 @@ The HTTP request header used to resolve the event store namespace on a per-reque
 ```json
 { "Cratis": { "Chronicle": { "NamespaceHttpHeader": "x-my-tenant" } } }
 ```
+
+## Webhooks (Kernel only)
+
+The Kernel's `Cratis.Chronicle.Configuration.ChronicleOptions.Webhooks` is separate from the client
+options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`, or under
+`Cratis:Chronicle:Webhooks` in application configuration. Environment variable equivalents use
+`Cratis__Chronicle__Webhooks__` followed by the key.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `Validation` | `Warn` | Log violations during rollout; `Enforce` rejects them. Enforce is planned as the next major release's default. |
+| `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
+| `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
+| `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
+| `TestTimeoutSeconds` | `30` | Timeout for the registration reachability probe. |
+
+### Delivery retry policy
+
+Webhook delivery uses one HTTP attempt at a time. The observer owns retries, a finite
+retry budget, and durable deadlines; the HTTP resilience pipeline has no retry strategy.
+`RetryDelaySeconds` is retained for compatibility but no longer controls delivery retries.
+Webhook retry policy is configured under `Webhooks:Retry`, independently of the global
+[observer retry settings](../hosting/configuration/observers.md). Non-webhook observers
+retain their existing retry and quarantine defaults.
+
+| `Webhooks:Retry` key | Default | Purpose |
+|---|---|---|
+| `BackoffScheduleSeconds` | `[1, 5, 30, 120, 600, 1800, 3600]` | Delays for successive failures; the last entry repeats. Setting it replaces the default schedule. |
+| `MaximumBackoffDelay` | `3600` | Caps the delay in seconds, including bounded ±20% jitter. |
+| `MaxRetryAttempts` | `0` | No attempt-count limit; a positive value adds a limit alongside the elapsed budget. |
+| `RetryBudget` | `"1.00:00:00"` | Elapsed budget from the first persisted failure since quarantine was last cleared. Zero disables this limit. |
+| `QuarantineOnFailedPartitionCount` | `5` | Pause the observer when this many partitions are parked. Zero disables this threshold. |
+| `QuarantineOnFailedPartitionPercentage` | `0.5` | Pause at or above this fraction of distinct partitions in failure/resolution history. Zero disables this threshold. |
+
+Either exhausted retry limit parks the partition. Schedule deadlines and the first failure's
+timestamp survive reactivation; jitter is not resampled. Valid receiver/circuit deferrals do
+not consume attempts or count toward quarantine. There is no automatic quarantined-observer
+probe scheduler yet; recovery requires operator action.
+
+`MaximumRetryAfterSeconds` bounds receiver-provided `Retry-After` delays on `429` and
+`503` responses. Its default is `86400` seconds (24 hours). Invalid or expired headers
+fall back to the retry budget, without sleeping in the HTTP pipeline. A valid deferral
+and an open-circuit rejection do not consume retry attempts. See
+[webhook delivery policy](../webhooks/index.mdx#receiver-back-pressure-and-permanent-failures)
+for configuration-error pauses, immediate `410` parking, and manual recovery.
+
+For example, `Cratis__Chronicle__Webhooks__Validation=Enforce` enables blocking, and
+`Cratis__Chronicle__Webhooks__AllowedHosts__0=hooks.example.com` approves one host. OAuth authorities
+and discovered token endpoint hosts must also be approved. Cloud metadata addresses need explicit
+approval even in Warn. Redirects are rejected in both modes.
+
+See [Webhook target validation](../webhooks#target-validation) for rollout, Docker/tunnel examples,
+DNS/address restrictions, and the distinction between warnings and blocking.

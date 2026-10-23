@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelConcepts;
 extern alias KernelCore;
 extern alias KernelGrpc;
-extern alias KernelConcepts;
-
 using Cratis.Arc;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
@@ -30,7 +29,8 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// between topologies, so a difference in the measurement is attributable to clustering.
 /// </remarks>
 /// <param name="topology">The <see cref="ClusterTopology"/> to bring up.</param>
-public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDisposable
+/// <param name="configureDiagnostics">Optional scenario-local service instrumentation.</param>
+public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<IServiceCollection>? configureDiagnostics = null) : IAsyncDisposable
 {
     /// <summary>
     /// The name of the event store the benchmarks append to.
@@ -67,6 +67,15 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
         _cluster!.Silos[0].ServiceProvider.GetRequiredService<IGrainFactory>(),
         EventStore1,
         EventStore);
+
+    /// <summary>
+    /// Gets the MongoDB database containing the served read models.
+    /// </summary>
+    internal MongoDB.Driver.IMongoDatabase ReadModelDatabase =>
+        _cluster!.Silos[0].ServiceProvider.GetRequiredService<Storage.MongoDB.IDatabase>()
+            .GetReadModelDatabase(
+                (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)EventStore,
+                KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
     /// <summary>
     /// Brings the cluster up and drives one event end to end so every benchmark starts from an
@@ -113,6 +122,7 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
             {
                 hostBuilder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions()));
                 hostBuilder.Logging.SetMinimumLevel(LogLevel.Warning);
+                if (configureDiagnostics is not null) hostBuilder.Logging.AddConsole();
 
                 var services = hostBuilder.Services;
                 services.AddCratisMongoDB(
@@ -123,10 +133,11 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
                     },
                     _ => { });
 
+                // Arc TryAdds its metrics factory; register it before self-binding can install an unusable constructor binding.
+                services.AddCratisArcMeter();
                 services.AddTypeDiscovery();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
-                services.AddCratisArcMeter();
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusterBenchmarkFixture).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -149,8 +160,9 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology) : IAsyncDi
                 {
                     KernelBootstrap.RemoveServerStartupTask(services);
                     services.AddInProcessChronicleClient(
-                        new DefaultClientArtifactsProvider(new BenchmarkAssemblyDiscovery(typeof(ClusterBenchmarkFixture).Assembly)),
+                        new DefaultClientArtifactsProvider(new ReplayShapeAssemblyDiscovery(typeof(ClusterBenchmarkFixture).Assembly, configureDiagnostics is not null)),
                         EventStore);
+                    configureDiagnostics?.Invoke(services);
                 });
             });
 

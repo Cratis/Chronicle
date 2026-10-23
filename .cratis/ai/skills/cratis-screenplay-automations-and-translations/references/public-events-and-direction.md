@@ -2,7 +2,7 @@
 <!-- Copyright (c) Cratis. All rights reserved. -->
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
-# Public events and translation direction (released ESM v9)
+# Public events and translation direction
 
 ## Contents
 
@@ -101,26 +101,92 @@ module Integration
       direction inbound
       event ShipmentDispatched from "shipping"
         orderId OrderId
-      event OrderDispatched
+        carrier String
+      event ShipmentDelivered from "shipping"
         orderId OrderId
+        status String
+      event OrderDispatched
+        carrier String
+      event OrderDeliveryRecorded
+        carrier String
+        status String
       capture ShipmentTracking
         source events
           from ShipmentDispatched
+          from ShipmentDelivered
         key orderId
         append OrderDispatched
-          orderId = $.orderId
+          when added
+            carrier = $.carrier
+        append OrderDeliveryRecorded
+          when status
+            carrier = $.carrier
+            status = $.status
+      specification RecordingTheFirstDispatch
+        when append ShipmentDispatched
+          orderId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+        then OrderDispatched
+          for "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+      specification FoldingEarlierDispatchIntoDelivery
+        given ShipmentDispatched
+          orderId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+        when append ShipmentDelivered
+          orderId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          status = "delivered"
+        then OrderDeliveryRecorded
+          for "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+          status = "delivered"
+      specification IgnoringAnUnchangedDispatch
+        given ShipmentDispatched
+          orderId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+        when append ShipmentDispatched
+          orderId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          carrier = "DHL"
+        then no events
 ```
 
-This compiles and binds as ESM v9. Evaluating the events-source capture returns
-typed Unsupported: the event-payload-to-working-record contract is not admitted.
-Do not equate binding with a passing capture specification or invent that mapping.
-Keep correlation and resulting private events in the model and report the runtime gap.
+Requires Screenplay 4.171.0 or later (`screenplay --version`) for event-capture
+reference execution and PLAY0700/0701; older runners do not deliver these inputs
+to captures. Run `screenplay <model> --warnaserror`, then `screenplay test <model>`:
+zero diagnostics and all three capture specifications passed are the pass signals.
+
+Present the consumed public event itself: `given <Event>` / `when append <Event>`.
+Fields are typed by its local declaration. `given capture` / `when capture` is
+PLAY0701, with a repair only for exactly one `from` event (several are ambiguous).
+`for` is optional on foreign fixtures: when supplied, it is opaque nonempty text
+identifying the foreign source, not the capture key. A content key such as `orderId`
+must be required on every `from` event (PLAY0700); `$eventSourceId` and other context
+keys are refused. An empty or whitespace-only text key fails execution, even in a
+given before the action; non-text/non-numeric keys are Unsupported.
+
+Givens fold in authored order without appending. Each event overlays its top-level
+properties onto state for that typed key: absent properties retain earlier values;
+objects/lists replace whole values. First sight is `added` only, unchanged overlays
+append nothing, and field/`and`/`or`/transition guards require a modification. An
+append without `when` holds on any change, not on every delivery. Maps apply to
+before and after states; `$.field` reads the mapped merged state. An expression
+guard evaluates the after state only on a change. Root `when removed` never holds.
+
+Captures run after reactions to the same input settle; each capture append settles
+its own cascade before the next. Mixed capture/reaction assertions may need
+`then events in any order`: reference order does not prove independent observer
+order. Only `$context.occurred` (from `given clock`) is admitted; other context
+members fail binding. `children`/`nested` over events remain Unsupported, as do
+composite/list values used as scalars or watched by guards. Reference state never
+persists between specifications and does not prove redelivery deduplication,
+source acknowledgement, retry safety or context propagation. A passing reference
+scenario is not renderer admission; Stage must refuse forms Chronicle cannot realize.
 
 ## Admission and evidence
 
-ESM v9 shipped and is selected only by use of public events,
-origins, direction, event-target builders or events-source captures. At 4.135.0,
-publication reference scenarios execute; imported shapes still refuse binding.
+ESM v9 is selected by use of public events, origins, direction, event-target
+builders or events-source captures. Publication and admitted event-capture
+reference scenarios execute; imported shapes still refuse binding.
 Stage 4.52.0 (previous CLI 3.46.1, history) audited only through v7. The CLI/Stage pair (toolchain `references/renderable-subset.md`)
 reaches construct admission through its bundled ceiling but still refuses publication (STAGE-ESM-032), foreign
 events/events-source captures (STAGE-ESM-033); source admission is not rendering.

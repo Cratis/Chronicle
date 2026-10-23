@@ -24,7 +24,7 @@ public class and_the_round_reported_the_held_back_partition : given.an_observer_
     async Task Because()
     {
         await _observer.Handle("B", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 10UL)]);
-        await _observer.ReportHandledEvents("B", new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 1 });
+        await _observer.ReportHandledEvents("B", new Dictionary<EventTypeId, EventCount> { [event_type.Id] = 1 }, JobStepId.New(), 1UL);
         await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
     }
 

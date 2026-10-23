@@ -43,7 +43,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration());
+        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (ConnectionString.Length == 0)
         {
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
@@ -77,7 +77,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport().AddInterceptors(Interceptors).Options;
+        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
 
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
         var context = new ReadModelDbContext(options, containerName, _columns, _migrator);

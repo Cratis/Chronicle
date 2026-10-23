@@ -24,7 +24,8 @@ public class Sinks(
     IInstancesOf<ISinkFactory> sinkFactories) : ISinks
 {
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
-    readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
+    readonly ConcurrentDictionary<SinkKey, (ISink Sink, ReadModelDefinition Definition)> _sinks = new();
+    readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
 
     /// <inheritdoc/>
     public async Task<ISink> GetFor(ReadModelDefinition readModel)
@@ -32,14 +33,42 @@ public class Sinks(
         readModel.Sink.EnsureReadModelSupported();
         ThrowIfUnknownSink(readModel.Sink.Type);
         var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
-        if (_sinks.TryGetValue(key, out var existing)) return existing;
-        var sink = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
-        await sink.EnsureIndexes();
-        return _sinks.GetOrAdd(key, sink);
+        if (_sinks.TryGetValue(key, out var cached) && SameDefinition(cached.Definition, readModel)) return cached.Sink;
+        var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            var changed = _sinks.TryGetValue(key, out var existing);
+            if (changed && SameDefinition(existing.Definition, readModel)) return existing.Sink;
+            var sink = _factories[readModel.Sink.Type].CreateFor(eventStoreName, eventStoreNamespaceName, readModel);
+            if (changed && sink is ICanReconcileIndexes reconciler)
+            {
+                await reconciler.ReconcileIndexes();
+            }
+            else
+            {
+                await sink.EnsureIndexes();
+            }
+            _sinks[key] = (sink, readModel);
+            return sink;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <inheritdoc/>
+    public Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container) =>
+        GetFor(readModel with { ContainerName = container });
+
+    /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
+
+    static bool SameDefinition(ReadModelDefinition first, ReadModelDefinition second) =>
+        first.Schemas.Count == second.Schemas.Count &&
+        first.Schemas.All(pair => second.Schemas.TryGetValue(pair.Key, out var schema) && pair.Value.ToJson() == schema.ToJson()) &&
+        first.Indexes.SequenceEqual(second.Indexes);
 
     void ThrowIfUnknownSink(SinkTypeId typeId)
     {

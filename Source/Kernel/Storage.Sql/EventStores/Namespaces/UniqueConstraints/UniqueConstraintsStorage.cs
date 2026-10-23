@@ -121,14 +121,15 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     /// <param name="sequenceNumber">The claim's sequence number.</param>
     /// <param name="value">The hashed value.</param>
     /// <param name="scopeKey">The resolved scope.</param>
+    /// <param name="subject">The subject whose personal data the value derives from, or null.</param>
     /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DuplicateUniqueConstraintValue">Another event source owns the value.</exception>
-    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
+    public async Task Save(EventSourceId eventSourceId, UniqueConstraintDefinition definition, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "", Subject? subject = default, CancellationToken cancellationToken = default)
     {
         if (definition.Mode != UniqueConstraintMode.PerValue)
         {
-            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, cancellationToken);
+            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, subject?.Value, cancellationToken);
             return;
         }
 
@@ -141,6 +142,14 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
                 throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
             }
 
+            if (existing.Subject != subject?.Value)
+            {
+                var subjectValue = subject?.Value;
+                await scope.DbContext.Entries
+                    .Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value)
+                    .ExecuteUpdateAsync(_ => _.SetProperty(row => row.Subject, subjectValue), cancellationToken);
+            }
+
             return;
         }
 
@@ -148,7 +157,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         {
             Value = value.Value,
             EventSourceId = eventSourceId.Value,
-            SequenceNumber = sequenceNumber.Value
+            SequenceNumber = sequenceNumber.Value,
+            Subject = subject?.Value
         });
         try
         {
@@ -163,6 +173,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             {
                 throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
             }
+
+            SqlStorageTelemetry.RecoveredCollision("unique-constraint-value");
         }
     }
 
@@ -201,6 +213,28 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await scope.DbContext.Entries.Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
+    {
+        (string[] PerEventSource, string[] PerValue) tables;
+        await using (var namespaceScope = await database.Namespace(eventStore, @namespace))
+        {
+            tables = await UniqueConstraintTables.For(namespaceScope.DbContext, eventSequenceId, cancellationToken);
+        }
+
+        foreach (var table in tables.PerEventSource)
+        {
+            await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, table);
+            await scope.DbContext.Entries.Where(_ => _.Subject == subject.Value).ExecuteDeleteAsync(cancellationToken);
+        }
+
+        foreach (var table in tables.PerValue)
+        {
+            await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, table);
+            await scope.DbContext.Entries.Where(_ => _.Subject == subject.Value).ExecuteDeleteAsync(cancellationToken);
+        }
+    }
+
     static bool IsUniqueViolation(DbUpdateException error) => error.InnerException switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
@@ -209,7 +243,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         _ => false
     };
 
-    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, CancellationToken cancellationToken)
+    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, string? subject, CancellationToken cancellationToken)
     {
         var tableName = GetTableName(name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
@@ -222,6 +256,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         {
             entry.Value = value.Value;
             entry.SequenceNumber = sequenceNumber.Value;
+            entry.Subject = subject;
         }
         else
         {
@@ -229,7 +264,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             {
                 EventSourceId = eventSourceId.Value,
                 Value = value.Value,
-                SequenceNumber = sequenceNumber.Value
+                SequenceNumber = sequenceNumber.Value,
+                Subject = subject
             });
         }
 
@@ -256,6 +292,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
             winner.Value = value.Value;
             winner.SequenceNumber = sequenceNumber.Value;
+            winner.Subject = subject;
             try
             {
                 await scope.DbContext.SaveChangesAsync(cancellationToken);
@@ -271,6 +308,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
                 throw;
             }
+
+            SqlStorageTelemetry.RecoveredCollision("unique-constraint-source");
         }
     }
 

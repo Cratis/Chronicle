@@ -1,3 +1,6 @@
+---
+description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+---
 # Open Telemetry
 
 Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.
@@ -81,6 +84,31 @@ Chronicle instruments the following meters:
 | `Microsoft.Orleans` | Orleans distributed actor framework metrics |
 | `Grpc.AspNetCore.Server` | gRPC server request metrics |
 | .NET runtime | GC, thread pool, and memory metrics from the .NET runtime |
+
+### SQL startup and contention
+
+SQL storage publishes these instruments on the `Cratis.Chronicle` meter:
+
+| Instrument | Kind | Tags | Meaning |
+| --- | --- | --- | --- |
+| `chronicle-sql-schema-lock-wait` | Histogram (seconds) | `provider`, `outcome` | Elapsed database schema-lock acquisition time, including failed waits. Outcomes are `acquired` and `failed`. |
+| `chronicle-sql-upsert-collisions-recovered` | Counter | `operation` | Concurrent inserts handled by an existing SQL recovery or idempotency path. Unhandled conflicts and ordinary updates do not increment it. |
+
+Schema-lock timing excludes opening the connection, migration execution, and the
+in-process migration semaphore. SQLite has no database schema lock and emits no
+schema-lock wait measurement. Collision operation labels identify storage paths,
+not individual rows, event stores, or namespaces.
+
+The `Cratis.Chronicle.Storage.Sql.Database` logger emits an Information event for
+each EF migration it starts applying, with `Node` (machine name), `ProcessId`,
+`Store` (physical database name), and `Migration`. An attempt can still fail or
+roll back; this event is not proof of completion. Already-applied migrations emit
+no event. Connection strings and credentials are not included.
+
+The kernel health endpoint reports healthy only after the host signals that
+startup has completed, including startup migrations and silo initialization. It
+reports unhealthy during shutdown. Later on-demand schema work does not reopen
+the startup readiness gate.
 
 ### Observer failure metrics
 

@@ -142,11 +142,10 @@ public class ReducerPipeline(
                 : SinkWriteMode.Always;
             var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
 
-            if (failedPartitions.Any())
+            var failures = failedPartitions.ToArray();
+            if (failures.Length > 0)
             {
-                var firstFailure = failedPartitions.First();
-                var reason = string.IsNullOrEmpty(firstFailure.Reason) ? string.Empty : $": {firstFailure.Reason}";
-                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}{reason}");
+                throw new ReducerSinkWriteFailed(failures);
             }
         }
     }

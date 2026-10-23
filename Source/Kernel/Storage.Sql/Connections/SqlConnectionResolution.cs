@@ -21,8 +21,13 @@ namespace Cratis.Chronicle.Storage.Sql.Connections;
 /// </remarks>
 /// <param name="storage">The <see cref="Storage"/> configuration.</param>
 /// <param name="resolution">The <see cref="IStorageConnectionResolution"/>.</param>
-internal sealed class SqlConnectionResolution(Configuration.Storage storage, IStorageConnectionResolution resolution)
+internal sealed class SqlConnectionResolution(Configuration.Storage storage, IStorageConnectionResolution resolution) : IDisposable
 {
+    /// <summary>
+    /// Gets native PostgreSQL authentication, when enabled.
+    /// </summary>
+    internal PostgreSqlEntraAuthentication? PostgreSqlEntra { get; } = PostgreSqlEntraAuthentication.From(storage.PostgreSqlEntra);
+
     /// <summary>
     /// Gets a value indicating whether any connection is resolved.
     /// </summary>
@@ -32,6 +37,9 @@ internal sealed class SqlConnectionResolution(Configuration.Storage storage, ISt
     /// Gets the resolver.
     /// </summary>
     internal ICachingConnectionResolver Resolver => resolution.Resolver;
+
+    /// <inheritdoc/>
+    public void Dispose() => PostgreSqlEntra?.Dispose();
 
     /// <summary>
     /// Get the kind of storage a SQL connection string connects to.
@@ -105,16 +113,17 @@ internal sealed class SqlConnectionResolution(Configuration.Storage storage, ISt
     /// These connections administer the server — checking which databases exist and creating them — so they use the
     /// identity resolved for the cluster's <see cref="ConnectionPurpose.Schema"/>.
     /// </remarks>
-    internal async Task PrepareRawConnection(DbConnection connection)
-    {
-        if (!IsConfigured)
-        {
-            return;
-        }
+    internal Task PrepareRawConnection(DbConnection connection) => Prepare(connection, ConnectionPurpose.Schema);
 
-        var resolved = await Resolve(DatabaseIdentity.Cluster, ConnectionPurpose.Schema);
-        connection.ApplyResolvedConnection(connection.ConnectionString, new ResolvedConnection(Identity: resolved.Identity));
-    }
+    /// <summary>
+    /// Apply the resolved identity to a connection Chronicle opens itself to check the cluster database is reachable.
+    /// </summary>
+    /// <param name="connection">The closed <see cref="DbConnection"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Uses the identity resolved for the cluster's <see cref="ConnectionPurpose.Runtime"/>, the one the kernel runs with.
+    /// </remarks>
+    internal Task PrepareRuntimeConnection(DbConnection connection) => Prepare(connection, ConnectionPurpose.Runtime);
 
     static (StorageConnectionKind Kind, string EventStore, string Namespace) Scope(DatabaseIdentity identity) => identity.Kind switch
     {
@@ -123,4 +132,18 @@ internal sealed class SqlConnectionResolution(Configuration.Storage storage, ISt
         DatabaseKind.Namespace => (StorageConnectionKind.Namespace, identity.EventStore, identity.Namespace),
         _ => (StorageConnectionKind.ReadModels, identity.EventStore, identity.Namespace)
     };
+
+    async Task Prepare(DbConnection connection, ConnectionPurpose purpose)
+    {
+        if (IsConfigured)
+        {
+            var resolved = await Resolve(DatabaseIdentity.Cluster, purpose);
+            connection.ApplyResolvedConnection(connection.ConnectionString, new ResolvedConnection(Identity: resolved.Identity));
+        }
+
+        if (PostgreSqlEntra is not null)
+        {
+            await PostgreSqlEntra.Prepare(connection);
+        }
+    }
 }
