@@ -425,7 +425,8 @@ jobs:
           retention-days: 1
 
   legacy-contracts:
-    if: always()
+    # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
+    if: ${{ !cancelled() }}
     needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
     permissions:
       contents: read

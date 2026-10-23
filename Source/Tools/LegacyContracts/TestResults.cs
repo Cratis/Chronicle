@@ -21,10 +21,16 @@ static class TestResults
             throw new CannotEvaluate("No TRX files were supplied.");
         }
 
-        return paths.SelectMany(_ => Parse(File.ReadAllText(_))).ToArray();
+        // A project whose specs are all filtered out writes a TRX without results; only the aggregate must be non-empty.
+        return RequireAny(paths.SelectMany(_ => ParseDocument(File.ReadAllText(_))).ToArray());
     }
 
-    public static IReadOnlyList<TestResult> Parse(string xml)
+    public static IReadOnlyList<TestResult> Parse(string xml) => RequireAny(ParseDocument(xml));
+
+    static IReadOnlyList<TestResult> RequireAny(IReadOnlyList<TestResult> results) =>
+        results.Count > 0 ? results : throw new CannotEvaluate("TRX contains no test results.");
+
+    static TestResult[] ParseDocument(string xml)
     {
         using var text = new StringReader(xml);
         using var reader = XmlReader.Create(text, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
@@ -49,10 +55,6 @@ static class TestResults
 
             return new TestResult(name, string.Equals(Required(result, "outcome"), "Passed", StringComparison.Ordinal));
         }).ToArray();
-        if (results.Length == 0)
-        {
-            throw new CannotEvaluate("TRX contains no test results.");
-        }
 
         return results;
     }
