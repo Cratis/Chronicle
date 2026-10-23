@@ -45,6 +45,34 @@ public sealed class UnfencedSinkWrites : ISinkWrites
         collection.DeleteManyAsync(filter);
 
     /// <inheritdoc/>
-    public Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken) =>
-        collection.BulkWriteAsync(requests, cancellationToken: cancellationToken);
+    public async Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts = null)
+    {
+        var remaining = requests.ToArray();
+        while (remaining.Length > 0)
+        {
+            try
+            {
+                await collection.BulkWriteAsync(remaining, cancellationToken: cancellationToken);
+                return;
+            }
+            catch (MongoBulkWriteException<BsonDocument> exception) when (IsRejectedGuardedUpsert(exception, remaining, guardedUpserts))
+            {
+                remaining = remaining.Skip(exception.WriteErrors[0].Index + 1).ToArray();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Determines whether an ordered batch stopped at an explicitly guarded upsert rejected by its primary key.
+    /// </summary>
+    /// <param name="exception">The ordered bulk failure.</param>
+    /// <param name="requests">The submitted requests.</param>
+    /// <param name="guardedUpserts">The explicitly guarded requests.</param>
+    /// <returns>Whether the failed request is a watermark no-op.</returns>
+    internal static bool IsRejectedGuardedUpsert(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts) =>
+        exception.WriteConcernError is null && exception.WriteErrors.Count == 1 &&
+        exception.WriteErrors[0] is { Category: ServerErrorCategory.DuplicateKey } error &&
+        error.Message.Contains("index: _id_", StringComparison.Ordinal) &&
+        error.Index >= 0 && error.Index < requests.Count &&
+        guardedUpserts?.Contains(requests[error.Index]) == true;
 }
