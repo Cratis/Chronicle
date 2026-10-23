@@ -121,7 +121,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
+builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup", tags: ["ready"]);
 
 if (chronicleOptions.Features.Api)
 {
