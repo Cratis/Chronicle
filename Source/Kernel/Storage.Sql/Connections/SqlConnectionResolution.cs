@@ -21,8 +21,13 @@ namespace Cratis.Chronicle.Storage.Sql.Connections;
 /// </remarks>
 /// <param name="storage">The <see cref="Storage"/> configuration.</param>
 /// <param name="resolution">The <see cref="IStorageConnectionResolution"/>.</param>
-internal sealed class SqlConnectionResolution(Configuration.Storage storage, IStorageConnectionResolution resolution)
+internal sealed class SqlConnectionResolution(Configuration.Storage storage, IStorageConnectionResolution resolution) : IDisposable
 {
+    /// <summary>
+    /// Gets native PostgreSQL authentication, when enabled.
+    /// </summary>
+    internal PostgreSqlEntraAuthentication? PostgreSqlEntra { get; } = PostgreSqlEntraAuthentication.From(storage.PostgreSqlEntra);
+
     /// <summary>
     /// Gets a value indicating whether any connection is resolved.
     /// </summary>
@@ -32,6 +37,9 @@ internal sealed class SqlConnectionResolution(Configuration.Storage storage, ISt
     /// Gets the resolver.
     /// </summary>
     internal ICachingConnectionResolver Resolver => resolution.Resolver;
+
+    /// <inheritdoc/>
+    public void Dispose() => PostgreSqlEntra?.Dispose();
 
     /// <summary>
     /// Get the kind of storage a SQL connection string connects to.
@@ -127,12 +135,15 @@ internal sealed class SqlConnectionResolution(Configuration.Storage storage, ISt
 
     async Task Prepare(DbConnection connection, ConnectionPurpose purpose)
     {
-        if (!IsConfigured)
+        if (IsConfigured)
         {
-            return;
+            var resolved = await Resolve(DatabaseIdentity.Cluster, purpose);
+            connection.ApplyResolvedConnection(connection.ConnectionString, new ResolvedConnection(Identity: resolved.Identity));
         }
 
-        var resolved = await Resolve(DatabaseIdentity.Cluster, purpose);
-        connection.ApplyResolvedConnection(connection.ConnectionString, new ResolvedConnection(Identity: resolved.Identity));
+        if (PostgreSqlEntra is not null)
+        {
+            await PostgreSqlEntra.Prepare(connection);
+        }
     }
 }

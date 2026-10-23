@@ -87,7 +87,6 @@ public class UserStorage(IDatabase database) : IUserStorage, IDisposable
     {
         await using var scope = await database.Cluster();
         await scope.DbContext.Users.Upsert(ToEntity(user));
-        await scope.DbContext.SaveChangesAsync();
         await RefreshSubject();
     }
 

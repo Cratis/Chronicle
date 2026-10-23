@@ -169,7 +169,7 @@ public class EventScenario(
         var root = new TestingEventStore(store, ns, () => defaults.EventTypes, defaults.ScenarioTime);
         var eventSources = new EventSources.EventSources(null, defaults.ClientArtifactsProvider);
         eventSources.Discover().GetAwaiter().GetResult();
-        root.Seed(provider, defaults.JsonSchemaGenerator, ((EventStoreForTesting)defaults.EventStore).EventTypeMigrators, eventSources.All).GetAwaiter().GetResult();
+        root.Seed(provider, defaults.JsonSchemaGenerator, ((EventStoreForTesting)defaults.EventStore).EventTypeMigrators, eventSources.All, ((EventStoreForTesting)defaults.EventStore).Metadata).GetAwaiter().GetResult();
         var constraints = new InProcessConstraints(provider ?? new EmptyConstraintProvider());
         constraints.Discover().GetAwaiter().GetResult();
         var clientSequence = root.CreateSequence(sequence, defaults.EventSerializer, constraints, eventSources);

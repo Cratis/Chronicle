@@ -44,7 +44,6 @@ public class EventSourcesStorage(EventStoreName eventStore, IDatabase database) 
         await using (var scope = await database.EventStore(eventStore))
         {
             await scope.DbContext.EventSourceDefinitions.Upsert(definition.ToSql());
-            await scope.DbContext.SaveChangesAsync();
         }
 
         _subject.OnNext(await GetAll());

@@ -1,0 +1,217 @@
+{
+  "enforcement": "report",
+  "rows": [
+    {
+      "id": "W",
+      "proves": "The current wire contract serves released contracts in this major.",
+      "owners": [
+        5222
+      ],
+      "status": "runnable",
+      "jobs": [
+        "wire-compatibility",
+        "specs-other"
+      ],
+      "specs": [
+        {
+          "selector": "Cratis.Chronicle.Compatibility.for_WireCompatibilityChecker.when_the_contract_narrowed.and_a_field_is_gone",
+          "minimum": 2
+        },
+        {
+          "selector": "Cratis.Chronicle.Compatibility.for_ConnectCompatibility",
+          "minimum": 9
+        },
+        {
+          "selector": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running",
+          "minimum": 10
+        }
+      ],
+      "plantedDefects": [
+        {
+          "defect": "removed field",
+          "spec": "Cratis.Chronicle.Compatibility.for_WireCompatibilityChecker.when_the_contract_narrowed.and_a_field_is_gone.should_report_the_field_number_that_is_gone"
+        },
+        {
+          "defect": "real descriptor removed field",
+          "spec": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running.and_a_field_is_removed.should_detect_the_planted_break"
+        },
+        {
+          "defect": "real descriptor removed method",
+          "spec": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running.and_a_method_is_removed.should_detect_the_planted_break"
+        },
+        {
+          "defect": "real descriptor changed field type",
+          "spec": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running.and_a_field_changes_type.should_detect_the_planted_break"
+        },
+        {
+          "defect": "real descriptor unary-to-streaming change",
+          "spec": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running.and_a_unary_method_becomes_streaming.should_detect_the_planted_break"
+        },
+        {
+          "defect": "real descriptor removed enum value",
+          "spec": "Cratis.Chronicle.Tools.WireCompatibility.for_SelfTest.when_running.and_an_enum_value_is_removed.should_detect_the_planted_break"
+        }
+      ],
+      "requiredProofs": []
+    },
+    {
+      "id": "G",
+      "proves": "Silos retain the released Orleans grain contract for rolling upgrades.",
+      "owners": [
+        5169
+      ],
+      "status": "runnable",
+      "jobs": [
+        "grain-compatibility",
+        "specs-other"
+      ],
+      "specs": [
+        {
+          "selector": "Cratis.Chronicle.Tools.GrainCompatibility.for_SelfTest.when_running.and_the_comparison_is_intact",
+          "minimum": 2
+        }
+      ],
+      "plantedDefects": [
+        {
+          "defect": "planted grain contract breaks",
+          "spec": "Cratis.Chronicle.Tools.GrainCompatibility.for_SelfTest.when_running.and_the_comparison_is_intact.should_detect_every_planted_case"
+        }
+      ],
+      "requiredProofs": []
+    },
+    {
+      "id": "O",
+      "proves": "Startup refuses a persisted generation floor above the binary capability; this is not the rolling-cluster lane.",
+      "owners": [
+        5226
+      ],
+      "status": "runnable",
+      "jobs": [
+        "specs-other"
+      ],
+      "specs": [
+        {
+          "selector": "Cratis.Chronicle.Generations.Admission.for_GenerationFloorAdmission",
+          "minimum": 18
+        },
+        {
+          "selector": "Orleans.Hosting.for_ChronicleServerStartupTask.when_executing.and_a_generation_floor_is_too_high",
+          "minimum": 6
+        },
+        {
+          "selector": "Orleans.Hosting.for_ChronicleServerStartupTask.when_executing.and_a_sibling_silo_runs_an_incompatible_release",
+          "minimum": 2
+        },
+        {
+          "selector": "Cratis.Chronicle.Storage.InMemory.Generations.for_GenerationFloorStorage",
+          "minimum": 30
+        }
+      ],
+      "plantedDefects": [
+        {
+          "defect": "system floor above binary capability",
+          "spec": "Cratis.Chronicle.Generations.Admission.for_GenerationFloorAdmission.when_system_is_below_floor.should_refuse_admission"
+        },
+        {
+          "defect": "startup floor above binary capability",
+          "spec": "Orleans.Hosting.for_ChronicleServerStartupTask.when_executing.and_a_generation_floor_is_too_high.should_fail_closed"
+        },
+        {
+          "defect": "incompatible sibling silo release",
+          "spec": "Orleans.Hosting.for_ChronicleServerStartupTask.when_executing.and_a_sibling_silo_runs_an_incompatible_release.should_fail"
+        }
+      ],
+      "requiredProofs": []
+    },
+    {
+      "id": "C1",
+      "proves": "A released .NET client against the new kernel preserves legacy behavior with adoption off and refuses legacy semantics after initialization.",
+      "owners": [
+        5224
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Run a released NuGet client against the HEAD kernel with generation adoption off.",
+        "Plant legacy replay after initialization and prove an explicit refusal rather than silent legacy semantics."
+      ]
+    },
+    {
+      "id": "C2",
+      "proves": "Kotlin, TypeScript, Elixir and Python clients honor capabilities and typed refusals.",
+      "owners": [
+        5163
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Exercise generated clients against the kernel, beyond protocol shape or client compilation.",
+        "Plant missing capability support and assert typed refusal in every shipped client."
+      ]
+    },
+    {
+      "id": "D",
+      "proves": "Disabled or unadopted stores do not adopt generation semantics implicitly.",
+      "owners": [
+        5223
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Plant accidental adoption or generation writes while disabled or before explicit adoption; assert unchanged legacy behavior."
+      ]
+    },
+    {
+      "id": "R",
+      "proves": "Reducer generation behavior refuses unsupported capability and preserves isolated replay.",
+      "owners": [
+        5227
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Plant missing reducer capability and assert refusal.",
+        "Plant cross-generation reducer replay and prove generation isolation."
+      ]
+    },
+    {
+      "id": "P",
+      "proves": "MongoDB, SQL and in-memory providers provide equivalent fencing or explicit refusal.",
+      "owners": [
+        5225,
+        5229
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Plant an unfenced stale write in every provider and assert rejection or explicit unsupported-capability refusal.",
+        "Compare provider scenario coverage, including typed missing-capability refusal."
+      ]
+    },
+    {
+      "id": "S",
+      "proves": "Delayed stale DDL, cleanup and commands cannot mutate a newer generation.",
+      "owners": [
+        5159,
+        5221
+      ],
+      "status": "pending-owner",
+      "jobs": [],
+      "specs": [],
+      "plantedDefects": [],
+      "requiredProofs": [
+        "Delay a stale DDL, cleanup or command past generation advancement and assert that fencing prevents mutation."
+      ]
+    }
+  ]
+}

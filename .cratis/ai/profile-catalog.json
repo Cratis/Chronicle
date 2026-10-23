@@ -630,6 +630,13 @@
       ]
     },
     {
+      "id": "cratis/playwright",
+      "availableTargets": [],
+      "languages": [
+        "language-agnostic"
+      ]
+    },
+    {
       "id": "cratis/components",
       "availableTargets": [
         "cratis-components-accessibility",
@@ -650,6 +657,7 @@
       "availableTargets": [
         "cratis-content-length",
         "cratis-developer-marketing",
+        "cratis-discoverability",
         "cratis-release-notes",
         "cratis-social-feed-post",
         "cratis-technical-examples",
@@ -663,6 +671,7 @@
     {
       "id": "cratis/documentation",
       "availableTargets": [
+        "cratis-discoverability",
         "cratis-documentation-writing",
         "cratis-engineering-docs-authoring",
         "cratis-llm-friendly-documentation",
@@ -981,10 +990,14 @@
     {
       "id": "cratis/engineering/core",
       "availableTargets": [
+        "cratis-ci-pipeline-performance",
         "cratis-documentation-writing",
+        "cratis-engineering-consolidation-guard",
         "cratis-engineering-decision-record",
         "cratis-engineering-docs-authoring",
         "cratis-engineering-effect-boundaries",
+        "cratis-engineering-local-cross-repo-verification",
+        "cratis-engineering-regression-cluster",
         "cratis-release-notes",
         "cratis-technical-examples"
       ],
@@ -995,11 +1008,95 @@
     {
       "id": "cratis/engineering/csharp",
       "composes": [
-        "cratis/engineering/core"
+        "cratis/engineering/core",
+        "cratis/engineering/dotnet"
       ],
       "availableTargets": [
         "cratis-engineering-csharp-conventions",
         "cratis-orleans-jobs"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet",
+      "composes": [
+        "cratis/engineering/dotnet/performance",
+        "cratis/engineering/dotnet/diagnostics",
+        "cratis/engineering/dotnet/msbuild",
+        "cratis/engineering/dotnet/orleans",
+        "cratis/engineering/dotnet/testing",
+        "cratis/engineering/dotnet/refactoring"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/performance",
+      "availableTargets": [
+        "microbenchmarking",
+        "analyzing-dotnet-performance",
+        "vectorization",
+        "profiling"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/diagnostics",
+      "availableTargets": [
+        "dotnet-trace-collect",
+        "dump-collect"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/msbuild",
+      "availableTargets": [
+        "msbuild",
+        "directory-build-organization",
+        "eliminate-redundant-restores",
+        "check-bin-obj-clash",
+        "including-generated-files",
+        "target-authoring",
+        "extension-points",
+        "binlog-generation"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/orleans",
+      "availableTargets": [
+        "orleans"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/testing",
+      "availableTargets": [
+        "platform-detection",
+        "run-tests",
+        "filter-syntax",
+        "coverage-analysis"
+      ],
+      "languages": [
+        "csharp"
+      ]
+    },
+    {
+      "id": "cratis/engineering/dotnet/refactoring",
+      "availableTargets": [
+        "csharp-refactoring",
+        "dotnet-aot-compat"
       ],
       "languages": [
         "csharp"

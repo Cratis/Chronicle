@@ -35,6 +35,12 @@ public class ObserverState
     public ObserverInitialization? Initialization { get; set; }
 
     /// <summary>
+    /// Gets or sets the outstanding delivery fence snapshot, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<DeliveryFenceState>? DeliveryFences { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

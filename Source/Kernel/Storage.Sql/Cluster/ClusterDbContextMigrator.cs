@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
 /// <summary>
@@ -17,5 +19,11 @@ public class ClusterDbContextMigrator(IDatabase database) : IStartupTask
     public async Task Execute(CancellationToken cancellationToken)
     {
         await using var scope = await database.Cluster();
+        if (database is Database { VerifySchema: true } sql)
+        {
+            await using var store = await database.EventStore(EventStoreName.System);
+            await using var @namespace = await database.Namespace(EventStoreName.System, EventStoreNamespaceName.Default);
+            await sql.PrepareJobs(EventStoreName.System, EventStoreNamespaceName.Default);
+        }
     }
 }

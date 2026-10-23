@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-automations-and-translations/references/translation-patterns.md -->
 # Translation patterns
 
+## Contents
+
+- 1. Where outside facts may enter
+- 2. Correlation first
+- 3. Two vocabularies
+- 4. Per-field disposition
+- 5. Dedup and ordering
+- 6. Corrections from outside
+- 7. Specifying translations
+
 Complete compiled example: `translate-example.md` (binds as ESM v6; a compiler that stops before v6
 compiles it but rejects the slice at binding).
 
@@ -8,8 +18,15 @@ compiles it but rejects the slice at binding).
 Only two routes, both in a `Translate` slice:
 - **`capture`** over a source (api poll, webhook, message topic): key, map, conditional
   appends. Change detection compares each record with the last one seen for the same key.
-- **translator `reaction`** over an event imported from another context (unquoted
-  `import Context.Event`) or over the external fact a capture appended.
+- **translator `reaction`** over a foreign public event declared with its origin.
+  Opaque unquoted imports do not bind. A reaction to a local event a capture
+  appended is a follow-up Automation in a separate slice, not another translation.
+
+A directionless Translate with an unrouted reaction to its own capture's appends
+(including children/nested) warns PLAY0694 and fails `--warnaserror`; explicitly
+inbound local-event consumption is PLAY0616. Keep the capture in Translate and
+choose a separate Automation slice and its specs; there is no automatic repair.
+Requires Screenplay 4.176.0 or later (`screenplay --version`) for PLAY0694; older compilers leave the directionless shape unchecked.
 Not a translation: our own event-to-event follow-up (Automation), infrastructure plumbing,
 and raw database row changes published as-is.
 
@@ -26,8 +43,8 @@ thing by it. Keep it as a property when it is needed to correlate or deduplicate
 ## 3. Two vocabularies
 - The capture appends an **external fact** in the provider's terms (`ProctorResultReceived`
   with a translated `outcome`).
-- Translator reactions record **our facts** in business terms (`ExamPassed`, `ExamFailed`),
-  each guarded by our constraints.
+- Reactions to that local fact record further **our facts** (`ExamPassed`, `ExamFailed`)
+  in a separate Automation slice, each guarded by our constraints.
 - A further worker needs a distinct local decision, obligation or external effect; otherwise
   project views from our fact directly.
 - Name our facts for what they mean to us, not for the transport (`<X>Synced`,
@@ -79,11 +96,17 @@ is a new fact for us (`ResultCorrected`), never an overwrite. Mutually exclusive
 event with `released by` or a separate correction flow is right.
 
 ## 7. Specifying translations
-- `when capture <Capture>` with record fields (as the source names them) -> `then` the
-  external fact and, under v6, what translator reactions appended (`then` lists every new
-  fact).
-- `given capture` for the previous record when a condition compares (`from … to …`,
-  unchanged redelivery).
-- `when append <ExternalFact>` -> `then <OurFact>` to test a translator reaction alone.
-- Case list: `cases-to-specify.md`. These forms parse (probed in
-  `translate-example.md`) but are not executed by any local engine.
+- Record sources: `when capture <Capture>` with source fields -> `then` every new
+  fact, including follow-up Automation appends. A first record of a key is added
+  only: use a separate `when added` append for first sight, keeping the field guard
+  for updates. Seed updates with `given capture` of the same key. Child/nested
+  additions follow the same rule; expressions, maps and unguarded appends are unchanged.
+  Requires Screenplay 4.175.0 or later (`screenplay --version`); older evaluators
+  treat first-record fields as changed.
+- Event sources: `given <FromEvent>` / `when append <FromEvent>`, never capture
+  records (PLAY0701). The key is required on every source event (PLAY0700).
+  Read [public event captures](public-events-and-direction.md) for executable examples,
+  overlay semantics and their prerequisite.
+- `when append <LocalFact>` -> `then <OurFact>` tests the follow-up Automation alone.
+- Run admitted cases with `screenplay test <model>`; all selected specs must pass.
+  Case list: `cases-to-specify.md`.

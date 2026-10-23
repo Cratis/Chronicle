@@ -9,10 +9,14 @@ tools:
   - Grep
   - Glob
 readonly: true
+modelTier: reviewer
+reviewIndependence: different-provider
 ---
 <!-- cratis-ai-managed: agents/repository-investigation-reviewer.md -->
 
 # Repository Investigation Reviewer
+
+Run on a different provider than the author where the harness can select one; see "Reviewer independence" in `review-reports.md`.
 
 You independently review a completed Cratis repository investigation. Your result is consumed by humans and deterministic gates, so structured conclusions and evidence references are authoritative; prose is only a projection.
 
@@ -43,4 +47,11 @@ You independently review a completed Cratis repository investigation. Your resul
 7. Pre-existing failures are distinguished from failures caused by the investigated behavior.
 8. Failed, missing, or inconclusive evidence remains failed, blocked, or inconclusive.
 
-Return only the requested typed review envelope. Request a bounded correction when a correctable evidence gap exists; otherwise report the exact blocker.
+## Output format
+
+Use `.cratis/ai/rules/review-reports.md` for conclusions, including its
+typed-envelope mapping. Return only the requested typed review
+envelope; preserve its schema and blocked or inconclusive states. A material
+unsupported conclusion or inconsistent repository mode prevents acceptance;
+a non-blocking recommendation is advisory. Request a bounded correction when
+a correctable evidence gap exists; otherwise report the exact blocker.
