@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 
@@ -163,6 +164,58 @@ public partial class ProjectionsManager
             {
                 // An unhealthy artifact must not prevent healthy subscriptions or namespace creation.
                 logger.FailedSettingDefinitionAndSubscribing(exception, definition.Identifier);
+            }
+        }));
+    }
+
+    /// <summary>
+    /// Repairs registration subscriptions using the activation-local cache. Only namespace-local
+    /// triggers check real observer state, so idle tenants do not cause a whole-store observer sweep.
+    /// </summary>
+    /// <returns>A task representing the subscription repair.</returns>
+    async Task ResubscribeProjectionsThatAreNotSubscribed()
+    {
+        if (_resubscribeRunning)
+        {
+            _resubscribeRequested = true;
+            return;
+        }
+
+        _resubscribeRunning = true;
+        try
+        {
+            do
+            {
+                _resubscribeRequested = false;
+                await ResubscribeMissingProjections();
+            }
+            while (_resubscribeRequested);
+        }
+        finally
+        {
+            _resubscribeRunning = false;
+
+            // Even a failed pass cannot consume a request that arrived while it was awaiting storage.
+            if (_resubscribeRequested) ScheduleResubscribeProjectionsThatAreNotSubscribed();
+        }
+    }
+
+    async Task ResubscribeMissingProjections()
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
+        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
+            activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
+        await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
+        {
+            try
+            {
+                await EnsureSubscribedIn(namespaceName);
+            }
+            catch (Exception exception)
+            {
+                // The namespace pass logs individual failures; this scheduled repair has no caller to fail.
+                logger.FailedEnsuringSubscriptionsInNamespace(exception, namespaceName);
             }
         }));
     }

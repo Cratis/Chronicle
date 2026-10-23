@@ -13,7 +13,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -119,15 +118,7 @@ public partial class ProjectionsManager(
         }
         finally
         {
-            _registeringDefinitions.Clear();
-
-            // A pass that skipped a definition because it was announced here must not leave it unsubscribed
-            // when the announcement ends, whatever way the registration ended.
-            if (_skippedWhileRegistering)
-            {
-                _skippedWhileRegistering = false;
-                ScheduleResubscribeProjectionsThatAreNotSubscribed();
-            }
+            EndAnnouncement();
         }
     }
 
@@ -168,9 +159,6 @@ public partial class ProjectionsManager(
         return Task.CompletedTask;
     }
 
-    static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
-        [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
-
     List<ProjectionDefinition> FilterUnsupportedKernelDefinitions(List<ProjectionDefinition> definitions)
     {
         var unsupported = definitions.Where(definition => definition.Owner == ProjectionOwner.Kernel && definition.Scope == ProjectionScope.Global).ToArray();
@@ -189,31 +177,16 @@ public partial class ProjectionsManager(
         var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
 
-        // Namespace passes interleave with this registration and read the stored definitions, which are only
-        // replaced once it has set and subscribed the incoming ones. Announcing them here keeps such a pass from
-        // setting or subscribing the definition this registration is replacing.
-        foreach (var definition in definitionList)
-        {
-            _registeringDefinitions[definition.Identifier] = definition;
-        }
+        Announce(definitionList);
 
         // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers
         // must neither replace what a newer version registered, nor retire what a newer version added.
         var olderThanStored = definitionList.Where(definition => IsOlderThanStored(definition, version)).ToList();
         if (olderThanStored.Count > 0)
         {
-            foreach (var definition in olderThanStored)
-            {
-                var stored = State.Projections.First(projection => projection.Identifier == definition.Identifier);
-                logger.IgnoringOlderRegistration(definition.Identifier, version!, stored.Version!);
-                await AddIgnoredRegistrationRecommendation(definition.Identifier, version!, stored.Version!);
-            }
-
+            await IgnoreOlderRegistrations(olderThanStored);
             definitionList = definitionList.Except(olderThanStored).ToList();
-            foreach (var definition in olderThanStored)
-            {
-                _registeringDefinitions.Remove(definition.Identifier);
-            }
+            Withdraw(olderThanStored);
         }
 
         if (fullSetOwner is not null && IsOlderThanAnyRetirableBy(fullSetOwner.Value, registrant, version))
@@ -233,12 +206,7 @@ public partial class ProjectionsManager(
         var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
         changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
 
-        // Only a definition that is actually being replaced may block subscribe passes. An unchanged
-        // re-registration compares unequal by instance, so leaving it announced would keep it dark.
-        foreach (var identifier in _registeringDefinitions.Keys.Except(changedDefinitions.Select(definition => definition.Identifier)).ToArray())
-        {
-            _registeringDefinitions.Remove(identifier);
-        }
+        KeepAnnounced(changedDefinitions);
 
         var failures = new Dictionary<ProjectionId, Exception>();
 
@@ -292,67 +260,6 @@ public partial class ProjectionsManager(
         }
 
         _registrationNamespaces = namespaces.ToHashSet();
-    }
-
-    bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
-        State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));
-
-    /// <summary>
-    /// Checks whether a full set is older than any stored projection it could retire. Another application sharing the
-    /// event store registers its own versions, and those must not stop this application from retiring what it no
-    /// longer registers.
-    /// </summary>
-    /// <param name="owner">The owner of the full set.</param>
-    /// <param name="registrant">The registrant of the full set, if any.</param>
-    /// <param name="version">The version of the full set, if any.</param>
-    /// <returns>True if the full set is older than a projection it could retire.</returns>
-    bool IsOlderThanAnyRetirableBy(ProjectionOwner owner, string? registrant, string? version) =>
-        State.Projections.Any(stored =>
-            stored.Owner == owner &&
-            IsRegisteredBy(stored.Identifier, registrant) &&
-            ProjectionVersions.IsOlder(version, stored.Version));
-
-    async Task AddIgnoredRegistrationRecommendation(ProjectionId identifier, string incomingVersion, string storedVersion)
-    {
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        foreach (var @namespace in namespaces)
-        {
-            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
-
-            // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
-            await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
-                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
-                new()
-                {
-                    ProjectionId = identifier,
-                    IncomingVersion = incomingVersion,
-                    StoredVersion = storedVersion
-                });
-        }
-    }
-
-    /// <summary>
-    /// Records which registrant last registered each of the definitions, so a full set can later retire only what
-    /// the same registrant registered. Several applications share one event store, each registering its own full set.
-    /// </summary>
-    /// <param name="definitions">The definitions in the registration.</param>
-    /// <param name="registrant">The registrant, if the client identified itself.</param>
-    /// <returns><see langword="true"/> if the recorded registrants changed and state needs writing.</returns>
-    bool RecordRegistrant(IEnumerable<ProjectionDefinition> definitions, string? registrant)
-    {
-        if (string.IsNullOrEmpty(registrant)) return false;
-
-        var changed = false;
-        var registrants = new Dictionary<string, string>(State.Registrants);
-        foreach (var definition in definitions)
-        {
-            if (registrants.TryGetValue(definition.Identifier.Value, out var current) && current == registrant) continue;
-            registrants[definition.Identifier.Value] = registrant;
-            changed = true;
-        }
-
-        if (changed) State.Registrants = registrants;
-        return changed;
     }
 
     /// <summary>
@@ -416,58 +323,6 @@ public partial class ProjectionsManager(
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         await Task.WhenAll(namespaces.Select(namespaceName => SubscribeInNamespace(namespaceName, reconcile: false)));
-    }
-
-    /// <summary>
-    /// Repairs registration subscriptions using the activation-local cache. Only namespace-local
-    /// triggers check real observer state, so idle tenants do not cause a whole-store observer sweep.
-    /// </summary>
-    /// <returns>A task representing the subscription repair.</returns>
-    async Task ResubscribeProjectionsThatAreNotSubscribed()
-    {
-        if (_resubscribeRunning)
-        {
-            _resubscribeRequested = true;
-            return;
-        }
-
-        _resubscribeRunning = true;
-        try
-        {
-            do
-            {
-                _resubscribeRequested = false;
-                await ResubscribeMissingProjections();
-            }
-            while (_resubscribeRequested);
-        }
-        finally
-        {
-            _resubscribeRunning = false;
-
-            // Even a failed pass cannot consume a request that arrived while it was awaiting storage.
-            if (_resubscribeRequested) ScheduleResubscribeProjectionsThatAreNotSubscribed();
-        }
-    }
-
-    async Task ResubscribeMissingProjections()
-    {
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
-        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
-            activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
-        await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
-        {
-            try
-            {
-                await EnsureSubscribedIn(namespaceName);
-            }
-            catch (Exception exception)
-            {
-                // The namespace pass logs individual failures; this scheduled repair has no caller to fail.
-                logger.FailedEnsuringSubscriptionsInNamespace(exception, namespaceName);
-            }
-        }));
     }
 
     async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions, bool reactivateRetired)
