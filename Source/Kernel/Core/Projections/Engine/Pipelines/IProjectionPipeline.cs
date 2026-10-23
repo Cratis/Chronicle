@@ -46,6 +46,12 @@ public interface IProjectionPipeline
     Task BeginBulk();
 
     /// <summary>
+    /// Join the sink's open bulk window, or begin one when none is open.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeBulk();
+
+    /// <summary>
     /// Drain the sink's buffered writes without closing its bulk window.
     /// </summary>
     /// <returns>The window identity and any buffered write failures.</returns>
