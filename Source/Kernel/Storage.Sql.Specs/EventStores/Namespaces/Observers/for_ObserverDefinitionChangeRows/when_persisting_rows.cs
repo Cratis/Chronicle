@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Data.Sqlite;
@@ -21,7 +22,7 @@ public class when_persisting_rows : DefinitionChangeRowsContract, IDisposable
 
     async Task Establish()
     {
-        _connectionString = $"DataSource=definition_rows_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        _connectionString = $"Data Source=definition_rows_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
         _connection = new(_connectionString);
         await _connection.OpenAsync();
         await using var context = CreateContext();
@@ -31,8 +32,16 @@ public class when_persisting_rows : DefinitionChangeRowsContract, IDisposable
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 
     /// <summary>
-    /// Creates a context with EF Core's provider cache kept on: this is one fixed option set per provider and the
-    /// rows open many contexts, so an uncached provider would rebuild the model for every context.
+    /// Creates a context with the kernel's own option set and EF Core's provider cache kept on. The rows open many
+    /// contexts, so an uncached provider would rebuild the model for every context, and matching the kernel's options
+    /// reuses its cached provider instead of adding one more towards EF's limit of twenty.
     /// </summary>
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connectionString).AddConceptAsSupport().Options);
+    NamespaceDbContext CreateContext()
+    {
+        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+        builder.UseDatabaseFromConnectionString(_connectionString)
+            .AddConceptAsSupport()
+            .AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
+        return new(builder.Options);
+    }
 }
