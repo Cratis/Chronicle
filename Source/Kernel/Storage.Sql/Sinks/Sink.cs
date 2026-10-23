@@ -182,6 +182,11 @@ public partial class Sink : ISink, ICanReconcileIndexes
         EventSequenceNumber eventSequenceNumber,
         SinkWriteMode mode)
     {
+        if (mode == SinkWriteMode.GuardedUpsert && eventSequenceNumber.IsActualValue)
+        {
+            return await ApplyGuardedUpsert(key, changeset, eventSequenceNumber);
+        }
+
         var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
 
