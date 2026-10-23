@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
@@ -26,6 +27,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     readonly Lock _containerLock = new();
 #endif
 
+    readonly IntegrationTimings _timings;
     MongoDBContextStorage? _contextStorage;
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
@@ -39,6 +41,10 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     protected ChronicleFixture()
     {
+        _timings = new IntegrationTimings(
+            GetType().FullName ?? GetType().Name,
+            Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable",
+            Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER") ?? "unavailable");
         LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
         {
             builder.AddConsole();
@@ -69,7 +75,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             {
                 if (_container is null)
                 {
-                    _container = BuildContainer(Network);
+                    _container = _timings.Measure("container-build-and-auxiliary-start", () => BuildContainer(Network));
                     StartContainer(_container).GetAwaiter().GetResult();
                 }
                 return _container;
@@ -107,6 +113,18 @@ public abstract class ChronicleFixture : IChronicleFixture
 
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await _timings.Run("fixture-disposal", DisposeFixture);
+        }
+        finally
+        {
+            _timings.Complete();
+        }
+    }
+
+    async Task DisposeFixture()
     {
         if (_contextStorage is null)
         {
@@ -243,7 +261,11 @@ public abstract class ChronicleFixture : IChronicleFixture
         await _contextStorage!.DropDatabases(client);
     }
 
-    async Task StartContainer(IContainer container)
+    Task StartContainer(IContainer container) => _started
+        ? Task.CompletedTask
+        : _timings.Run("container-start-total", () => StartContainerCore(container));
+
+    async Task StartContainerCore(IContainer container)
     {
         if (_started) return;
 
@@ -257,7 +279,7 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 failure = null;
 
-                await container.StartAsync();
+                await _timings.Run("container-start-attempt", () => container.StartAsync());
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
@@ -282,7 +304,8 @@ public abstract class ChronicleFixture : IChronicleFixture
                 container = BuildContainer(Network);
                 _container = container;
 
-                await Task.Delay(2000);
+                IntegrationTimings.CurrentPhase?.Retry();
+                await _timings.Run("container-start-retry-delay", () => Task.Delay(2000));
             }
 
             try
