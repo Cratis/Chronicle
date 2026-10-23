@@ -20,6 +20,7 @@ SCRIPT = Path(__file__).with_name("evaluate-hot-core-gate.py")
 spec = importlib.util.spec_from_file_location("evaluate_hot_core_gate", SCRIPT)
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
+LATEST_REQUESTED = gate.latest_requested
 
 # Recorded read-only API fields from the plan's green and skipped-label runs.
 SHA = "647523d239226eec17b4718855f2f0d3930bc0ae"
@@ -41,6 +42,42 @@ def arguments(**overrides):
 
 
 class GateDecisions(unittest.TestCase):
+    def setUp(self):
+        latest = patch.object(gate, "latest_requested", return_value=None)
+        self.latest = latest.start()
+        self.addCleanup(latest.stop)
+
+    def test_message_tells_missing_running_and_failed_integration_apart(self):
+        url = "https://github.com/Cratis/Chronicle/actions/runs/7"
+        cases = [(None, "No Requested Integration run has started"),
+                 ({"id": 7, "status": "in_progress", "conclusion": None, "html_url": url}, "still running"),
+                 ({"id": 7, "status": "completed", "conclusion": "failure", "html_url": url},
+                  "ended with failure"),
+                 ({"id": 7, "status": "completed", "conclusion": "success", "html_url": url},
+                  "requested gate did not pass")]
+        for env in (ENV, dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")):
+            for latest, text in cases:
+                with self.subTest(touched=env["TOUCHED"], latest=latest), patch.dict(os.environ, env, clear=True), \
+                        patch.object(gate, "api", return_value={"head": {"sha": SHA},
+                                                                "labels": [{"name": "run-integration"}]}), \
+                        patch.object(gate, "evidence_runs", return_value=[]):
+                    self.latest.return_value = latest
+                    ok, message = gate.gate(arguments())
+                    self.assertFalse(ok)
+                    self.assertIn(text, message)
+                    self.assertIn(SHA, message)
+                    if latest:
+                        self.assertIn(url, message)
+        self.latest.assert_called_with("Cratis/Chronicle", SHA, None)
+
+    def test_latest_requested_picks_newest_pull_request_run_for_the_head(self):
+        older = dict(GREEN, id=1, status="completed", conclusion="failure")
+        newer = dict(GREEN, id=2, status="in_progress", conclusion=None)
+        other = dict(GREEN, id=3, head_sha="new-push")
+        with patch.object(gate, "workflow_runs", return_value=[older, newer, other]) as runs:
+            self.assertEqual(newer, LATEST_REQUESTED("Cratis/Chronicle", SHA, None))
+        runs.assert_called_once_with("Cratis/Chronicle", gate.EVIDENCE_WORKFLOW, SHA)
+
     def test_evidence_is_exact_sha_event_and_job(self):
         cases = [([], False), ([GREEN], True), ([SKIPPED], False)]
         for field, value in [("head_sha", "new-push"), ("event", "workflow_dispatch")]:
@@ -94,6 +131,48 @@ class GateDecisions(unittest.TestCase):
         self.assertIn(SHA, message)
         self.assertNotIn("Add the", message)
 
+    def labelled_not_touched(self, pr, runs):
+        env = dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")
+        with patch.dict(os.environ, env, clear=True), patch.object(gate, "api", return_value=pr) as api, \
+                patch.object(gate, "evidence_runs", return_value=runs) as evidence:
+            result = gate.gate(arguments())
+        api.assert_called_once_with("repos/Cratis/Chronicle/pulls/7")
+        return result, evidence
+
+    def test_labelled_pr_without_hot_core_needs_evidence_for_its_head(self):
+        labelled = {"head": {"sha": SHA}, "labels": [{"name": "run-integration"}]}
+        (ok, message), _ = self.labelled_not_touched(labelled, [])
+        self.assertFalse(ok)
+        self.assertIn("title=Integration requested", message)
+        self.assertIn(SHA, message)
+        self.assertIn("remove the label and re-run this check", message)
+        (ok, message), _ = self.labelled_not_touched(labelled, [GREEN])
+        self.assertTrue(ok)
+        self.assertIn(GREEN["html_url"], message)
+
+    def test_labelled_pr_keeps_old_behaviour_when_label_removed_or_head_moved(self):
+        for pr in ({"head": {"sha": SHA}, "labels": []},
+                   {"head": {"sha": "new-push"}, "labels": [{"name": "run-integration"}]}):
+            with self.subTest(pr=pr):
+                (ok, message), evidence = self.labelled_not_touched(pr, [])
+                self.assertTrue(ok)
+                self.assertIn("not required", message)
+                evidence.assert_not_called()
+
+    def test_labelled_pr_api_error_fails_closed_in_cli(self):
+        output = io.StringIO()
+        env = dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")
+        with patch.dict(os.environ, env, clear=True), patch.object(sys, "argv", [str(SCRIPT), "gate"]), \
+                patch.object(gate, "api", side_effect=subprocess.CalledProcessError(1, "gh", stderr="HTTP 500")), \
+                redirect_stdout(output):
+            self.assertEqual(1, gate.main())
+        self.assertIn("failing closed: HTTP 500", output.getvalue())
+
+    def test_unlabelled_untouched_pr_never_reads_the_current_pr(self):
+        with patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                patch.object(gate, "api", side_effect=AssertionError("must not call")):
+            self.assertTrue(gate.gate(arguments())[0])
+
     def test_evidence_lookup_uses_pr_head_not_merge_commit(self):
         with patch.dict(os.environ, dict(ENV, GITHUB_SHA="merge-commit", RUN_INTEGRATION="true"), clear=True), \
                 patch.object(gate, "collection", return_value=[GREEN]) as collect, \
@@ -120,6 +199,42 @@ class GateDecisions(unittest.TestCase):
     def test_api_collection_keeps_all_pages(self):
         with patch.object(gate, "api", return_value=[{"jobs": [{"name": "other"}]}, {"jobs": GREEN["jobs"]}]):
             self.assertEqual(2, len(gate.collection("jobs", "jobs")))
+
+    def test_jobs_are_listed_with_a_small_page_size(self):
+        with patch.object(gate, "collection", return_value=[]) as collect:
+            gate.with_jobs("Cratis/Chronicle", {"id": 7})
+        collect.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/7/jobs?filter=latest&per_page=30", "jobs")
+
+    def test_api_retries_server_errors_then_succeeds(self):
+        server_error = subprocess.CalledProcessError(1, "gh", stderr="gh: Server Error (HTTP 502)")
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout='{"ok": true}', stderr="")
+        with patch.object(gate.subprocess, "run", side_effect=[server_error, server_error, ok]) as run, \
+                patch.object(gate.time, "sleep") as sleep:
+            self.assertEqual({"ok": True}, gate.api("anything"))
+        self.assertEqual(3, run.call_count)
+        self.assertEqual([((5,),), ((15,),)], sleep.call_args_list)
+
+    def test_api_gives_up_after_bounded_server_errors(self):
+        server_error = subprocess.CalledProcessError(1, "gh", stderr="gh: Server Error (HTTP 502)")
+        with patch.object(gate.subprocess, "run", side_effect=[server_error] * 3) as run, \
+                patch.object(gate.time, "sleep"), self.assertRaises(subprocess.CalledProcessError):
+            gate.api("anything")
+        self.assertEqual(3, run.call_count)
+
+    def test_api_retries_timeouts(self):
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout="", stderr="")
+        with patch.object(gate.subprocess, "run", side_effect=[subprocess.TimeoutExpired("gh", 30), ok]) as run, \
+                patch.object(gate.time, "sleep"):
+            self.assertIsNone(gate.api("anything"))
+        self.assertEqual(2, run.call_count)
+
+    def test_api_never_retries_client_errors(self):
+        forbidden = subprocess.CalledProcessError(1, "gh", stderr="gh: Forbidden (HTTP 403)")
+        with patch.object(gate.subprocess, "run", side_effect=[forbidden]) as run, \
+                patch.object(gate.time, "sleep") as sleep, self.assertRaises(subprocess.CalledProcessError):
+            gate.api("anything")
+        self.assertEqual(1, run.call_count)
+        sleep.assert_not_called()
 
 
 class RefreshDecisions(unittest.TestCase):
