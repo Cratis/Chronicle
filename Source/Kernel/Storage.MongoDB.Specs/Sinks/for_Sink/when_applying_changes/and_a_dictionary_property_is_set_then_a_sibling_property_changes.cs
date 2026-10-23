@@ -45,7 +45,7 @@ public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(co
         public BsonDocument? RawDocumentAfterFirstWrite;
         public ExpandoObject? Result;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
@@ -86,7 +86,7 @@ public class and_a_dictionary_property_is_set_then_a_sibling_property_changes(co
             Result = await _sink.FindOrDefault(_key);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_databaseName is not null)
             {

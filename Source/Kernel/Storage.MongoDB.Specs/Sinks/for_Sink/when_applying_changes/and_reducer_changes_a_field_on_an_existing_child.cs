@@ -47,7 +47,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
         public ExpandoObject? Result;
         public PropertyDifference[] RawDifferences = [];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
@@ -88,7 +88,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
             Result = await _sink.FindOrDefault(_key);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_databaseName is not null)
             {

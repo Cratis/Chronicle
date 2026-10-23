@@ -37,7 +37,7 @@ public class and_the_document_lacks_what_the_change_is_positioned_in(context ctx
         public BsonDocument WithoutArrayInBulk = default!;
         public bool MissingRootWasCreated;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _client = new MongoClient(fixture.ConnectionString);
             var database = _client.GetDatabase(_databaseName);
@@ -69,7 +69,7 @@ public class and_the_document_lacks_what_the_change_is_positioned_in(context ctx
             MissingRootWasCreated = await Exists("missing-root");
         }
 
-        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
         static Key Key(string id) => new(id, ArrayIndexers.NoIndexers);
 

@@ -25,7 +25,7 @@ public class when_every_silo_saves_the_same_context_at_once(MongoDBFixture fixtu
     [Fact] public void should_hold_one_context() => _stored.ShouldEqual(1);
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
@@ -53,5 +53,5 @@ public class when_every_silo_saves_the_same_context_at_once(MongoDBFixture fixtu
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+    public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 }

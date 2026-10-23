@@ -50,7 +50,7 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
 
         public string ReleasedChildName { get; private set; } = string.Empty;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var schema = await JsonSchema.FromJsonAsync(
                 """
@@ -165,7 +165,7 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             ReleasedChildName = releasedChild["name"]!.GetValue<string>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_databaseName is not null)
             {

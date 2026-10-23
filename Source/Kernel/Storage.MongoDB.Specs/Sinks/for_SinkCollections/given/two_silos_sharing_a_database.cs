@@ -29,7 +29,7 @@ public abstract class two_silos_sharing_a_database(MongoDBFixture fixture) : IAs
     protected SinkCollections SecondSilo { get; private set; } = default!;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _client = new MongoClient(fixture.ConnectionString);
         Database = _client.GetDatabase(_databaseName);
@@ -52,7 +52,7 @@ public abstract class two_silos_sharing_a_database(MongoDBFixture fixture) : IAs
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+    public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
     /// <summary>
     /// Brings the database to the state the specification starts from.

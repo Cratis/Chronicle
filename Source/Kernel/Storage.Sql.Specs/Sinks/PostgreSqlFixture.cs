@@ -66,7 +66,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder("postgres:16-alpine")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
@@ -78,7 +78,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {
