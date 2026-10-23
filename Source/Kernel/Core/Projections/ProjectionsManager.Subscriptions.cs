@@ -14,7 +14,9 @@ namespace Cratis.Chronicle.Projections;
 public partial class ProjectionsManager
 {
     /// <inheritdoc/>
-    public Task EnsureSubscribedIn(EventStoreNamespaceName @namespace)
+    public Task EnsureSubscribedIn(EventStoreNamespaceName @namespace) => SubscribeInNamespace(@namespace);
+
+    Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
     {
         if (_namespaceSubscriptions.TryGetValue(@namespace, out var pending))
         {
@@ -25,28 +27,35 @@ public partial class ProjectionsManager
         // not leave a completed pass in the map. Explicit callers join, rather than skip, pending work.
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _namespaceSubscriptions.Add(@namespace, completion.Task);
-        _ = CompleteNamespaceSubscriptions(@namespace, completion);
+        _ = CompleteNamespaceSubscriptions(@namespace, reconcile, completion);
         return completion.Task;
     }
 
-    async Task CompleteNamespaceSubscriptions(EventStoreNamespaceName @namespace, TaskCompletionSource completion)
+    async Task CompleteNamespaceSubscriptions(EventStoreNamespaceName @namespace, bool reconcile, TaskCompletionSource completion)
     {
-        try
+        Exception? failure = null;
+        do
         {
-            await SubscribeInNamespace(@namespace);
-            completion.TrySetResult();
+            _namespaceReruns.Remove(@namespace);
+            try
+            {
+                await RunNamespaceSubscriptionPass(@namespace, reconcile);
+            }
+            catch (Exception exception)
+            {
+                failure ??= exception;
+            }
         }
-        catch (Exception exception)
-        {
-            completion.TrySetException(exception);
-        }
-        finally
-        {
-            _namespaceSubscriptions.Remove(@namespace);
-        }
+        while (_namespaceReruns.Contains(@namespace));
+
+        // All joiners await requested reruns too. Remove the promise before completing it so a new
+        // caller cannot join finished work. A failed pass still honors a retry requested while it ran.
+        _namespaceSubscriptions.Remove(@namespace);
+        if (failure is null) completion.TrySetResult();
+        else completion.TrySetException(failure);
     }
 
-    async Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
+    async Task RunNamespaceSubscriptionPass(EventStoreNamespaceName @namespace, bool reconcile)
     {
         var pass = SubscribeInNamespaceCore(@namespace, reconcile);
         _subscriptionPasses.Add(pass);

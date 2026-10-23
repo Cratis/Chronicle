@@ -68,11 +68,14 @@ public partial class ProjectionsManager(
     /// </summary>
     readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _subscribed = new();
     readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
+    readonly HashSet<EventStoreNamespaceName> _namespaceReruns = [];
     readonly HashSet<Task> _subscriptionPasses = [];
     readonly HashSet<ProjectionId> _removingProjections = [];
     readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
+    bool _resubscribeRunning;
+    bool _resubscribeRequested;
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
     bool _skippedWhileRegistering;
 
@@ -422,6 +425,33 @@ public partial class ProjectionsManager(
     /// <returns>A task representing the subscription repair.</returns>
     async Task ResubscribeProjectionsThatAreNotSubscribed()
     {
+        if (_resubscribeRunning)
+        {
+            _resubscribeRequested = true;
+            return;
+        }
+
+        _resubscribeRunning = true;
+        try
+        {
+            do
+            {
+                _resubscribeRequested = false;
+                await ResubscribeMissingProjections();
+            }
+            while (_resubscribeRequested);
+        }
+        finally
+        {
+            _resubscribeRunning = false;
+
+            // Even a failed pass cannot consume a request that arrived while it was awaiting storage.
+            if (_resubscribeRequested) ScheduleResubscribeProjectionsThatAreNotSubscribed();
+        }
+    }
+
+    async Task ResubscribeMissingProjections()
+    {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
         var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
@@ -628,6 +658,15 @@ public partial class ProjectionsManager(
 
     void ScheduleResubscribeProjectionsThatAreNotSubscribed()
     {
+        // Mark pending namespace passes immediately, before a timer can join their stale snapshots.
+        // Sets and flags coalesce requests; completion drains at most one pending rerun at a time.
+        _namespaceReruns.UnionWith(_namespaceSubscriptions.Keys);
+        if (_resubscribeRunning)
+        {
+            _resubscribeRequested = true;
+            return;
+        }
+
         _resubscribeTimer?.Dispose();
         _resubscribeTimer = this.RegisterGrainTimer(
             async _ =>
