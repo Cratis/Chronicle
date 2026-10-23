@@ -33,7 +33,6 @@ public class PatchStorage(IDatabase database) : IPatchStorage
             AppliedAt = patch.AppliedAt,
         };
         await scope.DbContext.Patches.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

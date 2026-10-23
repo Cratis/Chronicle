@@ -17,6 +17,6 @@ public class when_upgrading_from_the_previous_release_one_node_at_a_time() : Sql
     ClusterChange.RollingUpgrade,
     Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_PREVIOUS_IMAGE") ?? "cratis/chronicle:latest-development-slim")
 {
-    [Fact(Skip = "#5246 / #5300: Observers stall in catch-up after a node loss until the watchdog runs.")]
+    [Fact]
     public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
 }

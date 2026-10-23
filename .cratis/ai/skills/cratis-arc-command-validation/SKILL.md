@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-validation
-description: Add a rejection rule to an existing Arc command — choosing between ConceptValidator, CommandValidator, a short-circuiting Provide, and a read-model-injected Handle returning a Result of either the event or a ValidationResult. Use when a command must refuse work under some condition. Do not use to define a new command, and do not use for append-time Chronicle constraints.
+description: Add a rejection rule to an existing Arc command — choosing between ConceptValidator, CommandValidator, a short-circuiting Provide, and a read-model-injected Handle returning a Result of either the event or a ValidationResult. Use when placing a C# business rejection in ConceptValidator, CommandValidator, Provide() or a Handle() result containing ValidationResult. Do not use for JVM validators (use cratis-arc-validation-kotlin), Node.js ruleFor (use cratis-arc-validation-typescript), new commands (use cratis-arc-command), or append-time uniqueness (use cratis-chronicle-event-constraints).
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-validation/SKILL.md -->
@@ -60,14 +60,15 @@ another version.
 Which mechanism makes a rule hold under concurrent writers (constraint, protected
 decision, stream decision, aggregate, scope, reactor repair) is routed in
 [choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
-A validator is never that mechanism.
+A validator holds a state rule only when the project is on read protection `On`;
+under `Off` (the default) it is a hint, never the mechanism.
 
 | The rule is… | Put it in |
 | --- | --- |
 | A reusable value invariant — length, format, range | `ConceptValidator<T>` on the concept type |
 | Command input, cross-field, or a pre-handler check | `CommandValidator<TCommand>` with `RuleFor(...)` |
 | A dependency on data the handler must fetch first | `Provide()` — fetch, and short-circuit if unusable |
-| State-dependent and must hold **under concurrency** | Guard the read with `IStreamReads`/`StreamDecision`, or `[ProtectedDecision]` + `DecisionRead<T>`; return events through Arc |
+| State-dependent and must hold **under concurrency** | Under `On`, a `CommandValidator<T>` with the read model as a constructor parameter (Step 5); or `IStreamReads`/`StreamDecision`; return events through Arc. `[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in |
 | Uniqueness | A Chronicle constraint, never a command-side read |
 | A genuine defect or missing infrastructure | `throw` a domain exception |
 
@@ -120,11 +121,21 @@ public class TransferFundsValidator : CommandValidator<TransferFunds>
 - The validator is discovered by type — no registration.
 - Constructor dependencies (read models, services) are injected. A read model
   injected here resolves the same way as one injected into `Handle()`; see
-  Step 5 for what "the same way" actually means. A validator that reads state is
-  **advisory only**: it shows the state at validation time and guards nothing, so
-  use it for a friendly early message, never as the rule. A `[ProtectedDecision]`
-  command refuses a discoverable validator unless it has exactly one public
-  parameterless constructor (otherwise HTTP 500), so keep state rules out of it.
+  Step 5. **State rules ("may this proceed") belong here**, with the read model as a
+  constructor parameter. Under read protection `On` that read is fresh from the log
+  and guards the append: if an event of the model's types for that key arrives
+  after the read, nothing from the command is written. Under `Off` (the default
+  when nothing is set) and `Measure` the same validator reads a plain model: a hint
+  with a friendly message that guards nothing. Under `On` the validator must be
+  convention-registered (transient); hand-registered scoped, singleton, factory or
+  instance validators are refused. Under `[ProtectedDecision]` without `On`, a
+  discoverable validator needs exactly one public parameterless constructor
+  (otherwise HTTP 500).
+- **The caller can lower the severity threshold.** Under `Off`/`Measure`, pin
+  `[BlockOnValidationSeverity(ValidationResultSeverity.Error)]` when Error rules
+  must block. Requires Arc 22.108.0 for commands declared `On` to keep an Error
+  floor. Read references/validation-severity.md when choosing that threshold;
+  severity is not authorization.
 - **Omit the validator entirely when there are no rules.** An empty subclass is
   noise the reader has to check.
 - Single-property intrinsic rules belong on `ConceptValidator<T>` instead, so
@@ -160,53 +171,77 @@ public async Task<Result<Customer, ValidationResult>> Provide(IReadModels readMo
 
 ## Step 5 — Guard a concurrency-sensitive decision
 
-Plain read-model injection or `IReadModels.GetInstanceById` is **advisory**, even
-inside `Handle()` returning `Result<,>`: it enrolls no guard against a competing
-append. Choose the first boundary that fits:
+Set read protection `On` for new code: `<CratisReadProtection>On</CratisReadProtection>`
+in the project (or `[ReadProtection(ReadProtectionMode.On)]` on one command). Under
+`On`, the read-model parameters of `Handle()` and of the validator constructor are
+the guard, so the state rule is a validator and `Handle()` returns the events.
+Requires Arc 22.106.0. Under `Off` (the default) a plain read guards nothing, even
+inside `Handle()` returning `Result<,>`. Choose the first boundary that fits:
 
-1. One routed stream: `Provide(IStreamReads reads) => reads.ForCommand()` returns
-   `Task<StreamDecision>`; `Handle(StreamDecision decision)` returns
-   `decision.Append(...)` (`EventsWithConcurrencyScopes`), guarding the read tail.
-2. Projected state: mark the command `[ProtectedDecision]` and take
-   `DecisionRead<T>` (`.Exists`/`.Instance`) or command-aware `IDecisionReads`.
-   Only Chronicle-admitted, direct event-source-keyed projections with known
-   event types qualify; reducers (including self-reducing models), joins, children and open-ended event
-   types are refused. The model needs an `Id` property.
-   Only parameterless validators constructed/certified by Arc run. Constructor
-   dependencies are refused; static/service-locator decision state is still your
-   responsibility. Command-level `[Unprotected]` opts out, not into safety.
-3. Stream-level automatic scopes: `concurrency: true` on routing attributes
-   (`EventStreamId`, `EventStreamType`, `EventSourceType`). It is **not** a guard
-   for the decision: like the default check it reads the tail after `Handle`.
-   Exact returned scopes take precedence; do not combine automatic capture with
-   exact scopes. A guard detects every matching event after its boundary, whoever
-   wrote it, but it protects only guarded decisions, so every writer that decides
-   on the rule needs one, or the rule must be a constraint.
+1. A unique value or create-once: a Chronicle constraint, not a read.
+2. One entity's state: a read-model parameter in the validator (this step's example).
+   Several entities: one parameter each, with `[LookUpBy(nameof(Command.Prop))]` on
+   a parameter whose key is not the command's event source id, and `Handle()`
+   returning `IEnumerable<EventForEventSourceId>` with a distinct event type per
+   entity.
+3. A limit inside one stream: a per-stream read model (`[EventStream<TSource>("…")]`)
+   on a command routed `[EventSource<TSource>("…")]` + `[EventStreamId("{Prop}")]`,
+   or `Provide(IStreamReads reads) => reads.ForCommand()` returning `StreamDecision`.
+4. An editing conflict: exact returned scopes from the revision the client sent.
+   `concurrency: true` on routing attributes is **not** a guard: like the default
+   check it reads the tail after `Handle`.
+5. Rich lifecycle: an aggregate; do not also read the same source.
 
-`ARCCHR0011/0012` flag unprotected reads and immediate append bypasses. Return
-events, never append them directly. Read
+A read under `On` is refused, with HTTP 500, when it cannot be guarded exactly:
+`IReadModels`, `IMongoCollection`, detached reads, an injected `IEventLog.Append`,
+and models that are joins, event-property keyed, filtered or dependency-bearing
+reducers, Pinned or on another sequence (`ReadCannotBeProtected`; mark a deliberate
+advisory read `[Unprotected("why")]`). Several command properties with the model's
+`Id` type are `AmbiguousReadModelLookup`: add `[LookUpBy]`. A lost race is HTTP 400
+`concurrencyViolation` (`ReadChanged`): the client resubmits; Arc does not re-run
+the command. `[ProtectedDecision]` with `DecisionRead<T>` is the older per-command
+opt-in; it still works and is not obsolete. A guard protects only guarded
+decisions: every writer that decides on the rule needs one, or the rule must be a
+constraint.
+
+`ARCCHR0011` (Info, `Off` only) and `ARCCHR0012` flag plain reads and immediate
+append bypasses. Return events, never append them directly. Read
 [protected and stream decisions](../cratis-arc-command/references/decisions-and-routing.md)
-when choosing the guard. This handler excerpt assumes `CartSummary` is an
-admitted projection; domain types are the slice's existing types.
+and
+[choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md)
+when choosing the guard. The example assumes `CartSummary` is a model-bound
+projection with a `CartId Id`; domain types are the slice's existing types.
 
 ```csharp
-using Cratis.Monads;
-using Cratis.Arc.Chronicle.ReadModels;
+using Cratis.Arc.Commands;
+using Cratis.Arc.Commands.ModelBound;
+using FluentValidation;
 
 [Command]
-[ProtectedDecision]
 public record AddItemToCart(CartId CartId, ItemId ItemId)
 {
-    /// <summary>Adds the item; rejects when the cart already holds the maximum.</summary>
-    /// <param name="cart">The current cart summary, resolved by the command's event-source id.</param>
-    /// <returns>The event on success, or a validation error.</returns>
-    public Result<ItemAddedToCart, ValidationResult> Handle(DecisionRead<CartSummary> cart) =>
-        !cart.Exists
-            ? ValidationResult.Error("Cart must exist.")
-            : cart.Instance.ItemCount >= 3
-                ? ValidationResult.Error("A cart can hold at most 3 items.")
-                : new ItemAddedToCart(ItemId);
+    /// <summary>Adds the item.</summary>
+    /// <returns>The event.</returns>
+    public ItemAddedToCart Handle() => new(ItemId);
 }
+
+public class AddItemToCartValidator : CommandValidator<AddItemToCart>
+{
+    public AddItemToCartValidator(CartSummary? cart) =>
+        RuleFor(c => c.CartId)
+            .Must(_ => cart is { ItemCount: < 3 })
+            .WithMessage("The cart must exist and hold fewer than 3 items.");
+}
+```
+
+Use `Result<TEvent, ValidationResult>` from `Handle()` only when the rule needs a value
+computed there:
+
+```csharp
+public Result<ItemAddedToCart, ValidationResult> Handle(CartSummary? cart) =>
+    cart is not { ItemCount: < 3 }
+        ? ValidationResult.Error("A cart can hold at most 3 items.")
+        : new ItemAddedToCart(ItemId);
 ```
 
 - `Result<TSuccess, TError>` is `Cratis.Monads.Result<,>` from Cratis
@@ -215,40 +250,26 @@ public record AddItemToCart(CartId CartId, ItemId ItemId)
   statements above compile without wrapping.
 - **Return the error; never throw it.**
 - One parameter per logical read model; several reads mean several parameters.
+- Keep the fetch for a *computed* key in `Provide()` with `IDecisionReads.Get`;
+  under `On`, `IReadModels` there is refused.
 
-⚠️ **Two things the resolution does *not* do.** It does not key off the
-`[ReadModel]` attribute — a read model becomes injectable because a Chronicle
-projection or reducer, an EF Core `DbSet<T>`, or a MongoDB collection backs it.
-And there is **no slice or feature restriction**: registration is global by
-type, so "the read model must be in the same slice" is a convention with nothing
-enforcing it.
+Read references/read-model-resolution.md when choosing lookup keys, handling a
+missing injected model, or distinguishing registration from slice conventions.
 
-The resolution is **by the command's resolved event-source id**, not by the
-read-model type and not by "the property that looks like its key". If the
-instance you need is keyed by anything else — a referenced other entity, a
-command with more than one candidate identity, or an id generated inside
-`Handle()` — direct injection hands you the wrong instance or none. Read by
-explicit key in `Provide()` instead:
-
-```csharp
-var other = await readModels.GetInstanceById<Other>((EventSourceId)otherId);
-```
-
-A missing instance resolves to `null`, never to a default object. A nullable
-parameter receives that `null`; a non-nullable one is **rejected as a validation
-failure (400)**, not crashed. `ARC0006` warns on a non-nullable command-scoped
-read-model parameter for exactly this reason. Handle a nullable parameter by rejecting (a validator,
-`Provide()`, or `Result<TEvent, ValidationResult>`), never by returning a
-nullable event from `Handle()`. `cratis-arc-command` carries the
-full resolution and nullability reference, including the passive-projection case
-where absence is *not* `null`.
+Read references/input-binding.md when accepting date-time input or returning
+member-bound validation results: offset requirements, malformed-body
+authorization and camelCase member paths are separate contracts.
 
 ## Step 6 — Specify the rejection
 
 Every rule gets a specification of its failure case, using
-`CommandScenario<TCommand>`. For protected reads, call `UseDecisionReads()`
-before seeding actual events; pinned read models cannot supply a guard. Queue a
-competing append on the relevant route and assert the conflict. Assert **both** that the command did not succeed
+`CommandScenario<TCommand>`. For guarded reads, `new CommandScenario<T>()`
+selects the in-process log from the command's mode and dependencies (do not call
+`UseDecisionReads()`). Seed real events with `Given.ForEventSource(id).Events(...)`
+(pinned read models cannot supply a guard), queue a competing
+`AppendConcurrently(id, events...)` and assert
+`ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation)`.
+For the ordinary rejection, assert **both** that the command did not succeed
 and that it failed *as a validation*:
 
 ```csharp
@@ -274,9 +295,9 @@ the fact. See
 - **The rule never fires.** The read-model type has no backing Chronicle
   projection, reducer, `DbSet<T>`, or MongoDB collection, so nothing registered
   it for command-side resolution.
-- **Two requests both win.** A plain read was mistaken for a protected decision;
-  moving it to `Handle()` or returning `Result<,>` does not guard it. Enroll a
-  stream/projection decision read, or use an append-time uniqueness constraint.
+- **Two requests both win.** The project is on `Off` (the default) or `Measure`, so
+  the validator read is a hint; moving it to `Handle()` or returning `Result<,>`
+  does not guard it. Set `On`, or use a stream decision or a constraint.
 - **`ARC0005` on build.** `Provide()` returns a value no `Handle()` parameter
   consumes.
 

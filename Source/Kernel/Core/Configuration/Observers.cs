@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -15,7 +17,7 @@ public class Observers
     /// Despite the name, this does not limit live event delivery: live delivery never processes partitions of one
     /// observer concurrently. It only caps parallel job steps (replay and catch-up work), together with
     /// <see cref="Jobs.MaxParallelSteps"/>: the effective limit is the smaller of
-    /// <see cref="Jobs.GetEffectiveMaxParallelSteps"/> and this value.
+    /// <see cref="Jobs.GetEffectiveMaxParallelSteps()"/> and this value.
     /// </remarks>
     public int MaxConcurrentPartitions { get; init; } = 32;
 
@@ -32,6 +34,12 @@ public class Observers
     /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.
     /// </remarks>
     public int SubscriberTimeout { get; init; } = 30;
+
+    /// <summary>
+    /// Gets the maximum time in seconds to hold an abandoned client delivery after its timeout.
+    /// A non-positive value disables fencing. Positive values are at least the subscriber timeout.
+    /// </summary>
+    public int AbandonedDeliveryHold { get; init; } = 300;
 
     /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
@@ -96,6 +104,21 @@ public class Observers
     /// Gets the policy for evolving read models when a projection or reducer definition changes.
     /// </summary>
     public DefinitionEvolutionPolicy DefinitionEvolution { get; init; } = DefinitionEvolutionPolicy.Automatic;
+
+    /// <summary>
+    /// Gets the promotion gate for projection generations. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public PromotionGateMode GenerationPromotion { get; init; } = PromotionGateMode.OnCatchUp;
+
+    /// <summary>
+    /// Gets how long the deployment condition must hold before promotion. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan DeploymentConditionGracePeriod { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Gets how long a generation may remain pending before an alert is raised. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan PendingGenerationAlertAfter { get; init; } = TimeSpan.FromHours(24);
 
     /// <summary>
     /// Gets whether reactors and webhooks should automatically replay when their definition changes.

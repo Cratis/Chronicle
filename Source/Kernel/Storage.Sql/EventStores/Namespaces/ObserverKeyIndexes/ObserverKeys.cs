@@ -20,9 +20,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes
 /// <param name="fromEventSequenceNumber">The <see cref="EventSequenceNumber"/> we want to get keys starting from.</param>
 /// <param name="scope">The <see cref="ObserverReaderScope"/> the index is for.</param>
 /// <remarks>
-/// A wildcard scope has no types to filter by and enumerates no keys on SQL, which is what an empty type list has
-/// always done here; MongoDB enumerates every key for it. Making the two agree is a behavior change and is not made
-/// by introducing the scope.
+/// A wildcard scope enumerates every key without an event-type filter, matching MongoDB.
+/// An explicit scope narrows by its types; an empty explicit scope enumerates no keys.
 /// </remarks>
 public class ObserverKeys(
     EventStoreName eventStore,
@@ -32,9 +31,7 @@ public class ObserverKeys(
     EventSequenceNumber fromEventSequenceNumber,
     ObserverReaderScope scope) : IObserverKeys
 {
-    readonly IEnumerable<EventTypeId> _eventTypes = scope.EventTypes.Select(_ => _.Id).ToArray();
-
     /// <inheritdoc/>
     public IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
-        new ObserverKeysAsyncEnumerator(eventStore, @namespace, database, eventSequenceId, fromEventSequenceNumber, _eventTypes, cancellationToken);
+        new ObserverKeysAsyncEnumerator(eventStore, @namespace, database, eventSequenceId, fromEventSequenceNumber, scope, cancellationToken);
 }

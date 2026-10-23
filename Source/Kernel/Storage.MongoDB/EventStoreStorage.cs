@@ -70,6 +70,9 @@ public class EventStoreStorage(
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-initialization"));
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
 
     /// <inheritdoc/>
@@ -137,16 +140,16 @@ public class EventStoreStorage(
         .CountDocumentsAsync(new BsonDocument("_id", 1)) > 0;
 
     /// <inheritdoc/>
-    public Task MarkInitialized() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
-        .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true });
+    public Task MarkInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true }));
 
     /// <inheritdoc/>
     public async Task<bool> AreObserversInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
         .CountDocumentsAsync(new BsonDocument("_id", 2)) > 0;
 
     /// <inheritdoc/>
-    public Task MarkObserversInitialized() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
-        .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true });
+    public Task MarkObserversInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true }));
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

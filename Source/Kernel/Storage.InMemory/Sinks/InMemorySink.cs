@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// </remarks>
 /// <param name="readModel">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-public class InMemorySink(
+public partial class InMemorySink(
     ReadModelDefinition readModel,
     ITypeFormats typeFormats) : ISink, IDisposable
 {
@@ -191,16 +191,7 @@ public class InMemorySink(
 
         if (changeset.HasBeenRemoved())
         {
-            bool removedFromPrimary;
-            lock (_collectionLock)
-            {
-                Collection.Remove(keyValue);
-                LastHandledEventSequenceNumbers.Remove(keyValue);
-                removedFromPrimary = !_isReplaying;
-            }
-
-            NotifyChanged(keyValue, removedFromPrimary);
-            return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            return ApplyRemoval(keyValue, eventSequenceNumber, mode);
         }
 
         var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
@@ -242,9 +233,7 @@ public class InMemorySink(
         bool wroteToPrimary;
         lock (_collectionLock)
         {
-            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
-                eventSequenceNumber.IsActualValue &&
-                !AdvancesWatermark(keyValue, eventSequenceNumber))
+            if (IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode))
             {
                 return Task.FromResult<IEnumerable<FailedPartition>>([]);
             }

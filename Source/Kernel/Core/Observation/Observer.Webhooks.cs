@@ -25,6 +25,9 @@ public partial class Observer
         var validation = await webhookTargetPolicy.EvaluateForDelivery(definition.Target.Url, _observerKey.EventStore);
         var warnings = new List<string>();
         if (validation.IsAllowed && validation.Reason.Length > 0) warnings.Add(validation.Reason);
+
+        // Managed identity token acquisition uses Azure's pipeline, not the webhook target policy.
+        // The receiver URL above remains subject to the delivery policy for every authorization type.
         if (validation.IsAllowed && definition.Target.Authorization.IsT2)
         {
             validation = await webhookTargetPolicy.EvaluateForDelivery(definition.Target.Authorization.AsT2.Authority, _observerKey.EventStore);

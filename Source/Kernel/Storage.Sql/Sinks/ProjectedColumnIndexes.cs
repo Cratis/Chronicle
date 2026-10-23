@@ -12,20 +12,21 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 internal static class ProjectedColumnIndexes
 {
     /// <summary>
-    /// Ensures a declared index, using the canonical ordering shadow for SQLite decimals.
+    /// Ensures a declared index, using the canonical ordering shadow for a single ascending SQLite decimal column.
     /// </summary>
     /// <param name="context">The read-model context.</param>
-    /// <param name="column">The declared scalar column.</param>
+    /// <param name="table">The table name.</param>
+    /// <param name="plan">The resolved index plan.</param>
     /// <param name="online">Whether the provider should build a native index online.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, ProjectedColumn column, bool online)
+    internal static async Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, bool online)
     {
-        if (context.Database.IsSqlite() && SqliteDecimalSortKey.IsDecimal(column))
+        if (context.Database.IsSqlite() && plan.IsLegacy && SqliteDecimalSortKey.IsDecimal(plan.Targets[0].Column))
         {
-            await EnsureDecimalShadow(context, column);
+            await EnsureDecimalShadow(context, plan.Targets[0].Column);
             return;
         }
-        await ReadModelIndexes.Ensure(context, context.TableName, column.Name, online);
+        await ReadModelIndexes.Ensure(context, table, plan, online);
     }
 
     static async Task EnsureDecimalShadow(ReadModelDbContext context, ProjectedColumn column)

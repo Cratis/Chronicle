@@ -8,6 +8,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="../../Kernel/Protobuf/chronicle.desc" Link="chronicle.desc" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../WireCompatibility/WireCompatibility.csproj" />
+
+        <!--
+            Contracts regenerates chronicle.desc after it builds, deleting the previous file first. Building it before
+            this project keeps the copy above from racing the generator in a parallel solution build.
+        -->
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

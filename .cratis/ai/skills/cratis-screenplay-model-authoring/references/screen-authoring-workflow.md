@@ -171,6 +171,28 @@ open, read, propose, review, apply, reopen loop; the syntax and rules are in
 5. Switching a module from inherit to override copies the application's items; retarget each copy to the module's own
    features first or the proposal is refused.
 
+### Feature and module toolbars
+
+A feature (or module) toolbar is a `ScreenToolbarSyntax` in the `toolbars` member of its `FeatureSyntax` (or `ModuleSyntax`);
+`syntax-schema` for `FeatureSyntax` lists `toolbars`. `add` a `ScreenToolbarSyntax` with `name`, `items` and `buttons` to the
+feature, and `replace` a `ToolbarButtonSyntax` or `ToolbarItemSyntax` to set its `confirm` text; `remove` takes a button away.
+Read the proposal's diagnostics: a warning says an `item ... action` names a command no slice of that feature (or module)
+declares. The syntax, the `confirm` rule and when to prefer the feature toolbar are in `cratis-screenplay-ui-composition`
+(`references/application-shell.md`, "Feature and module toolbars"; Screenplay 4.238.0 or later).
+
+### The profile's shell
+
+`ui-profiles` (Screenplay 4.201.0 or later) reads each `ui profile`'s root template, shell options, appearance, new screens default and
+shell diagnostics, and lists the own templates that could be the root template (`applicableRootTemplates`) or the new screens
+default (`applicableNewScreenTemplates`); pick from those instead of guessing. Edit `RootTemplateSyntax` (`name`, `blueprint`,
+`version`), `ShellOptionSyntax` (`add` to the root's `options`; `syntaxKind` is `Word`, `Text`, `Number` or `Flag`),
+`ProfileAppearanceSyntax` (`colorScheme`, `accent`) and `NewScreenTemplateSyntax` with `propose-ast`. A refusal is the answer:
+`PLAY0790` (a template nothing declares), `PLAY0792` (a blueprint the profile does not list), `PLAY0794` (a template that cannot
+be the shell), `PLAY0795` (no `content` slot), `PLAY0797` (a bad color scheme, accent, corners or identity value), `PLAY0799` (a new screens default that
+cannot start a screen). `PLAY0796` (an option the shell does not expose) and `PLAY0791` (the legacy `layout` line) are warnings:
+the proposal is accepted and `ui-profiles` shows them. Replay against the `ui-profile-root-positive` vector and its rejection
+vectors (`ui-profile-root-unknown`, `ui-profile-root-not-a-shell`, `ui-profile-root-invalid`) in `Cratis.Screenplay.CanonicalCorpus`.
+
 Requires Screenplay 4.188.0 or later (`screenplay --version`) to `add` the first region, button or sub-item to a member
 the node JSON omits while empty; an older MCP server answers "Unknown typed syntax member".
 

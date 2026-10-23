@@ -184,6 +184,11 @@ public partial class Sink : ISink, ICanReconcileIndexes
         EventSequenceNumber eventSequenceNumber,
         SinkWriteMode mode)
     {
+        if (mode == SinkWriteMode.GuardedUpsert && eventSequenceNumber.IsActualValue)
+        {
+            return await ApplyGuardedUpsert(key, changeset, eventSequenceNumber);
+        }
+
         var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
 
@@ -305,6 +310,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
             ApplyChangesToEntity(reloadedEntry, write.Changes);
             AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
+            SqlStorageTelemetry.RecoveredCollision("read-model");
         }
     }
 

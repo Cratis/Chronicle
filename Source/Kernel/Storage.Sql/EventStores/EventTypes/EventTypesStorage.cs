@@ -59,7 +59,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        await scope.DbContext.SaveChangesAsync();
         _definitionsByType.TryRemove(eventType.Id, out _);
         return true;
     }
@@ -102,7 +101,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        await scope.DbContext.SaveChangesAsync();
         _definitionsByType.TryRemove(definition.Id, out _);
         return true;
     }

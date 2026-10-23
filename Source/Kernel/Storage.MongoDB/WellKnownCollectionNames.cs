@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The kernel single-writer lease.
+    /// </summary>
+    public const string SingleWriterLeases = "single-writer-leases";
+
+    /// <summary>
     /// The collection holding retained alert incidents.
     /// </summary>
     public const string AlertIncidents = "alert-incidents";

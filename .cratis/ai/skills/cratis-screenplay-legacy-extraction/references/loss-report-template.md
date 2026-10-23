@@ -36,7 +36,8 @@ and the question raised.
 ## Rules not enforced or not expressible today
 One line per rule, named individually (never one generic platform caveat): the rule, its
 evidence row, the invariant and consistency risk, and the target enforcement. State-dependent
-checks are written as `reads` + `require` and marked NOT enforced in the slice description;
+checks use `reads` + `require`: eligible reads opt into v25 protection, while legacy/refused
+shapes are marked unenforced and Stage realization remains a separate gap;
 date rules and opaque policies that no declaration can state stay in the slice `documentation` and here.
 
 ## Unknowns and undecided target decisions

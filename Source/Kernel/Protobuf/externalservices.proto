@@ -33,6 +33,7 @@ enum AuthorizationType {
    Basic = 1;
    Bearer = 2;
    OAuth = 3;
+   ManagedIdentity = 4;
 }
 message BasicAuthorization {
    string Username = 1;

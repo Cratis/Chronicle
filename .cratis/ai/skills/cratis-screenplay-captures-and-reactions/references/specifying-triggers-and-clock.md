@@ -4,7 +4,11 @@
 **Specify what sets them off** (execution from ESM v6): `when clock "<instant>"`
 for a reaction on `every` or `at`, `when trigger <Trigger>` with its values for one
 on an application trigger, and `given capture` / `when capture <Capture>` with the
-source record's fields for a capture, then the events that should follow.
+source record's fields for a record capture, then the events that should follow.
+For `source events`, use `given <FromEvent>` / `when append <FromEvent>` instead
+(PLAY0701). First sight is `added` only; update guards need the same key's prior
+record or events. See [record capture cases](record-capture-specifications.md) and
+[public event captures](../../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md).
 `given clock` fixes the occurrence time, so values mapped from `$context.occurred`
 can be asserted. Excerpt of the complete example in [complete-examples.md](complete-examples.md):
 

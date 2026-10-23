@@ -1,0 +1,20 @@
+# cratis-ai-managed: skills/run-tests/NOTICE
+Run .NET Tests
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet-test/skills/run-tests/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line with the skill-specific safety, ownership or compatibility caveat.
+- Render unimported mtp-hot-reload routing reference as plain topic text.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+- Remove the reference to the mtp-hot-reload skill.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.

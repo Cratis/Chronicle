@@ -21,8 +21,8 @@ internal static class ReplayShapeScenario
     {
         var settings = ReplayShapeSettings.Read();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(settings.TimeoutSeconds));
-        var counters = new ReplayShapeCounters();
-        await using var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo, counters.Configure);
+        var counters = new BenchmarkCounters(nameof(ReplayShapeReadModel));
+        await using var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo, counters.Configure, includeReplayShape: true);
         await Console.Error.WriteLineAsync($"{DateTimeOffset.UtcNow:O} Starting single-silo fixture.");
         await fixture.Start().WaitAsync(deadline.Token);
         var dataset = new ReplayShapeDataset(fixture, settings);
@@ -40,6 +40,7 @@ internal static class ReplayShapeScenario
         await dataset.CaughtUp(deadline.Token);
         clock.Stop();
         var counts = counters.Stop();
+        var bulks = counts.SinkBulkOperations;
 
         await Console.Error.WriteLineAsync($"{DateTimeOffset.UtcNow:O} Replay complete; verifying contents.");
         var after = await dataset.Snapshot(deadline.Token);
@@ -57,10 +58,30 @@ internal static class ReplayShapeScenario
             DocumentsWritten = after.Count,
             counts.MongoCommands,
             MongoCommandsPerEvent = (double)counts.MongoCommands / settings.Events,
+            counts.MongoCommandsByName,
             MongoBoundary = "Chronicle IMongoDBClientManager clients; excludes Orleans persistence/membership and Arc clients; includes readiness probes and background work",
             counts.GrainCalls,
             GrainCallsPerEvent = (double)counts.GrainCalls / settings.Events,
+            counts.GrainCallsByMethod,
             GrainBoundary = "All incoming silo grain calls, including readiness probes and background work; excludes calls bypassing Orleans dispatch",
+            SinkBulks = bulks.Count,
+            SinkBulkOpsMean = bulks.Count == 0 ? 0 : bulks.Average(),
+            SinkBulkOpsMax = bulks.Count == 0 ? 0 : bulks.Max(),
+            SinkBulksAtOrAbove1000 = bulks.Count(b => b >= 1000),
+            SinkBulkOpsHistogram = new Dictionary<string, int>
+            {
+                ["1"] = bulks.Count(b => b == 1),
+                ["2-99"] = bulks.Count(b => b is >= 2 and < 100),
+                ["100-499"] = bulks.Count(b => b is >= 100 and < 500),
+                ["500-999"] = bulks.Count(b => b is >= 500 and < 1000),
+                ["1000+"] = bulks.Count(b => b >= 1000)
+            },
+            SinkBulkBoundary = "Insert/update/delete commands on collections whose name contains the read-model type name, grouped by driver OperationId (one ordered bulk write); operations are the summed documents/updates/deletes array lengths",
+            counts.FlushForCalls,
+            FlushForCallsPer1000Events = counts.FlushForCalls * 1000.0 / settings.Events,
+            FlushForBoundary = "Incoming IObserverService.FlushFor grain-service calls (one per FlushAllFor on a single silo); 0 means grain-service calls bypassed the filter",
+            counts.EventCursorPages,
+            EventCursorPagesBoundary = "getMore commands on the event-log collection plus one initial find; a lower bound on event cursor pages across all readers in the window",
             Before = new { before.Count, before.Hash },
             After = new { after.Count, after.Hash }
         }));

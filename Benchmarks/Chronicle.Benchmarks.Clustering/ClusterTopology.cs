@@ -23,5 +23,13 @@ public enum ClusterTopology
     /// Two silos with the roles split so that event sequences live on one silo and observers on the
     /// other. Every event therefore crosses the silo boundary, which isolates the cost of the hop.
     /// </summary>
-    TwoSilosWithSplitRoles = 2
+    TwoSilosWithSplitRoles = 2,
+
+    /// <summary>Three silos, each hosting every grain type.</summary>
+    ThreeSilos = 3,
+
+    /// <summary>
+    /// Two silos, with event sequences and observers on silo zero and only jobs on silo one.
+    /// </summary>
+    TwoSilosWithSplitJobs = 4
 }

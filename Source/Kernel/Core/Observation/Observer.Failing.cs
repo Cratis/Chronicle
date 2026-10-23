@@ -20,7 +20,7 @@ public partial class Observer
     static readonly TimeSpan _minimumRetryReminderPeriod = TimeSpan.FromMinutes(1);
 
     /// <inheritdoc/>
-    public async Task PartitionFailed(
+    public Task PartitionFailed(
         Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> exceptionMessages,
@@ -28,9 +28,233 @@ public partial class Observer
         FailureKind kind = FailureKind.Unknown,
         FailedPartitionId? episodeId = null,
         Guid? deferralId = null,
-        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry)
+        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy));
+
+    /// <inheritdoc/>
+    public Task PartitionFailedWithDeliveryFence(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        PartitionFailureContext context) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context);
+
+    /// <inheritdoc/>
+    public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        FailedPartitionRecovered(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Live delivery skips a failed partition, so an event appended after the recovery read the partition but before
+    /// the failure is cleared reaches the observer only through catch-up. The check for it therefore runs here, after
+    /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
+    /// exclude, which are never counted as handled.
+    /// </remarks>
+    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
-        if (IsRetired || _removed)
+        if (IsRetired || _removed) return;
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        logger.FailingPartitionRecovered(partition);
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        EvaluateSuspectedSkips();
+    }
+
+    /// <inheritdoc/>
+    public async Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
+    {
+        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
+        if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.FailingPartitionNotRecovered(partition);
+        await RegisterRetryReminder(failure);
+    }
+
+    /// <inheritdoc/>
+    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
+    {
+        if (IsRetired || _removed) return;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+            logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
+            Skips.Delivered(partition, lastHandledEventSequenceNumber);
+            HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
+            await WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
+    {
+        ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
+        await CancelWebhookProbe();
+        if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
+        if (IsQuarantined)
+        {
+            logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
+            return PartitionRecoveryOutcome.ObserverQuarantined;
+        }
+
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            logger.SkippingFailedPartitionRecoveryBecausePartitionNotFound(partition);
+            return PartitionRecoveryOutcome.PartitionNotFound;
+        }
+
+        if (failure.IsQuarantined)
+        {
+            logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
+            return PartitionRecoveryOutcome.PartitionQuarantined;
+        }
+
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (failure.Deferral is { } deferral)
+            {
+                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
+                failure.Deferral = null;
+                await WriteFailedPartitions();
+                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        await StartRecoverJobForFailedPartition(failure);
+        return PartitionRecoveryOutcome.Started;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
+    {
+        ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
+        await CancelWebhookProbe();
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        FailedPartition? failure;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed || !Failures.TryGet(partition, out failure))
+            {
+                logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
+                return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
+            }
+
+            if (!failure.IsQuarantined)
+            {
+                logger.SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(partition);
+                return new(ClearPartitionQuarantineOutcome.NotQuarantined, PartitionRecoveryOutcome.Started);
+            }
+
+            logger.ClearingPartitionQuarantine(partition);
+            failures.State.ClearQuarantine(partition);
+            ChangeAlertState();
+            await WriteFailedPartitions();
+            _metrics?.PartitionQuarantineCleared();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        if (!retry)
+        {
+            await RegisterRetryReminder(failure);
+            return new(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
+        }
+
+        var retryOutcome = await TryStartRecoverJobForFailedPartition(partition);
+        if (retryOutcome != PartitionRecoveryOutcome.Started)
+        {
+            await RegisterRetryReminder(failure);
+        }
+
+        return new(ClearPartitionQuarantineOutcome.Cleared, retryOutcome);
+    }
+
+    /// <inheritdoc/>
+    public async Task ClearFailedPartitions()
+    {
+        ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (Failures.HasFailedPartitions)
+        {
+            logger.ClearingFailedPartitions(Failures.Partitions.Count());
+            await DiscardFailedPartitions(AlertClearedReason.Cleared);
+        }
+
+        ScheduleAlertReport();
+    }
+
+    static void SetWebhookFailureMetadata(FailedPartition failure, WebhookDeliveryFailurePolicy failurePolicy, EventSequenceNumber sequenceNumber)
+    {
+        failure.WebhookDisposition = WebhookProbeOutcome.Disposition(failurePolicy);
+
+        // This deadline belongs to the attempt that just ran, not the next retry.
+        failure.Deferral = null;
+        failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
+    }
+
+    static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
+    {
+        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
+        var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
+
+        if (time > maxTime)
+        {
+            return maxTime;
+        }
+
+        if (time == TimeSpan.Zero)
+        {
+            return TimeSpan.FromSeconds(config.BackoffDelay);
+        }
+
+        return time;
+    }
+
+    /// <summary>
+    /// Get the period for the reminder that retries a failed partition.
+    /// </summary>
+    /// <param name="retryDelay">The delay before the next retry attempt.</param>
+    /// <returns>The reminder period.</returns>
+    /// <remarks>
+    /// The reminder is removed as soon as it is received, so the period only matters if its first tick is never
+    /// delivered. That happens when persisting the reminder takes longer than the retry delay - the reminder service
+    /// then schedules the next tick one full period after the intended one. Keeping the period at the retry delay
+    /// (never below the smallest period the reminder service accepts) bounds how late such a retry can be.
+    /// </remarks>
+    static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
+        retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    async Task RecordPartitionFailure(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        FailedPartitionId? episodeId,
+        Guid? deferralId,
+        PartitionFailureContext context)
+    {
+        // An activation that does not own the definition is not the observer that failed; it records nothing.
+        if (IsRetired || _removed || !KeyOwnsDefinition)
         {
             return;
         }
@@ -47,6 +271,7 @@ public partial class Observer
             logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            await RecordAbandonedDeliveryFence(failure, kind, context.DeliveryFence);
             if (!partitionWasAlreadyFailed)
             {
                 State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
@@ -54,17 +279,12 @@ public partial class Observer
 
             _metrics?.PartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-            if (webhook)
-            {
-                // This deadline belongs to the attempt that just ran, not the next retry.
-                failure.Deferral = null;
-                failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
-            }
+            if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
 
             if (!IsQuarantined)
             {
-                quarantineObserver = webhook ? failurePolicy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
-                if (webhook && failurePolicy == WebhookDeliveryFailurePolicy.ParkPartition)
+                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
+                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
                 {
                     logger.QuarantiningFailedPartition(partition);
                     failures.State.Quarantine(partition);
@@ -123,7 +343,7 @@ public partial class Observer
                 // Fence old reports before the partition write. A crash between the two writes reports whichever
                 // partition level actually committed. Reports alone are coalesced, never these source writes.
                 await WriteStateAsync();
-                await failures.WriteStateAsync();
+                await WriteFailedPartitions();
             }
         }
         finally
@@ -135,197 +355,10 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
+            ArmWebhookProbeAfterFailure();
             await TransitionTo<QuarantinedObserver>();
         }
     }
-
-    /// <inheritdoc/>
-    public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
-        FailedPartitionRecovered(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable);
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Live delivery skips a failed partition, so an event appended after the recovery read the partition but before
-    /// the failure is cleared reaches the observer only through catch-up. The check for it therefore runs here, after
-    /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
-    /// exclude, which are never counted as handled.
-    /// </remarks>
-    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
-    {
-        if (IsRetired || _removed) return;
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
-        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        logger.FailingPartitionRecovered(partition);
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        EvaluateSuspectedSkips();
-    }
-
-    /// <inheritdoc/>
-    public async Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
-    {
-        if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
-        if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        logger.FailingPartitionNotRecovered(partition);
-        await RegisterRetryReminder(failure);
-    }
-
-    /// <inheritdoc/>
-    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
-    {
-        if (IsRetired || _removed) return;
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
-            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-            logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
-            Skips.Delivered(partition, lastHandledEventSequenceNumber);
-            HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
-            await WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
-    {
-        ThrowIfSealed();
-        if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
-        if (IsQuarantined)
-        {
-            logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return PartitionRecoveryOutcome.ObserverQuarantined;
-        }
-
-        if (!Failures.TryGet(partition, out var failure))
-        {
-            logger.SkippingFailedPartitionRecoveryBecausePartitionNotFound(partition);
-            return PartitionRecoveryOutcome.PartitionNotFound;
-        }
-
-        if (failure.IsQuarantined)
-        {
-            logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
-            return PartitionRecoveryOutcome.PartitionQuarantined;
-        }
-
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (failure.Deferral is { } deferral)
-            {
-                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
-                failure.Deferral = null;
-                await failures.WriteStateAsync();
-                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
-            }
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        await StartRecoverJobForFailedPartition(failure);
-        return PartitionRecoveryOutcome.Started;
-    }
-
-    /// <inheritdoc/>
-    public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
-    {
-        ThrowIfSealed();
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        FailedPartition? failure;
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (IsRetired || _removed || !Failures.TryGet(partition, out failure))
-            {
-                logger.SkippingClearPartitionQuarantineBecausePartitionNotFound(partition);
-                return new(ClearPartitionQuarantineOutcome.NotFound, PartitionRecoveryOutcome.Started);
-            }
-
-            if (!failure.IsQuarantined)
-            {
-                logger.SkippingClearPartitionQuarantineBecausePartitionNotQuarantined(partition);
-                return new(ClearPartitionQuarantineOutcome.NotQuarantined, PartitionRecoveryOutcome.Started);
-            }
-
-            logger.ClearingPartitionQuarantine(partition);
-            failures.State.ClearQuarantine(partition);
-            ChangeAlertState();
-            await failures.WriteStateAsync();
-            _metrics?.PartitionQuarantineCleared();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        if (!retry)
-        {
-            await RegisterRetryReminder(failure);
-            return new(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
-        }
-
-        var retryOutcome = await TryStartRecoverJobForFailedPartition(partition);
-        if (retryOutcome != PartitionRecoveryOutcome.Started)
-        {
-            await RegisterRetryReminder(failure);
-        }
-
-        return new(ClearPartitionQuarantineOutcome.Cleared, retryOutcome);
-    }
-
-    /// <inheritdoc/>
-    public async Task ClearFailedPartitions()
-    {
-        ThrowIfSealed();
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (Failures.HasFailedPartitions)
-        {
-            logger.ClearingFailedPartitions(Failures.Partitions.Count());
-            await DiscardFailedPartitions(AlertClearedReason.Cleared);
-        }
-
-        ScheduleAlertReport();
-    }
-
-    static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
-    {
-        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
-        var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
-
-        if (time > maxTime)
-        {
-            return maxTime;
-        }
-
-        if (time == TimeSpan.Zero)
-        {
-            return TimeSpan.FromSeconds(config.BackoffDelay);
-        }
-
-        return time;
-    }
-
-    /// <summary>
-    /// Get the period for the reminder that retries a failed partition.
-    /// </summary>
-    /// <param name="retryDelay">The delay before the next retry attempt.</param>
-    /// <returns>The reminder period.</returns>
-    /// <remarks>
-    /// The reminder is removed as soon as it is received, so the period only matters if its first tick is never
-    /// delivered. That happens when persisting the reminder takes longer than the retry delay - the reminder service
-    /// then schedules the next tick one full period after the intended one. Keeping the period at the retry delay
-    /// (never below the smallest period the reminder service accepts) bounds how late such a retry can be.
-    /// </remarks>
-    static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
-        retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
     Task<Observers> GetRetryConfiguration() =>
         typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
@@ -355,7 +388,7 @@ public partial class Observer
             quarantineObserver = ShouldQuarantineObserver(config);
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -365,6 +398,7 @@ public partial class Observer
         await RemoveReminder(failure);
         if (quarantineObserver)
         {
+            _armWebhookProbe = failure.WebhookDisposition == WebhookFailureDisposition.Retryable;
             await TransitionTo<QuarantinedObserver>();
         }
 
@@ -397,11 +431,14 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task SaveFailedPartition(Key partition)
     {
-        if (!Failures.TryGet(partition, out var failure))
+        if (!KeyOwnsDefinition || !Failures.TryGet(partition, out var failure))
         {
             return;
         }
 
+        // This bypasses the failed partitions storage provider, so it checks ownership against storage the way the
+        // provider does.
+        await storage.ThrowIfKeyDoesNotOwnStoredDefinition(_observerKey);
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
@@ -430,6 +467,7 @@ public partial class Observer
     /// </remarks>
     async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
+        await CancelWebhookProbe();
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -443,7 +481,7 @@ public partial class Observer
             State = State with { FailedPartitionCount = 0 };
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -471,7 +509,7 @@ public partial class Observer
 
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
             return true;
         }
         finally
@@ -548,4 +586,7 @@ public partial class Observer
 
         return false;
     }
+
+    void ArmWebhookProbeAfterFailure() =>
+        _armWebhookProbe = IsWebhookSubscription && Failures.Partitions.Any(WebhookProbeEligibility.IsEligible);
 }

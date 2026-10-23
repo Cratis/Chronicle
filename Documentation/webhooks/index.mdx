@@ -43,8 +43,9 @@ No receiver back-pressure response sleeps on a worker or trips the circuit break
 
 Other `4xx` responses indicate a configuration problem, except `408` and `410`. Chronicle
 records the failure and pauses the entire observer using its existing quarantine state,
-rather than retrying unchanged credentials or URLs. Correct the configuration and clear
-the observer quarantine to resume delivery.
+rather than spending the normal retry budget on unchanged credentials or URLs. Correct the
+configuration; the quarantined observer checks for recovery at a separate low rate. An
+operator can still clear observer quarantine to resume immediately.
 
 A `410 Gone` immediately parks the partition with no automatic retries and logs the target
 authority. It does **not** retire the webhook in this release. Operator intervention is
@@ -66,9 +67,42 @@ Catch-up and replay steps respect an existing partition deferral: they yield wit
 events handled or advancing their checkpoint. The fenced recovery job owns the persisted
 inclusive resume position; unfenced completion cannot clear that episode.
 
-A quarantined observer does **not** automatically probe the receiver in this implementation.
-Operators must correct the endpoint and clear quarantine or explicitly retry. The automatic
-quarantined-observer probe scheduler proposed in issue #5108 is not implemented here.
+## Automatic recovery from quarantine
+
+Eligible quarantined webhooks periodically attempt **one real, pending event**, using the
+ordinary subscriber, target validation, authorization, circuit breaker, generation policy,
+and receiver back-pressure handling. There is no synthetic health request, new endpoint,
+or empty-batch probe. The observer stays quarantined until that delivery succeeds and its
+progress is durably recorded. If a bounded read finds no deliverable event, it remains paused.
+
+Probes begin after 60 seconds by default, doubling after unsuccessful checks to a one-hour
+cap, with ±20% jitter. The chosen deadline survives restart: startup reconciliation restores
+the subscriber without clearing quarantine, resetting retry budgets, or sending early.
+Circuit-open and `Retry-After` deadlines take precedence when later than probe backoff.
+Probe failures do not add partition attempts, consume the normal retry budget, or grow the
+failure history. Only one probe may run for an observer, and cancellation must drain its
+HTTP operation before a later delivery can begin.
+
+Configuration failures and exhausted transient-failure budgets are eligible. `410 Gone`,
+legacy failures without an explicit receiver policy, and unrelated watchdog quarantines
+remain manual-only. A healthy probe resets the eligible partitions' retry budgets while
+retaining attempt history; `410` and manual-only partitions remain parked. Other partitions'
+durable deferral deadlines and resume positions remain in force. The successful event is
+checkpointed before normal recovery starts at the next undelivered position.
+HTTP delivery is still at least once: a crash before the success checkpoint can cause a
+redelivery, so endpoints must remain idempotent.
+
+Existing Workbench and CLI observer state continues to show **Quarantined** until recovery;
+there is no new UI or command. Structured logs record probe generation, failure episode,
+deadlines and outcomes without payloads, URLs or credentials. Counters
+`chronicle-webhook-probe-scheduled`, `chronicle-webhook-probe-attempts`,
+`chronicle-webhook-probe-failures`, `chronicle-webhook-probe-successes`,
+`chronicle-webhook-probe-deferred`, `chronicle-webhook-probe-skipped`,
+`chronicle-webhook-probe-cancelled`, and `chronicle-webhook-probe-resumes` distinguish scheduling from actual delivery and resumption.
+Disable automatic checks with `Cratis:Chronicle:Webhooks:Probe:Enabled=false`; manual clear,
+retry, retirement and removal remain available. Unsubscribe, explicit re-registration and
+operator recovery invalidate the old probe so a late callback cannot resume a new lifecycle.
+
 See [Kernel webhook options](../configuration/chronicle-options.mdx#delivery-retry-policy)
 for schedule, budget and quarantine overrides.
 
@@ -86,6 +120,53 @@ and refreshes shortly before expiry. Tokens without an expiry are not cached. Au
 is applied on each HTTP send, including sends from long-lived external-service clients.
 A `401` invalidates the rejected token and retries the same request once with a fresh token;
 other responses do not trigger an OAuth retry. Receivers should remain idempotent.
+
+## Managed identity
+
+**This lends the kernel's own Azure identity to the webhook receiver**, not the identity of the client registering the webhook. Only approve receivers and scopes you trust to receive that identity's access token.
+
+**First, the kernel operator must configure the global allow-lists.** Managed identity webhooks are disabled until scopes are allowed. In `chronicle.json`:
+
+```json
+{
+  "webhooks": {
+    "allowedHosts": ["receiver.example"],
+    "managedIdentity": {
+      "allowedScopes": ["api://receiver/.default"],
+      "allowedClientIds": ["<managed-identity-client-id>"],
+      "allowSystemAssigned": false
+    }
+  }
+}
+```
+
+The equivalent environment variables are:
+
+```bash
+Cratis__Chronicle__Webhooks__AllowedHosts__0=receiver.example
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedScopes__0=api://receiver/.default
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedClientIds__0=<managed-identity-client-id>
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowSystemAssigned=false
+```
+
+`AllowedScopes` defaults to empty and matches the complete scope ignoring case, without prefix or wildcard matching. `AllowedClientIds` defaults to empty and matches non-empty client ids exactly. `AllowSystemAssigned` defaults to `false`; set it to `true` only to permit an empty client id, including the `AZURE_CLIENT_ID` environment default on workload identity hosts. These identity options are global only, not per event store.
+
+The receiver host must explicitly match the existing `AllowedHosts` policy, even in `Warn` mode. Existing `EventStoreAllowedHosts` overrides and `*.example.com` subdomain matching still apply. Other authorization types retain their validation mode behavior. Registration, including bulk client registration, refuses unapproved requests before recording changes or acquiring a token. Delivery rechecks approval before token acquisition; revoking approval blocks persisted definitions and pauses their observer instead of sending a token.
+
+Then register the approved scope, client id and receiver with the .NET builder's `WithManagedIdentity(scope, clientId)` method. The kernel requests tokens with its
+own managed identity or workload identity. `scope` is required, for example
+`api://<receiver-application-id>/.default`; `clientId` is optional and selects a user-assigned
+identity (leave it out for the system-assigned identity only when `AllowSystemAssigned` is enabled). The Workbench offers the same option as
+**Managed identity**.
+
+<ChronicleClientTabs snippet="webhooks/index/managed-identity" />
+
+Access tokens are not stored in webhook definitions or delivery-failure details and are not shown in the Workbench. Receiver response bodies and reason phrases are not retained as managed identity delivery errors.
+
+Tokens are cached and refreshed shortly before expiry. On a `401`, Chronicle discards its cached token and the Azure credential instance that supplied it, then retries once. Azure Identity and the identity endpoint control their own caching; this does not guarantee a different access token.
+If the kernel has no managed identity, the delivery fails and is retried like any failed delivery.
+See [Call Entra-protected endpoints from webhooks](../hosting/azure.md#call-entra-protected-endpoints-from-webhooks)
+for the hosting details.
 
 ## Pin the generation your endpoint understands
 
