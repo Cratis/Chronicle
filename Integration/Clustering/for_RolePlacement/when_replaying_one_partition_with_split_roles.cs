@@ -13,7 +13,7 @@ using ObserverKey = KernelConcepts::Cratis.Chronicle.Concepts.Observation.Observ
 
 namespace Cratis.Chronicle.Integration.Clustering.for_RolePlacement;
 
-[Collection(ReplayPlacementCollection.Name)]
+[Collection(PartitionReplayPlacementCollection.Name)]
 public class when_replaying_one_partition_with_split_roles(context _context) : IClassFixture<context>
 {
     public class context(ReplayPlacementFixture fixture) : IAsyncLifetime
