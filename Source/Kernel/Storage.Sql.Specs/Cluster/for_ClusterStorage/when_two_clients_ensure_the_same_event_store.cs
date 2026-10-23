@@ -80,6 +80,8 @@ public class when_two_clients_ensure_the_same_event_store : Specification, IDisp
     /// Holds the first client's native upsert after it has decided to write, so the second
     /// client stores the same name first. The held statement must then succeed without a duplicate.
     /// </summary>
+    /// <param name="ready">Completed when the first client's insert is held.</param>
+    /// <param name="release">Completed by the specification to let the held insert run.</param>
     sealed class PauseBeforeInsert(TaskCompletionSource ready, TaskCompletionSource release) : DbCommandInterceptor
     {
         public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
