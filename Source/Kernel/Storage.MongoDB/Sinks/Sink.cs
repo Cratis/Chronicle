@@ -184,9 +184,7 @@ public class Sink(
 
         var collection = Collection;
 
-        using var result = await collection.FindAsync(
-            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)),
-            new FindOptions<BsonDocument> { Comment = "Sink.FindOrDefault" });
+        using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -948,7 +946,6 @@ public class Sink(
             filter,
             new FindOptions<BsonDocument>
             {
-                Comment = "Sink.TryFindRootKeyByChildValue",
                 Projection = Builders<BsonDocument>.Projection.Include("_id"),
                 Limit = 1
             });
