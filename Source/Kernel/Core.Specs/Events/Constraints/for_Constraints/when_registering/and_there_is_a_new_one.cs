@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.when_registering;
 
+[PerFactSpecificationLifecycle]
 public class and_there_is_a_new_one : given.a_constraints_system
 {
     IConstraintDefinition _existingFirstConstraint;
