@@ -6,11 +6,13 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ensuring_indexes;
 [Collection(SqlServerCollection.Name)]
 public class and_the_provider_is_sql_server(SqlServerFixture fixture) : given.an_indexed_sink
 {
+    protected override string CompoundLead => "number]quote";
+
     protected override ISqlSinkHarness CreateHarness() => new SqlServerSinkHarness { Fixture = fixture };
 
     Task Because() => EnsureAndReplay();
 
-    [Fact] void should_create_only_supported_scalar_indexes() => _indexedColumns.ShouldEqual(["<expression>", "name", "name", "number]quote", "number]quote"]);
+    [Fact] void should_create_only_supported_scalar_indexes() => _indexedColumns.ShouldEqual(["<expression>", "name", "number]quote", "number]quote", "number]quote"]);
     [Fact] void should_create_indexes_on_the_existing_table() => _initialCount.ShouldEqual(5);
     [Fact] void should_be_idempotent() => _repeatedCount.ShouldEqual(5);
     [Fact] void should_index_the_shadow() => _shadowCount.ShouldEqual(5);

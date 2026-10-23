@@ -106,17 +106,8 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
     /// <param name="target">The resolved property.</param>
     /// <param name="helper">The provider SQL generation helper.</param>
     /// <returns>The SQL expression.</returns>
-    internal static string SqlServerExpression(ReadModelIndexTarget target, ISqlGenerationHelper helper)
-    {
-        var cast = target.Type switch
-        {
-            JsonObjectType.Integer => "bigint",
-            JsonObjectType.Number => "decimal(38,18)",
-            JsonObjectType.Boolean => "bit",
-            _ => "nvarchar(450)"
-        };
-        return $"CAST(JSON_VALUE({helper.DelimitIdentifier(target.Column.Name)}, N{Literal(JsonPath(target))}) AS {cast})";
-    }
+    internal static string SqlServerExpression(ReadModelIndexTarget target, ISqlGenerationHelper helper) =>
+        $"CAST(JSON_VALUE({helper.DelimitIdentifier(target.Column.Name)}, N{Literal(JsonPath(target))}) AS nvarchar(450))";
 
     static string JsonPath(ReadModelIndexTarget target) => "$" + string.Concat(target.JsonSegments.Select(segment => "." + JsonSerializer.Serialize(segment, _pathOptions)));
     static string Literal(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";

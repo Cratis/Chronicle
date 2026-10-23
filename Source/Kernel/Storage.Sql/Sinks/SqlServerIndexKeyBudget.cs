@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,13 +27,7 @@ internal static class SqlServerIndexKeyBudget
         {
             if (target.IsExpression)
             {
-                bytes += target.Type switch
-                {
-                    JsonObjectType.Integer => 8,
-                    JsonObjectType.Number => 17,
-                    JsonObjectType.Boolean => 1,
-                    _ => 900
-                };
+                bytes += 900;
                 continue;
             }
             var column = target.Column;

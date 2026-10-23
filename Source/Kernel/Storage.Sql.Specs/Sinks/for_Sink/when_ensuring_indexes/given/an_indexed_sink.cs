@@ -26,6 +26,8 @@ public abstract class an_indexed_sink : Specification
     protected string[] _names;
     const string Table = "indexed-models";
 
+    protected virtual string CompoundLead => "name";
+
     protected abstract ISqlSinkHarness CreateHarness();
 
     async Task Establish()
@@ -44,7 +46,7 @@ public abstract class an_indexed_sink : Specification
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
             new[] { "number]quote", "name", "nested", "nested.value", "lines", "lines.value", "missing" }.Select(path => new IndexDefinition(new PropertyPath(path))).Concat(
             [
-                new IndexDefinition("name") { Properties = [new("name"), new("nested.value", true)] },
+                new IndexDefinition(CompoundLead) { Properties = [new(CompoundLead), new("nested.value", true)] },
                 new IndexDefinition("number]quote") { Properties = [new("number]quote", true)] }
             ]).ToArray()));
     }

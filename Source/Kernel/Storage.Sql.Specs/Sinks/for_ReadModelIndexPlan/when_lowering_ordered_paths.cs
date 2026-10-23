@@ -21,7 +21,7 @@ public class when_lowering_ordered_paths : Specification
 
     async Task Establish()
     {
-        _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"details":{"type":"object","properties":{"total":{"type":"number"},"active":{"type":"boolean"},"quote'key":{"type":"string"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"}}}}}}""");
+        _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"details":{"type":"object","properties":{"total":{"type":"number"},"count":{"type":"integer"},"active":{"type":"boolean"},"quote'key":{"type":"string"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"}}}}}}""");
         _columns = ProjectedColumns.ForSchema(_schema);
         await using var sqlite = new DbContext(new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:").Options);
         await using var postgres = new DbContext(new DbContextOptionsBuilder().UseNpgsql("Host=localhost;Database=indexes").Options);
@@ -36,7 +36,9 @@ public class when_lowering_ordered_paths : Specification
     [Fact] void should_extract_sqlite_scalars() => Plan(new("details.total"), DatabaseType.Sqlite).Keys(DatabaseType.Sqlite, _sqlite).ShouldEqual("json_extract(\"details\", '$.\"total\"') ASC");
     [Fact] void should_escape_sqlite_path_literals() => Plan(new("details.quote'key"), DatabaseType.Sqlite).Keys(DatabaseType.Sqlite, _sqlite).ShouldContain("quote''key");
     [Fact] void should_cast_sql_server_strings_to_a_bounded_key() => ReadModelIndexPlan.SqlServerExpression(Plan(new("details.quote'key"), DatabaseType.SqlServer).Targets[0], _sqlServer).ShouldContain("AS nvarchar(450)");
-    [Fact] void should_cast_sql_server_numbers_precisely() => ReadModelIndexPlan.SqlServerExpression(Plan(new("details.total"), DatabaseType.SqlServer).Targets[0], _sqlServer).ShouldContain("AS decimal(38,18)");
+    [Fact] void should_cast_sql_server_numbers_to_text() => ReadModelIndexPlan.SqlServerExpression(Plan(new("details.total"), DatabaseType.SqlServer).Targets[0], _sqlServer).ShouldEqual("CAST(JSON_VALUE([details], N'$.\"total\"') AS nvarchar(450))");
+    [Fact] void should_cast_sql_server_integers_to_text() => ReadModelIndexPlan.SqlServerExpression(Plan(new("details.count"), DatabaseType.SqlServer).Targets[0], _sqlServer).ShouldContain("AS nvarchar(450)");
+    [Fact] void should_cast_sql_server_booleans_to_text() => ReadModelIndexPlan.SqlServerExpression(Plan(new("details.active"), DatabaseType.SqlServer).Targets[0], _sqlServer).ShouldContain("AS nvarchar(450)");
     [Fact] void should_use_gin_on_the_whole_json_column() => Plan(new("lines.productId"), DatabaseType.PostgreSql).Keys(DatabaseType.PostgreSql, _postgres).ShouldEqual($"{_postgres.DelimitIdentifier("lines")} jsonb_path_ops");
     [Fact] void should_collapse_array_paths_sharing_a_column() => Plan(new("lines"), DatabaseType.PostgreSql).Signature.ShouldEqual(Plan(new("lines.productId"), DatabaseType.PostgreSql).Signature);
     [Fact] void should_reject_sql_server_array_paths() => ReadModelIndexPlan.Resolve(new("lines.productId"), _schema, _columns, DatabaseType.SqlServer).ShouldBeNull();

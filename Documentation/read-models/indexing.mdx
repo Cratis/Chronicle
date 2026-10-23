@@ -72,9 +72,10 @@ while an empty legacy path list continues to preserve composite and descending d
 
 SQL stores nested objects and arrays in JSON columns. A nested scalar declaration uses an expression
 index on SQLite (`json_extract`) or PostgreSQL (`#>>`). PostgreSQL casts numeric and boolean leaves
-to their schema types. SQL Server indexes a non-persisted computed column using `JSON_VALUE`, with
-bounded string keys and precise numeric casts. These columns do not store a second copy of your
-read-model data; adding them changes metadata only. The index itself still requires a build.
+to their schema types. SQL Server indexes a non-persisted computed column using
+`CAST(JSON_VALUE(...) AS nvarchar(450))` for every scalar kind. SQL Server therefore orders nested
+values lexically as text, not numerically or as booleans. These columns do not store a second copy of
+your read-model data; adding them changes metadata only. The index itself still requires a build.
 
 | Declaration | SQLite | PostgreSQL | SQL Server |
 | --- | --- | --- | --- |
@@ -91,9 +92,10 @@ index. Chronicle does not rewrite your application queries.
 SQL Server bounds newly projected indexed strings to a supported key size; existing unbounded
 columns are not resized during activation. A declaration on an unbounded column produces a warning
 and requires a replay to apply the bound. The combined nonclustered key must fit in 1700 bytes.
-Nested string keys use `nvarchar(450)`, truncating index values beyond 450 characters without changing
-the stored JSON. Numbers use `decimal(38,18)`. An incompatible value or unsupported computed
-expression fails visibly in the kernel log; Chronicle does not fall back to
+All nested scalar keys use `nvarchar(450)`, truncating index values beyond 450 characters without
+changing the stored JSON, including exponent-form numbers. Each nested key consumes a 900-byte
+budget. SQL Server skips a composite whose combined key exceeds 1700 bytes and logs a warning.
+An unsupported computed expression fails visibly in the kernel log; Chronicle does not fall back to
 persisted computed columns or alter the stored values.
 
 A composite SQL index is created only when every path is supported; arrays cannot be mixed into a composite.
