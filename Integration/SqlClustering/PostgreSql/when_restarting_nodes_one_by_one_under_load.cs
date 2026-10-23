@@ -5,6 +5,6 @@ namespace Cratis.Chronicle.Integration.SqlClustering.PostgreSql;
 
 public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(true, ClusterChange.Restart)
 {
-    [Fact(Skip = "Observers stall in catch-up after a node loss until the watchdog runs: https://github.com/Cratis/Chronicle/issues/5246 (see also https://github.com/Cratis/Chronicle/issues/5304)")]
+    [Fact]
     public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
 }
