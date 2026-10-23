@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -8,10 +11,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink;
 
 public class when_mutating_a_bulk_answer : given.a_sink_with_gated_bulk_writes
 {
-    bool _newValueFound;
-    bool _oldValueFound;
-    bool _laterValueFound;
-    bool _rewrittenValueFound;
+    bool _originalValueFound;
+    bool _mutatedValueFound;
+    bool _savedValueFound;
+    bool _independentCopies;
+    int _cachedCount;
+    int _cachedChildId;
+    int _cachedChildCount;
+    byte _cachedByte;
 
     async Task Establish()
     {
@@ -21,30 +28,49 @@ public class when_mutating_a_bulk_answer : given.a_sink_with_gated_bulk_writes
         _collection.FindAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<FindOptions<BsonDocument, BsonDocument>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(cursor));
         await _sink.BeginBulk();
-        await Apply(_firstKey, 42, 1);
-        await _sink.TryFindRootKeyByChildValue("count", 42);
+        var changeset = Changes(42);
+        var child = new ExpandoObject();
+        ((IDictionary<string, object?>)child)["id"] = 42;
+        ((IDictionary<string, object?>)changeset.CurrentState)["children"] = new List<ExpandoObject> { child };
+        ((IDictionary<string, object?>)changeset.CurrentState)["bytes"] = "*"u8.ToArray();
+        await _sink.ApplyChanges(_firstKey, changeset, 1);
+        await _sink.TryFindRootKeyByChildValue("[children].id", 42);
     }
 
     async Task Because()
     {
-        var state = (IDictionary<string, object?>)(await _sink.FindOrDefault(_firstKey))!;
+        var workingState = (await _sink.FindOrDefault(_firstKey))!;
+        var state = (IDictionary<string, object?>)workingState;
         state["count"] = 99;
-        var oldValue = await _sink.TryFindRootKeyByChildValue("count", 42);
-        _oldValueFound = oldValue.TryGetValue(out _);
-        var newValue = await _sink.TryFindRootKeyByChildValue("count", 99);
-        _newValueFound = newValue.TryGetValue(out var key) && key == _firstKey;
-        state["count"] = 100;
-        var laterValue = await _sink.TryFindRootKeyByChildValue("count", 100);
-        _laterValueFound = laterValue.TryGetValue(out key) && key == _firstKey;
-        await Apply(_firstKey, 101, 2);
-        var rewrittenState = (IDictionary<string, object?>)(await _sink.FindOrDefault(_firstKey))!;
-        rewrittenState["count"] = 102;
-        var rewrittenValue = await _sink.TryFindRootKeyByChildValue("count", 102);
-        _rewrittenValueFound = rewrittenValue.TryGetValue(out key) && key == _firstKey;
+        var children = (List<ExpandoObject>)state["children"]!;
+        ((IDictionary<string, object?>)children[0])["id"] = 99;
+        children.Add(new ExpandoObject());
+        ((IList<byte>)state["bytes"]!)[0] = 99;
+        var cachedCopy = (await _sink.FindOrDefault(_firstKey))!;
+        var cached = (IDictionary<string, object?>)cachedCopy;
+        _independentCopies = !ReferenceEquals(workingState, cachedCopy);
+        _cachedCount = (int)cached["count"]!;
+        var cachedChildren = (List<ExpandoObject>)cached["children"]!;
+        _cachedChildCount = cachedChildren.Count;
+        _cachedChildId = (int)((IDictionary<string, object?>)cachedChildren[0])["id"]!;
+        _cachedByte = ((IList<byte>)cached["bytes"]!)[0];
+        var originalValue = await _sink.TryFindRootKeyByChildValue("[children].id", 42);
+        _originalValueFound = originalValue.TryGetValue(out var key) && key == _firstKey;
+        var mutatedValue = await _sink.TryFindRootKeyByChildValue("[children].id", 99);
+        _mutatedValueFound = mutatedValue.TryGetValue(out _);
+        var changeset = new Changeset<AppendedEvent, ExpandoObject>(new ObjectComparer(), null!, cachedCopy);
+        changeset.ReplaceState(workingState, [new PropertyDifference("count", 42, 99)]);
+        await _sink.ApplyChanges(_firstKey, changeset, 2);
+        var savedValue = await _sink.TryFindRootKeyByChildValue("count", 99);
+        _savedValueFound = savedValue.TryGetValue(out key) && key == _firstKey;
     }
 
-    [Fact] void should_not_return_the_old_value() => _oldValueFound.ShouldBeFalse();
-    [Fact] void should_find_the_mutated_value() => _newValueFound.ShouldBeTrue();
-    [Fact] void should_observe_repeated_mutations_of_the_same_answer() => _laterValueFound.ShouldBeTrue();
-    [Fact] void should_observe_mutation_after_rewriting_a_cached_document() => _rewrittenValueFound.ShouldBeTrue();
+    [Fact] void should_return_independent_working_copies() => _independentCopies.ShouldBeTrue();
+    [Fact] void should_keep_the_cached_scalar() => _cachedCount.ShouldEqual(42);
+    [Fact] void should_keep_the_cached_child_id() => _cachedChildId.ShouldEqual(42);
+    [Fact] void should_keep_the_cached_child_collection() => _cachedChildCount.ShouldEqual(1);
+    [Fact] void should_keep_the_cached_binary_value() => _cachedByte.ShouldEqual((byte)42);
+    [Fact] void should_find_the_cache_owned_value() => _originalValueFound.ShouldBeTrue();
+    [Fact] void should_not_find_unsaved_working_changes() => _mutatedValueFound.ShouldBeFalse();
+    [Fact] void should_accept_the_working_state_through_an_explicit_write() => _savedValueFound.ShouldBeTrue();
 }

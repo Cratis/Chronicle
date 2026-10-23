@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -211,8 +212,7 @@ public class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
-            _bulkChildIndex.MarkExposed(cacheKey);
-            answer = cachedState;
+            answer = cachedState.Clone();
             return true;
         }
 
@@ -590,9 +590,11 @@ public class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         return () =>
         {
-            _bulkStateCache[cacheKey] = changeset.CurrentState;
+            // Keep changesets and returned working states independent of the cache-owned snapshot.
+            var state = changeset.CurrentState.Clone();
+            _bulkStateCache[cacheKey] = state;
             _bulkKeysByCacheKey[cacheKey] = key;
-            _bulkChildIndex.Update(cacheKey, changeset.CurrentState);
+            _bulkChildIndex.Update(cacheKey, state);
             _bulkPendingDeletes.TryRemove(cacheKey, out _);
             if (eventSequenceNumber.IsActualValue)
             {

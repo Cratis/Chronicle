@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// Lazily indexes child values for paths queried during a bulk window.
 /// </summary>
 /// <remarks>
+/// Documents are cache-owned snapshots, replaced through Update rather than mutated in place.
 /// Duplicate matches follow the current cache enumeration order, including across value buckets.
 /// Reads do not take a global lock. Lazy initialization serializes the first build of each path with
 /// updates to that path. Cache writes must precede Update/Remove, just as they precede key publication.
@@ -18,10 +19,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 internal sealed class BulkStateChildIndex
 {
     readonly ConcurrentDictionary<string, Lazy<PathIndex>> _paths = new(StringComparer.Ordinal);
-    readonly ConcurrentDictionary<string, byte> _exposedStates = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Finds candidate cache keys, refreshing documents whose mutable references have been exposed.
+    /// Finds candidate cache keys in cache-owned documents without reextracting their values.
     /// </summary>
     /// <param name="path">The child property path.</param>
     /// <param name="value">The child value to match.</param>
@@ -30,25 +30,11 @@ internal sealed class BulkStateChildIndex
     internal IEnumerable<string> Find(PropertyPath path, object value, ConcurrentDictionary<string, ExpandoObject> states)
     {
         var index = _paths.GetOrAdd(path.Path, static (_, args) => new Lazy<PathIndex>(() => Build(args.Path, args.States)), (Path: path, States: states)).Value;
-        foreach (var cacheKey in _exposedStates.Keys)
-        {
-            if (states.TryGetValue(cacheKey, out var document))
-            {
-                index.Update(cacheKey, document);
-            }
-        }
-
         var matches = index.Find(value).ToHashSet(StringComparer.Ordinal);
 
         // Only ambiguous lookups enumerate cache keys, without traversing the cached documents.
         return matches.Count > 1 ? states.Where(pair => matches.Contains(pair.Key)).Select(pair => pair.Key) : matches;
     }
-
-    /// <summary>
-    /// Marks a mutable cache reference as exposed until eviction or clear; callers can mutate it repeatedly.
-    /// </summary>
-    /// <param name="cacheKey">The exposed document's cache key.</param>
-    internal void MarkExposed(string cacheKey) => _exposedStates[cacheKey] = 0;
 
     /// <summary>
     /// Replaces the indexed values for a cached document across all materialized paths.
@@ -69,7 +55,6 @@ internal sealed class BulkStateChildIndex
     /// <param name="cacheKey">The document cache key.</param>
     internal void Remove(string cacheKey)
     {
-        _exposedStates.TryRemove(cacheKey, out _);
         foreach (var path in _paths.Values)
         {
             path.Value.Remove(cacheKey);
@@ -79,11 +64,7 @@ internal sealed class BulkStateChildIndex
     /// <summary>
     /// Discards all materialized paths when the bulk cache is cleared.
     /// </summary>
-    internal void Clear()
-    {
-        _paths.Clear();
-        _exposedStates.Clear();
-    }
+    internal void Clear() => _paths.Clear();
 
     static PathIndex Build(PropertyPath path, ConcurrentDictionary<string, ExpandoObject> states)
     {
@@ -174,8 +155,7 @@ internal sealed class BulkStateChildIndex
                 return;
             }
 
-            // Remember extracted values rather than rereading the old document: projection changes can
-            // mutate the same ExpandoObject before it is cached again.
+            // Retain the previous bucket membership so replacement removes every old value.
             foreach (var bucketKey in bucketKeys)
             {
                 var bucket = _buckets[bucketKey];
