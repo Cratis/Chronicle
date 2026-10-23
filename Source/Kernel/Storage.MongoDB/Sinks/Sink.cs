@@ -211,6 +211,7 @@ public class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
+            _bulkChildIndex.MarkExposed(cacheKey);
             answer = cachedState;
             return true;
         }
