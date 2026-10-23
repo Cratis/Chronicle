@@ -302,7 +302,8 @@ public sealed class WebhookRegistrar(
                 oauth.Authority,
                 oauth.ClientId,
                 new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value))) { Scope = oauth.Scope },
-            none => WebhookAuthorization.None);
+            none => WebhookAuthorization.None,
+            managedIdentity => (WebhookAuthorization)managedIdentity);
 
         var encryptedTarget = new Concepts.Observation.Webhooks.WebhookTarget(
             definition.Target.Url,
@@ -318,7 +319,8 @@ public sealed class WebhookRegistrar(
             basic => Append(eventSequence, webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
             bearer => Append(eventSequence, webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
             oauth => AppendOAuth(eventSequence, webhookId, oauth),
-            none => Task.CompletedTask);
+            none => Task.CompletedTask,
+            managedIdentity => Append(eventSequence, webhookId, new ManagedIdentityAuthorizationSetForWebhook(managedIdentity.ClientId, managedIdentity.Scope)));
     }
 
     async Task AppendOAuth(IEventSequence sequence, string webhookId, OAuthAuthorization oauth)

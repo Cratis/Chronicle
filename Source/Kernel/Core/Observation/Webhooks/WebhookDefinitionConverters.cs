@@ -108,7 +108,8 @@ internal static class WebhookDefinitionConverters
                 ClientSecret = oauth.ClientSecret,
                 Scope = oauth.Scope
             }),
-            none => { });
+            none => { },
+            managedIdentity => throw new ManagedIdentityNotAvailable("Managed identity webhook authorization is not available on the contract surface."));
 
         return contractTarget;
     }
@@ -154,5 +155,6 @@ internal static class WebhookDefinitionConverters
             _ => Contracts.Security.AuthorizationType.Basic,
             _ => Contracts.Security.AuthorizationType.Bearer,
             _ => Contracts.Security.AuthorizationType.OAuth,
-            _ => Contracts.Security.AuthorizationType.None);
+            _ => Contracts.Security.AuthorizationType.None,
+            _ => throw new ManagedIdentityNotAvailable("Managed identity webhook authorization is not available on the contract surface."));
 }

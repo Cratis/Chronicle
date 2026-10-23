@@ -11,12 +11,23 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
 /// <param name="oAuthClient">The shared OAuth token provider.</param>
-public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient) : IWebhookHttpClientFactory
+/// <param name="managedIdentityTokens">The managed identity token provider.</param>
+public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient, IManagedIdentityTokens managedIdentityTokens) : IWebhookHttpClientFactory
 {
     /// <summary>
     /// The name of the <see cref="HttpClient"/> to use.
     /// </summary>
     public const string HttpClientName = "webhook";
+
+    /// <summary>
+    /// Initializes a factory for hosts without managed identity token acquisition.
+    /// </summary>
+    /// <param name="httpClientFactory">The HTTP transport factory.</param>
+    /// <param name="oAuthClient">The shared OAuth token provider.</param>
+    public WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAuthClient oAuthClient)
+        : this(httpClientFactory, oAuthClient, new ManagedIdentityTokens())
+    {
+    }
 
     /// <inheritdoc/>
     public HttpClient Create(WebhookTarget webhookTarget, string? accessToken = null)
@@ -36,7 +47,11 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAu
             },
             bearer => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer.Token),
             oAuth => client = OAuthHttpMessageHandler.CreateClient(client, oAuth, oAuthClient),
-            none => { });
+            none => { },
+            managedIdentity => client = TokenHttpMessageHandler.CreateClient(
+                client,
+                (_, cancellation) => managedIdentityTokens.AcquireToken(managedIdentity, cancellation),
+                token => managedIdentityTokens.Invalidate(managedIdentity, token)));
 
         foreach (var header in webhookTarget.Headers)
         {
