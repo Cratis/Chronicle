@@ -1,0 +1,171 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+# Manual, same-runner before/after measurements: discarded warmups, alternating AB/BA pairs,
+# raw records and median/spread deltas. No publishing or changes to the nightly series.
+# Dispatch after this workflow lands on the default branch; product/harness refs must exist on GitHub.
+# Example / #5167 recipe (small rebuild workload, fixed harness, two scenarios and two topologies):
+# gh workflow run benchmarks-paired.yml -R Cratis/Chronicle \
+#   -f before_sha=e191c7f00ebda0e617fb3281ddb0190c4222f55e -f after_sha=449c92b4ceb74c14b9cf156d860b25dfce04d22c \
+#   -f target=rebuild -f harness_ref=da082230826bcd3c886f95e3ac267e5987b06632 \
+#   -f scenarios=S2,S3 -f topologies=two,split-jobs -f mode=live -f size=small -f repetitions=3
+# For #5317, choose target=replay-shape; scenarios/topologies/mode are ignored.
+# Empty harness_ref uses each product's own harness. Rebuild needs a harness with --rebuild.
+# Shared hosted runners are noisy: report spread, not a single delta. Top-15 activations can be inconclusive.
+name: Benchmarks (paired)
+
+on:
+  workflow_dispatch:
+    inputs:
+      before_sha:
+        description: "Product ref/SHA measured as 'before'"
+        required: true
+        type: string
+      after_sha:
+        description: "Product ref/SHA measured as 'after'"
+        required: true
+        type: string
+      target:
+        description: Benchmark target
+        required: true
+        type: choice
+        options: [rebuild, replay-shape]
+        default: rebuild
+      harness_ref:
+        description: "Ref whose Benchmarks/ is overlaid on both sides; empty = each side's own"
+        type: string
+        default: ""
+      scenarios:
+        description: "rebuild: comma list of S1..S4"
+        type: string
+        default: S2,S3
+      topologies:
+        description: "rebuild: comma list of single,two,split-jobs,three"
+        type: string
+        default: two
+      mode:
+        description: "rebuild: live or cold"
+        type: choice
+        options: [live, cold]
+        default: live
+      size:
+        description: "rebuild: small|medium|large|<count>; replay-shape: <events> or 'small' for default"
+        type: string
+        default: small
+      repetitions:
+        description: "Interleaved pairs (ABBA…), 1-10"
+        type: number
+        default: 3
+      timeout_seconds:
+        description: Per-run harness deadline
+        type: number
+        default: 1200
+
+permissions:
+  contents: read
+
+concurrency:
+  # Queue identical pairs rather than cancelling collected evidence.
+  group: ${{ github.workflow }}-${{ inputs.target }}-${{ inputs.before_sha }}-${{ inputs.after_sha }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Spec the paired benchmark script
+        run: python3 -B .github/scripts/test-paired-benchmark.py
+      - id: matrix
+        env:
+          TARGET: ${{ inputs.target }}
+          SCENARIOS: ${{ inputs.scenarios }}
+          TOPOLOGIES: ${{ inputs.topologies }}
+          REPETITIONS: ${{ inputs.repetitions }}
+          BEFORE_SHA: ${{ inputs.before_sha }}
+          AFTER_SHA: ${{ inputs.after_sha }}
+        run: python3 .github/scripts/paired-benchmark.py matrix
+
+  measure:
+    needs: plan
+    name: ${{ matrix.cell }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      # Sibling checkouts: never put Directory.Build.props above either product tree.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: tools
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: before
+          ref: ${{ inputs.before_sha }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: after
+          ref: ${{ inputs.after_sha }}
+          persist-credentials: false
+      - if: inputs.harness_ref != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: harness
+          ref: ${{ inputs.harness_ref }}
+          persist-credentials: false
+          sparse-checkout: Benchmarks
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: "10.0.x"
+      - name: Record runner
+        run: python3 tools/.github/scripts/paired-benchmark.py machine --out results/machine.json
+      - name: Build both sides
+        timeout-minutes: 40
+        env:
+          TARGET: ${{ inputs.target }}
+          HARNESS_REF: ${{ inputs.harness_ref }}
+        run: |
+          harness=()
+          if [ -n "$HARNESS_REF" ]; then harness=(--harness harness); fi
+          python3 tools/.github/scripts/paired-benchmark.py build --side before:before --side after:after "${harness[@]}" --target "$TARGET" --out results
+      - name: Run interleaved pairs
+        timeout-minutes: 80
+        env:
+          TARGET: ${{ inputs.target }}
+          CELL: ${{ matrix.cell }}
+          SCENARIO: ${{ matrix.scenario }}
+          TOPOLOGY: ${{ matrix.topology }}
+          MODE: ${{ inputs.mode }}
+          SIZE: ${{ inputs.size }}
+          REPETITIONS: ${{ inputs.repetitions }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
+          RUN_BUDGET_SECONDS: "4500"
+        run: python3 tools/.github/scripts/paired-benchmark.py run --results results
+      - name: Compare
+        if: always()
+        run: python3 tools/.github/scripts/paired-benchmark.py compare --results results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paired-${{ matrix.cell }}-attempt-${{ github.run_attempt }}
+          path: results/
+          retention-days: 7
+          if-no-files-found: warn
