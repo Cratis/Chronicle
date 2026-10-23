@@ -27,8 +27,8 @@ static class TestResults
 
     public static IReadOnlyList<TestResult> Parse(string xml) => RequireAny(ParseDocument(xml));
 
-    static IReadOnlyList<TestResult> RequireAny(IReadOnlyList<TestResult> results) =>
-        results.Count > 0 ? results : throw new CannotEvaluate("TRX contains no test results.");
+    static TestResult[] RequireAny(TestResult[] results) =>
+        results.Length > 0 ? results : throw new CannotEvaluate("TRX contains no test results.");
 
     static TestResult[] ParseDocument(string xml)
     {
@@ -45,7 +45,7 @@ static class TestResults
             _ => Required(_, "id"),
             _ => FullName(_.Element(ns + "TestMethod") ?? throw new CannotEvaluate("TRX test has no TestMethod.")),
             StringComparer.Ordinal);
-        var results = document.Descendants(ns + "UnitTestResult").Select(result =>
+        return document.Descendants(ns + "UnitTestResult").Select(result =>
         {
             var id = Required(result, "testId");
             if (!definitions.TryGetValue(id, out var name))
@@ -55,8 +55,6 @@ static class TestResults
 
             return new TestResult(name, string.Equals(Required(result, "outcome"), "Passed", StringComparison.Ordinal));
         }).ToArray();
-
-        return results;
     }
 
     static string FullName(XElement method) => $"{Required(method, "className")}.{Required(method, "name")}";
