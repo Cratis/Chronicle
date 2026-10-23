@@ -13,12 +13,7 @@ public class when_persisting_postgresql_rows(PostgreSqlFixture fixture) : Defini
 {
     string _connectionString;
 
-    async Task Establish()
-    {
-        _connectionString = await fixture.CreateDatabase();
-        await using var context = CreateContext();
-        await context.Database.MigrateAsync();
-    }
+    async Task Establish() => _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
