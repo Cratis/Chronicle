@@ -26,35 +26,44 @@ public partial class EventSequenceStorage
         }
 
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-        foreach (var chunk in sources.Chunk(512))
+        foreach (var source in sources)
         {
-            var query = scope.DbContext.Events.AsNoTracking().Where(e => chunk.Contains(e.EventSourceId) && types.Contains(e.Type) && e.SequenceNumber <= upTo.Value);
-            var entries = await ParentHistoryWindow(query, from, upTo, chunk.Length).OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
-            var events = await MaterializeParentHistory(entries, scope, cancellationToken);
-            foreach (var group in events.GroupBy(e => e.Context.EventSourceId))
+            var query = scope.DbContext.Events.AsNoTracking().Where(e => e.EventSourceId == source && e.SequenceNumber <= upTo.Value);
+            var entries = await ParentHistoryWindow(query, types, from, upTo, cancellationToken);
+            if (entries.Count > 0)
             {
-                result[group.Key] = group.ToArray();
+                result[source] = await MaterializeParentHistory(entries, scope, cancellationToken);
             }
         }
         return result;
     }
 
-    static IQueryable<EventEntry> ParentHistoryWindow(IQueryable<EventEntry> query, EventSequenceNumber from, EventSequenceNumber upTo, int sourceCount)
+    static async Task<List<EventEntry>> ParentHistoryWindow(IQueryable<EventEntry> query, EventTypeId[] types, EventSequenceNumber from, EventSequenceNumber upTo, CancellationToken cancellationToken)
     {
-        // The common live/single-candidate lookup is one indexed TOP/LIMIT query.
-        if (sourceCount == 1)
+        var predecessor = await ParentHistoryPredecessor(query, types, from, cancellationToken);
+        List<EventEntry> entries = predecessor is null ? [] : [predecessor];
+        if (from <= upTo)
         {
-            if (from > upTo)
-            {
-                return query.OrderByDescending(e => e.SequenceNumber).Take(1);
-            }
-
-            var predecessor = query.Where(e => e.SequenceNumber < from.Value).OrderByDescending(e => e.SequenceNumber).Take(1);
-            return query.Where(e => e.SequenceNumber >= from.Value).Union(predecessor);
+            var window = await query.Where(e => types.Contains(e.Type) && e.SequenceNumber >= from.Value)
+                .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+            entries.AddRange(window);
         }
+        return entries;
+    }
 
-        var predecessors = query.Where(e => e.SequenceNumber < from.Value).GroupBy(e => e.EventSourceId).Select(g => g.Max(e => e.SequenceNumber));
-        return query.Where(e => e.SequenceNumber >= from.Value || predecessors.Contains(e.SequenceNumber));
+    static async Task<EventEntry?> ParentHistoryPredecessor(IQueryable<EventEntry> query, EventTypeId[] types, EventSequenceNumber from, CancellationToken cancellationToken)
+    {
+        EventEntry? predecessor = null;
+        foreach (var type in types)
+        {
+            var candidate = await query.Where(e => e.Type == type && e.SequenceNumber < from.Value)
+                .OrderByDescending(e => e.SequenceNumber).FirstOrDefaultAsync(cancellationToken);
+            if (candidate is not null && (predecessor is null || candidate.SequenceNumber > predecessor.SequenceNumber))
+            {
+                predecessor = candidate;
+            }
+        }
+        return predecessor;
     }
 
     async Task<List<AppendedEvent>> MaterializeParentHistory(List<EventEntry> entries, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)

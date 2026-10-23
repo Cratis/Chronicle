@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
@@ -26,39 +25,51 @@ public partial class EventSequenceStorage
             return result;
         }
 
-        foreach (var chunk in sources.Chunk(512))
+        foreach (var source in sources)
         {
-            var filter = Builders<Event>.Filter.In(e => e.EventSourceId, chunk) &
-                Builders<Event>.Filter.In(e => e.Type, types) & Builders<Event>.Filter.Lte(e => e.SequenceNumber, upTo);
-            var events = await ReadParentHistoryWindow(filter, from, upTo, chunk.Length, cancellationToken);
-            foreach (var group in events.GroupBy(e => e.EventSourceId))
+            var filter = Builders<Event>.Filter.Eq(e => e.EventSourceId, source) & Builders<Event>.Filter.Lte(e => e.SequenceNumber, upTo);
+            var events = await ReadParentHistoryWindow(filter, types, from, upTo, cancellationToken);
+            if (events.Count == 0)
             {
-                var converted = new List<AppendedEvent>();
-                foreach (var entry in group)
-                {
-                    converted.Add(await converter.ToAppendedEvent(entry));
-                }
-                result[group.Key] = converted;
+                continue;
             }
+
+            var converted = new List<AppendedEvent>();
+            foreach (var entry in events)
+            {
+                converted.Add(await converter.ToAppendedEvent(entry));
+            }
+            result[source] = converted;
         }
         return result;
     }
 
-    async Task<List<Event>> ReadParentHistoryWindow(FilterDefinition<Event> filter, EventSequenceNumber from, EventSequenceNumber upTo, int sourceCount, CancellationToken cancellationToken)
+    async Task<List<Event>> ReadParentHistoryWindow(FilterDefinition<Event> filter, EventTypeId[] types, EventSequenceNumber from, EventSequenceNumber upTo, CancellationToken cancellationToken)
     {
-        if (sourceCount == 1 && from > upTo)
+        var predecessor = await ReadParentHistoryPredecessor(filter, types, from, cancellationToken);
+        List<Event> events = predecessor is null ? [] : [predecessor];
+        if (from <= upTo)
         {
-            // Live and on-demand predecessor lookups read just one indexed candidate.
-            return await _collection.Find(filter).SortByDescendingSequenceNumber().Limit(1).ToListAsync(cancellationToken);
+            var window = await _collection.Find(filter & Builders<Event>.Filter.In(e => e.Type, types) & Builders<Event>.Filter.Gte(e => e.SequenceNumber, from))
+                .SortByAscendingSequenceNumber().ToListAsync(cancellationToken);
+            events.AddRange(window);
         }
+        return events;
+    }
 
-        var predecessors = await _collection.Aggregate()
-            .Match(filter & Builders<Event>.Filter.Lt(e => e.SequenceNumber, from))
-            .Sort(Builders<Event>.Sort.Ascending(e => e.EventSourceId).Descending(e => e.SequenceNumber))
-            .Group(new BsonDocument { { "_id", "$eventSourceId" }, { "sequenceNumber", new BsonDocument("$first", "$_id") } })
-            .ToListAsync(cancellationToken);
-        var locators = predecessors.Select(e => ToEventSequenceNumber(e["sequenceNumber"])).ToArray();
-        var window = Builders<Event>.Filter.Gte(e => e.SequenceNumber, from) | Builders<Event>.Filter.In(e => e.SequenceNumber, locators);
-        return await _collection.Find(filter & window).SortByAscendingSequenceNumber().ToListAsync(cancellationToken);
+    async Task<Event?> ReadParentHistoryPredecessor(FilterDefinition<Event> filter, EventTypeId[] types, EventSequenceNumber from, CancellationToken cancellationToken)
+    {
+        Event? predecessor = null;
+        foreach (var type in types)
+        {
+            var candidates = await _collection.Find(filter & Builders<Event>.Filter.Eq(e => e.Type, type) & Builders<Event>.Filter.Lt(e => e.SequenceNumber, from))
+                .SortByDescendingSequenceNumber().Limit(1).ToListAsync(cancellationToken);
+            var candidate = candidates.FirstOrDefault();
+            if (candidate is not null && (predecessor is null || candidate.SequenceNumber > predecessor.SequenceNumber))
+            {
+                predecessor = candidate;
+            }
+        }
+        return predecessor;
     }
 }
