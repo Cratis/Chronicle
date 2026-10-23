@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
-using Xunit;
 using EventSequencesStorageProvider = KernelCore::Cratis.Chronicle.EventSequences.EventSequencesStorageProvider;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -24,7 +23,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents the base fixture.
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
-public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
+public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDisposable, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
