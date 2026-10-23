@@ -66,8 +66,9 @@ public class when_indexing_sqlite_decimals : Specification
         _preservedUnique = indexes.Contains("chronicle_idx_unique_name");
         _preservedCustom = indexes.Contains("manual_amount");
 
-        // Simulate an old replay promotion while the migrator and index-build caches are warm.
-        await context.Database.ExecuteSqlRawAsync("CREATE TABLE old_decimal_indexes AS SELECT * FROM decimal_indexes; DROP TABLE decimal_indexes; CREATE TABLE decimal_indexes(id TEXT NOT NULL PRIMARY KEY, amount TEXT NULL, name TEXT NULL, __lastHandledEventSequenceNumber INTEGER NULL, __initialized INTEGER NOT NULL DEFAULT 1); INSERT INTO decimal_indexes SELECT id,amount,name,__lastHandledEventSequenceNumber,__initialized FROM old_decimal_indexes; DROP TABLE old_decimal_indexes; CREATE INDEX manual_amount ON decimal_indexes(amount); CREATE UNIQUE INDEX chronicle_idx_unique_name ON decimal_indexes(id)");
+        // Simulate an old replay promotion while the migrator and index-build caches are warm. Chronicle owns and
+        // renames every chronicle_idx_ index on promotion, so the hand-made unique index is not recreated here.
+        await context.Database.ExecuteSqlRawAsync("CREATE TABLE old_decimal_indexes AS SELECT * FROM decimal_indexes; DROP TABLE decimal_indexes; CREATE TABLE decimal_indexes(id TEXT NOT NULL PRIMARY KEY, amount TEXT NULL, name TEXT NULL, __lastHandledEventSequenceNumber INTEGER NULL, __initialized INTEGER NOT NULL DEFAULT 1); INSERT INTO decimal_indexes SELECT id,amount,name,__lastHandledEventSequenceNumber,__initialized FROM old_decimal_indexes; DROP TABLE old_decimal_indexes; CREATE INDEX manual_amount ON decimal_indexes(amount)");
         _capture.Clear();
         var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         changeset.Changes.Returns([new Joined(new ExpandoObject(), new Amount(193.580m), "amount", ArrayIndexers.NoIndexers, [new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("name", null, "joined")])])]);
