@@ -17,14 +17,17 @@ public class SiloRoles(ISiloMetadataCache metadataCache) : ISiloRoles
     /// The silo metadata key for the role metadata format version.
     /// </summary>
     internal const string VersionKey = "cratis.chronicle.roles.v";
+
     /// <summary>
     /// The silo metadata key for the event sequences role.
     /// </summary>
     internal const string EventSequencesKey = "cratis.chronicle.role.eventSequences";
+
     /// <summary>
     /// The silo metadata key for the observers role.
     /// </summary>
     internal const string ObserversKey = "cratis.chronicle.role.observers";
+
     /// <summary>
     /// The silo metadata key for the jobs role.
     /// </summary>

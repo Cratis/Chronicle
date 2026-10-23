@@ -15,7 +15,7 @@ public class Observers
     /// Despite the name, this does not limit live event delivery: live delivery never processes partitions of one
     /// observer concurrently. It only caps parallel job steps (replay and catch-up work), together with
     /// <see cref="Jobs.MaxParallelSteps"/>: the effective limit is the smaller of
-    /// <see cref="Jobs.GetEffectiveMaxParallelSteps"/> and this value.
+    /// <see cref="Jobs.GetEffectiveMaxParallelSteps()"/> and this value.
     /// </remarks>
     public int MaxConcurrentPartitions { get; init; } = 32;
 
