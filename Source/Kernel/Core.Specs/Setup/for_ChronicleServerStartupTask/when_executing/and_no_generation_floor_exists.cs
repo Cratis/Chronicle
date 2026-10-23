@@ -25,10 +25,10 @@ public class and_no_generation_floor_exists : given.a_startup_task
     {
         _eventStoreStorage.GenerationFloor.Get();
         _systemStorage.GenerationFloor.Get();
-        _patchManager.ApplyPatches();
+        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
     });
 
-    [Fact] void should_still_apply_patches() => _patchManager.Received(1).ApplyPatches();
+    [Fact] void should_still_apply_patches() => _patchManager.Received(1).ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
     [Fact] void should_not_write_the_event_store_floor_without_opt_in() => _eventStoreStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
     [Fact] void should_not_write_the_system_store_floor_without_opt_in() => _systemStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
 }

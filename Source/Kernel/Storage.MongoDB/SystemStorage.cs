@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.MongoDB.Patching;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Patching;
@@ -17,6 +18,7 @@ public class SystemStorage(IDatabase database) : ISystemStorage
 {
     const string SystemInformationCollectionName = "system-information";
     const int SystemInformationId = 0;
+    const int PatchingKernelVersionId = 1;
 
     /// <inheritdoc/>
     public IUserStorage Users { get; } = new UserStorage(database);
@@ -48,5 +50,24 @@ public class SystemStorage(IDatabase database) : ISystemStorage
             si => si.Id == SystemInformationId,
             document,
             new ReplaceOptions { IsUpsert = true }));
+    }
+
+    /// <inheritdoc/>
+    public async Task<SemanticVersion?> GetPatchingKernelVersion()
+    {
+        var collection = database.GetCollection<MongoDBSystemInformation>(SystemInformationCollectionName);
+        var cursor = await collection.FindAsync(si => si.Id == PatchingKernelVersionId);
+        var document = await cursor.FirstOrDefaultAsync();
+        return document?.Version;
+    }
+
+    /// <inheritdoc/>
+    public async Task SetPatchingKernelVersion(SemanticVersion version)
+    {
+        var collection = database.GetCollection<MongoDBSystemInformation>(SystemInformationCollectionName);
+        await collection.ReplaceOneAsync(
+            si => si.Id == PatchingKernelVersionId,
+            new MongoDBSystemInformation(PatchingKernelVersionId, version),
+            new ReplaceOptions { IsUpsert = true });
     }
 }

@@ -413,8 +413,9 @@ class [GrainType("lifecycleoccurrences")] Cratis.Chronicle.Occurrences.Lifecycle
 
 class [GrainType("occurrencequeue")] Cratis.Chronicle.Occurrences.OccurrenceQueue
 
-interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(1)]
   3D9CA6B5: ApplyPatches() -> Task
+  925D5620: ApplyPatchesFor(Cratis.Chronicle.Concepts.System.SemanticVersion) -> Task<Cratis.Chronicle.Patching.PatchOutcome>
 
 class [GrainType("patchmanager")] Cratis.Chronicle.Patching.PatchManager
 
