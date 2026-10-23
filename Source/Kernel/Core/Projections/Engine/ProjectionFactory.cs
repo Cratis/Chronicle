@@ -1082,7 +1082,13 @@ public class ProjectionFactory(
 
         // TODO: This has an implication in that only one key resolver can exist for each event type, meaning that an event type
         // can only be used once for a projection, including child projections.
-        var distinctEventTypes = eventsForProjection.DistinctBy(_ => _.EventType).ToArray();
+        // The first registration keeps its resolver, but an event type only resolves to the event source id when
+        // every registration of it does: a join on the same event type updates other documents, so it must keep
+        // the projection off the fine-grained lock even when a from on that event type is keyed by the event source.
+        var distinctEventTypes = eventsForProjection
+            .GroupBy(_ => _.EventType)
+            .Select(_ => _.First() with { ResolvesToEventSourceId = _.All(registration => registration.ResolvesToEventSourceId) })
+            .ToArray();
         logger.ResolveEventsForProjectionComplete(distinctEventTypes.Length, projection.Path);
 
         // An event reached only by subscribing to every event type has no FromDefinition to carry a key, so the
