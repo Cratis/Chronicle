@@ -24,6 +24,9 @@ internal static partial class ProjectionObserverSubscriberLogging
     [LoggerMessage(LogLevel.Trace, "Successfully handled event {EventSequenceNumber} for projection pipeline for key {Key}")]
     internal static partial void SuccessfullyHandledEvent(this ILogger<ProjectionObserverSubscriber> logger, ulong eventSequenceNumber, ObserverSubscriberKey key);
 
+    [LoggerMessage(LogLevel.Warning, "Preparing a page of events for projection pipeline for key {Key} failed — the page is handled without preparation")]
+    internal static partial void FailedPreparingPage(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
+
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for projection pipeline for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
 

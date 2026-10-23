@@ -34,10 +34,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="observerServiceClient">The client that confirms buffered writes on every silo.</param>
+/// <param name="options">The kernel configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 public class HandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -46,11 +47,13 @@ public class HandleEventsForObserver(
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
     IObserverServiceClient observerServiceClient,
+    IOptions<ChronicleOptions> options,
     ILogger<HandleEventsForObserver> logger,
     IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
+    readonly IOptions<ChronicleOptions> _options = options;
     readonly SemaphoreSlim _flushGate = new(1, 1);
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
@@ -65,11 +68,14 @@ public class HandleEventsForObserver(
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
+    ReplayHandledEventsPage? _replayReports;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
+    bool DeliversPages { get; set; }
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -180,6 +186,8 @@ public class HandleEventsForObserver(
     protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+        DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
+        _replayReports = DeliversPages ? new() : null;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -249,86 +257,137 @@ public class HandleEventsForObserver(
                 var eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsRead, nonRedactionEventTypeIds);
                 eventsToHandle = _subscription.Filters.Apply(eventsToHandle);
 
-                // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
-                // immediately on the first failure instead of continuing to later partitions. This is intentional:
-                // a projection that resolves keys, joins, or child collections across event sources depends on
-                // earlier partitions already being materialized in the sink, so processing past a failed partition
-                // would layer state onto a parent that never materialized and silently produce an inconsistent read
-                // model. Halting preserves the same global-order contract live observation relies on and surfaces
-                // the failure through PartitionFailed so it can be recovered before more state is built on top of it.
-                foreach (var partitionEvents in GetConsecutivePartitionBatches(eventsToHandle))
+                var usePages = DeliversPages &&
+                    _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
+                if (usePages && failedPartitions.Count > 0)
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    eventsToHandle = eventsToHandle.Where(_ => !failedPartitions.Contains(_.Context.EventSourceId)).ToArray();
+                }
+
+                foreach (var unit in usePages ? eventsToHandle.Chunk(_options.Value.ReadModels.MaxBatchSize) : Enumerable.Repeat(eventsToHandle, 1))
+                {
+                    if (usePages && cancellationToken.IsCancellationRequested)
                     {
+                        if (!await FlushReplayReports()) return ClosedResult();
                         LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
                         return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
                     }
 
-                    var partition = partitionEvents[0].Context.EventSourceId;
-                    if (failedPartitions.Contains(partition))
+                    if (usePages)
                     {
-                        logger.SkippingFailedPartition(partition);
-                        continue;
+                        var dispatched = false;
+                        var pageResult = await TryHandleEvents(ObserverSubscriberKey.AllPartitions, unit, subscriberTimeout, page: true, onPageDispatch: () => dispatched = true);
+                        if (dispatched && pageResult.TryGetException(out var pageException))
+                        {
+                            return await HandlePageDispatchException(unit[0], pageException);
+                        }
+
+                        if (pageResult.TryGetResult(out var pageHandled))
+                        {
+                            var (result, lastSuccessful) = await HandleSubscriberResult(
+                                currentState,
+                                unit[0].Context.EventSourceId,
+                                pageHandled.Result,
+                                pageHandled.HandledEvents,
+                                lastSuccessfullyHandledEventSequenceNumber,
+                                cancellationToken,
+                                page: true);
+                            lastSuccessfullyHandledEventSequenceNumber = lastSuccessful;
+                            if (result is not null) return result;
+                            if (!await FlushReplayReports()) return ClosedResult();
+                            continue;
+                        }
+
+                        // Only preparation failures can fall back: a dispatched page may still be applying events,
+                        // so re-sending its runs could apply them twice.
                     }
 
-                    var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
-                        () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
-                        TransientRetryDelay,
-                        timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
-                        cancellationToken);
-                    if (handleEventsResult.TryGetException(out var handleEventsException))
+                    // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
+                    // immediately on the first failure instead of continuing to later partitions. This is intentional:
+                    // a projection that resolves keys, joins, or child collections across event sources depends on
+                    // earlier partitions already being materialized in the sink, so processing past a failed partition
+                    // would layer state onto a parent that never materialized and silently produce an inconsistent read
+                    // model. Halting preserves the same global-order contract live observation relies on and surfaces
+                    // the failure through PartitionFailed so it can be recovered before more state is built on top of it.
+                    foreach (var partitionEvents in GetConsecutivePartitionBatches(unit))
                     {
-                        var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
-                        var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
-                        lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
-                        if (TransientTimeouts.IsTimeout(handleEventsException))
+                        if (cancellationToken.IsCancellationRequested)
                         {
-                            // The observer is not told yet: it is the grain that was too busy to answer, and the job runs
-                            // the step again before it reports the partition.
-                            var shortMessage = TransientTimeouts.ShortMessageFor(handleEventsException);
-                            logger.StepTimedOut(shortMessage);
+                            if (!await FlushReplayReports()) return ClosedResult();
+                            LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
+                            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
+                        }
+
+                        var partition = partitionEvents[0].Context.EventSourceId;
+                        if (failedPartitions.Contains(partition))
+                        {
+                            logger.SkippingFailedPartition(partition);
+                            continue;
+                        }
+
+                        var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
+                            () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
+                            TransientRetryDelay,
+                            timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
+                            cancellationToken);
+                        if (handleEventsResult.TryGetException(out var handleEventsException))
+                        {
+                            var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
+                            var exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
+                            lastEventSequenceNumberAttempted = partitionEvents[0].Context.SequenceNumber;
+                            if (TransientTimeouts.IsTimeout(handleEventsException))
+                            {
+                                // The observer is not told yet: it is the grain that was too busy to answer, and the job runs
+                                // the step again before it reports the partition.
+                                var shortMessage = TransientTimeouts.ShortMessageFor(handleEventsException);
+                                logger.StepTimedOut(shortMessage);
+                                if (!await FlushReplayReports()) return ClosedResult();
+                                if (!Advanced(await FlushFromWork()))
+                                {
+                                    return ClosedResult();
+                                }
+
+                                return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+                                    CreateResult(_lastDurableCheckpoint) with
+                                    {
+                                        TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
+                                    },
+                                    [shortMessage],
+                                    string.Empty));
+                            }
+
+                            if (!await FlushReplayReports()) return ClosedResult();
+                            await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                             if (!Advanced(await FlushFromWork()))
                             {
                                 return ClosedResult();
                             }
 
                             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                                CreateResult(_lastDurableCheckpoint) with
-                                {
-                                    TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
-                                },
-                                [shortMessage],
+                                CreateResult(_lastDurableCheckpoint),
+                                TransientTimeouts.ShortenForStep(exceptionMessages),
                                 string.Empty));
                         }
-
-                        await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
-                        if (!Advanced(await FlushFromWork()))
+                        if (handleEventsResult.TryGetResult(out var handledEventsResult))
                         {
-                            return ClosedResult();
-                        }
-
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                            CreateResult(_lastDurableCheckpoint),
-                            TransientTimeouts.ShortenForStep(exceptionMessages),
-                            string.Empty));
-                    }
-                    if (handleEventsResult.TryGetResult(out var handledEventsResult))
-                    {
-                        var (eventObserverResult, handledEvents) = handledEventsResult;
-                        var (result, newLastSuccessfullyHandledEventSequenceNumber) = await HandleSubscriberResult(
-                            currentState,
-                            partition,
-                            eventObserverResult,
-                            handledEvents,
-                            lastSuccessfullyHandledEventSequenceNumber,
-                            cancellationToken);
-                        lastSuccessfullyHandledEventSequenceNumber = newLastSuccessfullyHandledEventSequenceNumber;
-                        if (result is not null)
-                        {
-                            return result;
+                            var (eventObserverResult, handledEvents) = handledEventsResult;
+                            var (result, newLastSuccessfullyHandledEventSequenceNumber) = await HandleSubscriberResult(
+                                currentState,
+                                partition,
+                                eventObserverResult,
+                                handledEvents,
+                                lastSuccessfullyHandledEventSequenceNumber,
+                                cancellationToken);
+                            lastSuccessfullyHandledEventSequenceNumber = newLastSuccessfullyHandledEventSequenceNumber;
+                            if (result is not null)
+                            {
+                                return result;
+                            }
                         }
                     }
                 }
+
+                if (!await FlushReplayReports()) return ClosedResult();
 
                 if (eventsRead.Length != 0)
                 {
@@ -360,16 +419,19 @@ public class HandleEventsForObserver(
         }
         catch (TaskCanceledException)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             var message = TransientTimeouts.ShortMessageFor(e);
             logger.StepTimedOut(message);
             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
@@ -379,6 +441,7 @@ public class HandleEventsForObserver(
         }
         catch (Exception e)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             logger.FailedPerforming(e, nameof(HandleEventsForObserver));
             if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
             {
@@ -699,7 +762,8 @@ public class HandleEventsForObserver(
         ObserverSubscriberResult eventObserverResult,
         AppendedEvent[] handledEvents,
         EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool page = false)
     {
         var handledCount = EventCount.Zero;
         if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
@@ -710,7 +774,7 @@ public class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
-                if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+                if (!await RecordAndReportSubscriberEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, page, cancellationToken))
                 {
                     // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
                     // checkpoint, so it handles every batch since then again; the observer recognizes the reports it
@@ -718,9 +782,9 @@ public class HandleEventsForObserver(
                     return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 }
 
-                await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
+            case var _ when page:
                 return await HandleFailedSubscriberResult(
                     currentState,
                     partition,
@@ -728,10 +792,12 @@ public class HandleEventsForObserver(
                     handledEvents,
                     handledCount,
                     lastSuccessfullyHandledEventSequenceNumber,
-                    cancellationToken);
+                    cancellationToken,
+                    page);
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
+                if (!await FlushReplayReports()) return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
                 if (!Advanced(await FlushFromWork()))
                 {
@@ -749,17 +815,48 @@ public class HandleEventsForObserver(
         }
     }
 
-    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
+    async Task<bool> RecordAndReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
     {
         var counts = handledEvents
             .Where(e => e.Context.SequenceNumber <= handledUpTo)
             .CountByEventType();
-        return TransientTimeouts.ReportHandledEventsWithoutFailing(
-            _observer,
-            new(partition, counts, JobStepId, handledUpTo),
-            TransientRetryDelay,
-            logger,
-            cancellationToken);
+        var report = new HandledEventsReport(partition, counts, JobStepId, handledUpTo);
+        if (_replayReports is not null)
+        {
+            _replayReports.Add(report);
+            return true;
+        }
+
+        if (!Advanced(await ReportFromWork(handledUpTo))) return false;
+        await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, report, TransientRetryDelay, logger, cancellationToken);
+        return true;
+    }
+
+    async Task<bool> FlushReplayReportsAfterFailure()
+    {
+        try
+        {
+            return await FlushReplayReports();
+        }
+        catch (Exception exception)
+        {
+            logger.FailedPerforming(exception, nameof(HandleEventsForObserver));
+            return true;
+        }
+    }
+
+    async Task<bool> FlushReplayReports()
+    {
+        if (_replayReports?.LastHandled.IsActualValue != true) return true;
+        var lastHandled = _replayReports.LastHandled;
+        var reports = _replayReports.Reports;
+        _replayReports.Clear();
+        if (!Advanced(await ReportFromWork(lastHandled))) return false;
+
+        // Events already handled before a stop still need their counts reported; cancellation only stops dispatch.
+        await TransientTimeouts.ReportHandledEventsBatchWithoutFailing(
+            _observer, JobStepId, reports, TransientRetryDelay, logger, CancellationToken.None);
+        return true;
     }
 
     async Task<(JobStepResult Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleFailedSubscriberResult(
@@ -769,7 +866,8 @@ public class HandleEventsForObserver(
         AppendedEvent[] handledEvents,
         EventCount handledCount,
         EventSequenceNumber lastSuccessfullyHandledEventSequenceNumber,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool page = false)
     {
         var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
         if (eventObserverResult.HandledAnyEvents)
@@ -779,21 +877,27 @@ public class HandleEventsForObserver(
                 ? failedEvent.Context.SequenceNumber
                 : eventObserverResult.LastSuccessfulObservation.Next();
 
-            if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+            if (!await RecordAndReportSubscriberEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, page, cancellationToken))
             {
                 return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
             }
 
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-            await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
         }
         else
         {
             lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
         }
 
+        if (page && eventObserverResult.FailedAt.IsActualValue && eventObserverResult.FailedPartition is not null)
+        {
+            partition = eventObserverResult.FailedPartition;
+            lastEventSequenceNumberAttempted = eventObserverResult.FailedAt;
+        }
+
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
+        if (!await FlushReplayReports()) return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
         await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling, failurePolicy: eventObserverResult.FailurePolicy);
         if (!Advanced(await FlushFromWork()))
         {
@@ -808,10 +912,32 @@ public class HandleEventsForObserver(
             lastSuccessfullyHandledEventSequenceNumber);
     }
 
+    async Task<JobStepResult> HandlePageDispatchException(AppendedEvent firstEvent, Exception exception)
+    {
+        var messages = TransientTimeouts.IsTimeout(exception)
+            ? [TransientTimeouts.ShortMessageFor(exception)]
+            : TransientTimeouts.ShortenForStep(exception.GetAllMessages().ToArray());
+        if (TransientTimeouts.IsTimeout(exception)) logger.StepTimedOut(messages[0]);
+        if (!await FlushReplayReports()) return ClosedResult();
+        if (!Advanced(await FlushFromWork())) return ClosedResult();
+
+        // A page has no authoritative progress after an exception. Resume from the durable checkpoint,
+        // just as for an exhausted per-run timeout, without counting or immediately re-dispatching it.
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(_lastDurableCheckpoint) with
+            {
+                TransientFailure = new(firstEvent.Context.EventSourceId, firstEvent.Context.SequenceNumber, messages)
+            },
+            messages,
+            string.Empty));
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
         AppendedEvent[] events,
-        TimeSpan subscriberTimeout)
+        TimeSpan subscriberTimeout,
+        bool page = false,
+        Action? onPageDispatch = null)
     {
         try
         {
@@ -825,7 +951,10 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var result = await subscriber!.OnNextWithin(subscriberTimeout, partition, decryptedEvents, subscriberContext);
+            if (page) onPageDispatch?.Invoke();
+            var result = page
+                ? await ((IObserverPageSubscriber)subscriber!).OnNextPageWithin(subscriberTimeout, decryptedEvents, subscriberContext)
+                : await subscriber!.OnNextWithin(subscriberTimeout, partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
         catch (Exception ex)
@@ -833,6 +962,27 @@ public class HandleEventsForObserver(
             logger.ErrorHandling(ex, partition);
             return ex;
         }
+    }
+
+    async Task<bool> RecordAndReportSubscriberEvents(
+        Key partition,
+        AppendedEvent[] events,
+        EventSequenceNumber handledUpTo,
+        bool page,
+        CancellationToken cancellationToken)
+    {
+        if (!page)
+        {
+            return await RecordAndReportHandledEvents(partition, events, handledUpTo, cancellationToken);
+        }
+
+        foreach (var group in events.Where(_ => _.Context.SequenceNumber <= handledUpTo).GroupBy(_ => _.Context.EventSourceId))
+        {
+            var handled = group.ToArray();
+            if (!await RecordAndReportHandledEvents(group.Key, handled, handled[^1].Context.SequenceNumber, cancellationToken)) return false;
+        }
+
+        return true;
     }
 
     void LogCancelled(EventSequenceNumber lastHandledSequenceNumber)
