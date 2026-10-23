@@ -111,7 +111,7 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
         };
     }
 
-    IWebhookDefinitionBuilder WithAuthorization(OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization)
+    WebhookDefinitionBuilder WithAuthorization(OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization)
     {
         _authorization = authorization;
         _managedIdentity = null;
