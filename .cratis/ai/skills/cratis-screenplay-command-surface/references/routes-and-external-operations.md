@@ -8,7 +8,7 @@ This reference holds the route, public-event and external-operation guidance for
 Routes bind as ESM v8; production `stream Source.Stream` overrides
 select v10. Read toolchain [routes](../../cratis-screenplay-toolchain/references/production-routes-and-filters.md)
 and [source/stream declarations](../../cratis-screenplay-toolchain/references/sources-and-streams.md).
-A stored stream `All` / `id "All"` refuses PLAY0273;
+A stored stream `All` / `id "All"` and a stored source `Default` refuse PLAY0802 (PLAY0273 at binding as a backstop);
 rename and history-migration guidance is in that reference.
 `public event X` is a local export; `event X from "store"` is a locally declared,
 unverified foreign shape. Commands never produce public events. Read

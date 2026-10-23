@@ -168,8 +168,8 @@ it. Verify the answer became a specification, a description or a project-owned
 decision record; a resolved note is not behavioral proof. Ask the owner to reanchor
 or resolve affected notes before source apply; resolution alone leaves an orphan.
 
-The optional `--open-questions fail` gate is a standalone `screenplay` option; the
-CLI-bundled compiler can lack it. Report it separately from V1–V5. Evidence: Screenplay
+The optional `--open-questions fail` gate exists on the standalone `screenplay` tool and on
+`cratis screenplay validate` (CLI 3.60.0 or later). Report it separately from V1–V5. Evidence: Screenplay
 `Documentation/screenplay/model-notes.md`,
 `Documentation/screenplay/mcp/reference.md`; source lines in the linked guide.
 

@@ -66,6 +66,32 @@ on every silo and resume from the last durable position after a failed window.
 Check the kernel version and shutdown logs; neither guarantee makes an interrupted
 external effect exactly once.
 
+Requires Chronicle 19.77.4 for an observer replaced by a newer connected client
+to hand over to a still-connected older client when the newer one disconnects.
+The newest registration wins while both are connected; the older handler does
+not receive event types only the departed client handled. Check the kernel tag;
+older kernels can leave that observer stopped.
+
+### Job acceptance and bounded recovery
+
+Requires Chronicle 19.80.0 for `IJobs.Stop` and `IJobs.Resume` to return
+`JobCommandResult` with `Accepted` and a refusal reason. A completed RPC is not
+an accepted operation: inspect the result. `RetryFailedPartitions` retries
+partitions through bounded per-partition jobs without reopening a concluded
+replay. Do not invent a CLI flag for this contract operation.
+
+Timed-out job steps retry up to five attempts. Replay work has at most 16
+partition steps active, but projection replay/catch-up still use the single
+ordered step above; do not generalize partition parallelism to projections.
+Running jobs whose steps concluded over two minutes ago are reconciled, and
+replay-complete notifications retry. These recovery paths do not clear quarantine or
+prove historical completeness. Check the kernel/client version before relying
+on acceptance results; older clients do not expose them.
+
+Requires Chronicle 19.77.2 for stopped/deactivated catch-up and replay steps to
+drain within the job-step stop timeout and resume from their durable checkpoint.
+This does not make external effects exactly once.
+
 ### Next-event lookup failures
 
 Routing keeps the saved position and defers observation when

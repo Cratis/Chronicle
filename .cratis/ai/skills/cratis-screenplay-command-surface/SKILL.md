@@ -51,9 +51,8 @@ concept InvoiceStatus : Enum
   paid
 ```
 
-The seven primitives are `Uuid`, `String`, `Int`, `Decimal`, `Bool`, `Date` and
-`DateTime`. `Enum` is **not** one of them — it is a separate concept kind, which
-is why the compiler says *expected … or Enum* rather than listing it among them.
+Primitives: `Uuid`, `String`, `Int`, `Decimal`, `Bool`, `Date`, `DateTime`.
+`Enum` is a separate concept kind; details: `references/enum-numbers.md`.
 Use bare `pii` (`personal` alias) and `secret` on concepts; **Compliance is inherited**.
 Keep protection even when a compiler or renderer refuses it. Read
 [compliance and purposes](references/compliance.md) for ESM v13, binder-only refusals,
@@ -107,12 +106,15 @@ fix to migrate. `--warnaserror` does not reject information diagnostics.
 properties, `reads`, `authorize`, `validate`, `produces`/`handler`, `concurrency`.
 Keep to it.
 
-⚠️ **`produces` and `handler` are mutually exclusive** — declaring both is an
-error. Everything else may repeat except `description` (one) and `concurrency`
-(one). A `handler` parses but **never binds**, with or without an `implementation`
-or `hint`: the binder reports `PLAY0268` ("handler requires a constrained
-implementation attachment"), and a `handler` is not one of the opaque bodies below.
-Prefer `produces` when the model must run or render.
+A file/code `handler` cannot coexist with `produces` and fails binding
+with PLAY0800 (`CommandHandlerRequiresAttachment`): gap-fill the slice in code
+with a constrained implementation attachment, not by waiting for a new ESM version.
+Read the required typed `subject` argument for the command, never parse the message.
+Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800; older binders use PLAY0268 for this refusal. A pending `handler implementation` beside unconditional `produces`
+is a described command (ESM v23): the body owns payload values only. Prefer plain
+`produces` for declarative logic. Read [described handlers](references/described-handlers.md)
+when logic needs prose, for the result contract, PLAY0695–0698, Unsupported
+ImplementationBody and Stage's STAGE-IMPL-002 refusal (no stubs, even in Stub mode).
 
 ## `identifier` — the stream boundary decision
 
@@ -150,29 +152,27 @@ alias on **every** read (`PLAY0410`), aliases are unique (`PLAY0411`) and must n
 match a command property (`PLAY0412`). A `require` path uses the alias, or the
 view name when that view is read once.
 
-⚠️ **`reads` is not a protected read.** It documents the read-model-to-command
-arrow of the event model; nothing checks at append time that the state is still
-current. The executable model rejects every `reads` and `concurrency` with
-`PLAY0271`, and `require` over a read-model path with `PLAY0268`, until
-decision-consistent reads exist. Adding a
-`concurrency` block does not fix this: its scope is not the read's watermark, and the
-combination is planned to become an error once protected reads ship.
-When a rule depends on state:
+Opt eligible state reads into application-root `command reads protected` (v25).
+Absence rejects; matching intervening facts conflict. Read [protected reads](references/protected-reads.md)
+for strict admission, paths and PLAY0780–0786. Legacy reads stay unprotected;
+reads/concurrency cannot combine (PLAY0783). Semantic Host/executor support is separate.
+Requires Stage 4.138.0 to render protected reads as Arc read protection (shapes it cannot preserve stay STAGE-ESM-044); `cratis render` gets it from the first CLI that bundles it, and CLI 3.75.0 refuses every protected read with STAGE-ESM-044.
+Uniqueness still uses a constraint; reference success is not target realization.
 
-- if it is uniqueness, declare a `unique` constraint (below);
-- otherwise state the rule, and say in review that the target implementation
-  must enforce it consistently. Do not claim the model guarantees it.
-
-Do not use `reads` to fetch data the caller could supply. A composite-key view's `by` block is
-`PLAY0268` (read-surface `references/named-keys.md`).
+Do not use `reads` to fetch data the caller could supply. A composite-key view's `by` block in a
+command read is `PLAY0271`, or `PLAY0781` reason `by-parts` under `command reads protected`
+(read-surface `references/named-keys.md`).
 
 ## `validate`
 
 Each rule takes an optional `severity information|warning|error` and then an
 optional `message "<text>"` (or `$strings.<key>`). The default severity is `error`.
 
-The rule vocabulary (`not empty`, `min`/`max`, comparisons, `length`, `matches`, `all`, `rule <Name>`) is in
+The rule vocabulary (`not empty`, `min`/`max`, comparisons, `length`, literal text rules, `matches`, `all`, `rule <Name>`) is in
 [references/validate-rules.md](references/validate-rules.md): read it when choosing or writing a rule form.
+Read [text and match rules](references/text-and-match-rules.md) for ordinal `contains`,
+`not contains`, `starts with`, `ends with` (v24), the portable linear match dialect,
+PLAY0699/0787, Studio repairs and public pattern checks. Text rules are not conditions.
 
 ⚠️ **Validation severity is not compiler severity.** Every failed rule and
 `require` rejects the command, at `information` and `warning` too; severity only
@@ -183,11 +183,23 @@ optional `severity`, sharing the condition grammar with `produces … when`:
 `and` binds tighter than `or`, parentheses group. A conditional rule is an
 implication: `require isExtension == false or newEndDate > endDate`.
 
+Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`) for Date/DateTime
+comparisons; older binders report PLAY0268. Read [date comparisons](references/date-comparisons.md)
+when ordering a retention window with `require to >= from`, comparing instants
+across offsets, or rejecting offset-less inputs before rules. It covers admitted
+positions, PLAY0268/0273, ordinal `then` matching and Stage's STAGE-ESM-046 renderer refusal.
+
+Requires Screenplay 4.205.0 (ESM v28; `screenplay --version`) for `==`/`!=` between Uuid
+values (properties, concepts, identities, canonical literals, and read paths in `require`);
+older binders report PLAY0268. Read [Uuid equality](references/uuid-equality.md) for the same-concept
+rule, PLAY0268/0273 and the refused shapes (ordering, Uuid validation rules, Uuid concept rules).
+
 **Rules whose logic is code.** A bare `rule <Name>` has no portable meaning (`PLAY0268`) and a bodied rule binds only as
 opaque code. Read [references/validate-rules.md](references/validate-rules.md) when a rule's logic must live in a `file`
 or fenced code body.
 
-**Put format rules on the `concept`, not the command.** A concept carries its own
+**Put format rules on the `concept`, not the command** (except date comparisons,
+which bind only on command properties, not as concept rules). A concept carries its own
 `validate` block and every use inherits it — that is Screenplay's type system, and
 a rule that travels is worth more than one that is repeated.
 
@@ -242,8 +254,11 @@ One `concurrency` block per command; it is not bound (`PLAY0271`) and does not p
 
 UUID generation/responses bind as v7; serialized concept `generate` selects v15:
 UUIDv7/ULID/TypeID/NanoID/bytes, strict fixtures and whole-source freshness.
-Reuse rejects Concurrency, no append/retry. Generated rules/secrets and pattern/random/rule
-remain refused.
+Reuse rejects Concurrency, no append/retry. Rules select v20 (Requires Screenplay
+4.164.0, `screenplay --version`); pattern/checksum, Int random and attached rules
+select v21 (Requires 4.172.0). Older compilers refuse PLAY0268. Secrets and sequences
+remain refused. Patterns are readable references, not gapless allocators or secrets;
+check digits catch typos, not forgery. Keep uniqueness/freshness enforcement.
 Read [references/generated-values-and-responses.md](references/generated-values-and-responses.md)
 for `generated`, `generate`, `returns`, strict fixtures/freshness and renderer limits.
 
@@ -258,7 +273,7 @@ Chronicle's constraints enforce **uniqueness only**; use one when two concurrent
 ## `policy` and `persona`
 
 A policy has **exactly one** `require` line (`PLAY0441`) **or** one implementation, never both (`PLAY0440`). Read [references/policy-persona-seed.md](references/policy-persona-seed.md) when
-declaring a policy, a persona, or a `seed` block.
+declaring a policy (including `require anonymous` for a deliberately public command or query), a persona, or a `seed` block.
 
 ## Event data subject
 
@@ -284,17 +299,19 @@ Four contexts, and **what each omits is load-bearing** — when writing a code b
       bundle compatibility and execution are separate checks.
 - [ ] No unintended `PLAY0478` or `PLAY0479` information remains.
 - [ ] At most one command property carries `identifier`, and no event property does.
-- [ ] Format rules live on the `concept`; state-dependent rules are specifications.
+- [ ] Format rules live on the `concept` except command-only date comparisons;
+      state-dependent rules are specifications. DateTime comparisons preserve UTC
+      ticks; specs include missing-offset Validation rejection.
 - [ ] Every `authorize` combining policies writes `and`/`or` explicitly.
-- [ ] No `reads` or `concurrency` is described as protecting a decision; the gap
-      is stated.
+- [ ] Protected reads opt in, meet admission and distinguish reference protection
+      from target realization; legacy reads and `concurrency` imply no protection.
 - [ ] Constraints are `unique` forms; no `file` constraint stands in for another rule.
 - [ ] Each policy has one `require` or one implementation, not both.
 - [ ] Personal data is `pii` on the concept; operational secrets are `secret`;
       no identifier or subject concept carries either. Reasons explain the value,
       while purposes declare basis/retention; run `--check purposes` separately.
-- [ ] No `handler` where the model must bind, and no bodied construct described as
-      runnable or renderable without saying which tool admits it.
+- [ ] Described handlers distinguish binding from Unsupported body execution and
+      Stage refusal; attached handlers remain unbound. Name the admitting tool.
 - [ ] No event carries an optional property covering two situations.
 
 Compiler versions and admission: `cratis-screenplay-toolchain/SKILL.md`.
