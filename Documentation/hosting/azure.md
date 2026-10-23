@@ -121,7 +121,7 @@ Then register the webhook with `WithManagedIdentity(scope, clientId)`. The kerne
 
 - No secret is stored with the webhook definition.
 - When the kernel runs with workload identity (for example on AKS), it sees `AZURE_FEDERATED_TOKEN_FILE` and uses the federated token. Without it, the kernel uses its managed identity. For workload identity, an empty `clientId` falls back to `AZURE_CLIENT_ID`.
-- Tokens are cached per client id and scope, and refreshed shortly before expiry. A `401` invalidates the token and retries the request once with a fresh one.
+- Tokens are cached per client id and scope, and refreshed shortly before expiry. A `401` discards Chronicle's cached token and the Azure credential instance that supplied it, then retries once. Azure Identity and the identity endpoint control their own caching, so the retry is not guaranteed to receive a different access token.
 - If the kernel host has no usable managed identity, token acquisition fails and the delivery fails. It is retried like any failed delivery and is never reported as delivered.
 
 ## Plan for availability

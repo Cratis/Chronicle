@@ -129,7 +129,7 @@ identity (leave it out for the system-assigned identity only when `AllowSystemAs
 
 Access tokens are not stored in webhook definitions or delivery-failure details and are not shown in the Workbench. Receiver response bodies and reason phrases are not retained as managed identity delivery errors.
 
-Tokens are cached and refreshed shortly before expiry, and a `401` triggers one refresh and retry.
+Tokens are cached and refreshed shortly before expiry. On a `401`, Chronicle discards its cached token and the Azure credential instance that supplied it, then retries once. Azure Identity and the identity endpoint control their own caching; this does not guarantee a different access token.
 If the kernel has no managed identity, the delivery fails and is retried like any failed delivery.
 See [Call Entra-protected endpoints from webhooks](../hosting/azure.md#call-entra-protected-endpoints-from-webhooks)
 for the hosting details.

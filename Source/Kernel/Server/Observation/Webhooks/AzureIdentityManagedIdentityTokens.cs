@@ -20,7 +20,7 @@ public class AzureIdentityManagedIdentityTokens(IManagedIdentityCredentialFactor
     static readonly TimeSpan _refreshMargin = TimeSpan.FromSeconds(60);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly ConcurrentDictionary<ManagedIdentityClientId, Lazy<TokenCredential>> _credentials = new();
-    readonly ConcurrentDictionary<TokenKey, Lazy<Task<AccessTokenInfo>>> _tokens = new();
+    readonly ConcurrentDictionary<TokenKey, Lazy<Task<TokenEntry>>> _tokens = new();
 
     /// <inheritdoc/>
     public async Task<AccessTokenInfo> AcquireToken(ManagedIdentityAuthorization authorization, CancellationToken cancellationToken)
@@ -29,7 +29,7 @@ public class AzureIdentityManagedIdentityTokens(IManagedIdentityCredentialFactor
         while (true)
         {
             var request = _tokens.GetOrAdd(key, static (_, state) => new(() => state.Self.Fetch(state.Authorization)), (Self: this, Authorization: authorization));
-            if (CompletedToken(request) is { } cached && NeedsRefresh(cached))
+            if (CompletedToken(request) is { } cached && NeedsRefresh(cached.Token))
             {
                 _tokens.TryRemove(new(key, request));
                 continue;
@@ -39,8 +39,8 @@ public class AzureIdentityManagedIdentityTokens(IManagedIdentityCredentialFactor
             try
             {
                 var token = await task.WaitAsync(cancellationToken);
-                if (NeedsRefresh(token)) _tokens.TryRemove(new(key, request));
-                return token;
+                if (NeedsRefresh(token.Token)) _tokens.TryRemove(new(key, request));
+                return token.Token;
             }
             catch when (task.IsFaulted || task.IsCanceled)
             {
@@ -55,10 +55,16 @@ public class AzureIdentityManagedIdentityTokens(IManagedIdentityCredentialFactor
     {
         var key = new TokenKey(authorization.ClientId, authorization.Scope);
         if (!_tokens.TryGetValue(key, out var request)) return;
-        if (ReferenceEquals(CompletedToken(request), token)) _tokens.TryRemove(new(key, request));
+        var entry = CompletedToken(request);
+        if (entry is null || !ReferenceEquals(entry.Token, token)) return;
+        if (_tokens.TryRemove(new(key, request)))
+        {
+            // Azure credentials also cache tokens. Never evict a replacement credential for a stale rejection.
+            _credentials.TryRemove(new(key.ClientId, entry.Credential));
+        }
     }
 
-    static AccessTokenInfo? CompletedToken(Lazy<Task<AccessTokenInfo>> request)
+    static TokenEntry? CompletedToken(Lazy<Task<TokenEntry>> request)
     {
         if (!request.IsValueCreated) return null;
         return request.Value.IsCompletedSuccessfully ? request.Value.Result : null;
@@ -66,12 +72,13 @@ public class AzureIdentityManagedIdentityTokens(IManagedIdentityCredentialFactor
 
     bool NeedsRefresh(AccessTokenInfo token) => _clock.GetUtcNow() >= token.ExpiresAt - _refreshMargin;
 
-    async Task<AccessTokenInfo> Fetch(ManagedIdentityAuthorization authorization)
+    async Task<TokenEntry> Fetch(ManagedIdentityAuthorization authorization)
     {
-        var credential = _credentials.GetOrAdd(authorization.ClientId, static (clientId, factory) => new(() => factory.Create(clientId)), credentialFactory).Value;
-        var token = await credential.GetTokenAsync(new TokenRequestContext([authorization.Scope.Value]), CancellationToken.None);
-        return new(token.Token, token.ExpiresOn);
+        var credential = _credentials.GetOrAdd(authorization.ClientId, static (clientId, factory) => new(() => factory.Create(clientId)), credentialFactory);
+        var token = await credential.Value.GetTokenAsync(new TokenRequestContext([authorization.Scope.Value]), CancellationToken.None);
+        return new(new(token.Token, token.ExpiresOn), credential);
     }
 
+    record TokenEntry(AccessTokenInfo Token, Lazy<TokenCredential> Credential);
     record TokenKey(ManagedIdentityClientId ClientId, OAuthScope Scope);
 }
