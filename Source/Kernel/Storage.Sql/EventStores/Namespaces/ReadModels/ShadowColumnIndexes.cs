@@ -5,8 +5,6 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
@@ -60,18 +58,16 @@ internal static class ShadowColumnIndexes
         var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
         if (ShadowColumns.For(context).Count == 0) return;
         var indexes = await Existing(context).ToArrayAsync();
-        var helper = context.GetService<ISqlGenerationHelper>();
         foreach (var index in indexes.Where(index => !expected.Contains(index.Column)))
         {
-            var suffix = context.Database.IsSqlServer() ? $" ON {helper.DelimitIdentifier(context.TableName)}" : string.Empty;
-            await Execute(context, $"DROP INDEX {helper.DelimitIdentifier(index.Name)}{suffix}");
+            await ReadModelIndexOperations.Drop(context, context.TableName, index.Name, online: true);
         }
         foreach (var column in expected.Where(column => !indexes.Any(index => index.Column == column)))
         {
             // Names must survive renames untouched. A unique suffix avoids a name still owned by a revert table.
             var name = ReadModelIndexNames.For(context.Database.GetDatabaseType(), context.TableName, $"{column}_{Guid.NewGuid():N}")
                 .Replace(ReadModelIndexNames.Prefix, Prefix, StringComparison.Ordinal);
-            await Execute(context, $"CREATE INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(context.TableName)} ({helper.DelimitIdentifier(column)})");
+            await ReadModelIndexOperations.Ensure(context, (context.TableName, column), name, online: true);
         }
     }
 
@@ -84,13 +80,6 @@ internal static class ShadowColumnIndexes
             DatabaseType.SqlServer => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS [Name], c.name AS [Column] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND ic.key_ordinal = 1 AND i.is_unique = 0 AND LEFT(i.name, 14) = {Prefix}"),
             _ => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS Name, c.name AS \"Column\" FROM pragma_index_list({table}) i JOIN pragma_index_info(i.name) c WHERE i.\"unique\" = 0 AND substr(i.name, 1, 14) = {Prefix}")
         };
-    }
-
-    static Task<int> Execute(ReadModelDbContext context, string sql)
-    {
-#pragma warning disable EF1002 // All identifiers are delimited; no data is interpolated.
-        return context.Database.ExecuteSqlRawAsync(sql);
-#pragma warning restore EF1002
     }
 
     sealed class StoredIndex
