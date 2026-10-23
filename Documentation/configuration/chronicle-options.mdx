@@ -376,7 +376,7 @@ Managed identity webhooks lend the kernel's own Azure identity to the receiver. 
 | `AllowedClientIds` | `[]` | Non-empty client ids must match an entry exactly. |
 | `AllowSystemAssigned` | `false` | Permit an empty client id, including workload identity's `AZURE_CLIENT_ID` default. |
 
-Managed identity receivers must match `AllowedHosts` even when `Validation` is `Warn` or `Off`. Existing `EventStoreAllowedHosts` overrides and wildcard subdomain rules still apply. Registration and delivery enforce approval before requesting a token. Other authorization types keep their existing validation behavior. See [Managed identity setup](../webhooks/index.mdx#managed-identity) for JSON and environment variable examples.
+Managed identity receivers must match `AllowedHosts` even when `Validation` is `Warn`. Existing `EventStoreAllowedHosts` overrides and wildcard subdomain rules still apply. Registration and delivery enforce approval before requesting a token. Other authorization types keep their existing validation behavior. See [Managed identity setup](../webhooks/index.mdx#managed-identity) for JSON and environment variable examples.
 
 ### Delivery retry policy
 

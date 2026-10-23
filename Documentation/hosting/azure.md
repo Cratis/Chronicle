@@ -110,7 +110,7 @@ Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedClientIds__0=<managed-ident
 Cratis__Chronicle__Webhooks__ManagedIdentity__AllowSystemAssigned=false
 ```
 
-Scopes and client ids are global operator settings only. Empty `AllowedScopes` disables managed identity webhooks; non-empty client ids must match `AllowedClientIds` exactly. An empty client id requires `AllowSystemAssigned=true`, including workload identity's environment default. Scope matching is exact ignoring case. The receiver must match the existing host allow-list even in `Warn` or `Off` mode; event-store host overrides and wildcard subdomains keep their existing meaning. See [Managed identity](../webhooks/index.mdx#managed-identity) for the JSON configuration and defaults.
+Scopes and client ids are global operator settings only. Empty `AllowedScopes` disables managed identity webhooks; non-empty client ids must match `AllowedClientIds` exactly. An empty client id requires `AllowSystemAssigned=true`, including workload identity's environment default. Scope matching is exact ignoring case. The receiver must match the existing host allow-list even in `Warn` mode; event-store host overrides and wildcard subdomains keep their existing meaning. See [Managed identity](../webhooks/index.mdx#managed-identity) for the JSON configuration and defaults.
 
 Then register the webhook with `WithManagedIdentity(scope, clientId)`. The kernel requests the token with its own Azure identity, as in the [managed identity example](../webhooks/index.mdx#managed-identity):
 

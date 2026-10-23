@@ -32,7 +32,7 @@ public class with_an_unapproved_managed_identity : given.a_webhook_registrar
         var requested = new ContractWebhookDefinition
         {
             Identifier = "managed",
-            EventSequenceId = WellKnownConstants.EventSequences.EventLog.ToString(),
+            EventSequenceId = Concepts.EventSequences.EventSequenceId.Log.Value,
             Target = new()
             {
                 Url = "https://receiver.example",
