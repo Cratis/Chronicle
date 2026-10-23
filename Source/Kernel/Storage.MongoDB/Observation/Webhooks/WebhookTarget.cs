@@ -31,6 +31,11 @@ public class WebhookTarget
     public OAuthAuthorization? OAuthAuthorization { get; set; }
 
     /// <summary>
+    /// Gets or sets the managed identity authorization.
+    /// </summary>
+    public ManagedIdentityAuthorization? ManagedIdentityAuthorization { get; set; }
+
+    /// <summary>
     /// Gets or sets the headers.
     /// </summary>
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();

@@ -35,13 +35,24 @@ internal static class ReadModelIndexOperations
     /// <param name="target">The table, column and index name.</param>
     /// <param name="execution">Online mode and an optional DDL timeout override; zero is unbounded.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, (string Table, string Column, string Name) target, Execution execution)
+    internal static Task Ensure(ReadModelDbContext context, (string Table, string Column, string Name) target, Execution execution) =>
+        EnsureIndex(context, (target.Table, target.Name, context.GetService<ISqlGenerationHelper>().DelimitIdentifier(target.Column), false), execution);
+
+    /// <summary>
+    /// Ensures a scalar or ordered index with the supplied provider-delimited keys and execution settings.
+    /// </summary>
+    /// <param name="context">The read model context.</param>
+    /// <param name="target">The table, index name, provider-delimited keys and GIN mode.</param>
+    /// <param name="execution">Online mode and an optional DDL timeout override; zero is unbounded.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task EnsureIndex(ReadModelDbContext context, (string Table, string Name, string Keys, bool Gin) target, Execution execution)
     {
-        var (table, column, name) = target;
+        var (table, name, keys, gin) = target;
         var database = context.Database;
         var databaseType = database.GetDatabaseType();
         var helper = context.GetService<ISqlGenerationHelper>();
-        var create = $"CREATE INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
+        var method = gin ? " USING GIN" : string.Empty;
+        var create = $"CREATE INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}{method} ({keys})";
         var exists = databaseType == DatabaseType.SqlServer && await database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.indexes WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND name = {name}").AnyAsync(execution.CancellationToken);
         if (exists)
         {
@@ -54,7 +65,7 @@ internal static class ReadModelIndexOperations
                 await DropIfInvalid(context, (table, name), execution);
             }
 
-            create = $"CREATE INDEX {(execution.Online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
+            create = $"CREATE INDEX {(execution.Online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}{method} ({keys})";
         }
 
         if (await TryBuildOnline(context, (create, name), execution))

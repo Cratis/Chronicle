@@ -61,7 +61,9 @@ internal static class WebhookDefinitionConverters
     /// <returns>Converted <see cref="WebhookTarget"/>.</returns>
     internal static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        var authorization = target.Authorization switch
+        var authorization = target.ManagedIdentity is not null
+            ? WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope))
+            : target.Authorization switch
         {
             null => WebhookAuthorization.None,
             var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
@@ -108,7 +110,12 @@ internal static class WebhookDefinitionConverters
                 ClientSecret = oauth.ClientSecret,
                 Scope = oauth.Scope
             }),
-            none => { });
+            none => { },
+            managedIdentity => contractTarget.ManagedIdentity = new Contracts.Security.ManagedIdentityAuthorization
+            {
+                ClientId = managedIdentity.ClientId,
+                Scope = managedIdentity.Scope
+            });
 
         return contractTarget;
     }
@@ -154,5 +161,6 @@ internal static class WebhookDefinitionConverters
             _ => Contracts.Security.AuthorizationType.Basic,
             _ => Contracts.Security.AuthorizationType.Bearer,
             _ => Contracts.Security.AuthorizationType.OAuth,
-            _ => Contracts.Security.AuthorizationType.None);
+            _ => Contracts.Security.AuthorizationType.None,
+            _ => Contracts.Security.AuthorizationType.ManagedIdentity);
 }

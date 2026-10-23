@@ -6,12 +6,14 @@ using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Cluster;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Jobs.Placement;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
@@ -81,12 +83,13 @@ public static class ChronicleServerSiloBuilderExtensions
         // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
         // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
         // so the cap has to be folded in here to keep the effective limit unchanged.
+        builder.AddChronicleSiloRoles();
         builder.Services.TryAddSingleton<IOptions<Cratis.Orleans.Jobs.JobsOptions>>(sp =>
         {
             var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
             return Options.Create(new Cratis.Orleans.Jobs.JobsOptions
             {
-                MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
+                MaxParallelSteps = chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(chronicleOptions.Clustering.Roles.Jobs, chronicleOptions.Observers.MaxConcurrentPartitions),
                 DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
                 CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
                 StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,
@@ -109,6 +112,10 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
+
+            // Register at least one release before applying to job steps: the calling silo resolves placement,
+            // independently of the grain interface versioning configured above.
+            .AddPlacementDirector<JobWorkerPlacementStrategy, JobWorkerPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()

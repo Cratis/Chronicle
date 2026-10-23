@@ -8,3 +8,5 @@
   href: ./grain-interfaces.mdx
 - name: Patches
   href: ./patches/toc.yml
+- name: Legacy contract matrix
+  href: legacy-contracts.md

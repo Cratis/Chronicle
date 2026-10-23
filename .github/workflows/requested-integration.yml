@@ -32,6 +32,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # The nested legacy-contracts job reads owner issue states and the run's TRX artifacts.
+      issues: read
+      actions: read
     uses: ./.github/workflows/dotnet-build.yml
     secrets: inherit
     with:

@@ -3,6 +3,38 @@
 
 using BenchmarkDotNet.Running;
 
+if (args.Contains("--fence-cost", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostScenario.Run();
+    return;
+}
+
+if (args.Contains("--fence-ddl", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostDdlScenario.Run();
+    return;
+}
+
+if (Array.IndexOf(args, "--rebuild") is var rebuildIndex && rebuildIndex >= 0)
+{
+    try
+    {
+        if (rebuildIndex + 1 >= args.Length)
+        {
+            throw new ArgumentException("--rebuild requires S1, S2, S3 or S4.");
+        }
+
+        await Cratis.Chronicle.Benchmarks.Clustering.RebuildBaselineScenario.Run(args[rebuildIndex + 1]);
+    }
+    catch (ArgumentException error)
+    {
+        await Console.Error.WriteLineAsync(error.Message);
+        Environment.ExitCode = 1;
+    }
+
+    return;
+}
+
 if (args.Contains("--rebuild-live", StringComparer.Ordinal))
 {
     await Cratis.Chronicle.Benchmarks.Clustering.LiveRebuildScenario.Run();

@@ -4,10 +4,15 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
@@ -46,16 +51,21 @@ public class SinkFactory(
             readModel,
             serviceProvider.GetRequiredService<ILogger<MongoDBConverter>>());
 
+        var readModelDatabase = database.GetReadModelDatabase(eventStore, @namespace);
+        var writes = CreateWrites(eventStore, @namespace, readModel, readModelDatabase);
         var mongoDBSinkCollections = new SinkCollections(
             readModel,
-            database.GetReadModelDatabase(eventStore, @namespace),
-            serviceProvider.GetRequiredService<ILogger<SinkCollections>>());
+            readModelDatabase,
+            serviceProvider.GetRequiredService<ILogger<SinkCollections>>(),
+            writes,
+            new MongoDBGenerationContainerClaims(readModelDatabase));
         var mongoDBChangesetConverter = new ChangesetConverter(
             readModel,
             mongoDBConverter,
             mongoDBSinkCollections,
             expandoObjectConverter,
-            serviceProvider.GetRequiredService<ILogger<ChangesetConverter>>());
+            serviceProvider.GetRequiredService<ILogger<ChangesetConverter>>(),
+            writes);
 
         return new Sink(
             readModel,
@@ -64,6 +74,22 @@ public class SinkFactory(
             mongoDBChangesetConverter,
             expandoObjectConverter,
             serviceProvider.GetRequiredService<IReadModelChangeStreams>(),
-            serviceProvider.GetRequiredService<ILogger<Sink>>());
+            serviceProvider.GetRequiredService<ILogger<Sink>>(),
+            writes);
+    }
+
+    ISinkWrites CreateWrites(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
+    {
+        if (serviceProvider.GetService<IOptions<ChronicleOptions>>()?.Value.Features.ProjectionGenerations != true)
+        {
+            return UnfencedSinkWrites.Instance;
+        }
+
+        Task.Run(() => MongoTopology.RequireTransactions(readModelDatabase)).GetAwaiter().GetResult();
+        var tokens = new ClaimingFenceTokenSource(new FenceGates(readModelDatabase), $"{eventStore}/{@namespace}/{readModel.Identifier}", readModel.LatestGeneration.Value);
+        return new FencedSinkWrites(
+            tokens,
+            new FencedBatchExecutor(new MongoFenceStore(readModelDatabase)),
+            serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.ReadModels.MaxBatchSize);
     }
 }

@@ -157,14 +157,16 @@ If a field can only be filled by reaching into another behavior's read model to
 a wrong stream boundary. Fix the model. A read-only cross-slice read through
 Chronicle is allowed where the rule needs it (an injected read model read by
 explicit key, or a `[Passive]` projection for a current read; a rule that must hold under
-concurrency needs a decision read or constraint, see
+concurrency needs read protection `On`, a stream decision or a constraint, see
 [choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md)); see
 Cross-slice patterns in `rules/vertical-slices.md`. Make such a read deliberate
 and name it in the brief, with the consistency it needs: a rule that must hold
 under concurrency needs enrolled guarded reads, not plain injection or a stale
-materialized snapshot. In Arc v22.75.0 use `IStreamReads`/`StreamDecision` for one
-stream or `[ProtectedDecision]` + admitted `DecisionRead<T>` for projected state;
-`Result<,>` alone supplies rejection, not a concurrency guard.
+materialized snapshot. In Arc use read protection `On` with the read model as a
+validator or `Handle()` parameter for projected state, a per-stream read model or
+`IStreamReads`/`StreamDecision` for one stream (`[ProtectedDecision]` +
+`DecisionRead<T>` is the older per-command opt-in); `Result<,>` alone supplies
+rejection, not a concurrency guard.
 
 ## Compliance modeling
 

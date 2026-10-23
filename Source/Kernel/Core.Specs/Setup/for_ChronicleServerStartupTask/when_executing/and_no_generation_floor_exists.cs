@@ -15,20 +15,18 @@ public class and_no_generation_floor_exists : given.a_startup_task
     {
         _systemStorage = Substitute.For<IEventStoreStorage>();
         _storage.GetEventStore(EventStoreName.System).Returns(_systemStorage);
-        _eventStoreStorage.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(null));
-        _systemStorage.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(null));
+        _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(new Dictionary<EventStoreName, GenerationFloor>()));
     }
 
     Task Because() => Execute();
 
-    [Fact] void should_admit_both_stores_before_applying_patches() => Received.InOrder(() =>
+    [Fact] void should_read_generation_floors_before_applying_patches() => Received.InOrder(() =>
     {
-        _eventStoreStorage.GenerationFloor.Get();
-        _systemStorage.GenerationFloor.Get();
-        _patchManager.ApplyPatches();
+        _storage.ReadGenerationFloors();
+        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
     });
 
-    [Fact] void should_still_apply_patches() => _patchManager.Received(1).ApplyPatches();
+    [Fact] void should_still_apply_patches() => _patchManager.Received(1).ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
     [Fact] void should_not_write_the_event_store_floor_without_opt_in() => _eventStoreStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
     [Fact] void should_not_write_the_system_store_floor_without_opt_in() => _systemStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
 }

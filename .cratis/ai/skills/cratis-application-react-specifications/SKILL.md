@@ -1,6 +1,6 @@
 ---
 name: cratis-application-react-specifications
-description: Write specifications for the React and TypeScript surface of a Cratis application slice — view models, helpers, command orchestration, and narrow component behavior — using Vitest with Mocha-style describe/it, Sinon, and the Chai should interface. Use when adding or changing frontend behavior in an application that consumes Cratis. Do not use for backend scenarios or for specifications inside a Cratis framework package.
+description: Write specifications for the React and TypeScript surface of a Cratis application slice — view models, helpers, command orchestration, and narrow component behavior — using Vitest with Mocha-style describe/it, Sinon, and the Chai should interface. Use when specifying React view-model decisions, frontend command orchestration or narrow component interactions with Vitest, Sinon and Chai. Do not use for backend pipeline scenarios (use cratis-application-slice-specifications) or framework package specs (use cratis-specifications-typescript).
 license: MIT
 metadata:
   cratis-hint-paths: "**/for_*/**/*.ts **/for_*/**/*.tsx"
@@ -13,9 +13,9 @@ Frontend specifications are specifications, not tests. The `for_ / when_ / and_`
 shape is deliberately the same BDD language as the backend, so one subject, one
 context, clear setup, and small assertions read as sentences.
 
-This is the **application** frontend peer of the backend slice specification
-skill. Specifications for a Cratis framework package (`@cratis/*`) follow that
-repository's own TypeScript specification conventions instead.
+This is the **application** frontend peer of `cratis-application-slice-specifications`
+for backend pipeline scenarios. Framework package (`@cratis/*`) specifications
+use `cratis-specifications-typescript` and the repository's conventions instead.
 
 ## Stack
 

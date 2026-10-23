@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
@@ -76,36 +77,39 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
 
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var entity = state.ToSql();
-        var existing = await scope.DbContext.Observers.AsTracking()
-            .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
-        if (existing is null)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            await scope.DbContext.Observers.AddAsync(entity);
-        }
-        else
-        {
-            if (state.TypeSetControl is null)
+            var entity = state.ToSql();
+            var existing = await scope.DbContext.Observers.AsTracking()
+                .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+            if (existing is null)
             {
-                entity.TypeSetControl = existing.TypeSetControl;
+                await scope.DbContext.Observers.AddAsync(entity);
             }
             else
             {
-                var storedControl = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
-                if (storedControl is not null && state.TypeSetControl.Revision.Value < storedControl.Revision.Value)
-                {
-                    entity.TypeSetControl = existing.TypeSetControl;
-                }
+                PreserveControl(entity, existing);
+
+                // A competing control write after this read must still fail the concurrency check.
+                scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
             }
 
-            entity.Initialization ??= existing.Initialization;
+            try
+            {
+                await scope.DbContext.SaveChangesAsync();
+                return;
+            }
+            catch (DbUpdateException error) when (attempt == 0 && existing is null && StorageWriteConflicts.IsUnique(error))
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                if (!await scope.DbContext.Observers.AnyAsync(observer => observer.Id == entity.Id))
+                {
+                    throw;
+                }
 
-            // The tracked control is a concurrency token: a competing write after this read
-            // fails the save rather than overwriting a newer revision with this snapshot.
-            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
+                SqlStorageTelemetry.RecoveredCollision("observer-state");
+            }
         }
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -133,7 +137,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var existing = await scope.DbContext.Observers.FindAsync(currentId);
-        if (existing is null)
+        if (existing is null || currentId == newId)
         {
             return;
         }
@@ -143,6 +147,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             Id = newId,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
+            DeliveryFences = existing.DeliveryFences,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,
@@ -156,11 +161,55 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             CatchingUpPartitions = existing.CatchingUpPartitions,
             FailedPartitions = existing.FailedPartitions,
             FailedPartitionCount = existing.FailedPartitionCount,
-            IsReplaying = existing.IsReplaying
+            IsReplaying = existing.IsReplaying,
+            HandledEventCount = existing.HandledEventCount,
+            HandledEventCountPerEventType = existing.HandledEventCountPerEventType
         };
 
-        scope.DbContext.Observers.Remove(existing);
-        await scope.DbContext.Observers.AddAsync(renamed);
-        await scope.DbContext.SaveChangesAsync();
+        try
+        {
+            // A user-initiated transaction must run inside the execution strategy, since SQL Server and
+            // PostgreSQL use retrying strategies that refuse transactions started outside them.
+            await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+                await scope.DbContext.Observers.AddAsync(renamed);
+                await scope.DbContext.SaveChangesAsync();
+                await scope.DbContext.Observers.Where(observer => observer.Id == currentId).ExecuteDeleteAsync();
+                await transaction.CommitAsync();
+            });
+        }
+        catch (DbUpdateException)
+        {
+            // The transaction is rolled back on dispose (PostgreSQL aborts it on a unique violation).
+            // Converge only when a peer completed this same rename: the source row is gone.
+            await using var fresh = await database.Namespace(eventStore, @namespace);
+            if (await fresh.DbContext.Observers.AnyAsync(observer => observer.Id == currentId))
+            {
+                throw;
+            }
+        }
+    }
+
+    static void PreserveControl(ObserverState entity, ObserverState existing)
+    {
+        // On an insert collision the progress fields take the losing writer's values, matching
+        // MongoDB's last-writer-wins upsert; the worst case is re-handling events, never losing them.
+        if (entity.TypeSetControl is null)
+        {
+            entity.TypeSetControl = existing.TypeSetControl;
+        }
+        else
+        {
+            var requested = ObserverTypeSetControlJson.Deserialize(entity.TypeSetControl);
+            var stored = ObserverTypeSetControlJson.Deserialize(existing.TypeSetControl);
+            if (stored is not null && requested is not null && requested.Revision.Value < stored.Revision.Value)
+            {
+                entity.TypeSetControl = existing.TypeSetControl;
+            }
+        }
+
+        entity.Initialization ??= existing.Initialization;
     }
 }

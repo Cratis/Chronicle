@@ -23,7 +23,8 @@ public class and_a_promotion_is_in_progress : given.a_sink_observing_a_container
 
     [Fact] void should_refuse_an_ambiguous_lookup() => _error.ShouldBeOfExactType<ReadModelPrimaryIsChanging>();
     [Fact] void should_not_return_an_instance() => _result.ShouldBeNull();
-    [Fact] void should_warn_when_the_primary_is_missing() => _logger.Entries.Count(entry => entry.Level == LogLevel.Warning).ShouldEqual(3);
+    [Fact] void should_log_the_ordinary_promotion_window_at_debug() => _logger.Entries.Count(entry => entry.Level == LogLevel.Debug).ShouldEqual(3);
+    [Fact] void should_warn_only_when_giving_up() => _logger.Entries.Count(entry => entry.Level == LogLevel.Warning).ShouldEqual(1);
     [Fact] void should_name_the_promoting_collection() => _logger.Entries.All(entry => entry.Message.Contains(PromotingName, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_check_collection_identity() => _listCollectionsCalls.ShouldEqual(3);
 }

@@ -155,6 +155,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         yield return new(
             Builders<Event>.IndexKeys.Combine(
+                Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+                Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+                Builders<Event>.IndexKeys.Descending(_ => _.SequenceNumber)),
+            new CreateIndexOptions { Name = "eventSourceId_eventTypeId_sequenceNumber", Background = true });
+
+        yield return new(
+            Builders<Event>.IndexKeys.Combine(
                 Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
                 Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamId)),
             new CreateIndexOptions { Name = "eventStreamType_eventStreamId", Background = true });

@@ -23,6 +23,21 @@
       "command": "cs-mcp",
       "args": [],
       "description": "Review Code Health changes and prioritize maintainability risks with CodeScene; requires a CodeScene account and OAuth login."
+    },
+    {
+      "id": "playwright",
+      "profiles": [
+        "cratis/playwright"
+      ],
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.83",
+        "--headless",
+        "--isolated"
+      ],
+      "description": "Drive a headless, isolated browser with Playwright for exploratory checks; requires Node.js and downloads the package and a browser on first use."
     }
   ],
   "$cratisAiManaged": "mcp-servers.json"

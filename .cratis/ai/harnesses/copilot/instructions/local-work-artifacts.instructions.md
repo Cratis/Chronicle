@@ -55,9 +55,12 @@ dumps, and similar coordination files. These are **work records, not documentati
   worktree and branch behind, which is why the script exists. If the branch must outlive the
   task unmerged, leave the worktree and say so in the handoff. Never `--force` a removal; a
   refusal means look, not push harder.
+- **Scan for secrets before archiving or sharing.** Before anything from `.ai-work/` is archived,
+  attached or shared, run `gitleaks detect --no-git --source <dir>` (or the repository's equivalent)
+  and redact every finding. See [`secrets.md`](./secrets.instructions.md).
 - **A decision log is not a work record.** A decision — a durable choice with a
   decider and a date — is documentation: it lives in **`decisions/`** (or the
-  repository's documented decisions folder) and is reviewed like any other
+  repository's documented decisions folder, such as `.cratis/ai.json` `process.decisions.path`) and is reviewed like any other
   documentation. A handover may summarize decisions; it never holds the only
   copy. If a session produced a real decision, land the record in `decisions/`
   before the session's `.ai-work/` files are discarded.

@@ -16,5 +16,5 @@ public class when_a_step_failed_for_a_reason_other_than_a_timeout : given.a_step
     async Task Because() => await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(_observer, _otherFailure, _options);
 
     [Fact] void should_leave_reporting_to_the_step() =>
-        _observer.DidNotReceive().PartitionFailed(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<FailureKind>());
+        _observer.DidNotReceive().PartitionFailedWithDeliveryFence(Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<FailureKind>(), Arg.Any<PartitionFailureContext>());
 }

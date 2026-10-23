@@ -4,6 +4,7 @@
 ## Contents
 
 - V1: authorable
+- Declared validation gate (`screenplay.json`)
 - Release-baseline gate (independent of V1–V5)
 - V2: executable diagnostics
 - V3: binding-ready
@@ -52,7 +53,66 @@ render, V1 and V5 from the CLIs. Read installed versions with `screenplay --vers
 - Warnings are failures here. PLAY0029 (a construct dropped silently) and the unresolved-name
   warnings are the defects this verdict exists to catch.
 - Syntax and consistency checks (PLAY0282 to PLAY0294) run; binding does not.
+- A `screenplay.json` at the model root supplies checks, warnings-as-errors, scope and open-questions
+  mode to both commands above, so they need not repeat those flags; drop `--warnaserror` only when
+  `--print-gate` shows `warningsAsErrors: true`. Read the effective gate before
+  reporting (next section).
 - Report: `V1 pass (screenplay <version>, 3 files)`, `V1 fail: PLAY0029 in a.play, line 12`.
+
+## Declared validation gate (`screenplay.json`)
+
+A repository declares its V1 gate once, in an authored `screenplay.json` at the model root,
+beside the tool-owned `.screenplay/`. Prefer it to repeating `--check`, `--warnaserror`,
+`--scope` and `--open-questions` in every script: every run then enforces the same gate.
+`screenplay.json` is the only file there people write; no tool creates or edits it.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/Cratis/Screenplay/main/Documentation/screenplay/screenplay-v1.schema.json",
+  "validation": {
+    "checks": ["field-origins", "query-keys", "navigation"],
+    "warningsAsErrors": true,
+    "scope": "Workspaces.Tracking",
+    "openQuestions": "fail"
+  }
+}
+```
+
+- Every member is optional. A `checks` item is one check name, diagnostic code or `all`
+  (never a comma list); `all` expands to every check the running tool supports, so an upgrade can
+  strengthen the gate, while an explicit list pins it. `openQuestions` is `report` or `fail`;
+  omitted means notes are not evaluated.
+- The model root is the nearest folder at or above the target (a file's parent) that holds
+  `screenplay.json` or `.screenplay/`. The search includes but never crosses the first folder with
+  `.git`; with no match the target folder is the root and the defaults apply. Nested models keep
+  their own gates; imports never affect the search.
+- A command-line option replaces only its own setting. Omitting `--warnaserror` keeps
+  `warningsAsErrors: true`, and any `--check` replaces the file's whole list. `--no-gate-file`
+  ignores the file, even an invalid one; a relaxed run is not the repository's gate, so say so.
+
+| Need | Standalone | `cratis screenplay validate` |
+| --- | --- | --- |
+| Effective gate and the source of each value, no compile (exit 0 unless the file is refused) | `screenplay <root> --print-gate` (text) | `--print-gate` (text, or the gate object under `-o json`) |
+| Machine-readable verdict | `--format json`: one document with `diagnostics`, `openQuestions`, `refusal`, `exitCode`, `gate` | `-o json-compact`: the summary carries `gate` |
+| Ignore the file | `--no-gate-file` | `--no-gate-file` |
+
+Each gate value reports `commandLine`, `file` or `default` as its source. Report the gate with
+the verdict: `V1 pass (screenplay <version>, gate screenplay.json: field-origins, query-keys,
+warnings as errors, 3 files)`.
+
+**A refused gate file is "could not run", never a pass or a fail.** Malformed JSON, a duplicate
+member, an unknown key, an unknown check name or a wrong type is refused as invalid, and a
+directory, symlink or unreadable file is refused as unreadable; neither is ignored or repaired. The
+standalone tool exits **2** and the CLI exits **1**, each with `path:line:column`. Report
+`V1 not run: gate file refused (<path:line:column>)`, fix the file and rerun.
+A scope declared in the file combined with `cratis screenplay validate --executable` also exits 1:
+check binding separately or pass `--no-gate-file` and name it.
+
+Requires Screenplay 4.165.0 or later (`screenplay --version`) for `screenplay.json`, `--format`,
+`--print-gate` and `--no-gate-file`; an older tool does not read the file and runs without the
+gate, so a clean result there says nothing about it. `cratis screenplay validate` reads the file
+from Cratis CLI 3.65.0 or later (`cratis --version`); an older CLI ignores it, so use the standalone
+tool for the gate.
 
 ## Release-baseline gate (independent of V1–V5)
 
@@ -181,9 +241,10 @@ What Stage admits: `renderable-subset.md`.
 
 | Layer | Route | Result |
 | --- | --- | --- |
-| Source validation | `screenplay <root> --warnaserror --no-color` | 0 clean; 1 reported defects; 2 could not run or invalid arguments or input. `--scope` limits the reported set, not compilation |
+| Source validation | `screenplay <root> --warnaserror --no-color` | 0 clean; 1 reported defects; 2 could not run or invalid arguments or input, including a refused `screenplay.json`. `--scope` limits the reported set, not compilation |
+| Declared gate | `screenplay <root> --print-gate`; `--format json`; `--no-gate-file` | Reads `screenplay.json`; `--print-gate` exits 0 without compiling unless the file is refused; a gate-promoted warning or an open question in `fail` mode exits 1 |
 | Completeness | add `--check <name>[,<name>]` (repeatable) or `--check all` | Opt-in warnings; whole-source errors skip checks, not pass them |
-| CLI source validation | `cratis screenplay validate <root> --warnings-as-errors -o json-compact` | Read the producer exit and the JSON errors, warnings and file count |
+| CLI source validation | `cratis screenplay validate <root> --warnings-as-errors -o json-compact` | Read the producer exit and the JSON errors, warnings and file count; 5 validation error (including gate-promoted warnings), 1 invalid input (including a refused `screenplay.json`) |
 | Binding | MCP workspace readiness and `executable-diagnostics` | V2 reads diagnostics; V3 requires binding with no blocking diagnostics |
 | Reference specifications | `screenplay test <root> [--filter <address>] [--format text\|json]`, or MCP `run-specifications` (`specification`, `scope`, `offset`, `limit`, `expectedSourceRevision`, `proposalId`) | 0 all selected passed; 1 failed; 2 invalid arguments, input, selection or IO; 3 unsupported or unbound. Counts of zero do not prove coverage |
 | Release baseline | `screenplay baseline admit <root> --release <label>`; `screenplay baseline check <root>` | 0 success; 1 changed or missing revision; 2 unavailable, unreadable or invalid input or write failure |
@@ -222,7 +283,7 @@ change ESM or V1–V5 verdicts. Read model-authoring
 [model notes](../../cratis-screenplay-model-authoring/references/model-notes.md) when
 recording, resolving, paging or reviewing orphan impact.
 
-Requires Screenplay 4.144.0 or later (`screenplay --version`) for `--open-questions`; `cratis screenplay validate` has no such option, so use the standalone tool for this gate.
+Requires Screenplay 4.144.0 or later (`screenplay --version`) for `--open-questions`. `cratis screenplay validate` accepts the same option from Cratis CLI 3.60.0 or later (exit 5 when a question remains in `fail` mode, 1 when notes are unreadable); with an older CLI use the standalone tool. `validation.openQuestions` in `screenplay.json` selects the mode without the flag.
 
 ## Revisions and descriptions
 

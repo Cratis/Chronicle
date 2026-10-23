@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -117,9 +118,9 @@ public static class ProjectedColumns
     /// <param name="schema">The read-model schema.</param>
     /// <param name="indexes">The declared indexes.</param>
     /// <returns>The ordered columns.</returns>
-    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<Cratis.Chronicle.Concepts.ReadModels.IndexDefinition> indexes)
+    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<IndexDefinition> indexes)
     {
-        var indexed = indexes.Select(index => index.PropertyPath.Path).ToHashSet(StringComparer.Ordinal);
+        var indexed = indexes.SelectMany(index => index.Properties).Select(property => property.Path.Path).ToHashSet(StringComparer.Ordinal);
         return ForSchema(schema).Select(column => column with { IsIndexed = indexed.Contains(column.Name) }).ToArray();
     }
 

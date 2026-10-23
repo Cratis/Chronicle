@@ -11,6 +11,7 @@ public static class MaterializationGenerationStateExtensions
     /// <summary>
     /// Check whether a generation may move from one state to another, as defined by the lifecycle in ADR 0014.
     /// </summary>
+    /// <remarks>Expiry may move a Retired generation directly to Removed when retention is disabled, after draining and cleanup.</remarks>
     /// <param name="from">The current <see cref="MaterializationGenerationState"/>.</param>
     /// <param name="to">The <see cref="MaterializationGenerationState"/> to move to.</param>
     /// <returns>True if the transition is allowed, false if not.</returns>
@@ -23,6 +24,7 @@ public static class MaterializationGenerationStateExtensions
         (MaterializationGenerationState.Active, MaterializationGenerationState.Retired) => true,
         (MaterializationGenerationState.Retired, MaterializationGenerationState.Active) => true,
         (MaterializationGenerationState.Retired, MaterializationGenerationState.Archived) => true,
+        (MaterializationGenerationState.Retired, MaterializationGenerationState.Removed) => true,
         (MaterializationGenerationState.Archived, MaterializationGenerationState.Removed) => true,
         (MaterializationGenerationState.Abandoned, MaterializationGenerationState.Removed) => true,
         _ => false

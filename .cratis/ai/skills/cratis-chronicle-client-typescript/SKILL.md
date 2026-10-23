@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-typescript
-description: Talk to a Chronicle server from a Node.js or TypeScript application with @cratis/chronicle - reflect-metadata and decorator compiler settings, ChronicleClient and connection strings, @eventType classes, eventLog.append, reactors and reducers dispatched by camelCase method name, model-bound and declarative projections, variants (@variantOf/@entersOn/@globalFor or .variantOf()/.entersOn()) for an entity with mutually exclusive lifecycle shapes, glob-based artifact discovery, and the lazy connect and keepalive lifecycle. Use when a Node application appends to or observes a Chronicle event store. Do not use for the .NET, Kotlin, or Elixir clients, and do not use for Arc React frontends or generated Arc proxies.
+description: Connect Node.js applications to Chronicle with @cratis/chronicle, including reflect-metadata, compiler settings, camelCase reactor dispatch, projections, reducers, variants and the lazy-connect lifecycle. Use when configuring @cratis/chronicle decorators, glob discovery or eventLog.append in a standalone Node.js process. Do not use for JVM connections (use cratis-chronicle-client-kotlin), OTP supervision (use cratis-chronicle-client-elixir), or React generated proxies (use cratis-arc-react-page).
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-typescript/SKILL.md -->

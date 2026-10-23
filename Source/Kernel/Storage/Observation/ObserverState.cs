@@ -66,6 +66,12 @@ public record ObserverState(
     public ObserverTypeSetControl? TypeSetControl { get; init; }
 
     /// <summary>
+    /// Gets the outstanding delivery fences. Null identifies legacy state whose fences must be restored from failures;
+    /// an empty snapshot means every fence has been released or expired.
+    /// </summary>
+    public IEnumerable<DeliveryFenceState>? DeliveryFences { get; init; }
+
+    /// <summary>
     /// Gets the observer's initialization state and latest refusal reasons, or null for legacy state.
     /// </summary>
     public ObserverInitialization? Initialization { get; init; }
@@ -89,6 +95,11 @@ public record ObserverState(
     /// Gets the current quarantine episode identity, or null outside quarantine.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; init; }
+
+    /// <summary>
+    /// Gets the source-owned webhook probe control, absent for legacy and non-webhook quarantines.
+    /// </summary>
+    public WebhookProbeState? WebhookProbe { get; init; }
 
     /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.

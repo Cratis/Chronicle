@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_ResolveFutures.given;
@@ -20,6 +22,8 @@ public class a_resolve_futures_step : Specification
     protected ITypeFormats _typeFormats;
     protected IObjectComparer _objectComparer;
     protected ILogger<ResolveFutures> _logger;
+    protected IEventSequenceStorage _eventSequenceStorage;
+    protected ISink _sink;
     protected IProjection _projection;
     protected ProjectionEventContext _context;
     protected AppendedEvent _event;
@@ -32,7 +36,9 @@ public class a_resolve_futures_step : Specification
         _typeFormats = Substitute.For<ITypeFormats>();
         _objectComparer = Substitute.For<IObjectComparer>();
         _logger = Substitute.For<ILogger<ResolveFutures>>();
-        _step = new ResolveFutures(_projectionFutures, _tracker, _typeFormats, _objectComparer, _logger);
+        _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
+        _sink = Substitute.For<ISink>();
+        _step = new ResolveFutures(_projectionFutures, _tracker, _typeFormats, _objectComparer, _logger, _eventSequenceStorage, _sink);
 
         _projection = Substitute.For<IProjection>();
         _projection.Identifier.Returns(new ProjectionId("test-projection"));

@@ -62,7 +62,7 @@ own full givens. The excerpt is copied from `invoicing-dues-example.md`; the las
 both that the stored row is gone and that the keyed query returns nothing. The whole-list query
 (no key) is executable too (Requires Screenplay 4.105.0 or later): `invoicing-dues-example.md` adds
 `ListOpenInvoices => OpenInvoice[]` with one spec that expects one `result` row and one that
-expects the empty list after `PaymentReceived`. Only `filter`, `scoped to` and `performer` queries stay design-mode.
+expects the empty list after `PaymentReceived`. Only `filter`, `scoped to` and `performer` queries stay design-mode (a performer query is left out of the executable model, not refused).
 The source document also asserts the other terminal outcomes (`InvoiceVoided`, `InvoiceSettled`) the same way; they are not copied here.
 ```screenplay excerpt parent=references/invoicing-dues-example.md#1
 specification OpenInvoicesLifecycle1Empty
@@ -145,8 +145,8 @@ not prove an entire list is empty: assert the unkeyed list query itself (an unke
   the command needs its own constraint, or the rule is `recorded` as target-enforced.
 - **Rebuild**: a view rebuilt from all facts must give the same rows. Mappings from
   `$eventContext.occurred` or other occurrence data cannot be executed:
-  the plan blocks every event-context path except the event source id
-  (`UnsupportedEventContext`). `given clock` does not change that; it supplies `$context.occurred`
+  the reference runner refuses every event-context path except the event source id
+  (`UnsupportedEventContext`), so specifications that reach that projection report unsupported. `given clock` does not change that; it supplies `$context.occurred`
   to command productions only. Record such projection cases as capability gaps (keep the
   mapping and the intended spec in design mode).
 - **Corrections and backdated facts**: a correction is a new fact; specify the view after it.
