@@ -19,8 +19,8 @@ public class and_there_are_no_constraints : given.a_constraints_system
 
     async Task Because() => await _constraints.Register([_firstConstraint, _secondConstraint]);
 
-    [Fact] void should_add_first_constraint() => _stateStorage.State.Constraints.ShouldContain(_firstConstraint);
-    [Fact] void should_add_second_constraint() => _stateStorage.State.Constraints.ShouldContain(_secondConstraint);
+    [Fact] void should_add_first_constraint() => _stateStorage.State.Constraints.Any(_ => ReferenceEquals(_, _firstConstraint)).ShouldBeTrue();
+    [Fact] void should_add_second_constraint() => _stateStorage.State.Constraints.Any(_ => ReferenceEquals(_, _secondConstraint)).ShouldBeTrue();
     [Fact] void should_write_state() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_broadcast_constraints_changed() => _broadcastChannelWriter.Received().Publish(Arg.Any<ConstraintsChanged>());
 }

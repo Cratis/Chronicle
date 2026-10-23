@@ -32,6 +32,6 @@ public class and_there_is_a_new_one : given.a_constraints_system
 
     [Fact] void should_only_have_two_constraints() => _stateStorage.State.Constraints.Count.ShouldEqual(2);
     [Fact] void should_have_the_first_constraint() => _stateStorage.State.Constraints.ShouldContain(_firstConstraint);
-    [Fact] void should_add_second_constraint() => _stateStorage.State.Constraints.ShouldContain(_secondConstraint);
+    [Fact] void should_add_second_constraint() => _stateStorage.State.Constraints.Any(_ => ReferenceEquals(_, _secondConstraint)).ShouldBeTrue();
     [Fact] void should_broadcast_constraints_changed() => _broadcastChannelWriter.Received().Publish(Arg.Any<ConstraintsChanged>());
 }
