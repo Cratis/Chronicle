@@ -21,5 +21,10 @@ public enum SinkCollectionOperation
     /// <summary>
     /// Renaming a collection.
     /// </summary>
-    Rename = 2
+    Rename = 2,
+
+    /// <summary>
+    /// Creating indexes on a collection.
+    /// </summary>
+    CreateIndexes = 3
 }
