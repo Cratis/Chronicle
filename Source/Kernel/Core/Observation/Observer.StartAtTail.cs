@@ -21,6 +21,9 @@ public partial class Observer
             return false;
         }
 
+        // Starting at the tail is the first step of registering, and registering decides which event sequence the
+        // observer is on. Without the claim, a definition shared with another sequence would leave the position unwritten.
+        ClaimDefinitionForKey();
         var tail = await _eventSequence.GetTailSequenceNumber();
         if (tail.IsActualValue)
         {

@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
-
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -16,9 +14,7 @@ public partial class Observer
     /// never persists state or the definition, and rejects operator operations. A definition without an event
     /// sequence belongs to no sequence yet, so any key owns it.
     /// </remarks>
-    bool KeyOwnsDefinition =>
-        Definition.EventSequenceId == EventSequenceId.Unspecified ||
-        Definition.EventSequenceId == _observerKey.EventSequenceId;
+    bool KeyOwnsDefinition => Definition.IsOwnedBy(_observerKey.EventSequenceId);
 
     /// <summary>
     /// Claims the definition for the event sequence of this key.
@@ -29,6 +25,16 @@ public partial class Observer
     /// </remarks>
     void ClaimDefinitionForKey() =>
         observerDefinition.State = observerDefinition.State with { EventSequenceId = _observerKey.EventSequenceId };
+
+    /// <summary>
+    /// Writes the failed partitions, unless this activation does not own the definition.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Failed partitions are stored by observer identifier alone, like the definition, so an inert activation writing
+    /// them would overwrite those of the real observer. The storage provider refuses such a write as well.
+    /// </remarks>
+    Task WriteFailedPartitions() => KeyOwnsDefinition ? failures.WriteStateAsync() : Task.CompletedTask;
 
     /// <summary>
     /// Throws when this activation does not own the stored definition.
