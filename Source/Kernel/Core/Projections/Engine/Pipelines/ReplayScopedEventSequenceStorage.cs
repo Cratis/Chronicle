@@ -92,6 +92,22 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>> GetLastInstancesOfAny(IEnumerable<EventSourceId> eventSourceIds, IEnumerable<EventTypeId> eventTypes)
+    {
+        var types = eventTypes.ToArray();
+        var results = await inner.GetLastInstancesOfAny(eventSourceIds, types);
+        if (_active)
+        {
+            foreach (var (source, result) in results)
+            {
+                _lastInstances.TryAdd(BuildKey(source, types.Select(type => type.Value)), Task.FromResult(result));
+            }
+        }
+
+        return results;
+    }
+
+    /// <inheritdoc/>
     public Task EnsureIndexes() => inner.EnsureIndexes();
 
     /// <inheritdoc/>
