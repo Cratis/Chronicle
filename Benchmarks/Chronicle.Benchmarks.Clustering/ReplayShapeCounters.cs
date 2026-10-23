@@ -79,13 +79,11 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// </summary>
     /// <returns>Commands, incoming grain invocations, and find commands grouped by call-site comment started in the window.</returns>
     internal (long MongoCommands, IReadOnlyDictionary<string, long> MongoCommandsByName, long GrainCalls, IReadOnlyDictionary<string, long> GrainCallsByMethod, IReadOnlyDictionary<string, long> MongoFindCommandsByTag) Stop()
-
     {
         lock (_gate)
         {
             _measuring = false;
             return (_mongoCommands, new SortedDictionary<string, long>(_mongoCommandsByName, StringComparer.Ordinal), _grainCalls, new SortedDictionary<string, long>(_grainCallsByMethod, StringComparer.Ordinal), new Dictionary<string, long>(_mongoFindCommandsByTag, StringComparer.Ordinal));
-
         }
     }
 
@@ -94,7 +92,6 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// </summary>
     /// <param name="command">The command started by the MongoDB driver.</param>
     internal void OnCommand(CommandStartedEvent command)
-
     {
         lock (_gate)
         {
@@ -111,7 +108,6 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
                 count = _mongoFindCommandsByTag[tag];
             }
             _mongoFindCommandsByTag[tag] = count + 1;
-
         }
     }
 }
