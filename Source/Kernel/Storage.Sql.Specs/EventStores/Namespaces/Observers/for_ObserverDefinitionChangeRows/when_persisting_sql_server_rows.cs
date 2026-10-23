@@ -24,5 +24,9 @@ public class when_persisting_sql_server_rows(SqlServerFixture fixture) : Definit
 
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
+    /// <summary>
+    /// Creates a context with EF Core's provider cache kept on: this is one fixed option set per provider and the
+    /// rows open many contexts, so an uncached provider would rebuild the model for every context.
+    /// </summary>
+    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().Options);
 }
