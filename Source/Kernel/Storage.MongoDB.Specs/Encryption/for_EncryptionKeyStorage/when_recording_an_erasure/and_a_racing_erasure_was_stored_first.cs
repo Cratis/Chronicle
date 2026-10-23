@@ -19,5 +19,5 @@ public class and_a_racing_erasure_was_stored_first : racing_encryption_key_colle
     async Task Because() => _result = await Catch.Exception(() => _storage.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "identifier"));
 
     [Fact] void should_surface_the_duplicate_key_error() => _result.ShouldBeOfExactType<MongoWriteException>();
-    [Fact] void should_not_overwrite_the_stored_erasure() => _erasures.ReceivedWithAnyArgs(1).ReplaceOneAsync(default(FilterDefinition<EncryptionKeyErasureForIdentifier>)!, default!, default(ReplaceOptions)!, default);
+    [Fact] void should_not_overwrite_the_stored_erasure() => _erasures.ReceivedWithAnyArgs(1).ReplaceOneAsync(default!, default!, default(ReplaceOptions)!, default);
 }
