@@ -200,6 +200,42 @@ class GateDecisions(unittest.TestCase):
         with patch.object(gate, "api", return_value=[{"jobs": [{"name": "other"}]}, {"jobs": GREEN["jobs"]}]):
             self.assertEqual(2, len(gate.collection("jobs", "jobs")))
 
+    def test_jobs_are_listed_with_a_small_page_size(self):
+        with patch.object(gate, "collection", return_value=[]) as collect:
+            gate.with_jobs("Cratis/Chronicle", {"id": 7})
+        collect.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/7/jobs?filter=latest&per_page=30", "jobs")
+
+    def test_api_retries_server_errors_then_succeeds(self):
+        server_error = subprocess.CalledProcessError(1, "gh", stderr="gh: Server Error (HTTP 502)")
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout='{"ok": true}', stderr="")
+        with patch.object(gate.subprocess, "run", side_effect=[server_error, server_error, ok]) as run, \
+                patch.object(gate.time, "sleep") as sleep:
+            self.assertEqual({"ok": True}, gate.api("anything"))
+        self.assertEqual(3, run.call_count)
+        self.assertEqual([((5,),), ((15,),)], sleep.call_args_list)
+
+    def test_api_gives_up_after_bounded_server_errors(self):
+        server_error = subprocess.CalledProcessError(1, "gh", stderr="gh: Server Error (HTTP 502)")
+        with patch.object(gate.subprocess, "run", side_effect=[server_error] * 3) as run, \
+                patch.object(gate.time, "sleep"), self.assertRaises(subprocess.CalledProcessError):
+            gate.api("anything")
+        self.assertEqual(3, run.call_count)
+
+    def test_api_retries_timeouts(self):
+        ok = subprocess.CompletedProcess(["gh"], 0, stdout="", stderr="")
+        with patch.object(gate.subprocess, "run", side_effect=[subprocess.TimeoutExpired("gh", 30), ok]) as run, \
+                patch.object(gate.time, "sleep"):
+            self.assertIsNone(gate.api("anything"))
+        self.assertEqual(2, run.call_count)
+
+    def test_api_never_retries_client_errors(self):
+        forbidden = subprocess.CalledProcessError(1, "gh", stderr="gh: Forbidden (HTTP 403)")
+        with patch.object(gate.subprocess, "run", side_effect=[forbidden]) as run, \
+                patch.object(gate.time, "sleep") as sleep, self.assertRaises(subprocess.CalledProcessError):
+            gate.api("anything")
+        self.assertEqual(1, run.call_count)
+        sleep.assert_not_called()
+
 
 class RefreshDecisions(unittest.TestCase):
     def test_rerun_target_uses_latest_completed_failed_gate_only(self):
