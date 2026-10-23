@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Serialization;
 using KernelEvents = KernelConcepts::Cratis.Chronicle.Concepts.Events;
 
@@ -28,9 +29,47 @@ internal static class TestingEventTypes
     /// <param name="eventTypes">The discovered types.</param>
     /// <param name="schemas">The schema generator.</param>
     /// <param name="migrators">The client migrators.</param>
+    /// <param name="metadata">The shared application metadata that remembers the definitions, or <see langword="null"/> to compute them.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task Seed(IEventTypesStorage storage, IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators)
+    /// <remarks>
+    /// The definitions are templates when they come from shared metadata, so every store registers copies of them and
+    /// registers the whole set as one batch.
+    /// </remarks>
+    internal static async Task Seed(IEventTypesStorage storage, IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, ApplicationMetadata? metadata = null)
     {
+        var templates = metadata is null
+            ? CreateDefinitions(eventTypes, schemas, migrators)
+            : metadata.GetSeedDefinitions(() => CreateDefinitions(eventTypes, schemas, migrators));
+        var definitions = templates.Select(Copy).ToArray();
+
+        await storage.Register(definitions.Select(definition => new KernelEvents::EventTypeToRegister(definition, KernelEvents::EventTypeSource.Code)).ToArray());
+        foreach (var definition in definitions)
+        {
+            await RegisterLatestWithVisibility(storage, eventTypes, definition);
+            await storage.RecordMigrationsVersion(definition.Id, KernelEvents::EventTypeMigrationsVersion.For(definition.Migrations), definition.Migrations);
+        }
+    }
+
+    static async Task RegisterLatestWithVisibility(IEventTypesStorage storage, IEventTypes eventTypes, KernelEvents::EventTypeDefinition definition)
+    {
+        var latest = eventTypes.All.Where(type => type.Id.Value == definition.Id.Value).MaxBy(type => type.Generation.Value)!;
+        var latestGeneration = definition.Generations.First(generation => generation.Generation.Value == latest.Generation.Value);
+        await storage.Register(
+            new KernelEvents::EventType(definition.Id, latestGeneration.Generation, latest.Tombstone),
+            latestGeneration.Schema,
+            KernelEvents::EventTypeOwner.Client,
+            KernelEvents::EventTypeSource.Code,
+            RegistrationVisibilityFor(eventTypes, latest));
+    }
+
+    static KernelEvents::EventTypeVisibility RegistrationVisibilityFor(IEventTypes eventTypes, EventType type) =>
+        eventTypes is EventTypes registry
+            ? (KernelEvents::EventTypeVisibility)(int)registry.GetDescriptorFor(eventTypes.GetClrTypeFor(type.Id, type.Generation)).RegistrationVisibility
+            : KernelEvents::EventTypeVisibility.Unspecified;
+
+    static List<KernelEvents::EventTypeDefinition> CreateDefinitions(IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators)
+    {
+        var definitions = new List<KernelEvents::EventTypeDefinition>();
         foreach (var group in eventTypes.All.GroupBy(type => type.Id))
         {
             var generations = group.Select(type => new KernelEvents::EventTypeGenerationDefinition(
@@ -44,25 +83,25 @@ internal static class TestingEventTypes
                 generations.Add(new(generation, new JsonSchema()));
             }
 
-            var definition = new KernelEvents::EventTypeDefinition(
-                new KernelEvents::EventTypeId(group.Key.Value), KernelEvents::EventTypeOwner.Client, false, generations, migrations);
-            await storage.Register(definition);
-            var latest = group.MaxBy(type => type.Generation.Value)!;
-            var latestGeneration = generations.First(generation => generation.Generation.Value == latest.Generation.Value);
-            await storage.Register(
-                new KernelEvents::EventType(definition.Id, latestGeneration.Generation, latest.Tombstone),
-                latestGeneration.Schema,
-                KernelEvents::EventTypeOwner.Client,
-                KernelEvents::EventTypeSource.Code,
-                RegistrationVisibilityFor(eventTypes, latest));
-            await storage.RecordMigrationsVersion(definition.Id, KernelEvents::EventTypeMigrationsVersion.For(migrations), migrations);
+            definitions.Add(new KernelEvents::EventTypeDefinition(
+                new KernelEvents::EventTypeId(group.Key.Value), KernelEvents::EventTypeOwner.Client, false, generations, migrations));
         }
+
+        return definitions;
     }
 
-    static KernelEvents::EventTypeVisibility RegistrationVisibilityFor(IEventTypes eventTypes, EventType type) =>
-        eventTypes is EventTypes registry
-            ? (KernelEvents::EventTypeVisibility)(int)registry.GetDescriptorFor(eventTypes.GetClrTypeFor(type.Id, type.Generation)).RegistrationVisibility
-            : KernelEvents::EventTypeVisibility.Unspecified;
+    static KernelEvents::EventTypeDefinition Copy(KernelEvents::EventTypeDefinition definition) => definition with
+    {
+        Generations = definition.Generations
+            .Select(generation => generation with { Schema = new JsonSchema(generation.Schema.Node.DeepClone().AsObject()) })
+            .ToArray(),
+        Migrations = definition.Migrations.Select(migration => migration with
+        {
+            Operations = migration.Operations.ToArray(),
+            UpcastJmesPath = migration.UpcastJmesPath.DeepClone().AsObject(),
+            DowncastJmesPath = migration.DowncastJmesPath.DeepClone().AsObject()
+        }).ToArray()
+    };
 
     static KernelEvents::EventTypeMigrationDefinition CreateMigration(IEventTypeMigration migration)
     {
