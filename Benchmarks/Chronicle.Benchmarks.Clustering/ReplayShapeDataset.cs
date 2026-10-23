@@ -112,7 +112,7 @@ internal sealed class ReplayShapeDataset(ClusterBenchmarkFixture fixture, Replay
         var random = new Random(RandomSeed);
         var roots = Enumerable.Range(0, settings.Roots).Select(index => $"root-{index:D6}").ToArray();
         var leaves = roots.Select(root => ChildId(root, settings.Depth)).OrderBy(_ => random.Next()).ToArray();
-        var removeCount = (int)Math.Ceiling(settings.Roots * settings.RemovePercent / 100d);
+        var removeCount = (int)Math.Ceiling((long)settings.Roots * settings.RemovePercent / 100d);
         _removed.UnionWith(leaves.Take(removeCount));
         var nodeCount = checked(settings.Roots * settings.Depth);
         var updates = settings.Events - settings.Roots - nodeCount - removeCount;
