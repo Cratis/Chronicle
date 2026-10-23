@@ -222,6 +222,15 @@ public class Projection(
     static bool CreatesInstance(EngineProjection projection, ProjectionEventContext context) =>
         projection.Accepts(context.Event.Context.EventType) && context.CreatesInstance;
 
+    /// <summary>
+    /// Drops the initialization marker from the changes: it is bookkeeping, and on its own it must not bring an instance into existence.
+    /// </summary>
+    /// <param name="changes">The changes recorded for the event.</param>
+    /// <returns>The changes without any that only record the marker.</returns>
+    static Change[] WithoutInitializationMarker(Change[] changes) =>
+        [.. changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
+            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized))];
+
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
         Key key,
@@ -272,7 +281,7 @@ public class Projection(
         }
     }
 
-    static void SeedSingleReadModelAtCreation(EngineProjection projection, ProjectionEventContext context)
+    static void SeedAtCreation(EngineProjection projection, ProjectionEventContext context)
     {
         if (context.NeedsInitialState && !context.Changeset.HasJoined())
         {
@@ -373,7 +382,7 @@ public class Projection(
             var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false);
             context = await initialize.Perform(projection, context);
             await HandleEventFor(projection, context, NullSink.Instance, eventSequenceStorage);
-            SeedSingleReadModelAtCreation(projection, context);
+            SeedAtCreation(projection, context);
             result = ApplySingleReadModelChanges(projection, context, result);
         }
 
@@ -431,19 +440,20 @@ public class Projection(
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
+        var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         foreach (var @event in events)
         {
             var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
             if (keyResult is ResolvedKey resolvedKey)
             {
-                await ProjectInMemory(projection, eventSequenceStorage, sink, resolvedKey, @event);
+                await ProjectInMemory(projection, eventSequenceStorage, sink, initialize, resolvedKey, @event);
             }
         }
 
         return sink;
     }
 
-    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, ResolvedKey resolvedKey, AppendedEvent @event)
+    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, SetInitialState initialize, ResolvedKey resolvedKey, AppendedEvent @event)
     {
         var key = resolvedKey.Key;
         var keyValue = key.Value.ToString()!;
@@ -451,7 +461,9 @@ public class Projection(
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
+        context = await initialize.Perform(projection, context);
         await HandleEventFor(projection, context, sink, eventSequenceStorage);
+        SeedAtCreation(projection, context);
 
         if (changeset.HasBeenRemoved())
         {
@@ -463,7 +475,7 @@ public class Projection(
         var appliedJoins = sink.ApplyJoinsOnRoots(originalChanges, @event)
             .Concat(sink.ApplyJoinsOnChildren(originalChanges, @event)).ToArray();
         var hasReadModel = sink.TryGet(keyValue, out var state);
-        if (!ShouldMaterializeReadModel(hasReadModel, key, originalChanges, CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
+        if (!ShouldMaterializeReadModel(hasReadModel, key, WithoutInitializationMarker(originalChanges), CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
         {
             return;
         }
