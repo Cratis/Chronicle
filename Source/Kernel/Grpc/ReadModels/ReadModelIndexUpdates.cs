@@ -36,8 +36,12 @@ internal static class ReadModelIndexUpdates
         if (replace || declarations.Any(index => index.Properties is { Count: > 0 })) return converted.ToArray();
 
         // Legacy flat-path editors cannot represent ordered definitions: keep those rather than flattening or erasing them.
-        var retained = existing.Where(index => index.IsComposite || index.Properties[0].Descending).ToArray();
-        var leadingPaths = retained.Select(index => index.Properties[0].Path).ToHashSet();
-        return converted.Where(index => !leadingPaths.Contains(index.PropertyPath)).Concat(retained).ToArray();
+        var stored = existing.ToArray();
+        var retained = stored.Where(index => index.IsComposite || index.Properties[0].Descending).ToArray();
+        var standalonePaths = stored.Where(index => !index.IsComposite && !index.Properties[0].Descending).Select(index => index.PropertyPath).ToHashSet();
+        var standalone = converted.GroupBy(index => index.PropertyPath).SelectMany(group => group.Take(Math.Max(
+            standalonePaths.Contains(group.Key) ? 1 : 0,
+            group.Count() - retained.Count(index => index.PropertyPath == group.Key))));
+        return standalone.Concat(retained).ToArray();
     }
 }
