@@ -139,6 +139,7 @@ public class a_performing_job_step : Specification
             StepCheckpointFlushInterval = jobsConfig.StepCheckpointFlushInterval
         });
         _silo.AddService(options);
+        _silo.AddService(Options.Create(new ChronicleOptions { Jobs = jobsConfig }));
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),

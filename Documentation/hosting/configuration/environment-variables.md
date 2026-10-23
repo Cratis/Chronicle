@@ -60,6 +60,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
 | Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin | Force a password change on the admin's first login |
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
+| Cratis__Chronicle__Jobs__ReplayCheckpointEventInterval | Handled events after which a replay job step makes its progress durable (default 10000; zero or less checkpoints at the end of each event cursor page) |
 | Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |

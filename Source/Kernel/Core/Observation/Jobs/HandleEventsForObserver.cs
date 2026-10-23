@@ -66,6 +66,8 @@ public class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
+    int _replayCheckpointEventInterval;
+    int _replayEventsSinceReport;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -83,6 +85,7 @@ public class HandleEventsForObserver(
         await base.OnActivateAsync(cancellationToken);
         var jobs = ServiceProvider.GetService<IOptions<JobsOptions>>()?.Value;
         _durableCheckpoints = new(jobs?.StepCheckpointBatchInterval ?? 1);
+        _replayCheckpointEventInterval = ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value.Jobs.ReplayCheckpointEventInterval ?? 0;
         var interval = jobs?.StepCheckpointFlushInterval ?? TimeSpan.Zero;
         if (interval > TimeSpan.Zero)
         {
@@ -182,6 +185,7 @@ public class HandleEventsForObserver(
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         _replayReports = currentState.EventObservationState == EventObservationState.Replay ? new() : null;
+        _replayEventsSinceReport = 0;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -472,12 +476,13 @@ public class HandleEventsForObserver(
     /// Records the handled position. Must run on the activation.
     /// </summary>
     /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <param name="forceCheckpoint">Whether the checkpoint must be flushed regardless of the debounce.</param>
     /// <returns>True when the batch interval is reached and the checkpoint must be flushed.</returns>
     /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
-    bool RecordHandled(EventSequenceNumber lastHandled)
+    bool RecordHandled(EventSequenceNumber lastHandled, bool forceCheckpoint = false)
     {
         _lastHandled = lastHandled;
-        if (_durableCheckpoints.Report(CheckpointAfterEveryBatch))
+        if (_durableCheckpoints.Report(CheckpointAfterEveryBatch || forceCheckpoint))
         {
             return true;
         }
@@ -588,13 +593,14 @@ public class HandleEventsForObserver(
     /// TryInvokeOnActivation.
     /// </summary>
     /// <param name="lastHandled">The last handled event sequence number.</param>
+    /// <param name="forceCheckpoint">Whether the checkpoint must be flushed regardless of the debounce.</param>
     /// <returns>The last confirmed durable event sequence number, or why the step refused a callback.</returns>
-    async Task<Result<EventSequenceNumber, ActivationCallbackRejected>> ReportFromWork(EventSequenceNumber lastHandled)
+    async Task<Result<EventSequenceNumber, ActivationCallbackRejected>> ReportFromWork(EventSequenceNumber lastHandled, bool forceCheckpoint = false)
     {
         var recorded = await TryInvokeOnActivation(() =>
         {
             using var scope = logger.BeginJobStepScope(State);
-            return Task.FromResult(RecordHandled(lastHandled));
+            return Task.FromResult(RecordHandled(lastHandled, forceCheckpoint));
         });
         if (recorded.TryGetError(out var rejection))
         {
@@ -769,7 +775,8 @@ public class HandleEventsForObserver(
         if (_replayReports is not null)
         {
             _replayReports.Add(report);
-            return true;
+            _replayEventsSinceReport += counts.Values.Aggregate(0, (total, count) => total + (int)count.Value);
+            return _replayCheckpointEventInterval <= 0 || _replayEventsSinceReport < _replayCheckpointEventInterval || await FlushReplayReports(forceCheckpoint: true);
         }
 
         if (!Advanced(await ReportFromWork(handledUpTo))) return false;
@@ -790,13 +797,14 @@ public class HandleEventsForObserver(
         }
     }
 
-    async Task<bool> FlushReplayReports()
+    async Task<bool> FlushReplayReports(bool forceCheckpoint = false)
     {
         if (_replayReports?.LastHandled.IsActualValue != true) return true;
         var lastHandled = _replayReports.LastHandled;
         var reports = _replayReports.Reports;
         _replayReports.Clear();
-        if (!Advanced(await ReportFromWork(lastHandled))) return false;
+        _replayEventsSinceReport = 0;
+        if (!Advanced(await ReportFromWork(lastHandled, forceCheckpoint))) return false;
 
         // Events already handled before a stop still need their counts reported; cancellation only stops dispatch.
         await TransientTimeouts.ReportHandledEventsBatchWithoutFailing(
