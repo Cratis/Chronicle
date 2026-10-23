@@ -512,6 +512,11 @@ jobs:
           cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
+      # The artifact carries bin/ only. Restore regenerates the NuGet imports that register the
+      # coverlet XPlat collector, which --no-build (it implies --no-restore) would otherwise lack.
+      - name: Restore API integration project
+        run: dotnet restore Integration/Api/Api.csproj
+
       - name: Run API integration tests with coverage
         working-directory: ./Integration/Api
         # --no-build: run the Release build from the downloaded artifact instead of recompiling
@@ -564,6 +569,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same as the API job: restore so the coverlet XPlat collector is registered for --no-build.
+      - name: Restore MongoDB integration project
+        run: dotnet restore Integration/MongoDB/MongoDB.csproj
 
       - name: Run MongoDB integration tests with coverage
         working-directory: ./Integration/MongoDB
