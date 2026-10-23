@@ -23,6 +23,8 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     long _getMoreCommands;
     Dictionary<long, long> _sinkBulks = [];
     long _ungroupedSinkBulks;
+    Dictionary<string, long> _mongoCommandsByName = new(StringComparer.Ordinal);
+    Dictionary<string, long> _grainCallsByMethod = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
     public Task Invoke(IIncomingGrainCallContext context)
@@ -34,6 +36,8 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
             {
                 _grainCalls++;
                 if (isFlushFor) _flushForCalls++;
+                var method = $"{context.InterfaceName}.{context.MethodName}";
+                _grainCallsByMethod[method] = _grainCallsByMethod.GetValueOrDefault(method) + 1;
             }
         }
         return context.Invoke();
@@ -59,6 +63,8 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         lock (_gate)
         {
             _mongoCommands = 0;
+            _mongoCommandsByName = new(StringComparer.Ordinal);
+            _grainCallsByMethod = new(StringComparer.Ordinal);
             _grainCalls = 0;
             _flushForCalls = 0;
             _getMoreCommands = 0;
@@ -71,15 +77,22 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// <summary>
     /// Closes the window atomically with the final counts.
     /// </summary>
-    /// <returns>Commands and incoming grain invocations started in the window.</returns>
-    internal (long MongoCommands, long GrainCalls, long FlushForCalls, long EventCursorPages, IReadOnlyList<long> SinkBulkOperations) Stop()
+    /// <returns>Commands and incoming grain invocations started in the window, in total and by name.</returns>
+    internal (long MongoCommands, IReadOnlyDictionary<string, long> MongoCommandsByName, long GrainCalls, IReadOnlyDictionary<string, long> GrainCallsByMethod, long FlushForCalls, long EventCursorPages, IReadOnlyList<long> SinkBulkOperations) Stop()
     {
         lock (_gate)
         {
             _measuring = false;
             var bulks = _sinkBulks.Values.ToList();
             for (var i = 0; i < _ungroupedSinkBulks; i++) bulks.Add(0);
-            return (_mongoCommands, _grainCalls, _flushForCalls, _getMoreCommands + 1, bulks);
+            return (
+                _mongoCommands,
+                new SortedDictionary<string, long>(_mongoCommandsByName, StringComparer.Ordinal),
+                _grainCalls,
+                new SortedDictionary<string, long>(_grainCallsByMethod, StringComparer.Ordinal),
+                _flushForCalls,
+                _getMoreCommands + 1,
+                bulks);
         }
     }
 
@@ -95,6 +108,7 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         {
             if (!_measuring) return;
             _mongoCommands++;
+            _mongoCommandsByName[started.CommandName] = _mongoCommandsByName.GetValueOrDefault(started.CommandName) + 1;
             if (isEventPage) _getMoreCommands++;
             if (operations <= 0) return;
             if (started.OperationId is { } id) _sinkBulks[id] = _sinkBulks.GetValueOrDefault(id) + operations;

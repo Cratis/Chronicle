@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Projections;
 /// replaces the previous <c language="csharp">CreateObjectReference</c> grain-observer callback whose one-way dispatch was
 /// silently dropped on slower backends.
 /// </remarks>
+[Version(1)]
 public interface IProjectionChangesetNotifier : IGrainWithStringKey
 {
     /// <summary>
@@ -44,4 +46,12 @@ public interface IProjectionChangesetNotifier : IGrainWithStringKey
     /// <param name="change">The <see cref="ReadModelChangeContext"/> describing the change and the event that caused it.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change);
+
+    /// <summary>
+    /// Notify all subscribed watch subscribers of changesets in order.
+    /// </summary>
+    /// <param name="namespaceName">The <see cref="EventStoreNamespaceName"/> the changesets belong to.</param>
+    /// <param name="notifications">The ordered changeset notifications.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task NotifyMany(EventStoreNamespaceName namespaceName, IReadOnlyList<ReadModelChangeNotification> notifications);
 }
