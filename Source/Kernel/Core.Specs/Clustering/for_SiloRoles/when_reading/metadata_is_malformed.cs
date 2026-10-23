@@ -5,7 +5,6 @@ using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Orleans.Runtime;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
 namespace Cratis.Chronicle.Clustering.for_SiloRoles.when_reading;
