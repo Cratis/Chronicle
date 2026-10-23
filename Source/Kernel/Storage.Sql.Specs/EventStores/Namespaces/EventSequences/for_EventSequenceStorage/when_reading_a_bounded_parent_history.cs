@@ -33,7 +33,7 @@ public class when_reading_a_bounded_parent_history : given.a_storage_for_appende
     }
 
     [Fact] void should_return_only_the_latest_predecessor_and_the_inclusive_window() => _result["some-source"].Select(e => e.Context.SequenceNumber.Value).ShouldEqual([1996UL, 1997UL, 1998UL, 1999UL]);
-    [Fact] void should_match_across_generations() => _result["some-source"].Select(e => e.Context.EventType.Generation.Value).ShouldEqual([1U, 2U, 1U, 2U]);
+    [Fact] void should_match_across_generations() => _result["some-source"].Select(e => e.Context.AppendedGeneration!.Value).ShouldEqual([1U, 2U, 1U, 2U]);
     [Fact] void should_include_the_upper_boundary_for_the_other_source() => _result["other-source"].Single().Context.SequenceNumber.Value.ShouldEqual(2001UL);
     [Fact] void should_omit_missing_sources_and_deduplicate_requested_sources() => _result.Count.ShouldEqual(2);
     [Fact] void should_support_a_single_predecessor_lookup_without_loading_the_history() => _predecessor["some-source"].Single().Context.SequenceNumber.Value.ShouldEqual(1996UL);
