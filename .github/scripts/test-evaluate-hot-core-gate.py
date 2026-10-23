@@ -20,6 +20,7 @@ SCRIPT = Path(__file__).with_name("evaluate-hot-core-gate.py")
 spec = importlib.util.spec_from_file_location("evaluate_hot_core_gate", SCRIPT)
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
+LATEST_REQUESTED = gate.latest_requested
 
 # Recorded read-only API fields from the plan's green and skipped-label runs.
 SHA = "647523d239226eec17b4718855f2f0d3930bc0ae"
@@ -41,6 +42,42 @@ def arguments(**overrides):
 
 
 class GateDecisions(unittest.TestCase):
+    def setUp(self):
+        latest = patch.object(gate, "latest_requested", return_value=None)
+        self.latest = latest.start()
+        self.addCleanup(latest.stop)
+
+    def test_message_tells_missing_running_and_failed_integration_apart(self):
+        url = "https://github.com/Cratis/Chronicle/actions/runs/7"
+        cases = [(None, "No Requested Integration run has started"),
+                 ({"id": 7, "status": "in_progress", "conclusion": None, "html_url": url}, "still running"),
+                 ({"id": 7, "status": "completed", "conclusion": "failure", "html_url": url},
+                  "ended with failure"),
+                 ({"id": 7, "status": "completed", "conclusion": "success", "html_url": url},
+                  "requested gate did not pass")]
+        for env in (ENV, dict(ENV, TOUCHED="false", RUN_INTEGRATION="true", PR_NUMBER="7")):
+            for latest, text in cases:
+                with self.subTest(touched=env["TOUCHED"], latest=latest), patch.dict(os.environ, env, clear=True), \
+                        patch.object(gate, "api", return_value={"head": {"sha": SHA},
+                                                                "labels": [{"name": "run-integration"}]}), \
+                        patch.object(gate, "evidence_runs", return_value=[]):
+                    self.latest.return_value = latest
+                    ok, message = gate.gate(arguments())
+                    self.assertFalse(ok)
+                    self.assertIn(text, message)
+                    self.assertIn(SHA, message)
+                    if latest:
+                        self.assertIn(url, message)
+        self.latest.assert_called_with("Cratis/Chronicle", SHA, None)
+
+    def test_latest_requested_picks_newest_pull_request_run_for_the_head(self):
+        older = dict(GREEN, id=1, status="completed", conclusion="failure")
+        newer = dict(GREEN, id=2, status="in_progress", conclusion=None)
+        other = dict(GREEN, id=3, head_sha="new-push")
+        with patch.object(gate, "workflow_runs", return_value=[older, newer, other]) as runs:
+            self.assertEqual(newer, LATEST_REQUESTED("Cratis/Chronicle", SHA, None))
+        runs.assert_called_once_with("Cratis/Chronicle", gate.EVIDENCE_WORKFLOW, SHA)
+
     def test_evidence_is_exact_sha_event_and_job(self):
         cases = [([], False), ([GREEN], True), ([SKIPPED], False)]
         for field, value in [("head_sha", "new-push"), ("event", "workflow_dispatch")]:
