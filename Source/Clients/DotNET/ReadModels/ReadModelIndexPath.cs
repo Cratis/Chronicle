@@ -46,6 +46,21 @@ internal static class ReadModelIndexPath
     }
 
     /// <summary>
+    /// Determines whether array paths nest as one chain, where each path is a segment-wise prefix of the next.
+    /// </summary>
+    /// <param name="arrayPaths">The array paths.</param>
+    /// <returns>True when the paths form a single chain.</returns>
+    internal static bool ArrayPathsFormAChain(IEnumerable<string> arrayPaths)
+    {
+        var ordered = arrayPaths.Distinct(StringComparer.Ordinal).Select(path => path.Split('.')).OrderBy(segments => segments.Length).ToArray();
+        for (var index = 1; index < ordered.Length; index++)
+        {
+            if (!ordered[index].Take(ordered[index - 1].Length).SequenceEqual(ordered[index - 1], StringComparer.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Gets the element type for a collection, excluding strings.
     /// </summary>
     /// <param name="type">The property type.</param>

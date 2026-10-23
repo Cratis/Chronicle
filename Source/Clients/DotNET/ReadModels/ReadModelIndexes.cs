@@ -76,7 +76,7 @@ internal sealed class ReadModelIndexes(INamingPolicy namingPolicy)
             {
                 throw new InvalidIndexDeclaration(type, "a composite index cannot repeat the same property");
             }
-            if (arrayPaths.Concat(resolved.SelectMany(path => path.ArrayPaths.Select(array => Prefix(prefix, array)))).Distinct(StringComparer.Ordinal).Count() > 1)
+            if (!ReadModelIndexPath.ArrayPathsFormAChain(arrayPaths.Concat(resolved.SelectMany(path => path.ArrayPaths.Select(array => Prefix(prefix, array))))))
             {
                 throw new InvalidIndexDeclaration(type, "a composite index cannot contain more than one collection-element path");
             }
