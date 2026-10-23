@@ -32,6 +32,10 @@ This reference holds registration wiring, the registration wait, keepalive and w
   falls more than 5 seconds behind is treated as a lost connection, with
   reconnect backoff capped at 30 seconds. **The failure mode is silence, not an
   exception** — appends keep working while observers go quiet.
+- Requires Chronicle 19.72.1 for reactor/reducer `ClientIsNotConnected` stream
+  failures to reconnect the whole client with a fresh connection id and register
+  all observers again. Older clients can retry a stale registration indefinitely;
+  check `dotnet list package` before diagnosing that as a quiet handler.
 - `Dispose()` disposes read model reactors for created stores, cancels the owned
   connection, and disposes the connection
   (`Source/Clients/DotNET/ChronicleClient.cs`, `Dispose`).

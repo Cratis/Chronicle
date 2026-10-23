@@ -12,6 +12,7 @@ tools:
   - Bash
   - Edit
   - Write
+modelTier: scoped
 ---
 <!-- cratis-ai-managed: agents/backend-developer.md -->
 

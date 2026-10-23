@@ -60,6 +60,14 @@ pair it with `[NotRewindable]`. `[NotProjected]` excludes a query-assembled memb
 from AutoMap and CHR0024. Sources: `Projections/ModelBound/NotProjectedAttribute.cs`,
 `Projections/FromEveryBuilder.cs`, and `Documentation/projections/model-bound/`.
 
+Requires Chronicle 19.78.1 for `[FromAll]`/`[FromEvery]` properties under
+`[ChildrenFrom<T>]` or `[Nested]` to be declared on the child itself, including
+the event creating it. Parent all-event mappings are not copied into children.
+Older client definitions with root-declared child mappings work only when the
+root has no property with the same name; otherwise the mapping stays on the
+root until the client is upgraded. Check client/kernel versions and replay
+affected projections to rebuild already materialized child values.
+
 ## Setting values
 
 | Attribute | Arity | Parameters | Targets |

@@ -26,6 +26,8 @@ public class and_all_values_are_configured : Specification
                 ["Cratis:Chronicle:Webhooks:RequestTimeoutSeconds"] = "90",
                 ["Cratis:Chronicle:Webhooks:TestTimeoutSeconds"] = "15",
                 ["Cratis:Chronicle:Sql:LiveQueryPollIntervalSeconds"] = "6",
+                ["Cratis:Chronicle:Storage:PostgreSqlEntra:Enabled"] = "true",
+                ["Cratis:Chronicle:Storage:PostgreSqlEntra:ManagedIdentityClientId"] = "managed-identity-client-id",
                 ["Cratis:Chronicle:Observers:SubscriptionReadyTimeout"] = "8",
                 ["Cratis:Chronicle:Events:QueueDepletionWaitTimeoutMilliseconds"] = "750",
                 ["Cratis:Chronicle:Events:CausationPropertyRetention"] = "Omit",
@@ -48,6 +50,8 @@ public class and_all_values_are_configured : Specification
     [Fact] void should_bind_the_circuit_breaker_break_duration() => _options.Webhooks.CircuitBreakerBreakDurationSeconds.ShouldEqual(20);
     [Fact] void should_bind_the_request_timeout() => _options.Webhooks.RequestTimeoutSeconds.ShouldEqual(90);
     [Fact] void should_bind_the_webhook_test_timeout() => _options.Webhooks.TestTimeoutSeconds.ShouldEqual(15);
+    [Fact] void should_enable_native_postgresql_entra_authentication() => _options.Storage.PostgreSqlEntra.Enabled.ShouldBeTrue();
+    [Fact] void should_bind_the_postgresql_managed_identity_client_id() => _options.Storage.PostgreSqlEntra.ManagedIdentityClientId.ShouldEqual("managed-identity-client-id");
     [Fact] void should_bind_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(6);
     [Fact] void should_bind_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(8);
     [Fact] void should_bind_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(750);

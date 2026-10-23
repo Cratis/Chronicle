@@ -68,10 +68,10 @@ During the rollout, nodes on the old version and on the new version run in the s
 
 ### 4. Give nodes time to start and stop
 
-A node needs a startup time budget that covers the 5-minute schema lock wait and the startup task retries, because a node that waits on a migration is working, not hung.
+A node binds its listeners before starting its silo, so a schema lock wait or startup retries do not prevent startup and liveness probes from succeeding. Keep the node out of traffic until readiness succeeds.
 
-- **Startup probe.** Use a generous startup probe and a restart only after it is exhausted. For example `periodSeconds: 10` with `failureThreshold: 60` allows 10 minutes. Do not start the liveness probe before the startup probe succeeds.
-- **Liveness probe.** Keep its failure window longer than a schema lock wait, or the orchestrator restarts a node that is waiting on a migration and the next node then waits for the same lock again.
+- **Startup probe.** Use `tcpSocket` on port 35000 or an HTTP probe on `/health/live`. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; do not use readiness as the startup probe.
+- **Liveness probe.** Use `/health/live`, which remains successful while the silo is starting, including while waiting on a schema lock.
 - **Shutdown.** The host allows 10 seconds for a graceful stop (`HostOptions.ShutdownTimeout`). Set the termination grace period at or above that and let the orchestrator send `SIGTERM`. The server treats a signal during startup as an orderly stop.
 - **Defunct entries.** A node that restarts joins as a new silo and never reuses an old identity. Old entries stay in the membership table until the sweep removes them. `defunctSiloExpiration` defaults to three hours and `defunctSiloCleanupPeriod` to one hour. They only control cleanup of dead entries, so do not raise them to make a rollout safer. See [Clustering](configuration/clustering.md).
 
@@ -79,13 +79,9 @@ Orleans' own failure detection settings, such as probe timeouts and the number o
 
 ### 5. Probe the right thing
 
-The `/health` endpoint on the main or dedicated [health port](configuration/health-endpoint.md) answers from a single check: it connects to the cluster database with the runtime identity and runs `SELECT 1`, with a three-second timeout. Use it for liveness and readiness, with these limits:
+Use `/health` (or `/health/ready`) on the main or dedicated [health port](configuration/health-endpoint.md) for readiness. It returns 503 until the silo startup task has finished and the host has started, and becomes unready when shutdown begins. It also runs existing storage health checks, including the cluster database check for SQL clustering; it does not cover every event store and namespace database.
 
-- It does **not** report whether the startup task has finished.
-- It does **not** report whether the node has joined the cluster membership.
-- It does **not** cover the event store and namespace databases.
-
-Chronicle has no separate startup or readiness endpoint. The probes above tell you that storage is reachable. To know a node is ready, watch for the `started successfully` line in step 2, and check that the node is in the membership table before you replace the next one.
+Use `/health/live` for liveness, not `/health`. A TCP connection or successful liveness check means only that the listener is accepting requests. While unready, non-health traffic receives HTTP 503 with `Retry-After` or gRPC `Unavailable`, including Workbench traffic. Wait for readiness before replacing the next node; background catch-up may continue after readiness succeeds.
 
 ### 6. Handle a node that does not come up
 

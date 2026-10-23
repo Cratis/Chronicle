@@ -54,8 +54,8 @@ model's behalf.
 
 3. **Element sweep** (phase 1, mechanical, before any judgement). One line per gated element, event,
    name, command, event property and slice; `references/checklist.md` S1-S7 gives each line's
-   format. Scoped `find-modeling-smells` supplies advisory generic-name, duplicate-shape
-   and wide-flow questions, never compiler defects or a substitute for the sweep. Each `NONE` and each form name is its own finding naming that element. A repeated
+   format. Scoped `find-modeling-smells` supplies advisory generic-name, duplicate-shape,
+   wide-flow and unread-event-property questions, never compiler defects or a substitute for the sweep. Each `NONE` and each form name is its own finding naming that element. A repeated
    payload or generic verb is a signal to investigate: report it only when the name or payload
    hides the business reason or a consequence is shown (distinct facts that share a shape and
    earlier generations are not findings). A description, comment or spec name never excuses a flagged line.
@@ -64,7 +64,10 @@ model's behalf.
    refused change needs a `then error` spec; each command missing from the table is investigated.
 5. **Lineage and completeness** (phase 3). Backward: every read-model field to an event field,
    `$eventSourceId`, literal or documented derivation, to a command input, `$context`, capture field
-   or literal, to the screen, reaction or integration that supplies it. AutoMap fills same-named
+   or literal, to the screen, reaction or integration that supplies it. Trace a field with the
+   `screenplay` MCP server's `trace-lineage` tool (paged tree, breaks, branches and opaque hops
+   are reported) rather than stitching `dependencies` calls; confirm each hop in the model.
+   Requires Screenplay 4.223.0 (`screenplay --version`); on older releases use `dependencies`. AutoMap fills same-named
    fields silently: count them. Forward: every event to a consumer or a terminal reason; every
    command input to an event field or a rule. Before calling data missing, search the model.
 6. **Phased checklist** (phases 4-10): ownership, event quality, events versus views, rules and
@@ -128,11 +131,8 @@ rejected state and its evidence.
 Optional, on request, all read-only and yielding edit requests: a subject's information journey (`references/model-inventory-report.md`), a resilience pass (`references/stressor-analysis.md`) and a slice-by-slice walkthrough (`references/walkthrough.md`).
 
 ## Quick self-check (modeler, P4; about ten minutes)
-Eleven yes/no checks the modeler runs on its own work before P5 (V1 clean, no dropped constructs,
-every event production has `for`, every field has an origin, every command a reachable authorized
-origin, NOT-enforced rules marked, coverage matrix filled, personas with their denials, rationale in
-`documentation`, open questions as anchored notes, every Automation with pending work). Any "no" is
-fixed or explained before P5. The list: [quick self-check](references/quick-self-check.md).
+Read [quick self-check](references/quick-self-check.md) before P5 for the eleven
+modeler checks. Fix or explain every "no"; this is not the independent review.
 
 ## Business-question pass (explain brief)
 Be a sharp business analyst seeing the domain fresh: walk each persona's journey and ask only what a domain person must decide, in plain language with no engineering words (could a non-technical product owner read it and immediately understand what is being asked?), anchored to a place in the model, at most 12 questions (zero is valid). Method, element prompts and the model-word translation table: `references/business-questions.md`. A behavior walk in the Stage sandbox (`cratis-stage-rendering-and-sandbox`) is a separate, optional check; its findings arrive here as review findings.

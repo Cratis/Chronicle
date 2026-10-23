@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.MongoDB;
@@ -105,6 +106,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
 
             // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where

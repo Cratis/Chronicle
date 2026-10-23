@@ -40,12 +40,9 @@ public sealed class GenerationLegacyWork(IStorage storage) : IGenerationLegacyWo
             }
             if (contexts.Count == 0 && unfinished.Length == 0)
             {
-                foreach (var observer in await ns.Observers.GetAll())
+                foreach (var observer in (await ns.Observers.GetAll()).Where(observer => observer.IsReplaying || observer.ReplayingPartitions.Count != 0 || observer.CatchingUpPartitions.Count != 0))
                 {
-                    if (observer.IsReplaying || observer.ReplayingPartitions.Count != 0 || observer.CatchingUpPartitions.Count != 0)
-                    {
-                        blockers.Add(new(eventStore, GenerationInitializationBlockerKind.ContradictoryLegacyState, $"legacy-work/{item.Name}/{observer.Identifier}", "Observer replay or catch-up state has no owning legacy work.", DateTimeOffset.UtcNow, null));
-                    }
+                    blockers.Add(new(eventStore, GenerationInitializationBlockerKind.ContradictoryLegacyState, $"legacy-work/{item.Name}/{observer.Identifier}", "Observer replay or catch-up state has no owning legacy work.", DateTimeOffset.UtcNow, null));
                 }
             }
         }

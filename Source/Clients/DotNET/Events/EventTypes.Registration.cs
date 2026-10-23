@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Schemas;
 
 using EventTypeRegistrationContract = Cratis.Chronicle.Contracts.Events.EventTypeRegistration;
 
@@ -21,6 +22,8 @@ public partial class EventTypes
     /// Gets the migrators prepared with this registry's owning-store binding and cache.
     /// </summary>
     internal IEventTypeMigrators PreparedMigrators => _storeMigrators ?? _eventTypeMigrators;
+
+    IClientArtifactsProvider CurrentArtifacts => _clientArtifacts is StoreClientArtifactsProvider store ? store.Current : _clientArtifacts;
 
     /// <summary>
     /// Supplies ordinary constructor dependencies for the custom-provider explicit migration overlay.
@@ -60,9 +63,36 @@ public partial class EventTypes
     /// <returns>The wire registration operation.</returns>
     internal Task RegisterPrepared(RegisterEventTypesRequest payload) => _servicesAccessor.Services.EventTypes.RegisterEventTypes(payload).EnsureSuccess();
 
+    /// <summary>
+    /// Captures what discovery produced so another registry over an equal catalog can adopt it.
+    /// </summary>
+    /// <returns>The frozen lookups, which are safe to share, and independent copies of the schemas.</returns>
+    internal EventTypesDiscovery CaptureDiscovery() => new(
+        _descriptors,
+        _typesByEventType,
+        _schemasByEventType.ToFrozenDictionary(_ => _.Key, _ => CloneSchema(_.Value)));
+
+    /// <summary>
+    /// Adopts a discovery captured from a registry over an equal catalog instead of discovering again.
+    /// </summary>
+    /// <param name="discovery">The captured discovery.</param>
+    /// <returns>A completed task.</returns>
+    /// <exception cref="ArtifactPreparationReentered">Adoption reenters unfinished local preparation.</exception>
+    internal Task AdoptDiscovery(EventTypesDiscovery discovery) => RunLocalPreparation(() => AdoptLocal(discovery));
+
+    static JsonSchema CloneSchema(JsonSchema schema) => new(schema.Node.DeepClone().AsObject());
+
+    void AdoptLocal(EventTypesDiscovery discovery)
+    {
+        _descriptors = discovery.Descriptors;
+        _typesByEventType = discovery.TypesByEventType;
+        _storeMigrators = StoreEventTypeMigrators.Bind(_eventTypeMigrators, CurrentArtifacts, this, _migrationServices, _namingPolicy);
+        _schemasByEventType = discovery.Schemas.ToFrozenDictionary(_ => _.Key, _ => CloneSchema(_.Value));
+    }
+
     void DiscoverLocal()
     {
-        var artifacts = _clientArtifacts is StoreClientArtifactsProvider store ? store.Current : _clientArtifacts;
+        var artifacts = CurrentArtifacts;
         var eventTypes = artifacts.EventTypes.Distinct().Select(type => artifacts is ExplicitArtifactCatalog catalog
             ? catalog.GetEventDescriptorFor(type, _eventStore.Name)
             : EventTypeDescriptor.FromDeclaration(type, _eventStore.Name)).ToArray();

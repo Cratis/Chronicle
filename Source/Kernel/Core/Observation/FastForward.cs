@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="EventStore">The event store the observer belongs to.</param>
 /// <param name="Namespace">The namespace within the event store the observer belongs to.</param>
 /// <param name="ObserverId">The identifier of the observer.</param>
-/// <param name="EventSequenceId">The event sequence the observer observes.</param>
+/// <param name="EventSequenceId">The event sequence the observer observes; uses its stored sequence when empty, or the event log if unavailable.</param>
 /// <remarks>
 /// All events the observer has not yet handled are skipped without invoking the observer. Use it to get past a
 /// backlog, or events that can never be handled, when the read side does not need to be rebuilt.
@@ -27,11 +28,12 @@ public record FastForward(string EventStore, string Namespace, string ObserverId
     /// Handles the command by fast forwarding the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
+    /// <param name="storage">The storage containing observer definitions.</param>
     /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
-    public Task<FastForwardResult> Handle(IGrainFactory grainFactory)
+    public async Task<FastForwardResult> Handle(IGrainFactory grainFactory, IStorage storage)
     {
-        var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
+        var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        return grainFactory.GetGrain<IObserver>(key).FastForward();
+        return await grainFactory.GetGrain<IObserver>(key).FastForward();
     }
 }

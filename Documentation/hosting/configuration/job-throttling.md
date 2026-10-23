@@ -26,8 +26,18 @@ The maximum number of parallel job steps can be configured using the `MaxParalle
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | MaxParallelSteps | number | Environment.ProcessorCount - 1 | Maximum number of parallel job steps (minimum 1) |
+| MaxParallelStepsWithoutJobsRole | number | max(1, effective MaxParallelSteps / 4) | Step budget when `Clustering:Roles:Jobs` is false; explicit values must be greater than zero. Integer division rounds down. |
 
 The limit that applies is the smaller of `Jobs:MaxParallelSteps` and `Observers:MaxConcurrentPartitions` (default 32, see [Observers](observers.md)). With the defaults, `Jobs:MaxParallelSteps` only has an effect below 32, so raising it above 32 needs `Observers:MaxConcurrentPartitions` raised as well.
+
+On a silo with `Clustering:Roles:Jobs=false`, Chronicle uses `Jobs:MaxParallelStepsWithoutJobsRole`
+instead, still capped by `Observers:MaxConcurrentPartitions`. When unset, this is one quarter of the
+effective `Jobs:MaxParallelSteps`, rounded down and never less than one. For example, an effective
+maximum of 20 gives a non-Jobs silo a budget of 5. Silos with the Jobs role keep the existing limit,
+regardless of the non-Jobs override. All silos have the Jobs role by default, so existing deployments
+keep their current throttling. The role does not restrict step placement yet.
+
+Set `Cratis__Chronicle__Jobs__MaxParallelStepsWithoutJobsRole` to override the reduced budget.
 
 Alternatively, you can use environment variables:
 

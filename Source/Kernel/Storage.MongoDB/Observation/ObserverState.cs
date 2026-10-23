@@ -35,6 +35,12 @@ public class ObserverState
     public ObserverInitialization? Initialization { get; set; }
 
     /// <summary>
+    /// Gets or sets the outstanding delivery fence snapshot, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<DeliveryFenceState>? DeliveryFences { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }
@@ -53,6 +59,10 @@ public class ObserverState
     /// Gets or sets the current quarantine episode identity.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
+
+    /// <summary>Gets or sets the optional durable webhook probe control.</summary>
+    [BsonIgnoreIfNull]
+    public WebhookProbeState? WebhookProbe { get; set; }
 
     /// <summary>
     /// Gets or sets the last handled event sequence number.

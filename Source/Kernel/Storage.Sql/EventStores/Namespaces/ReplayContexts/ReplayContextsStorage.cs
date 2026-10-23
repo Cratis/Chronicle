@@ -30,7 +30,6 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entry = ReplayContextEntryConverter.ToReplayContextEntry(context);
         await scope.DbContext.ReplayContexts.Upsert(entry);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

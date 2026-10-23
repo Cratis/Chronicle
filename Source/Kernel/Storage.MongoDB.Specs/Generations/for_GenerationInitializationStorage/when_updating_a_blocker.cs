@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.for_GenerationInitializat
 [Collection(ReplicaSetMongoDBCollection.Name)]
 public class when_updating_a_blocker(ReplicaSetMongoDBFixture fixture) : given.an_initialization_storage(fixture)
 {
-    DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
+    readonly DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
     GenerationInitializationBlocker _persisted;
 
     async Task Because()

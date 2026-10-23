@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.for_GenerationInitializa
 
 public class when_updating_a_blocker : given.an_initialization_storage
 {
-    DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
+    readonly DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
     GenerationInitializationBlocker _persisted;
 
     async Task Because()

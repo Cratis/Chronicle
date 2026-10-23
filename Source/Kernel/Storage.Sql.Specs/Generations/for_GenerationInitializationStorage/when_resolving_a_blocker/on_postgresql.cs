@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationInitializationS
 [Collection(PostgreSqlCollection.Name)]
 public class on_postgresql(PostgreSqlFixture fixture) : given.a_postgresql_initialization_storage(fixture)
 {
-    DateTimeOffset _resolved = DateTimeOffset.FromUnixTimeSeconds(20000);
+    readonly DateTimeOffset _resolved = DateTimeOffset.FromUnixTimeSeconds(20000);
     GenerationInitializationBlocker _persisted;
 
     async Task Because()

@@ -118,7 +118,6 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 1 });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -133,7 +132,6 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 2 });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

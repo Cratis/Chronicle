@@ -4,15 +4,13 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -35,17 +33,13 @@ public static class SqlChronicleBuilderExtensions
     {
         builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
 
-        builder.Services.AddStorageConnectionResolution(SqlConnectionResolution.StorageFor(options.Storage.ConnectionDetails), options.Storage.ConnectionResolution);
-        builder.Services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp.GetRequiredService<IStorageConnectionResolution>()));
-        builder.Services.AddSingleton<IDatabase, Database>();
+        SqlSchemaServices.Add(builder.Services, options);
         builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
+        builder.Services.AddSingleton<ISingleWriterLeaseStorage, SqlSingleWriterLeaseStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
 
-        builder.Services.AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>));
-        builder.Services.AddSingleton<IEventSequenceMigrator, EventSequenceMigrator>();
-        builder.Services.AddSingleton<IUniqueConstraintMigrator, UniqueConstraintMigrator>();
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         if (options.Clustering.Type == ClusteringType.Sql)
         {
@@ -66,7 +60,6 @@ public static class SqlChronicleBuilderExtensions
                 OptionsResolver = (scope, @namespace) => sp.GetRequiredService<IDatabase>().GetJobsDbContextOptions(scope, @namespace)
             }),
             sp));
-        builder.Services.AddSingleton<IReadModelMigrator, ReadModelMigrator>();
         builder.Services.AddSingleton<ISinkFactory, SinkFactory>();
 
         AddHealthCheck(builder, options);

@@ -20,13 +20,21 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(2)]
+[Version(3)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect. Without this it queued behind whatever the observer was
+    /// already doing, and the startup task fans one of these out across every reducer and reactor at
+    /// once: a single slow Subscribe put the whole fan-out past Orleans' response timeout and took the
+    /// silo down with it.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>
@@ -91,6 +99,22 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverSubscription> GetSubscription();
+
+    /// <summary>
+    /// Gets active abandoned-delivery fences independently of failure state.
+    /// </summary>
+    /// <returns>The current fences.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<DeliveryFence>> GetDeliveryFences();
+
+    /// <summary>
+    /// Releases the exact version whose original targets have drained.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <param name="releaseBy">The captured fence deadline.</param>
+    /// <returns>A task representing the release.</returns>
+    [AlwaysInterleave]
+    Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy);
 
     /// <summary>
     /// Checks whether a subscription is installed.
@@ -445,6 +469,18 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+
+    /// <summary>
+    /// Notify that the partition has failed with the original delivery fence.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="context">The internal recovery policy and optional original delivery identity and deadline.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailedWithDeliveryFence(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, PartitionFailureContext context);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.
