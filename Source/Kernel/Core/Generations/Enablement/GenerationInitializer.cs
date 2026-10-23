@@ -119,7 +119,7 @@ public sealed class GenerationInitializer(
             var subject = Subject(legacy);
             if (adoptedReceipts.TryGetValue(subject, out var receipt))
             {
-                if (receipt.Evidence != Evidence(legacy))
+                if (!receipt.Evidence.StartsWith($"{IdentityEvidence(legacy)};Position=", StringComparison.Ordinal))
                 {
                     return await Block(audit, eventStore, GenerationInitializationBlockerKind.ContradictoryLegacyState, subject, "The materialization snapshot no longer matches its receipt.");
                 }
@@ -172,7 +172,9 @@ public sealed class GenerationInitializer(
 
     static string Subject(LegacyMaterialization legacy) => $"{legacy.Namespace.Value.Length}:{legacy.Namespace}/{legacy.Projection}";
 
-    static string Evidence(LegacyMaterialization legacy) => $"Container={legacy.Container};Observer={legacy.Observer};Position={legacy.PositionEvidence};FailedPartitions={legacy.FailedPartitions};Revision=Unknown";
+    static string IdentityEvidence(LegacyMaterialization legacy) => $"Container={legacy.Container};Observer={legacy.Observer}";
+
+    static string Evidence(LegacyMaterialization legacy) => $"{IdentityEvidence(legacy)};Position={legacy.PositionEvidence};FailedPartitions={legacy.FailedPartitions};Revision=Unknown";
 
     static Task<bool> Record(IGenerationInitializationStorage audit, EventStoreName store, GenerationFloor floor, GenerationInitializationStep step, string subject, string evidence) =>
         audit.TryRecord(new(store, step, subject, evidence, floor.Incarnation, floor.Revision, DateTimeOffset.UtcNow));
