@@ -46,9 +46,8 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
             entity.ParentIdentifiedByProperty = updated.ParentIdentifiedByProperty;
             entity.ParentKeyJson = updated.ParentKeyJson;
             entity.Created = updated.Created;
+            await scope.DbContext.SaveChangesAsync();
         }
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

@@ -9,6 +9,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Sql" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
+        <InternalsVisibleTo Include="Cratis.Chronicle" />
     </ItemGroup>
 
     <ItemGroup>

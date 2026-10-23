@@ -34,6 +34,12 @@ public class Observers
     public int SubscriberTimeout { get; init; } = 30;
 
     /// <summary>
+    /// Gets the maximum time in seconds to hold an abandoned client delivery after its timeout.
+    /// A non-positive value disables fencing. Positive values are at least the subscriber timeout.
+    /// </summary>
+    public int AbandonedDeliveryHold { get; init; } = 300;
+
+    /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
     /// </summary>
     /// <remarks>

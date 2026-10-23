@@ -12,6 +12,7 @@
 - Event routes
 - Redelivery locators
 - Operation and recovery intent
+- Givens without an event source
 
 ## Typed examples
 
@@ -224,3 +225,21 @@ future external-work behavior. Use `then no events` to assert explicitly that th
 action and cascade produced no new facts; after append it excludes the input fact.
 It may accompany view/query/response assertions, not events, event-order assertions,
 errors or denial (PLAY0545). An omitted event list is not this explicit assertion.
+
+## Givens without an event source
+
+A `given` event with no `for` belongs to the event source the specification acts on: the
+event source each fact the command appends goes to, or the `for` of `when append`.
+
+- A unique-event constraint counts a sourceless given as already on that event source. A
+  unique-value constraint treats its value as the action's own claim.
+- When a projection needs the given's event-source identity, the reference evaluator reports
+  `Unsupported` (Projection) and does not invent one. This holds whatever the action,
+  because givens are projected before it runs.
+- Runners that append to real event streams, such as Stage, append sourceless givens to the
+  action's event source.
+- State `for` when the command appends to more than one event source, or when an assertion
+  depends on the given's event source. Never assert `$eventSourceId` of a sourceless given.
+
+Requires Screenplay 4.229.0 (`screenplay --version`) for the documented, vector-pinned
+placement; older versions leave a sourceless given's placement unspecified.

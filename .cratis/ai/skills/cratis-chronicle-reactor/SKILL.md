@@ -134,31 +134,14 @@ re-delivers the event as an ordinary observation, and a `[OnceOnly]` handler run
 again. Catch-up and crash redelivery are not replay either; every ordinary
 matching event can run, even on the same source. Keep effects idempotent.
 
-**A reactor new to a store catches up the whole history on first registration, and
-`[OnceOnly]` does not cover that.** For a side-effect reactor (jobs, AI or external
-calls), start the observer at the tail or have the handler ignore facts that
-predate its registration, and specify that history causes nothing. A
-reconciliation sweep that decides from a read model must not run while that model's
-observer is replaying or behind: a rebuilding model looks like "never processed".
-Decide from the events or a `[Passive]` model, and specify the replaying case.
+**A new reactor catches up history; `[OnceOnly]` does not stop that.**
+Requires Chronicle 19.70.0 for `[StartAtTail]` to start only its first registration
+at the tail; existing positions remain. Upgrade the server first: older kernels
+ignore it. Read references/starting-and-replaying.md when avoiding pre-registration
+side effects or choosing alternate replay behavior.
 
 Analyzer **CHR0022** (warning) requires `[OnceOnly]` on a handler that returns
 event side effects, because a replay would otherwise append duplicates.
-
-`Cratis.Chronicle.Reactors.ReplayAttribute` (`[Replay]`) is the other half, and
-targets a method only. Mark a **second** handler for the same event type with it
-when replay needs to do something *different* rather than nothing:
-
-```csharp
-public Task <MethodName>(<EventName> @event) => <serviceName>.<Operation>(@event.<Property>);
-
-[Replay]
-public Task <MethodName>DuringReplay(<EventName> @event) => Task.CompletedTask;
-```
-
-With a `[Replay]` handler present, only it runs during replay. Without one, the
-ordinary handler runs during replay as before. An event type handled *only* by a
-`[Replay]` handler is still subscribed to.
 
 ## Identity and event sequence
 

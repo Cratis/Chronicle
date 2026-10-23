@@ -121,7 +121,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup", tags: ["ready"]);
+builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
 if (chronicleOptions.Features.Api)
 {
@@ -316,6 +316,8 @@ hostBuilder
            .ToList();
        foreach (var descriptor in inactiveStorageDescriptors)
            services.Remove(descriptor);
+
+       services.UseDeferredSiloStart();
    });
 
 var app = builder.Build();
@@ -371,6 +373,8 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+
+app.UseMiddleware<KernelStartupGate>();
 
 // Accept the public scheme and client IP only from loopback or explicitly trusted reverse proxies.
 // ASPNETCORE_FORWARDEDHEADERS_ENABLED inserts its own middleware first; use Chronicle's policy
@@ -454,7 +458,7 @@ if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
 app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
-app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+app.MapKernelHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 // Lets a client-side load balancer (e.g. LeastConnectionsLoadBalancerStrategy) ask this silo how
 // busy it is before deciding whether to connect to it - anonymous so it can be probed before the

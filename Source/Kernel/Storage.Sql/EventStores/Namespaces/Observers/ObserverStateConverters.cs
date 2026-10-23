@@ -21,6 +21,7 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
+            DeliveryFences = definition.DeliveryFences is null ? null : JsonSerializer.Serialize(definition.DeliveryFences, ObserverStateJson.Options),
             Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
@@ -40,7 +41,11 @@ public static class ObserverStateConverters
                     a.Occurred,
                     a.SequenceNumber.Value,
                     a.Messages,
-                    a.StackTrace)),
+                    a.StackTrace)
+                {
+                    Kind = a.Kind,
+                    DeliveryFence = a.DeliveryFence
+                }),
                 fp.IsResolved)
             {
                 IsQuarantined = fp.IsQuarantined,
@@ -76,7 +81,9 @@ public static class ObserverStateConverters
                     Occurred = a.Occurred,
                     SequenceNumber = a.SequenceNumber,
                     Messages = a.Messages,
-                    StackTrace = a.StackTrace
+                    StackTrace = a.StackTrace,
+                    Kind = a.Kind,
+                    DeliveryFence = a.DeliveryFence
                 }),
                 IsResolved = fp.IsResolved,
                 IsQuarantined = fp.IsQuarantined,
@@ -90,6 +97,7 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
+            DeliveryFences = state.DeliveryFences is null ? null : JsonSerializer.Deserialize<Observation.DeliveryFenceState[]>(state.DeliveryFences, ObserverStateJson.Options),
             Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,

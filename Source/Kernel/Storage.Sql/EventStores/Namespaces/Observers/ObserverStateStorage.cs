@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
@@ -76,23 +77,39 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
 
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var entity = state.ToSql();
-        var existing = await scope.DbContext.Observers.AsTracking()
-            .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
-        if (existing is null)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            await scope.DbContext.Observers.Insert(entity, PreserveControl);
-        }
-        else
-        {
-            PreserveControl(entity, existing);
+            var entity = state.ToSql();
+            var existing = await scope.DbContext.Observers.AsTracking()
+                .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+            if (existing is null)
+            {
+                await scope.DbContext.Observers.AddAsync(entity);
+            }
+            else
+            {
+                PreserveControl(entity, existing);
 
-            // The tracked control is a concurrency token: a competing write after this read
-            // fails the save rather than overwriting a newer revision with this snapshot.
-            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
-        }
+                // A competing control write after this read must still fail the concurrency check.
+                scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
+            }
 
-        await scope.DbContext.SaveChangesAsync();
+            try
+            {
+                await scope.DbContext.SaveChangesAsync();
+                return;
+            }
+            catch (DbUpdateException error) when (attempt == 0 && existing is null && StorageWriteConflicts.IsUnique(error))
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                if (!await scope.DbContext.Observers.AnyAsync(observer => observer.Id == entity.Id))
+                {
+                    throw;
+                }
+
+                SqlStorageTelemetry.RecoveredCollision("observer-state");
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -130,6 +147,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             Id = newId,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
+            DeliveryFences = existing.DeliveryFences,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,
