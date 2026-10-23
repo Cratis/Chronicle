@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,20 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     const int Port = 5432;
     readonly ConcurrentDictionary<Type, Lazy<Task<string>>> _templates = new();
     IContainer _container;
+    SqlCommandTimings? _commandTimings;
+
+    internal IntegrationTimings Timings { get; } = new(nameof(PostgreSqlFixture), "sql-specs", "postgresql");
+
+    internal T Track<T>(T context) where T : DbContext
+    {
+        if (!IntegrationTimings.Enabled) return context;
+        if (_commandTimings is null)
+        {
+            _commandTimings = new(Timings);
+            _commandTimings.Start();
+        }
+        return _commandTimings.Track(context);
+    }
 
     /// <summary>
     /// Gets the connection string for the container.
@@ -31,7 +47,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     public async Task<string> CreateDatabase()
     {
         var name = $"spec_{Guid.NewGuid():N}";
-        await Execute($"CREATE DATABASE \"{name}\"");
+        await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE \"{name}\""));
         return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ToString();
     }
 
@@ -45,7 +61,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     {
         var template = await _templates.GetOrAdd(typeof(TContext), static (_, fixture) => new Lazy<Task<string>>(fixture.MigrateTemplate<TContext>), this).Value;
         var name = $"spec_{Guid.NewGuid():N}";
-        await Execute($"CREATE DATABASE \"{name}\" TEMPLATE \"{template}\"");
+        await Timings.Run("sql-template-clone", () => Execute($"CREATE DATABASE \"{name}\" TEMPLATE \"{template}\""));
         return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ToString();
     }
 
@@ -62,7 +78,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
 
         var name = new NpgsqlConnectionStringBuilder(connectionString).Database;
-        await Execute($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)");
+        await Timings.Run("sql-database-drop", () => Execute($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)"));
     }
 
     /// <inheritdoc/>
@@ -74,15 +90,23 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .WithPortBinding(Port, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chronicle"))
             .Build();
-        await _container.StartAsync();
+        await Timings.Run("sql-container-start", () => _container.StartAsync());
     }
 
     /// <inheritdoc/>
     public async Task DisposeAsync()
     {
-        if (_container is not null)
+        try
         {
-            await _container.DisposeAsync();
+            if (_container is not null)
+            {
+                await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
+            }
+        }
+        finally
+        {
+            _commandTimings?.Dispose();
+            Timings.Complete();
         }
     }
 
@@ -94,9 +118,9 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .UseNpgsql(connectionString)
             .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
-        await using (var context = (TContext)Activator.CreateInstance(typeof(TContext), options)!)
+        await using (var context = Timings.Measure("ef-context-construction", () => Track((TContext)Activator.CreateInstance(typeof(TContext), options)!)))
         {
-            await context.Database.MigrateAsync();
+            await Timings.Run("ef-migration", () => context.Database.MigrateAsync());
         }
 
         // Closing the context returns its connection to the pool; PostgreSQL cannot copy an open template.
