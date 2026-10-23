@@ -251,6 +251,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   0E88E52D: Replayed(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   444B1A83: ReplayedSuccessfullySince(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber>, Cratis.Chronicle.Concepts.Events.EventType[], System.DateTimeOffset) -> Task
   1AEDA21E: ReportHandledEvents(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId, Cratis.Chronicle.Concepts.Events.EventCount>, Cratis.Orleans.Jobs.JobStepId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
+  B95DED3E: ReportHandledEventsBatch(Cratis.Orleans.Jobs.JobStepId, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.Jobs.HandledEventsReport>) -> Task
   318C290F: RestoreClientSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Clients.ConnectedClient, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery) -> Task
   2CE6A3A4: Retire() -> Task
   A635A9CE: SetHandledStats(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task

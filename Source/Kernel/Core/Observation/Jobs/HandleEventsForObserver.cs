@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 public class HandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -70,6 +70,7 @@ public class HandleEventsForObserver(
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
+    ReplayHandledEventsPage? _replayReports;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -185,6 +186,7 @@ public class HandleEventsForObserver(
     protected override async Task<Catch<JobStepResult>> PerformStep(HandleEventsForObserverState currentState, CancellationToken cancellationToken)
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
+        _replayReports = currentState.EventObservationState == EventObservationState.Replay ? new() : null;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -266,6 +268,7 @@ public class HandleEventsForObserver(
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
+                        if (!await FlushReplayReports()) return ClosedResult();
                         LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
                         return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
                     }
@@ -289,6 +292,7 @@ public class HandleEventsForObserver(
                             // the step again before it reports the partition.
                             var shortMessage = TransientTimeouts.ShortMessageFor(handleEventsException);
                             logger.StepTimedOut(shortMessage);
+                            if (!await FlushReplayReports()) return ClosedResult();
                             if (!Advanced(await FlushFromWork()))
                             {
                                 return ClosedResult();
@@ -303,6 +307,7 @@ public class HandleEventsForObserver(
                                 string.Empty));
                         }
 
+                        if (!await FlushReplayReports()) return ClosedResult();
                         await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, exceptionMessages, exceptionStackTrace, handleEventsException.ToFailureKind());
                         if (!Advanced(await FlushFromWork()))
                         {
@@ -331,6 +336,8 @@ public class HandleEventsForObserver(
                         }
                     }
                 }
+
+                if (!await FlushReplayReports()) return ClosedResult();
 
                 if (eventsRead.Length != 0)
                 {
@@ -362,16 +369,19 @@ public class HandleEventsForObserver(
         }
         catch (TaskCanceledException)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             LogCancelled(lastSuccessfullyHandledEventSequenceNumber);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
         }
         catch (Exception e) when (TransientTimeouts.IsTimeout(e))
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             var message = TransientTimeouts.ShortMessageFor(e);
             logger.StepTimedOut(message);
             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
@@ -381,6 +391,7 @@ public class HandleEventsForObserver(
         }
         catch (Exception e)
         {
+            if (!await FlushReplayReportsAfterFailure()) return ClosedResult();
             logger.FailedPerforming(e, nameof(HandleEventsForObserver));
             if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
             {
@@ -712,7 +723,7 @@ public class HandleEventsForObserver(
         switch (eventObserverResult.State)
         {
             case ObserverSubscriberState.Ok:
-                if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+                if (!await RecordAndReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken))
                 {
                     // This batch is neither checkpointed nor counted here. The next run resumes from the last durable
                     // checkpoint, so it handles every batch since then again; the observer recognizes the reports it
@@ -720,7 +731,6 @@ public class HandleEventsForObserver(
                     return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 }
 
-                await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
                 return await HandleFailedSubscriberResult(
@@ -734,6 +744,7 @@ public class HandleEventsForObserver(
             case ObserverSubscriberState.Disconnected:
                 var lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                 logger.EventHandlerDisconnected(partition, lastSuccessfullyHandledEventSequenceNumber);
+                if (!await FlushReplayReports()) return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
                 await _observer.PartitionFailed(partition, lastEventSequenceNumberAttempted, [SubscriberDisconnected], string.Empty, FailureKind.Disconnected);
                 if (!Advanced(await FlushFromWork()))
                 {
@@ -751,17 +762,48 @@ public class HandleEventsForObserver(
         }
     }
 
-    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
+    async Task<bool> RecordAndReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
     {
         var counts = handledEvents
             .Where(e => e.Context.SequenceNumber <= handledUpTo)
             .CountByEventType();
-        return TransientTimeouts.ReportHandledEventsWithoutFailing(
-            _observer,
-            new(partition, counts, JobStepId, handledUpTo),
-            TransientRetryDelay,
-            logger,
-            cancellationToken);
+        var report = new HandledEventsReport(partition, counts, JobStepId, handledUpTo);
+        if (_replayReports is not null)
+        {
+            _replayReports.Add(report);
+            return true;
+        }
+
+        if (!Advanced(await ReportFromWork(handledUpTo))) return false;
+        await TransientTimeouts.ReportHandledEventsWithoutFailing(_observer, report, TransientRetryDelay, logger, cancellationToken);
+        return true;
+    }
+
+    async Task<bool> FlushReplayReportsAfterFailure()
+    {
+        try
+        {
+            return await FlushReplayReports();
+        }
+        catch (Exception exception)
+        {
+            logger.FailedPerforming(exception, nameof(HandleEventsForObserver));
+            return true;
+        }
+    }
+
+    async Task<bool> FlushReplayReports()
+    {
+        if (_replayReports?.LastHandled.IsActualValue != true) return true;
+        var lastHandled = _replayReports.LastHandled;
+        var reports = _replayReports.Reports;
+        _replayReports.Clear();
+        if (!Advanced(await ReportFromWork(lastHandled))) return false;
+
+        // Events already handled before a stop still need their counts reported; cancellation only stops dispatch.
+        await TransientTimeouts.ReportHandledEventsBatchWithoutFailing(
+            _observer, JobStepId, reports, TransientRetryDelay, logger, CancellationToken.None);
+        return true;
     }
 
     async Task<(JobStepResult Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleFailedSubscriberResult(
@@ -781,13 +823,12 @@ public class HandleEventsForObserver(
                 ? failedEvent.Context.SequenceNumber
                 : eventObserverResult.LastSuccessfulObservation.Next();
 
-            if (!Advanced(await ReportFromWork(eventObserverResult.LastSuccessfulObservation)))
+            if (!await RecordAndReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken))
             {
                 return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
             }
 
             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-            await ReportHandledEvents(partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
         }
         else
         {
@@ -796,6 +837,7 @@ public class HandleEventsForObserver(
 
         logger.FailedHandlingEvents(partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
         var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
+        if (!await FlushReplayReports()) return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
         await _observer.PartitionFailed(partition, failedAt, eventObserverResult.ExceptionMessages, eventObserverResult.ExceptionStackTrace, FailureKind.Handling, failurePolicy: eventObserverResult.FailurePolicy);
         if (!Advanced(await FlushFromWork()))
         {

@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(1)]
+[Version(2)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -76,6 +76,14 @@ public interface IObserver : IGrainWithStringKey
     /// </para>
     /// </remarks>
     Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo);
+
+    /// <summary>
+    /// Reports one page of replay handled counts, retaining each partition's deduplication identity.
+    /// </summary>
+    /// <param name="reportedBy">The reporting job step.</param>
+    /// <param name="reports">The counts and last handled sequence number for each partition.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEventsBatch(JobStepId reportedBy, IReadOnlyList<Jobs.HandledEventsReport> reports);
 
     /// <summary>
     /// Get the subscription for the observer.
@@ -476,7 +484,7 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <param name="failedPartitions">The failures returned by the projection sink.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionsFailed(IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition> failedPartitions);
+    Task PartitionsFailed(IReadOnlyCollection<Storage.Sinks.FailedPartition> failedPartitions);
 
     /// <summary>
     /// Notify that the partition has recovered.
