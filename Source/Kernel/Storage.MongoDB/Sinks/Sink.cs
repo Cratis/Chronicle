@@ -1358,7 +1358,7 @@ public class Sink(
 
             // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
             // belongs to a delete still queued and must survive the flush.
-            var batch = new BulkBatch([.._bulkOperations], new(_bulkOperationMetadata), [.._bulkPendingDeletes], _inFlight.Select(batch => batch.Completion.Task).ToArray());
+            var batch = new BulkBatch([.. _bulkOperations], new(_bulkOperationMetadata), [.. _bulkPendingDeletes], _inFlight.Select(batch => batch.Completion.Task).ToArray());
             ClearBulkOperations();
             _inFlight.Add(batch);
             return batch;
