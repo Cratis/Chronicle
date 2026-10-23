@@ -166,9 +166,43 @@ internal static class TransientTimeouts
     /// stopped while waiting, are the counts given up, and that is logged as an error rather than skipped quietly.
     /// </para>
     /// </remarks>
-    internal static async Task ReportHandledEventsWithoutFailing(
+    internal static Task ReportHandledEventsWithoutFailing(
         IObserver observer,
         HandledEventsReport report,
+        TimeSpan retryDelay,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        return ReportHandledCountsWithoutFailing(
+            () => observer.ReportHandledEvents(report.Partition, report.Counts, report.ReportedBy, report.HandledUpTo),
+            [report],
+            retryDelay,
+            logger,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Reports a replay page's handled counts without failing the step, retrying with the same report identities.
+    /// </summary>
+    /// <param name="observer">The <see cref="IObserver"/> to report to.</param>
+    /// <param name="reportedBy">The job step reporting the page.</param>
+    /// <param name="reports">The per-partition reports to send together.</param>
+    /// <param name="retryDelay">How long to wait before retrying.</param>
+    /// <param name="logger">The logger to record retries and abandoned reports with.</param>
+    /// <param name="cancellationToken">Cancels waiting to send the reports again.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static Task ReportHandledEventsBatchWithoutFailing(
+        IObserver observer,
+        JobStepId reportedBy,
+        IReadOnlyList<HandledEventsReport> reports,
+        TimeSpan retryDelay,
+        ILogger logger,
+        CancellationToken cancellationToken) => ReportHandledCountsWithoutFailing(
+            () => observer.ReportHandledEventsBatch(reportedBy, reports), reports, retryDelay, logger, cancellationToken);
+
+    static async Task ReportHandledCountsWithoutFailing(
+        Func<Task> send,
+        IReadOnlyList<HandledEventsReport> reports,
         TimeSpan retryDelay,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -177,22 +211,22 @@ internal static class TransientTimeouts
         {
             try
             {
-                await observer.ReportHandledEvents(report.Partition, report.Counts, report.ReportedBy, report.HandledUpTo);
+                await send();
                 return;
             }
             catch (Exception ex) when (attempt < MaximumAttempts && !cancellationToken.IsCancellationRequested)
             {
-                logger.RetryingHandledCountsReport(report.Partition, attempt, ShortMessageFor(ex));
+                foreach (var report in reports) logger.RetryingHandledCountsReport(report.Partition, attempt, ShortMessageFor(ex));
             }
             catch (Exception ex)
             {
-                logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, ShortMessageFor(ex));
+                foreach (var report in reports) logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, ShortMessageFor(ex));
                 return;
             }
 
             if (!await DelayUnlessCancelled(retryDelay, cancellationToken))
             {
-                logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, "the step was stopped");
+                foreach (var report in reports) logger.HandledCountsReportAbandoned(report.Partition, report.HandledUpTo, "the step was stopped");
                 return;
             }
         }
