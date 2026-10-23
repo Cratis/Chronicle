@@ -13,6 +13,7 @@ using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Antiforgery;
@@ -47,7 +48,18 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-var builder = WebApplication.CreateBuilder(args);
+SchemaCommand schemaCommand;
+try
+{
+    schemaCommand = SchemaCommand.Parse(args);
+}
+catch (ArgumentException exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
+var builder = WebApplication.CreateBuilder(schemaCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 logger = builder.Logging.Services
@@ -62,7 +74,45 @@ logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
-var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+ChronicleOptions chronicleOptions;
+SchemaAction schemaAction;
+try
+{
+    schemaAction = schemaCommand.Action != SchemaAction.None ? schemaCommand.Action
+        : builder.Configuration.GetValue<SchemaAction>($"{ChronicleOptions.SectionPath}:Storage:SchemaAction");
+    if (!Enum.IsDefined(schemaAction))
+    {
+        throw new ArgumentException("Storage.SchemaAction is invalid.");
+    }
+
+    if (schemaAction != SchemaAction.None)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:SchemaMode"] =
+            (schemaAction == SchemaAction.VerifyAndExit ? SchemaMode.Verify : SchemaMode.Migrate).ToString();
+    }
+
+    chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
+    {
+        throw new ArgumentException("Storage.SchemaMode is invalid.");
+    }
+}
+catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
+if (schemaAction != SchemaAction.None)
+{
+    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction);
+}
+
+if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && !SchemaCommandRunner.IsSql(chronicleOptions.Storage.Type))
+{
+    SchemaProvisionerLogging.SchemaModeIgnored(logger, chronicleOptions.Storage.Type);
+}
+
 ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
@@ -71,7 +121,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup", tags: ["ready"]);
 
 if (chronicleOptions.Features.Api)
 {
@@ -470,6 +520,8 @@ catch (OperationCanceledException)
     // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
     logger.ServerShutdownDuringStartup();
 }
+
+return 0;
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

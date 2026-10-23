@@ -51,7 +51,7 @@ public class SqlScopeStorage(IDatabase database, JsonSerializerOptions jsonSeria
         }
         else
         {
-            dbScope.DbContext.Scopes.Add(ToEntity(scope));
+            await dbScope.DbContext.Scopes.Upsert(ToEntity(scope));
             await dbScope.DbContext.SaveChangesAsync(cancellationToken);
         }
     }

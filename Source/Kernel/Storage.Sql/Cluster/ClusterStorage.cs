@@ -81,6 +81,8 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
             {
                 throw;
             }
+
+            SqlStorageTelemetry.RecoveredCollision("event-store");
         }
 
         await PushEventStoresToSubjectAsync(_eventStoresSubject);
