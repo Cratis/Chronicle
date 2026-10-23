@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
-using Orleans.Runtime;
+using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_Clustering;
 
