@@ -22,7 +22,7 @@ public interface ISinkWrites
     bool IsInBatch { get; }
 
     /// <summary>
-    /// Runs a group of writes that must commit together or not at all.
+    /// Runs a group of writes atomically within the configured cap; larger fenced groups use retry-safe capped transactions.
     /// </summary>
     /// <typeparam name="T">The type of result.</typeparam>
     /// <param name="work">The writes; may be called again from the start after a transient transaction error.</param>
@@ -66,6 +66,14 @@ public interface ISinkWrites
     /// <param name="filter">The filter.</param>
     /// <returns>The <see cref="DeleteResult"/>.</returns>
     Task<DeleteResult> DeleteOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter);
+
+    /// <summary>
+    /// Deletes every matching document.
+    /// </summary>
+    /// <param name="collection">The collection to write.</param>
+    /// <param name="filter">The filter.</param>
+    /// <returns>The <see cref="DeleteResult"/>.</returns>
+    Task<DeleteResult> DeleteMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter);
 
     /// <summary>
     /// Executes an ordered bulk write.

@@ -55,7 +55,8 @@ public class SinkFactory(
         var mongoDBSinkCollections = new SinkCollections(
             readModel,
             readModelDatabase,
-            serviceProvider.GetRequiredService<ILogger<SinkCollections>>());
+            serviceProvider.GetRequiredService<ILogger<SinkCollections>>(),
+            writes);
         var mongoDBChangesetConverter = new ChangesetConverter(
             readModel,
             mongoDBConverter,
@@ -82,7 +83,11 @@ public class SinkFactory(
             return UnfencedSinkWrites.Instance;
         }
 
+        Task.Run(() => MongoTopology.RequireTransactions(readModelDatabase)).GetAwaiter().GetResult();
         var tokens = new ClaimingFenceTokenSource(new FenceGates(readModelDatabase), $"{eventStore}/{@namespace}/{readModel.Identifier}", readModel.LatestGeneration.Value);
-        return new FencedSinkWrites(tokens, new FencedBatchExecutor(new MongoFenceStore(readModelDatabase)));
+        return new FencedSinkWrites(
+            tokens,
+            new FencedBatchExecutor(new MongoFenceStore(readModelDatabase)),
+            serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.ReadModels.MaxBatchSize);
     }
 }

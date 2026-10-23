@@ -38,6 +38,10 @@ public sealed class UnfencedSinkWrites : ISinkWrites
         collection.DeleteOneAsync(filter);
 
     /// <inheritdoc/>
+    public Task<DeleteResult> DeleteMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter) =>
+        collection.DeleteManyAsync(filter);
+
+    /// <inheritdoc/>
     public Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken) =>
         collection.BulkWriteAsync(requests, cancellationToken: cancellationToken);
 }
