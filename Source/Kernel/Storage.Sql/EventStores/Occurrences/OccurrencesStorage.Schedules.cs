@@ -119,6 +119,11 @@ public partial class OccurrencesStorage<TContext>
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error) || StorageWriteConflicts.IsTransactionConflict(error))
         {
             // The entire transaction rolls back; the engine recomputes the bounded turn.
+            if (StorageWriteConflicts.IsUnique(error))
+            {
+                SqlStorageTelemetry.RecoveredCollision("schedule-turn");
+            }
+
             return false;
         }
     }
@@ -145,6 +150,7 @@ public partial class OccurrencesStorage<TContext>
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
             // Only these single-row inserts are attempted in this context; a primary-key race inserts nothing.
+            SqlStorageTelemetry.RecoveredCollision("schedule-insert");
             return false;
         }
     }

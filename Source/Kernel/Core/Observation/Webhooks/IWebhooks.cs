@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -15,6 +16,11 @@ public interface IWebhooks : IGrainWithStringKey
     /// Ensure the existence of the webhook manager.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect and nothing to gain from queueing it behind real work.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>

@@ -14,8 +14,10 @@
 
 Use the [same shop concepts](../../cratis-fundamentals-concept/references/shop-generation.md):
 CustomerId is `cus_` + ULID; OrderId is context-aware TypeID; InviteCode is NanoID;
-ApiKey is secret `Bytes(32)` with `[NotAudited]`. The concept owns the factory,
-not a command property or a per-call random implementation.
+ApiKey is secret `Bytes(32)` with `[NotAudited]`. InvoiceNumber is a date/checksum
+pattern and TicketNumber an inclusive random Int64 pickup ticket. The concept owns
+the factory, not a command property or a per-call random implementation.
+Requires Fundamentals 7.25.0 for Pattern/Integer factories; check `dotnet list package --include-transitive`, upgrade or retain existing factories on older versions.
 
 The following complete command declarations depend on those Shop concepts and
 `Cratis.Arc.Core` / `Cratis.Arc.Chronicle`. They allocate response values only, not persisted entities or events;
@@ -88,16 +90,25 @@ and captured-time semantics, never one exact random suffix.
 - Existing/client-owned IDs stay command inputs; services/read models remain
   ordinary dependencies. Generation is not authorization or tenant isolation.
 - Randomness is not idempotency, storage freshness or a gapless invoice allocator.
-  Arc#3129 freshness is not delivered by this parameter API; Stage's v15 explicit
-  scopes are a separate realization.
+  Stage's explicit whole-source scopes protect generated destinations, not
+  every generated payload code; enforce payload uniqueness separately.
 - ApiKey is a credential, never a Chronicle stream ID: event-source IDs are plaintext
   metadata and cannot be encrypted. Identify the key with a separate `ApiKeyId` and keep
   ApiKey a secret value property. `[NotAudited]` protects
   causation only. Never log captures, return secrets on public endpoints, or
   append plaintext authentication credentials. Retain a hash; for retained
   operational secrets use `[Encrypted]` plus `[NotAudited]`.
-- Screenplay's generated context and secret execution remain unavailable. A
-  compiled Arc factory does not imply that it can recover or render as `.play`.
+- Readable patterns are not gapless/sequential invoice allocators or secrets;
+  check digits catch typos, not forgery. Short codes need uniqueness handling;
+  generation alone does not reserve a code.
+- Screenplay admits attached generation rules with Now/Tenant context, but its
+  reference evaluator only consumes pinned results. Generated secrets remain
+  refused. A compiled Arc factory does not imply that it can recover or render
+  as `.play`. Read [generated-value recovery](../../cratis-screenplay-legacy-extraction/references/generated-recovery.md)
+  for Arc.Screenplay prerequisites and refusal boundaries, and
+  [Stage admission](../../cratis-stage-rendering-and-sandbox/references/admission.md)
+  for checksum, pattern/random and `generate rule` rendering prerequisites (Stage 4.136.0 renders
+  `generate rule`; the Host and legacy engine still refuse it with STAGE-ESM-028).
 
 ## Sources
 

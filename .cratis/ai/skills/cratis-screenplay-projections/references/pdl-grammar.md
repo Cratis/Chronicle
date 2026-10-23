@@ -6,7 +6,10 @@
 - Grammar
 - Parser regexes
 - Diagnostics
+- Event scope
+- Projection-level directives
 - Syntax that parses but means something else
+- Flat composite read-model keys
 - Worked examples
 
 Checked against `Documentation/screenplay/projections/{grammar,semantic-model,keys,variants}.md`
@@ -70,11 +73,11 @@ NestedBlock     = "nested", Ident, NL,
 ClearWithBlock  = "clear", "with", TypeRef, NL ;
 
 RemoveWithBlock = "remove", "with", TypeRef, [ "key", Expr ], NL,
-                  [ INDENT, [ ParentDecl ], DEDENT ] ;
+                  [ INDENT, [ CompositeKeyDecl ], [ ParentDecl ], DEDENT ] ;
 RemoveWithJoinBlock = "remove", "via", "join", "on", TypeRef, [ "key", Expr ], NL ;
 
 KeyDecl         = "key", Expr, NL ;
-CompositeKeyDecl= "key", TypeRef, [ "{" ], NL,
+CompositeKeyDecl= "key", [ TypeRef ], [ "{" ], NL,
                   INDENT, KeyPart, { NL, KeyPart }, DEDENT, [ "}", NL ] ;
 KeyPart         = Ident, "=", Expr ;
 
@@ -147,20 +150,53 @@ LiteralKeyword  = "literal", " ", Literal ;   (* parsed at the Expr level *)
 | `PLAY0191` | A read model is built by more than one projection or reducer |
 | `PLAY0192` | A read model is declared more than once |
 | `PLAY0295`–`PLAY0299` | An `$eventContext` path the event-context catalog does not have; `PLAY0299` also warns when a dynamic dictionary key uses a `$` source other than `$eventContext` |
-| `PLAY0380` | Chronicle drops part of a construct: `all` below the top level, or `automap` on a joined event |
+| `PLAY0380` | Only `all` inside `children`/`nested`: loses its subscription to every event type and behaves as `every` |
 | `PLAY0381` | A projection-level `key` routes no event |
 | `PLAY0382`–`PLAY0385` | Variant errors: no `enters on`, shared mapping missing on a variant, duplicate variant name, entering event claimed twice |
 | `PLAY0397` | Inline code uses a language line instead of a tagged fence |
 | `PLAY0398` / `PLAY0399` | A reducer mixes bodied and body-less rules / observes one event twice |
 
+## Event scope
+
+Requires Screenplay 4.212.3 (`screenplay --version`) for the ordinary compilation
+error `PLAY0801` (`DuplicateEventInProjectionScope`) in both compilers; older
+executable binding rejected duplicate uses later with `PLAY0273`.
+
+A level is the projection root, one `children` block, one `nested` block or one
+variant. Within that level, `from` (including each event in `from A, B` lists),
+`remove with`, `remove via join` and `clear with` share one set of event names.
+All `join` events at that level share a separate set: an event may occur once in
+`from` and once in a join, but not twice in either set. Each children, nested and
+variant block starts fresh sets; separate projections are independent.
+
+The check compares authored event names ordinally, without resolving
+qualifications or generations. It reports the second and each later reference;
+identical or different keys do not change the rule. One event cannot update two
+rows of the same level through two `from` blocks with different keys. Combine
+mappings for the same row into one block. Only a genuinely second domain fact
+warrants another event; never invent events only to satisfy the read side.
+These scope checks do not establish executable or renderer admission.
+
+## Projection-level directives
+
+`description "..."` (or a fenced text block) on the projection header (report-only `PLAY0270`; variants
+and nested blocks take none), `no automap`, `sequence <name>`, `file <path>`. `sequence` is a realization
+concern and does not bind to the executable model. A mapping target may end in a dynamic dictionary
+key, `count eventCountByType.$eventContext.eventType.id` (one entry per distinct value); only
+`$eventContext` resolves there, any other `$` text is a literal key with warning `PLAY0299`.
+
 ## Syntax that parses but means something else
+
+An `automap` / `no automap` under a joined event (`with …`) is honored for that
+event alone; without one, it follows its level's auto-map. Requires Screenplay
+4.212.4 (`screenplay --version`) for executable binding; older binders replace the
+joined event's setting with the level's. It does not report `PLAY0380`.
 
 | Syntax | What Chronicle and the executable model do |
 | --- | --- |
 | `key` on the projection | Nothing: events route by the `from` key, then the event source id (`PLAY0381`) |
 | `from X` with no key | Routes by the event source id, never by another `from`'s key |
 | `join … on …` | Updates existing instances only; never creates one; the name after `join` is discarded |
-| `automap` under a joined event | Replaced by the auto-map of the join's level (`PLAY0380`) |
 | `all` inside `children`/`nested` | Behaves as `every` (`PLAY0380`) |
 | `$causedBy.<x>` | Does not bind; use `$eventContext.causedBy.<x>` |
 | Templates in mappings or keys | Do not bind |
@@ -172,6 +208,45 @@ LiteralKeyword  = "literal", " ", Literal ;   (* parsed at the Expr level *)
 | `remove via join` on a projection's own level | Chronicle's engine wires it as a child removal; binds, but the reference execution plan refuses it |
 | `all` beside removals, `children` or `nested` | Binds, but the reference execution plan refuses it |
 | `join`, `children` or `remove via join` inside `nested` | Not wired by Chronicle's engine; binds, but the reference execution plan refuses it |
+
+## Flat composite read-model keys
+
+Requires Screenplay 4.204.0 (ESM v27; `screenplay --version`); older binders refuse a
+read model with two or more `key` marks with PLAY0268.
+
+A read model with several flat `key` properties takes an **untyped** `key` block (no
+type name) in each root `from` and `remove with`, naming every key part once as
+`<property> = <expr>`. It differs from the typed composite key above, which fills one
+single property of composite type.
+
+```screenplay excerpt
+projection PaymentTotals => PaymentTotals
+  no automap
+  from PaymentReceived
+    key
+      invoiceId = invoice
+      method = method
+    total = amount
+  remove with PaymentRemoved
+    key
+      invoiceId = invoice
+      method = method
+```
+
+The block applies to every event the `from` names. Part order does not matter; creating
+an instance writes each part to its property even with `no automap`, and a mapping that
+contradicts a part fails the projection. `remove with` deletes only the instance whose
+parts all match, and a later `from` recreates it.
+
+| Written | Code |
+| --- | --- |
+| `from` or `remove with` with no key, `key <expr>`, an inline `from A key x`, or `parent` | PLAY0661 |
+| A part missing from the block | PLAY0661 |
+| An unknown, repeated or ill-typed part, a non-simple expression, or a typed key block on a composite-keyed read model | PLAY0662 |
+| `join`, `children`, `remove via join`, `every`, `all`, `nested`, `clear with`, `variant`, or a reducer on the read model | PLAY0268 |
+
+The complete executable example, with queries and specifications, is in read-surface
+`references/named-keys.md`.
 
 ## Worked examples
 

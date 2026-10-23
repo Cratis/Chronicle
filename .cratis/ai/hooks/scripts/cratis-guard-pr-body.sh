@@ -25,7 +25,7 @@ if ! command -v node >/dev/null 2>&1; then
         exit 0
     fi
     root=$(git rev-parse --show-toplevel 2>/dev/null || true)
-    if ! grep -Eq "^[[:space:]]*uses:[[:space:]]*['\"]?Cratis/Workflows/\\.github/workflows/verify-(release-notes|semver-label|release-intent)\\.yml@" "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml 2>/dev/null; then
+    if ! grep -Eq "^[[:space:]]*uses:[[:space:]]*['\"]?Cratis/Workflows/\\.github/workflows/verify-(pull-request-policy|release-notes|semver-label|release-intent)\\.yml@" "$root"/.github/workflows/*.yml "$root"/.github/workflows/*.yaml 2>/dev/null; then
         exit 0
     fi
     # JSON makes fail-open warnings visible to Claude; stderr exposes the same warning to Pi.

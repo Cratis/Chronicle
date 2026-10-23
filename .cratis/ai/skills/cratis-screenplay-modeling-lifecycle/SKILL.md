@@ -23,10 +23,10 @@ an unproven pass.
    `mcpServers.screenplay.root` in `.cratis/ai.json` opts in (even an empty configured root).
    The invariant is in `general.md` ("Model first").
    A behavior is a **contract** only when an accepted (committed) model under the root covers it.
-   A direct user request to model a scope is consent for that scope. Run `scripts/model-first-status.mjs` from the repository with Node.js and Git:
+   A direct user request to model a scope is consent for that scope. A committed model the project marks `modelFirst.frozen` in `.cratis/ai.json` is generated evidence, not opted in (reason `frozen-model`): read it, never regenerate or edit it unless the request names that `.play` path or model; a generic "regenerate all" skips it and says so. Run `scripts/model-first-status.mjs` from the repository with Node.js and Git:
    `node <skill-directory>/scripts/model-first-status.mjs [--root <repository-relative-dir>] [--json]`.
    Read-only roots: `--root`, configuration, then discovery from HEAD project paths (drafts only if none). Discovery prefers legacy `.cratis/screenplay/`, else the common folder, else `Source/`, `src/`, `Screenplay/`. It excludes hidden/build/docs/samples/examples/scratch/test fixtures from discovery and acceptance, including at `.`; explicit roots include everything beneath them.
-   Output: root, reason, file counts, drafts and model changes. Exits: **0 opted in**, **1 not opted in**, **2 could not run** (Git/configuration/arguments). Treat 2 as blocked, not code-first.
+   Output: root, reason, frozen marker, file counts, drafts, model changes and the resolved `process` block. Exits: **0 opted in**, **1 not opted in**, **2 could not run** (Git/configuration/arguments). Treat 2 as blocked, not code-first.
    Run `scripts/model-first-status.mjs --self-test` to plant and check verdict fixtures; it executes `scripts/model-first-self-test.mjs` and prints the checked count on success.
    Read `references/opt-in.md` when checking the project configuration mechanism.
 2. **Not opted in:** continue code-first; never force a model (framework, brownfield,
@@ -76,7 +76,7 @@ or **critic** (P4-P5: strict, report first, fix in a separate batch).
 ## Verdicts (independent evidence, not a ladder)
 | Verdict | Meaning | Does not prove |
 |---|---|---|
-| V1 authorable | compiles, warnings as errors | meaning, binding |
+| V1 authorable | compiles, warnings as errors (declared gate) | meaning, binding |
 | V2 executable diagnostics | the executable model produces none | that specs run |
 | V3 binding-ready | the model binds | that any spec passes |
 | V4 reference specs run | engine, expected vs discovered | rendering or build health |
@@ -86,7 +86,7 @@ Report all five at checkpoints and handoffs, each a result or "not run: <reason>
 
 ## Lifecycle
 P0 intake, P1 discover, P2 model, P3 specify, P4 self-check, P5 independent review, P6 accept
-(bound to a source identity), P7 execute, P8 render or fall back, P9 verify. Each phase has
+(bound to a source identity; one role or split meaning and commit roles), P7 execute, P8 render or fall back, P9 verify. Each phase has
 **Input / Carry-forward / Gate** in `references/phases.md`. Read `references/phases.md` when entering, skipping, or transitioning between phases. Gates bind: a phase ends when its
 gate holds against the current `.play` and fresh tool output, never memory. A failing item is
 fixed, accepted by the user, or recorded as an open question with its assumption; never
@@ -146,7 +146,7 @@ never a state copy, an attestation flag, or `handler` prose.
 P5 needs a review in a fresh context by an agent that authored nothing in scope; label a same-model review as such, and the user decides whether it is enough. Read [references/independent-review.md](references/independent-review.md) for model-family choice and what each packet records.
 
 ## Session state, report and packet
-State lives in `.ai-work/screenplay/<model-slug>/STATE.md` (untracked, overwritten and bounded); the phase report is exhaustive; the handoff packet is about 40 lines and opens with `Outcome:`. Templates and full contents:
+State lives in `.ai-work/screenplay/<model-slug>/STATE.md` (untracked, overwritten and bounded). Projects may route decisions, work items, acceptance roles and agent addenda; read `references/project-process.md` when `.cratis/ai.json` has `process` or `modelFirst`. The phase report is exhaustive; the handoff packet is about 40 lines and opens with `Outcome:`. Templates and full contents:
 
   Read `references/handoff-template.md` when writing state, packets, questions, or edit requests; `references/phase-report-inventories.md` when producing a phase report; `references/reasoning-notes.md` when recording durable rationale in `documentation`; and `references/code-reading-and-tokens.md` before choosing code-reading scope or compressing output.
 

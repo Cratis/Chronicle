@@ -55,11 +55,13 @@ identity (all such queries must agree). Only with no single-instance identifier
 and an admitted list query does the binder infer an unambiguous `*Id`; queryless
 read models need an explicit `key`. See named keys below for collection-key exclusions.
 One explicit key binds byte-identically to equivalent inference. Several marks
-form a composite key, supplied by name in query/read
-`by` blocks. Composite keys and block queries remain
-**authoring-only** (PLAY0268); the scalar optional snapshot shape binds.
-Read [named keys](references/named-keys.md) for complete examples, trigger/command
-reads, all-parts fixtures, PLAY0660–0662 and command-read-only PLAY0661 repair.
+form a flat composite key: an optional single-instance query names every part in a
+`by` block, a list query narrows with equality filters, and fixtures state every part.
+Requires Screenplay 4.204.0 (ESM v27; `screenplay --version`); older binders refuse
+several key marks with PLAY0268. A list query over such a read model cannot use a
+`by` block (PLAY0268).
+Read [named keys](references/named-keys.md) for one complete executable example,
+trigger/command reads, all-parts fixtures, PLAY0660–0662 and command-read-only PLAY0661 repair.
 A `=>` target resolving to an event is an event-target builder, not a read model;
 keep event and read-model names distinct (see projections' public-event targets).
 
@@ -76,10 +78,15 @@ query ListInvoices => InvoiceListReadModel[]
   authorize IsAuthenticated
 ```
 
+A deliberately public query (no identity needed) uses a policy with `require anonymous`
+as its whole authorization, ideally in a separate public module; leaving `authorize` off
+is not the same thing. Rules and diagnostics:
+[anonymous policy](../cratis-screenplay-command-surface/references/policy-persona-seed.md#anonymous-policy).
+
 **Name the compiler and renderer.** Optional keyed queries and collection queries
 bind, including `observable`. Caller-supplied equality
 filters on collections bind as ESM v14; `from`, single-result filters, `scoped to`,
-`performer` and composite `by` remain PLAY0268, each with its reason. Read
+and a `by` block on a list query (or on a non-optional single result) remain PLAY0268, each with its reason. A `performer` query is not refused: it is an opaque read (PLAY0270 information) left out of the executable model ([version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)). Read
 [equality filters](references/equality-filters.md) for the admitted shape, a complete
 compiled specification model and the Stage/CLI ceilings. Keep a list the domain needs.
 
@@ -160,7 +167,7 @@ precondition. It takes a `file` reference or an inline block in a tagged fence
 (` ```csharp `, ` ```sql `), and is the query's counterpart to a command's
 `handler`. The parser accepts any registered inline language and does not reject
 a nonsensical one, so the choice is yours to get right. Performer code is opaque:
-Screenplay never runs it.
+Screenplay never runs it. It is reported as information `PLAY0270` and left out of the executable model; a specification that reads it is left out while every other specification still runs. Older compilers refuse it with PLAY0268: see the [version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does).
 
 A read model a performer composes needs no projection, and no event builds it.
 Specify it from state with `given readmodel`, then `when query <Query>` with the
@@ -177,13 +184,17 @@ Caller-supplied equality filters on collections select ESM v14 (Requires Screenp
 primitive/concept/enum properties, same nominal type ignoring optionality, no
 `from`, distinct names not repeating `by`. `by` and supplied filters AND together;
 optional filters may be omitted, but supplied null is refused. PLAY0268 still
-rejects context sources, single-result filters, opaque scope/performer and
-composite `by`; a single non-optional result remains unadmitted too.
+rejects context sources, single-result filters, opaque scope and
+a `by` block on a list query (or on a non-optional single result).
 Authorization runs before lookup, ANDed with module/feature gates; policies see
 only `by`, never filters. Pin denial with `given caller` and `then denied`.
 Specs pass `by` and filters by name (PLAY0468 for unknown, repeated or missing
 required arguments); collection results match by read model/key regardless of
 row order. Details and renderer limits: [equality filters](references/equality-filters.md).
+
+A reducer-built view is keyed by event-source id, so a single-instance `by` of another
+nominal type warns `PLAY0690`. Rebuild it as a projection keyed on each `from`: projections
+[reducer identity](../cratis-screenplay-projections/references/reducer-identity.md).
 
 ## `screen` — three levels
 
@@ -264,9 +275,8 @@ choosing a whole action list rather than one labeled command, use block-form
 **Inside out:** the slice, then the enclosing feature, then the module, then the
 document. The innermost match wins.
 
-That rule exists because a generated document cannot make every name unique — one
-real application declares 76 queries under 37 distinct names, with `All` appearing
-21 times. Two sibling slices can each declare `All`, and each screen gets its own.
+Sibling slices may each declare `All`; each screen resolves its own query.
+Read `references/named-keys.md` when query scope affects identity inference.
 
 Reach across slices by qualifying with **any trailing part** of the scope.
 Excerpt: `Queue` and `Deviations` are sibling slices that each declare `All`.
@@ -301,8 +311,9 @@ binding failures are errors.
 - [ ] `observable` is present exactly where the caller should see changes without
       asking again.
 - [ ] Every authorized query has a specification with `given caller`, including a
-      `then denied` case.
+      `then denied` case (a query authorized only by an anonymous policy may omit `given caller`).
 - [ ] Each read model has exactly one builder and every field traces to an event.
+- [ ] A reducer-built view's `by` type matches its events' event-source identity (`PLAY0690`).
 - [ ] No screen reference is left ambiguous or unresolved.
 - [ ] Every UI binding that consumes screen data (component context, toolbar
       parameter, dialog input, outlet route) has a source in the screen contract

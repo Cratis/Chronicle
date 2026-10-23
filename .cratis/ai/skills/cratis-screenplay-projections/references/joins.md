@@ -36,7 +36,8 @@ A join cannot declare its own key or trigger removal — that is
 | `increment <prop>` | +1, expressing *modifying state* |
 | `decrement <prop>` | −1 |
 | `add <prop> by <expr>` | += expression |
-| `subtract <prop> by <expr>` | −= expression |
+| `add <prop> by <a> * <b>` | += the exact product of two values (ESM v29, decision 0098); only after `by`, one `*` |
+| `subtract <prop> by <expr>` | −= expression (also `by <a> * <b>`) |
 
 `count` and `increment` behave identically; the difference is intent. The target
 must be numeric.

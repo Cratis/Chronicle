@@ -75,7 +75,6 @@ public class CapturesStorage(EventStoreName eventStore, IDatabase database) : IC
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.Captures.Upsert(capture.ToSql());
-        await scope.DbContext.SaveChangesAsync();
         await NotifyChange();
     }
 
@@ -93,7 +92,6 @@ public class CapturesStorage(EventStoreName eventStore, IDatabase database) : IC
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.CaptureObservations.Upsert(observation.ToSql());
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

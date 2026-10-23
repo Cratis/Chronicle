@@ -3,22 +3,27 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Storage.Observation;
 
 using KernelObserverRemovalResult = Cratis.Chronicle.Concepts.Observation.ObserverRemovalResult;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_removing_observer;
 
 /// <summary>
-/// Most observers are on the event log, and a caller that has only ever seen an observer in a listing has no reason to
-/// know it has to name a sequence. An empty value resolves to the log rather than to an event sequence with no name,
-/// whose grain key would address an observer that does not exist and report nothing to remove.
+/// An omitted sequence follows the stored observer definition rather than assuming the event log.
 /// </summary>
 public class and_no_event_sequence_is_given : given.all_dependencies
 {
-    void Establish() =>
+    readonly EventSequenceId _eventSequenceId = "inbox-source";
+
+    void Establish()
+    {
+        _observerDefinitionsStorage.Get("some-observer").Returns(new ObserverDefinition(
+            "some-observer", [], _eventSequenceId, Concepts.Observation.ObserverType.Reactor, Concepts.Observation.ObserverOwner.Client, true));
         _observerRemover
             .Remove(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.Observation.ObserverId>(), Arg.Any<EventSequenceId>())
             .Returns(KernelObserverRemovalResult.Removed);
+    }
 
     async Task Because() => await _observers.RemoveObserver(new RemoveObserver
     {
@@ -28,9 +33,9 @@ public class and_no_event_sequence_is_given : given.all_dependencies
         EventSequenceId = string.Empty
     });
 
-    [Fact] async Task should_remove_from_the_event_log() =>
+    [Fact] async Task should_remove_from_the_observers_inbox() =>
         await _observerRemover.Received(1).Remove(
             Arg.Any<Concepts.EventStoreName>(),
             Arg.Any<Concepts.Observation.ObserverId>(),
-            EventSequenceId.Log);
+            _eventSequenceId);
 }

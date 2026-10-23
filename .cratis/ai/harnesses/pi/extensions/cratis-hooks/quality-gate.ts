@@ -286,6 +286,15 @@ export function tailLines(file: string, lines: number): string {
 
 export type Fingerprint = { kind: "ok"; value: string; root: string } | { kind: "not-repository" } | { kind: "unknown"; reason?: string };
 
+/**
+ * Git's discovery failure, in both wordings: "(or any of the parent directories)" and, when discovery stops at a
+ * filesystem boundary, "(or any parent up to mount point /tmp)". A broken GIT_DIR ("not a git repository: '<path>'")
+ * is not a non-repository, so it stays unknown.
+ */
+export function isNotRepositoryError(stderr: string): boolean {
+	return stderr.includes("not a git repository (or any ");
+}
+
 /** Digest the working tree; a Git failure or deadline is unknown, never proof that no gate applies. */
 export async function workingTreeFingerprint(cwd: string, timeoutMs = FINGERPRINT_TIMEOUT_MS, signal?: AbortSignal): Promise<Fingerprint> {
 	const hash = createHash("sha256");
@@ -298,7 +307,7 @@ export async function workingTreeFingerprint(cwd: string, timeoutMs = FINGERPRIN
 	};
 	const root = await git(["rev-parse", "--show-toplevel"]);
 	if (!root || root.aborted || root.timedOut || root.failed) return { kind: "unknown" };
-	if (root.code !== 0) return root.stderr.includes("not a git repository (or any of the parent directories)") ? { kind: "not-repository" } : { kind: "unknown" };
+	if (root.code !== 0) return isNotRepositoryError(root.stderr) ? { kind: "not-repository" } : { kind: "unknown" };
 	const status = await git(["status", "--porcelain=v2", "-z", "--untracked-files=all", "--ignore-submodules=none"]);
 	if (!status || status.code !== 0 || status.aborted || status.timedOut || status.failed || status.stdoutTruncated) return { kind: "unknown" };
 	const head = await git(["rev-parse", "--verify", "-q", "HEAD"]);

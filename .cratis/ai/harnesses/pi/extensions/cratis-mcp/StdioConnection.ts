@@ -16,7 +16,7 @@ export class StdioConnection {
     private _termination?: ReturnType<typeof setTimeout>;
     private readonly _maximumBytes = 8 * 1024 * 1024;
 
-    constructor(private readonly _child: ChildProcessWithoutNullStreams, private readonly _timeout = 30_000) {
+    constructor(private readonly _child: ChildProcessWithoutNullStreams, private readonly _timeout = 30_000, private readonly _label = 'Screenplay', private readonly _tolerant = false) {
         _child.stdout.on('data', this.receive);
         _child.stdout.on('end', this.ended);
         _child.stdout.on('error', this.streamFailed);
@@ -33,22 +33,22 @@ export class StdioConnection {
 
     async request(method: string, params: Record<string, unknown>, signal?: AbortSignal, mutation = false): Promise<unknown> {
         if (this._failure) throw this._failure;
-        if (signal?.aborted) throw new ConnectionFailure('Screenplay request cancelled before sending.');
-        if (this._pending) throw new ConnectionFailure('Screenplay is busy; parallel requests are not queued.');
+        if (signal?.aborted) throw new ConnectionFailure(`${this._label} request cancelled before sending.`);
+        if (this._pending) throw new ConnectionFailure(`${this._label} is busy; parallel requests are not queued.`);
         const id = ++this._sequence;
         const line = this.encode({ jsonrpc: '2.0', id, method, params });
         return new Promise((resolve, reject) => {
-            const abort = () => this.stop('Screenplay request cancelled after sending.');
-            const timer = setTimeout(() => this.stop('Screenplay request timed out.'), this._timeout);
+            const abort = () => this.stop(`${this._label} request cancelled after sending.`);
+            const timer = setTimeout(() => this.stop(`${this._label} request timed out.`), this._timeout);
             this._pending = {
                 id, mutation, resolve, reject,
                 cleanup: () => { clearTimeout(timer); signal?.removeEventListener('abort', abort); },
             };
             signal?.addEventListener('abort', abort, { once: true });
             try {
-                this._child.stdin.write(line, error => { if (error) this.stop('Screenplay input pipe failed.'); });
+                this._child.stdin.write(line, error => { if (error) this.stop(`${this._label} input pipe failed.`); });
             } catch {
-                this.stop('Screenplay input pipe failed.');
+                this.stop(`${this._label} input pipe failed.`);
             }
         });
     }
@@ -56,18 +56,18 @@ export class StdioConnection {
     notify(method: string): void {
         if (this._failure) throw this._failure;
         try {
-            this._child.stdin.write(this.encode({ jsonrpc: '2.0', method }), error => { if (error) this.stop('Screenplay notification failed.'); });
+            this._child.stdin.write(this.encode({ jsonrpc: '2.0', method }), error => { if (error) this.stop(`${this._label} notification failed.`); });
         } catch {
-            this.stop('Screenplay notification failed.');
+            this.stop(`${this._label} notification failed.`);
             throw this._failure;
         }
     }
 
-    dispose(): void { this.stop('Screenplay session closed.'); }
+    dispose(): void { this.stop(`${this._label} session closed.`); }
 
     private encode(value: unknown): string {
         const line = `${JSON.stringify(value)}\n`;
-        if (Buffer.byteLength(line) > this._maximumBytes) throw new ConnectionFailure('Screenplay request exceeds the 8 MiB transport limit.');
+        if (Buffer.byteLength(line) > this._maximumBytes) throw new ConnectionFailure(`${this._label} request exceeds the 8 MiB transport limit.`);
         return line;
     }
 
@@ -83,7 +83,7 @@ export class StdioConnection {
                 this._buffer = Buffer.alloc(0);
                 this.accept(line);
             } catch {
-                this.stop('Screenplay returned invalid UTF-8 protocol data.');
+                this.stop(`${this._label} returned invalid UTF-8 protocol data.`);
             }
             if (this.stopped) return;
             start = index + 1;
@@ -93,7 +93,7 @@ export class StdioConnection {
 
     private append(chunk: Buffer): boolean {
         if (this._buffer.length + chunk.length > this._maximumBytes) {
-            this.stop('Screenplay response exceeds the 8 MiB transport limit.');
+            this.stop(`${this._label} response exceeds the 8 MiB transport limit.`);
             return false;
         }
         this._buffer = Buffer.concat([this._buffer, chunk]);
@@ -104,6 +104,13 @@ export class StdioConnection {
         try {
             const message: unknown = JSON.parse(line);
             if (!object(message) || message.jsonrpc !== '2.0') throw new Error();
+            if ('method' in message && this._tolerant) {
+                // Third-party servers may notify or ask; this client offers no capabilities, so refuse requests and ignore notifications.
+                if ('id' in message && typeof message.method === 'string') {
+                    this._child.stdin.write(this.encode({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: 'Method not found' } }));
+                }
+                return;
+            }
             if ('method' in message) {
                 // This pinned server does not send requests or changing tool lists.
                 throw new Error();
@@ -114,14 +121,14 @@ export class StdioConnection {
             this._pending = undefined;
             pending.cleanup();
             if (object(message.error)) {
-                pending.reject(new ConnectionFailure(`Screenplay protocol error ${message.error.code}: ${message.error.message}`, pending.mutation));
+                pending.reject(new ConnectionFailure(`${this._label} protocol error ${message.error.code}: ${message.error.message}`, pending.mutation));
                 // A server failure during mutation is not evidence that nothing was written.
-                if (pending.mutation) this.stop('Screenplay mutation failed with a protocol error.', true);
+                if (pending.mutation) this.stop(`${this._label} mutation failed with a protocol error.`, true);
             } else {
                 pending.resolve(message.result);
             }
         } catch {
-            this.stop('Screenplay returned malformed or unexpected JSON-RPC.');
+            this.stop(`${this._label} returned malformed or unexpected JSON-RPC.`);
         }
     }
 
@@ -146,11 +153,13 @@ export class StdioConnection {
     }
 
     private readonly drain = (): void => { /* Drain server stderr without exposing it as a protocol result. */ };
-    private readonly ended = (): void => this.stop('Screenplay output closed before session shutdown.');
-    private readonly streamFailed = (): void => this.stop('Screenplay stdio failed.');
-    private readonly spawnFailed = (): void => this.stop('Cannot launch native cratis screenplay mcp. Install/update the Cratis CLI through its normal channel; this extension never downloads a runtime.');
+    private readonly ended = (): void => this.stop(`${this._label} output closed before session shutdown.`);
+    private readonly streamFailed = (): void => this.stop(`${this._label} stdio failed.`);
+    private readonly spawnFailed = (): void => this.stop(this._label !== 'Screenplay'
+        ? `Cannot launch the ${this._label} MCP server command. Check that it is installed; this extension never downloads a runtime.`
+        : 'Cannot launch native cratis screenplay mcp. Install/update the Cratis CLI through its normal channel; this extension never downloads a runtime.');
     private readonly closed = (): void => {
-        this.stop('Screenplay process exited. Check that the installed Cratis CLI includes the embedded Screenplay runtime; no runtime is downloaded by this extension.');
+        this.stop(this._label !== 'Screenplay' ? `${this._label} process exited.` : 'Screenplay process exited. Check that the installed Cratis CLI includes the embedded Screenplay runtime; no runtime is downloaded by this extension.');
         clearTimeout(this._termination);
         this._child.stdout.removeListener('error', this.streamFailed);
         this._child.stdin.removeListener('error', this.streamFailed);
