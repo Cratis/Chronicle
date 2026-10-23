@@ -24,7 +24,7 @@ public class when_starting_without_roles : Specification
         });
     }).Build();
 
-    async Task Because() => _error = await Catch.Exception(() => _host.StartAsync());
+    void Because() => _error = Catch.Exception(() => _host.Services.GetRequiredService<IStartupValidator>().Validate());
 
     void Destroy() => _host?.Dispose();
 
