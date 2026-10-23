@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceMigrator}"/> for logging.</param>
-public class EventSequenceMigrator(
+public partial class EventSequenceMigrator(
     ITableMigrator<EventSequenceDbContext> tableMigrator,
     ILogger<EventSequenceMigrator> logger) : IEventSequenceMigrator
 {
@@ -178,6 +178,7 @@ public class EventSequenceMigrator(
             columns: ["EventStreamType", "EventStreamId"]);
 
         AddPublicationIndex(context, migrationBuilder, tableName);
+        AddParentHistoryIndex(migrationBuilder, tableName);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
@@ -240,5 +241,7 @@ public class EventSequenceMigrator(
 
             await tableMigrator.ExecuteMigrationOperations(context, eventSourceMigration);
         }
+
+        await EnsureParentHistoryIndex(context, tableName);
     }
 }
