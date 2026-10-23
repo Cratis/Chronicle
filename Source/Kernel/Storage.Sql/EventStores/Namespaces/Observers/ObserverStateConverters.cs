@@ -59,7 +59,9 @@ public static class ObserverStateConverters
             }).ToList(),
             FailedPartitionCount = definition.FailedPartitionCount,
             IsReplaying = definition.IsReplaying,
-            SubscribesToAllEvents = definition.SubscribesToAllEvents
+            SubscribesToAllEvents = definition.SubscribesToAllEvents,
+            HandledEventCount = definition.HandledEventCount.Value,
+            HandledEventCountPerEventType = definition.HandledEventCountPerEventType.ToDictionary(kvp => kvp.Key.Value, kvp => kvp.Value.Value)
         };
 
     /// <summary>
@@ -110,6 +112,8 @@ public static class ObserverStateConverters
             QuarantineEpisodeId = state.QuarantineEpisodeId,
             WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
-            TailEventSequenceNumber = state.TailEventSequenceNumber
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
+            HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
 }
