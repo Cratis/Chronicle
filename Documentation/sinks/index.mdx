@@ -121,8 +121,21 @@ This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take a
 
 Decimal-formatted read-model properties use NUMERIC on PostgreSQL, DECIMAL(38,18) on SQL Server,
 and invariant decimal text in SQLite TEXT columns. MongoDB stores them as Decimal128. Double
-and float properties keep their floating-point storage types. SQLite TEXT decimal columns sort
-and compare lexicographically, not numerically.
+and float properties keep their floating-point storage types.
+
+SQLite sink paging sorts decimal keys numerically before applying page limits, with the original
+key text as a stable tie-breaker. Scalar decimal joins narrow candidates by exact canonical equality,
+including equal values with different scales. Declared decimal indexes target the registered ordering
+column, replacing only the old Chronicle non-unique TEXT index; custom and unique indexes are preserved.
+These operations use the [SQL shadow-column contract](../events/schema-representation#kernel-shadow-columns).
+Original decimal digits and scale remain unchanged and internal columns never appear in documents.
+
+Ad-hoc SQL over the original TEXT column still compares lexicographically, not numerically. Use the
+registered ordering column for numeric sorting, and an encoded decimal comparison key for equality
+or ranges, not an ordinary decimal string. Arbitrary EF decimal expressions are not translated to
+this contract automatically. Existing TEXT tables gain ordering support without replay or rewriting
+stored values. Legacy REAL-affinity tables still require replay for exact values and dependable
+numeric comparisons.
 
 Existing SQL column types are not altered in place. Replay the read model to create a table with
 the new mapping. SQL Server values are rounded to scale 18 with midpoints rounded away from zero;

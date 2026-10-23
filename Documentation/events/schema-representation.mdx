@@ -108,7 +108,7 @@ SQL read models before relying on exact decimal writes. Replay creates a fresh t
 mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
 REAL columns and SQL Server's former DECIMAL(18,2) columns.
 
-### Kernel shadow columns
+#### Kernel shadow columns
 
 SQL shadow columns are registered centrally, outside the projected columns and the EF model. They
 are nullable without a default, are never materialized or released, and do not change the original
@@ -132,6 +132,14 @@ SQLite catalog probes include generated columns, so a restart does not attempt t
 SQLite's original TEXT decimal columns preserve digits but still sort lexicographically in ad-hoc
 SQL (`"10"` precedes `"9"`). Existing REAL-affinity tables still require replay for exact values;
 non-text legacy values have NULL ordering keys. No floating-point conversion recovers lost precision.
+
+The decimal ordering key is a fixed-width ASCII encoding under SQLite's default BINARY collation.
+Numerically equal scales and all signed or scaled zeros have equal keys. NULL remains NULL and
+sorts first ascending. Sink paging orders decimal keys by this encoding with the original key text
+as a stable tie-breaker; scalar decimal candidate lookups compare the canonical key, admitting equal
+scales without materializing unrelated parents. Ad-hoc numeric ranges must compare encoded keys,
+not ordinary decimal strings. Arbitrary EF decimal expressions over the original property do not
+use this encoding automatically.
 
 Replay cannot undo precision already lost from the original event content. Check the source events
 before assuming that a replay will recover an amount.

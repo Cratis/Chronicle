@@ -21,6 +21,8 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
@@ -467,7 +469,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         var containerName = QueriedTableNameFor(occurrence);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
-        var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
+        var entries = await ReadOrderedPage(scope.DbContext, skip, take);
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
     }
 
@@ -483,7 +485,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
             var containerName = QueriedTableNameFor(occurrence);
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
             var totalCount = await scope.DbContext.Entries.CountAsync();
-            var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToArrayAsync();
+            var entries = (await ReadOrderedPage(scope.DbContext, skip, take)).ToArray();
             return [new ObservedPage(totalCount, entries)];
         }
 
@@ -505,6 +507,18 @@ public partial class Sink : ISink, ICanReconcileIndexes
     /// empty or only partly rebuilt.
     /// </remarks>
     string QueriedTableNameFor(ReadModelContainerName? occurrence) => occurrence?.Value ?? _tableName;
+
+    async Task<List<DynamicReadModelEntity>> ReadOrderedPage(ReadModelDbContext context, int skip, int take)
+    {
+        var key = _columns.First(column => column.IsKey);
+        if (!UsesDecimalSortKey(context, key)) return await OrderByKey(context.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
+        var shadow = SqliteDecimalSortKey.ColumnNameFor(key.Name);
+        var helper = context.GetService<ISqlGenerationHelper>();
+        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
+#pragma warning disable EF1002 // Provider-delimited identifiers only; page limits are parameters.
+        return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip).AsNoTracking().ToListAsync());
+#pragma warning restore EF1002
+    }
 
     IQueryable<DynamicReadModelEntity> OrderByKey(IQueryable<DynamicReadModelEntity> entries)
     {

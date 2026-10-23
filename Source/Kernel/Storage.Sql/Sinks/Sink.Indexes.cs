@@ -143,7 +143,7 @@ public partial class Sink
             }
             try
             {
-                await ReadModelIndexes.Ensure(context, table, column.Name, online);
+                await ProjectedColumnIndexes.Ensure(context, column, online);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

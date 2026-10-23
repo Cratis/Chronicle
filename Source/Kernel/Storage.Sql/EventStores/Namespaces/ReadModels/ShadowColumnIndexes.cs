@@ -42,6 +42,19 @@ internal static class ShadowColumnIndexes
         }
     }
 
+    /// <summary>
+    /// Removes the superseded declared non-unique decimal TEXT index, but never a custom or unique index.
+    /// </summary>
+    /// <param name="context">The SQLite read-model context.</param>
+    /// <param name="column">The original decimal property.</param>
+    /// <returns>An awaitable task.</returns>
+    internal static async Task RemoveLegacyDecimalIndex(ReadModelDbContext context, string column)
+    {
+        var name = ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column);
+        var exists = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({context.TableName}) WHERE \"unique\" = 0 AND name = {name}").AnyAsync();
+        if (exists) await Execute(context, $"DROP INDEX IF EXISTS {context.GetService<ISqlGenerationHelper>().DelimitIdentifier(name)}");
+    }
+
     static async Task EnsureIndexes(ReadModelDbContext context)
     {
         var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
