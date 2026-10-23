@@ -275,7 +275,13 @@ public class HandleEventsForObserver(
 
                     if (usePages)
                     {
-                        var pageResult = await TryHandleEvents(ObserverSubscriberKey.AllPartitions, unit, subscriberTimeout, page: true);
+                        var dispatched = false;
+                        var pageResult = await TryHandleEvents(ObserverSubscriberKey.AllPartitions, unit, subscriberTimeout, page: true, onPageDispatch: () => dispatched = true);
+                        if (dispatched && pageResult.TryGetException(out var pageException))
+                        {
+                            return await HandlePageDispatchException(unit[0], pageException);
+                        }
+
                         if (pageResult.TryGetResult(out var pageHandled))
                         {
                             var (result, lastSuccessful) = await HandleSubscriberResult(
@@ -292,8 +298,8 @@ public class HandleEventsForObserver(
                             continue;
                         }
 
-                        // A page exception has no reliable event attribution. Retry its consecutive runs through
-                        // the existing path, retaining its timeout retry and transient-partition semantics.
+                        // Only preparation failures can fall back: a dispatched page may still be applying events,
+                        // so re-sending its runs could apply them twice.
                     }
 
                     // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
@@ -778,6 +784,7 @@ public class HandleEventsForObserver(
 
                 return (null, eventObserverResult.LastSuccessfulObservation);
             case ObserverSubscriberState.Failed:
+            case var _ when page:
                 return await HandleFailedSubscriberResult(
                     currentState,
                     partition,
@@ -882,9 +889,9 @@ public class HandleEventsForObserver(
             lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
         }
 
-        if (page)
+        if (page && eventObserverResult.FailedAt.IsActualValue && eventObserverResult.FailedPartition is not null)
         {
-            partition = eventObserverResult.FailedPartition ?? partition;
+            partition = eventObserverResult.FailedPartition;
             lastEventSequenceNumberAttempted = eventObserverResult.FailedAt;
         }
 
@@ -905,11 +912,32 @@ public class HandleEventsForObserver(
             lastSuccessfullyHandledEventSequenceNumber);
     }
 
+    async Task<JobStepResult> HandlePageDispatchException(AppendedEvent firstEvent, Exception exception)
+    {
+        var messages = TransientTimeouts.IsTimeout(exception)
+            ? [TransientTimeouts.ShortMessageFor(exception)]
+            : TransientTimeouts.ShortenForStep(exception.GetAllMessages().ToArray());
+        if (TransientTimeouts.IsTimeout(exception)) logger.StepTimedOut(messages[0]);
+        if (!await FlushReplayReports()) return ClosedResult();
+        if (!Advanced(await FlushFromWork())) return ClosedResult();
+
+        // A page has no authoritative progress after an exception. Resume from the durable checkpoint,
+        // just as for an exhausted per-run timeout, without counting or immediately re-dispatching it.
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(_lastDurableCheckpoint) with
+            {
+                TransientFailure = new(firstEvent.Context.EventSourceId, firstEvent.Context.SequenceNumber, messages)
+            },
+            messages,
+            string.Empty));
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
         AppendedEvent[] events,
         TimeSpan subscriberTimeout,
-        bool page = false)
+        bool page = false,
+        Action? onPageDispatch = null)
     {
         try
         {
@@ -923,6 +951,7 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
+            if (page) onPageDispatch?.Invoke();
             var result = page
                 ? await ((IObserverPageSubscriber)subscriber!).OnNextPageWithin(subscriberTimeout, decryptedEvents, subscriberContext)
                 : await subscriber!.OnNextWithin(subscriberTimeout, partition, decryptedEvents, subscriberContext);

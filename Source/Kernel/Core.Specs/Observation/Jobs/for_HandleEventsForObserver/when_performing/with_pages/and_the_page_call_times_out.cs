@@ -3,16 +3,36 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_performing.with_pages;
 
 public class and_the_page_call_times_out : given.a_page_job_step
 {
-    void Establish() => _pageSubscriber.OnNextPage(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
-        .Returns(Task.FromException<ObserverSubscriberResult>(new SubscriberCallTimedOut("module", TimeSpan.FromSeconds(1))));
+    Catch<JobStepResult> _result;
+    readonly TaskCompletionSource<ObserverSubscriberResult> _pendingPage = new();
 
-    async Task Because() => await _jobStep.InvokePerformStep(_performState);
+    void Establish()
+    {
+        _observersConfig = new() { SubscriberTimeout = 1 };
+        _pageSubscriber.OnNextPage(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
+            .Returns(_pendingPage.Task);
+    }
 
-    [Fact] void should_fall_back_to_consecutive_runs() => _handledBatches.Select(_ => _.Partition).ShouldEqual([(Key)"module", (Key)"feature", (Key)"module"]);
-    [Fact] void should_finish_at_the_last_event() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3UL);
+    async Task Because() => _result = await _jobStep.InvokePerformStep(_performState);
+
+    void Destroy() => _pendingPage.TrySetResult(ObserverSubscriberResult.Ok(3UL));
+
+    [Fact] void should_not_resend_any_run() => _pageSubscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_leave_the_checkpoint_unchanged() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
+    [Fact] void should_not_report_any_handled_events() => _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEvents) || call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEventsBatch)).ShouldEqual(0);
+    [Fact] void should_not_report_a_partition_failure_yet() => _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.PartitionFailed)).ShouldEqual(0);
+    [Fact] void should_end_with_a_transient_failure()
+    {
+        _result.TryGetResult(out var stepResult).ShouldBeTrue();
+        TransientTimeouts.TryGetTransientFailure(stepResult, new System.Text.Json.JsonSerializerOptions(), out var failure).ShouldBeTrue();
+        failure.Partition.ShouldEqual((Key)"module");
+        failure.FailedAt.ShouldEqual((EventSequenceNumber)1UL);
+    }
 }

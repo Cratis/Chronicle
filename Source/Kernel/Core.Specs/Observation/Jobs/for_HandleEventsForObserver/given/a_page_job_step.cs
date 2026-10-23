@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
@@ -11,13 +12,18 @@ public class a_page_job_step : a_performing_job_step
 {
     protected IPageObserverType _pageSubscriber;
     protected readonly List<AppendedEvent[]> _pages = [];
+    protected readonly List<ObserverSubscriberKey> _subscriberKeys = [];
 
     void Establish()
     {
         var subscription = new ObserverSubscription("observer-id", _performState.ObserverKey, [], typeof(IPageObserverType), SiloAddress.Zero);
         _observer.GetSubscription().Returns(subscription);
         _pageSubscriber = Substitute.For<IPageObserverType>();
-        _silo.AddProbe(_ => _pageSubscriber);
+        _silo.AddProbe<IPageObserverType>(key =>
+        {
+            _subscriberKeys.Add(ObserverSubscriberKey.Parse(key.ToString()));
+            return _pageSubscriber;
+        });
         _pageSubscriber.OnNextPage(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(call =>
             {
