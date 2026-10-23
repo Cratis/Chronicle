@@ -29,6 +29,9 @@ Sources:
 
 Reverify product sources before claiming support for another version.
 
+Read references/remove-namespace.md when removing a tenant: provider-owned data,
+application read models, reminders and reconnect behavior have different boundaries.
+
 ## The concept
 
 | Term | Meaning |

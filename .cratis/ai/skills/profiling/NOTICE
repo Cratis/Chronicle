@@ -1,0 +1,51 @@
+# cratis-ai-managed: skills/profiling/NOTICE
+.NET Profiling
+Copyright (c) 2026 Managed Code
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/managedcode/dotnet-skills/blob/2d8fba176a33b9872d5de35ec71d9ec71112ee26/catalog/Tools/Profiling/skills/profiling/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Bootstrap step 4 records commands in task notes or the report instead of editing `AGENTS.md`.
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line with the skill-specific safety, ownership or compatibility caveat.
+- Add --version <x> placeholders to tool installations; pin the version.
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Scope upstream general workflow advice to this skill's stated task; it does not govern unrelated tasks.
+- Indent approval guard lines to keep the surrounding nested Markdown lists intact.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+
+references/commands.md:
+- Add --version <x> placeholders to tool installations; pin the version.
+- Replace obsolete dotnet-counters list examples with ps/monitor, as used elsewhere in this skill.
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/profiling.md:
+- Add --version <x> placeholders to tool installations; pin the version.
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/patterns.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.
+
+Executes or downloads (instructions retained, not executed by this import):
+- SKILL.md: - `dotnet tool install --global dotnet-counters --version <x>`
+- SKILL.md: - `dotnet tool install --global dotnet-trace --version <x>`
+- SKILL.md: - `dotnet tool install --global dotnet-gcdump --version <x>`
+- SKILL.md: - direct-download fallback when global tools are not suitable:
+- SKILL.md: - use the official Microsoft Learn download links for `dotnet-counters`, `dotnet-trace`, and `dotnet-gcdump`
+- references/commands.md: dotnet tool install --global dotnet-counters --version <x>
+- references/commands.md: dotnet tool install --global dotnet-trace --version <x>
+- references/commands.md: dotnet tool install --global dotnet-dump --version <x>
+- references/commands.md: dotnet tool install --global dotnet-gcdump --version <x>
+- references/profiling.md: dotnet tool install --global dotnet-counters --version <x>
+- references/profiling.md: dotnet tool install --global dotnet-trace --version <x>
+- references/profiling.md: dotnet tool install --global dotnet-gcdump --version <x>

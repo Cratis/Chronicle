@@ -1,0 +1,1 @@
+../../.cratis/ai/agents/browser-operator.md

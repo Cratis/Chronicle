@@ -8,11 +8,10 @@ license: MIT
 # Screenplay scenario coverage
 
 ## Purpose
-Turn designed slices into specifications that pin behaviour a business person would argue
-about. Decide **which** situations need a specification before writing any (coverage matrix),
-then write them with consistent example data in the form the chosen mode admits. Situations the
-language cannot express today are recorded, not faked. Grammar and outcome comparison live in
-`cratis-screenplay-specifications`; this skill owns coverage and method.
+Decide **which** situations need specifications in a coverage matrix, then use
+consistent example data and mode-admitted forms. Record inexpressible cases; never
+fake them. This skill owns coverage; `cratis-screenplay-specifications` owns grammar
+and outcome comparison.
 
 ## When / when not
 - Use: the scenario phase of `cratis-screenplay-modeling-lifecycle`; adding or changing a
@@ -34,11 +33,9 @@ Use it to seed, never replace, the matrix. Multi-step storylines remain unavaila
 lifecycle families emulate them.
 
 ## Interview phase
-**Skip if** the brief already states the coverage depth (rules, denials, state violations,
-retries, races), the critical rules with an allowed and a refused example each, how the specs
-will be used (reference only, executable, rendered and tested) and who validates them.
-Critical questions, one at a time, with follow-ups:
-Ask only what is missing: depth, known rules and edge cases (one allowed and the nearest refused request per rule), intended use (decides admitted forms), and who validates. Read [references/interview-batch.md](references/interview-batch.md) for the four questions and follow-ups.
+Ask only what is missing: coverage depth, allowed/refused rule examples, intended
+execution mode and who validates. Read [interview prompts](references/interview-batch.md)
+when these inputs are unsettled; skip answered questions.
 
 **Unattended:** assume visibly, never invent a rule, and record who actually answered; an agent asking itself four kinds of question is not four approvals.
 
@@ -65,23 +62,22 @@ Ask only what is missing: depth, known rules and edge cases (one allowed and the
    existing intentional fixtures (`references/scenario-catalogue.md` "Example data"). Shared
    fixtures may live as typed `example`s in another document beside the declarations they type
    (`cratis-screenplay-specifications` `references/examples-and-routes.md`).
-7. **Draft commands**: happy path, each rule, denial, duplicates and retries, competing claims,
-   state violations, alternative branches, compensation, external failure, evolution. In each
-   rejection vary only the value under test. Use typed `parameter`/named `case`
-   tables for a shared validation matrix, not for unrelated behaviors; rows are
-   cases, not typed fixture `example`s. `given caller as <Persona>` supplies one
-   authenticated policy witness for success/denial; use explicit callers for
-   anonymous/ownership or unsynthesizable personas. Syntax and complete model:
-   `cratis-screenplay-specifications` `references/persona-callers-and-cases.md`.
+7. **Draft commands** for each applicable scenario type below. Vary only the value
+   under test in a rejection. Read specifications'
+   [persona callers and cases](../cratis-screenplay-specifications/references/persona-callers-and-cases.md)
+   when sharing a validation matrix or choosing synthesized versus explicit callers;
+   cases are not fixture examples and do not group unrelated behaviors.
 8. **Separate view pass**: population, each update, accumulation, removal (with a surviving
    row), absence, ordering. Mark lifecycle branches. Views combining sources must
    tolerate any arrival order. Pin a child before its parent (Requires Screenplay 4.149.1 or later):
    given child, then parent, then read model; "parent never arrives" leaves the
    child absent. Evidence/example: `references/view-and-story-specs.md`.
-9. **State-dependent rules**: `reads <View>` + `require <expr> message "..."` as stated intent,
-   marked **NOT enforced in the model today** in the slice `description` (binding reports
-   PLAY0268/0271: expected in design mode; Screenplay#129), target named (Arc
-   `[ProtectedDecision]` + `DecisionRead<T>`, Chronicle DCB, or a constraint). Forbidden:
+9. **State-dependent rules**: use `reads` plus `require` over authoritative state;
+   eligible views opt into `command reads protected` (v25). Cover present/absent reads,
+   refusal and denial; matching decide/commit changes are conflicts, not refusals.
+   Read [protected reads](../cratis-screenplay-command-surface/references/protected-reads.md)
+   for admission and Stage refusal; legacy/refused shapes remain marked unenforced
+   with a named target mechanism. Forbidden:
    caller-supplied copies of state in `require`, boolean attestation inputs (`confirmsX ==
    true`) and rules hidden in `handler`/hint prose. Never drop an unresolved given or assertion
    to make a spec compile: record the blocked case and continue.
@@ -91,6 +87,16 @@ Ask only what is missing: depth, known rules and edge cases (one allowed and the
 
 ## Scenario types (decide each per command; detail in `references/scenario-catalogue.md`)
 Decide each of these per command: happy path; rule rejection (one spec per rule, exact pinned `then error`); denial (`given caller` without the policy, `then denied`, one per gated command and query); state violation; duplicate or retry; competing claim; alternative path; ordering; external failure; compensation; evolution; and the view pass. Read [references/scenario-catalogue.md](references/scenario-catalogue.md) ("Scenario types at a glance") for each type's question and usual shape.
+
+For command Date/DateTime ordering, cover increasing and inverted intervals,
+equality across offsets, a one-tick boundary and **each participating DateTime
+input without an offset or Z**. That last case rejects with Validation before rules,
+even if a condition short-circuits or a production is skipped. `then` stays ordinal;
+never replace payload text with an equivalent instant. Read the complete
+[retention-window specifications](../cratis-screenplay-command-surface/references/date-comparisons.md)
+for the compiler prerequisite, admitted positions, refused `today` and Stage's v26
+refusal. Missing-offset runtime coverage needs an evaluator-request or target input
+test: a typed `.play` fixture rejects that value at binding with PLAY0273, before runtime.
 
 For recovery, `when redelivered <Event> to <Reaction>` must select one definitely
 matching effective given and no undecided candidate. It delivers only to the named
@@ -102,11 +108,10 @@ when specifying malformed keys/filters versus valid absence (ESM v18).
 Requires Screenplay 4.157.0 (`screenplay --version`) for v17, 4.161.0 for query
 validation/error assertions; older tools do not execute these contracts.
 
-**Once, idempotent, exactly once are different claims.** A `unique event` constraint proves the
-*fact* occurs once per event source; it does not make *command handling* idempotent (a retry is
-rejected, not answered with success), and nothing in the model proves an *external effect* (an
-email, a payment) happens exactly once. Say which of the three a spec proves; record the rest as
-target requirements.
+**Once, idempotent, exactly once are different claims.** `unique event` proves a once-only fact,
+not successful retry handling or an exactly-once external effect. Name the claim
+proved and keep other guarantees as target requirements; recovery cases are in
+`references/scenario-catalogue.md`.
 
 ## Rules
 ### Compiler contracts
@@ -117,7 +122,8 @@ target requirements.
   or query spec needs `given caller` or `given caller as <Persona>` (module and feature gates count); an authorized scenario
   gets no inferred fixture (PLAY0389). Unauthorized is never `then error`.
 - Duplicate and competing specs use `when <Command>`; `when append` is for projection and
-  automation triggers, and for a constraint the command's own validation would reject first.
+  automation triggers, consumed public events driving captures, and for a
+  constraint the command's own validation would reject first.
 - `null` only for optional read-model properties; constraint messages are copied verbatim.
 - Executable-only binding checks (PLAY0350/0352/0388/0389/0273) do not show in V1: run V3.
 
@@ -126,10 +132,17 @@ target requirements.
 - One behaviour per spec; names read as sentences: `Reserving...`, `Rejecting...`, `Refusing...`
   (denial), `<View>LifecycleN<State>` for families.
 - `for` on every given, appended and expected event (plain `produces <Name>` too; inline `produces event` omits it), and on the `when` command where the
-  destination matters. A competing-claim given needs a *different* `for`.
+  destination matters. A competing-claim given needs a *different* `for`. A given without `for`
+  belongs to the event source the specification acts on; state `for` when the command appends to
+  several event sources or an assertion depends on the given's source, and never assert
+  `$eventSourceId` of a sourceless given. Read
+  [examples and routes](../cratis-screenplay-specifications/references/examples-and-routes.md#givens-without-an-event-source).
+  Foreign event fixtures feeding a capture may omit `for`; supplied `for` is
+  opaque source text, not the capture's content key.
 - Format rules belong on a `concept`: give each concept rule representative acceptance,
   rejection and boundary specs once (through one command that carries it), not on every use;
-  never `n/a` automatically. Include a whitespace-only rejection for text `not empty`:
+  never `n/a` automatically. Date/DateTime comparisons are command-only, not concept rules.
+  Include a whitespace-only rejection for text `not empty`:
   this changes outcomes in every ESM version (Requires Screenplay 4.151.0 or later). Unicode/identity boundaries
   and evidence: command-surface `references/validate-rules.md`.
   A business rule gets one rejection spec if an expert could recognize it from its message;
@@ -139,7 +152,9 @@ target requirements.
 - Descriptions are not rendered: a rule only in prose is unenforced; make it a rule layer, a
   spec or a recorded target requirement.
 - Prove projections with events (`given`/`when append`), not `given readmodel`; seed read models
-  only for performer-backed views or commands that decide on view state.
+  only for performer-backed views or commands that decide on view state. A query `performer` is an opaque read
+  (information `PLAY0270`, not `PLAY0268`): it is left out of the executable model, a spec that reads it is
+  left out too and the other specs still run, so mark it `gap` for the executable modes ([version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)).
 - No contradiction between a family and single-transition specs of the same view.
 
 ### Quality checklist (adapted from the TrogonStack scenario checklist; `references/provenance.md`)
@@ -150,7 +165,16 @@ Read [references/review-questions.md](references/review-questions.md) for the ra
 
 ## Public-event coverage (ESM v9)
 
-Outbound publication needs `when append <private>` and `then <PublicEvent>`. Read [references/public-event-coverage.md](references/public-event-coverage.md) when specifying public events or routed producers and observers.
+Outbound publication needs `when append <private>` and `then <PublicEvent>`.
+Captures over public events use `given <FromEvent>` / `when append <FromEvent>`,
+not capture records (PLAY0701). Read [references/public-event-coverage.md](references/public-event-coverage.md)
+when specifying public events or routed producers and observers.
+
+Record captures distinguish first sight from updates: first root/child/nested
+records are added only, so field guards need `given capture` for the same key.
+Use a separate `when added` append when initial observations should produce a fact.
+Read captures-and-reactions `references/record-capture-specifications.md` for the
+prerequisite and runnable cases. Include first, changed and unchanged rows in the matrix.
 
 ## Version skew: reaction cascades and false PLAY0285
 Under ESM v6 a command spec's `then` lists the events reactions cascade from it; an older `cratis` bundle reports a **false PLAY0285** for it. Never delete the reaction. Read [references/version-skew.md](references/version-skew.md) when a spec with cascade events reports PLAY0285 or the bundled compiler is older than the standalone tool.

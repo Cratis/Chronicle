@@ -9,7 +9,8 @@ About ten minutes, before the independent review.
 4. Every read-model field has an origin; every event has a consumer or terminal reason.
 5. Every command has a reachable, authorized origin (screen or form action, or a reaction to an event, clock or application trigger; a capture appends facts and a command after it is reached through a reaction).
 6. No gated command is invoked by a reaction without a recorded trusted-path decision.
-7. State-dependent rules are `reads` + `require ... message` marked NOT enforced; no
+7. State-dependent rules use admitted protected command reads plus `require`, or
+   record the legacy/refused shape and target gap; no
    caller-supplied state, attestation boolean (`confirmsX == true`) or handler/hint prose.
 8. Coverage matrix filled; every `n/a` has a domain reason.
 9. Persona text says what each role cannot do, each line backed by a gate and a `then denied`

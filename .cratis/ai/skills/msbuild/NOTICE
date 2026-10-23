@@ -1,0 +1,56 @@
+# cratis-ai-managed: skills/msbuild/NOTICE
+MSBuild troubleshooting
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet/skills/msbuild/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Lead the description trigger with an explicit "Use when" clause.
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line.
+- Require analyzer/warnings-as-errors restoration after labelled timing experiments.
+- Add direct conditional pointers for all otherwise-indirect reference/script/asset files: references/antipatterns/additional-antipatterns.md, references/antipatterns/incremental-build-inputs-outputs.md, references/antipatterns/private-assets.md.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+
+references/binlog-failure-analysis.md:
+- Render unimported binlog-failure-analysis routing reference as plain topic text.
+
+references/build-perf-baseline.md:
+- Render unimported build-perf-baseline routing reference as plain topic text.
+- Qualify analyzer/warning suppression as timing-only; require the real gate restored.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/build-perf-diagnostics.md:
+- Render unimported build-perf-diagnostics routing reference as plain topic text.
+- Qualify analyzer/warning suppression as timing-only; require the real gate restored.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/copy-to-output-directory.md:
+- Render unimported copy-to-output-directory routing reference as plain topic text.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/eval-performance.md:
+- Render unimported eval-performance routing reference as plain topic text.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/incremental-build.md:
+- Render unimported incremental-build routing reference as plain topic text.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/msbuild-antipatterns.md:
+- Render unimported msbuild-antipatterns routing reference as plain topic text.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/antipatterns/additional-antipatterns.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/extension-points.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.

@@ -89,6 +89,25 @@ export function selfTest(modelFirstStatus) {
         assert.equal(broadReport.committed.length, 2);
         write(join(broad, '.cratis/ai.json'), JSON.stringify({ mcpServers: { screenplay: { root: '.' } } }));
         assert.equal(check(broad, true, undefined).committed.length, 3);
+        const frozenCommitted = repo('frozen-committed');
+        write(join(frozenCommitted, 'Source/model.play'), 'module Test\n');
+        write(join(frozenCommitted, '.cratis/ai.json'), JSON.stringify({ modelFirst: { frozen: true, reason: 'generated evidence' } }));
+        git(frozenCommitted, ['add', '.']);
+        git(frozenCommitted, ['commit', '--quiet', '-m', 'Add frozen model']);
+        const frozenReport = check(frozenCommitted, false, undefined);
+        assert.equal(frozenReport.reason, 'frozen-model');
+        assert.equal(frozenReport.contract, null);
+        assert.equal(frozenReport.committed.length, 1);
+        write(join(frozenCommitted, '.cratis/ai.json'), JSON.stringify({ modelFirst: { frozen: false } }));
+        assert.equal(check(frozenCommitted, true, undefined).reason, 'committed-model');
+        const frozenConfigured = repo('frozen-configured');
+        write(join(frozenConfigured, '.cratis/ai.json'), JSON.stringify({
+            mcpServers: { screenplay: { root: 'Models' } }, modelFirst: { frozen: true },
+        }));
+        assert.equal(check(frozenConfigured, false, undefined).reason, 'frozen-model');
+        write(join(frozenConfigured, '.cratis/ai.json'), JSON.stringify({ modelFirst: { frozen: 'yes' } }));
+        assert.throws(() => modelFirstStatus(frozenConfigured), /modelFirst\.frozen must be a boolean/);
+        cases++;
         const aliasRepository = repo('alias');
         const alias = join(aliasRepository, 'skills');
         symlinkSync(resolve(dirname(fileURLToPath(import.meta.url)), '../..'), alias, 'dir');
