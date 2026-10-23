@@ -346,8 +346,10 @@ public class Sink(
 
         // A dropped join flush reports every partition of its batch, not just this writer's, and the write still runs.
         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
+        var directWrites = new SinkMultiDocumentWrites(collections, ClearPrefetchPage);
+        if (changeset.HasJoined()) directWrites.BeforeWrite();
         var joinBatch = await FlushBeforeJoin(changeset, options);
-        var failures = await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
+        var failures = await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options, directWrites);
         return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
 
@@ -359,12 +361,24 @@ public class Sink(
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber,
         WritePlan plan,
-        SinkWriteOptions options)
+        SinkWriteOptions options,
+        SinkMultiDocumentWrites directWrites)
     {
         // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
         // removes from all has to find the documents still holding it, so the children are removed only afterwards.
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
-        await RemoveChildrenFromAll(changeset);
+        UpdateDefinitionAndArrayFilters converted;
+        if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
+        {
+            converted = await converterWithDirectWrites.ToUpdateDefinition(key, changeset, eventSequenceNumber, directWrites);
+        }
+        else
+        {
+            // Alternate converters cannot expose their affected keys; do not retain read-only prefetch across them.
+            directWrites.BeforeWrite();
+            converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        }
+
+        await RemoveChildrenFromAll(changeset, directWrites);
 
         // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
         // Any remaining direct root PropertiesChanged have no single _id target, so issuing the follow-up
@@ -1646,22 +1660,22 @@ public class Sink(
         };
     }
 
-    async Task RemoveChildrenFromAll(IChangeset<AppendedEvent, ExpandoObject> changeset)
+    async Task RemoveChildrenFromAll(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkMultiDocumentWrites directWrites)
     {
         foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
-            await RemoveChildFromAll(childRemoved);
+            await RemoveChildFromAll(childRemoved, directWrites);
         }
     }
 
-    async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
+    async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved, SinkMultiDocumentWrites directWrites)
     {
         var (path, arrayFilters, filter) = BuildChildPath(childRemoved.ChildrenProperty.Segments.ToArray());
 
         var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
-        await Collection.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+        await directWrites.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
     }
 
     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)

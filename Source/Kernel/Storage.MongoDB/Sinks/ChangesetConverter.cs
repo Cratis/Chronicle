@@ -32,7 +32,7 @@ public class ChangesetConverter(
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ChangesetConverter> logger) : IChangesetConverter
+    ILogger<ChangesetConverter> logger) : IChangesetConverter, IChangesetConverterWithDirectWrites
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
@@ -55,48 +55,14 @@ public class ChangesetConverter(
     }
 
     /// <inheritdoc/>
-    public async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
+    public Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber)
-    {
-        var hasChanges = false;
-        var updateDefinitionBuilder = Builders<BsonDocument>.Update;
-        UpdateDefinition<BsonDocument>? updateBuilder = default;
-        var normalizedChanges = NormalizeJoinedChanges(changeset.Changes);
+        EventSequenceNumber eventSequenceNumber) => ToUpdateDefinition(key, changeset, eventSequenceNumber, new SinkMultiDocumentWrites(collections));
 
-        var arrayFiltersForDocument = new ArrayFilters();
-        var nullParentPaths = new HashSet<string>();
-        var nullArrayParents = new List<NullArrayParent>();
-        await ApplyActualChanges(
-            key,
-            normalizedChanges,
-            changeset.InitialState,
-            nullParentPaths,
-            nullArrayParents,
-            updateDefinitionBuilder,
-            ref updateBuilder,
-            ref hasChanges,
-            arrayFiltersForDocument,
-            eventSequenceNumber);
-
-        // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
-        // would pin the $max watermark at the top of the range and permanently block every later guarded write to
-        // the document.
-        if (hasChanges && eventSequenceNumber.IsActualValue)
-        {
-            BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
-        }
-
-        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
-
-        return new(updateBuilder!, distinctArrayFilters, hasChanges)
-        {
-            NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray(),
-            NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray(),
-            RequiredArrayPaths = [.. arrayFiltersForDocument.ArrayPaths]
-        };
-    }
+    /// <inheritdoc/>
+    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites) =>
+        ToUpdateDefinition(key, changeset, eventSequenceNumber, directWrites);
 
     /// <summary>
     /// Build the property and comparand the <see cref="Joined"/> change filters its update on.
@@ -247,6 +213,47 @@ public class ChangesetConverter(
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
     }
 
+    async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
+    {
+        var hasChanges = false;
+        var updateDefinitionBuilder = Builders<BsonDocument>.Update;
+        UpdateDefinition<BsonDocument>? updateBuilder = default;
+        var normalizedChanges = NormalizeJoinedChanges(changeset.Changes);
+
+        var arrayFiltersForDocument = new ArrayFilters();
+        var nullParentPaths = new HashSet<string>();
+        var nullArrayParents = new List<NullArrayParent>();
+        await ApplyActualChanges(
+            key,
+            normalizedChanges,
+            changeset.InitialState,
+            nullParentPaths,
+            nullArrayParents,
+            updateDefinitionBuilder,
+            ref updateBuilder,
+            ref hasChanges,
+            arrayFiltersForDocument,
+            eventSequenceNumber,
+            directWrites);
+
+        // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
+        // would pin the $max watermark at the top of the range and permanently block every later guarded write to
+        // the document.
+        if (hasChanges && eventSequenceNumber.IsActualValue)
+        {
+            BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
+        }
+
+        var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
+
+        return new(updateBuilder!, distinctArrayFilters, hasChanges)
+        {
+            NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray(),
+            NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray(),
+            RequiredArrayPaths = [.. arrayFiltersForDocument.ArrayPaths]
+        };
+    }
+
     Task ApplyActualChanges(
         Key key,
         IEnumerable<Change> changes,
@@ -257,7 +264,8 @@ public class ChangesetConverter(
         ref UpdateDefinition<BsonDocument>? updateBuilder,
         ref bool hasChanges,
         ArrayFilters arrayFiltersForDocument,
-        EventSequenceNumber eventSequenceNumber)
+        EventSequenceNumber eventSequenceNumber,
+        SinkMultiDocumentWrites directWrites)
     {
         var joinTasks = new List<Task>();
         var changesToApply = changes.ToList();
@@ -288,11 +296,11 @@ public class ChangesetConverter(
                     break;
 
                 case Joined joined:
-                    joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber));
+                    joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber, directWrites));
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites);
                     joinTasks.Add(applyActualChangesTask);
                     break;
             }
@@ -451,19 +459,17 @@ public class ChangesetConverter(
             : updateDefinitionBuilder.Pull(property, bsonValue);
     }
 
-    async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, Joined joined, EventSequenceNumber eventSequenceNumber)
+    async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, Joined joined, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
     {
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
-        var collection = collections.GetCollection();
-
         var joinArrayFiltersForDocument = new ArrayFilters();
         var nullParentPaths = new HashSet<string>();
         var nullArrayParents = new List<NullArrayParent>();
 
         // A join can match many documents with different parent shapes. Check each matched
         // document for legacy nulls rather than using one joined state for the whole batch.
-        await ApplyActualChanges(key, joined.Changes, null, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber);
+        await ApplyActualChanges(key, joined.Changes, null, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, directWrites);
 
         if (!hasJoinChanges)
         {
@@ -491,16 +497,16 @@ public class ChangesetConverter(
                 ? Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null)
                 : BuildNullArrayParentFilter(parent.Path, parent.Filters);
             var repairFilter = Builders<BsonDocument>.Filter.And(joinFilter, nullFilter);
-            await collection.UpdateManyAsync(
+            await directWrites.UpdateManyAsync(
                 repairFilter,
                 updateDefinitionBuilder.Unset(parent.Path),
                 new UpdateOptions { ArrayFilters = parent.Filters });
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var result = await collection.UpdateManyAsync(
+        var result = await directWrites.UpdateManyAsync(
             joinFilter,
-            joinUpdateBuilder,
+            joinUpdateBuilder!,
             new UpdateOptions
             {
                 IsUpsert = false,

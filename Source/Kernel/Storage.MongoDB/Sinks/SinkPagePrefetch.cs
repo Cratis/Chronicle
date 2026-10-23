@@ -48,6 +48,7 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
         foreach (var page in keysById.Chunk(1000))
         {
             var missing = page.ToDictionary();
+            var allReturnedIdsMatched = true;
             using var cursor = await collection.FindAsync(Builders<BsonDocument>.Filter.In("_id", missing.Keys));
             while (await cursor.MoveNextAsync())
             {
@@ -57,12 +58,16 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
                     {
                         seed(key, document);
                     }
+                    else
+                    {
+                        allReturnedIdsMatched = false;
+                    }
                 }
             }
 
-            foreach (var id in missing.Keys)
+            if (allReturnedIdsMatched)
             {
-                _knownMisses.TryAdd(id.ToString()!, 0);
+                foreach (var id in missing.Keys) _knownMisses.TryAdd(id.ToString()!, 0);
             }
         }
     }
