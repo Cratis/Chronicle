@@ -17,6 +17,14 @@ public interface IGenerationGateWrites
     /// <returns>The new epoch.</returns>
     Task<long> Revoke(IMongoDatabase database, IClientSessionHandle session, GenerationGateId gate, CancellationToken ct = default);
 
+    /// <summary>Revokes a raw writer gate without initializing its admission counter.</summary>
+    /// <param name="database">The read-model database.</param>
+    /// <param name="session">The writer's session.</param>
+    /// <param name="gateId">The gate identity.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The new epoch.</returns>
+    Task<long> Revoke(IMongoDatabase database, IClientSessionHandle session, string gateId, CancellationToken ct = default);
+
     /// <summary>Reads the majority-committed epoch.</summary>
     /// <param name="database">The read-model database.</param>
     /// <param name="gate">The generation gate.</param>

@@ -199,7 +199,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         }
         var gate = new GenerationGateId(binding.Key, candidate);
         var gateEpoch = await gates.Revoke(db, session, gate);
-        await gates.Revoke(db, session, new(binding.Key, active));
+        await gates.Revoke(db, session, new GenerationGateId(binding.Key, active));
         await Bindings(db).UpdateOneAsync(session, Id(binding.Key), _update.Set("fence", new BsonDocument { { "gate", gate.Value }, { "epoch", gateEpoch } }));
         return true;
     }

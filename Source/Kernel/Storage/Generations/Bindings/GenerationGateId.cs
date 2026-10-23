@@ -16,5 +16,13 @@ public record GenerationGateId(MaterializationKey Key, MaterializationGeneration
     /// <summary>
     /// Represents the value.
     /// </summary>
-    public string Value => $"{Key.Value}#{Generation.Value}";
+    public string Value => Format(Key.Value, Generation.Value);
+
+    /// <summary>
+    /// Formats the gate identity shared by bindings and sink fencing.
+    /// </summary>
+    /// <param name="key">The materialization key.</param>
+    /// <param name="generation">The generation.</param>
+    /// <returns>The gate identity.</returns>
+    public static string Format(string key, ulong generation) => $"{key}#{generation}";
 }
