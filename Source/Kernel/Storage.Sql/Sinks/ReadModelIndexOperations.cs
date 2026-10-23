@@ -24,9 +24,19 @@ internal static class ReadModelIndexOperations
     /// <param name="name">The index name.</param>
     /// <param name="online">Whether to request an online build.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, (string Table, string Column) target, string name, bool online)
+    internal static Task Ensure(ReadModelDbContext context, (string Table, string Column) target, string name, bool online) =>
+        Ensure(context, (target.Table, target.Column, name), new Execution(online, null));
+
+    /// <summary>
+    /// Ensures an index with execution settings scoped to its DDL statements.
+    /// </summary>
+    /// <param name="context">The read model context.</param>
+    /// <param name="target">The table, column and index name.</param>
+    /// <param name="execution">Online mode and an optional DDL timeout override; zero is unbounded.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task Ensure(ReadModelDbContext context, (string Table, string Column, string Name) target, Execution execution)
     {
-        var (table, column) = target;
+        var (table, column, name) = target;
         var database = context.Database;
         var databaseType = database.GetDatabaseType();
         var helper = context.GetService<ISqlGenerationHelper>();
@@ -40,17 +50,17 @@ internal static class ReadModelIndexOperations
         {
             if (databaseType == DatabaseType.PostgreSql)
             {
-                await DropIfInvalid(context, name, online);
+                await DropIfInvalid(context, (table, name), execution);
             }
 
-            create = $"CREATE INDEX {(online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
+            create = $"CREATE INDEX {(execution.Online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)} ({helper.DelimitIdentifier(column)})";
         }
 
-        if (await TryBuildOnline(context, create, online))
+        if (await TryBuildOnline(context, create, execution))
         {
             return;
         }
-        await Execute(context, create);
+        await Execute(context, (create, execution));
     }
 
     /// <summary>
@@ -61,21 +71,32 @@ internal static class ReadModelIndexOperations
     /// <param name="name">The index name.</param>
     /// <param name="online">Whether to request an online drop.</param>
     /// <returns>Awaitable task.</returns>
-    internal static Task Drop(ReadModelDbContext context, string table, string name, bool online)
+    internal static Task Drop(ReadModelDbContext context, string table, string name, bool online) =>
+        Drop(context, (table, name), new Execution(online, null));
+
+    /// <summary>
+    /// Drops an index with execution settings scoped to its DDL statement.
+    /// </summary>
+    /// <param name="context">The read model context.</param>
+    /// <param name="target">The table and index name.</param>
+    /// <param name="execution">Online mode and an optional DDL timeout override; zero is unbounded.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static Task Drop(ReadModelDbContext context, (string Table, string Name) target, Execution execution)
     {
+        var (table, name) = target;
         var helper = context.GetService<ISqlGenerationHelper>();
         var drop = context.Database.GetDatabaseType() switch
         {
-            DatabaseType.PostgreSql => $"DROP INDEX {(online ? "CONCURRENTLY " : string.Empty)}IF EXISTS {helper.DelimitIdentifier(name)}",
+            DatabaseType.PostgreSql => $"DROP INDEX {(execution.Online ? "CONCURRENTLY " : string.Empty)}IF EXISTS {helper.DelimitIdentifier(name)}",
             DatabaseType.SqlServer => $"DROP INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}",
             _ => $"DROP INDEX IF EXISTS {helper.DelimitIdentifier(name)}"
         };
-        return Execute(context, drop);
+        return Execute(context, (drop, execution));
     }
 
-    static async Task<bool> TryBuildOnline(ReadModelDbContext context, string create, bool online)
+    static async Task<bool> TryBuildOnline(ReadModelDbContext context, string create, Execution execution)
     {
-        if (!online || context.Database.GetDatabaseType() != DatabaseType.SqlServer)
+        if (!execution.Online || context.Database.GetDatabaseType() != DatabaseType.SqlServer)
         {
             return false;
         }
@@ -84,7 +105,7 @@ internal static class ReadModelIndexOperations
         {
             try
             {
-                await Execute(context, create + " WITH (ONLINE = ON)");
+                await Execute(context, (create + " WITH (ONLINE = ON)", execution));
                 return true;
             }
             catch (SqlException exception) when (exception.Number == 1712)
@@ -95,20 +116,41 @@ internal static class ReadModelIndexOperations
         return false;
     }
 
-    static async Task DropIfInvalid(ReadModelDbContext context, string name, bool online)
+    static async Task DropIfInvalid(ReadModelDbContext context, (string Table, string Name) target, Execution execution)
     {
+        var name = target.Name;
         var invalid = await context.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_namespace n ON n.oid = i.relnamespace WHERE i.relname = {name} AND n.nspname = current_schema() AND NOT x.indisvalid").AnyAsync();
         if (invalid)
         {
-            var helper = context.GetService<ISqlGenerationHelper>();
-            await Execute(context, $"DROP INDEX {(online ? "CONCURRENTLY " : string.Empty)}IF EXISTS {helper.DelimitIdentifier(name)}");
+            await Drop(context, target, execution);
         }
     }
 
-    static Task<int> Execute(ReadModelDbContext context, string sql)
+    static async Task<int> Execute(ReadModelDbContext context, (string Sql, Execution Execution) command)
     {
+        var (sql, execution) = command;
+        var commandTimeout = execution.CommandTimeout;
+        var timeout = context.Database.GetCommandTimeout();
+        if (commandTimeout.HasValue)
+        {
+            context.Database.SetCommandTimeout(commandTimeout);
+        }
+        try
+        {
 #pragma warning disable EF1002 // Identifiers are delimited by ISqlGenerationHelper.
-        return context.Database.ExecuteSqlRawAsync(sql);
+            return await context.Database.ExecuteSqlRawAsync(sql);
 #pragma warning restore EF1002
+        }
+        finally
+        {
+            context.Database.SetCommandTimeout(timeout);
+        }
     }
+
+    /// <summary>
+    /// Execution settings for index DDL, separate from catalog queries.
+    /// </summary>
+    /// <param name="Online">Whether to request online execution.</param>
+    /// <param name="CommandTimeout">An optional DDL timeout override; zero is unbounded.</param>
+    internal readonly record struct Execution(bool Online, int? CommandTimeout);
 }

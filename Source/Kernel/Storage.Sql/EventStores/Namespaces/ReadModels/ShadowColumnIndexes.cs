@@ -58,16 +58,16 @@ internal static class ShadowColumnIndexes
         var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
         if (ShadowColumns.For(context).Count == 0) return;
         var indexes = await Existing(context).ToArrayAsync();
-        foreach (var index in indexes.Where(index => !expected.Contains(index.Column)))
+        foreach (var index in indexes.Where(index => !index.IsValid || !expected.Contains(index.Column)))
         {
-            await ReadModelIndexOperations.Drop(context, context.TableName, index.Name, online: true);
+            await ReadModelIndexOperations.Drop(context, (context.TableName, index.Name), execution: new(Online: true, CommandTimeout: 0));
         }
-        foreach (var column in expected.Where(column => !indexes.Any(index => index.Column == column)))
+        foreach (var column in expected.Where(column => !indexes.Any(index => index.IsValid && index.Column == column)))
         {
             // Names must survive renames untouched. A unique suffix avoids a name still owned by a revert table.
             var name = ReadModelIndexNames.For(context.Database.GetDatabaseType(), context.TableName, $"{column}_{Guid.NewGuid():N}")
                 .Replace(ReadModelIndexNames.Prefix, Prefix, StringComparison.Ordinal);
-            await ReadModelIndexOperations.Ensure(context, (context.TableName, column), name, online: true);
+            await ReadModelIndexOperations.Ensure(context, (context.TableName, column, name), execution: new(Online: true, CommandTimeout: 0));
         }
     }
 
@@ -76,9 +76,9 @@ internal static class ShadowColumnIndexes
         var table = PrimaryKeyNames.TableIdentifier(context.Database.GetDatabaseType(), context.TableName);
         return context.Database.GetDatabaseType() switch
         {
-            DatabaseType.PostgreSql => context.Database.SqlQuery<StoredIndex>($"SELECT i.relname AS \"Name\", a.attname AS \"Column\" FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0] WHERE t.relname = {table} AND n.nspname = current_schema() AND x.indnatts = 1 AND NOT x.indisunique AND left(i.relname, 14) = {Prefix}"),
-            DatabaseType.SqlServer => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS [Name], c.name AS [Column] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND ic.key_ordinal = 1 AND i.is_unique = 0 AND LEFT(i.name, 14) = {Prefix}"),
-            _ => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS Name, c.name AS \"Column\" FROM pragma_index_list({table}) i JOIN pragma_index_info(i.name) c WHERE i.\"unique\" = 0 AND substr(i.name, 1, 14) = {Prefix}")
+            DatabaseType.PostgreSql => context.Database.SqlQuery<StoredIndex>($"SELECT i.relname AS \"Name\", a.attname AS \"Column\", x.indisvalid AS \"IsValid\" FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0] WHERE t.relname = {table} AND n.nspname = current_schema() AND x.indnatts = 1 AND NOT x.indisunique AND left(i.relname, 14) = {Prefix}"),
+            DatabaseType.SqlServer => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS [Name], c.name AS [Column], CAST(1 AS bit) AS [IsValid] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND ic.key_ordinal = 1 AND i.is_unique = 0 AND LEFT(i.name, 14) = {Prefix}"),
+            _ => context.Database.SqlQuery<StoredIndex>($"SELECT i.name AS Name, c.name AS \"Column\", 1 AS IsValid FROM pragma_index_list({table}) i JOIN pragma_index_info(i.name) c WHERE i.\"unique\" = 0 AND substr(i.name, 1, 14) = {Prefix}")
         };
     }
 
@@ -86,5 +86,6 @@ internal static class ShadowColumnIndexes
     {
         public string Name { get; set; } = string.Empty;
         public string Column { get; set; } = string.Empty;
+        public bool IsValid { get; set; }
     }
 }
