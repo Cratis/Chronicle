@@ -15,4 +15,12 @@ public record PatchManagerState(IEnumerable<Patch> AppliedPatches)
     /// Gets an empty state.
     /// </summary>
     public static readonly PatchManagerState Empty = new([]);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PatchManagerState"/> class with no applied patches.
+    /// </summary>
+    public PatchManagerState()
+        : this([])
+    {
+    }
 }

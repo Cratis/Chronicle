@@ -11,6 +11,10 @@ through their concept's `validate` rules in every ESM version. An omitted option
 filter is not validated. A violation is a Validation rejection carrying the rule's
 message; a valid key with no matching instance is absence.
 
+On a composite-keyed read model every `by` part of a single-instance query is validated
+the same way; an argument that breaks a part's concept rule binds and rejects with
+Validation (Requires Screenplay 4.204.0, ESM v27).
+
 Use exactly one query request and one `then error`, bare or with a message. No
 command/append/reaction action, result, `then no result` or `then denied` may
 accompany it (PLAY0465). An actionless `then query` with `arguments` and no `result`

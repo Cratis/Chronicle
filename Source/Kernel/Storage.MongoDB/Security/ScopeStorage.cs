@@ -31,7 +31,7 @@ public class ScopeStorage(IDatabase database) : IScopeStorage
 
     /// <inheritdoc/>
     public Task Create(Scope scope, CancellationToken cancellationToken = default) =>
-        _collection.InsertOneAsync(scope, cancellationToken: cancellationToken);
+        _collection.InsertOnce(scope, _ => _.Id == scope.Id, cancellationToken);
 
     /// <inheritdoc/>
     public Task Update(Scope scope, CancellationToken cancellationToken = default) =>

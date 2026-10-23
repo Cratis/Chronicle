@@ -73,10 +73,12 @@ public partial class SqlMembershipTable
         }
         catch (SqlException exception) when (exception.Number is 2601 or 2627)
         {
+            SqlStorageTelemetry.RecoveredCollision("membership");
             return false;
         }
         catch (PostgresException exception) when (string.Equals(exception.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal))
         {
+            SqlStorageTelemetry.RecoveredCollision("membership");
             return false;
         }
     }

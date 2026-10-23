@@ -59,6 +59,5 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.WebhookDefinitions.Upsert(definition.ToSql());
-        await scope.DbContext.SaveChangesAsync();
     }
 }

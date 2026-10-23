@@ -1,0 +1,4 @@
+{
+  "servers": "selected-profiles",
+  "$cratisAiManaged": "harnesses/pi/extensions/cratis-mcp/capabilities.json"
+}

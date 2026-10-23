@@ -5,9 +5,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, renameSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Script } from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,7 @@ const commandTimeout = 15_000;
 const reviewedRulesRef = '40125b4fcae388e62ed9471edfffd0e991422f0a';
 const hookMode = process.argv[2] === '--hook';
 let claudeHook = false;
+let invocation = {};
 const hookWarnings = [];
 const warningLine = line => /^(::warning\b|::notice title=Release notes (?:drift )?not checked|Warning:)/.test(line);
 const warning = message => {
@@ -26,6 +27,23 @@ const warning = message => {
 const run = (command, args, options = {}) => spawnSync(command, args, {
     encoding: 'utf8', timeout: commandTimeout, maxBuffer: 32 * 1024 * 1024, ...options,
 });
+// A bare ENOENT cannot be told apart from a path resolved against the wrong directory, a copy of this
+// checker from another checkout, or a file that is not there yet. Naming all of those lets the next
+// occurrence be diagnosed instead of retried.
+function readBodyFile(value) {
+    const resolved = resolve(value);
+    try {
+        return readFileSync(resolved, 'utf8');
+    } catch (error) {
+        const parent = dirname(resolved);
+        const details = [`--body-file value: ${value}`, `path tried: ${resolved}`,
+            `parent directory exists: ${existsSync(parent)}`, `file exists now: ${existsSync(resolved)}`,
+            `checker working directory: ${process.cwd()}`,
+            ...Object.entries(invocation).map(([name, detail]) => `${name}: ${detail}`),
+            `checker script: ${fileURLToPath(import.meta.url)}`];
+        throw new Error(`cannot read the pull-request body file (${error.code || error.message}); ${details.join('; ')}`, { cause: error });
+    }
+}
 const gh = (args, options = {}) => {
     const result = run('gh', args, options);
     if (result.error || result.status !== 0) throw new Error(`gh ${args[0]} failed: ${result.stderr?.trim() || result.error?.message || result.status}`);
@@ -36,8 +54,9 @@ const git = (args, cwd = process.cwd()) => {
     return result.status === 0 ? result.stdout.trim() : '';
 };
 
+// The combined pull-request policy caller opts in, as do the legacy per-check callers it replaced.
 function workflowCallers(source) {
-    return [...source.matchAll(/^\s*uses:\s*['"]?Cratis\/Workflows\/\.github\/workflows\/(verify-(?:release-notes|semver-label|release-intent))\.yml@([^\s'"#]+)/gmi)]
+    return [...source.matchAll(/^\s*uses:\s*['"]?Cratis\/Workflows\/\.github\/workflows\/(verify-(?:pull-request-policy|release-notes|semver-label|release-intent))\.yml@([^\s'"#]+)/gmi)]
         .map(match => ({ name: match[1], ref: match[2] }));
 }
 
@@ -53,6 +72,13 @@ function callers(cwd = process.cwd()) {
     } catch { return []; }
 }
 
+function missingCaller(repository) {
+    return `No Cratis/Workflows policy caller found for ${repository}, so its pull-request contract is not enforced and this check cannot vouch for it. `
+        + 'Add .github/workflows/verify-pull-request-policy.yml calling Cratis/Workflows/.github/workflows/verify-pull-request-policy.yml '
+        + '(a legacy verify-release-notes, verify-semver-label or verify-release-intent caller also counts), then run this check again. '
+        + 'Cratis/Workflows bootstrap-common-workflows installs the caller; if the repository is meant to have none, do not use this check there.';
+}
+
 function repositoryName(value) {
     return value?.replace(/^(?:https?:\/\/github\.com\/|(?:ssh:\/\/)?git@github\.com[:/])/i, '')
         .replace(/^github\.com\//i, '').replace(/\/$/, '').replace(/\.git$/i, '');
@@ -62,16 +88,23 @@ function originRepository(cwd) {
     return repositoryName(git(['remote', 'get-url', 'origin'], cwd));
 }
 
-function targetCallers(repository, cwd) {
+function targetCallers(repository, cwd, warn) {
     if (cwd && repository?.toLowerCase() === originRepository(cwd)?.toLowerCase()) return callers(cwd);
-    let files;
-    try { files = JSON.parse(gh(['api', `repos/${repository}/contents/.github/workflows`])); }
-    catch (error) {
-        if (/HTTP 404/.test(error.message)) return [];
+    let listed = false;
+    try {
+        const files = JSON.parse(gh(['api', `repos/${repository}/contents/.github/workflows`]));
+        listed = true;
+        return files.filter(file => file.type === 'file' && /\.ya?ml$/.test(file.name)).flatMap(file =>
+            workflowCallers(gh(['api', '-H', 'Accept: application/vnd.github.raw', `repos/${repository}/contents/${file.path}`])));
+    } catch (error) {
+        // Only a missing workflows directory means no opt-in; a failed file fetch is an unknown.
+        if (!listed && /HTTP 404/.test(error.message)) return [];
+        if (/^Cratis\/[^/]+$/i.test(repository)) {
+            warn(`Could not determine release-workflow opt-in for ${repository} (${error.message}); checking against bundled reviewed rules`);
+            return [{ name: 'verify-release-notes', ref: reviewedRulesRef }];
+        }
         throw new Error(`Could not determine release-workflow opt-in for ${repository}: ${error.message}`);
     }
-    return files.filter(file => file.type === 'file' && /\.ya?ml$/.test(file.name)).flatMap(file =>
-        workflowCallers(gh(['api', '-H', 'Accept: application/vnd.github.raw', `repos/${repository}/contents/${file.path}`])));
 }
 
 function optedIn(cwd) {
@@ -93,12 +126,27 @@ function programs(workflow) {
     return bundle;
 }
 
+// Workflows that carry the marked release-note programs, in order of preference. Each has its own
+// cache root so a bundle from one file is never offered for the other at the same ref.
+const ruleSources = [
+    { caller: 'verify-pull-request-policy', file: 'verify-pull-request-policy.yml', cache: 'verify-pull-request-policy' },
+    { caller: 'verify-release-notes', file: 'verify-release-notes.yml', cache: 'release-notes' },
+];
+
+function ruleSource(repositoryCallers) {
+    for (const source of ruleSources) {
+        const caller = repositoryCallers.find(candidate => candidate.name === source.caller);
+        if (caller) return { ...source, ref: caller.ref };
+    }
+    return { ...ruleSources.find(source => source.caller === 'verify-release-notes'), ref: reviewedRulesRef };
+}
+
 function rules(warn, repositoryCallers) {
-    const ref = repositoryCallers.find(caller => caller.name === 'verify-release-notes')?.ref || reviewedRulesRef;
+    const { file: workflowFile, cache: cacheName, ref } = ruleSource(repositoryCallers);
     const floating = !/^[a-f0-9]{40}$/i.test(ref);
-    const cache = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'cratis', 'release-notes', ref);
+    const cache = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'cratis', cacheName, ref);
     try {
-        const workflow = gh(['api', '-H', 'Accept: application/vnd.github.raw', `repos/Cratis/Workflows/contents/.github/workflows/verify-release-notes.yml?ref=${encodeURIComponent(ref)}`]);
+        const workflow = gh(['api', '-H', 'Accept: application/vnd.github.raw', `repos/Cratis/Workflows/contents/.github/workflows/${workflowFile}?ref=${encodeURIComponent(ref)}`]);
         const bundle = programs(workflow);
         const bytes = Buffer.from(workflow);
         const sha = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
@@ -109,10 +157,10 @@ function rules(warn, repositoryCallers) {
         renameSync(temporary, file);
         return file;
     } catch (error) {
-        if (floating) {
+        if (floating || ref === reviewedRulesRef) {
             const bundled = fileURLToPath(new URL('./cratis-release-notes-reviewed.cjs', import.meta.url));
             new Script(readFileSync(bundled, 'utf8'));
-            warn(`Could not fetch release-note rules at ${ref}; using bundled reviewed ${reviewedRulesRef}. ${error.message}`);
+            warn(`Could not fetch release-note rules from ${workflowFile} at ${ref}; using bundled reviewed ${reviewedRulesRef}. ${error.message}`);
             return bundled;
         }
         try {
@@ -124,12 +172,12 @@ function rules(warn, repositoryCallers) {
                     const source = readFileSync(file, 'utf8');
                     if (!source.includes('// cratis:program release-notes\n') || !source.includes('// cratis:program release-notes-drift\n')) continue;
                     new Script(source);
-                    warn(`Could not fetch release-note rules; using cached ${file}. ${error.message}`);
+                    warn(`Could not fetch release-note rules from ${workflowFile}; using cached ${file}. ${error.message}`);
                     return file;
                 } catch { /* Try the next complete cache entry. */ }
             }
         } catch { /* No cache available. */ }
-        warn(`unchecked: could not fetch release-note rules and nothing is cached. ${error.message}`);
+        warn(`unchecked: could not fetch release-note rules from ${workflowFile} at ${ref} and nothing is cached. ${error.message}`);
         return undefined;
     }
 }
@@ -157,7 +205,7 @@ function check(argv, repositoryCallers, lookupOptions) {
     for (const label of split(values['add-label'])) labels.add(label);
     const intent = intents.filter(label => labels.has(label));
     if (intent.length !== 1) throw new Error(`Exactly one release-intent label is required (major/minor/patch/no-release); found ${intent.join(', ') || 'none'}.`);
-    const body = values['body-file'] ? readFileSync(resolve(values['body-file']), 'utf8') : pull.body || '';
+    const body = values['body-file'] ? readBodyFile(values['body-file']) : pull.body || '';
     let repository = values.repo;
     let defaultBranch = git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).replace(/^origin\//, '') || 'main';
     try {
@@ -176,7 +224,11 @@ function check(argv, repositoryCallers, lookupOptions) {
     // The release-intent check above still applies to bot-authored pull requests.
     if (author === 'dependabot[bot]') return 0;
     const base = values.base || pull?.baseRefName || defaultBranch;
-    const file = rules(warn, repositoryCallers || targetCallers(repository, process.cwd()));
+    const found = repositoryCallers || targetCallers(repository, process.cwd(), warn);
+    // A Cratis repository without a policy caller has no enforced pull-request contract; passing here would
+    // let the author believe it has one. A fetch failure is not this case: targetCallers falls back to a caller.
+    if (!found.length && /^Cratis\/[^/]+$/i.test(repository)) throw new Error(missingCaller(repository));
+    const file = rules(warn, found);
     if (!file) return 3;
     const env = { PATH: process.env.PATH, HOME: homedir(), LANG: 'C.UTF-8',
         PR_BODY: body, PR_LABELS: JSON.stringify([...labels]),
@@ -325,6 +377,7 @@ function hook() {
     if (typeof text !== 'string' || !/\bgh\s+pr\s+(create|edit)\b/.test(text.replace(/\\\r?\n/g, ''))) return 0;
     // Match each simple command, never the same text inside an echo/grep argument.
     let cwd = payload.cwd || process.cwd();
+    invocation = { 'hook payload directory': payload.cwd || '(none)' };
     let knownDirectory = true;
     let parsed;
     try { parsed = commands(text); } catch (error) { if (!optedIn(cwd)) return 0; throw error; }
@@ -351,7 +404,7 @@ function hook() {
             throw new Error('Use a literal directory before gh pr create/edit.');
         }
         if (!/^Cratis\/[^/]+$/i.test(repository)) continue;
-        const repositoryCallers = targetCallers(repository, knownDirectory ? cwd : undefined);
+        const repositoryCallers = targetCallers(repository, knownDirectory ? cwd : undefined, message => warning(`Warning: ${message}`));
         if (!repositoryCallers.length) continue;
         if (!knownDirectory) throw new Error('Use a literal directory before gh pr create/edit.');
         const args = [];
@@ -387,6 +440,7 @@ function hook() {
         if (targetedRepository) lookupEnvironment.GH_REPO = targetedRepository;
         else delete lookupEnvironment.GH_REPO;
         process.chdir(cwd);
+        invocation['command directory'] = cwd;
         const code = check(args, repositoryCallers, { env: lookupEnvironment });
         if (code !== 0 && code !== 3) throw new Error('The pull-request body or release intent failed cratis-check-pr. Fix the reported violations before retrying.');
     }

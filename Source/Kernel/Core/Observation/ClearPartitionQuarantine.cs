@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="EventStore">The name of the event store.</param>
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="ObserverId">The unique identifier of the observer.</param>
-/// <param name="EventSequenceId">The identifier of the event sequence; defaults to the event log when empty.</param>
+/// <param name="EventSequenceId">The identifier of the event sequence; uses the stored observer sequence when empty, or the event log if unavailable.</param>
 /// <param name="Partition">The quarantined partition to clear.</param>
 /// <param name="RetryImmediately">Whether to start recovering the partition right after clearing it.</param>
 /// <remarks>
@@ -28,11 +29,12 @@ public record ClearPartitionQuarantine(string EventStore, string Namespace, stri
     /// Handles the command by invoking <see cref="IObserver.ClearPartitionQuarantine"/> on the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
+    /// <param name="storage">The storage containing observer definitions.</param>
     /// <returns>The <see cref="ClearPartitionQuarantineResult"/> describing what happened.</returns>
-    public Task<ClearPartitionQuarantineResult> Handle(IGrainFactory grainFactory)
+    public async Task<ClearPartitionQuarantineResult> Handle(IGrainFactory grainFactory, IStorage storage)
     {
-        var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
+        var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        return grainFactory.GetGrain<IObserver>(key).ClearPartitionQuarantine(Partition, RetryImmediately);
+        return await grainFactory.GetGrain<IObserver>(key).ClearPartitionQuarantine(Partition, RetryImmediately);
     }
 }

@@ -22,15 +22,11 @@ Produce a structured review of a pull request against all Cratis standards.
 
 ## Output
 
-```
-## Pull Request Review — #<number>
-### Summary — <2–3 sentences>
-### Architecture & Quality — ✅ / ⚠️ / ❌   <findings>
-### Security — ✅ / ⚠️ / ❌   <findings>
-### Spec Coverage — ✅ / ⚠️ / ❌
-### Documentation — ✅ / ⚠️ / ❌
-### Overall — ✅ Approved / ⚠️ Approved with comments / ❌ Changes requested
-**Blocking** (violates a MUST): 1. …    **Suggestions**: 1. …
-```
+Read and use `.cratis/ai/rules/review-reports.md` before writing the report.
+Open with the PR number and a short summary. Keep one report per reviewer using
+the shared Blockers / Suggestions / Dismissed (with reason) / Verdict sections
+and Not examined line. Include specification-coverage and documentation checks
+in the relevant reviewer's scope, with any missing evidence made explicit.
 
-Be specific — file, line, and corrected code for every blocking issue.
+End with one **Combined verdict** using the shared aggregation rule, preserving
+each reviewer's findings, dismissals, and scope limits.

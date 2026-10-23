@@ -52,6 +52,12 @@ client and kernel registration exception names. Changing a reactor/reducer's
 pin or delivery mode does not itself trigger replay; request replay when prior
 state needs rebuilding.
 
+Requires Chronicle 19.66.0 for generation-pinned event-store subscriptions.
+Their builder opts in separately with `WithGenerationDelivery(Pinned)` and
+explicit or typed event pins; the global observer option does not opt them in.
+Both source and target stores must register the generation. Read the client
+reference above for registration and forwarding failure behavior.
+
 ## PDL pins are resolved once, when saved
 
 For a PDL definition saved with `GenerationDelivery = Pinned`, a bare reference

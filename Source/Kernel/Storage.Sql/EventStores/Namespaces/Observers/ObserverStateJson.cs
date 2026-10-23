@@ -16,6 +16,6 @@ internal static class ObserverStateJson
     /// </summary>
     internal static JsonSerializerOptions Options { get; } = new()
     {
-        Converters = { new ConceptAsJsonConverterFactory() }
+        Converters = { new ConceptAsJsonConverterFactory(), new Concepts.Keys.KeyJsonConverter() }
     };
 }
