@@ -22,6 +22,7 @@ public partial class Observer
     public async Task<JobId> Replay()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsRetired || !Definition.IsReplayable)
         {
             return JobId.NotSet;
@@ -215,6 +216,7 @@ public partial class Observer
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsRetired || !Definition.IsReplayable)
         {
             return;

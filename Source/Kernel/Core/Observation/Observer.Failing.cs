@@ -195,6 +195,7 @@ public partial class Observer
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (IsQuarantined)
         {
@@ -238,6 +239,7 @@ public partial class Observer
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         FailedPartition? failure;
         await _alertMutationLock.WaitAsync();
@@ -285,6 +287,7 @@ public partial class Observer
     public async Task ClearFailedPartitions()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         if (Failures.HasFailedPartitions)
         {

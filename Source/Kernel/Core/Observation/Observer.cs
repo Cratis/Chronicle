@@ -208,6 +208,10 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         await InitializeAlertState();
+        if (!KeyOwnsDefinition)
+        {
+            logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
+        }
     }
 
     /// <inheritdoc/>
@@ -293,6 +297,7 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsQuarantined)
         {
             await ReviveFromQuarantine();
@@ -313,6 +318,7 @@ public partial class Observer(
         logger.RemovingObserver();
 
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
 
         // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
         // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
@@ -429,6 +435,7 @@ public partial class Observer(
 
         await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
+        ClaimDefinitionForKey();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await BeginAlertLifecycle();
@@ -772,7 +779,7 @@ public partial class Observer(
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
 
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists;
+    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -863,6 +870,9 @@ public partial class Observer(
         ThrowIfSealed();
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
+        // A subscription is a registration, and a registration decides which event sequence the observer is on.
+        ClaimDefinitionForKey();
+
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
         var leavesQuarantine = !automatic && !recovering;
         if (leavesQuarantine)
@@ -892,6 +902,7 @@ public partial class Observer(
                 var storageWasReset = await ReloadObserverState();
 
                 await observerDefinition.ReadStateAsync();
+                ClaimDefinitionForKey();
                 await failures.ReadStateAsync();
                 if (storageWasReset && wasQuarantined && IsQuarantined)
                 {
@@ -978,6 +989,7 @@ public partial class Observer(
 
         observerDefinition.State = observerDefinition.State with
         {
+            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
@@ -1004,6 +1016,7 @@ public partial class Observer(
         if (reconcile && CannotReconcileSubscription()) return;
         observerDefinition.State = observerDefinition.State with
         {
+            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = GetOwner<TObserverSubscriber>(),
             EventTypes = [],
