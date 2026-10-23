@@ -6,6 +6,7 @@ extern alias KernelCore;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections;
 using context = Cratis.Chronicle.Integration.Clustering.for_RolePlacement.when_replaying_a_kernel_projection_with_split_roles.context;
+using IHandleEventsForObserver = KernelCore::Cratis.Chronicle.Observation.Jobs.IHandleEventsForObserver;
 using IProjectionObserverSubscriber = KernelCore::Cratis.Chronicle.Projections.IProjectionObserverSubscriber;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_RolePlacement;
@@ -31,6 +32,7 @@ public class when_replaying_a_kernel_projection_with_split_roles(context _contex
             var store = fixture.ClientEventStore;
             var handler = store.Projections.GetHandlerFor<ReplayPlacementProjection>();
             await handler.WaitTillActive(_timeout);
+            Placement.BeginCapture(JobsSilo, typeof(IHandleEventsForObserver), handler.Id.Value);
             var sources = Enumerable.Range(0, Partitions).Select(_ => Guid.NewGuid().ToString()).ToArray();
             foreach (var source in sources)
             {
@@ -40,17 +42,24 @@ public class when_replaying_a_kernel_projection_with_split_roles(context _contex
 
             var grains = fixture.SiloServices.GetRequiredService<IGrainFactory>();
             var management = grains.GetGrain<IManagementGrain>(0);
-            var warmSubscribers = await management.GetDetailedGrainStatistics();
-            foreach (var statistic in warmSubscribers.Where(statistic => IsSubscriber(statistic, handler.Id)))
+            Placement.Deliveries.Count.ShouldEqual(Partitions);
+            foreach (var subscriberId in Placement.Deliveries.Values)
             {
-                await grains.GetGrain<IProjectionObserverSubscriber>(statistic.GrainId).ReleaseAfterPartition();
+                await grains.GetGrain<IProjectionObserverSubscriber>(subscriberId).ReleaseAfterPartition();
             }
 
-            Placement.JobsSilo = JobsSilo;
-            Placement.Capturing = true;
+            Placement.BeginCapture(JobsSilo, typeof(IHandleEventsForObserver), handler.Id.Value);
             var replay = await store.Projections.Replay<ReplayPlacementProjection>();
             await store.Jobs.WaitTillJobCompletesOrIsDeleted(replay, _timeout);
-            Placement.Capturing = false;
+            Placement.Deliveries.Count.ShouldEqual(Partitions);
+            var subscriberIds = Placement.Deliveries.Values.ToHashSet();
+            var replayStatistics = await management.GetDetailedGrainStatistics();
+            foreach (var statistic in replayStatistics.Where(statistic => subscriberIds.Contains(statistic.GrainId)))
+            {
+                Placement.Subscribers[statistic.GrainId] = statistic.SiloAddress;
+            }
+            Placement.Steps.Count.ShouldEqual(1);
+            Placement.Subscribers.Count.ShouldBeGreaterThanOrEqual(Partitions);
             Replayed = await Task.WhenAll(sources.Select(source => store.ReadModels.GetInstanceById<ReplayPlacementModel>(source)));
 
             // An untouched partition must still activate on the observer's silo during live delivery.
@@ -58,21 +67,22 @@ public class when_replaying_a_kernel_projection_with_split_roles(context _contex
             var liveAppend = await store.EventLog.Append(liveSource, new ReplayPlaced(99));
             await handler.WaitTillReachesEventSequenceNumber(liveAppend.SequenceNumber, _timeout);
             var liveStatistics = await management.GetDetailedGrainStatistics();
-            LiveSubscriber = liveStatistics.Single(statistic => IsSubscriber(statistic, handler.Id) &&
-                statistic.GrainId.ToString().Contains(liveSource, StringComparison.Ordinal)).SiloAddress;
+            var liveId = Placement.Deliveries[liveSource];
+            LiveSubscriber = liveStatistics.Single(statistic => statistic.GrainId == liveId).SiloAddress;
+            Placement.Capturing = false;
         }
 
         public Task DisposeAsync() => Task.CompletedTask;
-
-        static bool IsSubscriber(DetailedGrainStatistic statistic, ProjectionId projection) =>
-            statistic.GrainType.Contains("projectionobserversubscriber", StringComparison.OrdinalIgnoreCase) &&
-            statistic.GrainId.ToString().Contains(projection.Value, StringComparison.Ordinal);
     }
 
-    [Fact] void should_run_a_real_step_for_every_partition() => _context.Placement.Steps.Count.ShouldBeGreaterThanOrEqual(context.Partitions);
+    [Fact] void should_run_one_real_streaming_step() => _context.Placement.Steps.Count.ShouldEqual(1);
     [Fact] void should_force_every_step_onto_the_jobs_silo() => _context.Placement.Steps.Values.ShouldEachConformTo(address => address == _context.JobsSilo);
-    [Fact] void should_observe_every_replay_subscriber_before_release() => _context.Placement.Subscribers.Count.ShouldBeGreaterThanOrEqual(context.Partitions);
+    [Fact] void should_leave_every_replay_subscriber_for_idle_collection() => _context.Placement.Subscribers.Count.ShouldBeGreaterThanOrEqual(context.Partitions);
     [Fact] void should_place_at_least_ninety_percent_of_replay_subscribers_next_to_their_steps() => ((double)_context.Placement.Subscribers.Values.Count(address => address == _context.JobsSilo) / _context.Placement.Subscribers.Count).ShouldBeGreaterThanOrEqual(0.9);
-    [Fact] void should_rebuild_every_partition() => _context.Replayed.ShouldEachConformTo(model => model.Number == 42);
+    [Fact] void should_rebuild_every_partition()
+    {
+        _context.Replayed.Count.ShouldEqual(context.Partitions);
+        _context.Replayed.ShouldEachConformTo(model => model.Number == 42);
+    }
     [Fact] void should_keep_live_delivery_on_the_observer_silo() => _context.LiveSubscriber.ShouldEqual(_context.LiveSilo);
 }
