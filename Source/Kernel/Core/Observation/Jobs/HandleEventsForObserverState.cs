@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Orleans.Storage.Jobs;
 
@@ -16,6 +17,12 @@ public class HandleEventsForObserverState : JobStepState
     /// Gets or sets the replay bucket. Null retains ordered processing for legacy steps.
     /// </summary>
     public ReplayBucket? Bucket { get; set; }
+
+    /// <summary>
+    /// Gets or sets the partitions this bucket has failed, retained across retries and resumes.
+    /// Empty for steps stored before bucket failures were persisted. Ignored by ordered steps.
+    /// </summary>
+    public IEnumerable<Key> BucketFailedPartitions { get; set; } = [];
 
     /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.

@@ -33,6 +33,7 @@ public class and_a_partition_fails : given.a_performing_job_step
 
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
+    [Fact] void should_not_record_bucket_failures_in_ordered_mode() => _stateStorage.State.BucketFailedPartitions.ShouldBeEmpty();
     [Fact] void should_handle_the_module_partition_first() => _handledBatches[0].Partition.ShouldEqual((Key)"module");
     [Fact] void should_attempt_the_failing_feature_partition() => _handledBatches[1].Partition.ShouldEqual((Key)"feature");
     [Fact] void should_not_dispatch_anything_after_the_failure() => _handledBatches.Count.ShouldEqual(2);

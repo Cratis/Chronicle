@@ -14,11 +14,19 @@ public partial class HandleEventsForObserver
         bucket is not null && result.State == ObserverSubscriberState.Failed &&
         (!page || (result.FailedPartition is not null && result.FailedAt.IsActualValue));
 
+    static void ValidateBucket(ReplayBucket? bucket)
+    {
+        if (bucket is { HashVersion: not 1 })
+        {
+            throw new NotSupportedException($"Replay bucket hash version {bucket.HashVersion} is not supported.");
+        }
+    }
+
     static AppendedEvent[] FilterBucketEvents(ReplayBucket? bucket, AppendedEvent[] events) => bucket is null
         ? events
         : events.Where(@event => ReplayBuckets.For(@event.Context.EventSourceId, bucket.Count) == bucket).ToArray();
 
-    (JobStepResult? Result, EventSequenceNumber LastSuccessful) FailureResult(
+    async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessful)> FailureResult(
         ReplayBucket? bucket,
         Key partition,
         ObserverSubscriberResult result,
@@ -26,12 +34,36 @@ public partial class HandleEventsForObserver
     {
         if (CanContinueBucket(bucket, result, context.Page))
         {
-            _bucketFailedPartitions.Add(partition);
-            return (null, context.LastSuccessful);
+            return (await RecordBucketFailure(partition) ? null : ClosedResult(), context.LastSuccessful);
         }
 
         return (JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
             CreateResult(_lastDurableCheckpoint), result.ExceptionMessages, result.ExceptionStackTrace)), context.LastSuccessful);
+    }
+
+    void RestoreBucketFailures(HandleEventsForObserverState state) =>
+        _bucketFailedPartitions = state.Bucket is null ? [] : [.. state.BucketFailedPartitions];
+
+    async Task<JobStepResult?> DispatchFailureResult(ReplayBucket? bucket, Key partition, IEnumerable<string> exceptionMessages)
+    {
+        if (bucket is not null) return await RecordBucketFailure(partition) ? null : ClosedResult();
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(_lastDurableCheckpoint),
+            TransientTimeouts.ShortenForStep(exceptionMessages),
+            string.Empty));
+    }
+
+    async Task<bool> RecordBucketFailure(Key partition)
+    {
+        var recorded = await TryInvokeOnActivation(async () =>
+        {
+            State.BucketFailedPartitions = [.. _bucketFailedPartitions, partition];
+            var persisted = await WriteStateAsync();
+            persisted.RethrowError();
+        });
+        if (!recorded.IsSuccess) return false;
+        _bucketFailedPartitions.Add(partition);
+        return true;
     }
 
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessful, bool Handled, AppendedEvent[] Remaining)> HandlePage(

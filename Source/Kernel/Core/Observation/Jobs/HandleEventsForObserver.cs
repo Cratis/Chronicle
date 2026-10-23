@@ -195,13 +195,14 @@ public partial class HandleEventsForObserver(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
         _replayReports = DeliversPages ? new() : null;
-        _bucketFailedPartitions = [];
+        RestoreBucketFailures(currentState);
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
         _subscription = await _observer.GetSubscription();
         try
         {
+            ValidateBucket(currentState.Bucket);
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
             if (!_subscription.IsSubscribed)
             {
@@ -354,16 +355,9 @@ public partial class HandleEventsForObserver(
                                 return ClosedResult();
                             }
 
-                            if (currentState.Bucket is not null)
-                            {
-                                _bucketFailedPartitions.Add(partition);
-                                continue;
-                            }
-
-                            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                                CreateResult(_lastDurableCheckpoint),
-                                TransientTimeouts.ShortenForStep(exceptionMessages),
-                                string.Empty));
+                            var failure = await DispatchFailureResult(currentState.Bucket, partition, exceptionMessages);
+                            if (failure is not null) return failure;
+                            continue;
                         }
                         if (handleEventsResult.TryGetResult(out var handledEventsResult))
                         {
@@ -901,7 +895,7 @@ public partial class HandleEventsForObserver(
             return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
         }
 
-        return FailureResult(currentState.Bucket, partition, eventObserverResult, (lastSuccessfullyHandledEventSequenceNumber, page));
+        return await FailureResult(currentState.Bucket, partition, eventObserverResult, (lastSuccessfullyHandledEventSequenceNumber, page));
     }
 
     async Task<JobStepResult> HandlePageDispatchException(AppendedEvent firstEvent, Exception exception)

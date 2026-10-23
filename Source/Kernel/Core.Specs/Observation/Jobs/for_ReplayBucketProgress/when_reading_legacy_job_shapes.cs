@@ -25,5 +25,6 @@ public class when_reading_legacy_job_shapes : Specification
 
     [Fact] void should_read_old_arguments_as_ordered() => _arguments.Bucket.ShouldBeNull();
     [Fact] void should_read_old_step_state_as_ordered() => _step.Bucket.ShouldBeNull();
+    [Fact] void should_read_old_step_state_without_failed_bucket_partitions() => _step.BucketFailedPartitions.ShouldBeEmpty();
     [Fact] void should_read_old_job_state_without_bucket_progress() => _job.ReplayBucketSteps.ShouldBeEmpty();
 }

@@ -43,6 +43,12 @@ public class a_performing_job_step : Specification
     protected EventSequenceNumber _startSequenceNumber = EventSequenceNumber.Unavailable;
     protected readonly List<HandledBatch> _handledBatches = [];
 
+    protected async Task ReestablishStep()
+    {
+        _silo = new();
+        await Establish();
+    }
+
     protected virtual ReadModelsConfiguration CreateReadModelsConfig() => new();
 
     protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
