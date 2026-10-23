@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MongoDB.Driver.Core.Events;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
@@ -12,6 +13,15 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
 {
     readonly object _gate = new();
+    readonly Dictionary<string, long> _mongoFindCommandsByTag = new(StringComparer.Ordinal)
+    {
+        ["Sink.FindOrDefault"] = 0,
+        ["Sink.TryFindRootKeyByChildValue"] = 0,
+        ["EventSequenceStorage.TryGetLastInstanceOfAny"] = 0,
+        ["EventSequenceStorage.GetHeadSequenceNumber"] = 0,
+        ["EventSequenceStorage.GetRange"] = 0,
+        ["Other"] = 0
+    };
     bool _measuring;
     long _mongoCommands;
     long _grainCalls;
@@ -47,6 +57,10 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         {
             _mongoCommands = 0;
             _grainCalls = 0;
+            foreach (var tag in _mongoFindCommandsByTag.Keys.ToArray())
+            {
+                _mongoFindCommandsByTag[tag] = 0;
+            }
             _measuring = true;
         }
     }
@@ -54,24 +68,36 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// <summary>
     /// Closes the window atomically with the final counts.
     /// </summary>
-    /// <returns>Commands and incoming grain invocations started in the window.</returns>
-    internal (long MongoCommands, long GrainCalls) Stop()
+    /// <returns>Commands, incoming grain invocations, and find commands grouped by call-site comment started in the window.</returns>
+    internal (long MongoCommands, long GrainCalls, IReadOnlyDictionary<string, long> MongoFindCommandsByTag) Stop()
     {
         lock (_gate)
         {
             _measuring = false;
-            return (_mongoCommands, _grainCalls);
+            return (_mongoCommands, _grainCalls, new Dictionary<string, long>(_mongoFindCommandsByTag, StringComparer.Ordinal));
         }
     }
 
     /// <summary>
     /// Counts one driver command started in the window.
     /// </summary>
-    internal void OnCommand()
+    /// <param name="command">The command started by the MongoDB driver.</param>
+    internal void OnCommand(CommandStartedEvent command)
     {
         lock (_gate)
         {
-            if (_measuring) _mongoCommands++;
+            if (!_measuring) return;
+            _mongoCommands++;
+            if (command.CommandName != "find") return;
+            var tag = command.Command.TryGetValue("comment", out var comment) && comment.IsString
+                ? comment.AsString
+                : "Other";
+            if (!_mongoFindCommandsByTag.TryGetValue(tag, out var count))
+            {
+                tag = "Other";
+                count = _mongoFindCommandsByTag[tag];
+            }
+            _mongoFindCommandsByTag[tag] = count + 1;
         }
     }
 }

@@ -529,7 +529,7 @@ public partial class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
 
-        var highest = await collection.Find(filter)
+        var highest = await collection.Find(filter, new FindOptions { Comment = "EventSequenceStorage.GetHeadSequenceNumber" })
                                       .SortByAscendingSequenceNumber()
                                       .Limit(1)
                                       .SingleOrDefaultAsync()
@@ -784,7 +784,7 @@ public partial class EventSequenceStorage(
             Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId));
 
         var collection = _collection;
-        var @event = await collection.Find(filter)
+        var @event = await collection.Find(filter, new FindOptions { Comment = "EventSequenceStorage.TryGetLastInstanceOfAny" })
                                     .SortByDescendingSequenceNumber()
                                     .Limit(1)
                                     .SingleOrDefaultAsync()
@@ -901,7 +901,7 @@ public partial class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.And([.. filters]);
 
-        var cursor = await collection.Find(filter)
+        var cursor = await collection.Find(filter, new FindOptions { Comment = "EventSequenceStorage.GetRange" })
                                      .SortByAscendingSequenceNumber()
                                      .ToCursorAsync(cancellationToken)
                                      .ConfigureAwait(false);
