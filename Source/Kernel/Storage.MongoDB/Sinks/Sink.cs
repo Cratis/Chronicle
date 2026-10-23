@@ -87,6 +87,7 @@ public class Sink(
     readonly Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
+    readonly BulkStateChildIndex _bulkChildIndex = new();
 
     /// <summary>
     /// Highest event sequence number known to be applied to each document while a bulk window is open.
@@ -461,6 +462,7 @@ public class Sink(
     void EvictBulkCache(string cacheKey)
     {
         _bulkStateCache.TryRemove(cacheKey, out _);
+        _bulkChildIndex.Remove(cacheKey);
         _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
         _bulkWatermarks.TryRemove(cacheKey, out _);
     }
@@ -589,6 +591,7 @@ public class Sink(
         {
             _bulkStateCache[cacheKey] = changeset.CurrentState;
             _bulkKeysByCacheKey[cacheKey] = key;
+            _bulkChildIndex.Update(cacheKey, changeset.CurrentState);
             _bulkPendingDeletes.TryRemove(cacheKey, out _);
             if (eventSequenceNumber.IsActualValue)
             {
@@ -656,6 +659,7 @@ public class Sink(
     {
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
+        _bulkChildIndex.Clear();
         _bulkWatermarks.Clear();
         _bulkPendingDeletes.Clear();
     }
@@ -846,11 +850,9 @@ public class Sink(
     {
         if (_isBulkMode)
         {
-            var pathSegments = childPropertyPath.Segments.ToArray();
-            foreach (var (cacheKey, cachedState) in _bulkStateCache)
+            foreach (var cacheKey in _bulkChildIndex.Find(childPropertyPath, childValue, _bulkStateCache))
             {
-                if (TryFindValueInDocument(cachedState, pathSegments, 0, childValue) &&
-                    _bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
+                if (_bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
                 {
                     return new Option<Key>(rootKey);
                 }
@@ -1544,7 +1546,15 @@ public class Sink(
         return $"MongoDB write concern error {writeConcernError.Code} ({writeConcernError.CodeName}): {writeConcernError.Message}";
     }
 
-    bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
+    /// <summary>
+    /// Tests the original bulk-cache traversal, retained as the index equivalence oracle.
+    /// </summary>
+    /// <param name="document">The cached document.</param>
+    /// <param name="pathSegments">The child path segments.</param>
+    /// <param name="segmentIndex">The current segment.</param>
+    /// <param name="targetValue">The child value to match.</param>
+    /// <returns>Whether the document contains a matching value.</returns>
+    internal static bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
     {
         if (segmentIndex >= pathSegments.Length)
         {
@@ -1564,7 +1574,7 @@ public class Sink(
             : TryFindValueInChildren(value, pathSegments, segmentIndex, targetValue);
     }
 
-    bool TryFindValueInChildren(object value, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue) =>
+    static bool TryFindValueInChildren(object value, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue) =>
         value switch
         {
             IEnumerable<object> collection => collection.OfType<ExpandoObject>().Any(item => TryFindValueInDocument(item, pathSegments, segmentIndex + 1, targetValue)),
@@ -1572,7 +1582,13 @@ public class Sink(
             _ => false
         };
 
-    static bool ValuesAreEqual(object value, object targetValue)
+    /// <summary>
+    /// Compares bulk-cache values using CLR equality or their string representations.
+    /// </summary>
+    /// <param name="value">The stored value.</param>
+    /// <param name="targetValue">The lookup value.</param>
+    /// <returns>Whether the values match.</returns>
+    internal static bool ValuesAreEqual(object value, object targetValue)
     {
         if (value.Equals(targetValue))
         {
