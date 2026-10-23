@@ -15,5 +15,5 @@ public class when_storing_a_data_protection_key_and_the_insert_fails_otherwise :
     async Task Because() => _result = await Catch.Exception(() => _storage.Store(_key));
 
     [Fact] void should_throw_the_failure() => _result.ShouldBeOfExactType<InvalidOperationException>();
-    [Fact] void should_not_look_for_a_winner() => _collection.DidNotReceiveWithAnyArgs().FindAsync<DataProtectionKey>(default!, default, default);
+    [Fact] void should_not_look_for_a_winner() => _collection.DidNotReceiveWithAnyArgs().FindAsync<DataProtectionKey>(default, default, default);
 }
