@@ -71,6 +71,7 @@ export class ObserversViewModel {
                 this._replay.eventStore = eventStore;
                 this._replay.namespace = namespace;
                 this._replay.observerId = observerId;
+                this._replay.eventSequenceId = this.selectedObserver.eventSequenceId;
                 const commandResult = await this._replay.execute();
                 commandResult
                     .onException((error) => {
