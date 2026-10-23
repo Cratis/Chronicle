@@ -28,5 +28,9 @@ public class when_starting_without_roles : Specification
 
     void Destroy() => _host?.Dispose();
 
-    [Fact] void should_refuse_startup() => _error.ShouldBeOfExactType<OptionsValidationException>();
+    [Fact] void should_refuse_startup_because_of_the_roles() =>
+        (_error is AggregateException aggregate ? aggregate.Flatten().InnerExceptions : new[] { _error } as IEnumerable<Exception?>)
+            .OfType<OptionsValidationException>()
+            .Any(_ => _.OptionsType == typeof(ChronicleOptions))
+            .ShouldBeTrue();
 }
