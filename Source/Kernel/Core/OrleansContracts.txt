@@ -196,7 +196,10 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
   AC5A4CDC: SourceEventStoreAdded(Cratis.Chronicle.Concepts.EventStoreName) -> Task
   12134551: WaitUntilSubscribed(Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId, System.TimeSpan) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
+  99F6A550: Drain() -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(3)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   DD5E028F: CaughtUp(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -212,6 +215,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   E1FBBBE9: FailedPartitionRecovered(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task
   0B146F40: FastForward() -> Task<FastForwardResult>
   985D50C9: GetDefinition() -> Task<Cratis.Chronicle.Storage.Observation.ObserverDefinition>
+  5A1F1523: GetDeliveryFences() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Observation.DeliveryFence>>
   8F9CF48F: GetEventTypes() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
   BB66DB3A: GetFailedPartitionKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>>
   98A3B662: GetState() -> Task<Cratis.Chronicle.Storage.Observation.ObserverState>
@@ -229,6 +233,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   FBC5310A: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   957B55C5: PartitionDeferred(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.PartitionDeferral, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task
   25E3BC5A: PartitionFailed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<string>, string, Cratis.Chronicle.Concepts.Observation.FailureKind, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?, Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy) -> Task
+  520F1A05: PartitionFailedWithDeliveryFence(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IEnumerable<string>, string, Cratis.Chronicle.Concepts.Observation.FailureKind, Cratis.Chronicle.Observation.PartitionFailureContext) -> Task
   8B2111ED: PartitionReplayPartiallyCompleted(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   9AC9A52B: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   C0602201: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[]) -> Task
@@ -237,6 +242,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   A1B6D3B8: ReconcileSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, bool, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task
   D7E5FB10: RecoverStalledSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
   A652D659: RegisterCatchingUpPartitions(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>) -> Task
+  4D12BA79: ReleaseDeliveryFence(Cratis.Chronicle.Concepts.Keys.Key, System.DateTimeOffset) -> Task
+  B1F1D3A7: ReleaseRefusedPartitionReplay(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
+  8F78556C: ReleaseRefusedReplay() -> Task
   BF525C50: Remove() -> Task
   59316F29: Replay() -> Task<Cratis.Orleans.Jobs.JobId>
   8793636E: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key) -> Task
@@ -258,6 +266,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   7798939C: TryStartRecoverJobForFailedPartition(Cratis.Chronicle.Concepts.Keys.Key) -> Task<Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome>
   BC98490E: Unsubscribe() -> Task
   9EC111E3: UnsubscribeIfMatchesClient(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPageSubscriber")] Cratis.Chronicle.Observation.IObserverPageSubscriber [Version(1)]
+  50EF116D: OnNextPage(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverService")] Cratis.Chronicle.Observation.IObserverService [Version(0)]
   6CB341E4: AbandonReplayFor(Cratis.Chronicle.Observation.ObserverDetails) -> Task
@@ -404,8 +415,9 @@ class [GrainType("lifecycleoccurrences")] Cratis.Chronicle.Occurrences.Lifecycle
 
 class [GrainType("occurrencequeue")] Cratis.Chronicle.Occurrences.OccurrenceQueue
 
-interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(1)]
   3D9CA6B5: ApplyPatches() -> Task
+  925D5620: ApplyPatchesFor(Cratis.Chronicle.Concepts.System.SemanticVersion) -> Task<Cratis.Chronicle.Patching.PatchOutcome>
 
 class [GrainType("patchmanager")] Cratis.Chronicle.Patching.PatchManager
 
@@ -424,7 +436,7 @@ class [GrainType("patterncapturesubscriptions")] Cratis.Chronicle.Patterns.Patte
 
 class [GrainType("patternminer")] Cratis.Chronicle.Patterns.PatternMiner
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(1)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation")] Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation [Version(0)]
 
@@ -460,7 +472,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionFutures")
   FD8C8E35: GetFutures() -> Task<System.Collections.Generic.IEnumerable<ProjectionFuture>>
   74D908B1: ResolveFuture(Cratis.Chronicle.Concepts.Projections.ProjectionFutureId) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(1)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(0)]
   E36EB1EC: Ensure() -> Task

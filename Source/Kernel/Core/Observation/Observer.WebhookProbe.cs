@@ -450,6 +450,7 @@ public partial class Observer
             if (!CurrentWebhookProbe(control, failure)) return false;
             var cursor = failure.EffectiveRecoveryCursor;
             failure.RecoveryCursor = new(next, cursor.Mode, cursor.ReplayBoundary);
+
             // Only the delivered episode consumed its deferral. Other partitions retain their deadlines and resume positions.
             failure.Deferral = null;
             failure.RecoveryOwner = null;

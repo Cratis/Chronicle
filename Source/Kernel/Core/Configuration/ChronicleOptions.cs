@@ -221,6 +221,13 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (ReadModels.MaxBatchSize <= 0)
+        {
+            yield return new ValidationResult(
+                "ReadModels.MaxBatchSize must be greater than zero.",
+                [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
+        }
+
         var alertErrors = Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(

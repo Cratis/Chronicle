@@ -70,10 +70,6 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     internal DbSet<DatabaseNameBinding> DatabaseNames => Set<DatabaseNameBinding>();
 
     /// <inheritdoc/>
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
-        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
-
-    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

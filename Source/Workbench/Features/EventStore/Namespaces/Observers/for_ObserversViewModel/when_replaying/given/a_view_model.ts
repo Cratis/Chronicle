@@ -13,7 +13,10 @@ export class a_view_model {
         // Real command instances, not stub instances: generated commands keep their values in private fields,
         // which can only be set on an object the class actually constructed.
         this.replay = new Replay();
-        this.replay.execute = sinon.stub().returns({ onException: sinon.stub() });
+        this.replayResult = { onException: sinon.stub(), onValidationFailure: sinon.stub() };
+        this.replayResult.onException.returns(this.replayResult);
+        this.replayResult.onValidationFailure.returns(this.replayResult);
+        this.replay.execute = sinon.stub().returns(this.replayResult);
         this.clearObserverQuarantine = new ClearObserverQuarantine();
         this.clearObserverQuarantine.execute = sinon.stub().returns({ onException: sinon.stub() });
         this.removeObserver = new RemoveObserver();
@@ -28,6 +31,7 @@ export class a_view_model {
     }
 
     replay: Replay;
+    replayResult: { onException: sinon.SinonStub; onValidationFailure: sinon.SinonStub };
     clearObserverQuarantine: ClearObserverQuarantine;
     removeObserver: RemoveObserver;
     fastForward: FastForward;

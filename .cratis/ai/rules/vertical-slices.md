@@ -89,7 +89,7 @@ The command carries input from the caller. `Handle()` is defined directly on the
 | Reusable value invariant (length, format, range) | `ConceptValidator<T>` on the concept type |
 | Command-input / cross-field / pre-handler rule (incl. injected read-model/service/identity checks) | `CommandValidator<TCommand>` with `RuleFor(...)` |
 | Handler needs fetched/computed data before it can build the event | `Provide()` — fetches the data; may validate it and short-circuit |
-| State-dependent rule that must hold **under concurrency** | `IStreamReads`/`StreamDecision` for one stream, or `[ProtectedDecision]` + `DecisionRead<T>` for admitted projected state; plain injection is advisory |
+| State-dependent rule that must hold **under concurrency** | Read protection `On`: the read model as a `CommandValidator<T>` constructor (or `Handle()`) parameter; a per-stream read model or `IStreamReads`/`StreamDecision` for one stream; an aggregate for a rich lifecycle. `[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in. Under `Off` (default) injection is a hint |
 | Uniqueness | Chronicle `[Unique]` / `IConstraint` (race-safe) — not a read-model pre-check |
 | Genuinely exceptional failure (bug, missing infra) | `throw` a domain exception |
 
@@ -183,13 +183,21 @@ Three attributes scope an append broad→narrow, and each one *also* (only with 
 
 Each attribute always tags the appended events (visible in `EventContext`). **Only when the command also carries `concurrency: true`** does each dimension join the server-side `ConcurrencyScope` (plus the event source id), with the optimistic strategy supplying the expected tail sequence number. A command **without** `concurrency: true` contributes no scope of its own, and the append falls to whatever concurrency strategy the event sequence is configured with — by default the optimistic one, scoped to the event source. So the attribute chooses *which dimensions* bound the check, not whether a check happens at all. Reach for it on high-contention state transitions where a stale read would let two commands both "win" — it narrows the boundary so appends that are genuinely independent stop colliding (concurrency failures surface on `CommandResult`/`AppendResult`). Adopt it deliberately per behavior, not as a blanket default.
 
-At Arc v22.75.0, prefer `IStreamReads.ForCommand()` in `Provide()` and return
-`StreamDecision.Append(...)` when deciding over one routed stream. For projected
-state use `[ProtectedDecision]` + `DecisionRead<T>`; plain injection and keyed
-reads are advisory, including in `Handle()`. Protected projections must be
-Chronicle-admitted (direct source key, known events; not reducers, joins, children
-or passive shapes); validators must be parameterless and certified by Arc.
-Exact returned scopes replace automatic `concurrency: true` capture.
+New code sets `<CratisReadProtection>On</CratisReadProtection>` (Arc 22.106.0).
+Under `On`, a read-model parameter of `Handle()` or of a `CommandValidator<T>`
+constructor is read fresh and guards the append; the state rule goes in the
+validator. Two entities: two parameters, `[LookUpBy(nameof(Cmd.Prop))]` on the
+second, `IEnumerable<EventForEventSourceId>` returned. One stream inside a source:
+a per-stream read model (`[ReadModel, EventStream<TSource>("Stream")]`) on a command
+routed with `[EventSource<TSource>("Stream")]` and `[EventStreamId("{Prop}")]`, or
+`IStreamReads.ForCommand()` in `Provide()` returning `StreamDecision.Append(...)`.
+A deliberate advisory read is `[Unprotected("why")]`. Models must be admitted
+(source-keyed projection with a string or Guid `Id`, or an unfiltered reducer
+without constructor dependencies); joins, children and event-property keys are
+refused. Under `Off` (the default) injection and keyed reads are advisory,
+including in `Handle()`; `[ProtectedDecision]` + `DecisionRead<T>` is the older
+per-command opt-in and still works. Exact returned scopes replace automatic
+`concurrency: true` capture. Refusals: [choosing how a rule holds](../skills/cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
 
 `[EventStreamId("{ReportingScopeId}:{Period}")]` resolves command property values
 after validation; concepts supply their underlying values. An interface can
@@ -237,6 +245,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 - **Events are not read models** — never append events for totals, counts, statuses, search indexes, or dashboards. Project those from source events into read models.
 - **Never duplicate one fact as an aggregate event *plus* a per-item fanout.** If a command fans out per item (one `RequestSentToPartner` per partner), don't also emit an aggregate event carrying the whole list. Keep the fanout as the single source of truth and project any aggregate from it; pick per-item vs. single-with-list event from how consumers read it — never both.
 - **Command rejection normally appends no event.** Validation and business-rule rejections are command results, not facts. Add a rejection/failed event only when the business must audit or react to that failure later.
+- **A settings event records the decision, not the whole blob.** Split composite configuration into one event per concern; a whole-object `…Set` event is last-writer-wins CRUD and turns every new field into a schema change. The tell is a `…Set`/`…Updated` event carrying a full settings record. Judgment-shaped; no gate.
 - **One event name = one meaning.** Don't reuse a vague event for several domain facts; if facts can occur, be absent, or have consumers independently, split them into separate event types.
 - **Never persist clock-relative state.** "Overdue", "expired", "due in 3 days" are true *now* and false later, and a projection only moves when an event arrives — so a projected `IsOverdue` is wrong the moment the clock crosses the line with no event to flip it. Store the **deadline** (a `DateOnly`/`DateTimeOffset` the business supplied) and compute the comparison at the query or UI edge, refreshing when time alone changes the answer. Only when *crossing* the deadline is itself a business fact (a fee is charged, a reminder goes out) does a scheduled process append an event for it.
 
@@ -249,15 +258,17 @@ public record AuthorRegistered(AuthorName Name);
 
 ## Read Models and Queries
 
-**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+**[contract]** `[ReadModel]` records expose eligible public and internal static methods as queries; internal visibility does not hide an endpoint. Dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
 
 Use `[ReadModel(RequireQueryAttribute = true)]` with `[Query]` on intended
-endpoints when public folds/helpers exist (ARC0026/ARCCHR0019). `[Query]` alone
-does not hide siblings; private/compiler-generated statics are never queries.
+endpoints when folds exist (ARC0026/ARCCHR0019). `[Query]` alone does not hide
+siblings. Keep helpers outside the read model regardless of visibility.
+Requires Arc 22.27.1 for private/protected/compiler-generated methods to be
+excluded; older versions can expose private statics too. Check `dotnet list package`.
 A `CancellationToken` is supplied by Arc; concept arguments come from the caller,
 not DI. Bad GET/QUERY argument conversions return 400. Single-instance MongoDB/EF
 observations emit `default` on absence/deletion/filter exit: guard `hasData` and
-`isReady` in React. Verified at Arc v22.75.0; see the read-model query reference.
+`isReady` in React; see the read-model query reference.
 
 ### Query return shapes **[contract]**
 
@@ -296,7 +307,9 @@ query reference for versioned behavior and composition trade-offs.
 
 ### Choosing read-model access in command-side code **[convention]**
 
-Ladder, first that fits: (1) advisory direct read-model injection — only when keyed by the command's own event-source id; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+Ladder, first that fits: (1) direct read-model injection — guarded under read protection `On`, advisory under `Off`; keyed by the command's own event-source id, or by `[LookUpBy]`; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+
+**[convention] One read model per consumer scenario, and dispatch never reads a UI model.** When a second consumer needs different semantics (board vs list vs count vs control flow), add a projection instead of extending the existing model; a command, reactor or job deciding what to do reads a model built for that decision, never a screen's listing model. The tell is a read model many slices import or one that projects many unrelated slices. Judgment-shaped; no gate.
 
 **[contract] Passive state is not sink state.** `IMongoCollection<T>` cannot
 compute a passive read model; any leftover documents are not maintained state.
@@ -408,14 +421,19 @@ Redaction is a system-event request that removes payload availability from the e
 
 ## Cross-slice patterns **[convention]**
 
-Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for a current read (a rule that must hold under concurrency needs a decision read or constraint, see the `cratis-chronicle-decision-reads` skill's `references/choosing-how-a-rule-holds.md`), or react to its events. **Never** instantiate or DI another slice's command/handler/service.
+Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for a current read (a rule that must hold under concurrency needs read protection `On`, a stream decision or a constraint, see the `cratis-chronicle-decision-reads` skill's `references/choosing-how-a-rule-holds.md`), or react to its events. **Never** instantiate or DI another slice's command/handler/service.
+
+**[convention] Prompts are content.** In an AI-backed feature, keep prompt bodies as resources (embedded files/templates) assembled by a typed composer, not as string literals in classes; the tell is a class dominated by multi-line prompt text. Judgment-shaped; no gate.
+
+**[convention] The third copy of a job shape is the deadline for the abstraction.** Two similar jobs or decision flows are fine; when a third appears, extract the shared template instead of copying again. Judgment-shaped; no gate.
 
 **DCB (Dynamic Consistency Boundary):** the boundary is the event state explicitly
 enrolled in guarded decisions, not every model a command reads. Use stream
-reads/exact scopes or `[ProtectedDecision]` + admitted `DecisionRead<T>`;
-plain validator/`Provide()`/`Handle()` injection is advisory. Stream-level
+reads/exact scopes or read-model parameters under read protection `On`
+(`[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in);
+validator/`Provide()`/`Handle()` injection under `Off` is advisory. Stream-level
 `concurrency: true` scopes are another explicit boundary, not protection for an
-arbitrary snapshot. Specify conflicts with `UseDecisionReads()` and actual seeded
+arbitrary snapshot. Specify conflicts with `AppendConcurrently` and actual seeded
 events, not pinned models.
 
 ## Dialogs

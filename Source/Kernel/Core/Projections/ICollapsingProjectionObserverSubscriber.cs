@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -19,4 +20,5 @@ namespace Cratis.Chronicle.Projections;
 /// Orleans keeps single cluster wide. The projection therefore does not scale out across silos - a deliberate
 /// trade, and not a new limit, since the coarse lock already serialized the whole projection within a silo.
 /// </remarks>
-public interface ICollapsingProjectionObserverSubscriber : IObserverSubscriber, IAmOwnedByKernel, IUnpartitionedObserverSubscriber;
+[Version(1)]
+public interface ICollapsingProjectionObserverSubscriber : IObserverPageSubscriber, IAmOwnedByKernel, IUnpartitionedObserverSubscriber;

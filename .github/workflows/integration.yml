@@ -342,8 +342,7 @@ jobs:
       matrix:
         # RollingUpgrade starts the cluster on the latest release and replaces its nodes with this build one at a
         # time under load, so silos of both releases call each other's grains (#5272). It runs on PostgreSQL.
-        # RollingUpgrade is skipped until #5246 / #5300; restore it together with the spec
-        provider: [PostgreSql, SqlServer]
+        provider: [PostgreSql, SqlServer, RollingUpgrade]
 
     steps:
       - name: Checkout code

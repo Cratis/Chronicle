@@ -68,6 +68,7 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
             // The failed SaveChanges transaction has rolled back before either lookup.
             if (await GetEffectReceipt(receipt.Id) is not null)
             {
+                SqlStorageTelemetry.RecoveredCollision("effect-receipt");
                 return EffectReceiptWriteResult.AlreadyRecorded;
             }
 

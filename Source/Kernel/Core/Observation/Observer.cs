@@ -47,6 +47,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -65,8 +66,10 @@ public partial class Observer(
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory,
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
-    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
     /// <summary>
@@ -195,6 +198,7 @@ public partial class Observer(
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await failures.ReadStateAsync();
+        await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -728,7 +732,8 @@ public partial class Observer(
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
-                WebhookProbe = _webhookProbe
+                WebhookProbe = _webhookProbe,
+                DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();

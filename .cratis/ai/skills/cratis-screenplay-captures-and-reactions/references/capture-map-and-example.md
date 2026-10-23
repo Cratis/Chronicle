@@ -50,10 +50,13 @@ convention, not enforcement. `source events` (`from <Event>` lines, ESM v9) is t
 its own closed grammar (PLAY0610/0612/0616/0619/0620).
 
 **`key <property>`** names the source property identifying an instance. From ESM v6
-a capture without a `key` does not bind (`PLAY0268`). In a specification the
+a capture without a `key` does not bind (`PLAY0268`). For record sources the
 reference is handed records (`given capture`, `when capture`) and never contacts a
-`source`, which stays realization metadata; events append to the event source the
-record's `key` names, and `$context.occurred` is the scenario's `given clock`.
+`source`, which stays realization metadata. For `source events`, present a declared
+`from` event with `given <Event>` / `when append <Event>` (PLAY0701 otherwise);
+`key` must be a required property of every source event, not a context key
+(PLAY0700). Events append to the event source the key names, and
+`$context.occurred` is supplied by the scenario's `given clock`.
 
 An event's external origin is declared on the `event` itself with `event X from "<origin>"` (ESM v9);
 outside records still enter through a `capture` in a `Translate` slice
@@ -61,7 +64,14 @@ outside records still enter through a `capture` in a `Translate` slice
 
 **`map`** reshapes properties before events are appended (rename, template, `translate`, `split`; mapping sources are `$.`, `$context.` and `$env.`); syntax is in the reference file linked above.
 
-**`append <Event>`** with optional `tag` lines and one `when` clause:
+**First observation is added only**, at root, child and nested levels. Field-change
+and transition guards need a previous record of the same key (`given capture`), or
+earlier typed events for `source events`. Use a separate `when added` append for
+first sight; keep the field guard for updates. Maps, expression guards and unguarded
+record appends are unchanged. Complete runnable record cases:
+[record-capture-specifications.md](record-capture-specifications.md).
+
+**`append <Event>`** takes optional `tag` lines and at most one `when` clause:
 
 | `when` form | Appends when |
 | --- | --- |

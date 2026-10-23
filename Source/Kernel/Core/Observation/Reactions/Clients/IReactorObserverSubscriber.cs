@@ -6,4 +6,4 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <summary>
 /// Defines a client observer subscriber that will receive all events it subscribes to.
 /// </summary>
-public interface IReactorObserverSubscriber : IObserverSubscriber, IAmOwnedByClient;
+public interface IReactorObserverSubscriber : IDrainableObserverSubscriber, IAmOwnedByClient;

@@ -7,6 +7,9 @@ namespace Cratis.Chronicle.Server;
 
 internal static partial class KernelLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Chronicle listeners are bound; Orleans silo is starting")]
+    internal static partial void ListenerBoundSiloStarting(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Information, "Starting Cratis Chronicle Server - Version {Version}")]
     internal static partial void ServerStarting(this ILogger<Kernel> logger, string version);
 

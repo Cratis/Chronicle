@@ -13,9 +13,12 @@
 
 ## State-dependent rules
 A rule that depends on stored state (current status, existing records, balances) is written
-as `reads <View>` + `require <expr> message "…"` and the slice description says it is **NOT
-enforced in the model today** (PLAY0268/0271 at binding are expected in design mode).
-Name the invariant, the race it leaves open, and the target:
+as `reads <View>` plus `require` with an indented message. Opt eligible views into
+application-root `command reads protected` (v25); test present/absent state and rule
+refusal, and matching decide/commit conflicts. Read
+[protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md)
+for admission and Stage's refusal. For legacy/refused shapes, mark the rule unenforced.
+Name the invariant, the race it leaves open and the target realization:
 `[ProtectedDecision]` + `DecisionRead<T>` (Arc 22.39.0 and later; available to gap-fill
 in Stage's rendered package set, not automatically emitted), or a Chronicle
 `concurrency` scope on the event source or stream, or a constraint where one fits. Forbidden: caller-supplied copies of state

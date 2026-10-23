@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -14,7 +15,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="EventStore">The event store the observer belongs to.</param>
 /// <param name="Namespace">The namespace within the event store the observer belongs to.</param>
 /// <param name="ObserverId">The identifier of the observer.</param>
-/// <param name="EventSequenceId">The event sequence the observer observes.</param>
+/// <param name="EventSequenceId">The event sequence the observer observes; uses its stored sequence when empty, or the event log if unavailable.</param>
 /// <remarks>
 /// <para>
 /// The operator's way of getting past partitions that failed together - a burst of timeouts while the observer was
@@ -35,10 +36,11 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
     /// Handles the command by asking the target observer grain to recover its failed partitions.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
+    /// <param name="storage">The storage containing observer definitions.</param>
     /// <returns>The <see cref="RetryFailedPartitionsResult"/> telling how many partitions were failed.</returns>
-    public async Task<RetryFailedPartitionsResult> Handle(IGrainFactory grainFactory)
+    public async Task<RetryFailedPartitionsResult> Handle(IGrainFactory grainFactory, IStorage storage)
     {
-        var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
+        var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
         var observer = grainFactory.GetGrain<IObserver>(key);
         var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
