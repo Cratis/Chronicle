@@ -41,16 +41,18 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
 
 class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
 
-interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(1)]
   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>
   4317FD1C: GetAllConnectedClients() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Clients.ConnectedClient>>
   9372A2C1: GetConnectedClient(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task<Cratis.Chronicle.Concepts.Clients.ConnectedClient>
   354EC105: GetConnectionCount() -> Task<int>
+  CAFB033F: GetProjectionRegistrations(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Projections.Generations.Deployment.ProjectionRegistration>>
   19F7F5BF: IsConnected(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task<bool>
   D1506BD4: OnClientConnected(Cratis.Chronicle.Concepts.Clients.ConnectionId, string, bool, int, string, string, string) -> Task
   993657A2: OnClientDisconnected(Cratis.Chronicle.Concepts.Clients.ConnectionId, string) -> Task
   F3AEBD2B: OnClientPing(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task<bool>
   CC76998D: OnClientRestored(Cratis.Chronicle.Concepts.Clients.ConnectionId, string, bool, int, string, string, string) -> Task
+  0ADB857B: RecordDeclaredProjectionVersions(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.EventStoreName, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.ProjectionId>, string?) -> Task
   27E68A56: RecordDeclaredProjections(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.EventStoreName, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.ProjectionId>) -> Task
   710D6431: ReserveConnection() -> Task
 
