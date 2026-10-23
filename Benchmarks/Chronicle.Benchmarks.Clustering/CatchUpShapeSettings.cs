@@ -5,8 +5,21 @@ using System.Globalization;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
+/// <summary>
+/// Settings for the catch-up shape scenario.
+/// </summary>
+/// <param name="Sources">The number of event sources.</param>
+/// <param name="Events">The number of events.</param>
+/// <param name="BatchSize">The append batch size.</param>
+/// <param name="TimeoutSeconds">The timeout in seconds.</param>
+/// <param name="ObserverType">The observer type, projection or reactor.</param>
 internal sealed record CatchUpShapeSettings(int Sources, int Events, int BatchSize, int TimeoutSeconds, string ObserverType)
 {
+    /// <summary>
+    /// Reads the settings from environment variables.
+    /// </summary>
+    /// <returns>The settings.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when CATCHUP_OBSERVER is not projection or reactor.</exception>
     public static CatchUpShapeSettings FromEnvironment()
     {
         var observerType = Environment.GetEnvironmentVariable("CATCHUP_OBSERVER") ?? "projection";

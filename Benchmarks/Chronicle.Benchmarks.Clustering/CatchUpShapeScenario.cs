@@ -6,8 +6,16 @@ using System.Text.Json;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
+/// <summary>
+/// Runs the interleaved catch-up scenario.
+/// </summary>
 internal static class CatchUpShapeScenario
 {
+    /// <summary>
+    /// Runs the scenario and prints the result.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the marker or backlog could not be established.</exception>
     public static async Task Run()
     {
         var settings = CatchUpShapeSettings.FromEnvironment();

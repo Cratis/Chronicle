@@ -5,11 +5,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
-// Registered fluently only by --catch-up-shape; no discovered projection runs in the other benchmarks.
+/// <summary>
+/// Read model registered fluently only by --catch-up-shape; no discovered projection runs in the other benchmarks.
+/// </summary>
 internal sealed class CatchUpShapeReadModel
 {
+    /// <summary>
+    /// Gets or sets the event source identifier.
+    /// </summary>
     [Key]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the latest value.
+    /// </summary>
     public int Value { get; set; }
 }

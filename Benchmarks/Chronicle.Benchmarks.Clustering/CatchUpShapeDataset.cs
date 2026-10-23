@@ -8,10 +8,27 @@ using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
+/// <summary>
+/// Generates and verifies the interleaved catch-up backlog.
+/// </summary>
+/// <param name="settings">The benchmark settings.</param>
 internal sealed class CatchUpShapeDataset(CatchUpShapeSettings settings)
 {
     readonly Dictionary<string, int> _expected = new(StringComparer.Ordinal) { [Source(0)] = 0 };
 
+    /// <summary>
+    /// Gets the source identifier for an index.
+    /// </summary>
+    /// <param name="index">The source index.</param>
+    /// <returns>The source identifier.</returns>
+    public static string Source(int index) => $"catchup-source-{index.ToString("D8", CultureInfo.InvariantCulture)}";
+
+    /// <summary>
+    /// Appends the backlog of events.
+    /// </summary>
+    /// <param name="fixture">The cluster fixture.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a seed batch is not acknowledged successfully.</exception>
     public async Task SeedBacklog(ClusterBenchmarkFixture fixture)
     {
         var batch = new List<EventForEventSourceId>(settings.BatchSize);
@@ -37,6 +54,12 @@ internal sealed class CatchUpShapeDataset(CatchUpShapeSettings settings)
         }
     }
 
+    /// <summary>
+    /// Verifies the materialized read models.
+    /// </summary>
+    /// <param name="fixture">The cluster fixture.</param>
+    /// <returns>A fingerprint of the snapshot, or null for the reactor.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the snapshot does not match the expected state.</exception>
     public async Task<string?> Verify(ClusterBenchmarkFixture fixture)
     {
         // The reactor intentionally does no work; its durable observer position and completed job are the completion proof.
@@ -51,6 +74,4 @@ internal sealed class CatchUpShapeDataset(CatchUpShapeSettings settings)
             .Select(pair => $"{pair.Key}:{pair.Value.ToString(CultureInfo.InvariantCulture)}"));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
-
-    public static string Source(int index) => $"catchup-source-{index.ToString("D8", CultureInfo.InvariantCulture)}";
 }
