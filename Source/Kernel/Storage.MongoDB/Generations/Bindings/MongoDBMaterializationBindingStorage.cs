@@ -119,9 +119,14 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                 }
                 var binding = MaterializationBindingDocuments.Binding(doc);
                 var outcome = Decide(binding, expectedActive, expectedEpoch, candidate);
-                if (outcome.Result == MaterializationPublicationResult.Published)
+                if (outcome.Result == MaterializationPublicationResult.Published && !await Publish(db, session, binding, expectedActive, expectedEpoch, candidate, receipt))
                 {
-                    await Publish(db, session, binding, expectedActive, expectedEpoch, candidate, receipt);
+                    await session.AbortTransactionAsync();
+                    if (attempt >= 4)
+                    {
+                        throw new InvalidOperationException("Materialization publication conflicted repeatedly.");
+                    }
+                    continue;
                 }
                 await Receipts(db).InsertOneAsync(session, MaterializationBindingDocuments.Receipt(key, expectedActive, expectedEpoch, candidate, receipt, outcome));
                 await session.CommitTransactionAsync();
@@ -176,7 +181,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         return new(MaterializationPublicationResult.Published, candidate, epoch.Next());
     }
 
-    async Task Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
+    async Task<bool> Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
     {
         var filter = Id(binding.Key) & _filter.Eq("active", (int)active.Value) & _filter.Eq("epoch", (long)epoch.Value)
             & _filter.ElemMatch("generations", _filter.Eq("generation", (int)candidate.Value) & _filter.Eq("state", (int)MaterializationGenerationState.Following));
@@ -190,12 +195,13 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         });
         if (result.MatchedCount != 1)
         {
-            throw new InvalidOperationException("The publication binding changed inside its transaction.");
+            return false;
         }
         var gate = new GenerationGateId(binding.Key, candidate);
         var gateEpoch = await gates.Revoke(db, session, gate);
         await gates.Revoke(db, session, new(binding.Key, active));
         await Bindings(db).UpdateOneAsync(session, Id(binding.Key), _update.Set("fence", new BsonDocument { { "gate", gate.Value }, { "epoch", gateEpoch } }));
+        return true;
     }
 
     async Task<GenerationTransitionResult> Transition(EventStoreName store, MaterializationKey key, MaterializationGeneration generation, MaterializationGenerationState target)
