@@ -72,11 +72,12 @@
     <PropertyGroup Condition="'$(IsTestProject)'=='true'">
         <IsPackable>false</IsPackable>
         <TargetFramework>net10.0</TargetFramework>
+        <!-- xUnit v3 test projects are executables. A project that must stay on xUnit v2 sets UseXunitV2=true. -->
+        <OutputType Condition="'$(UseXunitV2)'!='true'">Exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
         <PackageReference Include="coverlet.collector" />
-        <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="NSubstitute" />
         <!-- NSubstitute reaches Castle.Core transitively, and a PackageVersion only binds a direct PackageReference -
              so the Castle.Core pin in Directory.Packages.props is inert without this line and NuGet floats to whatever
@@ -84,9 +85,18 @@
              the member yields a null declaring type and the substitute throws on first access. Chronicle's client
              artifact interfaces use default interface members, so the difference is not theoretical. -->
         <PackageReference Include="Castle.Core" />
-        <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit.v3" />
+        <PackageReference Include="xunit.v3.mtp-off" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'=='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="xunit" />
     </ItemGroup>
 </Project>

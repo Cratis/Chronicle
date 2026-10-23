@@ -3,6 +3,8 @@
         <AssemblyName>Cratis.Chronicle.XUnit.Integration.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <!-- Exercises the shipping xUnit v2 harness, so it stays on xUnit v2. -->
+        <UseXunitV2>true</UseXunitV2>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
