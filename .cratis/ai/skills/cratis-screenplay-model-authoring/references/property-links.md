@@ -9,6 +9,7 @@
 - Address and query
 - Read evidence, not just a count
 - Propose a property change
+- Remove from an inline event
 - Add with explicit sources and fixtures
 
 Property-path evidence in `find-references` and `dependencies` is read-only inspection.
@@ -141,8 +142,10 @@ with `expectedRevision`, `expectedCatalogRevision`, `action: "rename"|"remove"`,
 or `alsoRemove` entries are `{ "target": <handle>, "expectedName": <name> }`.
 Select only intended command, current-event and non-key read-model properties:
 chain membership establishes eligibility, not permission to edit every field.
-Off-chain selections refuse atomically (`HopNotOnChain`). Historical generations, inline events,
+Off-chain selections refuse atomically (`HopNotOnChain`). Historical generations,
 keys, opaque or incomplete links and unsupported spans refuse rather than guess.
+Inline events refuse `InlineEventRequiresExtraction` unless the action is `remove`
+with `newGeneration: true` (see [inline events](#remove-from-an-inline-event)).
 
 Rename repairs proven references and fixtures. Renaming only a command input
 keeps the event payload name; broken AutoMap links become explicit mappings.
@@ -175,6 +178,24 @@ with one entry per selected event: `event`, `from`, `to`, `mode`, `mutability`
 have equal revisions. `[]` means no accepted planned event edits, not success;
 there is no singular `property.generation`. `deployableWithoutTransformation`
 and `esmVersionKnown` are independent of authoring acceptance.
+
+## Remove from an inline event
+
+Requires Screenplay 4.232.0 (`screenplay --version`) for inline-event removal;
+older releases refuse inline events.
+
+`action: "remove"` with `newGeneration: true` on an inline event extracts it to its
+owning slice in the same proposal (explicit `CanonicalizeTouchedDocuments` consent
+required) and drafts generation N+1 without the member and its mappings. Generation N
+keeps the member; the contract identity and property identities stay. This is how to
+retire a command identifier copied into a stored event payload (`PLAY0469`).
+Without `newGeneration`, an inline event still refuses `InlineEventRequiresExtraction`:
+extract it first with `propose-extract-inline-event`.
+
+The report adds `evolutionDraft` (true when any selected event uses `newGeneration`)
+and `extractedInlineEvents` (always an array). An evolution draft is source only: no
+migrator is declared and `deployableWithoutTransformation` stays false. Never present
+it as migration, deployment or replay ready; Chronicle still needs a transformation.
 
 ## Add with explicit sources and fixtures
 

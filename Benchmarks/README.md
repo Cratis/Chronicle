@@ -173,6 +173,92 @@ comparative historical runs, and generation-specific promote/rollback timing; th
 There is no benchmark specs project. These scenario-local helpers are verified by the bounded real-kernel
 smoke run and its non-empty overlap/data checks, not by introducing a new specs infrastructure.
 
+## Interleaved nested replay (throughput shape)
+
+Use `--replay-shape` for the throughput-shape series in [#5156](https://github.com/Cratis/Chronicle/issues/5156).
+It runs a single in-process silo over ephemeral MongoDB, seeds an acknowledged event log, waits for
+projection catch-up, then measures one full replay. It does not access an external environment.
+
+```bash
+dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release -p:CratisProxiesOutputPath=
+REPLAY_EVENTS=20000 dotnet run -c Release --no-build \
+  --project Benchmarks/Chronicle.Benchmarks.Clustering -p:CratisProxiesOutputPath= -- --replay-shape
+```
+
+| Environment variable | Default | Meaning |
+|---|---:|---|
+| `REPLAY_ROOTS` | 2000 | Number of root documents, each with its own event source |
+| `REPLAY_DEPTH` | 2 | Child levels: **1 or 2 only**; larger depths are rejected |
+| `REPLAY_EVENTS` | 50000 | Exact total workload events, including creation, updates and removal |
+| `REPLAY_RUN_LENGTH` | 1 | Maximum consecutive updates from one child source before rotating |
+| `REPLAY_RUN_LENGTH_MIX` | unset | Seeded maximum-length:weight buckets; overrides `REPLAY_RUN_LENGTH` when set |
+| `REPLAY_REMOVE_PERCENT` | 10 | Percentage of leaf children removed, rounded up; 0–100 |
+| `REPLAY_TIMEOUT_SECONDS` | 1200 | Deadline covering startup, seed, replay and content verification |
+
+The fixed shuffle seed is 5261. Every root has one first-level child, and at depth 2 that child has
+one leaf. Each child has its own event source. `ChildrenFrom` resolves the first child's root key,
+and the leaf's parent-child key through the parent hierarchy. Explicit `Children` and `Leaves`
+collections avoid recursive model definitions and duplicate Mongo array-filter names. Renames use
+`SetFrom`; leaf removals use `RemovedWith`. All surviving child names and identities are checked.
+
+Creation is ordered by level so parents exist first; sources are shuffled within each level.
+Updates rotate across shuffled child sources in runs of at most `REPLAY_RUN_LENGTH`; the final
+run may be shorter. Removal comes last. With run length 1, adjacent updates have different sources.
+With `REPLAY_RUN_LENGTH_MIX`, bucket weights are shares of **runs**, not shares of events; they need
+not sum to 100. Maxima must be strictly increasing positive integers, with finite positive weights.
+A bucket spans the previous maximum plus one through its own maximum (the first starts at 1).
+The seeded generator picks a bucket by weight, then samples a length uniformly inside it. Mixed
+updates rotate through child sources using a global event budget, reserving at least one rename per
+child; budget exhaustion can shorten runs. Fixed-length mode retains its even per-source update budget.
+Creation and removal still come in separate phases, so this approximates run shape rather than the
+production distribution of events per source or the fraction of child events.
+
+```bash
+REPLAY_EVENTS=50000 REPLAY_ROOTS=2750 REPLAY_DEPTH=2 \
+  REPLAY_RUN_LENGTH_MIX='1:45,2:6.5,4:6.1,8:24.4,16:12.5,64:5' \
+  REPLAY_TIMEOUT_SECONDS=2400 dotnet run -c Release --no-build \
+  --project Benchmarks/Chronicle.Benchmarks.Clustering -- --replay-shape
+```
+
+`RunLengthHistogram` in the JSON maps exact realized consecutive-source lengths to run counts over
+**all** workload events, including creation/removal and shortened or adjacent merged runs. The sum
+of `length × count` equals `EventCount`; normalize counts by their sum for shares of runs. It is not
+an assertion that the realized distribution matches the requested update-only mix.
+
+Appends use acknowledged batches of 500, outside the measured window. The event budget must cover
+root and child creation, at least one rename per child, and the configured removals; invalid settings
+fail before starting the cluster. The fixture's warm-up event is not a workload/replayed event.
+
+Seed projection catch-up can dominate total runtime for many roots. Progress goes to stderr; one
+measurement object is printed to stdout, alongside any framework console logs. For a longer local
+run, keep the roots/depth fixed and allow sufficient **total** runtime:
+
+```bash
+REPLAY_EVENTS=300000 REPLAY_TIMEOUT_SECONDS=14400 dotnet run -c Release --no-build \
+  --project Benchmarks/Chronicle.Benchmarks.Clustering -- --replay-shape
+```
+
+### Replay measurement boundaries
+
+- `ReplaySeconds` starts immediately before the replay request and ends after its job completes or
+  disappears, the observer is Active at the event-log tail, and no jobs are in flight. It includes
+  replay preparation, generation promotion, catch-up and readiness probes, not just fold CPU time.
+- `EventsPerSecond` divides the configured workload count by that window. `DocumentsWritten` is the
+  verified final root-document count, **not** the number of physical Mongo writes or nested children.
+- `MongoCommands` counts driver `CommandStartedEvent`s from Chronicle's `IMongoDBClientManager`
+  clients only. It excludes Orleans persistence/membership and Arc clients. It includes reads,
+  writes, getMore, readiness probes, background work and commands which subsequently fail.
+- `GrainCalls` counts all incoming silo grain invocations in the same window, including readiness
+  probes and background work; calls bypassing Orleans dispatch are excluded. Neither metric is
+  projection-only. The JSON includes both totals, per-workload-event ratios and boundary descriptions.
+- Seeding and content verification are outside the counter window. Both snapshots independently
+  check expected root/child counts, identities, last names and removals, then compare sorted-content
+  SHA-256 hashes. A missing, incorrect or changed document fails the run instead of emitting a result.
+
+These are diagnostic measurements, not BenchmarkDotNet publisher input. The default deadline may
+need raising on slower machines, particularly at 300k events. Keep the machine idle during replay
+and compare the same workload settings and counter boundaries across revisions.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.

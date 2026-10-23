@@ -71,10 +71,14 @@ export class ObserversViewModel {
                 this._replay.eventStore = eventStore;
                 this._replay.namespace = namespace;
                 this._replay.observerId = observerId;
+                this._replay.eventSequenceId = this.selectedObserver.eventSequenceId;
                 const commandResult = await this._replay.execute();
                 commandResult
                     .onException((error) => {
                         this._dialogs.showConfirmation('Replay', `Replay ${observerId} failed: ${error}`, DialogButtons.Ok);
+                    })
+                    .onValidationFailure((validationResults) => {
+                        this._dialogs.showConfirmation('Replay', `Replay ${observerId} was not started: ${validationResults.map(_ => _.message).join('; ')}`, DialogButtons.Ok);
                     });
             }
         }

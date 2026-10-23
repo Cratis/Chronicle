@@ -80,7 +80,7 @@ public class Storage(
         // Use Task.Run to avoid deadlocking Orleans grain task schedulers: the async continuations inside this
         // call must not be posted back to the Orleans ActivationTaskScheduler, which would be the case if called
         // directly with GetAwaiter().GetResult() from within a grain method.
-        Task.Run(() => collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true }))
+        Task.Run(() => DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true })))
             .GetAwaiter()
             .GetResult();
 

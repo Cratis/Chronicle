@@ -29,6 +29,11 @@ Source: `Cratis/Chronicle`.
 
 Take the version from nuget.org, not the placeholder version in the source.
 
+Read references/occurrences.md when recording durable triggers, implementing
+occurrence handlers, or choosing startup/shutdown activation and retry semantics.
+Read references/immediate-append-refusal.md when a unit must prevent immediate
+appends from escaping its atomic receipt boundary before transport.
+
 ## Lifecycle
 
 Read [references/lifecycle.md](references/lifecycle.md) when waiting for registration (`WaitForRegistration`, not polling `IsConnected`), diagnosing quiet observers (keepalive loss fails silently, not with an exception), or disposing the client.

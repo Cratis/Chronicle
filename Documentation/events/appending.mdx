@@ -24,11 +24,13 @@ The append returns an operation result you can use to detect schema errors, conc
 
 ## When the outcome is unknown
 
-`AppendOutcomeUnknown` means the event or batch may or may not be stored. Chronicle could not confirm the attempted slots by reading them back. **Do not retry blindly:** doing so can store the events twice.
+`AppendOutcomeUnknown` means the event or batch may or may not be stored. Chronicle could not confirm the attempted slots by reading them back, or lost the response while awaiting an append grain call because a kernel silo became unavailable or the call timed out. **Do not retry blindly:** doing so can store the events twice.
 
 Read the event source's events and look for the attempt's correlation id in their context. Append again only if those events are absent. A timeout or dropped connection without a result is also an unknown outcome, not proof that nothing was stored.
 
-Retry with an [idempotency key](#appending-once) instead, so the retry is deduplicated.
+In the .NET client, check `result.Errors.Contains(AppendError.AppendOutcomeUnknown)` on `AppendResult` or `AppendManyResult`. The result is unsuccessful, but this is not a rejection: the write may have committed. After a unit-of-work commit, the same error is available from `unitOfWork.GetAppendErrors()`. Validation and constraint rejections retain their existing behavior. An older kernel may still report a generic command failure for node loss; absence of this typed error does not prove that nothing was stored.
+
+Use an [idempotency key](#appending-once) on the original append and retry with that same key, so the retry is deduplicated.
 
 ## Verifying a possible duplicate
 

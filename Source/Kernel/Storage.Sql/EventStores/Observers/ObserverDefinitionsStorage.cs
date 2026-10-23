@@ -76,7 +76,6 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
         await scope.DbContext.Observers.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

@@ -1,0 +1,79 @@
+[
+  {
+    "name": "build",
+    "conclusion": "success",
+    "created_at": "2030-01-01T07:00:10Z",
+    "started_at": "2030-01-01T07:01:10Z",
+    "completed_at": "2030-01-01T07:06:10Z",
+    "steps": [
+      {
+        "name": "Checkout",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:01:10Z",
+        "completed_at": "2030-01-01T07:01:20Z"
+      },
+      {
+        "name": "dotnet build",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:01:20Z",
+        "completed_at": "2030-01-01T07:05:50Z"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:05:50Z",
+        "completed_at": "2030-01-01T07:06:10Z"
+      }
+    ]
+  },
+  {
+    "name": "test",
+    "conclusion": "success",
+    "created_at": "2030-01-01T07:06:10Z",
+    "started_at": "2030-01-01T07:07:10Z",
+    "completed_at": "2030-01-01T07:12:10Z",
+    "steps": [
+      {
+        "name": "dotnet test",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:07:10Z",
+        "completed_at": "2030-01-01T07:11:50Z"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:11:50Z",
+        "completed_at": "2030-01-01T07:12:10Z"
+      }
+    ]
+  },
+  {
+    "name": "lint",
+    "conclusion": "success",
+    "created_at": "2030-01-01T07:00:10Z",
+    "started_at": "2030-01-01T07:03:10Z",
+    "completed_at": "2030-01-01T07:04:10Z",
+    "steps": [
+      {
+        "name": "eslint",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:03:10Z",
+        "completed_at": "2030-01-01T07:04:00Z"
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "started_at": "2030-01-01T07:04:00Z",
+        "completed_at": "2030-01-01T07:04:10Z"
+      }
+    ]
+  },
+  {
+    "name": "deploy",
+    "conclusion": "skipped",
+    "created_at": "2030-01-01T07:00:10Z",
+    "started_at": null,
+    "completed_at": null,
+    "steps": []
+  }
+]

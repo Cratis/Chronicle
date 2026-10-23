@@ -24,6 +24,11 @@ catch (InvalidArguments ex)
 
 try
 {
+    if (options.SelfTest)
+    {
+        return SelfTest.Run(options.Current, Console.Out) == 0 ? 0 : 1;
+    }
+
 #pragma warning disable CA2000 // Ownership passes to NuGetContractsPackage, which is disposed below.
     using var nuget = new NuGetContractsPackage(new HttpClient());
 #pragma warning restore CA2000

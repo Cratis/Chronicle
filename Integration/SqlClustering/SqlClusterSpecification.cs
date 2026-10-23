@@ -6,12 +6,15 @@ using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public abstract class SqlClusterSpecification(bool postgres, ClusterChange change) : Specification
+public abstract class SqlClusterSpecification(bool postgres, ClusterChange change, string? initialImage = null) : Specification
 {
-    readonly SqlCluster _cluster = new(postgres);
-    readonly ClusterLoad _load = new();
+    readonly SqlCluster _cluster = new(postgres, initialImage);
+    readonly ClusterLoad _load = new(TransitionsFor(change));
 
     async Task Establish() => await _cluster.Start();
+
+    // A rolling upgrade replaces every node of the three-node cluster, and each replacement is a transition of its own.
+    static int TransitionsFor(ClusterChange change) => change == ClusterChange.RollingUpgrade ? 3 : 1;
 
     async Task Because()
     {
@@ -29,6 +32,9 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
                     break;
                 case ClusterChange.Restart:
                     await RestartAll();
+                    break;
+                case ClusterChange.RollingUpgrade:
+                    await UpgradeOneByOne();
                     break;
             }
 
@@ -99,6 +105,26 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
             entries => entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 2 && entries.Count(entry => entry.Status == (int)SiloStatus.Dead) == 1,
             failureWindow);
         Console.WriteLine($"Failure detection: {clock.Elapsed}. Membership rows before={before.Count}, after={after.Count}");
+    }
+
+    async Task UpgradeOneByOne()
+    {
+        var previous = await _cluster.WaitForMembership(entries => entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 3, TimeSpan.FromSeconds(10));
+        for (var index = 0; index < _cluster.Nodes.Count; index++)
+        {
+            var active = previous.Single(entry => entry.Address == _cluster.Nodes[index].IpAddress && entry.Status == (int)SiloStatus.Active);
+            _load.SiloDeparting(active);
+            await _cluster.Replace(index, SqlCluster.CurrentImage);
+
+            // Until the last node is replaced the cluster runs both releases, and the load keeps every grain call
+            // crossing between them - the state a rolling deployment leaves a cluster in.
+            previous = await _cluster.WaitForMembership(
+                entries =>
+                    entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 3 &&
+                    entries.Any(entry => entry.Address == active.Address && entry.Generation == active.Generation && entry.Status == (int)SiloStatus.Dead),
+                TimeSpan.FromSeconds(90));
+            await _load.WaitForProgress(_load.Successes + 10);
+        }
     }
 
     async Task RestartAll()

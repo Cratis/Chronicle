@@ -15,6 +15,12 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError Unknown = string.Empty;
 
     /// <summary>
+    /// The event or batch may have committed, but its outcome could not be confirmed.
+    /// Reconcile using the attempt's correlation id before retrying, or retry an idempotent append with the same key.
+    /// </summary>
+    public static readonly AppendError AppendOutcomeUnknown = nameof(AppendOutcomeUnknown);
+
+    /// <summary>
     /// Implicitly convert from string to <see cref="AppendError"/>.
     /// </summary>
     /// <param name="id">String to convert from.</param>

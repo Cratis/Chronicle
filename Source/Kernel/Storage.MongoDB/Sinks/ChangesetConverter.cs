@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
@@ -27,13 +28,33 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+/// <param name="writes"><see cref="ISinkWrites"/> executing the joined-document writes, fenced or not.</param>
 public class ChangesetConverter(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ChangesetConverter> logger) : IChangesetConverter
+    ILogger<ChangesetConverter> logger,
+    ISinkWrites writes) : IChangesetConverter
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class writing without a fence.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+    public ChangesetConverter(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter,
+        ILogger<ChangesetConverter> logger)
+        : this(readModel, converter, collections, expandoObjectConverter, logger, UnfencedSinkWrites.Instance)
+    {
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
     /// </summary>
@@ -491,16 +512,18 @@ public class ChangesetConverter(
                 ? Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null)
                 : BuildNullArrayParentFilter(parent.Path, parent.Filters);
             var repairFilter = Builders<BsonDocument>.Filter.And(joinFilter, nullFilter);
-            await collection.UpdateManyAsync(
+            await writes.UpdateMany(
+                collection,
                 repairFilter,
                 updateDefinitionBuilder.Unset(parent.Path),
                 new UpdateOptions { ArrayFilters = parent.Filters });
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var result = await collection.UpdateManyAsync(
+        var result = await writes.UpdateMany(
+            collection,
             joinFilter,
-            joinUpdateBuilder,
+            joinUpdateBuilder!,
             new UpdateOptions
             {
                 IsUpsert = false,

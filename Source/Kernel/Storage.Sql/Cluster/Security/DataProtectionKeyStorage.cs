@@ -32,6 +32,5 @@ public class DataProtectionKeyStorage(IDatabase database) : IDataProtectionKeySt
             Created = key.Created,
         };
         await scope.DbContext.DataProtectionKeys.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 }

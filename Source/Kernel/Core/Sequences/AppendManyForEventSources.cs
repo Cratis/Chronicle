@@ -108,16 +108,16 @@ public record AppendManyForEventSources(
         var conjunctions = scopes.AsT0;
         if (conjunctions.HasRepeatedIds)
         {
-            return EffectReceipt is null
+            return (EffectReceipt is null
                 ? eventSequence.AppendManyWithConjunctions(events, correlationId, causationChain, identity, conjunctions)
-                : eventSequence.AppendManyWithConjunctionsAndEffectReceipt(events, correlationId, causationChain, identity, conjunctions, EffectReceipt);
+                : eventSequence.AppendManyWithConjunctionsAndEffectReceipt(events, correlationId, causationChain, identity, conjunctions, EffectReceipt)).WithUnknownOutcome(correlationId);
         }
 
         var legacyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(conjunctions.Entries.ToDictionary(_ => _.EventSourceId, _ => _.Scope));
         var append = EffectReceipt is null
             ? eventSequence.AppendMany(events, correlationId, causationChain, identity, legacyScopes)
             : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, legacyScopes, EffectReceipt);
-        return WithScopePositions(append, conjunctions);
+        return WithScopePositions(append.WithUnknownOutcome(correlationId), conjunctions);
     }
 
     static async Task<AppendManyResult> WithScopePositions(Task<AppendManyResult> append, Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions scopes)

@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-query-kotlin
-description: Add a query to a Cratis Arc @ReadModel in Kotlin or Java — companion-object or static query methods, GET vs RFC QUERY, and observable queries returning Kotlin Flow, JDK Flow.Publisher, or RxJava 3 Observable over SSE and WebSocket. Use when exposing read-model data from a Kotlin or Java Arc application. Do not use for the .NET Arc query shape, for command definition, or for how events populate the read model (Chronicle projections/reducers).
+description: Add a query to a Cratis Arc @ReadModel in Kotlin or Java — companion-object or static query methods, GET vs RFC QUERY, and observable queries returning Kotlin Flow, JDK Flow.Publisher, or RxJava 3 Observable over SSE and WebSocket. Use when exposing JVM @ReadModel companion/static methods through KSP, Kotlin Flow, JDK Publisher or RxJava transports. Do not use for Node.js @query() (use cratis-arc-query-typescript), C# query creation (use cratis-chronicle-read-model), or commands (use cratis-arc-command-kotlin); event materialization belongs to cratis-chronicle-client-kotlin.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-query-kotlin/SKILL.md -->

@@ -173,6 +173,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             {
                 throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
             }
+
+            SqlStorageTelemetry.RecoveredCollision("unique-constraint-value");
         }
     }
 
@@ -306,6 +308,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
                 throw;
             }
+
+            SqlStorageTelemetry.RecoveredCollision("unique-constraint-source");
         }
     }
 

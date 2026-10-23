@@ -23,6 +23,7 @@ public class a_pipeline_manager : Specification
     protected IProjection _projection;
     protected IStorage _storage;
     protected ISink _sink;
+    protected IGrainFactory _grainFactory;
 
     void Establish()
     {
@@ -33,9 +34,10 @@ public class a_pipeline_manager : Specification
         _projection.EventSequenceId.Returns(EventSequenceId.Log);
         _projection.DefinitionFingerprint.Returns("first");
         _storage.GetEventStore(_store).GetNamespace(_namespace).Sinks.GetFor(_projection.ReadModel).Returns(_sink);
+        _grainFactory = Substitute.For<IGrainFactory>();
         _manager = new(
             _storage,
-            Substitute.For<IGrainFactory>(),
+            _grainFactory,
             Substitute.For<IObjectComparer>(),
             Substitute.For<ITypeFormats>(),
             Substitute.For<IReadModelsCompliance>(),

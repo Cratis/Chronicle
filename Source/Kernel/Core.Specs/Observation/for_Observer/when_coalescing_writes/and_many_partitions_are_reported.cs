@@ -37,6 +37,11 @@ public class and_many_partitions_are_reported : given.an_observer_coalescing_wri
     }
 
     [Fact] void should_not_write_while_reporting() => _writesWhileReporting.ShouldEqual(0);
-    [Fact] void should_increment_every_partition_once() => _observerHandledCountsStorage.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(_observerHandledCountsStorage.Increment)).ShouldEqual(Partitions);
+    [Fact] void should_write_two_chunks() => _observerHandledCountsStorage.Received(2).Increment(_observerId, Arg.Any<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>());
+    [Fact] void should_fill_the_first_chunk() => _observerHandledCountsStorage.Received(1).Increment(_observerId, Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts => counts.Count == 512));
+    [Fact] void should_write_the_remaining_partitions() => _observerHandledCountsStorage.Received(1).Increment(_observerId, Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts => counts.Count == 88));
+    [Fact] void should_not_increment_partitions_individually() => _observerHandledCountsStorage.DidNotReceive().Increment(_observerId, Arg.Any<Key>(), Arg.Any<IReadOnlyDictionary<EventTypeId, EventCount>>());
+    [Fact] void should_have_the_exact_per_type_total() => _stateStorage.State.HandledEventCountPerEventType[TypeA].Value.ShouldEqual((ulong)Partitions);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_have_the_exact_total_in_state() => _stateStorage.State.HandledEventCount.Value.ShouldEqual((ulong)Partitions);
 }

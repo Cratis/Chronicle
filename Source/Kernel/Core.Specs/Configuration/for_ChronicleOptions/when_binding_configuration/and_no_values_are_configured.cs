@@ -34,6 +34,8 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_circuit_breaker_break_duration() => _options.Webhooks.CircuitBreakerBreakDurationSeconds.ShouldEqual(15);
     [Fact] void should_default_the_request_timeout() => _options.Webhooks.RequestTimeoutSeconds.ShouldEqual(60);
     [Fact] void should_default_the_webhook_test_timeout() => _options.Webhooks.TestTimeoutSeconds.ShouldEqual(10);
+    [Fact] void should_disable_native_postgresql_entra_authentication() => _options.Storage.PostgreSqlEntra.Enabled.ShouldBeFalse();
+    [Fact] void should_not_select_a_postgresql_managed_identity_client_id() => _options.Storage.PostgreSqlEntra.ManagedIdentityClientId.ShouldBeNull();
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);

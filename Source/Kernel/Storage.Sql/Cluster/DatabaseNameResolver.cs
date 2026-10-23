@@ -195,6 +195,7 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
             if (winner is not null)
             {
                 name = winner.PhysicalName;
+                SqlStorageTelemetry.RecoveredCollision("database-name");
             }
             else if (hashed)
             {

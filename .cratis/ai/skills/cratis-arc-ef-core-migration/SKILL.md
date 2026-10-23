@@ -71,7 +71,13 @@ observation services and then, **only when `AutoDiscoverDbContexts` is true and
 the connection string is non-empty**, discovers and registers every public
 `BaseDbContext` subtype that is not marked `[IgnoreAutoRegistration]`.
 
-⚠️ `WithEntityFrameworkCore()` with no arguments discovers **nothing**.
+Requires Arc 22.109.0 for options bound from `Cratis:EntityFrameworkCore` before
+`configureOptions` runs; that callback wins over configuration. Read
+../cratis-arc-hosting/references/connection-resolution.md when resolving tenant or schema-purpose
+connections, including pooled contexts.
+
+⚠️ Without a connection string from configuration or the callback,
+`WithEntityFrameworkCore()` discovers **nothing**.
 `EntityFrameworkCoreOptions.ConnectionString` defaults to the empty string, and
 both discovery gates test it. A setup that looks wired and registers no context
 is almost always this.

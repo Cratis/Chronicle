@@ -159,14 +159,15 @@ internal sealed class TestingEventStore : IDisposable
     /// <param name="schemas">The schema generator.</param>
     /// <param name="migrators">The event migrators.</param>
     /// <param name="eventSources">The discovered event sources.</param>
+    /// <param name="metadata">The shared application metadata, or <see langword="null"/> to compute the seed from the inputs.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Seed(ICanProvideConstraints? constraints, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, IEnumerable<EventSources.EventSourceDefinition> eventSources)
+    internal async Task Seed(ICanProvideConstraints? constraints, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, IEnumerable<EventSources.EventSourceDefinition> eventSources, ApplicationMetadata? metadata = null)
     {
         foreach (var definition in ClosesStreamDeclarations.Merge(constraints?.Provide() ?? []))
         {
             await Store.Constraints.SaveDefinition(KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.ConstraintConverters.ToChronicle(definition.ToContract()));
         }
-        await TestingEventTypes.Seed(Store.EventTypes, _eventTypes(), schemas, migrators);
+        await TestingEventTypes.Seed(Store.EventTypes, _eventTypes(), schemas, migrators, metadata);
         foreach (var definition in eventSources)
         {
             await Store.EventSources.Save(definition.ToKernel());

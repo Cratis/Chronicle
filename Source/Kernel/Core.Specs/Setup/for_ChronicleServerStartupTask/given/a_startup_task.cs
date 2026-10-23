@@ -130,7 +130,7 @@ public class a_startup_task : Specification
         _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([]));
         _reducerDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([]));
 
-        _patchManager.ApplyPatches().Returns(Task.CompletedTask);
+        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>()).Returns(Task.FromResult(PatchOutcome.Completed));
         _systemNamespaces.EnsureDefault().Returns(Task.CompletedTask);
         _namespaces.EnsureDefault().Returns(Task.CompletedTask);
         _eventStoreSubscriptionsManager.Ensure().Returns(Task.CompletedTask);

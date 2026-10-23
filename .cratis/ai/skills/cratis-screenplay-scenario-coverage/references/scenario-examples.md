@@ -16,8 +16,10 @@ easily. Every excerpt below is copied verbatim from the complete document in
 `invoicing-dues-example.md`, which compiles with warnings as errors and whose 23 specifications
 pass in the reference evaluator; it also holds the declarations the excerpts depend on. The two
 compensation excerpts in section 4 come from `invoicing-dues-design.md` instead: that document
-holds the stored-state rules (`reads` + `require`), compiles but does not bind (PLAY0271,
-PLAY0268), so its specifications are design mode and do not run. A second
+holds stored-state rules as a legacy control without `command reads protected`, so
+it compiles but does not bind (PLAY0271/PLAY0268) and its design specs do not run.
+Eligible reads can instead opt into v25; inspect admission and keep Stage refusal
+separate (command-surface [protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md)). A second
 complete example, with competing claims and denial fixtures, is `berth-reservations.md`. The category structure and the good/bad contrast follow the worked
 examples in `eventmodeling-elaborating-scenarios` by TrogonStack and by Martin Dilger and Nebulit GmbH (`provenance.md`), translated to
 Screenplay specifications.
@@ -105,7 +107,11 @@ in `invoicing-dues-design.md`; it is never prose and never a spec that pretends 
 ## 3. External failure: the capture, then the retry
 Two separate obligations. First, the **capture specification**: concrete external input in, our
 facts out. The provider's refusal is a fact (never a `then error`), kept in the provider's
-vocabulary and then translated.
+vocabulary; a separate Automation records the local outcome. The capture uses
+`when added` for first sight and a separate `when outcome` for updates. An update
+spec needs `given capture` with the same key's earlier record; the first record's
+fields are not modifications (root, child or nested). See captures-and-reactions
+`references/record-capture-specifications.md` for runnable first/update/repeat cases.
 ```screenplay excerpt parent=references/invoicing-dues-example.md#1
 specification TranslatingADeclinedCardResult
   when capture PaymentGatewayResults
@@ -214,6 +220,6 @@ empty-list intent is a separate claim from a keyed row being absent (`view-and-s
 queries are executable too (`ListOpenInvoices` in the backing example); caller-supplied equality filters on collections bind as ESM v14.
 Pass `by` and filters in query arguments; PLAY0468 reports unknown, repeated or
 missing required arguments. Optional filters may be omitted, supplied null is refused.
-Context-sourced/single-result filters, opaque `scoped to`/`performer`, and composite
-`by` remain PLAY0268. Compiled coverage and renderer ceilings:
+Context-sourced/single-result filters, opaque `scoped to`, and a list-query
+`by` block remain PLAY0268; a `performer` query is an opaque read left out of the model (PLAY0270; [version gate](../../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)). Compiled coverage and renderer ceilings:
 read-surface [equality filters](../../cratis-screenplay-read-surface/references/equality-filters.md).

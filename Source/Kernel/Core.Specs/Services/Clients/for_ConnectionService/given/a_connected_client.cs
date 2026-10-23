@@ -6,8 +6,11 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
+using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using ProtoBuf.Grpc;
+
 using KernelConnectionService = Cratis.Chronicle.Services.Clients.ConnectionService;
 
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.given;
@@ -22,8 +25,12 @@ public class a_connected_client : Specification
     static readonly TimeSpan _patience = TimeSpan.FromSeconds(10);
 
     protected IConnectedClients _connectedClients;
+    readonly OpenConnections _openConnections = new();
     readonly SemaphoreSlim _somethingHappened = new(0);
+    readonly CancellationTokenSource _cancellation = new();
+    readonly TaskCompletionSource _disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     int _keepAlivesSent;
+    int _completed;
     IConnectionService _connectionService;
     IDisposable _subscription;
 
@@ -34,6 +41,12 @@ public class a_connected_client : Specification
         _connectedClients.WhenForAnyArgs(_ => _.OnClientConnected(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
         _connectedClients.WhenForAnyArgs(_ => _.OnClientRestored(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
         _connectedClients.WhenForAnyArgs(_ => _.IsConnected(default!)).Do(_ => _somethingHappened.Release());
+        _connectedClients.OnClientDisconnected(Arg.Any<ConnectionId>(), Arg.Any<string>()).Returns(_ =>
+        {
+            _somethingHappened.Release();
+            _disconnected.TrySetResult();
+            return Task.CompletedTask;
+        });
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
@@ -46,25 +59,40 @@ public class a_connected_client : Specification
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
-            new OpenConnections(),
+            _openConnections,
             NullLogger<KernelConnectionService>.Instance,
             options);
     }
 
-    void Destroy()
+    async Task Destroy()
     {
-        _subscription?.Dispose();
+        await _cancellation.CancelAsync();
+        if (_subscription is not null)
+        {
+            await _disconnected.Task.WaitAsync(_patience);
+            _subscription.Dispose();
+        }
+
+        _cancellation.Dispose();
         _somethingHappened.Dispose();
     }
 
     protected void Connect(bool isRunningWithDebugger = false) =>
         _subscription = _connectionService
-            .Connect(new ConnectRequest { ConnectionId = TheConnection, IsRunningWithDebugger = isRunningWithDebugger })
-            .Subscribe(_ =>
-            {
-                Interlocked.Increment(ref _keepAlivesSent);
-                _somethingHappened.Release();
-            });
+            .Connect(
+                new ConnectRequest { ConnectionId = TheConnection, IsRunningWithDebugger = isRunningWithDebugger },
+                new CallContext(new CallOptions(cancellationToken: _cancellation.Token)))
+            .Subscribe(
+                _ =>
+                {
+                    Interlocked.Increment(ref _keepAlivesSent);
+                    _somethingHappened.Release();
+                },
+                () =>
+                {
+                    Interlocked.Exchange(ref _completed, 1);
+                    _somethingHappened.Release();
+                });
 
     protected async Task ConnectAndWaitForRegistration(bool isRunningWithDebugger = false)
     {
@@ -76,6 +104,15 @@ public class a_connected_client : Specification
     /// Gets how many keep-alives the connection service has sent to the client.
     /// </summary>
     protected int KeepAlivesSent => Volatile.Read(ref _keepAlivesSent);
+
+    protected bool Completed => Volatile.Read(ref _completed) == 1;
+
+    protected void Lapse() => _openConnections.Responded(
+        new ConnectionId(TheConnection),
+        registryKnowsClient: false,
+        DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1),
+        TimeSpan.FromSeconds(4),
+        out _);
 
     protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 

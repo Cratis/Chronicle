@@ -16,6 +16,8 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// <param name="Content">The protected base JSON per generation, excluding separate revisions.</param>
 /// <param name="RevisionCount">The observed revision count, zero for providers revising in place.</param>
 /// <param name="ConcurrencyToken">The provider-defined concurrency token.</param>
+/// <param name="RevisedGeneration">The generation of the latest revision, or null when the event is not revised.</param>
+/// <param name="RevisedContent">The protected JSON of the latest revision, or null when the event is not revised.</param>
 public record StoredEventGenerations(
     EventSequenceNumber SequenceNumber,
     EventTypeId EventTypeId,
@@ -24,4 +26,6 @@ public record StoredEventGenerations(
     EventTypeGeneration? AppendedGeneration,
     IReadOnlyDictionary<EventTypeGeneration, string> Content,
     int RevisionCount,
-    string ConcurrencyToken);
+    string ConcurrencyToken,
+    EventTypeGeneration? RevisedGeneration = null,
+    string? RevisedContent = null);

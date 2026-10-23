@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation;
@@ -19,12 +20,21 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
+[Version(2)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect. Without this it queued behind whatever the observer was
+    /// already doing, and the startup task fans one of these out across every reducer and reactor at
+    /// once: a single slow Subscribe put the whole fan-out past Orleans' response timeout and took the
+    /// silo down with it.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>
@@ -76,11 +86,35 @@ public interface IObserver : IGrainWithStringKey
     Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo);
 
     /// <summary>
+    /// Reports one page of replay handled counts, retaining each partition's deduplication identity.
+    /// </summary>
+    /// <param name="reportedBy">The reporting job step.</param>
+    /// <param name="reports">The counts and last handled sequence number for each partition.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEventsBatch(JobStepId reportedBy, IReadOnlyList<Jobs.HandledEventsReport> reports);
+
+    /// <summary>
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverSubscription> GetSubscription();
+
+    /// <summary>
+    /// Gets active abandoned-delivery fences independently of failure state.
+    /// </summary>
+    /// <returns>The current fences.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<DeliveryFence>> GetDeliveryFences();
+
+    /// <summary>
+    /// Releases the exact version whose original targets have drained.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <param name="releaseBy">The captured fence deadline.</param>
+    /// <returns>A task representing the release.</returns>
+    [AlwaysInterleave]
+    Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy);
 
     /// <summary>
     /// Checks whether a subscription is installed.
@@ -421,6 +455,18 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
 
     /// <summary>
+    /// Notify that the partition has failed with the original delivery fence.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="context">The internal recovery policy and optional original delivery identity and deadline.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailedWithDeliveryFence(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, PartitionFailureContext context);
+
+    /// <summary>
     /// Persist a delivery deadline without consuming an attempt.
     /// </summary>
     /// <param name="partition">The partition to defer.</param>
@@ -446,7 +492,7 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <param name="failedPartitions">The failures returned by the projection sink.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionsFailed(IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition> failedPartitions);
+    Task PartitionsFailed(IReadOnlyCollection<Storage.Sinks.FailedPartition> failedPartitions);
 
     /// <summary>
     /// Notify that the partition has recovered.

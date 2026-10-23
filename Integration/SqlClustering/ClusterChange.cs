@@ -7,5 +7,6 @@ public enum ClusterChange
 {
     Join = 0,
     Kill = 1,
-    Restart = 2
+    Restart = 2,
+    RollingUpgrade = 3
 }

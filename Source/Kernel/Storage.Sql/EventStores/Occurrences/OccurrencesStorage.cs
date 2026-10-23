@@ -33,9 +33,13 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
                 throw;
             }
 
-            return existing.Fingerprint == occurrence.Fingerprint
-                ? OccurrenceRecordResult.AlreadyRecorded
-                : OccurrenceRecordResult.OccurrenceIdConflict;
+            if (existing.Fingerprint == occurrence.Fingerprint)
+            {
+                SqlStorageTelemetry.RecoveredCollision("occurrence");
+                return OccurrenceRecordResult.AlreadyRecorded;
+            }
+
+            return OccurrenceRecordResult.OccurrenceIdConflict;
         }
     }
 
@@ -202,6 +206,8 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
             {
                 throw;
             }
+
+            SqlStorageTelemetry.RecoveredCollision("occurrence-claim-fence");
         }
     }
 }

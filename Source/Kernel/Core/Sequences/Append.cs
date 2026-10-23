@@ -108,11 +108,11 @@ public record Append(
 
         if (namedTags.Count == 0 && string.IsNullOrEmpty(EventSource))
         {
-            return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
+            return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject).WithUnknownOutcome(correlationId);
         }
 
         var eventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource);
-        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags, eventSource);
+        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags, eventSource).WithUnknownOutcome(correlationId);
     }
 
     async Task<AppendResult> AppendReceipt(IGrainFactory grainFactory, RequestCausation causation, ICurrentPrincipalAccessor principalAccessor, IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
@@ -137,13 +137,14 @@ public record Append(
         {
             [EventSourceId] = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None
         });
+        var correlationId = CorrelationId ?? Guid.NewGuid();
         var result = await grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace).AppendManyWithEffectReceipt(
             events,
-            CorrelationId ?? Guid.NewGuid(),
+            correlationId,
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
             scopes,
-            EffectReceipt!);
+            EffectReceipt!).WithUnknownOutcome(correlationId);
 
         return new AppendResult
         {

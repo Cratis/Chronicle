@@ -13,6 +13,8 @@ permission:
 
 # Performance Reviewer
 
+Run on a different provider than the author where the harness can select one; see "Reviewer independence" in `review-reports.md`.
+
 ## Scope before checklists
 
 Identify the repository profile and changed lane before selecting rules or running a checklist. Read the repository's `AGENTS.md` and applicable universal rules in `.cratis/ai/rules/`. For framework contributions, load `.cratis/ai/rules/framework.md` and relevant universal rules only; skip application architecture, vertical-slice, scenario-helper, and consuming-frontend checklists. Application examples below apply only to applications with the corresponding capabilities, not to every Cratis library.
@@ -70,39 +72,8 @@ Your responsibility is to identify performance problems in changed code before t
 
 ---
 
-## Risk classification
-
-| Label | Meaning |
-| ------- | --------- |
-| 🔴 High | Will cause measurable degradation at moderate load — must fix before merge |
-| 🟡 Medium | Could degrade under load or at scale — should fix soon |
-| 🟢 Low | Minor inefficiency or style issue — fix when convenient |
-
----
-
 ## Output format
 
-Start with a **summary**:
-> **Performance Review: ✅ No issues / ⚠️ Minor findings / ❌ Blocking issues found**
-
-Group findings by category:
-
-```
-### MongoDB / Read Models
-
-🟡 **Medium** — `<AppSourceRoot>/Projects/Listing/AllProjects.cs`
-> The query does not specify a sort order or index hint, which will result in a
-> collection scan once the `projects` collection grows.
-> Fix: Add `.SortBy(m => m.Name)` and ensure an index on `Name` exists in the
-> MongoDB collection initialization.
-```
-
-End with a summary table:
-
-| Category | Status |
-| ---------- | -------- |
-| Chronicle / Event Sourcing | ✅ / ⚠️ / ❌ |
-| MongoDB / Read Models | ✅ / ⚠️ / ❌ |
-| ASP.NET Core / Commands & Queries | ✅ / ⚠️ / ❌ |
-| React / TypeScript | ✅ / ⚠️ / ❌ |
-| General .NET | ✅ / ⚠️ / ❌ |
+Read and use `.cratis/ai/rules/review-reports.md` when writing conclusions.
+Apply the domain-specific risk mapping in the Report section of
+`.cratis/ai/skills/cratis-performance-review/SKILL.md`.

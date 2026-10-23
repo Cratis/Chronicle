@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-decision-reads
-description: Guard a state-dependent Chronicle decision with IDecisionReads, projection admission, ambient unit-of-work enrollment and commit conflict handling, and choose which mechanism makes a write-side rule hold (constraint, decision read, stream decision, aggregate, explicit scope, reactor repair or a plain read). Use when an append must remain valid for the facts read, when a rule must hold under concurrent writers, when choosing whole-source versus stream-scoped reads, or diagnosing DecisionReadRefused and scope conflicts. Do not use for ordinary query reads, append-time uniqueness alone, or defining an Arc command's ProtectedDecision API.
+description: Choose which mechanism makes a write-side rule hold (constraint, Arc read protection with read-model parameters and validators, per-stream read model, stream decision, aggregate, explicit scope, reactor repair or an advisory read), and guard a Chronicle decision directly with IDecisionReads, projection admission, ambient unit-of-work enrollment and commit conflict handling. Use when an append must remain valid for the facts read, when a rule must hold under concurrent writers, when choosing whole-source versus stream-scoped reads, or diagnosing ReadChanged, DecisionReadRefused and scope conflicts. Do not use for ordinary query reads or append-time uniqueness alone; Arc command shapes belong to cratis-arc-command.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-decision-reads/SKILL.md -->
@@ -18,9 +18,22 @@ consistency boundary (DCB), not authorization or a replacement for unique constr
 
 Read [choosing how a rule holds](references/choosing-how-a-rule-holds.md) first
 when the question is which mechanism to use, or before writing code that reads
-state and then appends. It carries the routing steps, the matrix with what not to
-use, and the traps. A plain read, a validator read, `Result<,>` and
-`concurrency: true` are never the guard.
+state and then appends. It carries the routing by rule shape, the matrix with what
+not to use, the refusals, rollout with Measure, testing and the traps.
+
+In an Arc application new code sets read protection `On`
+(`<CratisReadProtection>On</CratisReadProtection>`); `Off` is the default when
+nothing is set. Under `On` the read model is a parameter of `Handle()` or of the
+`CommandValidator<T>` constructor, and the read guards the append; under `Off` and
+`Measure` a validator over a plain read is a hint that guards nothing. A plain read under
+`Off`, `Result<,>` and `concurrency: true` are never the guard.
+`[ProtectedDecision]` with `DecisionRead<T>` is the older per-command opt-in; it
+still works and is not obsolete.
+
+Requires Arc 22.106.0 (read protection) with Chronicle client and kernel 19.71.0.
+Check `dotnet list package --include-transitive`; older Arc has only the
+per-command `[ProtectedDecision]` path, and the choosing reference names where it
+differs.
 
 ## Verified product sources
 
@@ -61,10 +74,12 @@ for the covered APIs, scope lifetime, rollback and immediate-append boundary.
 
 ## Route the work
 
-- For Arc `[ProtectedDecision]`, Arc command/handler shapes and Arc `IStreamReads`,
-  use **cratis-arc-command** and **cratis-arc-command-validation**; do not recreate
-  their unit-of-work ownership in a handler. The Chronicle `DecisionRead<T>`
-  below is not a license to invent an Arc wrapper shape.
+- For Arc read protection, `[LookUpBy]`, `[Unprotected]`, `[ProtectedDecision]`,
+  command/handler shapes and Arc `IStreamReads`, use **cratis-arc-command** and
+  **cratis-arc-command-validation**; do not recreate their unit-of-work ownership in
+  a handler. The Chronicle `IDecisionReads` below is for code outside an Arc
+  command (endpoints, services, `Provide()` for a computed key), not a license to
+  invent an Arc wrapper shape.
 - For a unique value claimed atomically or a closed stream, use
   **cratis-chronicle-event-constraints**. A decision read guards one key's
   history, not a value across keys: it is the wrong tool for uniqueness.
@@ -82,8 +97,12 @@ for the covered APIs, scope lifetime, rollback and immediate-append boundary.
 `Admit<T>()` / `AdmitForStream<T>()` check shape **without I/O**, returning
 `DecisionReadAdmission(IsAdmitted, Reason)`. The model needs an `Id` property
 (string, or a Guid in lowercase hyphenated form) and an event-source-keyed flat
-projection. Reducers, including self-reducing models, are refused with
-`Reducer`; a missing `Id` or an unconvertible key refuses with `KeyConversion`. A successful shape check is not
+projection, or an unfiltered reducer on the event log with no constructor
+dependencies other than `ILogger<T>` (self-reducing models are exempt). Requires
+Chronicle 19.68.0 for reducers. A filtered reducer refuses with `ReducerFilters`,
+one with dependencies with `ReducerDependencies`, an event type at two generations
+with `ReducerGeneration`, and a reducer in a stream-scoped read with
+`StreamScopeNotSupported`. A missing `Id` or an unconvertible key refuses with `KeyConversion`. A successful shape check is not
 runtime read success: definitions, key conversion and fold completion are also
 checked while reading.
 
@@ -113,17 +132,23 @@ projection also needs an explicit stream id, not the default wildcard.
 `AdmitForStream<T>()` checks this shape; unsupported readers/kernels refuse with
 `StreamScopeNotSupported`. Do not fall back to an unguarded query on refusal.
 
-Requires Arc 22.81.0 for these stream overloads inside Arc commands to use
-command protection, caching and enrollment; older Arc refuses them. Check Arc
-as well as the Chronicle client/kernel pair before choosing this path.
+In Arc, prefer a per-stream read model
+(`[ReadModel, EventStream<TSource>("Transactions")]` on a command routed with
+`[EventSource<TSource>("Transactions")]` and `[EventStreamId("{Month}")]`); use
+the stream overloads of `IDecisionReads` in `Provide()` for another stream or
+source. Requires Arc 22.81.0 for the stream overloads inside Arc commands to use
+command protection, caching and enrollment; older Arc refuses them.
 
 ## Commit and inspect conflicts
 
 Enroll the read **before** staging its decision's events through
 `EventLog.Transactional` and let the owning unit of work commit. Inspect
 `IsSuccess`, append errors/constraint violations/concurrency violations and
-`GetDecisionConflicts()`; the latter reports decision conflicts without exposing
-sequence numbers. On a kernel whose append validators accept an empty batch
+`GetDecisionConflicts()`. Requires Chronicle 19.76.0 for the nullable
+`ConflictingEventTypeId` and `ConflictingEventSequenceNumber` on decision conflicts
+and concurrency violations. They name the first event matching the failed guard;
+older kernels leave both null. Conflict JSON contains the read-model identifier,
+not its CLR type. Check with `dotnet list package` before asserting these fields. On a kernel whose append validators accept an empty batch
 (a kernel that does so when a scope carries an actual boundary or expects no matching event), a checked empty
 append validates its scope and writes nothing; a kernel that rejects it surfaces
 `DecisionReadValidateOnlyNotSupported`, which fails closed. Do not mistake "no
@@ -159,8 +184,8 @@ deciding writer is guarded or the rule is a constraint.
 - The unit commits in the ASP.NET Core middleware: it commits after the response
   and reports no concurrency violation. Call
   `IUnitOfWorkCompletionFeature.CommitAsync()` before responding.
-- Protection is opt-in in Arc (`[ProtectedDecision]`), so an unmarked command with
-  a read model is still unguarded.
+- Arc under `Off` (the default when nothing is set): a command with a read model
+  is unguarded unless it carries `[ProtectedDecision]`. Set `On` for new code.
 
 ## Verify
 

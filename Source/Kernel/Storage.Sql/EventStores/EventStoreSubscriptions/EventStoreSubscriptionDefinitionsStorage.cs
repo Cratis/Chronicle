@@ -59,6 +59,5 @@ public class EventStoreSubscriptionDefinitionsStorage(EventStoreName eventStore,
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreSubscriptions.Upsert(definition.ToSql());
-        await scope.DbContext.SaveChangesAsync();
     }
 }

@@ -15,9 +15,9 @@
 #
 # Ownership here requests review; it does not require it. "Require review from Code Owners" is a
 # branch-protection setting and is deliberately NOT enabled, so a pull request touching these paths
-# auto-requests @Cratis/core and can still merge without their approval. What does block is the
-# `hot-core-gate` check reports touched paths on ordinary PR pushes; the separately named
-# `hot-core-gate-requested` check enforces the full matrix on a `run-integration` label event.
+# auto-requests @Cratis/core and can still merge without their approval. The `hot-core-gate`
+# check fails on hot-core PRs until requested integration is green for the head SHA. It blocks
+# merge only once a maintainer configures it as a required status check; ownership alone does not.
 # Enabling code-owner review later needs no change to this file.
 
 # area: Observer handling
@@ -41,6 +41,24 @@
 # area: SQL sink
 /Source/Kernel/Storage.Sql/Sinks/ @Cratis/core
 
+# area: Kernel grains and services
+/Source/Kernel/Core/ @Cratis/core
+
+# area: Kernel concepts
+/Source/Kernel/Concepts/ @Cratis/core
+
+# area: Storage abstractions
+/Source/Kernel/Storage/ @Cratis/core
+
+# area: In-memory storage
+/Source/Kernel/Storage.InMemory/ @Cratis/core
+
+# area: MongoDB storage
+/Source/Kernel/Storage.MongoDB/ @Cratis/core
+
+# area: SQL storage and migrations
+/Source/Kernel/Storage.Sql/ @Cratis/core
+
 # The contracts that decide all of the above. Weakening the hot-core list, the gate, or this file
 # should cost the same review as changing the code they protect.
 /.github/CODEOWNERS @Cratis/core
@@ -48,3 +66,5 @@
 /.github/workflows/hot-core-gate.yml @Cratis/core
 /.github/workflows/requested-integration.yml @Cratis/core
 /.github/scripts/detect-hot-core-changes.py @Cratis/core
+/.github/workflows/hot-core-gate-refresh.yml @Cratis/core
+/.github/scripts/evaluate-hot-core-gate.py @Cratis/core

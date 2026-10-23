@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-kotlin
-description: Talk to a Chronicle server from a Kotlin or Java application with the io.cratis:chronicle client - connection strings, ChronicleClient and the Spring Boot starter, @EventType classes, suspending append, reactors and reducers dispatched by first-parameter type, model-bound and declarative projections, variants (@VariantOf/@EntersOn/@GlobalFor or variantOf()/entersOn()) for an entity with mutually exclusive lifecycle shapes, classpath artifact discovery, and the blocking API Java uses. Use when building a JVM application that appends to or observes a Chronicle event store. Do not use for the .NET, TypeScript, or Elixir clients, and do not use for Chronicle kernel or Arc work.
+description: Connect Kotlin and Java applications to Chronicle with the standalone client or Spring Boot starter, including events, reactors, reducers, projections and variants. Use when connecting standalone Kotlin coroutines or Java blocking calls to Chronicle through io.cratis:chronicle and classpath discovery. Do not use for Elixir OTP (use cratis-chronicle-client-elixir) or Node.js decorators (use cratis-chronicle-client-typescript); Arc commands belong to cratis-arc-command-kotlin, not this client skill.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-kotlin/SKILL.md -->

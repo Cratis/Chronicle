@@ -26,7 +26,7 @@ public class AuthorizationStorage(IDatabase database) : IAuthorizationStorage
 
     /// <inheritdoc/>
     public Task Create(Authorization authorization, CancellationToken cancellationToken = default) =>
-        _collection.InsertOneAsync(authorization, cancellationToken: cancellationToken);
+        _collection.InsertOnce(authorization, _ => _.Id == authorization.Id, cancellationToken);
 
     /// <inheritdoc/>
     public Task Update(Authorization authorization, CancellationToken cancellationToken = default) =>

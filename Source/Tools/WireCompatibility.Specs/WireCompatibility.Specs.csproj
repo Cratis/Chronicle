@@ -8,6 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="../../Kernel/Protobuf/chronicle.desc" Link="chronicle.desc" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../WireCompatibility/WireCompatibility.csproj" />
     </ItemGroup>
 </Project>

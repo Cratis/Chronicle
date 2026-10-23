@@ -28,7 +28,20 @@ The kernel supports every Entra mode of the `Authentication` keyword, so `Active
 
 ## Store events in Azure Database for PostgreSQL
 
-PostgreSQL has no `Authentication=` mode in the connection string. Chronicle does not fetch an Entra token for Npgsql itself. The one supported path is a [connection resolver](configuration/storage-connection-resolution.md) that returns an Entra access token as `identity.accessToken`, which Chronicle then uses as the password:
+PostgreSQL has no `Authentication=` mode in the connection string. Enable native Entra authentication and give the PostgreSQL name of the identity as `Username`. Provision that identity in Azure Database for PostgreSQL and grant it the permissions to read, write and migrate Chronicle's tables, as for Azure SQL above.
+
+```bash
+Cratis__Chronicle__Storage__Type=PostgreSql
+Cratis__Chronicle__Storage__ConnectionDetails='Host=myserver.postgres.database.azure.com;Database=chronicle;Username=chronicle-kernel;SSL Mode=VerifyFull'
+Cratis__Chronicle__Storage__PostgreSqlEntra__Enabled=true
+Cratis__Chronicle__Storage__PostgreSqlEntra__ManagedIdentityClientId='<managed-identity-client-id>'
+```
+
+Chronicle uses `DefaultAzureCredential` to request a token for `https://ossrdbms-aad.database.windows.net/.default`. Omit `ManagedIdentityClientId` for a system-assigned managed identity. On AKS, use the workload identity environment variables described above; the default credential chain also supports developer credentials locally. `Username` is the PostgreSQL principal, not the managed identity client id.
+
+Npgsql obtains a password from the provider whenever it opens a new physical connection. Chronicle shares the token between connections and refreshes it when five minutes or less remain before expiry. Startup checks, database provisioning and schema locks use the same authentication. Native authentication is disabled by default. Do not supply a password or return credentials from a resolver when it is enabled; a resolver may still place databases and select schemas.
+
+The existing [connection resolver](configuration/storage-connection-resolution.md) token path remains available with native authentication disabled. The resolver returns an Entra token as `identity.accessToken`, which Chronicle uses as the password:
 
 ```json
 {
@@ -37,14 +50,7 @@ PostgreSQL has no `Authentication=` mode in the connection string. Chronicle doe
 }
 ```
 
-Your resolver requests the token for the `https://ossrdbms-aad.database.windows.net/.default` scope and sets `expiresAt` before the token expires. Chronicle applies the identity every time a connection opens, so a refreshed token takes effect without a restart.
-
-To use token authentication on PostgreSQL you therefore need a resolver, in the `identity` slot or the `connection` slot. Without one, authenticate with a user name and password in `connectionDetails`. Set the storage type and a connection string without a password:
-
-```bash
-Cratis__Chronicle__Storage__Type=PostgreSql
-Cratis__Chronicle__Storage__ConnectionDetails='Host=myserver.postgres.database.azure.com;Database=chronicle;Username=chronicle-kernel;SSL Mode=Require'
-```
+Your resolver requests the same PostgreSQL scope and sets `expiresAt` before the token expires. Chronicle applies the resolved identity each time a connection opens, so a refreshed token takes effect without a restart.
 
 ## Resolve tenant databases over HTTP with Entra ID
 

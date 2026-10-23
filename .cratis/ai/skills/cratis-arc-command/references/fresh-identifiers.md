@@ -99,8 +99,11 @@ use an appropriate constraint or explicit concurrency scope for them.
 
 ## Specify the collision
 
-Use `new CommandScenario<TCommand>().UseDecisionReads()` **before seeding**, then
-`PinGeneratedValue(name, id)` and `Given.ForEventSource(id).Events(existingEvent)`.
+Use `new CommandScenario<TCommand>()`; it selects the in-process log from the
+command's read-protection mode and dependencies before seeding. If a seeded
+collision throws `GeneratedIdentifierCollisionRequiresDecisionReads`, the
+scenario stayed in legacy mode: call the compatibility switch `UseDecisionReads()`
+before seeding. Then `PinGeneratedValue(name, id)` and `Given.ForEventSource(id).Events(existingEvent)`.
 Assert the concurrency reason and collision detail, unchanged append tail and
 one handler execution. Also cover an empty source receiving two events through
 the chosen write API, an occupied source whose events belong to another stream,

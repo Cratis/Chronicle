@@ -12,7 +12,7 @@ public class and_the_instance_carries_initialization_state : for_ReadModels.give
 {
     async Task Because()
     {
-        var service = new MaterializedReadModels(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
         var response = await service.ObserveInstances(new() { EventStore = "test-store", Namespace = "test-namespace", ReadModel = _readModelDefinition.Identifier }).FirstAsync();
         _document = JsonNode.Parse(response.Instances.Single())!.AsObject();
     }

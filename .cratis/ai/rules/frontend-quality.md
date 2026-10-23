@@ -36,6 +36,7 @@ Stop-and-fix signals during implementation and review:
 | A reusable component reaches into domain strings, generated proxies, identity, query, command, or navigation | It is no longer a primitive | Move it to the slice, or make it explicitly Cratis-aware and test/story it as such |
 | Class/style string copied 3× or grown hard to scan | Styling changes become search-and-replace bugs | Extract to a shared style constant or a focused child component |
 | `style={{ ... }}` with static token names | Bypasses theming and review | Move to `className`; keep `style` only for runtime values |
+| A domain constant, threshold or eligibility rule in a `.ts`/`.tsx` file (`canApprove`, `maxAttempts = 2`) deciding whether an action shows | The client re-derives what the server knows, so the two drift and the UI breaks silently | Project the affordance as a read-model property server-side and render it. Judgment-shaped; no gate |
 
 ## Definition of done for a frontend change
 

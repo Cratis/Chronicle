@@ -87,6 +87,14 @@ public class EventSequenceSink(
     }
 
     /// <inheritdoc/>
+    public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
+    {
+        // There is no shadow container: every publication is already a durable public fact.
+        var last = await FindLast(key);
+        return last?.Content.Clone();
+    }
+
+    /// <inheritdoc/>
     public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue) => Task.FromResult(Option<Key>.None());
 
     /// <inheritdoc/>

@@ -116,9 +116,10 @@ module Billing
   another reason each service has its own folder.
 - A capture keys on the incoming content, so the contract carries the identity
   the consumer keys on.
-- The producer's publication specification runs in the reference evaluator; the
-  consumer's capture over events binds but evaluates as typed Unsupported. Specify
-  the consumer's private behavior downstream of the capture.
+- Both sides run in the reference evaluator: the producer's publication
+  specification, and the consumer's capture over events, which a specification
+  drives by presenting the consumed public event (`when append <Event>`;
+  Requires Screenplay 4.171.0).
 - Syntax, publication semantics and the full rules: read
   `cratis-screenplay-automations-and-translations`
   `references/public-events-and-direction.md`.

@@ -143,7 +143,17 @@ Configure the Kernel's `Webhooks` section (not client registration options). In 
 
 `Validation` defaults to **Warn** for this release. Non-compliant existing receivers continue to work,
 with structured warnings. **Enforce** rejects HTTP, hosts outside the allow-list, and private/special
-resolved addresses unless the host is explicitly approved. Enforce will become the default in the
+resolved addresses unless the host is explicitly approved. Stored active webhooks are evaluated against
+current policy before subscription, including after restart. A rejected stored target or OAuth authority quarantines
+the observer without changing the definition or its `IsActive` flag. Warn-mode violations are logged
+at activation, not for every delivery. Inactive webhooks remain inactive and are not subscribed.
+
+After fixing the target, approved hosts, or runtime policy, re-register the webhook or explicitly
+clear its observer quarantine. Policy is evaluated again before delivery resumes; clearing quarantine
+alone cannot bypass a still-invalid target. A policy rejection during request/connect validation
+also pauses the whole observer rather than consuming its transient retry budget.
+
+Enforce will become the default in the
 next major release. Review warnings, add only trusted receiver and OAuth hosts, then opt in before upgrading.
 
 An exact host entry also explicitly permits that host's private addresses. `*.example.com` approves

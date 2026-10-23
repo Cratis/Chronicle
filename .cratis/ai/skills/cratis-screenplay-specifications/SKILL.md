@@ -35,47 +35,85 @@ Requires Screenplay 4.145.0 or later (`screenplay --version`) for `run-specifica
 
 Read [source notes](references/source-notes.md) for the retained inline-fact and action-syntax evidence; run the changed examples at the standalone pin.
 
+## State every property
+
+A `when` command and each `then` event list **every** property, including `optional`
+ones, with a concrete value; omitting one is PLAY0524. Only a read-model property may be `null` (PLAY0350).
+This model fails with PLAY0524 on both `when` and `then` until `note = "none"` is added:
+
+```screenplay excerpt
+event TaskOpened
+  note String optional
+specification Opening
+  when OpenTask
+    taskId = "t1"
+    title = "Write"
+  then TaskOpened
+    for "t1"
+    title = "Write"
+```
+
 ## Reference execution — what actually runs
 
 Screenplay's reference runner executes specifications against an immutable
 in-memory world: no Arc, no Chronicle, no database, no network. Every downstream
 target has one normalized behavior to match.
 
-- It runs the capabilities the execution plan admits: declarative validation
-  and `require` over command properties, conditional production, literal tags,
-  declarative policies, `unique` constraints, and projections as Chronicle
-  lowers them. The `cratis-screenplay-model-authoring` language reference lists
-  what binds and what the plan admits.
-- Binding is not admission. These projection constructs bind, but the plan
-  refuses them: a projection-level `remove via join`; `all` beside removals,
-  `children` or `nested`; a `join`, `children` or `remove via join` inside
-  `nested`; and any `$eventContext.<path>` other than `eventSourceId`, such as
-  `$eventContext.occurred`. The limits apply at every ESM version.
-- A specification that needs **opaque code** — a bodied reducer, a rule with a
-  body, a fenced `validate` block, a code policy, or (ESM v6) a reached reaction
-  body — returns **unsupported** and
-  never passes. Authorization is evaluated first, so a `then denied` case still
-  runs when a portable policy decides it. Other specifications in the model run
-  normally.
-- Unsupported reachable declarative constructs block the whole execution plan
-  rather than running partially: no specification in the model runs, including
-  the ones that never touch the refused construct.
-- Reactions: before ESM v6 they never run, not even after `when append`. From ESM
-  v6 they run after every action, as in "Reactions and
-  cascades" ([references/reactions-and-cascades.md](references/reactions-and-cascades.md)). A compiler that stops before ESM v6 fails `when clock`, `when trigger`
-  and `when capture` binding with `PLAY0268`, and so reactions and captures.
-- Children defer until their parent exists; an ambiguous parent still fails closed.
-  [Child ordering](references/child-ordering.md): specs and routing caveat.
+Binding is not plan admission. Read model-authoring's
+[language reference](../cratis-screenplay-model-authoring/references/language-reference.md)
+when distinguishing executable declarations, refused projection shapes and opaque
+code. Reached opaque code is **unsupported**, never passed; portable denial may
+still execute before it. An unadmitted projection makes unsupported only the specifications that reach it
+(Screenplay 4.213.2 or later); other unsupported declarative constructs block the whole plan.
 
-  Requires Screenplay 4.149.1 or later (`screenplay --version`) for child deferral.
-- A rejected individual command or append leaves the world unchanged; an accepted
-  one commits once, then the read models and queries are compared. There is no
-  scenario-wide transaction in v6: when a later effect of a cascade or capture
-  rejects, the earlier accepted facts and their projections remain.
+Read [reactions and cascades](references/reactions-and-cascades.md) when testing
+ESM v6 actions; older compilers fail reaction/capture binding with PLAY0268.
+Read [child ordering](references/child-ordering.md) for deferral;
+an ambiguous parent still fails closed.
+Requires Screenplay 4.149.1 or later (`screenplay --version`) for child deferral; older runners do not defer.
 
-Unsupported is not passed. Report it as "needs a target", not as green. "Specified"
-and "bound" are never "passing": run the reference CLI/MCP route or the owning
-target tests, and name the engine, version and expected/discovered selection.
+A rejected command/append leaves the world unchanged; an accepted one commits
+before comparing views. V6 has no scenario-wide transaction: later cascade
+failure does not roll back earlier accepted facts. Atomic mode boundaries are below.
+
+Unsupported is not passed. Name a target. Run CLI/MCP reference execution
+or target tests; name engine, version and expected/discovered selection.
+
+## Batches, described bodies, protected reads and text rules
+
+- With `reaction batches atomic`, assert no facts from a failed direct-production or
+  selected refusal-branch batch and unchanged views through evaluator world assertions,
+  not only `then error`. `then no events` is acceptance and cannot accompany an error. Earlier
+  accepted batches/invoked commands remain; legacy absence retains per-fact appends.
+  Read [atomic boundaries](../cratis-screenplay-captures-and-reactions/references/atomic-batches-and-source-mappings.md).
+- A described handler binds v23, but reaching its body returns Unsupported
+  ImplementationBody, naming command/RequirementId and emitting no events. Denial and
+  validation cases still run; an all-Unsupported run is never green. Read
+  [described handlers](../cratis-screenplay-command-surface/references/described-handlers.md).
+- Protected command reads opt into v25. Test present/absent state and rule refusal;
+  matching decide/commit changes are Conflict / DecisionStateChanged, not validation
+  refusal. Race vectors are not new specification syntax. Read
+  [protected reads](../cratis-screenplay-command-surface/references/protected-reads.md).
+- Literal text rules use ordinal UTF-16 comparison (v24); matches uses a portable
+  linear matcher, not platform regex. Old invalid/refused patterns plan as
+  UnsupportedValidation, not a successful check. Read
+  [text and match rules](../cratis-screenplay-command-surface/references/text-and-match-rules.md)
+  for boundary values and PLAY0699/0787. Reference success is not Stage admission.
+
+## Chronological command date comparisons
+
+Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`); older binders refuse
+these comparisons with PLAY0268. DateTime conditions compare UTC instants at tick
+precision: cover equal instants with different offsets, increasing endpoints,
+an inverted interval and a one-tick boundary. Every participating DateTime input
+without an offset or `Z` rejects with Validation before rules, even when its
+comparison is skipped; add a missing-offset rejection, not a clock fixture workaround.
+`then` matching stays ordinal: expected event values keep the exact produced text,
+not an equivalent offset. Read the complete [retention-window specifications](../cratis-screenplay-command-surface/references/date-comparisons.md)
+for `require to >= from`, PLAY0268/0273 and Stage's v26 refusal. The missing-offset
+runtime case needs an evaluator-request or target input test: putting the invalid
+value in a typed `.play` fixture instead fails binding with PLAY0273; `then error`
+does not exercise runtime validation.
 
 ## Descriptions, persona callers and case tables
 
@@ -103,8 +141,7 @@ Rules the binder enforces:
 - **`then result` and `then no result` need `when query`**, and `when query`
   needs one of them, `then denied` or a sole validation `then error` (`PLAY0465`). Each argument is a `by` or
   `filter` parameter of the query (`PLAY0468`).
-- **A clock instant is ISO 8601 with an offset or `Z`**, such as
-  `"2026-10-05T08:00:00Z"` (`PLAY0461`); `given clock` appears at most once.
+- **A clock instant is ISO 8601 with an offset or `Z`** (PLAY0461); one `given clock` maximum.
 - **`then` contains either events or an error — never both.** A rejection
   specification has exactly one rejection and no success outcome.
 - **`then denied` stands alone**: not with events, errors or state assertions
@@ -115,10 +152,8 @@ Rules the binder enforces:
 - **`null` only in optional read-model values.** A `null` in a command or event
   value is `PLAY0350`: an optional fact is a separate event.
 
-`PLAY0358` is a syntax error (`PLAY0388` also at parse time for extra text after `then denied`). `PLAY0350`, `PLAY0352`, `PLAY0388` (mixed with another outcome), `PLAY0389` and
-the one-rejection rule (`PLAY0273`) are reported only when the model binds, so
-`screenplay --warnaserror` does not show them. Check executable diagnostics
-(the MCP authoring tools) as well.
+V1 does not report binding-only outcome errors; read `references/vocabulary.md`
+for parse-versus-bind diagnostics and check executable diagnostics too.
 
 ## How outcomes are compared
 
@@ -155,12 +190,13 @@ Read [references/reactions-and-cascades.md](references/reactions-and-cascades.md
 
 ## Published-event specifications (released ESM v9)
 
-Use `when append <PrivateEvent>` then `then <PublicEvent>` for outbound publication,
-not `then readmodel`. The follow-up event list is exhaustive and ordered. Read
-[publication example and fold cases](../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md).
-Events-source captures and reached opaque event-target reducers return typed
-Unsupported, not a pass. Composite view fixtures need every key part but remain
-unadmitted (PLAY0268); see read-surface `references/named-keys.md`.
+Use `when append <PrivateEvent>` then `then <PublicEvent>`, not `then readmodel`;
+follow-up events are exhaustive and ordered. Read
+[publication and fold cases](../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md)
+when specifying outbound facts or event-source captures: it owns the minimum
+compiler, PLAY0700/0701, key folding and Unsupported boundaries. Composite-keyed
+view fixtures state every key part (Requires Screenplay 4.204.0, ESM v27); see
+`references/vocabulary.md` and read-surface `references/named-keys.md`.
 
 ## Reusable fixtures, routes and recovery intent
 
@@ -195,6 +231,9 @@ Whitespace-acceptance specs fail. This applies to every ESM version.
 
 Requires Screenplay 4.151.0 or later (`screenplay --version`) for the Unicode `not empty` correction.
 
+Date/DateTime comparisons are the command-only exception: do not move them onto
+concept rules to follow the general format-rule convention.
+
 ## Application-boundary coverage
 
 Every slice should carry at least one specification whose action is what a real
@@ -218,15 +257,21 @@ For command specifications:
 - [ ] `given caller` is present whenever the command is authorized, with a
       `then denied` case for a caller who must be refused.
 - [ ] `then` contains **either** events **or** an error, never both.
-- [ ] A collision between two event sources uses `for` on the `given` event.
+- [ ] A collision between two event sources uses `for` on the `given` event. A `given` without
+      `for` belongs to the event source the specification acts on; state `for` when the command
+      appends to several event sources or an assertion depends on it (see
+      [examples and routes](references/examples-and-routes.md#givens-without-an-event-source)).
 - [ ] Error cases test business rules; each concept rule has one rejection
       specification through one command, not one per use.
 - [ ] A localized rejection is pinned by its quoted `$strings` key.
+- [ ] DateTime comparisons cover offset-less input rejection before rules, equal
+      instants across offsets and tick boundaries; `then` keeps ordinal payload values.
 
 For view specifications:
 
 - [ ] A view a `performer` composes is specified with `given readmodel`,
-      `when query` and `then result` or `then no result`.
+      `when query` and `then result` or `then no result`; the reference runner leaves such a
+      spec out (`PLAY0270` information), so it is design intent, not executed proof.
 - [ ] `given readmodel` is a complete instance with its identifier.
 - [ ] `then readmodel` states the identifier and the properties that matter; add
       `exactly` only when extra properties must fail the assertion.

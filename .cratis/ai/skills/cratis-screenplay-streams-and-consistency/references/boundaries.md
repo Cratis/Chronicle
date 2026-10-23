@@ -81,8 +81,8 @@ For each affected boundary, identify:
 
 Use declaration addresses, not copies of payloads. Per slice, also record the events it consumes
 and which slice produces them, for orientation, not as a build order. A command or reaction may
-consult another slice's view (`reads`; unprotected in `.play`, see `consistency-and-concurrency.md`
-section 3); a slice calls another slice's command only through `invokes`.
+consult another slice's view (`reads`; eligible commands opt into v25 protection,
+trigger reads cannot; see `consistency-and-concurrency.md` section 3 for target gaps); a slice calls another slice's command only through `invokes`.
 
 ### Responsibility matrix and ownership timeline
 One compact matrix per feature shows who owns what; the timeline shows where a fact crosses.

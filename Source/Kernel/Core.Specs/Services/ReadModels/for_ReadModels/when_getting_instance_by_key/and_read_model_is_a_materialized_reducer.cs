@@ -29,7 +29,7 @@ public class and_read_model_is_a_materialized_reducer : given.all_dependencies
         var storedValues = (IDictionary<string, object?>)storedState;
         storedValues["name"] = "FromMaterializedStore";
         storedValues[WellKnownProperties.LastHandledEventSequenceNumber] = 42UL;
-        _sink.FindOrDefault(Arg.Any<Key>()).Returns(storedState);
+        _sink.FindInPrimaryOrDefault(Arg.Any<Key>()).Returns(storedState);
 
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<Schemas.JsonSchema>())
             .Returns(call =>
@@ -53,6 +53,8 @@ public class and_read_model_is_a_materialized_reducer : given.all_dependencies
         ReadModelKey = "read-model-key"
     });
 
+    [Fact] void should_read_the_primary() => _sink.Received(1).FindInPrimaryOrDefault(Arg.Any<Key>());
+    [Fact] void should_not_read_projection_state() => _sink.DidNotReceive().FindOrDefault(Arg.Any<Key>());
     [Fact] void should_return_the_materialized_read_model() => JsonSerializer.Deserialize<JsonElement>(_result.ReadModel).GetProperty("name").GetString().ShouldEqual("FromMaterializedStore");
     [Fact] void should_report_the_stored_last_handled_sequence_number() => _result.LastHandledEventSequenceNumber.ShouldEqual(42UL);
     [Fact] void should_not_project_any_events() => _result.ProjectedEventsCount.ShouldEqual(0UL);

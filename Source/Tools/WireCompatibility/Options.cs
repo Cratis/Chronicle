@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 /// <param name="ImportPath">The directory holding the proto files imports resolve against.</param>
 /// <param name="GitHub">Whether to emit GitHub workflow commands alongside the report.</param>
 /// <param name="AllowMissingBaseline">Whether a major with nothing released yet passes instead of failing.</param>
+/// <param name="SelfTest">Whether to plant breaks in the current descriptor set instead of comparing releases.</param>
 public record Options(
     int? Major,
     string? Since,
@@ -26,7 +27,8 @@ public record Options(
     string Current,
     string ImportPath,
     bool GitHub,
-    bool AllowMissingBaseline)
+    bool AllowMissingBaseline,
+    bool SelfTest = false)
 {
     /// <summary>
     /// How to invoke the tool.
@@ -43,6 +45,7 @@ public record Options(
         "  --current <path>         The descriptor set, or contracts assembly, to check. Required.",
         "  --import-path <dir>      Directory to resolve proto imports from. Defaults to the current file's directory.",
         "  --github                 Emit GitHub workflow commands for each breaking change.",
+        "  --self-test              Plant wire breaks in --current and verify each is detected. No baseline required.",
         "  --allow-missing-baseline Pass when the major has no release yet, rather than failing.",
         string.Empty,
         "Exactly one of --major, --baseline or --baseline-assembly is required.",
@@ -65,6 +68,7 @@ public record Options(
         string? importPath = null;
         var github = false;
         var allowMissingBaseline = false;
+        var selfTest = false;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -94,6 +98,9 @@ public record Options(
                 case "--github":
                     github = true;
                     break;
+                case "--self-test":
+                    selfTest = true;
+                    break;
                 case "--allow-missing-baseline":
                     allowMissingBaseline = true;
                     break;
@@ -105,6 +112,11 @@ public record Options(
         if (string.IsNullOrEmpty(current))
         {
             throw new InvalidArguments("--current is required.");
+        }
+
+        if (selfTest)
+        {
+            return new(null, null, [], null, null, current, importPath ?? Path.GetDirectoryName(Path.GetFullPath(current)) ?? ".", github, false, true);
         }
 
         var baselines = new object?[] { major, baselineVersion, baselineAssembly }.Count(_ => _ is not null);

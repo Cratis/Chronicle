@@ -33,7 +33,8 @@ the Screenplay MCP views.
    for obligations with no matching specification. These read authored examples, not executed
    coverage (`../../cratis-screenplay-model-authoring/references/mcp-tools.md`).
 5. Gaps and orphans: `find-references` and `dependencies` for declarations referenced by nothing;
-   `find-modeling-smells` for the candidate shapes.
+   `find-modeling-smells` for the candidate shapes; SMELL006 names event properties no
+   mapping, reaction, condition or specification reads, a question to answer, not a defect.
 
 ## Report
 Asked conversationally, give the summary and the most important gap and offer the full lists on request.

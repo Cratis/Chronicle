@@ -7,12 +7,14 @@ import { given } from 'given';
 import { a_view_model } from './given/a_view_model';
 
 describe('when replaying and there is a selected observer', given(a_view_model, (context) => {
-    beforeEach(() => {
+    beforeEach(async () => {
         context.viewModel.selectedObserver = new ObserverInformation();
+        context.viewModel.selectedObserver.eventSequenceId = 'inbox-source';
         context.dialogs.showConfirmation.resolves(DialogResult.Yes);
-        context.viewModel.replay(context.params.eventStore!, context.params.namespace!);
+        await context.viewModel.replay(context.params.eventStore!, context.params.namespace!);
     });
 
     it('should display dialog', () => context.dialogs.showConfirmation.should.be.called);
     it('should perform replay', () => context.replay.execute.should.be.called);
+    it('should replay the selected observers sequence', () => context.replay.eventSequenceId.should.equal('inbox-source'));
 }));

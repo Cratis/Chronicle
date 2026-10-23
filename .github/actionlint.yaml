@@ -1,0 +1,19 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+# Starts from the shared Cratis/Workflows configuration; keep the two in step.
+self-hosted-runner:
+  labels:
+    - cratis-arc
+    - cratis-arc-small
+    - cratis-arc-release
+
+paths:
+  '.github/{workflows,templates}/**':
+    ignore:
+      # Remove once actionlint supports concurrency.queue.
+      - 'unexpected key "queue" for "concurrency" section'
+  .github/workflows/publish.yml:
+    ignore:
+      # publish-python-client is held with `if: false` on purpose until #3806's PyPI setup lands.
+      # Remove this together with that hold.
+      - 'constant expression "false" in condition'

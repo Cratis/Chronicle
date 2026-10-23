@@ -158,6 +158,12 @@ jobs:
             exit 1
           fi
 
+      - name: Prove planted wire breaks are detected
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project Source/Tools/WireCompatibility -c Release -- --self-test --current "$PROTOBUF_DIRECTORY/chronicle.desc"
+
       - name: Check the wire contract against every released minor of the major
         if: steps.baseline.outputs.skip == 'false'
         env:

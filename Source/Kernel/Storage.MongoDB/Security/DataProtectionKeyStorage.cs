@@ -24,5 +24,5 @@ public class DataProtectionKeyStorage(IDatabase database) : IDataProtectionKeySt
 
     /// <inheritdoc/>
     public Task Store(DataProtectionKey key) =>
-        _collection.InsertOneAsync(key);
+        _collection.InsertOnce(key, _ => _.Id == key.Id);
 }

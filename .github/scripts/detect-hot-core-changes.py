@@ -6,7 +6,7 @@
 `.github/hot-core-paths.txt` is a committed contract naming the areas where a fix breaks a sibling
 path. `.github/workflows/hot-core-gate.yml` asks this script whether a pull request touches
 any of them. The full out-of-process matrix runs only when `run-integration` is applied (or on
-manual dispatch); otherwise the author sees which paths need local integration coverage.
+manual dispatch); otherwise the gate fails until requested integration passes for the head commit.
 
 The answer is never just a boolean. Every run prints the paths it matched under the area heading
 they belong to, to the log and to the job summary.
@@ -108,11 +108,13 @@ def changed_files(root, base, head, files_from):
 
 
 def matches(contract, paths):
-    """Returns `{area: [path, ...]}` for every path a contract pattern matches, areas in contract order."""
+    """Assigns each path to its first matching area, preserving contract order without double counting."""
     expressions = [(area, to_regex(pattern)) for area, pattern in contract]
     found = {}
+    assigned = set()
     for area, expression in expressions:
-        hits = sorted(path for path in paths if expression.match(path))
+        hits = sorted(path for path in set(paths) - assigned if expression.match(path))
+        assigned.update(hits)
         if hits:
             found.setdefault(area, [])
             found[area].extend(hit for hit in hits if hit not in found[area])
@@ -162,9 +164,10 @@ def report(found, changed, run_integration=False):
         emit("## Hot-core gate: request integration for this change")
         emit("")
         emit(f"This pull request changes {counted(total, 'hot-core file')} of "
-             f"{counted(len(changed), 'changed file')}. Run the relevant integration namespace "
-             "locally, then apply the `run-integration` label to request the full out-of-process "
-             "matrix. Remove and re-add the label to request another run.")
+             f"{counted(len(changed), 'changed file')}. The `hot-core-gate` check fails until the full "
+             "out-of-process matrix has passed for this commit. Run the relevant integration namespace "
+             "locally, then apply the `run-integration` label (remove and re-add it after every new "
+             "push). The check turns green on its own when that run passes.")
     emit("")
     for area, paths in found.items():
         emit(f"**{area}**")

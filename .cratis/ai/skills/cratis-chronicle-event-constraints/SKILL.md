@@ -16,7 +16,7 @@ Constraints are discovered automatically. There is no registration call.
 
 A constraint binds **every** writer, whichever client or service appends, so it is
 the mechanism for uniqueness and create-once. It cannot count, sum or test a
-predicate: capacity and stock rules need a decision read, a stream decision or an
+predicate: capacity and stock rules need a guarded read (read protection `On`), a stream decision or an
 aggregate. Read [choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md)
 when it is unclear which one a rule needs. Limits: the claim is settled after the
 durable append, so a failed index update can let a later duplicate
@@ -44,9 +44,9 @@ memory.
 - The rule rejects **command input** — a range, a format, a cross-field
   condition: use `cratis-arc-command-validation`.
 - The rule is state-dependent (a count, a capacity, a status) and needs
-  concurrency protection: use enrolled stream/projection decision reads with
-  `cratis-arc-command-validation` and `cratis-chronicle-decision-reads`. Plain
-  injected models, validators and `Result<,>` alone remain advisory.
+  concurrency protection: use read protection `On` or stream decision reads with
+  `cratis-arc-command-validation` and `cratis-chronicle-decision-reads`. Injected
+  models and validators under `Off` (the default), and `Result<,>` alone, remain advisory.
 - You are creating or changing a read model that the rule reads: use
   `cratis-chronicle-read-model`.
 - You are writing the specification and want the `EventScenario` mechanics in

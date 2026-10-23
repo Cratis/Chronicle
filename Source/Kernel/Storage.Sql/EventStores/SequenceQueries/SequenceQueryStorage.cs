@@ -46,7 +46,6 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.SequenceQueries.Upsert(definition.ToSql());
-        await scope.DbContext.SaveChangesAsync();
         await NotifyChange();
     }
 
@@ -82,7 +81,6 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.SequenceQueryFolders.Upsert(definition.ToSql());
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

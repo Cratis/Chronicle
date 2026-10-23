@@ -25,7 +25,10 @@ For the current threaded example, read [shop commands](shop-generation.md) and
 [shop concepts](../../cratis-fundamentals-concept/references/shop-generation.md).
 Those declarations show:
 CustomerId (`cus_` + ULID), context-aware TypeID OrderId, NanoID InviteCode and
-secret bytes ApiKey. They allocate responses, not events or persisted entities.
+secret bytes ApiKey, readable InvoiceNumber (pattern/checksum) and Int64 pickup
+TicketNumber (`Integer`). The latter helpers require Fundamentals 7.25.0; inspect
+`dotnet list package --include-transitive` before use and retain existing factories
+on older packages. They allocate responses, not events or persisted entities.
 For a real Chronicle stream identity use `EventSourceId<T>`; return `(id, event)`
 to append and return the stream ID, or use an explicit event-source wrapper.
 
@@ -33,14 +36,19 @@ Keep existing/client-chosen identifiers and references on command properties.
 Services and read models remain ordinary dependencies, not generated values.
 UUID generation does not establish authorization, secrecy, idempotency, storage
 freshness, or gapless/sequential numbering. Use the domain's authoritative
-allocation mechanism for invoice numbers, not a random UUID strategy.
+allocation mechanism for gapless/sequential invoice numbers, not a random strategy.
+A pattern supplies a readable reference, not an allocator or secret; check digits
+catch typos, not forgery. The concept validator can call
+`GenerateValue.HasValidChecksum(value, Checksum.Luhn)` alongside shape checks;
+pinning bypasses generation, never validation. Keep short-code uniqueness separate.
 
 ## Resolution, validation and captures
 
 `GeneratedValueAttribute` targets parameters only. Use it on a command's public
 instance `Handle()`, not a property, constructor or `Provide()` parameter.
-The type must be non-nullable and implement `IGeneratable<TSelf>` for itself;
-a raw `Guid`, nullable concept or by-reference parameter is invalid. Use domain
+The type must be non-nullable and implement `IGeneratable<TSelf>` or
+`IGeneratableInContext<TSelf>` for itself; a raw `Guid`, nullable concept or
+by-reference parameter is invalid. Use domain
 concepts; the runtime's type check is the self-generatable interface contract.
 
 `[GeneratedValue]` uses the parameter name. `[GeneratedValue("customerId")]` keeps the
@@ -53,10 +61,11 @@ invoking `Handle()`. Neither a provided value nor a DI registration overrides a
 generated parameter. Unmarked parameters retain their normal resolution.
 
 Discoverable concept validators run with the command's scoped provider and
-cancellation token. Errors produce `GeneratedValueRejected`, an exception
+cancellation token. A failed rule produces `GeneratedValueRejected`, an exception
 outcome in `CommandResult`: a server-generation defect, not a request-validation
-400. Warnings/information allow execution. Fix the strategy or invariant; do not
-turn the defect into a user rejection or disable validation to make it pass.
+400. Requires Arc 22.104.0 for rejection at every severity, including Warning and
+Information; older runtimes let those severities execute. Fix the strategy or
+invariant; do not turn the defect into a user rejection or disable validation.
 
 Validated values enter `CommandContext.GeneratedValues` in parameter-resolution
 order. Each capture has zero-based `Order`, `Name`, declared `Type` and `Value`;
@@ -74,7 +83,7 @@ handler-construction checks remain for declarations compiled without analyzers.
 
 | Diagnostic | Severity | Fix |
 | --- | --- | --- |
-| ARC0022 | Error | Use a non-nullable type implementing `IGeneratable<TSelf>` for itself; no raw `Guid` or by-reference parameter. |
+| ARC0022 | Error | Use a non-nullable type implementing `IGeneratable<TSelf>` or `IGeneratableInContext<TSelf>` for itself; no raw `Guid` or by-reference parameter. |
 | ARC0023 | Error | Move the attribute to a non-static command `Handle()` parameter, not `Provide()`, a read model or controller. |
 | ARC0024 | Error | Give each generated parameter a non-empty unique name; comparison is case-sensitive. |
 | ARC0025 | Warning | Remove a redundant provided value of the generated type, or remove the attribute if `Provide()` should supply it. An unmarked parameter can still consume that provided type. |
@@ -127,7 +136,15 @@ Source: `Source/DotNET/Arc.Core/Commands/ModelBound/GeneratedValueAttribute.cs`,
 `Source/DotNET/Testing/Commands/CommandScenarioGeneratedValueExtensions.cs`.
 
 Contextual generation (received time and tenant) and Fundamentals' additional strategies need a newer Arc; [sources and Clock/Tenant
-setup](shop-generation.md). Arc does not supply a native freshness/collision
-allocator or a pattern contract. Screenplay separately admits concept `generate`
-strategies and freshness; see `cratis-screenplay-command-surface/references/generated-values-and-responses.md`
-for that language contract and Stage's explicit scopes, not native Arc freshness support.
+setup](shop-generation.md). Generated parameter resolution is not a gapless or
+short-code collision allocator. Fundamentals owns pattern/checksum factories;
+Arc resolves these through the concept's generation interface, not strategy-specific
+`[GeneratedValue]` options. Requires Arc.Screenplay 22.107.0 for pattern/random,
+checksum and self-contained String-rule recovery; older adapters keep them in code.
+Requires Stage 4.118.0 for checksum validation and 4.119.0 for pattern/random
+rendering; older renderers refuse them. Requires Stage 4.136.0 to render `generate rule` as an
+`IGeneratableInContext<T>.New(GenerationContext)` factory (body errors STAGE-ESM-019, shadowing -022, missing
+attachment -020); the Host and legacy syntax engine still refuse a command generating its value with STAGE-ESM-028.
+Screenplay separately admits concept `generate` strategies and freshness; see `cratis-screenplay-command-surface/references/generated-values-and-responses.md`
+for that language contract and Stage's explicit scopes. Native Arc freshness is a
+separate policy; a factory alone is not a storage guard.

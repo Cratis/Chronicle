@@ -183,23 +183,35 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
-        JsonSchemaGenerator = new JsonSchemaGenerator(
-            new ComplianceMetadataResolver(
-                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders))),
-            new SecurityMetadataResolver(
-                new KnownInstancesOf<ICanProvideSecurityMetadataForType>(Activate<ICanProvideSecurityMetadataForType>(ClientArtifactsProvider.SecurityForTypesProviders)),
-                new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
-            _namingPolicy);
+        var shareGenerator = ShareSchemaGenerator && ServiceProvider.GetType() == typeof(DefaultServiceProvider);
+        var generator = shareGenerator
+            ? SchemaGeneratorsForTesting.GetOrCreate(_namingPolicy, ClientArtifactsProvider, CreateJsonSchemaGenerator)
+            : CreateJsonSchemaGenerator();
+        JsonSchemaGenerator = new IsolatedJsonSchemaGenerator(generator);
 
         // Discovery needs a connection first; the root resolves the registry only after discovery.
         TestingStore = testingStore ?? new TestingEventStore(eventStore ?? new EventStoreName(DefaultEventStoreName), @namespace ?? new EventStoreNamespaceName(DefaultNamespaceName), () => _eventTypes!, time, capabilities);
         Connection = TestingStore.Connection;
 
+        // Custom providers, explicit artifacts and an unshared generator all fall back to discovering per store.
+        // A catalog that already carries explicit artifacts, from these options or from another store, is never shared.
+        Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
+            && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog)
+            ? ApplicationMetadataForTesting.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
+            : null;
+
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
         _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation: false, namingPolicy: _namingPolicy);
         _eventTypes.UseMigrationServices(ServiceProvider);
-        _eventTypes.Discover().GetAwaiter().GetResult();
+        if (Metadata is null)
+        {
+            _eventTypes.Discover().GetAwaiter().GetResult();
+        }
+        else
+        {
+            Metadata.DiscoverEventTypes(_eventTypes);
+        }
+
         EventTypeMigrators = _eventTypes.PreparedMigrators;
 
         // The in-memory event log validates appends against the same definitions a real Kernel would hold.
@@ -218,6 +230,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
+        if (Metadata is not null)
+        {
+            _projections.ModelBoundSource = Metadata.ModelBoundSource;
+        }
+
         ExplicitSnapshot.ApplyTo(_projections);
         _projections.Discover().GetAwaiter().GetResult();
 
@@ -308,6 +325,28 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _occurrences = new(CreateOccurrences);
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
+
+    /// <summary>
+    /// Gets or sets whether newly constructed stores using the exact default service provider type share the process-wide schema generator. Defaults to true.
+    /// Each store receives isolated copies of generated schemas regardless of this setting.
+    /// </summary>
+    /// <remarks>
+    /// Custom service providers, including subclasses of the default provider, always receive fresh schema generators.
+    /// Changing this setting does not affect existing stores.
+    /// </remarks>
+    public static bool ShareSchemaGenerator { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether newly constructed stores over equivalent artifact catalogs reuse the
+    /// discovered application metadata - event types, model-bound projection definitions and the seeded event type
+    /// definitions - instead of discovering them again. Each store receives its own copies of every mutable object
+    /// regardless of this setting.
+    /// </summary>
+    /// <remarks>
+    /// Custom service providers, explicit artifacts and <see cref="ShareSchemaGenerator"/> set to <see langword="false"/>
+    /// always disable sharing. Changing this setting does not affect existing stores.
+    /// </remarks>
+    public static bool ShareApplicationMetadata { get; set; } = true;
 
     /// <inheritdoc/>
     public EventStoreName Name => TestingStore.Name;
@@ -409,6 +448,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal ChronicleOptions ClientOptions { get; }
 
     /// <summary>
+    /// Gets the application metadata shared with equivalent stores, or <see langword="null"/> when this store discovers its own.
+    /// </summary>
+    internal ApplicationMetadata? Metadata { get; }
+
+    /// <summary>
     /// Gets the original immutable recipes for this scenario store.
     /// </summary>
     internal ExplicitArtifactsSnapshot ExplicitSnapshot { get; }
@@ -500,7 +544,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     {
         if (scenarioStorage is null)
         {
-            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All).GetAwaiter().GetResult();
+            TestingStore.Seed(_constraintProvider, JsonSchemaGenerator, EventTypeMigrators, _eventSources.All, Metadata).GetAwaiter().GetResult();
         }
 
         return new ReadModelsForTesting(inner, EventLog, this, foldReads: _scenarioEventLog is not null);
@@ -512,6 +556,15 @@ public class EventStoreForTesting : IEventStore, IDisposable
         constraints.Discover().GetAwaiter().GetResult();
         return TestingStore.CreateSequence(id, EventSerializer, constraints, _eventSources);
     }
+
+    JsonSchemaGenerator CreateJsonSchemaGenerator() => new(
+        new ComplianceMetadataResolver(
+            new KnownInstancesOf<ICanProvideComplianceMetadataForType>(Activate<ICanProvideComplianceMetadataForType>(ClientArtifactsProvider.ComplianceForTypesProviders)),
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>(Activate<ICanProvideComplianceMetadataForProperty>(ClientArtifactsProvider.ComplianceForPropertiesProviders))),
+        new SecurityMetadataResolver(
+            new KnownInstancesOf<ICanProvideSecurityMetadataForType>(Activate<ICanProvideSecurityMetadataForType>(ClientArtifactsProvider.SecurityForTypesProviders)),
+            new KnownInstancesOf<ICanProvideSecurityMetadataForProperty>(Activate<ICanProvideSecurityMetadataForProperty>(ClientArtifactsProvider.SecurityForPropertiesProviders))),
+        _namingPolicy);
 
     T[] Activate<T>(IEnumerable<Type> artifactTypes)
         where T : class =>

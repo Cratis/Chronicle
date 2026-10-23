@@ -54,6 +54,12 @@ Paths are relative to `Source/Kernel/Core/Observation/` unless they start with `
 - **Slice 2, storage only:** round-trip one member `A` alongside two distinct durable connection registrations for `A@1` and `A@2`, preserving each registration's pins and mode on InMemory, MongoDB and SQL. Assert that the member has no pins or generation-history set, and that storing the distinct capabilities preserves its revision, incarnation and fence. These storage specifications do not prove connectivity, routing or release behavior.
 - **Later routing/runtime slices:** concurrent connected `A@1` and `A@2` targets retain independent eligibility and release behavior while sharing one `A` membership. A generation/mode-only declaration on a new connection leaves membership revision, incarnation and fence unchanged; a changed live-connection declaration is rejected. A selected target never borrows another target's pins or mode, or membership as a fallback; a persisted but disconnected registration is ineligible. Retirement acts on `A` across generations under section 6's checks.
 
+## Amendment (2026-10-23)
+
+SQL wildcard key enumeration now omits the event-type filter and enumerates every key, matching MongoDB. This amends slice 1's statement that every scope reads as before: SQL wildcard observers, such as projections subscribed to all events, could not catch up at all because their empty type list enumerated no keys ([issue #5305](https://github.com/Cratis/Chronicle/issues/5305); evidence runs [39853880518](https://github.com/Cratis/Chronicle/actions/runs/39853880518) and [39845465562](https://github.com/Cratis/Chronicle/actions/runs/39845465562)). Explicit empty scopes still enumerate no keys; explicit nonempty scopes are unchanged.
+
+L0 approved 2026-10-23 03:55 under woksin's delegation.
+
 ## Context
 
 ### Who loses events

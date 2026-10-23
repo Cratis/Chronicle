@@ -141,6 +141,16 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
+    public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
+    {
+        var keyValue = GetKeyValue(key);
+        lock (_collectionLock)
+        {
+            return Task.FromResult(_collection.GetValueOrDefault(keyValue));
+        }
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
         ApplyChanges(key, changeset, eventSequenceNumber, SinkWriteMode.Always);
 

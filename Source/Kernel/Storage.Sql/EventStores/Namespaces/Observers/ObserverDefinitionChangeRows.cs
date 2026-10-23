@@ -51,6 +51,7 @@ public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceD
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
+            SqlStorageTelemetry.RecoveredCollision("observer-definition-change");
             return false;
         }
     }

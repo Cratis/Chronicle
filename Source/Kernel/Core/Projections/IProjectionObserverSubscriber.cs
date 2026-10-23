@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Observation;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -14,4 +15,5 @@ namespace Cratis.Chronicle.Projections;
 /// the activations spread across the silos of a cluster. A projection whose key can collapse several event sources
 /// onto one document subscribes as <see cref="ICollapsingProjectionObserverSubscriber"/> instead.
 /// </remarks>
-public interface IProjectionObserverSubscriber : IObserverSubscriber, IAmOwnedByKernel;
+[Version(1)]
+public interface IProjectionObserverSubscriber : IObserverPageSubscriber, IAmOwnedByKernel;

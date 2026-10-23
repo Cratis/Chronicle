@@ -12,6 +12,15 @@
 Write it **before** drafting specs, keep it in `.ai-work/screenplay/<model-slug>/coverage.md` (or the
 `STATE.md` beside it), and update it with the specs. Reviewers check it against the model. Screenplay 4.127.0 MCP `find-specification-obligations` seeds the inventory (SPEC001–SPEC008), for command success, requirements, command/concept validation, effective authorization gates, value constraints, read models, projection removals and reaction outcomes. A met row proves matching authored presence, not full coverage or passing execution: the matrix still records domain judgments and scenario types the heuristic cannot infer.
 
+For SPEC004, a gated query's denial can use `when query <Query>` with
+`then denied`, or no `when` and exactly one `then query <Query>` with `arguments`
+and no `result`, followed by `then denied`. The read-only form meets that query's
+denial obligation, not the returned read model's SPEC006 assertion obligation.
+Keep a separate view state, absence or query-result specification.
+Requires Screenplay 4.212.2 (`screenplay --version`) for this inventory matching;
+older servers miss the read-only denial for SPEC004 and count it for SPEC006.
+Upgrade before gating on those rows; a met denial still proves presence, not execution.
+
 ## Cell values
 - `spec <Name>` - written; the name exists in the model.
 - `n/a: <domain reason>` - the situation cannot occur in this business. "Keeps it short" is not

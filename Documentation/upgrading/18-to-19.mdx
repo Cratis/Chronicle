@@ -63,6 +63,14 @@ against a kernel whose own fix cannot be redeployed. Leave it off unless you are
 exactly that position.
 :::
 
+### Bounded gRPC delivery fencing
+
+The kernel now holds abandoned reactor and reducer deliveries for up to five minutes by default before retry,
+catch-up or replay can overlap them. It drains the original target even after another client supersedes it,
+discards late results, and rejects queued batches whose delivery deadline passed. No client or wire-contract
+change is required. See [abandoned client deliveries](../hosting/configuration/observers.md#abandoned-client-deliveries)
+for `abandonedDeliveryHold`, disable behavior, metrics and the remaining idempotency requirement.
+
 ## Why a major for a change this small
 
 Because it is a breaking change to a published API, and the alternative was worse. The

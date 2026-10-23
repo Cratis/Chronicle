@@ -35,8 +35,9 @@ module Projects
 The omitted `for` means the command's required scalar identifier **only for
 inline productions**, when every production targets that same source. Once a
 production targets another source, every production must state `for`. Mixing
-omitted inline and plain destinations also fails (`PLAY0470`); there is no
-verified MCP repair for that diagnostic. Explicit syntax does not make cross-source
+omitted inline and plain destinations also fails (`PLAY0470`); the MCP repair needs an explicit
+author-chosen destination per production and never retargets an explicit one (see the
+model-authoring skill's `references/destination-intent-repair.md`). Explicit syntax does not make cross-source
 execution supported.
 
 Plain `produces X` references a declared event; omitting `for` does not infer
@@ -80,6 +81,9 @@ MCP can declare a missing produced event (`PLAY0166`), add explicit routing
 (`PLAY0478`), remove a redundant pin (`PLAY0471`), or remove an inline identifier
 copy (`PLAY0469`). The last **changes the event contract**, retires a property,
 refuses affected consumers/opaque implementations and is not fix-all. It does
-not establish that stored data is safe to migrate. Use
+not establish that stored data is safe to migrate; for a contract that may have been
+stored, `propose-property` `remove` with `newGeneration: true` extracts the event and
+drafts a new generation (a source draft, never deployment ready; requires Screenplay
+4.232.0, `screenplay --version`). Use
 `cratis-screenplay-model-authoring` for discovery, preview, extraction and rename.
 

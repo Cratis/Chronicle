@@ -29,6 +29,7 @@ public class all_dependencies : Specification
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected ISinks _sinks;
+    protected IReadModelReadBindings _readBindings;
     protected ISink _sink;
     protected IReadModel _readModel;
     protected ReadModelDefinition _readModelDefinition;
@@ -69,6 +70,9 @@ public class all_dependencies : Specification
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _namespaceStorage.Sinks.Returns(_sinks);
         _sinks.GetFor(Arg.Any<ReadModelDefinition>()).Returns(_sink);
+        _readBindings = Substitute.For<IReadModelReadBindings>();
+        _readBindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
+            .Returns(call => new ReadModelReadBinding(_sink, call.ArgAt<ReadModelContainerName?>(3)));
 
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
@@ -82,7 +86,7 @@ public class all_dependencies : Specification
 
         // The materialized store is exercised for real over the mocked sink and compliance helper — it is the
         // sink read plus the release pass, and specs assert on both through those mocks.
-        _materializedReadModels = new MaterializedReadModelStore(_storage, _complianceHelper);
+        _materializedReadModels = new MaterializedReadModelStore(_readBindings, _complianceHelper);
 
         _localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _localSiloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 0));
@@ -113,6 +117,7 @@ public class all_dependencies : Specification
         _service = new ReadModels(
             _grainFactory,
             _storage,
+            _readBindings,
             _expandoObjectConverter,
             _reducerMediator,
             _changesetMediator,

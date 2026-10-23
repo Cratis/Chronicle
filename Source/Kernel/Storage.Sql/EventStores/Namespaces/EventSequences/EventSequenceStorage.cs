@@ -86,7 +86,6 @@ public partial class EventSequenceStorage(
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entry = EventSequenceStateConverter.ToEventSequenceStateEntry(state, eventSequenceId);
         await scope.DbContext.EventSequences.Upsert(entry);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

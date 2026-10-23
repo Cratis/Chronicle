@@ -32,24 +32,32 @@ public class FailedPartitionStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        // Remove resolved partitions
-        foreach (var resolvedPartition in failedPartitions.ResolvedPartitions)
+        await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            var entity = await scope.DbContext.FailedPartitions.FirstOrDefaultAsync(fp => fp.Id == resolvedPartition.Id.Value);
-            if (entity is not null)
+            scope.DbContext.ChangeTracker.Clear();
+            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+
+            // Remove resolved partitions
+            foreach (var resolvedPartition in failedPartitions.ResolvedPartitions)
             {
-                scope.DbContext.FailedPartitions.Remove(entity);
+                var entity = await scope.DbContext.FailedPartitions.FirstOrDefaultAsync(fp => fp.Id == resolvedPartition.Id.Value);
+                if (entity is not null)
+                {
+                    scope.DbContext.FailedPartitions.Remove(entity);
+                }
             }
-        }
 
-        // Save or update failed partitions
-        foreach (var failedPartition in failedPartitions.Partitions)
-        {
-            var entity = failedPartition.ToEntity();
-            await scope.DbContext.FailedPartitions.Upsert(entity);
-        }
+            await scope.DbContext.SaveChangesAsync();
 
-        await scope.DbContext.SaveChangesAsync();
+            // Save or update failed partitions
+            foreach (var failedPartition in failedPartitions.Partitions)
+            {
+                var entity = failedPartition.ToEntity();
+                await scope.DbContext.FailedPartitions.Upsert(entity);
+            }
+
+            await transaction.CommitAsync();
+        });
     }
 
     /// <inheritdoc/>

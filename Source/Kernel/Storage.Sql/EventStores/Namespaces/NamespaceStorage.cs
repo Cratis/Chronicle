@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -24,8 +25,26 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
         }
 
         await using var scope = await database.EventStore(eventStore);
+        if (await scope.DbContext.Namespaces.FindAsync(name.ToString()) is not null)
+        {
+            return;
+        }
+
         await scope.DbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
-        await scope.DbContext.SaveChangesAsync();
+        try
+        {
+            await scope.DbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException error) when (StorageWriteConflicts.IsUnique(error))
+        {
+            scope.DbContext.ChangeTracker.Clear();
+            if (!await scope.DbContext.Namespaces.AnyAsync(existing => existing.Name == name.Value))
+            {
+                throw;
+            }
+
+            SqlStorageTelemetry.RecoveredCollision("namespace");
+        }
     }
 
     /// <inheritdoc/>

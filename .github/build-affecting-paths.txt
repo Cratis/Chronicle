@@ -77,3 +77,7 @@ specs.runsettings
 
 # This file. Editing the contract has to re-run the check that enforces it.
 .github/build-affecting-paths.txt
+
+# The legacy-contract matrix selects the owner issues and executable compatibility proofs.
+# Source/** and .github/workflows/** above already cover its tool, specs and reusable workflow.
+.github/legacy-contracts.json

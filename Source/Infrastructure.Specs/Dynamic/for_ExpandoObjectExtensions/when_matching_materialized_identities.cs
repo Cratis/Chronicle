@@ -35,6 +35,10 @@ public class when_matching_materialized_identities : Specification
             (42, "not-a-number"),
             (42, "9999999999999999999999999"),
             (id, "not-a-guid"),
+            (42, id),
+            (42, id.ToString()),
+            (Role.Administrator, id),
+            (Role.Administrator, id.ToString()),
             (identity.AsExpandoObject(), new CompositeIdentity("tenant", 43).AsExpandoObject()),
             (identity.AsExpandoObject(), new { Tenant = "tenant" }.AsExpandoObject()),
             (new { Tenant = "tenant" }.AsExpandoObject(), identity.AsExpandoObject()),
@@ -64,4 +68,10 @@ public class when_matching_materialized_identities : Specification
     }
 
     record CompositeIdentity(string Tenant, int Number);
+
+    enum Role
+    {
+        Reader = 0,
+        Administrator = 1
+    }
 }

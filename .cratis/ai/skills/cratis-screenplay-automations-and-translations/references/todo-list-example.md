@@ -189,7 +189,7 @@ module Certification
 ## Design-only additions
 
 Two things a real queue often wants stay out of the complete model above: a list query (the
-visible queue) and a retry sweep that reads the whole view. The list query binds (Stage refuses a snapshot list); the sweep needs a code body the
+visible queue) and a retry sweep that reads the whole view. The list query binds (Stage renders snapshot and observable lists); the sweep needs a code body the
 reference does not run, and durable per-item fan-out is outside the language. Say so
 in the verdict.
 

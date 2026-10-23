@@ -26,20 +26,22 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
             return;
         }
 
-        var id = new ObserverPartitionCountsId(observerId, partition.ToString());
-        var increments = countsPerEventType.Select(_ =>
-            Builders<ObserverPartitionCounts>.Update.Inc(
-                new StringFieldDefinition<ObserverPartitionCounts, long>($"{nameof(ObserverPartitionCounts.Counts)}.{_.Key.Value}"),
-                (long)_.Value.Value));
-        var update = Builders<ObserverPartitionCounts>.Update.Combine(increments);
-        var model = new UpdateOneModel<ObserverPartitionCounts>(
-            Builders<ObserverPartitionCounts>.Filter.Eq(_ => _.Id, id),
-            update)
-        {
-            IsUpsert = true
-        };
+        await _collection.BulkWriteAsync([CreateIncrement(observerId, partition, countsPerEventType)]).ConfigureAwait(false);
+    }
 
-        await _collection.BulkWriteAsync([model]).ConfigureAwait(false);
+    /// <inheritdoc/>
+    public async Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition)
+    {
+        var models = countsPerPartition
+            .Where(_ => _.Value.Count > 0)
+            .Select(_ => CreateIncrement(observerId, _.Key, _.Value))
+            .ToArray();
+        if (models.Length == 0)
+        {
+            return;
+        }
+
+        await _collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = true }).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -67,4 +69,20 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
     /// <inheritdoc/>
     public async Task RemoveAllFor(ObserverId observerId) =>
         await _collection.DeleteManyAsync(_ => _.Id.ObserverId == observerId).ConfigureAwait(false);
+
+    static UpdateOneModel<ObserverPartitionCounts> CreateIncrement(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        var id = new ObserverPartitionCountsId(observerId, partition.ToString());
+        var increments = countsPerEventType.Select(_ =>
+            Builders<ObserverPartitionCounts>.Update.Inc(
+                new StringFieldDefinition<ObserverPartitionCounts, long>($"{nameof(ObserverPartitionCounts.Counts)}.{_.Key.Value}"),
+                (long)_.Value.Value));
+        var update = Builders<ObserverPartitionCounts>.Update.Combine(increments);
+        return new UpdateOneModel<ObserverPartitionCounts>(
+            Builders<ObserverPartitionCounts>.Filter.Eq(_ => _.Id, id),
+            update)
+        {
+            IsUpsert = true
+        };
+    }
 }

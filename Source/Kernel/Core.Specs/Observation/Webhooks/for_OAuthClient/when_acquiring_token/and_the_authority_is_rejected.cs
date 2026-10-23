@@ -12,7 +12,7 @@ public class and_the_authority_is_rejected : given.an_oauth_client
 
     void Establish()
     {
-        _policy.Evaluate("https://authority.example/.well-known/openid-configuration", Arg.Any<Concepts.EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(new WebhookTargetValidation(false, "Authority is not approved."));
+        _policy.EvaluateForDelivery("https://authority.example/.well-known/openid-configuration", Arg.Any<Concepts.EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(new WebhookTargetValidation(false, "Authority is not approved."));
     }
 
     async Task Because()

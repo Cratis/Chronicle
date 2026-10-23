@@ -8,10 +8,12 @@
 - Which provider owns a read model type
 
 Source: [read models in commands](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
-Plain models and keyed reads are advisory, not concurrency guards. For protected
-reads use [decisions and routing](decisions-and-routing.md): opt into
-`[ProtectedDecision]` before taking `DecisionRead<T>`; constructor-injected
-validators are refused there.
+Under read protection `Off` (the default) and `Measure`, injected models and keyed
+reads are plain reads, not concurrency guards. Under `On`, a read-model parameter of
+`Handle()` or a validator constructor is guarded; `IReadModels.GetInstanceById` in a
+command is refused, so read another entity's model with a second parameter and
+`[LookUpBy(nameof(Cmd.Prop))]`. See [decisions and routing](decisions-and-routing.md)
+and, for per-command opt-in, `[ProtectedDecision]` with `DecisionRead<T>`.
 
 A read model can be injected into a `CommandValidator<T>` constructor, into
 `Provide()`, or into `Handle()`. Arc resolves it through an
@@ -27,7 +29,9 @@ error. The three shapes it takes:
    ambiguous;
 3. the id is generated inside `Handle()` and does not exist yet.
 
-In all three, read by explicit key in `Provide()`:
+In all three, under `Off` read by explicit key in `Provide()`; under `On` use a
+second parameter with `[LookUpBy]`, or `IDecisionReads.Get` in `Provide()` for a
+key computed there:
 
 ```csharp
 var other = await readModels.GetInstanceById<<Other>>((EventSourceId)<OtherId>);

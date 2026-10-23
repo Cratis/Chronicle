@@ -1,0 +1,41 @@
+# cratis-ai-managed: skills/dump-collect/NOTICE
+.NET Crash Dump Collection
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet-diag/skills/dump-collect/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line with the skill-specific safety, ownership or compatibility caveat.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+- Replace absence-of-CorExeMain NativeAOT detection with positive evidence (sibling app.dll and runtimeconfig.json, loaded runtime modules, Rhp runtime symbols).
+
+references/container-dumps.md:
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+- Place approval guards immediately before complete Markdown tables so original rows remain intact.
+
+references/coreclr-dumps.md:
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+- Add marked approval and pinned-version guidance before the official direct-download/source-build fallback.
+
+references/nativeaot-dumps.md:
+- Prefix official tool downloads/installs with marked approval/pinned-version guidance and privileged/perfcollect examples with explicit root/container-security approval, where present.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.
+
+Executes or downloads (instructions retained, not executed by this import):
+- references/container-dumps.md: --privileged \
+- references/container-dumps.md: ⚠️ `--privileged` is needed to write to `/proc/sys/kernel/core_pattern`. For production, prefer configuring the core pattern on the host instead.
+- references/container-dumps.md: | Core dump goes to wrong location | Host `core_pattern` overrides container | Configure `core_pattern` on the host or use `--privileged` |
+- references/coreclr-dumps.md: dotnet tool install -g dotnet-dump
+- references/nativeaot-dumps.md: Invoke-WebRequest -Uri "https://download.sysinternals.com/files/Procdump.zip" -OutFile "$env:TEMP\Procdump.zip"
+- references/coreclr-dumps.md: # Without the SDK, download directly from https://github.com/dotnet/diagnostics/releases

@@ -135,9 +135,9 @@ For an implemented application slice, require the applicable changed-lane gates 
 - [ ] All TypeScript specs pass (`yarn test`) if applicable
 - [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
 - [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
-- [ ] Code review by `code-reviewer` finds no blocking issues
+- [ ] Code review by `code-reviewer` approves the scoped change using `.cratis/ai/rules/review-reports.md`
 - [ ] In an opted-in repository: `.play` changes were reviewed by `screenplay-reviewer`, and no modeled business rule or model-owned behavior exists only in code (infrastructure, client, adapter, code-attachment/handler code and authorized gap-fill governed by the `.play` slice and specs are allowed)
-- [ ] Security review by `security-reviewer` finds no vulnerabilities
+- [ ] Security review by `security-reviewer` approves the scoped change; combine the review reports using `.cratis/ai/rules/review-reports.md`, preserving each reviewer's findings and scope limits
 - [ ] PR description follows the pull request template and the release-note contract in `pull-requests.md`; test and review notes are in a PR comment
 
 ---

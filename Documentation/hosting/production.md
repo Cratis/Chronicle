@@ -159,7 +159,9 @@ The remaining settings stay in the mounted `chronicle.json`; the environment var
 
 ## Health Checks
 
-Chronicle exposes a health check endpoint at `/health` by default.
+Chronicle binds its listeners before starting the Orleans silo. `/health/live` returns 200 while the process is running and accepting requests, including during startup. `/health` and `/health/ready` return 503 until the silo has completed startup and the host has started, and become unready when shutdown begins. Existing storage health checks also contribute to readiness.
+
+While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC `Unavailable`. This includes the Workbench and static files. Background catch-up does not delay readiness after startup completes.
 
 > [!IMPORTANT]
 > **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
@@ -174,9 +176,12 @@ Cratis__Chronicle__Health__Tls=false
 Then point the probe at it:
 
 ```yaml
+startupProbe:
+  tcpSocket:
+    port: 35000
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health/live
     port: 8080
     scheme: HTTP
 readinessProbe:
@@ -185,6 +190,8 @@ readinessProbe:
     port: 8080
     scheme: HTTP
 ```
+
+You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
 
 Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so do not expose it publicly.
 

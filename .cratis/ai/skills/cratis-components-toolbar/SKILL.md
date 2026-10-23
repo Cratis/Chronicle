@@ -205,6 +205,10 @@ consumer, ordered ascending by `order` (default `0`). `useToolbarSlot(slotName)`
 returns the current content for a custom consumer. `ToolbarContext` also accepts
 a `slotName`.
 
+In a Screenplay model the same idea is authored, not coded: a `feature` or `module` adds buttons to the `toolbar` slot of every
+screen beneath it and links each to a command of the feature (see `cratis-screenplay-ui-composition`, "Feature and module
+toolbars"). Use the slot components above only when writing the React application by hand.
+
 ## Props
 
 ### `Toolbar`

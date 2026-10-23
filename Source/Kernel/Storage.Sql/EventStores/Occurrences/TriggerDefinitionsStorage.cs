@@ -48,6 +48,7 @@ public class TriggerDefinitionsStorage(Func<Task<DbContextScope<EventStoreDbCont
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
+            SqlStorageTelemetry.RecoveredCollision("trigger-definition");
             return false;
         }
     }

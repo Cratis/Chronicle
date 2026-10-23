@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null) : ICanPerformProjectionPipelineStep
+/// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
+public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -87,7 +89,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             await ResolveSavedFutures(pendingSavesToFold);
 
             await changesetStorage.Save(
-                projection.ReadModel.ContainerName,
+                changesetContainer ?? projection.ReadModel.ContainerName,
                 context.Key,
                 context.Event.Context.EventType,
                 context.Event.Context.SequenceNumber,

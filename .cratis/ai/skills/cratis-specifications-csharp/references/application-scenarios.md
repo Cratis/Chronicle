@@ -17,7 +17,7 @@ call. A library or framework repository reaches for a scenario only to test the
 very engine it provides.
 
 Read [query and decision scenarios](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-when using `QueryScenario<T>`, buffered emissions or `UseDecisionReads()`.
+when using `QueryScenario<T>`, buffered emissions or guarded command scenarios.
 Guarded decisions need actual seeded events, not pinned models; their given
 state and appends share one in-process log, unlike legacy dictionary seeding.
 

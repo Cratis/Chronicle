@@ -58,7 +58,6 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
         await scope.DbContext.Reactors.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -66,7 +65,7 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
         var existing = await scope.DbContext.Reactors.FindAsync(currentId);
-        if (existing is null)
+        if (existing is null || currentId == newId)
         {
             return;
         }
@@ -80,8 +79,29 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
             IsReplayable = existing.IsReplayable
         };
 
-        scope.DbContext.Reactors.Remove(existing);
-        await scope.DbContext.Reactors.AddAsync(renamed);
-        await scope.DbContext.SaveChangesAsync();
+        try
+        {
+            // A user-initiated transaction must run inside the execution strategy, since SQL Server and
+            // PostgreSQL use retrying strategies that refuse transactions started outside them.
+            await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+                await scope.DbContext.Reactors.AddAsync(renamed);
+                await scope.DbContext.SaveChangesAsync();
+                await scope.DbContext.Reactors.Where(reactor => reactor.Id == currentId).ExecuteDeleteAsync();
+                await transaction.CommitAsync();
+            });
+        }
+        catch (DbUpdateException)
+        {
+            // The transaction is rolled back on dispose (PostgreSQL aborts it on a unique violation).
+            // Converge only when a peer completed this same rename: the source row is gone.
+            await using var fresh = await database.EventStore(eventStore);
+            if (await fresh.DbContext.Reactors.AnyAsync(reactor => reactor.Id == currentId))
+            {
+                throw;
+            }
+        }
     }
 }

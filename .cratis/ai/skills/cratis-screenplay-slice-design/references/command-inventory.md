@@ -172,13 +172,13 @@ Rules for filling it:
 | AssignLocker | caller is not an attendant | `authorize IsAttendant` | denied: Customer | RefusingACustomerAssigningALocker |
 | AssignLocker | locker already has a request | constraint `OneRequestPerLocker` | "The locker is already assigned" | AppendingASecondAssignmentOfALocker (`when append`: the command's own `require` would reject first) |
 | AssignLocker | request already has a locker | constraint `OneLockerPerRequest` | "The request already has a locker" | gap |
-| AssignLocker | locker is not free | `reads` + `require`, NOT enforced today | "The locker is not free"; target: `[ProtectedDecision]` (Arc 22.39.0+; available to Stage 4.73.1 gap-fill, not emitted protection) or DCB on the locker stream | RejectingASecondAssignmentOfALocker (pins the message; blocked until the target exists) |
-| AssignLocker | request is not waiting | `reads` + `require`, NOT enforced today | "The request is not waiting for a locker" | gap (same) |
+| AssignLocker | locker is not free | Legacy example lacks protected-read opt-in; inspect v25 admission and Stage gap | "The locker is not free"; target: `[ProtectedDecision]` (Arc 22.39.0+; available to Stage 4.73.1 gap-fill, not emitted protection) or DCB on the locker stream | RejectingASecondAssignmentOfALocker (pins the message; blocked until the target exists) |
+| AssignLocker | request is not waiting | Legacy example lacks protected-read opt-in; inspect v25 admission and Stage gap | "The request is not waiting for a locker" | gap (same) |
 | LockerById, ListLockers | caller is anonymous | module `authorize IsAuthenticated` | denied: no caller | RefusingAnAnonymousLockerLookup, RefusingAnAnonymousLockerList |
 | RequestById | caller is anonymous | module `authorize IsAuthenticated` | denied: no caller | RefusingAnAnonymousRequestLookup |
 
-The gaps are the hand-off: most are cheap rejection specs, and two are blocked on a target the
-model cannot express yet. A model whose inventory shows no gaps at design time has probably
+The gaps are the hand-off: most are cheap rejection specs, and two need protected-read admission plus separately verified target realization;
+the legacy example has not opted into v25. A model whose inventory shows no gaps at design time has probably
 not been asked the refusal questions.
 
 ## Common mistakes

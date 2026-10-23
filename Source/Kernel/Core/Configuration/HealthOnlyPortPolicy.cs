@@ -34,7 +34,7 @@ public static class HealthOnlyPortPolicy
     }
 
     /// <summary>
-    /// Determines whether a request path addresses the configured health check endpoint.
+    /// Determines whether a request path addresses the configured health check endpoint or its live/ready subpaths.
     /// </summary>
     /// <param name="healthCheckEndpoint">The configured health check endpoint.</param>
     /// <param name="path">The request path.</param>
@@ -61,12 +61,14 @@ public static class HealthOnlyPortPolicy
     {
         if (string.IsNullOrWhiteSpace(healthCheckEndpoint)) return false;
 
-        var endpoint = healthCheckEndpoint.Trim().TrimEnd('/');
-        if (!endpoint.StartsWith('/')) endpoint = $"/{endpoint}";
+        var prefix = healthCheckEndpoint.Trim().Trim('/');
+        prefix = prefix.Length == 0 ? string.Empty : $"/{prefix}";
 
         var requested = (path ?? string.Empty).TrimEnd('/');
         if (requested.Length == 0) requested = "/";
 
-        return string.Equals(endpoint, requested, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(prefix.Length == 0 ? "/" : prefix, requested, StringComparison.OrdinalIgnoreCase)
+            || string.Equals($"{prefix}/live", requested, StringComparison.OrdinalIgnoreCase)
+            || string.Equals($"{prefix}/ready", requested, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-ui-composition
-description: Compose the user interface of a Cratis Screenplay `.play` model — `layout` and responsive `arrangement`, screen/dialog templates, component data-context bindings, exposed template configuration, command forms and columns, navigation contributions, application navigation regions (topbar/sidebar, module inherit/extend/override), toolbar slice buttons, blueprint template references, sample data packs, hierarchical outlets/routes, toolbar dialogs, package/icon selection, interaction `behavior`/`on`/`uses` wiring, `ui profile`, `theme`, localized `$strings`, and `file` references. Use when declaring the application shell, reusable screen shapes, component/package configuration, command forms, navigation/toolbars, click or submit behavior, or theming. Do not use for a screen's own data and actions.
+description: Compose the user interface of a Cratis Screenplay `.play` model — `layout` and responsive `arrangement`, screen/dialog templates, component data-context bindings, exposed template configuration, command forms and columns, navigation contributions, application navigation regions (topbar/sidebar, module inherit/extend/override), toolbar slice buttons, blueprint template references, sample data packs, hierarchical outlets/routes, toolbar dialogs, package/icon selection, interaction `behavior`/`on`/`uses` wiring, `ui profile` (root template, shell options, appearance, new screens default), `theme`, localized `$strings`, and `file` references. Use when declaring the application shell, reusable screen shapes, component/package configuration, command forms, navigation/toolbars, click or submit behavior, or theming. Do not use for a screen's own data and actions.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-ui-composition/SKILL.md -->
@@ -82,7 +82,7 @@ Read `references/worked-flow.md` when a complete example is needed before compos
 
 ## `layout` — the application shell
 
-One per application, declared at the top level and selected by a `ui profile`.
+One or more per application, declared at the top level; a `ui profile` selects the shell with `root template <Name>`.
 A complete example:
 
 ```screenplay
@@ -226,71 +226,29 @@ module Sales
 ```
 
 Read [references/application-shell.md](references/application-shell.md) before writing any of it: the inherit/extend/override
-choice, item target and slot, the module-only target rule (`PLAY0750`), buttons, blueprint ranges, sample data, MCP editing
+choice, item target and slot, the module-only target rule (`PLAY0750`), buttons, feature and module toolbars (`toolbar` in a
+`feature` or `module`, `confirm`), blueprint ranges, sample data, MCP editing
 and the review checklist. `contribute to Navigation` stays the flat contribution; a new application uses regions.
 
 ## Interactions — what a click does
 
-A screen can say what it shows; an interaction says what happens when someone
-acts. Three words carry it:
-
-| Word | What it is |
-| --- | --- |
-| **Interaction trigger** | the `on <thing>` clause: `click`, `double click`, `select`, `submit`, `change`, `load`/`unload`, `enter`/`leave`, `event <Event>`, `interval <n> <unit>`, or a declared application trigger |
-| **Action** | a closed set: `execute`, `navigate to`/`navigate back`, `open dialog`/`close dialog`, `refresh`, `set … to`, `notify`, `confirm`, `raise` |
-| **Behavior** | a bundle of trigger-to-action bindings; inline (`on …`) or named (`behavior` + `uses`) |
+An interaction wires an `on <thing>` trigger to actions, inline or through named
+`behavior` + `uses`. This is closed UI wiring, not scripting; validation stays on
+the command. Trigger/action syntax is in [interaction example](references/interaction-example.md)
+and [guarded interactions](references/guarded-interactions.md).
 
 Guarded alternatives and `where` deprecation:
 [guarded interactions](references/guarded-interactions.md).
 
-Complete named/inline behavior example:
-
-```screenplay
-concept InvoiceId : Uuid
-
-behavior ConfirmThenExecute
-  parameter command
-  parameter message
-  on click
-    confirm message
-      on success
-        execute command
-
-module Invoicing
-  feature InvoiceManagement
-    slice StateChange CancelInvoice
-      command CancelInvoice
-        invoiceId InvoiceId identifier
-        produces event InvoiceCancelled
-      screen CancelInvoiceScreen
-        data InvoiceStatusView via query InvoiceStatusById by invoiceId
-        uses ConfirmThenExecute
-          command CancelInvoice
-          message "Cancel this invoice?"
-        on enter
-          refresh InvoiceStatusById
-            on failure
-              notify error "The invoice could not be loaded"
-    slice StateView InvoiceStatus
-      readmodel InvoiceStatusView
-        invoiceId InvoiceId
-        cancelled Bool
-      projection InvoiceStatuses => InvoiceStatusView
-        from InvoiceCancelled
-          invoiceId = $eventSourceId
-          cancelled = true
-      query InvoiceStatusById => InvoiceStatusView optional
-        by invoiceId InvoiceId
-```
-
-The inline event targets `invoiceId`; the projection gets it from event context.
+Read [interaction example](references/interaction-example.md) when wiring a
+named confirmation behavior and an inline refresh to the same screen.
 Scalar/named `returns` bind and reference-execute (ESM v7).
 Renderer generation/response limits: command-surface `references/generated-values-and-responses.md`.
 Screenplay resolves response names in form submit and execute success (Requires Screenplay 4.148.0 or later);
 own failure use is PLAY0685. No ESM change; Scene runtime binding remains downstream.
 An existing success continuation does not imply a response contract.
-Read [response continuations](references/response-continuations.md) for precedence,
-nested/failure scopes, PLAY0485, examples and tagged evidence.
+Read [response continuations](references/response-continuations.md) for scope,
+precedence, PLAY0485 and examples.
 
 - Write the one-off case inline; name it with `behavior` when several places need
   the same wiring. A `uses` site must supply exactly the declared parameters
@@ -308,12 +266,10 @@ nested/failure scopes, PLAY0485, examples and tagged evidence.
 - **A declared `trigger` is not a UI event.** Use `on click`, not `trigger`, for a
   button. `on <Trigger>` observes an application trigger and `raise <Trigger>`
   fires one; that is where the two meet.
-- Interactions are a closed vocabulary, not a scripting language. Validation stays
-  on the command; the UI surfaces it.
 
 ## `ui profile` and `theme`
 
-A `ui profile` selects the layout, theme and `packages`, listed in override-priority order (a later package shadows an earlier one); `target platform` and `target size` accept any identifier, so a typo is silent. Read [references/ui-profile-and-theme.md](references/ui-profile-and-theme.md) when writing a profile or theme.
+A `ui profile` selects the application shell with `root template` (an own layout or application-scope screen template, or `blueprint <B> <Name>` with an optional `version` pin), its shell `option` lines, an `appearance` block (`color scheme`, `accent`), the template new screens start from (`new screens use template`), the theme and the `packages`, listed in override-priority order (a later package shadows an earlier one); `target platform` and `target size` accept any identifier, so a typo is silent. The legacy `layout <Name>` line inside a profile still reads but warns `PLAY0791`: write `root template`. `PLAY0790` to `PLAY0799` check the shell. Read [references/ui-profile-and-theme.md](references/ui-profile-and-theme.md) when writing a profile or theme, or fixing a shell diagnostic.
 
 ## Localized strings
 
@@ -334,6 +290,7 @@ Localized text lives in companion `.strings` files and is referenced unquoted as
 - [ ] Every slot a `contribute` targets is declared `contributes <Point>` somewhere
       that encloses it.
 - [ ] No `dialog template` declares `fits slot`.
+- [ ] Each `ui profile` names its shell with `root template`, not the legacy `layout` line (`PLAY0791`); a blueprint shell is listed under `packages` and its `version` pin is deliberate.
 - [ ] `packages` are ordered deliberately — later shadows earlier.
 - [ ] Every theme a profile selects is `compatible with` one of its packages.
 - [ ] `target platform` and `target size` values are spelled correctly; nothing
@@ -342,7 +299,7 @@ Localized text lives in companion `.strings` files and is referenced unquoted as
 - [ ] No `file` reference is doing work the declaration should be doing.
 - [ ] Every click, submit and screen entry that does something has an `on` or
       `uses`; continuations sit only on actions that can fail.
-- [ ] Navigation regions, slice buttons, blueprint references and sample data follow `references/application-shell.md`: each module's mode is deliberate, no module item targets another module, every button names a State Change slice, every template has a `category`, and the active sample data pack is chosen once in the `ui profile`.
+- [ ] Navigation regions, slice buttons, blueprint references and sample data follow `references/application-shell.md`: each module's mode is deliberate, no module item targets another module, every button names a State Change slice, buttons shared by a feature's screens sit in a feature `toolbar` linked to its commands (`confirm` on destructive ones), every template has a `category`, and the active sample data pack is chosen once in the `ui profile`.
 - [ ] Component bindings, exposed template values, manual form columns, toolbar items, outlets and routes all trace to typed data; no runtime fallback counts as delivery. Report authoring acceptance, executable admission and runtime
       implementation separately.
 

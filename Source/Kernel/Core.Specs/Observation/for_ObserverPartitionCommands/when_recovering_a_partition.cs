@@ -16,7 +16,9 @@ public class when_recovering_a_partition : given.an_observer_grain
 
     void Establish() => _observer.TryStartRecoverJobForFailedPartition(Partition).Returns(PartitionRecoveryOutcome.PartitionQuarantined);
 
-    async Task Because() => _result = await new RetryPartition(EventStore, Namespace, ObserverIdentifier, string.Empty, Partition).Handle(_grainFactory);
+    async Task Because() => _result = await new RetryPartition(EventStore, Namespace, ObserverIdentifier, string.Empty, Partition).Handle(_grainFactory, _storage);
+
+    [Fact] void should_address_the_observers_inbox() => _grainFactory.Received(1).GetGrain<IObserver>(_key);
 
     [Fact] void should_recover_the_partition() => _observer.Received(1).TryStartRecoverJobForFailedPartition(Partition);
     [Fact] void should_not_replay_the_partition() => _observer.DidNotReceive().ReplayPartition(Arg.Any<Concepts.Keys.Key>());

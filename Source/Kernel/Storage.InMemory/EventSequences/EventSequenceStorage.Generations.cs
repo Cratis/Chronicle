@@ -52,6 +52,8 @@ public partial class EventSequenceStorage
             var content = stored.GenerationalContent.ToDictionary(_ => new EventTypeGeneration((uint)_.Key), _ => _.Value);
             EventTypeGeneration? appended = _appendedGenerations.TryGetValue(sequenceNumber, out var generation) ? new(generation) : null;
 
+            var latest = stored.Revisions.LastOrDefault();
+
             return Task.FromResult<StoredEventGenerations?>(new(
                 sequenceNumber,
                 stored.Context.EventType.Id,
@@ -60,7 +62,9 @@ public partial class EventSequenceStorage
                 appended,
                 content,
                 stored.Revisions.Count(),
-                string.Empty));
+                string.Empty,
+                latest?.EventTypeGeneration,
+                latest?.Content));
         }
     }
 

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
+using Cratis.Chronicle.Sys;
 
 namespace Cratis.Chronicle.Services.Host;
 
@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Services.Host;
 /// </remarks>
 internal static class ServerVersion
 {
-    static readonly string _informationalVersion = ReadInformationalVersion();
+    static readonly string _informationalVersion = KernelVersion.InformationalVersion;
 
     /// <summary>
     /// Gets the version of the running server.
@@ -32,30 +32,12 @@ internal static class ServerVersion
     /// </summary>
     /// <param name="informationalVersion">The informational version string, for example <c language="csharp">15.9.0+abc123</c>.</param>
     /// <returns>The version portion before any '+' separator, or the whole string when there is none.</returns>
-    internal static string ParseVersion(string informationalVersion)
-    {
-        var plusIndex = informationalVersion.IndexOf('+', StringComparison.Ordinal);
-        return plusIndex > 0 ? informationalVersion[..plusIndex] : informationalVersion;
-    }
+    internal static string ParseVersion(string informationalVersion) => KernelVersion.ParseVersion(informationalVersion);
 
     /// <summary>
     /// Parses the commit from an assembly informational version string.
     /// </summary>
     /// <param name="informationalVersion">The informational version string, for example <c language="csharp">15.9.0+abc123</c>.</param>
     /// <returns>The build metadata after the '+' separator, or an empty string when there is none.</returns>
-    internal static string ParseCommitSha(string informationalVersion)
-    {
-        var plusIndex = informationalVersion.IndexOf('+', StringComparison.Ordinal);
-        return plusIndex >= 0 && plusIndex < informationalVersion.Length - 1
-            ? informationalVersion[(plusIndex + 1)..]
-            : string.Empty;
-    }
-
-    static string ReadInformationalVersion()
-    {
-        var assembly = Assembly.GetEntryAssembly() ?? typeof(ServerVersion).Assembly;
-        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString()
-            ?? "0.0.0";
-    }
+    internal static string ParseCommitSha(string informationalVersion) => KernelVersion.ParseCommitSha(informationalVersion);
 }

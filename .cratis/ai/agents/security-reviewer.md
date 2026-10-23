@@ -11,10 +11,14 @@ tools:
   - Glob
   - Bash
 readonly: true
+modelTier: reviewer
+reviewIndependence: different-provider
 ---
 <!-- cratis-ai-managed: agents/security-reviewer.md -->
 
 # Security Reviewer
+
+Run on a different provider than the author where the harness can select one; see "Reviewer independence" in `review-reports.md`.
 
 ## Scope before checklists
 
@@ -80,42 +84,8 @@ Your responsibility is to perform a structured **security review** of all change
 
 ---
 
-## Risk classification
-
-Assign each finding one of:
-
-| Label | Meaning |
-|-------|---------|
-| 🔴 Critical | Must be fixed before merge — exploitable without significant effort |
-| 🟡 Medium | Should be fixed soon — exploitable under specific conditions |
-| 🟢 Low | Improvement or defense-in-depth — fix when convenient |
-
----
-
 ## Output format
 
-Start with a **summary**:
-> **Security Review: ✅ No issues / ⚠️ Low-risk findings / ❌ Blocking issues found**
-
-Then list findings grouped by category:
-
-```
-### Input Validation & Injection
-
-🔴 **Critical** — `Projects/Registration/RegisterProject.cs`
-> Line 14: `var path = Path.Combine(root, command.FileName);`
-> A path traversal attack is possible if `FileName` contains `../` sequences.
-> Fix: Validate that the resolved path stays within the expected root directory.
-```
-
-End with a summary table:
-
-| Category | Status |
-|----------|--------|
-| Input Validation | ✅ / ⚠️ / ❌ |
-| Auth / Authz | ✅ / ⚠️ / ❌ |
-| Data Exposure | ✅ / ⚠️ / ❌ |
-| Secrets | ✅ / ⚠️ / ❌ |
-| Dependencies | ✅ / ⚠️ / ❌ |
-| Event Sourcing | ✅ / ⚠️ / ❌ |
-| Frontend | ✅ / ⚠️ / ❌ |
+Read and use `.cratis/ai/rules/review-reports.md` when writing conclusions.
+Apply the domain-specific risk mapping in the Report section of
+`.cratis/ai/skills/cratis-security-review/SKILL.md`.

@@ -127,6 +127,10 @@ array.should.have.lengthOf(3);
 (() => throwingFn()).should.throw(ErrorType);
 ```
 
+### Comparing JSON
+
+Never assert JSON equality by comparing `JSON.stringify` output: object key order is insertion order, so two equal documents can serialize differently and a spec fails, or passes, for the wrong reason. Compare parsed values with `should.deep.equal`. When a helper must compare serialized JSON (a snapshot, a file on disk, a request body), canonicalize first: sort object keys recursively at every level and keep array order, because array order is data. Review flags raw `JSON.stringify(a) === JSON.stringify(b)` equality in specs and spec helpers.
+
 ## Mocking with Sinon
 
 ```typescript

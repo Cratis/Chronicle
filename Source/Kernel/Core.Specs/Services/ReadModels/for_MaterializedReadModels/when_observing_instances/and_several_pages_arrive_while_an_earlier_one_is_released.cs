@@ -64,7 +64,7 @@ public class and_several_pages_arrive_while_an_earlier_one_is_released : for_Rea
                 return Task.FromResult<IEnumerable<ExpandoObject>>(instances);
             });
 
-        _materializedService = new(_grainFactory, _storage, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        _materializedService = new(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
     }
 
     async Task Because()

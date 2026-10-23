@@ -45,6 +45,21 @@ public class Storage
     public bool CreateIfMissing { get; init; } = true;
 
     /// <summary>
+    /// Gets the runtime policy for versioned SQL schemas.
+    /// </summary>
+    public SchemaMode SchemaMode { get; init; } = SchemaMode.Migrate;
+
+    /// <summary>
+    /// Gets the one-shot SQL schema action. None starts the kernel normally.
+    /// </summary>
+    public SchemaAction SchemaAction { get; init; } = SchemaAction.None;
+
+    /// <summary>
+    /// Gets native Microsoft Entra authentication for PostgreSQL. Disabled by default.
+    /// </summary>
+    public PostgreSqlEntra PostgreSqlEntra { get; init; } = new();
+
+    /// <summary>
     /// Gets how connections are resolved per event store, namespace and purpose.
     /// </summary>
     /// <remarks>

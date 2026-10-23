@@ -23,6 +23,9 @@ public partial class EventSequenceStorage
 
         var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(stored.Content)!;
 
+        var revised = stored.RevisedGeneration;
+        var revisedContent = revised is not null && content.TryGetValue(revised.Value.ToString(), out var revisedElement) ? revisedElement.GetRawText() : null;
+
         return new(
             sequenceNumber,
             stored.Type,
@@ -31,7 +34,9 @@ public partial class EventSequenceStorage
             stored.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null,
             content.ToDictionary(_ => new EventTypeGeneration(uint.Parse(_.Key)), _ => _.Value.GetRawText()),
             0,
-            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes }));
+            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes }),
+            revisedContent is null ? null : new EventTypeGeneration(revised!.Value),
+            revisedContent);
     }
 
     /// <inheritdoc/>

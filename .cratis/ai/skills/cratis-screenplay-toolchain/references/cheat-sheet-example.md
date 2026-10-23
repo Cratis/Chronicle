@@ -3,7 +3,9 @@
 
 One complete document with every construct family. Design mode, not executable. Prose rules: [cheat-sheet.md](cheat-sheet.md); what binds: [executable-subset.md](executable-subset.md).
 
-Binding blockers: unquoted import, `reads` (PLAY0271), `starts with`. Caller-supplied collection equality filters bind as ESM v14; context and single-result filters remain blocked. Executable shapes are in the sibling examples. `RecordingAPayment` lists the `InvoiceClosed` cascade; an older bundled compiler rejected it with a false PLAY0285 ("outcome cannot be produced by 'RecordPayment'").
+Binding blockers in this legacy control without protected-read opt-in: unquoted
+import, legacy `reads` (PLAY0271), condition-only `starts with` (PLAY0268).
+Property/concept text rules bind v24; eligible protected reads bind v25. Caller-supplied collection equality filters bind as ESM v14; context and single-result filters remain blocked. Executable shapes are in the sibling examples. `RecordingAPayment` lists the `InvoiceClosed` cascade; an older bundled compiler rejected it with a false PLAY0285 ("outcome cannot be produced by 'RecordPayment'").
 
 Concept compliance itself binds as ESM v13; reasons remain report-only PLAY0270. Stage renders v13 concept
 protection. Binder-only PLAY0268 refusals and subject-lineage limits: command-surface `references/compliance.md`.

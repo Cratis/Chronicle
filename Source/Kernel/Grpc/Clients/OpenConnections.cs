@@ -46,6 +46,14 @@ internal sealed class OpenConnections
     public void Closed(ConnectionId connectionId) => _connections.TryRemove(connectionId, out _);
 
     /// <summary>
+    /// Check whether a connection has lapsed and must be closed so its client can register again.
+    /// </summary>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the connection.</param>
+    /// <returns>True if the open connection has lapsed; false otherwise.</returns>
+    public bool HasLapsed(ConnectionId connectionId) =>
+        _connections.TryGetValue(connectionId, out var connection) && connection.HasLapsed;
+
+    /// <summary>
     /// Record that a response from the client was handled, which is when the client can send its next one.
     /// </summary>
     /// <param name="connectionId">The <see cref="ConnectionId"/> the client responded on.</param>
@@ -96,6 +104,17 @@ internal sealed class OpenConnections
         bool _lapsed;
 
         public ConnectRequest Request { get; } = request;
+
+        public bool HasLapsed
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _lapsed;
+                }
+            }
+        }
 
         public void Handled(DateTimeOffset at)
         {

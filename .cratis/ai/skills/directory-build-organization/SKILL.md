@@ -1,0 +1,206 @@
+---
+name: directory-build-organization
+description: 'Organizes shared MSBuild policy across Directory.Build.props, Directory.Build.targets, Directory.Build.rsp, and Directory.Packages.props: centralizing repeated properties, targets, and package versions, hierarchy and import structure, props-versus-targets placement, and folder or project exceptions. Use when two or more projects repeat MSBuild policy, or an existing Directory.Build hierarchy has an import, placement, or layering defect, even if only one project is affected. Not for a one-project repo without a Directory.Build file, property value or condition semantics, legacy-to-SDK migration, or non-MSBuild systems.'
+license: MIT
+---
+<!-- cratis-ai-managed: skills/directory-build-organization/SKILL.md -->
+
+<!-- Modified by Cratis from dotnet's original (MIT): frontmatter, applicability, navigation and the changes listed in NOTICE. Upstream: https://github.com/dotnet/skills (plugins/dotnet-msbuild/skills/directory-build-organization/SKILL.md; see NOTICE) -->
+
+# Organizing Build Infrastructure with Directory.Build Files
+
+Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ.
+
+## Intent control
+
+- For "should we", "how should we organize", "recommend", "advise", or review
+  requests, inspect the actual project files and return a proposed layout only.
+  Do not create or edit files unless the user explicitly asks to apply, move,
+  centralize, or clean up the configuration.
+- Before summarizing, verify which project retains each project-specific
+  property, item, or target. Name the actual file; do not infer it from sibling
+  names.
+- Recommend a verification command only after discovering a real `.sln`,
+  `.slnx`, `.proj`, or project file at that path. If no repo-root entry point
+  exists, give commands for the discovered projects or state that the entry
+  point was not found.
+- Every advice response must explain that `Microsoft.Common.props` searches
+  upward from each project and automatically imports the nearest
+  `Directory.Build.props` early; project values can then override shared
+  defaults. Explain the equivalent late `Microsoft.Common.targets` import when
+  recommending `Directory.Build.targets`.
+
+## Directory.Build.props vs Directory.Build.targets
+
+Understanding which file to use is critical. They differ in **when** they are imported during evaluation:
+
+**Evaluation order:**
+
+```
+Microsoft.Common.props imports Directory.Build.props early
+→ project body and package/project imports evaluate
+→ Microsoft.Common.targets imports Directory.Build.targets late
+```
+
+| Use `.props` for | Use `.targets` for |
+|---|---|
+| Setting property defaults | Custom build targets |
+| Common item definitions | Late-bound property overrides |
+| Properties projects can override | Post-build steps |
+| Assembly/package metadata | Conditional logic on final values |
+| Analyzer PackageReferences | Targets that depend on SDK-defined properties |
+
+**Rule of thumb:** Properties and items go in `.props`. Custom targets and late-bound logic go in `.targets`.
+
+Because `.props` is imported before the project file, the project can override any value set there. Because `.targets` is imported after everything, it gets the final say—but projects cannot override `.targets` values.
+
+### ⚠️ Critical: TargetFramework Availability in .props vs .targets
+
+**Property conditions on `$(TargetFramework)` in `.props` files silently fail for single-targeting projects** — the property is empty during `.props` evaluation. Move TFM-conditional properties to `.targets` instead. ItemGroup and Target conditions are not affected.
+
+See [targetframework-props-pitfall.md](references/targetframework-props-pitfall.md) for the full explanation.
+
+## Directory.Build.props
+
+Good candidates: language settings, assembly/package metadata, build warnings, code analysis, common analyzers.
+
+```xml
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Company>Contoso</Company>
+    <Authors>Contoso Engineering</Authors>
+  </PropertyGroup>
+</Project>
+```
+
+**Do NOT put here:** project-specific TFMs, project-specific PackageReferences, targets/build logic, or properties depending on SDK-defined values (not available during `.props` evaluation).
+
+## Directory.Build.targets
+
+Good candidates: custom build targets, late-bound property overrides (values depending on SDK properties), post-build validation.
+
+```xml
+<Project>
+  <Target Name="ValidateProjectSettings" BeforeTargets="Build">
+    <Error Text="All libraries must target netstandard2.0 or higher"
+           Condition="'$(OutputType)' == 'Library' AND '$(TargetFramework)' == 'net472'" />
+  </Target>
+
+  <PropertyGroup>
+    <!-- DocumentationFile depends on OutputPath, which is set by the SDK -->
+    <DocumentationFile Condition="'$(IsPackable)' == 'true'">$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+</Project>
+```
+
+## Directory.Packages.props (Central Package Management)
+
+Central Package Management (CPM) provides a single source of truth for all NuGet package versions. See [https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) for details.
+
+**Enable CPM in `Directory.Packages.props` at the repo root:**
+
+```xml
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="xunit" Version="2.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GlobalPackageReference applies to ALL projects — great for analyzers -->
+    <GlobalPackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
+    <GlobalPackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
+  </ItemGroup>
+</Project>
+```
+
+## Directory.Build.rsp
+
+Contains default MSBuild CLI arguments applied to all builds under the directory tree.
+
+**Example `Directory.Build.rsp`:**
+
+```
+/maxcpucount
+/nodeReuse:false
+/consoleLoggerParameters:Summary;ForceNoAlign
+/warnAsMessage:MSB3277
+```
+
+- Works with both `msbuild` and `dotnet` CLI in modern .NET versions
+- Great for enforcing consistent CI and local build flags
+- Each argument goes on its own line
+
+## Multi-level Directory.Build Files
+
+MSBuild only auto-imports the **first** `Directory.Build.props` (or `.targets`) it finds walking up from the project directory. To chain multiple levels, explicitly import the parent at the **top** of the inner file. See [multi-level-examples](references/multi-level-examples.md) for full file examples.
+
+```xml
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"
+         Condition="Exists('$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))')" />
+
+  <!-- Inner-level overrides go here -->
+</Project>
+```
+
+**Example layout:**
+
+```
+repo/
+  Directory.Build.props          ← repo-wide (lang version, company info, analyzers)
+  Directory.Build.targets        ← repo-wide targets
+  Directory.Packages.props       ← central package versions
+  src/
+    Directory.Build.props        ← src-specific (imports repo-level, sets IsPackable=true)
+  test/
+    Directory.Build.props        ← test-specific (imports repo-level, sets IsPackable=false, adds test packages)
+```
+
+## Artifact Output Layout (.NET 8+)
+
+Set `<ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>` in `Directory.Build.props` to automatically produce project-name-separated `bin/`, `obj/`, and `publish/` directories under a single `artifacts/` folder, avoiding bin/obj clashes by default. See [common-patterns](references/common-patterns.md) for the directory layout and additional patterns (conditional settings by project type, post-pack validation).
+
+## Workflow: Organizing Build Infrastructure
+
+1. **Audit all `.csproj` files** — Catalog every `<PropertyGroup>`, `<ItemGroup>`, and custom `<Target>` across the solution. Note which settings repeat and which are project-specific.
+2. **Create root `Directory.Build.props`** — Move shared property defaults (LangVersion, Nullable, TreatWarningsAsErrors, metadata) here. These are imported before the project file so projects can override them.
+3. **Create root `Directory.Build.targets`** — Move custom build targets, post-build validation, and any properties that depend on SDK-defined values (e.g., `OutputPath`, `TargetFramework` for single-targeting projects) here. These are imported after the SDK so all properties are available.
+4. **Create `Directory.Packages.props`** — Enable Central Package Management (`ManagePackageVersionsCentrally`), list all `PackageVersion` entries, and remove `Version=` from `PackageReference` items in `.csproj` files.
+5. **Set up multi-level hierarchy** — Create inner `Directory.Build.props` files for `src/` and `test/` folders with distinct settings. Use `GetPathOfFileAbove` to chain to the parent.
+6. **Simplify `.csproj` files** — Remove all centralized properties, version attributes, and duplicated targets. Each project should only contain what is unique to it.
+7. **Validate** — Run restore/build against the discovered `.sln`, `.slnx`,
+   `.proj`, or project path, for example
+   `dotnet restore <entrypoint> && dotnet build <entrypoint>`. If no root
+   entrypoint exists, validate each discovered project explicitly instead of
+   claiming a repo-root build. Use
+   `dotnet msbuild <project> -pp:output.xml` to inspect the final merged view.
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| `Directory.Build.props` isn't picked up | File name casing wrong (exact match required on Linux/macOS) | Verify exact casing: `Directory.Build.props` (capital D, B) |
+| Properties from `.props` are ignored by projects | Project sets the same property after the import | Move the property to `Directory.Build.targets` to set it after the project |
+| Multi-level import doesn't work | Missing `GetPathOfFileAbove` import in inner file | Add the `<Import>` element at the top of the inner file (see Multi-level section) |
+| Properties using SDK values are empty in `.props` | SDK properties aren't defined yet during `.props` evaluation | Move to `.targets` which is imported after the SDK |
+| `Directory.Packages.props` not found | File not at repo root or not named exactly | Must be named `Directory.Packages.props` and at or above the project directory |
+| Property condition on `$(TargetFramework)` doesn't match in `.props` | `TargetFramework` isn't set yet for single-targeting projects during `.props` evaluation | Move property to `.targets`, or use ItemGroup/Target conditions instead (which evaluate late) |
+
+**Diagnosis:** Use the preprocessed project output to see all imports and final property values:
+
+```bash
+dotnet msbuild -pp:output.xml MyProject.csproj
+```
+
+This expands all imports inline so you can see exactly where each property is set and what the final evaluated value is.

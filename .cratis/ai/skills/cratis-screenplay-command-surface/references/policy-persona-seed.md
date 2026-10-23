@@ -1,6 +1,13 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-command-surface/references/policy-persona-seed.md -->
 # Policies, personas and seed
 
+## Contents
+
+- `policy` and `persona`
+- Anonymous policy
+- Policy negation
+- `seed`
+
 ## `policy` and `persona`
 
 ```screenplay
@@ -21,7 +28,7 @@ persona Accountant
   policy IsAccountant
 ```
 
-Condition atoms: `authenticated`, `role "<name>"`, and
+Condition atoms: `authenticated`, `anonymous`, `role "<name>"`, and
 `claim "<name>" matches subject | "<value>" | <path>`. A policy has **exactly one**
 `require` line — continue the condition on deeper-indented lines instead of adding
 a second (`PLAY0441`) — **or** one implementation (a tagged ` ```csharp ` block or
@@ -29,6 +36,51 @@ a second (`PLAY0441`) — **or** one implementation (a tagged ` ```csharp ` bloc
 runner; a code policy binds as opaque ESM v3 and needs a target to evaluate it.
 A `persona` is authoring metadata: the binder reports it as information `PLAY0270`
 (report-only) and it does not block binding; an unknown policy it lists is an error.
+
+## Anonymous policy
+
+Requires Screenplay 4.231.0 (ESM v31; `screenplay --version`); older compilers reject
+`require anonymous`. A policy with `require anonymous` exposes a public command or
+query, such as sign-up. The condition always holds, for callers with and without an
+identity alike. Only a model that declares one selects v31.
+
+```screenplay
+concept SubscriberId : Uuid
+concept EmailAddress : String
+policy PublicAccess
+  require anonymous
+module Newsletter
+  feature Signup
+    slice StateChange SubscribeToNewsletter
+      command SubscribeToNewsletter
+        subscriberId SubscriberId identifier
+        email EmailAddress
+        authorize PublicAccess
+        produces event SubscriberSignedUp
+          email EmailAddress = email
+      specification SubscribingWithoutAnIdentity
+        when SubscribeToNewsletter
+          subscriberId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          email = "ada@example.com"
+        then SubscriberSignedUp
+          email = "ada@example.com"
+```
+
+`anonymous` must be the command's or query's whole effective authorization:
+
+| Code | Refused |
+| --- | --- |
+| PLAY0804 | combined with another condition in `require` |
+| PLAY0805 | negated; write `authenticated` instead |
+| PLAY0806 | combined with another policy in `authorize` |
+| PLAY0807 | under or above another module, feature, command or query gate |
+
+A specification of such a command or query may omit `given caller`; every other
+authorized specification still needs one (`PLAY0389`).
+
+**Security:** `anonymous` declares a public surface on purpose. Never use it to make a
+model compile or to silence a missing-`authorize` or caller finding; model the real
+policy instead, because a generated application renders it as an open endpoint.
 
 ## Policy negation
 

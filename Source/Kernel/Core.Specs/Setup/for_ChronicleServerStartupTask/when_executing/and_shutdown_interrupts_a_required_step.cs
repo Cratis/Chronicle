@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Patching;
+
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 
 public class and_shutdown_interrupts_a_required_step : given.a_startup_task
@@ -9,10 +11,11 @@ public class and_shutdown_interrupts_a_required_step : given.a_startup_task
     readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     Exception? _failure;
 
-    void Establish() => _patchManager.ApplyPatches().Returns(async _ =>
+    void Establish() => _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>()).Returns(async _ =>
     {
         _entered.SetResult();
         await _release.Task;
+        return PatchOutcome.Completed;
     });
 
     async Task Because()

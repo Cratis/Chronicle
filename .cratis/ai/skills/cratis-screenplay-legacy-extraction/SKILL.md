@@ -134,12 +134,12 @@ chain per slice before handoff (`references/evidence-table-template.md`, "Tracea
    `cratis-screenplay-slice-design` for slices, `cratis-screenplay-streams-and-consistency` for
    identity and invariants). To move an already authored slice or feature to its right parent, use
    the MCP `propose-move` tool (identity-preserving; it refuses identity loss, collisions and
-   captures) rather than retyping the declarations (`cratis-screenplay-model-authoring`):
+   name capture (a reference that would resolve to a different declaration); it also moves a single declaration between slices from Screenplay 4.230.0) rather than retyping the declarations (`cratis-screenplay-model-authoring`):
    - one StateChange per decision a person or system makes; events are facts experts recognise;
      consequences (counters, denormalised copies) become projections; an automation only when
      evidence shows a separate decision; no generic names (`Update/Edit/Save<Noun>`, `<Noun>Updated`): split by intent;
-   - refusals, state-dependent rules (`reads` + `require`, marked **NOT enforced in the model
-     today** with the target named), unique indexes and preserved `pii` / `secret` protection:
+   - refusals, state-dependent rules (`reads` + `require` with eligible protected-read
+     opt-in; legacy/refused shapes marked unenforced and target realization named), unique indexes and preserved `pii` / `secret` protection:
      `references/rule-modeling.md`. Every role gate has `authorize` plus a `then denied` spec,
      else a recorded gap; rules you cannot express truthfully are recorded one by one, never
      fabricated.

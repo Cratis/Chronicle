@@ -80,6 +80,12 @@ public class Projections(
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets or sets where model-bound projection definitions come from. The default discovers them; a source must hand back
+    /// definitions this instance owns, because generation delivery is applied to them afterwards.
+    /// </summary>
+    internal IModelBoundProjectionsSource ModelBoundSource { get; set; } = ModelBoundProjectionsSource.Default;
+
+    /// <summary>
     /// Gets the software version of the application, sent with every registration so the kernel can ignore one that
     /// is older than what it has stored. Left unset, registrations carry no version and are never ignored.
     /// </summary>
@@ -348,9 +354,8 @@ public class Projections(
 
     Task DiscoverCore()
     {
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
-        var modelBoundDefinitions = modelBoundProjections.Discover();
-        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundProjections.Failures);
+        var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
+        ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,
             kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
@@ -423,7 +428,7 @@ public class Projections(
                     .. _definitionsByType.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. modelBoundDefinitions.Keys.Select(type => new ArtifactRegistration(type, null)),
                     .. failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value)),
-                    .. modelBoundProjections.Failures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
+                    .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
                 ]).ToImmutableList();
 
             BuildAllExplicitProjections();

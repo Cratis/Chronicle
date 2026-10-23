@@ -1,0 +1,141 @@
+---
+name: orleans
+description: 'Designs Microsoft Orleans systems from each primitive''s purpose and failure model: grains, digital twins, state versus databases, transactions, messaging, streams, timers, reminders, Durable Jobs, stateless workers, grain services, startup, and hosting. Use when a task needs an Orleans design decision: inspect version and topology, choose the primitive, implement, and validate. Not for other actor stacks, batch processing, relational-only CRUD, or advice without an Orleans decision.'
+license: MIT
+---
+<!-- cratis-ai-managed: skills/orleans/SKILL.md -->
+
+<!-- Modified by Cratis from managedcode's original (MIT): frontmatter, applicability, navigation and the changes listed in NOTICE. Upstream: https://github.com/managedcode/dotnet-skills (catalog/Frameworks/Orleans/skills/orleans/SKILL.md; see NOTICE) -->
+
+# Microsoft Orleans
+
+Use only within this skill's stated task; general workflow advice does not apply to unrelated tasks. Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ. `.cratis/ai/rules/orleans.md` forbids `[Alias]` on grain interfaces and grain methods (it is used only on `[GenerateSerializer]` state and definition records that must survive a rename) and forbids `ConfigureAwait(false)` in grain code; **cratis-orleans-jobs** owns recoverable jobs. DurableJobs/Journaling are experimental and are not interchangeable with Cratis.Orleans jobs.
+
+## Diagnostic Output Budget
+
+Keep native test progress and ANSI visible; use the detected runner's supported flags (`--progress on --ansi on` for MTP/TUnit), not MTP switches on VSTest. Keep console logs at `Warning` or higher and one concise final summary. Do not replay progress redraws, successful-test output, or Information/Debug/Trace logs into model context. On failure/crash, show only the failing test/resource, root error, and relevant stack frames; deduplicate and cap each diagnostic response at 80 lines / 8 KiB. Never dump entire console/host/browser logs, HTML, TRX, or crash artifacts. Keep necessary artifacts size-bounded outside context, link them, and inspect exact bounded excerpts. Preserve the runner exit code through capture/filtering; disclose truncation. Silence alone does not establish a hang.
+
+## Start With Purpose
+
+Do not begin with an Orleans API. First state:
+
+1. the business identity that owns the behavior;
+2. the invariant and what must survive activation or cluster failure;
+3. the required consistency, query shape, acknowledgement, durability, replay, fan-out, and timing.
+
+Then select the smallest Orleans primitive whose guarantees match those requirements. Reject Orleans when the problem is primarily shared-memory computation, a finite batch, relational querying, or global coordination with few independent entities.
+
+Inspect package versions for version-sensitive work. Orleans `10.3.1` ships `Microsoft.Orleans.DurableJobs*` and `Microsoft.Orleans.Journaling*` as `10.3.1-alpha.1`; treat them as experimental until that status changes.
+
+Orleans 10.3 makes Newtonsoft storage enforce the type allow-list, changes RPC telemetry keys, and requires custom grain-context activators to apply configurators before construction. Prefer generated/allowed types over permissive JSON and update affected tests, dashboards, and activators together. `10.3.1` services analyzer contract identities and documents placement hints.
+
+## Mental Model
+
+- A **grain** is a virtual actor with stable identity, behavior, and optional state, not a process, row, DTO, controller, or background job.
+- A **grain reference** is a location-transparent address. Getting a reference does not create a durable record or prove that an activation exists.
+- An **activation** is an ephemeral in-memory execution instance. Orleans creates, places, moves, deactivates, and recreates it. Never equate activation lifetime with entity lifetime.
+- A normal grain has at most one activation in the cluster by default and processes turns one at a time. This makes the grain a natural owner of per-identity invariants.
+- A **silo** hosts activations. Silos form a cluster; external clients or a co-hosted `IGrainFactory` call grains.
+- Calls are asynchronous messages even when they look like C# method calls. Network failure, timeout, serialization, retries, and duplicate side effects still matter.
+- A grain can model a **digital twin** when its identity and behavior map to a real or domain entity; that is a use case, not every grain's definition.
+- Orleans gives logical ownership and turn-based execution. It does not make external side effects transactional, turn arbitrary data into a queryable database, or provide exactly-once execution by default.
+
+## Workflow
+
+1. Inspect the solution, Orleans version, hosting topology, grain interfaces, providers, and tests.
+2. Identify domain identities and invariants. Prefer many independent, bounded entities over global coordinator grains.
+3. Choose state, communication, and time-based work from the tables below.
+4. Keep default non-reentrant scheduling and placement until a measured requirement justifies a change.
+5. Configure providers independently and test the failure model the design depends on.
+
+## Choose the State Owner
+
+| Primitive | Purpose | Choose it when | Do not use it as |
+|---|---|---|---|
+| Activation fields | Fast, temporary state for one activation | The value is derived, cached, disposable, or safe to rebuild after deactivation/failure | Durable truth |
+| `IPersistentState<T>` | Durable current state owned by one grain identity | The grain needs a bounded snapshot loaded on activation and explicitly written after commands | A general query database or cross-grain table |
+| External database/repository | Queryable, indexed, relational, bulk, shared, or externally owned data | The system needs joins, search, reporting, set-based updates, independent access, or an existing system of record | A replacement for grain ownership when serialized per-entity decisions are still required |
+| Grain plus database/read model | Separate command ownership from query/storage concerns | A grain owns invariants and a small control snapshot while a database owns large records, history, projections, or reporting | Two competing sources of truth without an explicit contract |
+| `JournaledGrain<TState,TEvent>` | Persist domain events and reconstruct state | Audit history, business-event replay, log consistency, or multi-cluster event-sourced replication is a requirement | A default persistence choice for ordinary CRUD state |
+| `Orleans.Journaling` durable states | Replay durable collection/value operations through a journal | The experimental 10.3 journaling model, durable collections, or durable completion state solves a measured need | Stable default persistence; it is distinct from `JournaledGrain` business event sourcing |
+| `ITransactionalState<T>` | ACID, serializable all-or-nothing changes across transactional grain state | A short operation must atomically update multiple grain-owned states and compensation is unacceptable | Long-running workflows or atomicity with arbitrary external systems |
+| Saga/process manager | Durable progress with compensation across steps and external systems | Work is long-running, spans services, waits for events, or cannot share one transaction | Instant atomic commit |
+
+### Grain State Versus a Database
+
+Use grain state for bounded current state and per-identity invariants. Use a database/read model for joins, search, reporting, bulk work, history, shared access, or an external system of record. When using both, define one authority per field and recovery rules.
+
+Never query or mutate another grain's persistence record behind the grain, or expose provider storage as the public query model merely because it uses SQL/Cosmos/Redis. Before using transactions, try one bounded grain owner; use a saga for external effects or long waits. Read [references/persistence-api.md](references/persistence-api.md) for the full boundary.
+
+## Choose Communication
+
+Prefer a direct call for completion to a known owner. Use streams for decoupled provider-backed delivery, response streams for one caller, and broadcast/observers/one-way calls only for loss-tolerant notifications. A timeout does not prove whether an external effect committed; retries require idempotency. Read [references/primitive-selection.md](references/primitive-selection.md) for the communication guarantees and execution choices.
+
+## Choose Time-Based and Background Work
+
+| Primitive | Purpose | Choose it when | Do not choose it when |
+|---|---|---|---|
+| `RegisterGrainTimer` | Periodic or one-shot work tied to the current activation | Work is frequent, local to an active grain, and safe to stop on deactivation or silo failure | The schedule must survive reactivation/restart |
+| Reminder | Durable recurring schedule definition associated with a grain identity | Low-frequency recurring work must wake the grain after deactivation or cluster restart | Every missed occurrence must be replayed, timing must be precise, or work is high-frequency |
+| Durable Job | Persistent one-time future delivery to a target grain with cancellation/retry metadata | A delayed command, expiry, notification, or workflow step must execute at least once around a due time | Recurring work, exactly-once side effects, or production work that cannot accept the current alpha package status |
+| `[StatelessWorker]` | Auto-scaled pool of local stateless grain activations | CPU/transform/routing/pre-aggregation work is not tied to one durable entity | Scheduling or durability; a stateless worker is not a job system |
+| `BackgroundService` | Continuous loop owned by each host process | A silo/web host must poll or consume an external source and forward work into grains | One global loop across replicas unless duplicates are safe or externally coordinated |
+| `IHostedService` | Host startup/shutdown action or simpler background component | Initialization or bounded host-lifetime work belongs to standard .NET hosting | Per-entity durable work |
+| Orleans startup task | Fail-fast hook at a specific silo startup stage | Legacy/framework integration truly requires Orleans lifecycle ordering | General background work; prefer `BackgroundService` or `IHostedService` |
+| Silo lifecycle participant | Ordered initialization/shutdown of an Orleans component | A provider or runtime service must start at an exact lifecycle stage | Business scheduling |
+| Grain service | Per-silo, cluster-partitioned runtime support service | Every silo hosts a long-lived service and responsibility for grains must be partitioned across silos | An ordinary domain entity, a singleton, or a durable job queue |
+| External scheduler/workflow engine | Scheduling/orchestration outside Orleans | Cross-system workflows, cron calendars, human steps, broad operational control, or mature production guarantees dominate | Per-grain work already solved by a stable Orleans primitive |
+
+### Timer, Reminder, or Durable Job
+
+Timer means “while this activation lives”; reminder means “wake this grain on a durable recurring schedule”; Durable Job means “invoke this target once around a future time, at least once.” Reminders persist definitions but miss ticks while the cluster is down. Durable Job handlers must be idempotent, and current `alpha.1` packages are an explicit architecture risk.
+
+`BackgroundService` means one loop per host replica, not one loop per cluster. Use a well-known grain or external lease/leader for one logical collector.
+
+Read [references/scheduling-and-services.md](references/scheduling-and-services.md) before implementing timers, reminders, Durable Jobs, hosted/startup tasks, silo lifecycle participants, or grain services.
+
+## Choose Execution and Scaling
+
+Use standard grains for stateful identities and stateless workers for fungible work. Apply narrow interleaving attributes only after auditing invariants across every `await`; grain turns do not make reentrant workflows race-free. Preserve default placement unless a measured locality or compatibility requirement justifies changing it. See [references/primitive-selection.md](references/primitive-selection.md) before changing scheduling or placement.
+
+## Hosting and Provider Boundaries
+
+Keep concerns separate: clustering discovers silos; the grain directory locates activations; grain/reminder/transaction/job storage persist different records; stream providers carry events while `PubSubStore` tracks subscriptions; serialization defines wire and persistence compatibility.
+
+In-memory clustering, storage, reminders, streams, Durable Jobs, and journaling are development/test choices unless loss is explicitly acceptable. Configure production providers, credentials, TLS/networking, server GC, graceful shutdown, and health/readiness for the deployment target. In Aspire, declare backing resources in AppHost and register the keyed clients expected by Orleans providers.
+
+## Contract and API Rules
+
+- Keep grain interfaces coarse-grained and asynchronous: `Task`, `Task<T>`, `ValueTask<T>`, or supported `IAsyncEnumerable<T>`.
+- Cancellation is cooperative, not proof that work did not finish.
+- Use `[GenerateSerializer]` and stable `[Id(N)]` values on messages/state. Use `[Alias]` for durable type identity and `[Immutable]` only for genuinely immutable values.
+- Never reuse removed field IDs; write state explicitly and propagate storage failures.
+- Bound external calls and use idempotency plus a saga/outbox when state writes and external effects must be reconciled.
+
+## Validate the Chosen Guarantees
+
+- Grain boundaries follow business identity and avoid hot global coordinators.
+- State is bounded, and the grain-state-versus-database choice is explicit.
+- Every time primitive matches activation, recurrence, durability, and delivery requirements.
+- Durable Job handlers/retried commands are idempotent; reminders tolerate missed ticks.
+- Broadcast channels, observers, and one-way calls carry only loss-tolerant signals.
+- Provider-backed tests prove delivery, ordering, replay, and failover claims.
+- Reentrancy tests cover state across `await`; transactions use transactional storage, `[Reentrant]`, and `PerformRead`/`PerformUpdate`.
+- Hosted services are reviewed for per-replica duplication.
+- Production uses persistent providers, multi-silo tests, and observability wherever the guarantee depends on them.
+
+## Load References
+
+Open only the references needed for the selected primitive:
+
+- [references/official-docs-index.md](references/official-docs-index.md) — official documentation map
+- [references/scheduling-and-services.md](references/scheduling-and-services.md) — scheduled/background/runtime work
+- [references/grains.md](references/grains.md) and [references/grain-api.md](references/grain-api.md) — grain design and APIs
+- [references/persistence-api.md](references/persistence-api.md) — state, databases, Journaling, event sourcing, transactions
+- [references/streaming-api.md](references/streaming-api.md) — streams, broadcast, observers, response streams
+- [references/serialization-api.md](references/serialization-api.md) — serialization and versioning
+- [references/hosting.md](references/hosting.md) and [references/configuration-api.md](references/configuration-api.md) — hosting, providers, operations
+- [references/implementation.md](references/implementation.md) and [references/testing-patterns.md](references/testing-patterns.md) — runtime and tests
+- [references/patterns.md](references/patterns.md), [references/anti-patterns.md](references/anti-patterns.md), and [references/examples.md](references/examples.md) — patterns and samples
+
+Prefer Learn for stable APIs. For Durable Jobs and `Orleans.Journaling`, use version-tagged package READMEs/public API because Learn does not yet cover them fully.

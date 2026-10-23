@@ -176,8 +176,9 @@ silently takes the first declared. Implement `ICanProvideEventSourceId`.
 
 Read [decisions and routing](references/decisions-and-routing.md) when a command
 needs guarded state, stream-id templates, definition-backed routes, event tags or
-post-commit `CompleteStream`. Plain read-model injection remains advisory;
-`Result<,>` and `concurrency: true` are not protection; see
+post-commit `CompleteStream`. A read-model parameter guards the append only under
+read protection `On`; under `Off` (the default) it is advisory. `Result<,>` and
+`concurrency: true` are not protection; see
 [choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
 A returned `EventForEventSourceId` route wins over command context.
 

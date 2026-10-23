@@ -69,6 +69,7 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
         _service = new ReadModels(
             _grainFactory,
             _storage,
+            _readBindings,
             _expandoObjectConverter,
             _reducerMediator,
             _changesetMediator,

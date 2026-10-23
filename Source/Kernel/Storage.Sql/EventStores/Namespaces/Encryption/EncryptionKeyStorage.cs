@@ -39,7 +39,6 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             PublicKey = key.Public,
             PrivateKey = key.Private
         });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -90,6 +89,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             // propagates: nothing was persisted, so the candidate must never be handed back.
             var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
                 ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            SqlStorageTelemetry.RecoveredCollision("encryption-key");
             return new(winner, revision);
         }
     }
@@ -239,6 +239,5 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ErasedKeyFingerprints = string.Join(',', erasure.ErasedKeyFingerprints),
             NewKeyAllowed = erasure.NewKeyAllowed
         });
-        await dbContext.SaveChangesAsync();
     }
 }

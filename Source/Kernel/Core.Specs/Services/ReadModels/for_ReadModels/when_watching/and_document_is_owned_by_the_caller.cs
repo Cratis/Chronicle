@@ -67,6 +67,7 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
         _service = new ReadModels(
             _grainFactory,
             _storage,
+            _readBindings,
             _expandoObjectConverter,
             _reducerMediator,
             _changesetMediator,

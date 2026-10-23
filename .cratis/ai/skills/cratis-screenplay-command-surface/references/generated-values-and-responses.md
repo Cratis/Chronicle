@@ -1,11 +1,12 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-command-surface/references/generated-values-and-responses.md -->
-# Generated values and responses (ESM v7 and v15)
+# Generated values, rule proofs and responses
 
 ## Contents
 
 - Choosing a strategy
 - When not to
 - The concept declares how; the property declares that
+- Generation context binding
 - Inspect and edit generation through MCP
 - Generated-concept rules (ESM v20)
 - Version and freshness
@@ -29,16 +30,17 @@ Only the released generation phase is taught here.
 ## Choosing a strategy
 
 Use the [threaded shop model](shop-generation.md): CustomerId is `cus_` + ULID,
-OrderId is TypeID, InviteCode is NanoID. It links the same .NET concepts but does
-not claim their received-time/tenant context or secret ApiKey Bytes(32) factory
-is executable in Screenplay. The table below owns exact strategy shapes.
+OrderId is TypeID, InviteCode is NanoID, InvoiceNumber is a readable pattern with
+Luhn check digit, and TicketNumber is a random Int value. Keep short references
+separate from event-source identities. The table below owns exact strategy shapes.
 
 ## When not to
 
 Client-minted values remain inputs. Generation is not authorization, idempotency,
-gapless invoice allocation or a credential contract. Preserve ApiKey's `secret`
-classification without generated properties; context/secret execution remains
-Screenplay#616 phases 3/4, not a reason to strip protection.
+gapless/sequential invoice allocation or a credential contract. A pattern is not
+an allocator; check digits catch typing mistakes, not forgery. Preserve ApiKey's
+`secret` classification without generated properties: generated secrets remain
+refused, not a reason to strip protection.
 
 ## The concept declares how; the property declares that
 
@@ -47,7 +49,7 @@ strategies on concepts and `generated`/`generated identifier` on properties.
 It includes whole-value fixture pins and returned IDs.
 
 A generated property must be a required scalar **concept**, not a bare primitive,
-optional value or collection. Only Uuid and String generation are executable.
+optional value or collection. Uuid/String generation and Int `random` are executable.
 A Uuid concept implicitly generates `uuid`; String needs an explicit strategy.
 Each concept owns at most one `generate` line; there is no per-property override.
 Generated identifiers need Uuid or String backing and at least 64 random bits.
@@ -60,6 +62,9 @@ Generated identifiers need Uuid or String backing and at least 64 random bits.
 | `typeid "user"` | String | TypeID 0.3, lowercase Crockford UUIDv7 suffix; 74 random bits; prefix 1–63 lowercase letters/underscores, no leading/trailing underscore; empty prefix omits separator |
 | `nanoid [size]` | String | Default 21 symbols from `A-Za-z0-9_-`; size 1–256; entropy is size × log2(alphabet size) |
 | `bytes <count> base64url` / `hex` / `base32` | String | Count 1–512; 8 × count random bits; RFC 4648 without padding; hex lowercase, base32 uppercase; unused trailing bits zero |
+| `pattern "INV-{yyyy}{MM}-#{7}" checksum luhn` | String | Finite readable reference; UTC dates and check digits add no entropy |
+| `random 100000..999999` | Int | Inclusive signed Int64 interval; numeric value, not an identifier |
+| `rule Name` | String | Exactly one file or tagged fence; opaque ValueGeneration implementation with language-neutral Now/Tenant context, String result and unknown entropy |
 
 Modifiers occur once each, in any authored order. `prefix "text"` is printable
 ASCII, at most 32 characters, on uuid/uuidv7/ulid/nanoid/bytes; UUID prefixes need
@@ -72,17 +77,59 @@ identifier; non-identifiers warn PLAY0683 unless a single-property unique
 constraint covers the mapped event property. That suppression is not a runtime collision guarantee; use the constraint when
 collisions must reject the command.
 
-`pattern`, `random`, `rule` and checksum syntax parse/print but refuse PLAY0268;
-`generate sequence` is reserved (PLAY0682). Generated-concept validation rules select ESM v20; compliance markers, including
-generated secrets, remain refused. Do not
-remove classification or pretend a random String is a credential contract.
+Requires Screenplay 4.172.0 or later (`screenplay --version`) for pattern/random/rule
+and String-concept `validate checksum luhn|mod11|mod97` (ESM v21); older compilers
+refuse them with PLAY0268. Pattern `#` draws a digit, `?` an uppercase letter,
+`*` an uppercase letter or digit; positive ASCII classes and `{n}`/`{m,n}` repeats
+up to 64 are supported. `{yyyy}`, `{yy}`, `{MM}`, `{dd}` use one UTC date.
+The expanded value, including check digits, is at most 256 characters. Only pattern
+accepts `checksum`; write literals/classes rather than prefix/case/alphabet modifiers.
+Read Cratis/Screenplay `Documentation/screenplay/generated-values/patterns.md`
+for escaping and support limits. PLAY0691 means support counting exhausted its
+budget; PLAY0692 means some date in the 100-year assessment horizon has empty
+support. Neither is a proof warning or permission to redraw.
+
+Checksum generation appends one Luhn/Mod11 digit or two Mod97 digits over preceding
+ASCII digits, including date/literal digits. Author `validate checksum` separately
+for arithmetic validation of supplied/stored values and fixtures; generation alone
+checks only suffix shape on fixtures. `generate sequence` stays reserved (PLAY0682),
+and compliance markers on generated concepts, including secrets, remain refused.
+Never remove classification to make a model bind.
+
+## Generation context binding
+
+Requires Screenplay 4.181.1 or later (`screenplay --version`) for per-target context
+binding and tenant value formatting; older context documentation does not establish
+that binding. The version-1 ValueGeneration descriptor is language-neutral: `Now`
+(an instant), portable `TenantId` `Tenant`, and a String result. The selected provider,
+not a `csharp` fence or file attachment, chooses the native context type.
+
+The Cratis C# target (Arc and Stage's Cratis target contract) binds it to Fundamentals'
+`Cratis.Concepts.GenerationContext` (`DateTimeOffset Now`, `string Tenant`). BCL-only
+hosts can use `Cratis.Screenplay.Contexts.GenerationContext` (`Now`, `TenantId Tenant`);
+that package stays BCL-only. The types are name-compatible, not type-identical.
+
+For portable C# bodies, use `context.Now`, BCL operations and the tenant as text:
+`$"{context.Tenant}:{context.Now:yyyyMMdd}"`. `TenantId` formats as its value;
+compare that formatted string ordinally when a tenant comparison is needed.
+Passing `context` to `GenerateValue.*`, naming `GenerationContext` or
+`GenerationContext.DefaultTenant`, constructing a context, or reading
+`context.Tenant.Value` is target-bound.
+
+For example, `generate rule TenantReceiptNew` can own the inline `csharp` body
+`return $"{context.Tenant}:{GenerateValue.Ulid(context)}";` on the Cratis C# binding.
+Do not insert a bridge to Screenplay's record or promise another provider accepts it.
+Arc can recover such self-contained compound bodies under the adapter gate in
+[generated recovery](../../cratis-screenplay-legacy-extraction/references/generated-recovery.md).
+Recovery does not run the body; reference execution consumes a String pin, opaque
+entropy cannot supply an identifier. Requires Stage 4.136.0 to render `generate rule`: the attached C# body becomes the concept's `IGeneratableInContext<T>.New(GenerationContext)` factory; a body that does not compile or warns refuses STAGE-ESM-019, type or namespace shadowing STAGE-ESM-022 and a missing attachment STAGE-ESM-020. The Host and the legacy syntax engine still refuse a command that generates a `generate rule` value with STAGE-ESM-028. Rendering emits the attached body as written; it does not turn a portable body into another provider's contract.
 
 ## Inspect and edit generation through MCP
 
 A concept `generation` summary and entropy repairs are available.
 Use `screenplay_declaration_details` with `kind: "Concept"`, `view: "summary"`:
 only authored `generate` gets a block, with strategy, set modifiers,
-preview-only arguments, `entropyBits`, `entropyUnknownReason` when null,
+`arguments`, `supportCount`, `entropyBits`, `entropyUnknownReason` when null,
 `valuesAtOnePercentCollision` and `executable.status`. Status is `admitted` only
 after whole-model binding, `refused` for errors at this concept/generation, or
 `notAssessed` with a reason for unrelated binding failures. Empty local codes do
@@ -92,7 +139,7 @@ Set/change/remove `generate` through `screenplay_propose_ast` (replace the conce
 `GenerationSyntax`, omit/null `generation` to remove) or reviewed
 `screenplay_propose_source`; do not hand-edit the text. Inspect executable
 diagnostics independently of authoring acceptance: sequence PLAY0682;
-pattern/random/rule PLAY0268; generated-rule proofs PLAY0688/0689. Review, run candidate
+support failures PLAY0691/0692; generated-rule proofs PLAY0688/0689. Review, run candidate
 specifications where executable, then apply with revisions.
 
 `screenplay_repair_capabilities` advertises PLAY0683/0684; workspace repairs supply
@@ -105,12 +152,19 @@ individual review and `CanonicalizeTouchedDocuments`, with no pinned evidence.
 Length changes affect all concept uses; uniqueness changes append-time behavior.
 PLAY0688 repair replaces a refuted rule with the strategy-derived `matches`
 pattern. Review input/stored-value uses because this changes their validation,
-not just generation. Checksum repairs remain unadmitted.
+not just generation. A deterministic bounded pattern repair also adds the declared
+checksum validation if absent; review both rule changes. Ambiguous derived regexes
+have no repair. Date/checksum digit shapes alone do not prove containment.
 A CLI-bundled MCP can lack this summary and these repairs; it still
 supports existing typed concept proposals.
 
-Requires Screenplay 4.149.0 or later (`screenplay --version`) for the concept `generation` summary and entropy repairs. Full fields, mapping limits and tagged
-source evidence: [MCP generation guide](../../cratis-screenplay-model-authoring/references/mcp-tools.md#concept-generation).
+Requires Screenplay 4.173.0 or later (`screenplay --version`) for `arguments`,
+exact support counts, `derivedPattern` and authored-order `rules[]`; older servers
+can expose `previewArguments` instead. Read `rules[].status`, `witness` and `reason`
+instead of parsing diagnostic text. Use `derivedPattern` as `matches` through a
+typed proposal; use the discovered PLAY0688 repair to replace a refuted rule.
+A refuted rule without `diagnosticCode` was not checked by the compiler (for example,
+an unused UUID concept), so do not invent a repair. Full fields and mapping limits: [MCP generation guide](../../cratis-screenplay-model-authoring/references/mcp-tools.md#concept-generation).
 Sources: Cratis/Screenplay `Documentation/screenplay/generated-values.md`,
 `Source/DotNET/Screenplay.Mcp/McpGenerationDetails.cs`,
 `Source/DotNET/Screenplay/Workspaces/WorkspaceGenerationRepairs.cs`.
@@ -136,20 +190,27 @@ that cannot backtrack on generated values. Passing samples alone prove nothing.
 Providers validate generated values too: a failing fixture is a Contract violation,
 not client rejection or a reason to redraw. Opaque rules need a target.
 
-Rules select v20 even on implicit UUID generation. No proof status is serialized;
+Generated-concept validation rules select ESM v20 even on implicit UUID generation.
+No proof status is serialized;
 strategy changes do not silently change rules on stored/input values.
+
+Tool and renderer authors: read the toolchain's
+[generation checks](../../cratis-screenplay-toolchain/references/generation-checks.md)
+for declaration checks, value checks, strategy discovery and rule proofs.
+Proof status is not serialized; the reference evaluator always requires pins.
 
 ## Version and freshness
 
 A serialized concept `generation` member selects **v15**. Implicit Uuid generation
 and explicit unmodified Uuid `generate uuid` omit it and preserve earlier executable
-bytes/revision. A v15 model guards **all** generated destinations, including its
-implicit UUIDs. An append whose destination equals any value generated in that
+bytes/revision. Any model with a serialized strategy guards **all** generated destinations,
+including its implicit UUIDs; ESM version alone does not enable the guard. An append whose destination equals any value generated in that
 invocation requires the **whole source** to have no existing facts, regardless
 of stream or event type. Multiple initial facts in one invocation are allowed;
 a skipped production makes no freshness claim. Reuse rejects the whole command
 with `Concurrency`, appends nothing and does not silently regenerate or retry.
-Older models are Unguarded and retain legacy fixture reuse.
+Models without a serialized strategy are Unguarded and retain legacy fixture
+reuse, even if rules select v20.
 
 Freshness is neither authorization nor idempotency. Client-minted identifiers
 remain inputs; protect their invariants with constraints. Never use generation
@@ -159,7 +220,12 @@ Specifications pin values, not seeds: `for` pins a generated identifier;
 `generated <name> = <value>` pins another generated property. The reference
 evaluator draws no randomness. From v15 every pin must match exact strategy
 encoding, size, case, UUID version/variant and zero trailing bits. Invalid pins
-are Contract rejections, not client validation failures. Older models retain
+are Contract rejections, not client validation failures. Rule-bearing concepts
+also check rules, including implicit UUID. Pin date segments with `given clock`;
+all segments must match the same UTC instant. Without a clock only digit widths
+are checked, never the wall clock. Opaque generation rules consume String pins
+without executing attached code; opaque validation still yields Unsupported.
+Older rule-free implicit-UUID models retain
 canonical UUID checks without a version check. Complete executable examples:
 [generated responses](../../cratis-screenplay-toolchain/references/generated-responses-example.md)
 and [generation strategies](../../cratis-screenplay-toolchain/references/generation-strategies-example.md).
@@ -189,7 +255,7 @@ and [generation strategies](../../cratis-screenplay-toolchain/references/generat
 ## What the CLI and Stage realize
 
 Stage emits strategy-specific `IGeneratable<T>.New()` factories over Fundamentals
-7.24.0 or later (via the Arc scaffold pin in Stage's `references/rendered-application.md`). v15 generated destinations use explicit
+7.25.0 or later for pattern/random/checksum (via the Arc scaffold pin in Stage's `references/rendered-application.md`). v15 generated destinations use explicit
 `EventsWithConcurrencyScopes` with `BeforeFirst` whole-source scopes; Chronicle
 checks atomically at append: a batch's scopes are checked once against the state before
 the batch, all or nothing, and a storage retry that renumbers the append checks them again. Generated rejection specs assert
@@ -202,10 +268,13 @@ Requires Stage 4.94.0 or later for receipt-time generation; older factories use 
 
 | Refusal | Still unsupported |
 | --- | --- |
-| STAGE-ESM-028 | Unknown strategies, non-concepts, optional/collection generation; every explicit strategy on the legacy syntax engine |
-| STAGE-ESM-011 | A v15 fixture that does not match its strategy shape |
-| STAGE-ESM-038 | Routing combined with generation/responses; generated-property rules/requirements or concept rules; occurrence parameter/response/factory name collisions; unsupported response sources/composites/collections; generated identifier plus destination-less plain production |
-| STAGE-ESM-038 | Unpinned generation with unordered event, read-model or query expectations |
+| STAGE-ESM-028 | unknown strategies, non-concepts, optional/collection generation; a command generating a `generate rule` value in the Host; every explicit strategy and `generate rule` on the legacy syntax engine |
+| STAGE-ESM-019 / -022 / -020 | `generate rule` body that does not compile or warns / type or namespace shadowing / missing attachment (Requires Stage 4.136.0) |
+| STAGE-ESM-011 | A fixture that does not match its strategy shape or concept rules |
+| STAGE-ESM-038 | Routing combined with generation/responses; generated-property rules/requirements; occurrence parameter/response/factory name collisions; unsupported response sources/composites/collections; generated identifier plus destination-less plain production |
+| STAGE-ESM-038 | Unpinned generation with any Unproven/Refuted concept rule, production-condition reads, unordered event/read-model/query expectations or collision-sensitive generated constraints |
+| STAGE-ESM-042 | Unsupported concept-rule kinds; checksum remains refused only on the legacy syntax path |
+| STAGE-ESM-005 | Opaque/unsupported generated-concept rules, before pin evaluation |
 | STAGE-ESM-004 / -006 | StateChange slices without commands / expression or enum production conditions |
 
 Sequence generation is refused at binding (PLAY0682) and never reaches Stage;
@@ -214,7 +283,22 @@ command `given clock` fixtures render when whole milliseconds at or after 1970;
 
 Requires Stage 4.95.0 for command clock fixtures, 4.98.0 for multiple commands and
 conditional productions, and 4.100.0 for generated text unique constraints; older
-renderers refuse those shapes. ESM v20 still needs a renderer that admits v20.
+renderers refuse those shapes.
+
+Requires Stage 4.109.0 for ESM v20 factories plus `ConceptValidator`; older renderers refuse v20.
+Requires Stage 4.115.0 for ESM v21 admission and all-Proven unpinned generation;
+older renderers require pins even for Proven rules. Unproven/Refuted rules still
+require pins (-038), and invalid pins fail -011.
+Requires Stage 4.117.0 for warning/info-severity generated-concept rules; older
+renderers refuse them with -038. Every severity is enforced as a generation defect.
+Requires Stage 4.118.0 for semantic checksum validation and 4.119.0 for
+pattern/random factories, Host sampling and executor fixture checks; older
+renderers refuse those constructs with -042/-028. Dated patterns use receipt-time
+context; Int ranges render as `long`. `generate rule` renders from Stage 4.136.0 (see above).
+Requires Arc.Screenplay 22.107.0 for pattern/random/checksum and self-contained
+String-rule recovery; older adapters leave these factories in code. Recovery is
+not Stage rendering: keep refused rule contracts for gap-fill, never delete rules
+or secret classification.
 
 Missing pins in generated Debug specs use `AllowGeneration()` with relational
 assertions against captured values; v15 captures also check strategy shape.

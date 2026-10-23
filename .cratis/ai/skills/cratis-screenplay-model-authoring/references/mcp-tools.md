@@ -26,7 +26,7 @@
 - Formatting and recovery limits
 - Code attachments
 
-The standalone MCP server lists 43 tools (including the MCP-Apps visualization tool); `tools/list` is the authority for the installed server.
+The standalone MCP server lists 46 tools from Screenplay 4.228.0 (including the MCP-Apps visualization tool); `tools/list` is the authority for the installed server, and the CLI-bundled MCP (`cratis screenplay mcp`) can be an older Screenplay that lacks newer tools.
 
 The supported CLI launch is `cratis screenplay mcp <model-root>`, or `cratis screenplay mcp`
 alone inside a project, where the CLI locates the model (the project's `.play` files, else
@@ -51,16 +51,37 @@ the [MCP loop](mcp-loop.md).
 | Group | Tools | Intent |
 | --- | --- | --- |
 | Understanding | `describe-application`, `search-declarations`, `find-declaration`, `declaration-details` | Navigate logical hierarchy and inspect bounded details |
-| References and examples | `find-references`, `dependencies`, `dependency-graph`, `find-fixtures`, `find-assertion-gaps`, `find-specification-obligations`, `find-modeling-smells`, `semantic-diff` | Inspect declared relationships and authored examples, not executed coverage |
-| Source and validation | `diagnostics`, `read-document`, `merged-document`, `syntax-schema` | Read exact source or typed structure and diagnose problems |
+| References and examples | `find-references`, `dependencies`, `dependency-graph`, `find-fixtures`, `find-assertion-gaps`, `find-specification-obligations`, `find-modeling-smells`, `trace-lineage`, `semantic-diff` | Inspect declared relationships and authored examples, not executed coverage |
+| Source and validation | `diagnostics`, `ui-profiles`, `read-document`, `merged-document`, `syntax-schema` | Read exact source or typed structure and diagnose problems |
 | Workspace inspection | `open-workspace`, `read-workspace`, `read-ast`, `workspace-state`, `export-workspace`, `repair-capabilities` | Obtain current identities, handles, readiness, code attachment requirements, source-map locations, durable-state status and the repair catalog |
 | Visual (MCP-Apps hosts only) | `visualize-model` | Draw the board for the model or a `proposalId`; its `sketch` argument previews a what-if of whole documents. Reads only |
-| Planning | `propose-source`, `propose-ast`, `propose-rename`, `propose-move`, `propose-repair`, `propose-property`, `propose-number-enum-members`, `propose-extract-inline-event`, `propose`, `recommend-layout`, `expand-layout` | Produce validated, reviewable candidates without writing them |
+| Planning | `propose-source`, `propose-ast`, `propose-rename`, `propose-move`, `propose-repair`, `propose-property`, `propose-number-enum-members`, `propose-extract-inline-event`, `propose-inline-event`, `propose`, `recommend-layout`, `expand-layout` | Produce validated, reviewable candidates without writing them |
 | Review | `read-proposal`, `discard-proposal` | Inspect exact changes, dropped comments and proposed attachments, or abandon a connection-local proposal |
 | Reference execution | `run-specifications` | Run the workspace or a retained proposal candidate read-only; not attached code or target tests |
 | Effects | `apply`, `recover-workspace` | Apply an accepted plan or explicitly recover an interrupted write |
 
-`propose-move` moves a slice to another feature, or a feature to another module or feature, keeping identities: copy the `target` and `newParent` `{kind, parts}` addresses from the identity inventory and pass `expectedRevision` and `expectedCatalogRevision`. It repairs qualified references and `depends on`, and refuses identity loss, capture, collisions, descendant destinations, inherited authorization or screen-interaction changes and glob imports; review `moveReport` (`identityMigrations`, `referenceRepairs`, `fragmentsMoved`). It does not rename events, change pins or move files, and declaration moves between slices are deferred. Use it for legacy re-slicing instead of retyping declarations.
+`propose-move` moves a slice to another feature, a feature to another module or feature, or a single command, event, read model, projection, query, reaction or capture to another slice, keeping identities: copy the `target` and `newParent` `{kind, parts}` addresses from the identity inventory (`newParent` is the destination slice for a declaration) and pass `expectedRevision` and `expectedCatalogRevision`. It repairs qualified references and `depends on`, and refuses identity loss, collisions, descendant destinations, name capture (a reference that would resolve to a different declaration), inherited authorization or screen-interaction changes and glob imports; review `moveReport` (`identityMigrations`, `referenceRepairs`, `fragmentsMoved`, and `specificationsCarried` for a declaration). It does not rename events, change pins or move files. Use it for legacy re-slicing instead of retyping declarations. Its report document fields are plain strings, not nested identity objects.
+
+A declaration move follows these rules:
+
+- A specification that covers only the moved declaration moves with it. A specification covers a declaration when it is a matching specification of one of its `find-specification-obligations` obligations, or when its `when` step names it; a `given` or `then` reference alone is not coverage.
+- The move is refused when a specification also covers a declaration that stays, when an obligation the source slice met would no longer be met or the move would introduce an unmet obligation, on a name collision, for an inline declaration (such as an inline `produces event`), a declaration written in more than one fragment, a standalone specification, screen, constraint or module, and when an unqualified reference would resolve differently. Qualify that reference first.
+- Screen `execute`, `refresh` and `navigate to` targets that name the declaration are repaired, not moved.
+- Slice-level events named by `produces` do not travel with a command, and a projection's `from` may name an event declared in another slice; move such an event with its own `propose-move` only when it should change slices. A command's inline events go with it.
+- Event names and pins stay untouched, and assigned identities follow the declaration.
+
+Requires Screenplay 4.230.0 (`screenplay --version`) for declaration moves; older servers move only slices and features.
+
+Requires Screenplay 4.211.0 (`screenplay --version`) for string conflict/move-report document fields and independent reference-edit batches; older servers can emit objects and refuse independent remove/add batches. Upgrade before relying on this contract.
+
+Independent reference removals and additions with different text may share one
+`propose-source` or `propose-ast` batch. Only unmatched same-text removals/additions
+are refused for ambiguous correspondence, including under `Draft`; other reference
+safety and identity checks still apply. Preserve genuine moves with `propose-move`
+or semantic migrations. Read the refusal's `conflicts[].document`, `path` and
+`otherPath` as strings when present and inspect its located disappeared/introduced
+occurrences instead of bisecting the batch. Details and example:
+[reference continuity](mcp-loop.md#reference-continuity-and-located-conflicts).
 
 `propose` is the executable-only whole-document interface. Prefer `propose-source`
 for whole `.play` text, `propose-ast` for focused typed edits, and `propose-rename`
@@ -101,7 +122,7 @@ Continue with the same `proposalId` and returned `sourceRevision` as
 or reads the root with its persisted identities.
 
 The response includes `sourceRevision`, `outcome`, discovered/selected/executed/
-passed/failed/unsupported counts, `executableDiagnostics`, `planIssues`, and `page`
+passed/failed/unsupported counts, `executableDiagnostics`, `planIssues` (deferred projection issues stay listed even when the selected specifications pass), and `page`
 (plus `proposalId` for candidate runs). Counts cover the entire selection, not one
 page; unsupported cases are not executed. Outcomes are `passed`, `failed`,
 `unsupported`, or overall `unbound`; only `passed` has `isError: false`. An unbound
@@ -116,6 +137,32 @@ A folder is one application; a file selects only itself and its imports.
 
 
 ## Whole-source authoring
+
+Application notes already anchor before binding; Module, Feature and Slice
+identities materialize from the authoring hierarchy when every document parses
+and places. Binding keeps those IDs. Read `containerIdentities` in
+`open-workspace` / `workspace-state`: `complete`, `containers` (`address`,
+`reason`, `assigned`) and `documents` (`path`, `reason`). Reasons are `ambiguous`,
+`idCollision`, `incomplete`, `unparsed` and `unplaced`; incomplete documents stop
+all new assignments, not just their own. Fix parse/placement errors first.
+Notes tools refuse unavailable targets and descendants with the same reasons in
+all forms. Existing notes on ambiguous containers remain resolved with
+`ambiguous: true`; inspect them unfiltered or by existing `semanticId`.
+Unidentified members still need binding and substitute their own slice in
+`substitutions`, never silently promote to a feature/module. Details:
+[model notes](model-notes.md#anchors-and-independent-state).
+
+Requires Screenplay 4.213.0 (`screenplay --version`) for pre-binding container
+identities and reporting; upgrade older servers before relying on direct
+container anchoring.
+
+`propose-rename` and `propose-move` preserve assigned container identities and
+notes on unbound models, including before first binding. Manual `propose-ast` /
+`propose-source` renames need `semanticRenames`, removals need
+`retiredSemanticAddresses` and report `orphanedNotes`. Fix binding errors through
+MCP proposals so reopening does not require reconciliation after an external fix.
+Opening computes identities in memory only; even notes-only `apply` can persist
+them with notes under the same rollback journal.
 
 `propose-source` takes `expectedRevision`, `expectedCatalogRevision`, explicit
 `formatting` and `documents`. Default `validation: "Authoring"` accepts syntax-only
@@ -167,8 +214,12 @@ exists only for authored `generate`; an implicit UUID default has no block.
 | --- | --- |
 | `strategy` | Authored strategy name |
 | `modifiers` | Only set `prefix`, `case`, `size`, `alphabet`, `count`, `encoding`; omitted defaults are not filled in |
-| `previewArguments` | Present only for authored `pattern`, `checksum`, `range`, `rule`; each is `{value, executable: false}` |
-| `entropyBits` | Exact random bits, or null for unknown strategy/invalid entropy inputs |
+| `arguments` | Authored `pattern`, `checksum`, `rule` strings and `range: {text, minimum, maximum}` with exact Int64 endpoints; malformed range retains text only. Replaces `previewArguments`. |
+| `supportCount` | Exact JSON integer for assessed pattern/random distinct support; preserve large numbers without floating-point rounding. Dates use minimum conditioned support over the compiler's 100-year UTC horizon. |
+| `entropyBits` | Built-in random bits; pattern/random use log2(supportCount). Null for opaque rule implementations or invalid/unsupported inputs. |
+| `derivedPattern` | Anchored strategy-derived regex, or null; pattern expressions are deterministic and bounded, but date/checksum digit runs describe shape, not arithmetic containment. |
+| `derivedPatternUnknownReason` | Reason when derivedPattern is null; never invent a regex from it. |
+| `rules` | Authored-order entries: rule kind, line/column, status proven/refuted/unproven; witness for refuted, reason for unproven. diagnosticCode only for reported PLAY0688/0689; repair PLAY0688 only for a reported refuted declarative rule. |
 | `entropyUnknownReason` | Present only when entropy is unknown |
 | `valuesAtOnePercentCollision` | JSON number estimating the 1% birthday collision count, or null; scientific notation can exceed client floating-point range |
 | `executable` | `status`, `diagnosticCodes`, and `reason` only for `notAssessed` |
@@ -179,7 +230,10 @@ and no such error exists; otherwise `notAssessed`, with a reason that whole-mode
 binding failed. `diagnosticCodes` contains only errors at these declaration locations.
 An empty list is not admission; low-entropy property diagnostics require workspace
 inspection. Invalid alphabets/non-positive sizes or counts yield null estimates
-with `entropyUnknownReason`, preserving compiler diagnostics. Time, prefixes,
+with `entropyUnknownReason`, preserving compiler diagnostics. Pattern support
+budget exhaustion (PLAY0691) or empty support on a scanned date (PLAY0692) also
+leaves estimates null with the compiler's reason; an opaque `rule` has unknown,
+not zero, entropy. Time, prefixes,
 case and encoding add no randomness; the compiler, details and repairs share
 `GenerationEntropy`, not an agent's parallel estimate.
 
@@ -192,8 +246,9 @@ source document under the same revision/review contract. Canonical printing
 retains `generate`. Review `read-proposal` changes and `view: "executable-diagnostics"`,
 run candidate specifications where executable, then explicitly `apply`.
 Authoring acceptance does not imply executable readiness: `sequence` reports
-PLAY0682; `pattern`/`random`/`rule` and generated-concept validation rules report
-PLAY0268. Do not retype a refused proposal to bypass those diagnostics.
+PLAY0682; generated secrets still report PLAY0268, rule proofs PLAY0688/0689,
+and finite-support failures PLAY0691/0692. Pattern/random/rule and checksum
+validation bind as ESM v21. Do not retype a refused proposal to bypass diagnostics.
 
 `screenplay_repair_capabilities` advertises PLAY0683/PLAY0684. Discover concrete
 verified actions with `read-workspace view: "repairs"` at the diagnostic revision:
@@ -212,10 +267,40 @@ concept; uniqueness changes append-time behavior. Review every changed document
 before applying; discovery/proposal write nothing. The saved-file VS Code repair
 picker does not expose these entropy actions.
 
-PLAY0688 repair replaces a refuted generated-concept rule with the strategy-derived
-`matches` pattern. Review it as a validation change for input/stored values too.
-PLAY0689 is an unproven warning, not proof; checksum repairs remain unadmitted.
-MCP does not generate values.
+Read `generation.rules[]` instead of parsing diagnostic prose: `refuted` names
+the violating `witness`; `unproven` explains its `reason`; `proven` needs no diagnostic.
+A refuted result without `diagnosticCode` means the compiler did not check that
+rule (for example, a UUID concept unused by generated command properties), so
+there is no reported repair. Proof status is not executable admission, and
+passing samples do not prove containment.
+
+To add a rule the strategy satisfies, put `derivedPattern` into a typed `matches`
+proposal preserving other concept members. If null, read
+`derivedPatternUnknownReason` and keep the intended invariant; do not fabricate
+an expression. PLAY0688 repair replaces a refuted generated-concept rule with
+the strategy-derived matches pattern. Discover its subject through
+`read-workspace view: "repairs"`, then `propose-repair` with both revisions and
+canonical formatting. Review input/stored-value effects, not just generation.
+For a checksum pattern the same proposal explicitly adds the declared checksum
+validation if absent. Ambiguous/unbounded derived regexes have no repair.
+PLAY0689 is an Unproven warning, not proof; MCP never generates values.
+For an opaque generation rule, inspect `read-workspace view:
+"implementation-requirements"` for its ValueGeneration requirement; the reference
+runner consumes a pinned String and never executes its attached body.
+Requires Screenplay 4.181.1 (`screenplay --version`) for the language-neutral
+version-1 ValueGeneration context contract (Now instant, Tenant portable ID,
+String result); older Cratis C# bindings cannot compile all context-aware bodies.
+The provider selects the binding, not the fence tag: Cratis C# uses Fundamentals'
+`Cratis.Concepts.GenerationContext`; BCL-only C# hosts can use Screenplay's record.
+Portable bodies use Now, tenant interpolation/string assignment and BCL types.
+Passing context to `GenerateValue.*`, constructing/naming the context type or
+reading `Tenant.Value` is target-bound, not a shared language contract. See
+[context reference](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/context.md).
+
+Requires Screenplay 4.173.0 or later (`screenplay --version`) for `arguments`,
+exact support, derived patterns and `rules[]`; older servers can expose
+`previewArguments` and omit proofs. Discover schemas and diagnostics instead of
+assuming these fields. Reference: [generation details](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/mcp/reference.md#generated-values-and-responses).
 
 Requires Screenplay 4.164.0 or later (`screenplay --version`) for generated-rule proofs and PLAY0688 repair; older servers lack this action. The CLI-bundled MCP can lack
 this generation summary and the entropy repairs. Existing typed concept proposals predate the
@@ -235,7 +320,7 @@ with `view: "diagnostics"`, then `view: "repairs"` at the current revision.
 | `PLAY0166` | Declare a missing command-produced event in its slice. Infer known command-path types (retaining concepts) or `$context.occurred` as `DateTime`; refuse uncertain/conflicting shapes, imports, existing declarations, cross-file producers and parser-invalid workspaces. |
 | `PLAY0478` | Add `for <identifier>` to a plain production. Both models must be executable; refuse a version change or retargeting another production. This changes routing: accept only if the identifier, not allocation, is intended; `canFixAll: false`. |
 | `PLAY0471` | Remove a redundant event id only with unchanged executable model, catalog and comments. |
-| `PLAY0469` | Remove an inline same-source identifier property and mapping, retiring its semantic address. This changes the contract; `canFixAll` is false. Refuse other consumers, opaque impact, changed routing or comment loss. Plain contracts get guidance only. |
+| `PLAY0469` | Remove an inline same-source identifier property and mapping, retiring its semantic address. This changes the contract; `canFixAll` is false. Refuse other consumers, opaque impact, changed routing or comment loss. Plain contracts get guidance only. For a contract that may have been stored, use `propose-property` `remove` with `newGeneration: true` instead. |
 | `PLAY0479` | Migrate one optional type spelling, or all in a document, preserving syntax and trivia. Exclude `query Q => observable?`. |
 | `PLAY0563/0564` | Expand a one-line interaction alternative / turn a strict item `where` into one block-form `when`. Individual review, canonical formatting, no pinned evidence; refuse comment loss. Opaque non-item-condition text has no PLAY0564 repair. |
 | `PLAY0614` | Declare Translate direction only when exactly one inbound/outbound interpretation fits public metadata; never change event visibility to make a repair fit. |
@@ -273,6 +358,27 @@ tags and identities survive; canonical ESM must stay byte-identical and every
 comment must survive exactly once. Extract before adding `generation`, not after
 making the document parser-invalid. This is a refactoring, not a diagnostic repair.
 
+Requires Screenplay 4.228.0 (`screenplay --version`) for `propose-inline-event`.
+
+`propose-inline-event` is the inverse: it folds a slice-level event with exactly one
+production into an inline event on that production, takes the same `subject`,
+revisions and `formatting: "CanonicalizeTouchedDocuments"`, and preserves executable
+bytes and identities. Use it to undo an extraction when the event has one producer and
+no other consumer. It refuses when the fold could change meaning: a conditional
+production (`when`), incomplete mappings, generations, an external origin or public
+event, cross-slice or cross-document use, opaque or handler text, comments that would
+be lost, or any reference other than the single production. Read the refusal and
+leave the event standalone; never work around it with text edits.
+
+Requires Screenplay 4.223.0 (`screenplay --version`) for `trace-lineage`.
+
+`trace-lineage` takes a read-model property `address` and returns a paged tree
+(`limit`, `offset`) from the property through projection or reducer mappings, joins and
+child mappings to the event property, then to the producing command property or capture
+source. A broken hop is reported where the chain breaks, several sources appear as
+branches and code the model cannot see into is marked opaque. It is read-only and
+advisory.
+
 Requires Screenplay 4.153.0 or later (`screenplay --version`) for `propose-rename` to consult release-baseline mutability; before it, `propose-rename` pins the previous effective name without a baseline.
 
 `propose-rename` consults release-baseline mutability: without a
@@ -281,8 +387,10 @@ gets no new pin, while any admitted revision requires preserving its stored name
 `eventNeverPersisted: true` is refused for admitted revisions; otherwise it needs
 storage-history knowledge, not merely an identity catalog. It skips a new pin, removes a redundant current-name
 pin, but retains a pin for a different earlier name. Contradictory generation pins
-refuse the rename. Do not promise a generation-2 payload-removal repair or a
-`PLAY0470` repair: neither is available.
+refuse the rename. Do not promise a generation-2 payload-removal repair. `PLAY0470` has an
+author-intent repair, never a no-input one: read
+[destination intent repair](destination-intent-repair.md) when `repair-capabilities`
+lists it under `intentActions`.
 
 Requires Screenplay 4.152.0 or later (`screenplay --version`) for `storedName` (ESM v16).
 
@@ -304,12 +412,12 @@ then choose edits from evidence. Workflow, flags, guards and recovery:
 [release baseline](release-baseline.md). Target evidence: toolchain
 `references/diagnostics.md` (Reserved stored names and event pins).
 
-Requires Screenplay 4.150.0 or later (`screenplay --version`) for the stored stream name `All` refusal.
+Requires Screenplay 4.213.3 or later (`screenplay --version`) for the authoring-time PLAY0802 refusal; earlier compilers refuse stored stream `All` only at binding (PLAY0273, 4.150.0 or later).
 
 A stream whose stored name is exactly `All`, from its name or `id "All"`,
-refuses executable binding/readiness with PLAY0273. Use discovered `propose-rename`
-to change that stored stream name; pinning it back to `All` is not a repair.
-There is no typed PLAY0273 repair for this case. Existing `All` history reads as
+reports PLAY0802 in authoring diagnostics (binding keeps PLAY0273 as a backstop). Use discovered `propose-rename`
+to change that stored stream name; pinning it back to `All` is not a repair, while a pin away from `All` is valid.
+There is no typed PLAY0802 repair for this case. Existing `All` history reads as
 source-only appends. Source/stream pins otherwise travel as ESM v8 stored names;
 event stored names require v16.
 
@@ -344,7 +452,14 @@ correctness repair; PLAY0667–0670 require an author decision, with no automati
 
 Sources/streams and command/specification routes bind as ESM v8 and have
 catalog identities; `executionAvailable` still requires whole-workspace binding.
-Source/stream `propose-rename` repairs bound route references. Operations and
+Source/stream `propose-rename` repairs bound route references. `propose-rename` also
+renames a composite stream-id part: it rewrites the part declaration and every
+`part = ...` mapping in command routes, specification routes, examples and redelivery
+locators, keeps part order and stored stream ids, and is refused
+when the new name collides with another part of the same stream. Use it instead of a
+hand-written `propose-ast` batch.
+Requires Screenplay 4.220.0 (`screenplay --version`) for part renames; older servers
+cannot rename a part through `propose-rename`. Operations and
 exact numeric mode remain unadmitted. Check installed schemas, especially when
 the CLI bundle predates the standalone tool.
 
@@ -454,6 +569,11 @@ inspect authored links, not code execution or a transitive runtime graph.
 
 ## Dependencies and intent inventories
 
+Diagnostic subjects use code plus typed `arguments`, not parsed messages. This applies
+to `diagnostics`, executable diagnostics and proposal introducedExecutableErrors.
+Read [diagnostic arguments](../../cratis-screenplay-toolchain/references/diagnostic-arguments.md)
+for optional subjects, declaration paths and PLAY0524 step indices.
+
 `dependency-graph` edges point consumer → producer. Views: `edges`, `cycles`,
 `order`, `unresolved`, `declarations`; `from`/`to` select slice/feature/module
 aggregation (`to` also accepts context). `scope`, `direction`, `kinds` and
@@ -480,7 +600,12 @@ Workspace views `named-rule-intents`/`named-rule-intent-details` cover CommandNa
 only, including pending hints without a requirement ID. Details select either
 `subject` or attached `requirementId`, not both. `handler-intents` and
 `handler-intent-details` cover CommandHandler only; handler details select
-`requirementId`. All page ordered hints, not implementation correctness. Continue
+`requirementId`. A handler entry's `executableReady` means successful v23 binding
+with a matching Pending requirement, not a supplied body; `admission` is described,
+refused or authoring-only. `implementation-requirements` exposes ordered hints and
+provisional/ambiguous flags. Edit HandlerSyntax/ImplementationSyntax/ImplementationHintSyntax
+through `propose-ast` with Authoring validation, preview then apply; unwrapping
+pending metadata is refused. All page ordered hints, not implementation correctness. Continue
 with `expectedRevision` and `expectedCatalogRevision`; provisional owner IDs are
 not authoritative. Edit hints through reviewed `propose-ast`.
 
@@ -497,10 +622,24 @@ row is authored presence, not full coverage, causation or a passing specificatio
 Bare rejections cannot distinguish message-specific rules; syntax-only owners
 retain information-level readiness reasons. Never invent rules from opaque code.
 
+A query's SPEC004 denial matches either `when query <Query>` with `then denied`,
+or a read-only specification with no `when`, exactly one `then query <Query>`
+with `arguments` and no `result`, followed by `then denied`. That read-only denial
+does not meet the returned read model's SPEC006 assertion obligation; add a
+separate state, absence or query-result specification.
+Requires Screenplay 4.212.2 (`screenplay --version`) for this obligation matching;
+older servers miss the read-only denial for SPEC004 and count it for SPEC006.
+Upgrade before treating those rows as a coverage gate.
+
 `find-modeling-smells` asks information-level questions, never changes compilation
 or `--warnaserror`: SMELL001 generic event endings, SMELL002 generic command verbs,
 SMELL003 duplicate nonempty event shapes from different commands, SMELL004 event
-fan-out, SMELL005 read-model property fan-in. Optional scope/document and
+fan-out, SMELL005 read-model property fan-in (counts only the events that actually
+feed the property, not every known event through a projection `all` block), SMELL006
+an event property that no mapping, AutoMap, reaction, condition or specification
+reads (worded as a question: dead data or a missing reader?).
+Requires Screenplay 4.221.0 (`screenplay --version`) for SMELL006 and the corrected
+SMELL005 count; older servers over-report SMELL005 and never report SMELL006. Optional scope/document and
 `eventFanOutThreshold`/`propertyFanInThreshold` (default 5, integers 1–200) bound
 selection; equal to threshold is not flagged. Similar shape does not establish
 similar meaning: report a defect only with a domain consequence. No per-declaration

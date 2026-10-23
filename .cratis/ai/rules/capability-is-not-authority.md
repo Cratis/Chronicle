@@ -41,5 +41,9 @@ Levels of Authority in [`general.md`](./general.md).
 - **[contract] Absent authority for a consequential effect, stop and ask about that
   effect in plain language.** State the exact target, action, consequence, and recovery;
   a missing answer is a blocker for that effect, not for unrelated in-scope work.
+- **[contract] Never copy secrets or personal values into models, notes, state,
+  packets or briefs.** Never use real credentials or personal data in examples.
+- **[contract] Legacy extraction uses Git read-only:** never checkout, reset or stash
+  the legacy repository; do not touch a live checkout the brief excludes.
 - **[convention] Prefer the narrowest capability that does the job.** Reaching for the
   broadest available grant makes the next reader assume it was authorized.

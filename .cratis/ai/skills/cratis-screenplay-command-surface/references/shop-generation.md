@@ -2,22 +2,30 @@
 <!-- Copyright (c) Cratis. All rights reserved. -->
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
-# The shop in Screenplay: keep the release boundary
+# The shop in Screenplay: generated values
+
+## Contents
+
+- Choosing a strategy
+- When not to generate
+- Sources
 
 ## Choosing a strategy
 
 Use the same vocabulary as the [Fundamentals/Arc shop](../../cratis-fundamentals-concept/references/shop-generation.md),
 but only the released language realization: CustomerId is `cus_` + uppercase
-ULID, OrderId is `typeid "order"`, and InviteCode is NanoID. Their strategies
+ULID, OrderId is `typeid "order"`, and InviteCode is NanoID. InvoiceNumber uses
+a readable date/checksum pattern; TicketNumber is an Int pickup-ticket value. Their strategies
 belong to concepts; command properties only say `generated`/`generated identifier`.
 The existing [strategy reference](generated-values-and-responses.md) owns exact
 encodings, entropy, MCP edits, fixtures and freshness.
 
-**Context-dependent generation is not released in Screenplay.** The OrderId below
-is time-ordered TypeID, not Arc's received-time/tenant factory contract; Stage
-emits a wall-clock `New()`. Passed-through GenerationContext in Arc source
-recovery describes that strategy shape, not equivalent clock/tenant semantics.
-Context-member/rule recovery stays in code.
+Requires Screenplay 4.172.0 or later (`screenplay --version`) for pattern/random/rule
+and checksum validation (ESM v21); older compilers refuse them with PLAY0268.
+`generate rule Name` can attach code with Now/Tenant context, but the reference
+runner never executes it: pin the whole String result. TypeID itself has no
+tenant slot. Context-member factory recovery still stays in code. Stage's
+time-ordered factories use the command receipt, not an invented wall-clock value.
 
 The shop's ApiKey remains a **secret**. In .NET its factory is `Bytes(32)` and its
 concept is `[NotAudited]`. It is never an identifier (event-source IDs are plaintext
@@ -36,6 +44,11 @@ concept OrderId : String
 concept InviteCode : String
   generate nanoid
 concept ApiKey : String secret
+concept InvoiceNumber : String
+  generate pattern "INV-{yyyy}{MM}-#{7}" checksum luhn
+  validate checksum luhn
+concept TicketNumber : Int
+  generate random 100000..999999
 module Shop
   feature Customers
     slice StateChange Register
@@ -59,22 +72,39 @@ module Shop
           inviteCode = "abcdefghijklmnopqrstu"
   feature Orders
     slice StateChange Place
+      constraint UniqueInvoiceNumber
+        unique invoiceNumber on OrderPlaced
+      constraint UniquePickupTicket
+        unique pickupTicket on OrderPlaced
       command PlaceOrder
         orderId OrderId generated identifier
+        invoiceNumber InvoiceNumber generated
+        pickupTicket TicketNumber generated
         produces event OrderPlaced
+          invoiceNumber InvoiceNumber = invoiceNumber
+          pickupTicket TicketNumber = pickupTicket
         returns orderId
       specification PlacesWithPinnedValue
+        given clock "2026-10-02T09:00:00Z"
         when PlaceOrder
           for "order_0000000000e008000000000000"
+          generated invoiceNumber = "INV-202610-00000004"
+          generated pickupTicket = 123456
         then OrderPlaced
           for "order_0000000000e008000000000000"
+          invoiceNumber = "INV-202610-00000004"
+          pickupTicket = 123456
         then returns "order_0000000000e008000000000000"
 ```
 
 Each property is server-owned, not a client-minted input. The ApiKey declaration
 is not permission to replace its secret contract with an ordinary random String.
-No `given clock` is used: pin the whole value. A seed/clock does not draw a
-portable ULID or TypeID fixture. A v15 duplicate-source specification should
+The invoice date segments use the pinned UTC clock; it does not draw a portable
+ULID or TypeID fixture. Checksum validation is authored separately from generation.
+Dates/check digits add no entropy. The short invoice and ticket values use
+single-property unique constraints; neither is a generated identifier. Whole-source
+freshness protects the OrderId destination, not every generated payload value.
+A duplicate-source specification should
 expect Concurrency with no new facts or response, not a regenerated ID.
 
 ## When not to generate
@@ -84,10 +114,13 @@ idempotency keys, authorization, gapless invoice numbers or proof of projection
 readiness. A reference InviteCode is not automatically a credential; if possession
 confers access, protect it as a secret and do not claim this generated String
 example realizes that credential behavior. Never drop ApiKey's secret marker to
-make its generation bind/render. Pattern/random/rule execution, context rules,
-sequence allocation and secret generation stay explicit upstream gaps.
+make its generation bind/render. A pattern is not gapless/sequential numbering;
+check digits catch typos, not forgery. ESM v21 binds and reference-executes with
+pins. Requires Stage 4.118.0 for checksum validation and 4.119.0 for pattern/random
+rendering; older renderers refuse those constructs. `generate rule` renders from Stage 4.136.0 (the Host
+and legacy syntax engine still refuse it with STAGE-ESM-028). Sequence allocation and secret generation stay explicit gaps.
 
-## Tagged evidence
+## Sources
 
 Screenplay `Documentation/screenplay/generated-values/choosing.md`,
 `Documentation/screenplay/generated-values.md`,

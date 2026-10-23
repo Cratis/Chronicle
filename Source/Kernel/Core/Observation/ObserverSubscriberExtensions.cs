@@ -65,6 +65,40 @@ public static class ObserverSubscriberExtensions
     }
 
     /// <summary>
+    /// Hands a whole page to a subscriber without the unpartitioned live-delivery cap.
+    /// </summary>
+    /// <param name="subscriber">The page subscriber.</param>
+    /// <param name="timeout">How long to wait; zero or less waits indefinitely.</param>
+    /// <param name="events">The ordered page.</param>
+    /// <param name="context">The subscriber context.</param>
+    /// <param name="cancellationToken">Cancellation of the wait, not the grain's work.</param>
+    /// <returns>The subscriber result.</returns>
+    /// <exception cref="SubscriberCallTimedOut">The subscriber did not finish within the timeout.</exception>
+    public static async Task<ObserverSubscriberResult> OnNextPageWithin(
+        this IObserverPageSubscriber subscriber,
+        TimeSpan timeout,
+        IEnumerable<AppendedEvent> events,
+        ObserverSubscriberContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var call = subscriber.OnNextPage(events, context);
+        if (timeout <= TimeSpan.Zero)
+        {
+            return await call.WaitAsync(cancellationToken);
+        }
+
+        try
+        {
+            return await call.WaitAsync(timeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
+            throw new SubscriberCallTimedOut(ObserverSubscriberKey.AllPartitions, timeout);
+        }
+    }
+
+    /// <summary>
     /// Gets the keys for the subscriber.
     /// </summary>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/>.</param>

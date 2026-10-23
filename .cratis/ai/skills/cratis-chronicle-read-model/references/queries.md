@@ -33,10 +33,15 @@ Chronicle extensions — Chronicle declares no `Observe` on `IMongoCollection<T>
 
 ## Discovery rules
 
-Arc discovers **public static** methods; private and compiler-generated methods
-are never queries. Use `[ReadModel(RequireQueryAttribute = true)]` and `[Query]`
-on intended endpoints when the type also has folds (`Create`/`Reduce`) or public
-helpers. `[Query]` alone does not hide siblings. ARC0026 checks invalid/ambiguous
+Arc discovers eligible **public and internal static** methods on `[ReadModel]`
+types. Internal visibility is not an endpoint privacy boundary. Keep helpers
+outside the read model, regardless of their visibility. Use
+`[ReadModel(RequireQueryAttribute = true)]` and `[Query]` on intended endpoints
+when the type also has folds (`Create`/`Reduce`); `[Query]` alone does not hide
+siblings. Requires Arc 22.27.1 for exclusion of private, protected, special-name
+and compiler-generated methods; older versions can expose private statics too.
+Check with `dotnet list package`; on older versions move helpers out rather
+than relying on visibility. ARC0026 checks invalid/ambiguous
 query declarations; ARCCHR0019 warns about fold-like statics exposed by convention.
 Requires Arc 22.90.0 for automatic exclusion of methods taking the model itself,
 including `Reduce(event, current)`; `[Query]` cannot force such a method into an

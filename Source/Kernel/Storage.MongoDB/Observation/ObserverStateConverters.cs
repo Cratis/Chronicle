@@ -19,6 +19,7 @@ public static class ObserverStateConverters
             Id = state.Identifier,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
@@ -58,6 +59,7 @@ public static class ObserverStateConverters
         {
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
@@ -90,6 +92,7 @@ public static class ObserverStateConverters
         {
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,

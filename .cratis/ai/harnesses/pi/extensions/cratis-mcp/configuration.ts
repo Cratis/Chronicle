@@ -9,7 +9,7 @@ export function object(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function readJson(path: string): Record<string, unknown> {
+export function readJson(path: string): Record<string, unknown> {
     if (lstatSync(path).size > 1024 * 1024) throw new Error(`Cratis configuration is too large: ${path}`);
     const value: unknown = JSON.parse(readFileSync(path, 'utf8'));
     if (!object(value)) throw new Error(`Expected a JSON object: ${path}`);
@@ -20,6 +20,10 @@ function strings(value: unknown): string[] {
     if (value === undefined) return [];
     if (!Array.isArray(value) || !value.every(item => typeof item === 'string')) throw new Error('Expected a Cratis profile/language list.');
     return value;
+}
+
+export function supportedSchema(version: unknown): boolean {
+    return typeof version === 'string' && /^1\.\d+$/.test(version);
 }
 
 /** Resolve through existing directories only, refusing every source-root symlink. Never creates a directory. */
@@ -46,8 +50,16 @@ export function physicalRoot(project: string, root: string): string {
     return current;
 }
 
-/** Select only the shipped Screenplay descriptor, never project-supplied commands or environments. */
-export function selectedServer(project: string, corpus: string) {
+export interface ProfileResolution {
+    configuration: Record<string, unknown>;
+    selected: Set<string>;
+    /** Profiles listed directly in `.cratis/ai.json`, before any `composes` expansion. */
+    explicit: Set<string>;
+    nonApplicationSelection: boolean;
+}
+
+/** Resolve the selected profiles (after `composes` expansion) from the project's `.cratis/ai.json`. */
+export function resolveProfiles(project: string, corpus: string): ProfileResolution | undefined {
     let configuration: Record<string, unknown>;
     try {
         configuration = readJson(join(project, '.cratis', 'ai.json'));
@@ -87,7 +99,14 @@ export function selectedServer(project: string, corpus: string) {
         strings(profile.composes).forEach(child => select(child, false, applicationPath));
     };
     requested.forEach(id => select(id, true));
-    if (!selected.has('cratis/screenplay')) return undefined;
+    return { configuration, selected, explicit: new Set(requested), nonApplicationSelection };
+}
+
+/** Select only the shipped Screenplay descriptor, never project-supplied commands or environments. */
+export function selectedServer(project: string, corpus: string) {
+    const resolution = resolveProfiles(project, corpus);
+    if (!resolution?.selected.has('cratis/screenplay')) return undefined;
+    const { configuration, nonApplicationSelection } = resolution;
     const overrides = configuration.mcpServers;
     if (overrides !== undefined && !object(overrides)) throw new Error('Invalid mcpServers configuration.');
     const screenplay = object(overrides) ? overrides.screenplay : undefined;
@@ -95,7 +114,9 @@ export function selectedServer(project: string, corpus: string) {
     if (object(screenplay) && screenplay.enabled === false) return undefined;
     if (object(screenplay) && screenplay.enabled !== undefined && screenplay.enabled !== true) throw new Error('Screenplay MCP enabled must be a boolean.');
     const descriptor = readJson(join(corpus, 'mcp-servers.json'));
-    if (descriptor.schemaVersion !== '1.0' || !Array.isArray(descriptor.servers)) throw new Error('Unsupported Cratis MCP descriptor.');
+    // Any 1.x descriptor is accepted; another major loads no corpus MCP servers (the generic bridge reports it once).
+    if (!supportedSchema(descriptor.schemaVersion)) return undefined;
+    if (!Array.isArray(descriptor.servers)) throw new Error('Unsupported Cratis MCP descriptor.');
     const servers = descriptor.servers.filter(server => object(server) && server.id === 'screenplay');
     if (servers.length !== 1 || !object(servers[0])) throw new Error('Expected exactly one Screenplay MCP descriptor.');
     const server = servers[0];

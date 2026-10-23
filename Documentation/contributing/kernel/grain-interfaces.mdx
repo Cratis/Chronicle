@@ -1,0 +1,94 @@
+---
+title: Grain interfaces
+description: How to change a kernel grain interface so that silos of two releases can share a cluster during a rolling upgrade, and what checks it.
+---
+
+A Chronicle cluster upgraded one node at a time runs two releases side by side until the last node is replaced. Their silos call each other's grains the whole time. This page explains what that requires of a grain interface in `Source/Kernel/Core`, how to make each kind of change, and what checks it.
+
+## Why a signature cannot change
+
+Orleans identifies a grain method on the wire by a hash of its declaring interface, its name and its parameter types. The hash is not derived from the C# call site, so a change that every caller still compiles against can still be a different method on the wire.
+
+When Chronicle 19.106 added an optional `version` parameter to `IProjectionsManager.Register`, every caller compiled unchanged. A new node joining a 19.70 cluster then called `Register` on the projections manager while it was still active on a 19.70 node. The 19.70 node had no method with that hash, and the new node stopped with:
+
+```text
+TypeLoadException: Unable to resolve type alias "("inv",[Orleans.Runtime.GrainReference],[Cratis.Chronicle.Projections.IProjectionsManager,Cratis.Chronicle.Core],"F436C56F")"
+```
+
+The opposite direction breaks the same way. A node of the older release sends the previous hash, and the newer node no longer has it.
+
+## The rule
+
+Within a major release, grain interfaces only grow:
+
+- Never change or remove a method's parameters, parameter types, return type or name.
+- Add a method instead. Keep the old one, and have its implementation forward to the new one.
+- Raise the interface's `[Version]` whenever it gains a method.
+- Never move or rename a grain interface or grain class.
+
+A major release may break all of these, because a major upgrade is done with a full stop.
+
+## Add a capability to a grain
+
+Say a release needs `Register` to take a version. Keep `Register` exactly as it is, add a method beside it and raise the version. Then have the old method forward to the new one:
+
+<ChronicleClientTabs snippet="contributing/kernel/grain-interfaces/add-a-method" />
+
+<ChronicleClientTabs snippet="contributing/kernel/grain-interfaces/forward-the-old-method" />
+
+Import `Orleans.CodeGeneration` with a `using` at the top of the file. Do not qualify the attribute in place: inside a `Cratis.*` namespace, `Orleans` resolves to `Cratis.Orleans`, so `[Orleans.CodeGeneration.Version]` does not compile. An interface without the attribute is version 0.
+
+During the rollout this works in both directions:
+
+| Caller | Activation | What happens |
+| --- | --- | --- |
+| Old node, calls `Register` | Old node | Served as before. |
+| New node, calls `RegisterWithVersion` (needs version 1) | Old node (version 0) | Orleans will not send a version 1 call to a version 0 activation. It deactivates it and activates the grain on a node that has version 1. |
+| Old node, calls `Register` | New node (version 1) | Version 1 still has `Register` with the same hash, so the new node serves it and forwards. |
+
+The silo is configured with the `BackwardCompatible` compatibility strategy and the `AllCompatibleVersions` version selector in `ChronicleServerSiloBuilderExtensions`. Those strategies only route calls. They cannot make a changed method compatible. Keeping the old method is what does that.
+
+A grain that moves to a newer node reloads its state from storage. That state must therefore be readable and writable by both releases. Add properties to grain state; do not rename, retype or remove them.
+
+## Types that cross between silos
+
+A grain call carries its arguments and result between silos, so their types are part of the contract too:
+
+- Add properties; never rename, retype or remove one, and never remove an enum member.
+- Do not move or rename a type a custom codec writes the name of. `ConceptSerializer`, `OneOfSerializer` and `CratisJsonSerializer` in `Cratis.Orleans.Serialization` write their own type name into every value. When `ConceptSerializer` moved from the kernel into `Cratis.Orleans`, a 19.13 node could not read a value from a 19.4 node. The spec `for_SiloWireTypeNames` pins those names.
+
+The comparison described below sees each parameter type by name only, not what is inside it. Review changes to those types by hand.
+
+## The contract manifest
+
+`Source/Kernel/Core/OrleansContracts.txt` records every grain interface with its version, every method with its wire identity and signature, and every grain class with its grain type. The Orleans contract analyzer generates it and fails the Core build when the source and the manifest disagree. Never hand-edit it. The one exception is deleting a removed method that the analyzer keeps, which only a major release does.
+
+After changing a grain interface or grain class, regenerate the manifest from the repository root:
+
+```bash
+dotnet format Source/Kernel/Core/Core.csproj analyzers --severity info --diagnostics ORLEANS0016 ORLEANS0017 ORLEANS0018 ORLEANS0019 ORLEANS0020 ORLEANS0022 ORLEANS0023 ORLEANS0024
+```
+
+Commit the manifest with the change and read its diff. Lines only added, and a raised `[Version]` on each interface that gained a line, is what a compatible change looks like. A removed or changed line is a break.
+
+## What checks it
+
+| Check | Where | Fails when |
+| --- | --- | --- |
+| Orleans contract analyzer | every build of `Source/Kernel/Core` | the source and `OrleansContracts.txt` disagree |
+| Grain Compatibility | `.github/workflows/grain-compatibility.yml`, before every build and before publishing | the manifest is not purely additive against the latest release: a method, interface or grain class removed, a signature changed, methods added without a higher version, or a version lowered |
+| RollingUpgrade | `sql-clustering-integration-specs` in `.github/workflows/integration.yml` | a three-node cluster on the latest release, replaced by this build one node at a time under append load, loses an acknowledged event or fails to observe one |
+
+Run the comparison locally against any manifest, for example one generated from a release tag:
+
+```bash
+dotnet run --project Source/Tools/GrainCompatibility -- --baseline <previous OrleansContracts.txt> --current Source/Kernel/Core/OrleansContracts.txt
+```
+
+It exits 0 when the current contracts serve the baseline, 1 when they do not, and 2 when it could not tell. `--self-test` plants each kind of break and fails unless every one is found.
+
+A pull request labeled `major` skips Grain Compatibility, because a major release is upgraded with a full stop. A deliberate break in a minor or patch release is not supported: change the label or keep the old method.
+
+## When a node meets an incompatible release
+
+A startup step that fails because the other node cannot decode a call is not retried, since retrying cannot help until every node runs one release. The node logs a critical message naming the step and saying a full stop is needed, then stops. Operators see this when they roll across a release that predates these checks. [Roll out a new version](../../hosting/rolling-deploy.md) describes what to do.

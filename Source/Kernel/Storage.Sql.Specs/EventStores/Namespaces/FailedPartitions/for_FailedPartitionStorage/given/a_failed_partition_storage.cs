@@ -5,6 +5,7 @@ using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.FailedPartitions.for_FailedPartitionStorage.given;
 
@@ -46,11 +47,12 @@ public class a_failed_partition_storage : Specification, IDisposable
         _storage = new FailedPartitionStorage(_eventStore, _namespace, _database);
     }
 
-    protected NamespaceDbContext CreateContext()
+    protected NamespaceDbContext CreateContext(params IInterceptor[] interceptors)
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connectionString)
             .AddConceptAsSupport().WithoutServiceProviderCaching()
+            .AddInterceptors(interceptors)
             .Options;
 
         return new NamespaceDbContext(options);

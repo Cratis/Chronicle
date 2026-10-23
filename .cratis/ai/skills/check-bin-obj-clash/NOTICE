@@ -1,0 +1,28 @@
+# cratis-ai-managed: skills/check-bin-obj-clash/NOTICE
+Detecting OutputPath and IntermediateOutputPath Clashes
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet-msbuild/skills/check-bin-obj-clash/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line.
+- Render unimported msbuild-antipatterns routing reference as plain topic text.
+- Replace the blanket BuildProjectReferences=false exclusion with an evidence-based metadata-only query qualification.
+- Qualify the structured workflow exclusion by actual targets and writes.
+- Qualify the text-replay exclusion by actual targets and writes.
+- Move the complete ## Common Causes and Fixes section verbatim into references/common-causes-and-fixes.md to fit the body limit; leave a direct pointer.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+- Point the antipatterns cross-references at the bundled msbuild skill reference.
+
+references/common-causes-and-fixes.md:
+- Contain the section moved verbatim from SKILL.md, with a reference H1 title.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.

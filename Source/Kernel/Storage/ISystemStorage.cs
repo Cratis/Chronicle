@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.Patching;
 using Cratis.Chronicle.Storage.Security;
 
@@ -43,4 +44,17 @@ public interface ISystemStorage
     /// <param name="systemInformation">The <see cref="SystemInformation"/> to set.</param>
     /// <returns>Awaitable task.</returns>
     Task SetSystemInformation(SystemInformation systemInformation);
+
+    /// <summary>
+    /// Gets the newest kernel version that successfully completed patching.
+    /// </summary>
+    /// <returns>The kernel version, or null when none has been recorded.</returns>
+    Task<SemanticVersion?> GetPatchingKernelVersion();
+
+    /// <summary>
+    /// Records the newest kernel version that successfully completed patching.
+    /// </summary>
+    /// <param name="version">The kernel version.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetPatchingKernelVersion(SemanticVersion version);
 }

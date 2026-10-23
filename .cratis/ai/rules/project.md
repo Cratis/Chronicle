@@ -11,6 +11,7 @@ Read every concern below before working in this repository. Together they are th
 - [Verifying Workbench behavior](.cratis/ai/rules/project/verifying-workbench-behavior.md)
 - [Checking the Workbench's lint](.cratis/ai/rules/project/checking-the-workbench-s-lint.md)
 - [The wire protocol is generated from Core — don't think about the protocol](.cratis/ai/rules/project/the-wire-protocol-is-generated-from-core-don-t-think-about-the-protocol.md)
+- [Grain interfaces only grow within a major](.cratis/ai/rules/project/grain-interfaces-only-grow-within-a-major.md)
 - [AI-assisted development](.cratis/ai/rules/project/ai-assisted-development.md)
 - [Chronicle documentation authoring](.cratis/ai/rules/project/chronicle-documentation-authoring.md)
 - [Issue label conventions](.cratis/ai/rules/project/issue-label-conventions.md)

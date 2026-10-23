@@ -21,12 +21,18 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// </remarks>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="timeProvider">The delivery clock.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
-    ILogger<ReactorObserverSubscriber> logger) : Grain, IReactorObserverSubscriber
+    ILogger<ReactorObserverSubscriber> logger,
+    TimeProvider? timeProvider = null) : Grain, IReactorObserverSubscriber
 {
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
+
+    /// <inheritdoc/>
+    public Task Drain() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -38,6 +44,12 @@ public class ReactorObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        if (deliveryWait.Expired(context))
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
+        }
+
         foreach (var @event in events)
         {
             logger.EventReceived(
@@ -57,7 +69,11 @@ public class ReactorObserverSubscriber(
         try
         {
             reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
-            return await tcs.Task;
+            return await deliveryWait.For(tcs.Task, result => result, context);
+        }
+        catch (AbandonedDeliveryDiscarded)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
         }
         catch (TaskCanceledException taskCanceledException)
         {

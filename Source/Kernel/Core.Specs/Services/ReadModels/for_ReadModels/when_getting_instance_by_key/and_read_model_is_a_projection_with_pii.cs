@@ -44,7 +44,7 @@ public class and_read_model_is_a_projection_with_pii : given.all_dependencies
         storedDict[WellKnownProperties.Subject] = Subject;
 
         _sink.TypeId.Returns(WellKnownSinkTypes.InMemory);
-        _sink.FindOrDefault(Arg.Any<Key>()).Returns(storedState);
+        _sink.FindInPrimaryOrDefault(Arg.Any<Key>()).Returns(storedState);
 
         // The compliance helper decrypts the stored read model.
         var decrypted = new ExpandoObject();
@@ -74,6 +74,8 @@ public class and_read_model_is_a_projection_with_pii : given.all_dependencies
         ReadModelKey = Subject
     });
 
+    [Fact] void should_read_the_primary() => _sink.Received(1).FindInPrimaryOrDefault(Arg.Any<Key>());
+    [Fact] void should_not_read_projection_state() => _sink.DidNotReceive().FindOrDefault(Arg.Any<Key>());
     [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<ExpandoObject>());
     [Fact] void should_return_the_decrypted_read_model() => JsonSerializer.Deserialize<JsonElement>(_result.ReadModel).GetProperty("name").GetString().ShouldEqual("decrypted-value");
 }

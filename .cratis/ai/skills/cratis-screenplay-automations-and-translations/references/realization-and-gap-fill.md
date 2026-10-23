@@ -23,6 +23,19 @@ recovery behavior rather than assuming this handler supplies all-or-nothing sett
 rejected model renderable, and never claim a whole-application V5 from a subset. Choose the route
 with `cratis-screenplay-render-and-gap-fill`.
 
+Application-root `reaction batches atomic` also blocks Stage delivery with
+STAGE-ESM-043. Requires Stage 4.139.0 for v22 admission; older Stage reports -016. Preserve the
+per-occurrence/selected-branch batch boundary and independent invoked commands.
+Atomic appends do not prove redelivery deduplication or external exactly-once effects.
+
+Requires Stage 4.141.1 for independent event-reaction specifications with `given clock`;
+older executors refuse clocks beside reactions. This supplies `$context.occurred`
+through cascades, invocation arguments and refusal branches, not a scheduler.
+Clock/non-event triggers still refuse `STAGE-ESM-024`. Generated append/redelivery
+clock fixtures retain -024 and context-dependent generated reaction specs retain -011.
+Read [sandbox occurrence boundaries](../../cratis-stage-rendering-and-sandbox/references/sandbox-and-specrunner.md)
+when verifying reaction time in Stage rather than reference execution.
+
 ## Where the pieces go (hand-written)
 | Model element | Realization | Skill |
 |---|---|---|

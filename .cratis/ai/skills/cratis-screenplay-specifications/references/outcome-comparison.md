@@ -21,6 +21,12 @@ This reference holds the comparison rules for events, read models, query rows an
   and requires the rejection to carry the string-key marker; it never loads
   translated text; resolving the key is the realization's job.
 
+Date/DateTime `then` matching stays ordinal: different offsets naming one instant
+do not match merely because a v26 command comparison considers them equal. Keep
+the exact produced payload text in the expectation. Keys, constraints and freshness
+also retain ordinal equality. For UTC-tick comparisons and pre-rule missing-offset
+Validation rejections, read the [retention-window specifications](../../cratis-screenplay-command-surface/references/date-comparisons.md).
+
 ## Rejections and denials say different things
 
 `then error "<message>"` says **rejected, for this reason** — pin it when the

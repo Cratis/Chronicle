@@ -52,7 +52,7 @@ The description is published verbatim as the release notes, so it follows the co
 - Post reviewer notes (checks run, what was not verified, review provenance, stacking, merge or
   deploy order) right after creating the PR with `gh pr comment <n> --body-file .ai-work/pr-notes.md`.
   Never put them in the description, even for `no-release`.
-- After pushing, if `verify-release-notes` fails, fix it by editing the description; it re-runs on edit.
+- After pushing, if `policy / verify` fails on the release notes, fix it by editing the description; it re-runs on edit.
 
 ## Cleanup — the last step, never skipped
 

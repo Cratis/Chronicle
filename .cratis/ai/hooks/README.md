@@ -12,6 +12,7 @@ Three layers:
 | Pattern pass | `PostToolUse` on a write | `scripts/cratis-pattern-scan.sh` | zero tokens until a match | appends a one-line reminder to context, never blocks |
 | Hard block | `PreToolUse` on a write | `scripts/cratis-guard-writes.sh` | zero | exits **2** — the write does not happen |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-store-mutations.sh` | zero; parses only commands that mention `cratis` | exits **2** — the store-changing `cratis chronicle` command does not run |
+| Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-secrets.sh` | zero; parses only commands that mention a credential-bearing tool or file | exits **2** — a command that prints credentials (full `kubectl` specs and secrets, `env`/`printenv`, `docker inspect`, secret-manager reads, `.env`/kubeconfig/key files; also behind `/usr/bin/env`, `command`, attached options such as `-ePATTERN`, a bare `{.}` projection) does not run unless it projects a field; piped shells and recursive searches with no named file stay uncovered; see [`secrets.md`](../rules/secrets.md) |
 | Hard block | `PreToolUse` on `Bash` | `scripts/cratis-guard-pr-body.sh` | fetches shared rules only for `gh pr create/edit` | exits **2** for inline bodies, invalid notes or conflicting release labels; warns and allows when offline with no cache |
 | Cleanup of delivered work | `PostToolUse` on `Bash` (`gh pr merge`, `git pull/merge/worktree`) and `SessionStart` (Pi: `tool_result` and `session_start`) | `scripts/cratis-cleanup-worktrees.sh --hook` | zero when the command is unrelated | never blocks; removes delivered worktrees and branches, reports what it kept |
 | Quality gate (Claude) | `Stop` | `scripts/cratis-quality-gate.sh` | one build/test run, only when relevant files changed | exits **2** — the turn does not end |
@@ -37,8 +38,8 @@ rather than overwriting — the rest of that file is yours — and re-copy after
 The markdown files in this folder (`agent-stop.md`, `pre-commit.md`) remain *lifecycle guidance* —
 they describe what a hook should do for tools that have no wiring yet.
 
-> Hooks are the one surface with no folder adapter: Claude Code reads `.claude/settings.json`;
-> the Pi harness bridges the same scripts to its own events through the `cratis-hooks`
+> Hooks use native wiring rather than a shared folder adapter: Claude Code reads `.claude/settings.json`;
+> Codex has a shell-only adapter described below. The Pi harness bridges the same scripts to its own events through the `cratis-hooks`
 > extension under `../harnesses/pi/extensions/` (its `bash` tool feeds the store-mutation and PR-body guards, its
 > `write` and `edit` tools the write guard); Copilot would read `.github/hooks/*.json`, and no
 > Copilot wiring ships yet.
@@ -61,6 +62,49 @@ Tracked-file stability follows Git-visible contents, not byte-exact disk content
 conversion and Git's assume-unchanged or skip-worktree settings can hide raw disk changes. If you
 use those settings, independently verify raw file contents or remove the hiding settings before
 relying on this check.
+
+## Codex shell-command adapter (partial)
+
+[`../harnesses/codex/hooks.json`](../harnesses/codex/hooks.json) registers one native
+`PreToolUse` command running `hooks.mjs` for `^Bash$`. Per the
+[Codex hook contract](https://developers.openai.com/codex/hooks/), shell calls and unified
+`exec_command` calls are normalized to `tool_name: "Bash"`, with shell text in
+`tool_input.command`. The adapter requires that canonical payload, an absolute existing
+`cwd`, a nonempty `session_id`, and `hook_event_name: "PreToolUse"`. It does not match
+raw `exec_command` or invent tool aliases. `write_stdin` input to an already-running
+session does not trigger another `PreToolUse` check.
+
+The authoring setup (`yarn workspace @cratis/harness-setup run setup`) links
+`.codex/hooks.json` to the corpus asset, repairs owned stale links, and refuses occupied
+parents or user-owned hook files, even with `--force`. It leaves other Codex configuration
+alone. **Consumer activation through `cratis ai install/update` is not delivered by this
+adapter**: the CLI's Codex installation plan needs a separate change. Authoring setup
+and isolated fixtures are not evidence of installed or end-to-end Codex runtime coverage.
+
+The bridge runs the existing store-mutation guard and then the PR-body guard through
+Bash, using the payload's working directory and inherited environment. It never executes
+the pending command. A denial is final; the later guard cannot override it. Malformed
+input, a missing managed guard, spawn failure, signal, unexpected nonzero exit, malformed
+JSON output, excessive output, or an internal deadline produces explicit denial JSON and
+exit **2**, not synthetic success. Child warnings are retained as model-visible context;
+child allow/rewrite decisions are not forwarded. Input is limited to 1 MiB and two seconds;
+each child has ten seconds plus bounded process-group termination/reaping, shorter than
+the native thirty-second hook deadline. Cleanup targets only the detached child process
+group on macOS/Linux; processes deliberately escaping that group are not contained.
+
+This is a guardrail, **not absolute enforcement**. Node, Bash and Git are required to
+launch the adapter; native callback failure, crash, timeout, or malformed-response behavior
+can fail open before a supported denial is received. Other local hook configurations and
+specialized tool paths are outside this adapter's control. The existing scripts retain
+their own deliberate allowances and limits: missing `jq` skips the store guard; PR checks
+can allow with an unchecked/offline warning; command-text parsing cannot see all indirect
+execution. Inherited `CRATIS_HOOKS_ALLOW_STORE_MUTATIONS=1` and existing script configuration
+are preserved. An adapter exit **0** is not proof that every underlying check ran.
+
+**Not wired:** `apply_patch`/file-write protection (a patch is not a single-file write),
+pattern scans, an explicit quality-gate tool, Stop gates, SessionStart, SessionEnd,
+and automatic worktree cleanup. Use the repository's explicit verification and cleanup
+workflows; this slice neither provides full hook parity nor completes Codex integration.
 
 ## Cleanup of delivered work
 
@@ -188,8 +232,8 @@ inside the command (`CRATIS_HOOKS_ALLOW_STORE_MUTATIONS=1 cratis …`) changes n
 
 The Bash guard is a no-op unless **both** target-repository opt-in conditions hold: the target is under
 `github.com/Cratis/`, and its `.github/workflows` contains a reusable Cratis/Workflows
-`verify-release-notes` or `verify-semver-label` caller (including the renamed
-`verify-release-intent` caller). Installing the corpus or `@cratis/pi` alone does not opt in a
+`verify-pull-request-policy` caller. The legacy `verify-release-notes`, `verify-semver-label` and
+`verify-release-intent` callers it replaced are still recognized. Installing the corpus or `@cratis/pi` alone does not opt in a
 consumer or personal repository. This scope applies to both Claude Code and Pi; the direct checker
 remains available explicitly in any repository. As in `gh`, an edit's PR URL takes priority over
 `--repo` / `-R`, then literal leading or inherited `GH_REPO`, then the current directory's `origin`.
@@ -209,6 +253,16 @@ execution, so it cannot validate a body that the command has yet to write, even 
 already exists. Dependabot's generated description remains exempt (including GitHub CLI's
 `app/dependabot` bot identity), but its release-intent label is still checked.
 
+A release that changes a hook script or its wiring must say in its release notes that consumers run
+`cratis ai update`: hooks are managed files, so a fix reaches a repository only once it updates.
+
+The direct checker exits non-zero, with remediation text, in a `github.com/Cratis/` repository whose
+workflows hold no policy caller (none of the recognized callers above): without one, nothing enforces the
+pull-request contract there, and a pass would claim otherwise. A repository outside Cratis still falls back to
+the reviewed pin below, and the Bash guard stays a no-op where there is no caller. A contract spec in the AI corpus's own
+verification runs the checker over vendored copies of the callers Cratis/Workflows publishes; with
+`CRATIS_CONTRACT_LIVE=1` it compares them with Cratis/Workflows `main`.
+
 Run the same checker directly:
 
 ```bash
@@ -216,14 +270,17 @@ node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file .ai-work/pr-body.m
 node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file .ai-work/pr-body.md --pr 123 --strict
 ```
 
-The checker fetches both marked programs from Cratis/Workflows' `verify-release-notes.yml` at
-the immutable commit SHA in the repository's own release-notes caller. If there is no such caller,
+The checker fetches both marked programs (`release-notes` and `release-notes-drift`) from
+Cratis/Workflows' `verify-pull-request-policy.yml` at the ref in the repository's own policy caller,
+and ignores the other programs marked in that file. Without a policy caller it fetches them from
+`verify-release-notes.yml` at the ref in a legacy release-notes caller. If there is neither,
 it uses the reviewed pin `40125b4fcae388e62ed9471edfffd0e991422f0a`. Floating callers such as `@main`
 fetch the programs at that ref; if the fetch fails, they use the bundled programs from the reviewed
 pin with a warning, so body validation is never silently skipped. Programs receive only the proposed PR
 metadata and `PATH`, `HOME`, and `LANG`, not inherited credentials or Node runtime options.
 The exact programs are cached by workflow blob SHA under
-`${XDG_CACHE_HOME:-~/.cache}/cratis/release-notes/<ref>/<sha>.cjs`. Offline, the newest complete
+`${XDG_CACHE_HOME:-~/.cache}/cratis/verify-pull-request-policy/<ref>/<sha>.cjs` for a policy caller and
+`${XDG_CACHE_HOME:-~/.cache}/cratis/release-notes/<ref>/<sha>.cjs` otherwise. Offline, the newest complete
 cached copy for that same pin is used with a warning. With no cache it reports **unchecked** and
 exits **3**; the hook passes through with that warning. Successful checks are silent in hook mode;
 real warnings go to Pi's context or Claude Code's JSON `systemMessage` and `additionalContext`. Exit **0** means no violations; **1** means invalid notes or
@@ -278,6 +335,9 @@ their explicit consent. Slice-only scope checks do not replace the repository's 
 
 ### Project-specific gate configuration
 
+Shipped defaults live in `.cratis/ai/hooks/scripts/quality-gates.json`, not `.cratis/ai/quality-gates.json`.
+Project overrides live in `.cratis/ai/quality-gates.project.json`. `CRATIS_HOOKS_GATES=<path>` replaces
+the defaults file; the project overrides still merge over that replacement by gate id.
 The shipped gates discover the repository's own solution and package, so most repositories need no
 configuration at all. An eligible root workspace or solution keeps repository-wide dispatch. Without
 one, discovery uses only each gate's matching, non-excluded changes and runs it once per affected
@@ -548,9 +608,30 @@ inapplicable gate remains a no-op. Pi preserves the script's diagnostics when pl
 The same shipped file therefore activates in application and framework repositories, and reports
 an empty plan without running gates in a repository that has no project at all.
 
-**Overriding it, in order of increasing force.** Set `workingDirectory` on a gate to pin one of
-several candidate projects; drop a `quality-gates.json` of your own in place of the shipped one; or
-point `CRATIS_HOOKS_GATES` at a file anywhere. None of them requires forking the script.
+**Overriding it.** Set `workingDirectory` on a gate in `.cratis/ai/quality-gates.project.json` to pin
+one of several candidate projects. For a replacement defaults file, point `CRATIS_HOOKS_GATES` at a
+file anywhere instead of editing the managed file. Neither requires forking the script.
+A missing defaults file reports both real configuration paths and runs no gates.
+
+**Per-gate deadlines.** `timeoutSeconds` is an optional integer from 1 to 86400, applied separately
+to each command/directory. Unset means no per-gate deadline; Pi's whole-tool deadline still applies
+and may expire first. The shipped `backend-specs` gate allows 120 seconds so a long solution-wide
+spec run stops with a named diagnostic rather than consuming the entire tool budget. On timeout,
+the script stops the command's process group (TERM, then KILL after one second), exits **2**, and
+reports **NOT VERIFIED**, the gate, its directory, log tail, and `timeoutHint` (advice, never executed).
+Commands that create separate sessions/process groups can escape this cleanup; this is not a sandbox.
+
+For a large solution, replace the placeholder below with the affected test project and repeat for
+its affected dependents. Override `command` with that narrower argv array (or a repository-owned
+runner covering all affected projects), rather than raising the timeout without diagnosing the delay:
+
+```json
+{ "gates": [{ "id": "backend-specs", "command": ["dotnet", "test", "<affected.Specs.csproj>", "--configuration", "Debug", "--no-build"], "timeoutSeconds": 120, "timeoutHint": "Run dotnet test for each affected Specs/Tests project separately." }] }
+```
+
+This is not automatic affected-project selection: imported/conditional MSBuild references and
+linked or shared sources require evaluation to establish coverage safely. The default retains
+solution-wide tests rather than silently missing dependents, and a timeout is never a pass.
 
 **Profile note.** The C# patterns are application-profile and scoped to `Source/**/*.cs`, which is
 the application source root [`../rules/general.md`](../rules/general.md) documents. A
@@ -576,6 +657,14 @@ the intended action and the permitted alternative; it does not loosen its own co
 Supply credentials through the environment, never echo them or place them in committed files.
 A missing or disabled hook is not evidence that a protected action is safe.
 
+The shipped `permissions.ask` rules (`git push`, `gh pr`) are for a person at a terminal. In
+`claude -p` an `ask` rule wins over `--dangerously-skip-permissions`, and with nobody to answer,
+the call is denied. A runner whose work includes pushing or opening pull requests answers those
+prompts with `--permission-prompt-tool` (an MCP tool that returns an allow decision); `deny` rules
+and denying hooks are settled first and still refuse. Do not drop the project settings with
+`--setting-sources user` instead: on Claude Code 2.1.280 that also stops the repository's
+`CLAUDE.md`, skills and hooks from loading.
+
 ## Method lineage
 
 | Idea | Used in | Credit |
@@ -597,6 +686,7 @@ Each is an explicit, auditable opt-out — none of them is a default.
 | `CRATIS_HOOKS_PATTERNS=<path>` | replaces the pattern file |
 | `CRATIS_HOOKS_GATES=<path>` | replaces the gate file (the project override still merges over it) |
 | `CRATIS_HOOKS_ALLOW_STORE_MUTATIONS=1` | allows `cratis chronicle` commands that change a live store; set by the person who authorized the mutation, in the environment the harness was started from |
+| `CRATIS_HOOKS_ALLOW_SECRET_READS=1` | allows commands the secrets guard blocks; set by the person who authorized the read, in the environment the harness was started from — an assignment inside the command is ignored |
 | `CRATIS_HOOKS_STORE_MUTATIONS=<path>` | replaces the store-mutation guard's command lists (the `.local.json` beside the script still extends them) |
 | `CRATIS_HOOKS_SUBPATH_REPORT=1` | prints every `@cratis/*` subpath reference and how it resolved, not only the failures |
 | `CRATIS_HOOKS_IMPORT_REPORT=1` | prints every `@cratis/*` named import binding and how it resolved, not only the failures |
@@ -649,6 +739,12 @@ jq -nc '{tool_name:"Bash", tool_input:{command:"cratis chronicle observers repla
   | bash .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
 jq -nc '{tool_name:"Bash", tool_input:{command:"cratis chronicle observers list -o plain"}}' \
   | bash .cratis/ai/hooks/scripts/cratis-guard-store-mutations.sh; echo "exit=$?"
+
+# Secrets guard, both directions: expect exit 2, then exit 0 for the projected neighbor
+jq -nc '{tool_name:"Bash", tool_input:{command:"kubectl get pods -o json"}}' \
+  | bash .cratis/ai/hooks/scripts/cratis-guard-secrets.sh; echo "exit=$?"
+jq -nc '{tool_name:"Bash", tool_input:{command:"kubectl get pods -o name"}}' \
+  | bash .cratis/ai/hooks/scripts/cratis-guard-secrets.sh; echo "exit=$?"
 
 # Quality gate — show the dispatch plan without running anything
 jq -nc '{session_id:"t", cwd:"'"$PWD"'", stop_hook_active:false}' \

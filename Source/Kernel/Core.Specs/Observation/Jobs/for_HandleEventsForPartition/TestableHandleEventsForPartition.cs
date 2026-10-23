@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -35,8 +36,9 @@ public class TestableHandleEventsForPartition(
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForPartition> logger,
-    IEventGenerationRelease? eventGenerationRelease = null)
-    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger, eventGenerationRelease), IGrainType
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null)
+    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger, eventGenerationRelease, timeProvider), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -61,11 +63,18 @@ public class TestableHandleEventsForPartition(
     /// <param name="observer">The <see cref="IObserver"/> grain mock.</param>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/> mock.</param>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> for the partition.</param>
-    public void SetupForTesting(IObserver observer, IObserverSubscriber subscriber, EventSourceId eventSourceId)
+    /// <param name="subscription">The captured delivery subscription.</param>
+    public void SetupForTesting(IObserver observer, IObserverSubscriber subscriber, EventSourceId eventSourceId, ObserverSubscription? subscription = null)
     {
         _observerField.SetValue(this, observer);
         _subscriberField.SetValue(this, subscriber);
         _eventSourceIdField.SetValue(this, eventSourceId);
+        typeof(HandleEventsForPartition).GetField("_grainFactory", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(this, GrainFactory);
+        typeof(HandleEventsForPartition).GetField("_deliveryTarget", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(this, subscription is { Targets.Count: > 0 } ? subscription.Targets[0] : new ObserverSubscriberTarget(SiloAddress.Zero));
+        if (subscription is not null)
+        {
+            typeof(HandleEventsForPartition).GetField("_deliverySubscription", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(this, subscription);
+        }
     }
 
     /// <summary>

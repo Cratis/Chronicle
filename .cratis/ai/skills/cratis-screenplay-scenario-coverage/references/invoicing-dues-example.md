@@ -14,8 +14,10 @@ destination-type information; a reaction can also consume events from a capture 
 
 **Scope.** This document is the runnable demonstration only. It deliberately holds no rule that
 depends on stored state (the invoice must exist, only an open invoice may be voided, a reversal
-needs a received payment, `reads` + `require`): those rules cannot bind or run at Screenplay
-4.66.0 (PLAY0271, PLAY0268) and are stated in the design-mode document `invoicing-dues-design.md`,
+needs a received payment, `reads` + `require`): the legacy design control lacks
+`command reads protected` and retains PLAY0271/PLAY0268. Eligible reads can opt into
+v25; see command-surface protected-read admission and Stage refusal. The rules stay
+in the design-mode document `invoicing-dues-design.md`,
 never in prose here. It shows the category shapes; for a coverage example see `berth-reservations.md`.
 
 ```screenplay
@@ -209,27 +211,13 @@ module Invoicing
           when added
             outcome = $.outcome
             reason  = $.reason
+        append PaymentGatewayResultReceived
+          when outcome
+            outcome = $.outcome
+            reason  = $.reason
       event PaymentGatewayResultReceived
         outcome GatewayOutcome
         reason  String
-      event PaymentReceived
-      event PaymentDeclined
-        reason String
-
-    slice Automation TranslatePaymentGatewayResults
-      description "Our facts from the provider's: the translators react to the external fact the Translate slice records"
-      reaction ReceivedTranslator
-        when PaymentGatewayResultReceived
-          outcome
-          produces PaymentReceived
-        where outcome == "captured"
-      reaction DeclinedTranslator
-        when PaymentGatewayResultReceived
-          outcome
-          reason
-          produces PaymentDeclined
-            reason = reason
-        where outcome == "declined"
 
       specification TranslatingADeclinedCardResult
         when capture PaymentGatewayResults
@@ -243,6 +231,23 @@ module Invoicing
         then PaymentDeclined
           for "9c1f0a52-6a4e-4b1c-9f55-0d2c7b8e1a01"
           reason = "Card declined"
+
+    slice Automation RecordPaymentOutcome
+      reaction ReceivedTranslator
+        when PaymentGatewayResultReceived
+          outcome
+          produces PaymentReceived
+        where outcome == "captured"
+      reaction DeclinedTranslator
+        when PaymentGatewayResultReceived
+          outcome
+          reason
+          produces PaymentDeclined
+            reason = reason
+        where outcome == "declined"
+      event PaymentReceived
+      event PaymentDeclined
+        reason String
 
     slice StateView OpenInvoices
       description "Todo list: membership means 'still to collect'; there is no status flag."

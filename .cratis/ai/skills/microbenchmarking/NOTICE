@@ -1,0 +1,37 @@
+# cratis-ai-managed: skills/microbenchmarking/NOTICE
+Benchmark Authoring Guidelines
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet-diag/skills/microbenchmarking/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Package guidance defers to Central Package Management pins when `Directory.Packages.props` exists.
+- Reword the historical-measurements axis in neutral present-tense wording.
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+
+references/writing-benchmarks.md:
+- Repair references/-relative sibling link.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/bdn-internals-and-tuning.md:
+- Reduce release-specific version mentions to the single behavior boundary.
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/comparison-strategies.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/diagnosers-and-exporters.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/project-setup-and-running.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.

@@ -160,6 +160,11 @@ ACTION_SNIPPET = "read-models/decision-reads/early-commit"
 # .md snippet — so the alias plumbing never leaks into the public docs; the snippet body
 # itself stays exactly what a real Kernel contributor would write in their own file.
 DECLARATION_NAMESPACE_ALIASES = {
+    "Cratis.Chronicle.Contributing.GrainInterfaces": [
+        "using Grain = global::Orleans.Grain;",
+        "using IGrainWithStringKey = global::Orleans.IGrainWithStringKey;",
+        "using VersionAttribute = global::Orleans.CodeGeneration.VersionAttribute;",
+    ],
     "Cratis.Chronicle.Patches": [
         "using EventStoreName = KernelStorageSql::Cratis.Chronicle.Concepts.EventStoreName;",
         "using IEventTypes = KernelStorageSql::Cratis.Chronicle.EventTypes.IEventTypes;",
@@ -167,6 +172,8 @@ DECLARATION_NAMESPACE_ALIASES = {
 }
 
 DECLARATION_NAMESPACES = {
+    "contributing/kernel/grain-interfaces/add-a-method": "Cratis.Chronicle.Contributing.GrainInterfaces",
+    "contributing/kernel/grain-interfaces/forward-the-old-method": "Cratis.Chronicle.Contributing.GrainInterfaces",
     "contributing/kernel/patches/index/basic-structure": "Cratis.Chronicle.Patches",
     "contributing/kernel/patches/index/dependencies": "Cratis.Chronicle.Patches",
     "contributing/kernel/patches/index/semantic-logging": "Cratis.Chronicle.Patches",
@@ -174,6 +181,12 @@ DECLARATION_NAMESPACES = {
     "contributing/kernel/patches/index/idempotency": "Cratis.Chronicle.Patches",
     "contributing/kernel/patches/index/spec": "Cratis.Chronicle.Patches",
     "contributing/kernel/patches/index/rename-reactors-example": "Cratis.Chronicle.Patches",
+}
+
+
+# Usings in a declaration snippet that its wrapper's aliases replace, so they are not hoisted to the file.
+DECLARATION_ALIASED_USINGS = {
+    "contributing/kernel/grain-interfaces/add-a-method": ("using Orleans.CodeGeneration;",),
 }
 
 
@@ -283,6 +296,9 @@ def generate_source() -> str:
         """
         public record Account(string Id, string Name, decimal Balance, DateTimeOffset CreatedDate);
         """.strip(),
+        # Stand-ins for the Kernel types the grain interface example passes. Orleans generates a proxy for every grain
+        # interface it compiles, and that generated code cannot name a type only reachable through the extern alias.
+        "namespace Cratis.Chronicle.Contributing.GrainInterfaces\n{\n    public record ProjectionDefinition;\n    public record ProjectionOwner;\n}",
         "public record MyEvent(string Name);",
         "public class MyReadModel { public string Name { get; set; } = string.Empty; }",
         "public class InvitationMailReactor : Cratis.Chronicle.Reactors.IReactor;",
@@ -312,9 +328,12 @@ def generate_source() -> str:
 
         # The action snippet qualifies HttpContext in its compiler-only wrapper.
         # A global ASP.NET Core import would make Chronicle's [Tags] ambiguous.
+        # A Kernel declaration snippet imports Kernel namespaces the way a contributor's file does; its
+        # generator-only wrapper supplies those types through aliases instead (see DECLARATION_NAMESPACE_ALIASES).
         usings.update(
             using for using in snippet_usings
-            if relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;"
+            if (relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;")
+            and using not in DECLARATION_ALIASED_USINGS.get(relative_path, ())
         )
 
         site_namespace = site_concepts_namespace(relative_path)

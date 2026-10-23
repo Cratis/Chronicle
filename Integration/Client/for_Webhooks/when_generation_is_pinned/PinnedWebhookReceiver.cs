@@ -18,9 +18,13 @@ public sealed class PinnedWebhookReceiver : HttpMessageHandler
     volatile bool _failDelivery;
 
     /// <summary>
-    /// Sets whether deliveries received from now on are answered with a transient 503.
+    /// Sets whether deliveries received from now on are answered with a 503 that defers retries for an hour.
     /// </summary>
-    /// <param name="fail">True to answer with 503, false to answer with 200.</param>
+    /// <remarks>
+    /// The long Retry-After keeps automatic recovery from starting a retry job that races the spec's manual retry,
+    /// which overrides the deferral.
+    /// </remarks>
+    /// <param name="fail">True to answer with a deferring 503, false to answer with 200.</param>
     public void FailDeliveries(bool fail) => _failDelivery = fail;
 
     /// <summary>
@@ -50,14 +54,21 @@ public sealed class PinnedWebhookReceiver : HttpMessageHandler
         var payload = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!.AsObject();
         var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _gates.Enqueue(response);
-        var statusCode = _failDelivery ? System.Net.HttpStatusCode.ServiceUnavailable : System.Net.HttpStatusCode.OK;
+        var fail = _failDelivery;
         foreach (var @event in payload["events"]!.AsArray())
         {
             await _deliveries.Writer.WriteAsync((@event!.AsObject(), response), cancellationToken);
         }
 
         await response.Task.WaitAsync(cancellationToken);
-        return new HttpResponseMessage(statusCode);
+        if (!fail)
+        {
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        }
+
+        var deferred = new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
+        deferred.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromHours(1));
+        return deferred;
     }
 
     /// <inheritdoc/>

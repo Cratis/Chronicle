@@ -44,6 +44,18 @@ function**:
 The underlying hooks live in `@cratis/arc.react/queries` if you need them
 directly.
 
+Requires Arc 22.112.1 for optional-argument changes to refetch snapshot queries
+and for concurrent same-key readers to settle together. Requires Arc 22.113.1
+for cancellation/unmount scope cleanup. Requires Arc 22.116.1 for observable
+page/size/sort changes to resubscribe and for query hooks to stop showing the
+previous key's data or status after arguments, paging or sorting change. Check
+`npm ls @cratis/arc.react`; upgrade older clients rather than relying on these
+state transitions.
+
+Each key includes arguments, page, size and sorting. A changed key shows that
+key's cached result, or an initial not-ready result, never the old key's rows.
+Two different pages must not share one request or subscription.
+
 ### The result object
 
 Every query hook returns a result carrying:
@@ -70,7 +82,8 @@ states separately instead of collapsing them into "loaded or not":
 | Converged, empty | `hasData` with an empty `data` and no recent command | the designed empty state |
 | Converged, populated | `hasData` with items | the content |
 | Failed | `!isSuccess` / `hasExceptions` / `!isAuthorized` | the matching error affordance |
-| Stale refresh | `isPerforming` while `data` still holds the previous result | keep the old content, indicate refresh |
+| Same-key refresh | `isPerforming` while `data` still holds that key's previous result | keep that content, indicate refresh |
+| Changed arguments/page/sort | new key's cached result, or initial not-ready state | show only the new key's content or a skeleton |
 
 Two consequences. After a create command, take the **window action on the
 command's success** (close the dialog, navigate to the new id) and let the list

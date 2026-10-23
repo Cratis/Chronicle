@@ -31,7 +31,9 @@ One spec in the slice does not cover the others.
 ## Translations
 | Case | Question | Typical shape |
 |---|---|---|
-| happy path | record arrives, our fact recorded | `when capture` -> `then <External>` + `then <Ours>` |
+| first sight | new record key arrives | record `when capture`, `when added` append -> `then <Fact>` and any separate Automation follow-up |
+| update | a field changes for a known key | `given capture` same key's previous record + `when capture`; field-change append holds |
+| consumed public event | capture has `source events` | `given <FromEvent>` / `when append <FromEvent>`, never capture-record fixtures (PLAY0701) |
 | arrives before our entity | the reference is unknown to us | decide: park, reject, or record an orphan fact for follow-up |
 | duplicate delivery | same record again | `given capture` (same record) + `when capture`: nothing new; or constraint rejection on our fact |
 | out of order | an older record after a newer one | `given capture` newer + `when capture` older; expected outcome stated |
@@ -67,4 +69,11 @@ One spec in the slice does not cover the others.
   tool's compiler stops before v6 does it report a false PLAY0285 on a cascade:
   then keep the cascade out of the command spec, specify it in the Automation slice
   (`when append <Trigger>`) and record the expectation. See `cratis-screenplay-scenario-coverage`.
-- `given capture` never persists between specs: state the baseline in each spec that needs it.
+- `given capture` never persists between specs: state the baseline in each record
+  update spec. First records (root, child, nested) are added only; field-change
+  `and`/`or` and transitions need previous state. Expressions/maps/unguarded record
+  appends are unchanged. See captures-and-reactions `references/record-capture-specifications.md`.
+- For `source events`, use prior typed events instead of `given capture`; cover
+  first added, per-key overlays, unchanged input, independent keys and optional
+  foreign `for` unrelated to the content key. Reference execution does not prove
+  capture redelivery deduplication or observer ordering.

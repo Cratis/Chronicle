@@ -9,6 +9,7 @@
  *
  *   Claude PreToolUse  (Write|Edit)  →  Pi `tool_call`      →  cratis-guard-writes.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-store-mutations.sh  (exit 2 = block)
+ *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-secrets.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-pr-body.sh  (exit 2 = block)
  *   Claude PostToolUse (Write|Edit)  →  Pi `tool_result`    →  cratis-pattern-scan.sh  (advisory context)
  *   Claude PostToolUse (Bash)        →  Pi `tool_result`    →  cratis-cleanup-worktrees.sh --hook  (removes delivered worktrees/branches)
@@ -27,11 +28,11 @@
  *
  * Nothing here duplicates corpus content: it is adapter machinery, the Pi peer of the Claude
  * `hooks` block in `.claude/settings.json`. Every environment escape hatch the scripts honor
- * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_ALLOW_STORE_MUTATIONS, CRATIS_HOOKS_SKIP_SCAN,
+ * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_ALLOW_STORE_MUTATIONS, CRATIS_HOOKS_ALLOW_SECRET_READS, CRATIS_HOOKS_SKIP_SCAN,
  * CRATIS_HOOKS_SKIP_GATE, …) still works because the scripts are executed unchanged, in the environment
  * Pi was started from.
  *
- * Only Pi's `bash` tool is bridged to the store-mutation guard. A command the user types directly (`!cmd`,
+ * Only Pi's `bash` tool is bridged to the store-mutation and secrets guards. A command the user types directly (`!cmd`,
  * the `user_bash` event) is the person's own action and is deliberately not guarded.
  */
 
@@ -162,6 +163,19 @@ async function runBlockingGuard(
 	return undefined;
 }
 
+/** Runs the installed blocking Bash guards in order; the first refusal wins. */
+async function runCommandGuards(
+	guards: Array<[script: string, name: string]>,
+	payload: object,
+	ctx: ToolCallContext,
+): Promise<{ block: true; reason: string } | undefined> {
+	for (const [script, name] of guards.filter(([guard]) => isInstalled(guard))) {
+		const blocked = await runBlockingGuard(script, name, "command", payload, ctx);
+		if (blocked) return blocked;
+	}
+	return undefined;
+}
+
 /**
  * Whether a hook script is installed at all.
  *
@@ -187,6 +201,7 @@ export default function (pi: ExtensionAPI) {
 	const scriptsDir = fs.existsSync(managedScriptsDir) ? managedScriptsDir : path.join(bundledCorpusRoot, "hooks", "scripts");
 	const guardWrites = path.join(scriptsDir, "cratis-guard-writes.sh");
 	const guardStoreMutations = path.join(scriptsDir, "cratis-guard-store-mutations.sh");
+	const guardSecrets = path.join(scriptsDir, "cratis-guard-secrets.sh");
 	const guardPrBody = path.join(scriptsDir, "cratis-guard-pr-body.sh");
 	const patternScan = path.join(scriptsDir, "cratis-pattern-scan.sh");
 	const qualityGate = path.join(scriptsDir, "cratis-quality-gate.sh");
@@ -215,10 +230,8 @@ export default function (pi: ExtensionAPI) {
 			const command = (event as any).input?.command;
 			if (typeof command !== "string" || !command.trim()) return;
 			const payload = { cwd: ctx.cwd, tool_name: "Bash", tool_input: { command } };
-			if (isInstalled(guardStoreMutations)) {
-				const blocked = await runBlockingGuard(guardStoreMutations, "cratis-guard-store-mutations", "command", payload, ctx);
-				if (blocked) return blocked;
-			}
+			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"]], payload, ctx);
+			if (blocked) return blocked;
 			if (isInstalled(guardPrBody)) {
 				const run = await runScript(guardPrBody, JSON.stringify(payload), ctx.cwd, ctx.signal);
 				if (run.failed || run.code !== 0) return { block: true, reason: run.stderr.trim() || "cratis-guard-pr-body could not check this command." };
@@ -333,7 +346,10 @@ export default function (pi: ExtensionAPI) {
 		label: "Cratis quality gate",
 		description:
 			"Run the Cratis quality gate (.cratis/ai/hooks/scripts/cratis-quality-gate.sh): the build, spec and lint gates the current " +
-			"working-tree changes touch, configured in quality-gates.json. Runs in the foreground with a deadline and can be cancelled. " +
+			"working-tree changes touch. Shipped defaults: .cratis/ai/hooks/scripts/quality-gates.json; project overrides: " +
+			".cratis/ai/quality-gates.project.json, shallow-merged by gate id (command without requires drops inherited packageScripts). " +
+			"CRATIS_HOOKS_GATES replaces the defaults; project overrides still merge over it. " +
+			"Runs in the foreground with a whole-tool deadline and optional per-gate timeoutSeconds; can be cancelled. " +
 			"A failure, a timeout or a cancellation is returned as an error and means the change is NOT verified. " +
 			"Run it explicitly at a verification checkpoint, not after every prompt. It selects gates for all current " +
 			"working-tree changes, not the complete CI matrix; run CI-equivalent gates before claiming completion or pushing/opening a PR. " +
@@ -379,7 +395,7 @@ export default function (pi: ExtensionAPI) {
 				const last = latestGateLog(gateLogDirectory(sessionId), started);
 				const tail = last ? tailLines(last.file, TAIL_LINES) : "";
 				throw new Error(`The Cratis quality gate TIMED OUT after ${duration(timeoutSeconds * 1000)}${last ? ` while running '${last.gate}'${last.cwd ? ` (cwd: ${last.cwd})` : ""}` : ""}. This is not a pass: nothing was verified.` +
-					(last ? `\n\nGate log: ${last.file}` : "") +
+					(last ? `\nRun a narrower command instead: ${last.gate === "backend-specs" ? "dotnet test <affected.Specs.csproj-or-Tests.csproj> --configuration Debug --no-build (replace the placeholder; repeat for affected dependents)." : "run the affected project alone using this gate's configured command."}\nConfigure it in .cratis/ai/quality-gates.project.json.\n\nGate log: ${last.file}` : "") +
 					(tail ? `\n\n--- last ${TAIL_LINES} lines ---\n${tail}\n--- end ---` : ""));
 			};
 			const reportInterrupted = () => {

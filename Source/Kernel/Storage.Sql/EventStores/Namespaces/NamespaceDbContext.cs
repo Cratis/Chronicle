@@ -99,10 +99,6 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<ObserverHandledCounts.ObserverHandledCountEntry> ObserverHandledCounts { get; set; } = null!;
 
     /// <inheritdoc/>
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default) =>
-        SqlUpserts.SaveChanges(this, () => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
-
-    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

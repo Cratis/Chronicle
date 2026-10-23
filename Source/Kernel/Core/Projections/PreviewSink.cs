@@ -148,6 +148,9 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
         Task.FromResult(_readModels.TryGetValue(key.Value.ToString()!, out var readModel) ? readModel.State : null);
 
     /// <inheritdoc/>
+    public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key) => FindOrDefault(key);
+
+    /// <inheritdoc/>
     public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
         var holding = FindHolding(childPropertyPath, childValue).Select(_ => _.ReadModel).FirstOrDefault();

@@ -49,6 +49,9 @@ operator/kernel surface, not an application-profile layout rule.
   development database ports on loopback only; a host application needing MongoDB
   must be able to reach port 27017. Do not expose unauthenticated MongoDB.
 
+Read references/storage-resolution.md when choosing per-namespace destinations,
+separate schema/runtime identities, SQL schemas, or disabling automatic creation.
+
 ## Supply certificates before starting production
 
 Default TLS needs a PFX certificate with a private key:

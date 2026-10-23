@@ -53,6 +53,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
 
     /// <inheritdoc/>
@@ -112,7 +115,6 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 1 });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -127,7 +129,6 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 2 });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

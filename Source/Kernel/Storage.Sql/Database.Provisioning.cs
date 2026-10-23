@@ -74,10 +74,23 @@ public partial class Database
         // event-store / namespace targets a per-database isolation name that has not
         // been provisioned yet. This mirrors MongoDB, where each event store and each
         // namespace lives in its own database that the kernel creates on first access.
-        await EnsureDatabaseExists(context, target);
-
         var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
         var cacheKey = (migrationLock, key);
+        if (VerifySchema)
+        {
+            if (_migratedKeys.TryGetValue(cacheKey, out var verified) && verified == migrationLock.Generation)
+            {
+                return;
+            }
+
+            // The release-ordered migrator verifies instead of migrating; only a passing check is cached.
+            await EnsureDatabaseExists(context, target);
+            await context.Database.MigrateAsync();
+            _migratedKeys[cacheKey] = migrationLock.Generation;
+            return;
+        }
+
+        await EnsureDatabaseExists(context, target);
         if (_migratedKeys.TryGetValue(cacheKey, out var generation) && generation == migrationLock.Generation)
         {
             return;
@@ -126,6 +139,12 @@ public partial class Database
     /// <exception cref="DatabaseDoesNotExist">The database is missing and storage may not create it.</exception>
     async Task EnsureDatabaseExists(DbContext context, SqlTarget target)
     {
+        if (VerifySchema)
+        {
+            await VerifyDatabase(context, target);
+            return;
+        }
+
         var connectionString = target.ConnectionString;
         var databaseType = connectionString.GetDatabaseType();
         if (databaseType is not DatabaseType.PostgreSql and not DatabaseType.SqlServer)
@@ -158,7 +177,7 @@ public partial class Database
                 return;
             }
 
-            if (databaseType == DatabaseType.SqlServer && options.Value.Storage.CreateIfMissing)
+            if (databaseType == DatabaseType.SqlServer && CanCreateSchema)
             {
                 // Lock in master before probing the target. A peer must not open the new database while
                 // EF is still enabling READ_COMMITTED_SNAPSHOT, which needs exclusive database access.
@@ -185,7 +204,7 @@ public partial class Database
         var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
         if (!await creator.ExistsAsync())
         {
-            if (!options.Value.Storage.CreateIfMissing)
+            if (!CanCreateSchema)
             {
                 throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
             }
@@ -225,10 +244,11 @@ public partial class Database
     /// <param name="context">The <see cref="DbContext"/>.</param>
     /// <param name="target">The <see cref="SqlTarget"/> it connects to.</param>
     /// <param name="databaseType">The <see cref="DatabaseType"/>.</param>
+    /// <param name="verify">Whether schema creation must be refused.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="SchemaDoesNotExist">The schema is missing and storage may not create it.</exception>
     /// <exception cref="DefaultSchemaMismatch">The SQL Server user does not have the schema as its default schema.</exception>
-    async Task EnsureSchema(DbContext context, SqlTarget target, DatabaseType databaseType)
+    async Task EnsureSchema(DbContext context, SqlTarget target, DatabaseType databaseType, bool verify = false)
     {
         var key = $"{target.ConnectionString}|{target.Schema}";
         if (string.IsNullOrEmpty(target.Schema) || _ensuredSchemaKeys.ContainsKey(key))
@@ -243,11 +263,11 @@ public partial class Database
         {
             if (databaseType == DatabaseType.PostgreSql)
             {
-                await EnsurePostgreSqlSchema(connection, database, target.Schema);
+                await EnsurePostgreSqlSchema(connection, database, target.Schema, verify);
             }
             else
             {
-                await EnsureSqlServerSchema(connection, database, target.Schema);
+                await EnsureSqlServerSchema(connection, database, target.Schema, verify);
             }
         }
         finally
@@ -258,9 +278,9 @@ public partial class Database
         _ensuredSchemaKeys.TryAdd(key, true);
     }
 
-    async Task EnsurePostgreSqlSchema(System.Data.Common.DbConnection connection, string database, string schema)
+    async Task EnsurePostgreSqlSchema(System.Data.Common.DbConnection connection, string database, string schema, bool verify)
     {
-        if (options.Value.Storage.CreateIfMissing)
+        if (CanCreateSchema && !verify)
         {
             try
             {
@@ -280,11 +300,11 @@ public partial class Database
         }
     }
 
-    async Task EnsureSqlServerSchema(System.Data.Common.DbConnection connection, string database, string schema)
+    async Task EnsureSqlServerSchema(System.Data.Common.DbConnection connection, string database, string schema, bool verify)
     {
         if (await Scalar(connection, "SELECT COUNT(*) FROM sys.schemas WHERE name = @schema", schema) == 0)
         {
-            if (!options.Value.Storage.CreateIfMissing)
+            if (!CanCreateSchema || verify)
             {
                 throw new SchemaDoesNotExist(database, schema);
             }

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 
@@ -15,6 +16,11 @@ public interface IEventStoreSubscriptionsManager : IGrainWithStringKey
     /// Ensure the existence of the subscriptions manager.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect and nothing to gain from queueing it behind real work.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>

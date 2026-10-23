@@ -53,6 +53,9 @@ public class NullSink : ISink
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);
 
     /// <inheritdoc/>
+    public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key) => FindOrDefault(key);
+
+    /// <inheritdoc/>
     public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue) => Task.FromResult(Option<Key>.None());
 
     /// <inheritdoc/>

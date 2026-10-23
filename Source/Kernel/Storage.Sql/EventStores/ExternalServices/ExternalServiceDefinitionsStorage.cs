@@ -62,7 +62,6 @@ public class ExternalServiceDefinitionsStorage(EventStoreName eventStore, IDatab
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.ExternalServiceDefinitions.Upsert(definition.ToSql());
-        await scope.DbContext.SaveChangesAsync();
         await NotifyChange();
     }
 

@@ -23,25 +23,7 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
 
         var entry = ReplayedModelsConverters.ToReplayedModelOccurrence(occurrence);
 
-        // Recording the same replay again - a retried grain state write - updates the row it already has.
-        // Matched in memory because not every provider translates DateTimeOffset comparisons.
-        var existing = (await scope.DbContext.ReplayedModels
-            .Where(_ => _.ObserverId == entry.ObserverId)
-            .ToListAsync())
-            .FirstOrDefault(_ => _.Started == entry.Started);
-        if (existing is null)
-        {
-            scope.DbContext.ReplayedModels.Add(entry);
-        }
-        else
-        {
-            existing.ReadModelIdentifier = entry.ReadModelIdentifier;
-            existing.Generation = entry.Generation;
-            existing.ReadModelName = entry.ReadModelName;
-            existing.RevertModelName = entry.RevertModelName;
-        }
-
-        await scope.DbContext.SaveChangesAsync();
+        await scope.DbContext.ReplayedModels.Upsert(entry);
     }
 
     /// <inheritdoc/>

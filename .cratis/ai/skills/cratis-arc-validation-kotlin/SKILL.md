@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-validation-kotlin
-description: Add a rejection rule to a Cratis Arc command or query in Kotlin or Java — FluentModelValidator shared rules that also emit TypeScript, plus the server-only CommandValidator, QueryValidator, ConceptValidator, and ModelValidator. Use when a Kotlin or Java Arc command or query must refuse work under some condition. Do not use to define a new command or query, and do not use for append-time Chronicle constraints.
+description: Add a rejection rule to a Cratis Arc command or query in Kotlin or Java — FluentModelValidator shared rules that also emit TypeScript, plus the server-only CommandValidator, QueryValidator, ConceptValidator, and ModelValidator. Use when expressing JVM rejection checks with FluentModelValidator or Kotlin/Java server validators for Arc commands and queries. Do not use for C# rejection placement (use cratis-arc-command-validation) or Node.js ruleFor (use cratis-arc-validation-typescript); new command shapes belong to cratis-arc-command-kotlin, append-time uniqueness to cratis-chronicle-event-constraints.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-validation-kotlin/SKILL.md -->

@@ -10,11 +10,18 @@ using DotNet.Testcontainers.Networks;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public sealed class SqlCluster(bool postgres) : IAsyncDisposable
+public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisposable
 {
+    /// <summary>
+    /// The image of the build under test, from the environment when CI supplies one.
+    /// </summary>
+    public static readonly string CurrentImage = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
+
+    readonly string _image = image ?? CurrentImage;
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly List<IContainer> _nodes = [];
     readonly List<int> _ports = [];
+    readonly SqlClusterLogs _logs = new();
     readonly string _id = $"sql-clustering-{Guid.NewGuid():N}";
     SqlClusterDatabase _database = null!;
 
@@ -31,9 +38,28 @@ public sealed class SqlCluster(bool postgres) : IAsyncDisposable
         _database = new(postgres, _network);
         await _database.Start(timeout.Token);
         _ports.AddRange(Enumerable.Range(0, 3).Select(_ => FreePort()));
-        _nodes.AddRange(Enumerable.Range(0, 3).Select(BuildNode));
+        _nodes.AddRange(Enumerable.Range(0, 3).Select(index => BuildNode(index, _image)));
         await Task.WhenAll(_nodes.Select(node => node.StartAsync(timeout.Token)));
         await WaitForMembership(entries => entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 3, TimeSpan.FromMinutes(1));
+    }
+
+    /// <summary>
+    /// Replaces a node with a container running another image, the way a rolling deployment replaces a pod: the old
+    /// silo leaves gracefully and a new one joins under the same host name and client port.
+    /// </summary>
+    /// <param name="index">The node to replace.</param>
+    /// <param name="replacementImage">The image the replacement runs.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task Replace(int index, string replacementImage)
+    {
+        var previous = _nodes[index];
+        await previous.StopAsync().WaitAsync(TimeSpan.FromSeconds(90));
+        await _logs.CaptureReplaced(previous);
+        await previous.DisposeAsync();
+
+        var replacement = BuildNode(index, replacementImage);
+        _nodes[index] = replacement;
+        await replacement.StartAsync().WaitAsync(TimeSpan.FromMinutes(3));
     }
 
     public async Task<IReadOnlyList<MembershipEntry>> WaitForMembership(Func<IReadOnlyList<MembershipEntry>, bool> predicate, TimeSpan timeout)
@@ -55,14 +81,7 @@ public sealed class SqlCluster(bool postgres) : IAsyncDisposable
         throw new TimeoutException("SQL membership did not converge.");
     }
 
-    public async Task DumpLogs()
-    {
-        foreach (var node in _nodes)
-        {
-            var logs = await node.GetLogsAsync();
-            Console.WriteLine($"{node.Name} STDOUT:\n{logs.Stdout}\nSTDERR:\n{logs.Stderr}");
-        }
-    }
+    public Task DumpLogs() => _logs.Dump(_nodes, Console.Out);
 
     public async ValueTask DisposeAsync()
     {
@@ -79,8 +98,7 @@ public sealed class SqlCluster(bool postgres) : IAsyncDisposable
         await _network.DisposeAsync();
     }
 
-    IContainer BuildNode(int index) => new ContainerBuilder(
-            Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development")
+    IContainer BuildNode(int index, string nodeImage) => new ContainerBuilder(nodeImage)
         .WithHostname($"sql-node-{index}")
         .WithCreateParameterModifier(parameters => parameters.StopTimeout = TimeSpan.FromSeconds(90))
         .WithNetwork(_network)

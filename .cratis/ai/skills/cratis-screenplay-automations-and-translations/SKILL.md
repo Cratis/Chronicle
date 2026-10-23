@@ -13,37 +13,41 @@ guarantees. Then write it as `Automation` and `Translate` slices that say truthf
 protected, what is only recorded, and who acts. Grammar depth is in
 `cratis-screenplay-captures-and-reactions`; this skill owns the decisions.
 
-**Translation crosses an application boundary:** inbound turns outside data or foreign
-public events into private local facts; outbound publishes private facts as one local public
-event type. Declare `direction inbound|outbound` when public metadata is used; omission
-preserves inbound for translations without a declared direction. Private-to-private follow-up is an
-Automation (`produces` or `invokes`), even when a Chronicle reactor realizes it.
-Read [public events and direction](references/public-events-and-direction.md) for released
-ESM v9 forms, event-target folds, publication specifications and the Unsupported capture limit.
+**Translation crosses an application boundary:** private-to-private follow-up is
+Automation, even if a reactor realizes it. Keep captures in Translate and reactions
+to their local facts in separate Automation slices. Read
+[public events and direction](references/public-events-and-direction.md) when
+choosing direction, folding events or specifying publication: it owns the ESM v9
+forms, PLAY0616 and directionless Translate's PLAY0694 split boundary.
+Requires Screenplay 4.176.0 or later (`screenplay --version`) for PLAY0694; older compilers leave that directionless shape unchecked.
 One `source events` capture reads one origin (event store); split several origins.
 Requires Screenplay 4.155.0 (`screenplay --version`) for PLAY0687; older tools leave it unchecked.
 
-Work in the model first. Code appears only where it is truly needed: the external call, the
-source adapter, the trusted actor, and everything Stage cannot render (below). Session and
-verdict discipline: `cratis-screenplay-modeling-lifecycle`; tools, versions and verdicts V1 to V5:
-`cratis-screenplay-toolchain`. When you add or change a reaction or capture, resolve its input,
-identity, effect and pending-work contract at that point; do not postpone it to the final review.
+Model behavior first; code implements external calls, adapters, actors and refused
+target scope. Follow `cratis-screenplay-modeling-lifecycle` for session discipline
+and `cratis-screenplay-toolchain` for verdicts. Settle input, identity, effect and
+pending-work contracts when changing each reaction/capture, not at final review.
 
 ## Tool and realization facts (read before promising anything)
-- Reactions, clocks, triggers, captures and Automation/Translate slices compile (V1) and bind (V3)
-  as ESM v6: the standalone tool and a CLI whose bundled compiler admits v6. A compiler that
-  stops before v6 reports PLAY0268 at binding: report "V3 blocked: PLAY0268 (ESM v6)" and
-  name the tool, never remove them.
-- The pinned standalone tool runs admitted scenarios through `screenplay test` or MCP
-  `run-specifications`; source validation and render publication do not run V4.
-- A renderer can refuse Automation/Translate members (STAGE-ESM-024) it does not realize.
-  Deliver that scope as authorized gap-fill
-  (`references/realization-and-gap-fill.md`).
-- Reaction `runs as system role "<Role>"` declares an invocation actor (ESM v10).
-  Without it the invoke has no caller. A compiler or renderer that stops before v10
-  rejects the syntax (PLAY0137) or refuses it at render admission (CLI-RENDER-004). The CLI/Stage pair (toolchain
-  `references/renderable-subset.md`) renders role/authenticated reaction identity; claim-reading/opaque gates retain STAGE-ESM-034. Checked model/diagnostics: captures-and-reactions
-  `references/invocation-identity.md`.
+- V1, V3, V4 and target rendering are separate; name the compiler and never remove
+  a refused construct. Run `screenplay test` or MCP `run-specifications` for V4.
+- Read [realization and gap-fill](references/realization-and-gap-fill.md) before
+  promising Automation/Translate delivery (STAGE-ESM-024).
+- Invokes have no caller without `runs as`. Read captures-and-reactions
+  [invocation identity](../cratis-screenplay-captures-and-reactions/references/invocation-identity.md)
+  for the ESM v10 actor and role/authenticated versus claim/opaque admission.
+
+## Atomic production boundaries and source identity
+
+Start new models with application-root `reaction batches atomic` (ESM v22 or later).
+Each trigger occurrence's direct productions and each selected refusal branch are
+separate all-or-none batches; invoked commands remain independent. Absence retains
+legacy per-fact behavior even at later versions. Assert no failed-batch facts and
+unchanged views, not only `then error`. Requires Stage 4.139.0 for v22 admission
+(older: -016); atomic mode stays STAGE-ESM-043. Keep as gap-fill.
+Read [atomic batches and source mappings](../cratis-screenplay-captures-and-reactions/references/atomic-batches-and-source-mappings.md)
+when choosing these boundaries or mapping an invoked identifier from `$eventSourceId`
+(or `$eventContext.eventSourceId`) instead of copying it into event payload.
 
 ## Effect guarantees and recovery traps
 | Guarantee | What it promises | What can show it |
@@ -103,19 +107,9 @@ of each, and how each record finds our entity (the correlation strategy); and fo
 occurrence, the effect and who acts. Cite existing answers instead of asking again. Missing
 correlation is the most common cause of failed integrations: surface it first.
 
-**Critical questions** (ask one group at a time; follow up from the answer; accept "unsure" as an
-open question, not an invented answer):
-1. **Sources.** "Which systems send us facts? For each: name, record types, channel (webhook, poll,
-   topic, file), format, who authenticates it?" Follow-up per system: "Does the record carry our
-   entity id, or do we need to remember their id against ours?"
-2. **Mapping.** "For the hardest record: does it map directly to one fact of ours, need several
-   facts, or need data we already hold?" Follow-up if not direct: "What do we look up, and what
-   happens when the record arrives before that data exists?"
-3. **Automations.** "What happens on its own after <fact>? Can it fail, wait, or need a person? What
-   do people see meanwhile? Who is allowed to do it?" Follow-up: "What makes it stop? What if it ran
-   twice?"
-4. **Recovery.** "Which records or steps can we not accept, and who fixes them, how, and how does
-   processing resume?"
+Read [integration interview prompts](references/integration-interview.md) when
+sources, mapping, automation ownership or recovery are unsettled. Ask one group at
+a time; treat "unsure" as an open question.
 
 **Unattended:** assume visibly. Record each assumption as a labelled open decision in `STATE.md`
 (`.ai-work/screenplay/<model-slug>/STATE.md`), mark the dependent slice open, never write a mapping
@@ -156,7 +150,8 @@ or actor that nobody confirmed. Read `references/worked-integration.md` when you
 7. **Translate outside facts** (`references/translation-patterns.md`): enter only via `capture` or a
    translator reaction, in a `Translate` slice; correlate first; keep the external fact distinct from
    ours; trace source fields *and* every required target field; decide dedup, ordering and recovery
-   ownership. A worker after translation needs a distinct local decision, obligation or effect.
+   ownership. A reaction to a capture's local fact is a separate Automation, not a
+   second job inside Translate. A worker after translation needs a distinct local decision, obligation or effect.
 8. **Specify and audit.** Work through `references/cases-to-specify.md` per declaration and hand the
    named cases to `cratis-screenplay-scenario-coverage`. Produce the audit in `references/audit-format.md`.
 
@@ -168,9 +163,17 @@ or actor that nobody confirmed. Read `references/worked-integration.md` when you
 - Clock triggers take no values (PLAY0450) and no `by` on reads (PLAY0443). `for each <View>` is
   reserved, not available.
 - Capture `when` cannot mix `and` and `or` (PLAY0089). A capture without `key` does not bind.
+- For `source events`, `key` is a required property on every `from` event (PLAY0700);
+  specs supply `given <Event>` / `when append <Event>`, not capture records (PLAY0701).
+- First sight is `added` only. Use `when added` separately for initial facts; seed
+  record updates with `given capture` of the same key. Read captures-and-reactions
+  `references/record-capture-specifications.md` for the prerequisite and child/nested rules.
 - Current V1 warns on undeclared capture/removal events (PLAY0166); V3 remains a
   separate binder check.
-- A trigger with `reads` that `produces` directly fails binding: decide in a command. `reads` never protects.
+- A trigger with `reads` that `produces` directly fails binding: decide in a command.
+  Command reads can protect with `command reads protected` and admitted shapes (v25);
+  trigger reads cannot. Stage 4.138.0 renders protected reads as Arc read protection (`cratis render` gets it from the first CLI that bundles it; CLI 3.75.0 refuses them with STAGE-ESM-044);
+  semantic execution is separate from generated-app protection.
 - An authorized command exercised in a spec without `given caller` is PLAY0389 at binding.
 - A list query (`=> Item[]`) binds (a snapshot list is not rendered, `STAGE-ESM-010`);
   a clock sweep that iterates items needs a code body the reference does not run

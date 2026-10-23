@@ -20,6 +20,10 @@ public partial class EventSequenceStorage
             return null;
         }
 
+        var latest = stored.Revisions.LastOrDefault();
+        var revisedKey = latest?.EventTypeGeneration.ToString();
+        var revisedContent = revisedKey is not null && latest!.Content.TryGetValue(revisedKey, out var document) ? EventContentBson.ToJson(document) : null;
+
         return new(
             sequenceNumber,
             stored.Type,
@@ -28,7 +32,9 @@ public partial class EventSequenceStorage
             stored.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null,
             stored.Content.ToDictionary(_ => new EventTypeGeneration(uint.Parse(_.Key)), _ => EventContentBson.ToJson(_.Value)),
             stored.Revisions.Count(),
-            string.Empty);
+            string.Empty,
+            revisedContent is null ? null : latest!.EventTypeGeneration,
+            revisedContent);
     }
 
     /// <inheritdoc/>

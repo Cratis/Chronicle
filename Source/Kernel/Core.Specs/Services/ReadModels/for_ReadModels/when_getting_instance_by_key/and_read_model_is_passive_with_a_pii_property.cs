@@ -66,6 +66,7 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
         _service = new ReadModels(
             _grainFactory,
             _storage,
+            _readBindings,
             _expandoObjectConverter,
             _reducerMediator,
             _changesetMediator,

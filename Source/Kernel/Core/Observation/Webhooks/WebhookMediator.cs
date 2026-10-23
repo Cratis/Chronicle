@@ -75,7 +75,10 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         }
         catch (Exception error)
         {
-            return new(EventSequenceNumber.Unavailable, error);
+            var rejection = FindTargetRejection(error);
+            return rejection is not null
+                ? new(EventSequenceNumber.Unavailable, rejection) { FailurePolicy = WebhookDeliveryFailurePolicy.PauseObserver }
+                : new(EventSequenceNumber.Unavailable, error);
         }
     }
 
@@ -102,6 +105,17 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         }
 
         return null;
+    }
+
+    static WebhookTargetRejected? FindTargetRejection(Exception error)
+    {
+        if (error is WebhookTargetRejected rejection) return rejection;
+        if (error is AggregateException aggregate)
+        {
+            return aggregate.InnerExceptions.Select(FindTargetRejection).FirstOrDefault(rejection => rejection is not null);
+        }
+
+        return error.InnerException is { } inner ? FindTargetRejection(inner) : null;
     }
 
     WebhookDeliveryResult DeliveryRejected(HttpResponseMessage response, WebhookTarget target, AppendedEvent[] batch)

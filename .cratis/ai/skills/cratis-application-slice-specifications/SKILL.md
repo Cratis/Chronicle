@@ -1,6 +1,6 @@
 ---
 name: cratis-application-slice-specifications
-description: Specify the backend behavior of an event-sourced Cratis application slice — plain-call specs for pure decisions, plus CommandScenario, EventScenario, ReadModelScenario and ReactorScenario where the pipeline, validation, constraints or projections matter — including what to cover for each slice type and where the specification files live. Use when adding or changing backend behavior in an application built on Cratis. Do not use for framework library specifications and do not use for frontend behavior.
+description: Specify the backend behavior of an event-sourced Cratis application slice — plain-call specs for pure decisions, plus CommandScenario, EventScenario, ReadModelScenario and ReactorScenario where the pipeline, validation, constraints or projections matter — including what to cover for each slice type and where the specification files live. Use when choosing backend plain-call coverage versus CommandScenario, EventScenario, ReadModelScenario or ReactorScenario for an event-sourced slice. Do not use for frontend interactions (use cratis-application-react-specifications) or framework unit-spec mechanics (use cratis-specifications-csharp).
 license: MIT
 metadata:
   cratis-hint-paths: "**/when_*/**/*.cs **/for_*/**/*.cs"
@@ -202,9 +202,10 @@ produces. Pin an instance only when the events would be noise.
 Both builder methods return `void`; there is nothing to await.
 
 That is **legacy** read-model mode: seeded events populate an in-memory model,
-not the append log. For protected or stream decisions call `UseDecisionReads()`
-before seeding; actual events and decisions then share one in-process log.
-Pinned models cannot supply decision guards. Read
+not the append log. A command under read protection `On`, with a per-stream model or
+with `[ProtectedDecision]` selects the decision mode itself (no `UseDecisionReads()`
+call); actual events and decisions then share one in-process log. Pinned models
+cannot supply decision guards. Read
 [query and decision scenarios](references/query-and-decision-scenarios.md) when
 specifying query pipelines, routed conflicts, projection admission or completion.
 

@@ -55,7 +55,7 @@ internal sealed class PartitionedDeliveryScheduler : IDisposable
         {
             var key = MaxConcurrentPartitions == 1 ? SerialKey : partition;
             var previous = _tails.TryGetValue(key, out var tail) ? tail : _barrier;
-            var task = Task.Run(() => Run(previous, work, useSlot: true));
+            var task = StartDetached(() => Run(previous, work, useSlot: true));
             _tails[key] = task;
             _ = task.ContinueWith(
                 _ =>
@@ -85,7 +85,7 @@ internal sealed class PartitionedDeliveryScheduler : IDisposable
         lock (_lock)
         {
             var drain = Task.WhenAll(_tails.Values.Append(_barrier).ToArray());
-            var task = Task.Run(() => Run(drain, work, useSlot: false));
+            var task = StartDetached(() => Run(drain, work, useSlot: false));
             _barrier = task;
             _tails.Clear();
             return task;
@@ -131,6 +131,37 @@ internal sealed class PartitionedDeliveryScheduler : IDisposable
     {
         Stop();
         _slots.Dispose();
+    }
+
+    /// <summary>
+    /// Starts work without the caller's execution context.
+    /// </summary>
+    /// <param name="work">The work to start.</param>
+    /// <returns>The started work.</returns>
+    /// <remarks>
+    /// Work is scheduled from whatever context delivered the batch, such as a stream reader started inside an HTTP
+    /// request that made the client connect. Handlers must never see that caller's ambient state, for example an
+    /// HTTP context accessor pointing at a disposed request, so the work starts with a clean execution context.
+    /// </remarks>
+    static Task StartDetached(Func<Task> work)
+    {
+        if (ExecutionContext.IsFlowSuppressed())
+        {
+            return Task.Run(work);
+        }
+
+        Task started;
+        var flow = ExecutionContext.SuppressFlow();
+        try
+        {
+            started = Task.Run(work);
+        }
+        finally
+        {
+            flow.Undo();
+        }
+
+        return started;
     }
 
     async Task Run(Task previous, Func<Task> work, bool useSlot)

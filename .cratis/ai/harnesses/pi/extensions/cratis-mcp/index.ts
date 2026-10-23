@@ -8,8 +8,10 @@ import { fileURLToPath } from 'node:url';
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { ConnectionFailure } from './ConnectionFailure.ts';
 import { object, selectedServer } from './configuration.ts';
-import { startConnection, supportsNoModelStartup } from './process.ts';
+import type { CorpusServer } from './CorpusServer.ts';
+import { startConnection, startServer, supportsNoModelStartup } from './process.ts';
 import { discover, failedResult, mapResult } from './protocol.ts';
+import { createServerBridge } from './ServerBridge.ts';
 import type { DiscoveredTool } from './DiscoveredTool.ts';
 import type { StdioConnection } from './StdioConnection.ts';
 
@@ -17,7 +19,8 @@ const extensionDirectory = dirname(fileURLToPath(import.meta.url));
 const bundledCorpus = resolve(extensionDirectory, '..', '..', '..', '..');
 
 /** Native tools go through Pi's tool_call restrictions and normal execution/result pipeline. */
-export function registerBridge(pi: ExtensionAPI, corpus: string, connect = startConnection, checkVersion = supportsNoModelStartup): void {
+export function registerBridge(pi: ExtensionAPI, corpus: string, connect = startConnection, checkVersion = supportsNoModelStartup, connectServer: (project: string, server: CorpusServer) => StdioConnection = startServer): void {
+    const servers = createServerBridge(pi, corpus, connectServer);
     let connection: StdioConnection | undefined;
     let selectionKey: string | undefined;
     let attempted = false;
@@ -150,9 +153,15 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
         }
     };
 
-    pi.on('session_start', (_event, context) => refresh(context, true));
-    pi.on('before_agent_start', async (_event, context) => { await refresh(context); });
-    pi.on('session_shutdown', () => { dispose(); failures.clear(); });
+    // Screenplay and the other corpus servers fail independently; the first failure is surfaced after both ran.
+    const refreshAll = async (context: ExtensionContext, newSession: boolean): Promise<void> => {
+        const outcomes = await Promise.allSettled([refresh(context, newSession), servers.refresh(context, newSession)]);
+        const failed = outcomes.find(outcome => outcome.status === 'rejected');
+        if (failed) throw failed.reason;
+    };
+    pi.on('session_start', (_event, context) => refreshAll(context, true));
+    pi.on('before_agent_start', async (_event, context) => { await refreshAll(context, false); });
+    pi.on('session_shutdown', () => { dispose(); servers.dispose(); failures.clear(); });
     pi.on('tool_result', event => {
         if (!registered.has(event.toolName)) return;
         const failure = failures.get(event.toolCallId);

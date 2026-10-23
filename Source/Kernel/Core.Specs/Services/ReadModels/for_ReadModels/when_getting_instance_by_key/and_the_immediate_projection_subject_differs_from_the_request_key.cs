@@ -75,7 +75,7 @@ public class and_the_immediate_projection_subject_differs_from_the_request_key :
         _grainFactory.GetGrain<IImmediateProjection>(Arg.Any<string>()).Returns(immediateProjection);
 
         _complianceHelper = new ReadModelsCompliance(manager, new ExpandoObjectConverter(new TypeFormats()));
-        _service = new ReadModels(_grainFactory, _storage, _expandoObjectConverter, _reducerMediator, _changesetMediator, _localSiloDetails, _complianceHelper, _materializedReadModels, new JsonSerializerOptions());
+        _service = new ReadModels(_grainFactory, _storage, _readBindings, _expandoObjectConverter, _reducerMediator, _changesetMediator, _localSiloDetails, _complianceHelper, _materializedReadModels, new JsonSerializerOptions());
     }
 
     async Task Because()

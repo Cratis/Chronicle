@@ -15,8 +15,9 @@ focused assertions.
 
 Read [query and decision scenarios](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
 when specifying query emissions, routed conflicts or protected projection reads.
-Call `UseDecisionReads()` before seeding actual events; pinned models cannot
-supply a guard. `Perform`/`Observe` need configured services/principal, and
+Seed actual events for a guarded command; pinned models cannot supply a guard.
+`new CommandScenario<T>()` selects the in-process decision log from the command's
+read-protection mode and dependencies, so `UseDecisionReads()` is not called. `Perform`/`Observe` need configured services/principal, and
 MongoDB observations still need real infrastructure.
 
 ## Verified product sources

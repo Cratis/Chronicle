@@ -57,8 +57,10 @@ Sources: `Arc.Core/Queries/QueryStringQueryRequestReader.cs`,
 
 ## Which return shapes page
 
-A query is a public static method on the `[ReadModel]` type, discovered by its
-return type.
+A query is an eligible public or internal static method on the `[ReadModel]`
+type, discovered by its return type. Internal visibility does not hide an
+endpoint; keep helpers outside that type. Read **cratis-chronicle-read-model**'s
+query reference for explicit `[Query]` discovery and older-version limits.
 
 | Return | Paged? | How |
 | --- | --- | --- |

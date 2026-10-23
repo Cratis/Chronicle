@@ -1,0 +1,37 @@
+# cratis-ai-managed: skills/analyzing-dotnet-performance/NOTICE
+.NET Performance Patterns
+Copyright (c) .NET Foundation and Contributors
+Licensed under the MIT License. See LICENSE.
+
+Upstream source: https://github.com/dotnet/skills/blob/a6bf43ab61967c30919334986515163ab24d7635/plugins/dotnet-diag/skills/analyzing-dotnet-performance/SKILL.md
+
+Changes made by Cratis:
+
+LICENSE:
+- Copy upstream MIT license and copyright verbatim.
+
+SKILL.md:
+- Replace "I/O" with "input/output" in the description to satisfy the neutral-voice rule.
+- Normalize frontmatter serialization, add MIT license where absent; preserve name and description.
+- Add marked modification/source comment and applicability/Cratis precedence line.
+- Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
+
+references/structural-patterns.md:
+- Qualify sealing advice to preserve published framework/library public API compatibility.
+
+references/async-patterns.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/collections-and-linq.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/critical-patterns.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/io-and-serialization.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+references/memory-and-strings.md:
+- Add or normalize the top Contents list from existing headings; preserve section content.
+
+NOTICE: Add this attribution, change list, and any download/execution disclosure.

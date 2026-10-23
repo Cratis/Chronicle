@@ -6,8 +6,7 @@ using Cratis.Chronicle.Concepts.Observation;
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes.for_ObserverKeyIndexes.when_getting_keys;
 
 /// <summary>
-/// An empty type list has always enumerated no keys on SQL, whereas MongoDB enumerates every key for it. Introducing
-/// the scope keeps that as it is; changing it is a behavior change for observers subscribed to all events.
+/// A wildcard scope enumerates every event source's key without narrowing by event type, matching MongoDB.
 /// </summary>
 public class and_the_scope_is_a_wildcard : given.events_of_two_types_from_two_event_sources
 {
@@ -15,5 +14,5 @@ public class and_the_scope_is_a_wildcard : given.events_of_two_types_from_two_ev
 
     async Task Because() => _keys = await KeysOf(await IndexesFor(_namespace.Value).GetFor(_observerKey, ObserverReaderScope.Wildcard));
 
-    [Fact] void should_enumerate_no_keys_as_it_did_for_an_empty_type_list() => _keys.ShouldBeEmpty();
+    [Fact] void should_enumerate_every_event_source_key() => _keys.ShouldContainOnly([_firstSource.Value, _secondSource.Value]);
 }

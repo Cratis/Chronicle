@@ -1,14 +1,14 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-slice-design/references/worked-example.md -->
 # Worked example: parcel lockers (design mode)
 
-One complete model for `cratis-screenplay-slice-design`. It is in **design mode**: V1 clean
-(compiles with warnings as errors); V3 is blocked on purpose by the `ListLockers` list query
-(`PLAY0268` at binding); `given clock` also failed binding on a cratis before 3.28.2 bundle (3.28.2 binds it)
-(`cratis-screenplay-toolchain` `SKILL.md`). Personas and screens are informational.
-The stored-state rules in `AssignLocker` (`reads` + `require`) are intent, not enforced today,
-and they also fail binding on their own: `PLAY0271` on each `reads`, and `PLAY0268` because the
-`require` operands (`locker.assigned`, `request.state`) must be command properties. So this
-document is design mode as a whole: V3 is blocked twice over and no specification runs here.
+One complete legacy design-mode control for `cratis-screenplay-slice-design`, without
+`command reads protected`. Its reads and read paths retain PLAY0271/PLAY0268, so no
+specification runs here. List queries and clock fixtures bind on an admitting compiler;
+they are not the remaining blocker. Personas and screens are informational.
+Eligible command reads can opt into v25; inspect every projection/key/removal before
+migration and keep the separate rendering result (Stage 4.138.0 renders protected reads, STAGE-ESM-044 otherwise; the v25 pair itself is admitted). Read
+[protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md).
+The unenforced descriptions below refer to this legacy control, not all command reads.
 The specifications still seed every read-model source (`LockerInstalled`, `LockerRequested`,
 complete givens) so they are the right form once binding is possible.
 Lineage matrix: `field-lineage.md`. State-transition table and rule coverage: `slicing.md`.

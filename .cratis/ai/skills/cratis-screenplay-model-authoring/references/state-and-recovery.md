@@ -5,10 +5,33 @@ This reference holds identity-state, journal and recovery rules and the readines
 
 ## Preserve state and recover explicitly
 
+`.screenplay/` is tool-owned; the only authored file beside it is `screenplay.json`, the validation gate, which no MCP operation writes.
 Commit `.screenplay/identities.json` with the model. Only `apply` writes it;
 `open-workspace` never creates it; text-only models have none. Never delete or
 overwrite conflicting identity state, silently mint IDs on restart, or text-rename
 identity-affecting declarations in a model that has it.
+
+An unbound workspace materializes collision-free deterministic Module, Feature
+and Slice identities in memory when every document parses and places. Application
+notes already anchor before binding. Opening never writes state; `apply`,
+including a notes-only apply, persists these assignments. Binding preserves their
+IDs and origins, and rename/move proposals carry identities and notes before
+first binding. Read `containerIdentities` from `open-workspace` / `workspace-state`
+and the [notes guidance](model-notes.md#anchors-and-independent-state) for
+ambiguity, collision and incomplete-source refusals.
+
+Reopening persisted unbound state admits only deterministic container additions:
+every document must parse and place; every previous assignment must still be
+present in source; earlier IDs, origins, event revisions, document mappings and
+application metadata must be unchanged. Other drift still requires reconciliation.
+A supplied `workspaceJson` cannot replace different persisted identity authority.
+Fix binding errors through MCP proposals: an external fix after a partial catalog
+was persisted can add bound identities on reopen and require reconciliation.
+Never delete state to bypass that refusal.
+
+A notes apply journals the sidecar and any new container identities together;
+rollback restores exact earlier identity bytes as well as notes, including an
+earlier catalog without those containers.
 
 Default root discovery preserves ancestor identity state and journals. Inspect
 `rootBindingConflict` in `open-workspace`/`workspace-state` when several state roots

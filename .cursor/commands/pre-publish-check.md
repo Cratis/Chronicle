@@ -1,0 +1,1 @@
+../../.cratis/ai/prompts/pre-publish-check.prompt.md

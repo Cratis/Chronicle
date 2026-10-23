@@ -3,9 +3,11 @@
 
 ## Contents
 
+- Default shell
 - One complete shell
 - Navigation regions: inherit, extend or override
 - Toolbar buttons that invoke a State Change slice
+- Feature and module toolbars
 - Template references, categories and blueprints
 - Sample data packs
 - Shapes the compiler refuses
@@ -20,6 +22,12 @@ older compiler answers `PLAY0001`, `PLAY0022` or `PLAY0103` for the lines below;
 Every construct here is authoring syntax. The executable model defers it (`PLAY0269`), Stage plans it from the syntax
 tree, and none of it changes a backend. The Scene designer, the Stage runtime and Studio read the same lines, so the
 Screenplay is the one place to write them.
+
+## Default shell
+
+Requires Stage 4.189.3 or later (the CLI that bundles it) for a rendered frontend to get a default application shell without a
+`layout` or `ui profile`. Declare a `layout` and a `ui profile` only to customize that shell
+(navigation, logo, templates, sample data), as below.
 
 ## One complete shell
 
@@ -42,7 +50,7 @@ layout AppShell
 
 ui profile Desktop
   target platform web
-  layout AppShell
+  root template AppShell
 
   packages
     core
@@ -167,8 +175,62 @@ own.
 - `item` entries (`action`, `navigate to`, `dialog`) stay valid beside buttons. Use `button` to start a slice, and
   `item ... navigate to` to go to a screen.
 
+### Application-level buttons
+
+A layout's `navigation topbar` region takes the same `button` line once for the whole application, so an action stays at hand
+whichever page the user is on. An indented `authorize <Policy>` line under a button limits who sees it. A module's
+`navigation topbar extends|overrides|inherits` governs the buttons as it does the items. A button in `navigation sidebar` is
+`PLAY0741`. The slice rules above (`PLAY0761`-`PLAY0765`) apply unchanged (decision 0098).
+
+```text
+layout AppShell
+  category application
+  topbar
+  navigation contributes Navigation
+  content
+  navigation topbar
+    item shop title "Shop" target Shop
+    button newProduct title "New product" slice Merchandising.Products.DraftProduct emphasis primary icon plus
+      authorize CanCurateCatalog
+```
+
 ⚠️ When a screen uses a `template`, put the `toolbar` inside a slot body (`body` above). Stage refuses a screen that
 mixes a top-level `template` directive with other top-level directives.
+
+## Feature and module toolbars
+
+Requires Screenplay 4.238.0 or later (`screenplay --version`); an older compiler refuses `toolbar` in a `feature` or `module`.
+
+A template declares a `toolbar` slot. When the same actions belong to every screen of a feature, write the toolbar once on the
+`feature` (or on the `module` for every feature below it) instead of repeating it on each screen: the entries are contributed to
+the `toolbar` slot of every screen beneath it, sub features included, after the screen's own entries (the nearer toolbar comes
+later), and each entry runs one command of the feature. A screen that needs its own buttons keeps its own `toolbar`.
+
+```text
+module Merchandising
+  feature Publication
+    toolbar actions
+      button approve title "Approve product" slice Merchandising.Publication.ApproveProductForSale emphasis primary icon check
+      button withdraw title "Withdraw product" slice Merchandising.Publication.WithdrawProduct emphasis quiet icon ban
+        confirm "Take this product off sale?"
+      item archive action ArchiveProduct
+        label "Archive"
+        icon archive
+```
+
+- The lines are the ones of a screen toolbar: `item <id> action <Command>` and `button <id> title "<text>" slice <Slice>`, with
+  the `PLAY0761`-`PLAY0765` rules above.
+- `confirm "<text>"` (or a `$strings.<key>` token) is an optional child line of an `item` and of a `button`: the user confirms
+  before the command runs or before the button's dialog opens. Use it for destructive or hard-to-undo commands, not for every entry.
+- An `item ... action <Command>` must name a command that a slice of the feature (or module) declares; otherwise the compiler
+  warns that the command is not the feature's. Fix the name or move the toolbar to the feature that owns the command; never silence the warning.
+- Choose the feature toolbar when the buttons act on the feature as a whole (approve, withdraw, new). A button that needs the row
+  the user picked (a row action) stays an `item ... action` on the screen's table or list, because the toolbar has no row.
+- Preview and Play open the command's form dialog for an entry (or run it after the confirmation); Studio's feature editor has a
+  Toolbar section that adds a button and links it to a command of the feature. All of it is authoring syntax like every screen
+  construct: the printer writes it back where it was written.
+- Verify: `screenplay <model> --warnaserror` is clean (no warning about a command the feature does not declare), then Preview or Play a screen of the feature and see the
+  buttons in the template's toolbar; a destructive one asks first.
 
 ## Template references, categories and blueprints
 
@@ -298,5 +360,6 @@ pass. Propose, show the difference, apply, reopen. Details: `cratis-screenplay-m
 - [ ] Hierarchy is in the sidebar; sub-items target features of the parent's module.
 - [ ] Every button names a State Change slice; none is left without a slice.
 - [ ] A screen with a `template` keeps its toolbar inside a slot body.
+- [ ] Buttons shared by every screen of a feature sit in a feature `toolbar`, each linked to a command of that feature, with `confirm` on the destructive ones.
 - [ ] Every template has a `category`; every blueprint reference has a valid range and is listed in a profile's `packages`.
 - [ ] The active sample data pack is selected once, in the `ui profile`, and no sample value sits in a component.

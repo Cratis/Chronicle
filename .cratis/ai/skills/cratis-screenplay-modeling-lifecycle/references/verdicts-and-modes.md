@@ -49,6 +49,11 @@ V5 rules:
 ## Commands (enough to check without loading the toolchain skill)
 - V1, preferred: `screenplay <model-folder> --warnaserror --no-color` (check "N file(s) compiled").
 - V1, fallback: `cratis screenplay validate <model-folder> --warnings-as-errors`.
+- The repository's gate file: V1 runs through a `screenplay.json` at the model root when one exists
+  (checks, warnings as errors, scope, open questions), so it is part of the verification contract.
+  Read the effective gate with `screenplay <model-folder> --print-gate`, name it on the V1 line, and
+  never bypass it with `--no-gate-file` without saying so. A refused file is `V1 not run: gate file
+  refused`, not a pass. Commands and precedence: toolchain `references/verdicts.md`.
 - V2, V3: the MCP workspace readiness and executable diagnostics.
 - Name tool and version on each line. A tool older than the model's constructs reports false
   failures; see the toolchain skill.
@@ -57,7 +62,7 @@ V5 rules:
 
 ```text
 Mode: executable   Source: <commit+digest from the source-identity helper> / ws <revision> cat <catalogRevision>
-V1 authorable:   pass (N files)                      | fail: PLAYnnnn at file:line - meaning
+V1 authorable:   pass (N files, gate: <screenplay.json or flags>) | fail: PLAYnnnn at file:line - meaning | not run: gate file refused
 V2 diagnostics:  none (executable model)             | n diagnostics | not run: <reason>
 V3 binding:      ready                               | blocked: PLAYnnnn ... | not run: design mode
 V4 specs:        12 expected / 12 discovered, 11 passed, 1 unsupported (route) | not run: no route

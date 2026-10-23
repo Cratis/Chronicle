@@ -1,6 +1,0 @@
-name: "Cratis CodeQL config"
-
-query-filters:
-  # CA1031 is intentionally excluded from the shared baseline.
-  - exclude:
-      id: ca1031

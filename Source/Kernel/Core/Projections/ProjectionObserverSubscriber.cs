@@ -264,6 +264,43 @@ public class ProjectionObserverSubscriber(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<ObserverSubscriberResult> OnNextPage(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    {
+        var page = events.ToArray();
+        var lastSuccessful = EventSequenceNumber.Unavailable;
+        var offset = 0;
+        while (offset < page.Length)
+        {
+            var start = offset;
+            var partition = page[start].Context.EventSourceId;
+            while (offset < page.Length && page[offset].Context.EventSourceId == partition)
+            {
+                offset++;
+            }
+
+            // Reuse local handling, including one changeset notification per consecutive partition run.
+            var run = page[start..offset];
+            var result = await OnNext(partition, run, context);
+            if (result.State != ObserverSubscriberState.Ok)
+            {
+                var failedEvent = result.HandledAnyEvents
+                    ? run.FirstOrDefault(_ => _.Context.SequenceNumber > result.LastSuccessfulObservation) ?? run[^1]
+                    : run[0];
+                return result with
+                {
+                    LastSuccessfulObservation = result.HandledAnyEvents ? result.LastSuccessfulObservation : lastSuccessful,
+                    FailedPartition = partition,
+                    FailedAt = failedEvent.Context.SequenceNumber
+                };
+            }
+
+            lastSuccessful = result.LastSuccessfulObservation;
+        }
+
+        return ObserverSubscriberResult.Ok(lastSuccessful);
+    }
+
     async Task HandlePipeline()
     {
         if (_definition.ReadModel is null)

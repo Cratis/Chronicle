@@ -63,6 +63,16 @@ internal class EventTypeGenerationBackfill(
         return JobStepResult.Succeeded(null);
     }
 
+    static EventTypeGeneration SourceGeneration(StoredEventGenerations observed, bool isRevised, bool sourceIsAppended)
+    {
+        if (isRevised)
+        {
+            return observed.RevisedGeneration!;
+        }
+
+        return sourceIsAppended ? observed.AppendedGeneration! : observed.Content.Keys.MaxBy(_ => _.Value)!;
+    }
+
     async Task BackfillEvent(
         IEventSequenceStorage sequence,
         ProtectedEventTypeMigrations protectedMigrations,
@@ -87,9 +97,10 @@ internal class EventTypeGenerationBackfill(
                 return;
             }
 
-            var sourceIsAppended = observed.AppendedGeneration is { } appended && observed.Content.ContainsKey(appended);
-            var source = sourceIsAppended ? observed.AppendedGeneration! : observed.Content.Keys.MaxBy(_ => _.Value)!;
-            if (!sourceIsAppended && observed.AppendedGeneration is not null)
+            var isRevised = observed.RevisedGeneration is not null && observed.RevisedContent is not null;
+            var sourceIsAppended = !isRevised && observed.AppendedGeneration is { } appended && observed.Content.ContainsKey(appended);
+            var source = SourceGeneration(observed, isRevised, sourceIsAppended);
+            if (!isRevised && !sourceIsAppended && observed.AppendedGeneration is not null)
             {
                 logger.AppendedContentMissing(number, observed.AppendedGeneration);
             }
@@ -101,7 +112,7 @@ internal class EventTypeGenerationBackfill(
                 return;
             }
 
-            var json = JsonNode.Parse(observed.Content[source])!.AsObject();
+            var json = JsonNode.Parse(isRevised ? observed.RevisedContent! : observed.Content[source])!.AsObject();
             var schema = sourceDefinition.Schema;
             var protectedEvent = converter.ToExpandoObject(json, schema);
             var subject = observed.Subject.IsSet ? observed.Subject.Value : observed.EventSourceId.Value;
