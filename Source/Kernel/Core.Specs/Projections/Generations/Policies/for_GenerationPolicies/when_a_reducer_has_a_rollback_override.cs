@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
 namespace Cratis.Chronicle.Projections.Generations.Policies.for_GenerationPolicies;
 
 public class when_a_reducer_has_a_rollback_override : given.generation_policies
