@@ -126,15 +126,12 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     /// <returns>The durable floors.</returns>
     public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
     {
-        var floors = new Dictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>();
+        var floors = new Dictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor?>();
         foreach (var pair in _generationFloors)
         {
-            if (await pair.Value.Get() is { } floor)
-            {
-                floors.Add(pair.Key, floor);
-            }
+            floors.Add(pair.Key, await pair.Value.Get());
         }
-        return floors;
+        return floors.Where(_ => _.Value is not null).ToDictionary(_ => _.Key, _ => _.Value!);
     }
 
     /// <summary>

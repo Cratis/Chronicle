@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationInitializationS
 [Collection(SqlServerCollection.Name)]
 public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_initialization_storage(fixture)
 {
-    DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
+    readonly DateTimeOffset _raised = DateTimeOffset.FromUnixTimeSeconds(10000);
     GenerationInitializationBlocker _persisted;
 
     async Task Because()
