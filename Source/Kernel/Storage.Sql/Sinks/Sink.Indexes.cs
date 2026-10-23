@@ -155,13 +155,15 @@ public partial class Sink
             {
                 var reason = type == DatabaseType.SqlServer
                     ? "array paths require SQL Server 2025 JSON indexes; other paths must resolve to scalar leaves, and composites cannot contain arrays"
-                    : "the path must resolve to a scalar leaf or a standalone ascending PostgreSQL JSON array; composite array indexes are not supported";
+                    : "the path must resolve to a scalar leaf or a standalone PostgreSQL JSON array; composite array indexes are not supported";
                 _logger.IndexNotCreated(_tableName, index.PropertyPath.Path, reason);
+                continue;
             }
-            else if (seen.Add(plan.Signature))
+            if (plan.IsGin && plan.Targets.Any(target => target.Descending))
             {
-                yield return plan;
+                _logger.ArrayIndexDirectionIgnored(_tableName, index.PropertyPath.Path);
             }
+            if (seen.Add(plan.Signature)) yield return plan;
         }
     }
 }

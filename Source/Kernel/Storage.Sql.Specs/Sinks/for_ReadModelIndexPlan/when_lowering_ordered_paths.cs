@@ -32,6 +32,10 @@ public class when_lowering_ordered_paths : Specification
     }
 
     [Fact] void should_cast_postgresql_numbers() => Plan(new("details.total"), DatabaseType.PostgreSql).Keys(DatabaseType.PostgreSql, _postgres).ShouldEqual($"(({_postgres.DelimitIdentifier("details")} #>> ARRAY['total']::text[])::numeric) ASC");
+    [Fact] void should_cast_postgresql_integers_without_a_signed_range_limit() => Plan(new("details.count"), DatabaseType.PostgreSql).Keys(DatabaseType.PostgreSql, _postgres).ShouldContain("::numeric");
+    [Fact] void should_ignore_array_direction() => Plan(new("lines.productId") { Properties = [new("lines.productId", true)] }, DatabaseType.PostgreSql).Signature.ShouldEqual(Plan(new("lines.productId"), DatabaseType.PostgreSql).Signature);
+    [Fact] void should_still_reject_descending_arrays_on_sql_server() => ReadModelIndexPlan.Resolve(new("lines.productId") { Properties = [new("lines.productId", true)] }, _schema, _columns, DatabaseType.SqlServer).ShouldBeNull();
+    [Fact] void should_still_reject_descending_arrays_on_sqlite() => ReadModelIndexPlan.Resolve(new("lines.productId") { Properties = [new("lines.productId", true)] }, _schema, _columns, DatabaseType.Sqlite).ShouldBeNull();
     [Fact] void should_cast_postgresql_booleans() => Plan(new("details.active"), DatabaseType.PostgreSql).Keys(DatabaseType.PostgreSql, _postgres).ShouldContain("::boolean");
     [Fact] void should_extract_sqlite_scalars() => Plan(new("details.total"), DatabaseType.Sqlite).Keys(DatabaseType.Sqlite, _sqlite).ShouldEqual("json_extract(\"details\", '$.\"total\"') ASC");
     [Fact] void should_escape_sqlite_path_literals() => Plan(new("details.quote'key"), DatabaseType.Sqlite).Keys(DatabaseType.Sqlite, _sqlite).ShouldContain("quote''key");

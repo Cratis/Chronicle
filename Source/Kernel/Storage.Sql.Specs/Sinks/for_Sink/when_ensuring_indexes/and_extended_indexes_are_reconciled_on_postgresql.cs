@@ -21,5 +21,6 @@ public class and_extended_indexes_are_reconciled_on_postgresql(PostgreSqlFixture
     [Fact] void should_preserve_primary_data() => VerifyPreservePrimaryData();
     [Fact] void should_report_unsupported_array_paths() => VerifyReportUnsupportedArrayPaths();
     [Fact] void should_not_hide_index_creation_failures() => VerifyNotHideIndexCreationFailures();
+    [Fact] void should_warn_that_array_direction_is_ignored() => VerifyWarnAboutIgnoredArrayDirection();
     [Fact] void should_use_the_array_index_for_a_containment_lookup() => VerifyUseTheArrayIndexForAContainmentLookup();
 }

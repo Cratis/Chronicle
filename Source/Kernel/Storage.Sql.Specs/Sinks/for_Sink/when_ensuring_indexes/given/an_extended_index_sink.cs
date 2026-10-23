@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Xml.Linq;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -29,6 +30,8 @@ public abstract class an_extended_index_sink : Specification
     bool _columnRemoved;
     bool _customPreserved;
     bool _nonPersisted;
+    bool _deterministic;
+    bool _precise;
     int _rows;
 
     protected abstract ISqlSinkHarness CreateHarness();
@@ -37,7 +40,7 @@ public abstract class an_extended_index_sink : Specification
     {
         _harness = CreateHarness();
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"number":{"type":"integer"},"details":{"type":"object","properties":{"total":{"type":"number"},"active":{"type":"boolean"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"}}}}}}""");
-        _definition = new("extended", Table, "Extended", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "extended", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new("details.total"), new("lines.productId")]);
+        _definition = new("extended", Table, "Extended", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "extended", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new("details.total"), new("lines.productId") { Properties = [new("lines.productId", true)] }]);
         var sink = (Sink)_harness.CreateSink(_definition);
         await sink.GetInstances();
         _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
@@ -64,6 +67,8 @@ public abstract class an_extended_index_sink : Specification
         if (_type == DatabaseType.SqlServer)
         {
             await Execute($"ALTER TABLE {Quote(Table)} ADD custom_computed AS ({Quote("number")} + 1)");
+            _deterministic = await _context.Database.SqlQuery<int>($"SELECT COLUMNPROPERTY(OBJECT_ID({Table}), {SqlServerIndexColumns.Name(plan.Targets[0])}, 'IsDeterministic') AS [Value]").SingleAsync() == 1;
+            _precise = await _context.Database.SqlQuery<int>($"SELECT COLUMNPROPERTY(OBJECT_ID({Table}), {SqlServerIndexColumns.Name(plan.Targets[0])}, 'IsPrecise') AS [Value]").SingleAsync() == 1;
             _nonPersisted = await _context.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.computed_columns WHERE object_id=OBJECT_ID({Table}) AND name={SqlServerIndexColumns.Name(plan.Targets[0])} AND is_persisted=0").SingleAsync() == 1;
         }
         else
@@ -93,9 +98,12 @@ public abstract class an_extended_index_sink : Specification
     protected void VerifyStoreBothDescendingKeys() => _descending.ShouldEqual(2);
     protected void VerifyRemoveAnOrphanedOwnedComputedColumn() => _columnRemoved.ShouldBeTrue();
     protected void VerifyPreserveUserIndexes() => _customPreserved.ShouldBeTrue();
+    protected void VerifyComputedColumnsAreDeterministic() => _deterministic.ShouldBeTrue();
+    protected void VerifyComputedColumnsArePrecise() => _precise.ShouldBeTrue();
     protected void VerifyKeepComputedColumnsNonPersisted() => _nonPersisted.ShouldBeTrue();
     protected void VerifyPreservePrimaryData() => _rows.ShouldEqual(1);
     protected void VerifyReportUnsupportedArrayPaths() => (_type == DatabaseType.PostgreSql || _logger.Warnings.Any(message => message.Contains("lines.productId", StringComparison.Ordinal))).ShouldBeTrue();
+    protected void VerifyWarnAboutIgnoredArrayDirection() => _logger.Warnings.Any(message => message.Contains("direction is ignored", StringComparison.Ordinal) && !message.Contains("was not created", StringComparison.Ordinal)).ShouldBeTrue();
     protected void VerifyNotHideIndexCreationFailures() => _logger.Errors.ShouldBeEmpty();
 
     string Quote(string name) => _helper.DelimitIdentifier(name);
@@ -120,13 +128,36 @@ public abstract class an_extended_index_sink : Specification
         var name = plan.Name(_type, Table);
         if (_type == DatabaseType.SqlServer)
         {
-            await Execute($"SELECT {Quote("number")} FROM {Quote(Table)} WITH (INDEX({Quote(name)})) WHERE {expression}=42.5");
-            _used = await _context.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.dm_db_index_usage_stats s JOIN sys.indexes i ON i.object_id=s.object_id AND i.index_id=s.index_id WHERE s.database_id=DB_ID() AND i.object_id=OBJECT_ID({Table}) AND i.name={name} AND s.user_seeks+s.user_scans>0").SingleAsync() == 1;
+            await CheckSqlServerUsage(expression, name);
             return;
         }
         await _context.Database.OpenConnectionAsync();
         if (_type == DatabaseType.PostgreSql) await Execute("SET enable_seqscan=off");
         _used = await UsesPlan($"{expression}=42.5", name);
+    }
+
+    async Task CheckSqlServerUsage(string expression, string name)
+    {
+        await _context.Database.OpenConnectionAsync();
+        await using var command = _context.Database.GetDbConnection().CreateCommand();
+#pragma warning disable CA2100 // Provider-delimited test identifiers and schema-derived expression.
+        command.CommandText = $"INSERT INTO {Quote(Table)} ([id], [number], [details], [lines], [__initialized]) SELECT CONCAT('seed-', value), value, CONCAT('{{\"total\":', value, '}}'), '[]', 1 FROM GENERATE_SERIES(1000, 5095)";
+        await command.ExecuteNonQueryAsync();
+        command.CommandText = $"SELECT [number] FROM {Quote(Table)} WHERE {expression}=N'42.5'";
+#pragma warning restore CA2100
+        await Execute("SET SHOWPLAN_XML ON");
+        try
+        {
+            var plan = XDocument.Parse((string)(await command.ExecuteScalarAsync())!);
+            _used = plan.Descendants().Any(element => element.Name.LocalName == "RelOp" && (string?)element.Attribute("LogicalOp") == "Index Seek" && element.Descendants().Any(child => child.Name.LocalName == "Object" && (string?)child.Attribute("Index") == $"[{name}]"));
+        }
+        finally
+        {
+            await Execute("SET SHOWPLAN_XML OFF");
+        }
+        var matched = (int)(await command.ExecuteScalarAsync())!;
+        matched.ShouldEqual(7);
+        await Execute($"DELETE FROM {Quote(Table)} WHERE [id] LIKE 'seed-%'");
     }
 
     async Task<bool> UsesPlan(string predicate, string name)

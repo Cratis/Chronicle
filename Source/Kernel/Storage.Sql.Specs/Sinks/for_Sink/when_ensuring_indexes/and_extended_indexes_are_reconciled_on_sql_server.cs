@@ -17,6 +17,8 @@ public class and_extended_indexes_are_reconciled_on_sql_server(SqlServerFixture 
     [Fact] void should_store_both_descending_keys() => VerifyStoreBothDescendingKeys();
     [Fact] void should_remove_an_orphaned_owned_computed_column() => VerifyRemoveAnOrphanedOwnedComputedColumn();
     [Fact] void should_preserve_user_indexes() => VerifyPreserveUserIndexes();
+    [Fact] void should_use_deterministic_computed_columns() => VerifyComputedColumnsAreDeterministic();
+    [Fact] void should_use_precise_computed_columns() => VerifyComputedColumnsArePrecise();
     [Fact] void should_keep_computed_columns_non_persisted() => VerifyKeepComputedColumnsNonPersisted();
     [Fact] void should_preserve_primary_data() => VerifyPreservePrimaryData();
     [Fact] void should_report_unsupported_array_paths() => VerifyReportUnsupportedArrayPaths();

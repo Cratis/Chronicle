@@ -56,9 +56,10 @@ record parameter:
 <ChronicleClientTabs snippet="read-models/indexing/descending" />
 
 Registration throws `InvalidIndexDeclaration` before sending definitions to the kernel for an empty
-composite, an unknown property, repeated properties or duplicate composite declarations, a direction
+composite, an unknown property, repeated properties within a composite, a direction
 array whose length does not match the properties, or a composite containing more than one
-collection-element path. A composite may contain one collection-element path for MongoDB; SQL sinks
+distinct array scope. Multiple keys from the same array, such as `lines.sku` and `lines.qty`, are
+supported by MongoDB; parallel arrays are not. Repeated identical declarations coalesce into one index. SQL sinks
 warn and skip a composite containing an array path. Unique indexes are not part of these attributes;
 use event constraints to enforce uniqueness.
 
@@ -71,8 +72,9 @@ while an empty legacy path list continues to preserve composite and descending d
 ## SQL storage
 
 SQL stores nested objects and arrays in JSON columns. A nested scalar declaration uses an expression
-index on SQLite (`json_extract`) or PostgreSQL (`#>>`). PostgreSQL casts numeric and boolean leaves
-to their schema types. SQL Server indexes a non-persisted computed column using
+index on SQLite (`json_extract`) or PostgreSQL (`#>>`). PostgreSQL casts integer and number leaves to
+`numeric`, preserving unsigned and large JSON integers without an `Int64` range limit, and boolean
+leaves to `boolean`. SQL Server indexes a non-persisted computed column using
 `CAST(JSON_VALUE(...) AS nvarchar(450))` for every scalar kind. SQL Server therefore orders nested
 values lexically as text, not numerically or as booleans. These columns do not store a second copy of
 your read-model data; adding them changes metadata only. The index itself still requires a build.
@@ -85,9 +87,22 @@ your read-model data; adding them changes metadata only. The index itself still 
 | Object without a scalar leaf | Warning; not created | Warning; not created | Warning; not created |
 
 GIN indexes support JSON containment and JSONPath predicates, not arbitrary scalar comparisons.
-They have no ascending or descending key order; directions apply to scalar indexes.
+They have no ascending or descending key order. PostgreSQL ignores an array declaration's direction
+with a warning and creates the same GIN index for either direction; SQLite and SQL Server still warn
+and skip array declarations. Directions apply to scalar indexes.
 Queries must use the indexed expression and compatible casts for the database to use an expression
-index. Chronicle does not rewrite your application queries.
+index. Chronicle does not rewrite your application queries. For SQL Server, a matching nested numeric
+predicate is `CAST(JSON_VALUE([details], '$."total"') AS nvarchar(450)) = N'42.5'`.
+Compare text to text: a numeric literal forces implicit conversion and is not an equivalent indexed
+predicate. Ordering is lexical (`'10'` precedes `'2'`), booleans are text, and comparisons use the
+450-character bounded value rather than the full JSON value. Expression matching, compatible types
+and collation, and the optimizer's cost estimate determine whether the index is used; declaring an
+index does not guarantee a seek.
+
+SQL Server requires compatible session options for writes to read models with nested indexes.
+Chronicle uses `ARITHABORT` and `ANSI_WARNINGS` ON. A connection that sets either `ARITHABORT` or
+`ANSI_WARNINGS` OFF (a non-default configuration) fails inserts and updates against those indexed
+computed columns. Keep both options enabled on connections that write these read models.
 
 SQL Server bounds newly projected indexed strings to a supported key size; existing unbounded
 columns are not resized during activation. A declaration on an unbounded column produces a warning
@@ -99,7 +114,7 @@ An unsupported computed expression fails visibly in the kernel log; Chronicle do
 persisted computed columns or alter the stored values.
 
 A composite SQL index is created only when every path is supported; arrays cannot be mixed into a composite.
-MongoDB supports compound keys but rejects multiple array paths in one definition. Legacy flat-path
+MongoDB supports compound keys sharing one array but rejects keys spanning distinct array scopes. Legacy flat-path
 updates preserve existing ordered definitions rather than flattening or deleting them.
 
 Index names are deterministic and stay within provider identifier limits. Single ascending scalar

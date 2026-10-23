@@ -58,7 +58,7 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
         var targets = definition.Properties.Select(property => ReadModelIndexTarget.Resolve(property, schema, columns)).ToArray();
         if (targets.Any(target => target is null)) return null;
         var resolved = targets.OfType<ReadModelIndexTarget>().ToArray();
-        if (resolved.Any(target => target.IsArray) && (type != DatabaseType.PostgreSql || resolved.Length != 1 || resolved[0].Descending)) return null;
+        if (resolved.Any(target => target.IsArray) && (type != DatabaseType.PostgreSql || resolved.Length != 1)) return null;
         return new(definition, resolved);
     }
 
@@ -92,7 +92,7 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
         var extract = $"({column} #>> {path})";
         var cast = target.Type switch
         {
-            JsonObjectType.Integer => "bigint",
+            JsonObjectType.Integer => "numeric",
             JsonObjectType.Number => "numeric",
             JsonObjectType.Boolean => "boolean",
             _ => null

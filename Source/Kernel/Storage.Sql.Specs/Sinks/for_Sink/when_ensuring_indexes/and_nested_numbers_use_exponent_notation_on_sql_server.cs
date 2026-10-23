@@ -27,6 +27,7 @@ public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFix
     Sink _sink;
     string _inserted;
     string _updated;
+    string _indexName;
 
     async Task Establish()
     {
@@ -40,8 +41,8 @@ public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFix
         _logger.Errors.ShouldBeEmpty();
         _logger.Warnings.ShouldBeEmpty();
         _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
-        var name = ReadModelIndexPlan.Resolve(definition.Indexes.Single(), schema, ProjectedColumns.ForSchema(schema), DatabaseType.SqlServer)!.Name(DatabaseType.SqlServer, Table);
-        (await _context.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID({Table}) AND name={name} AND is_disabled=0").SingleAsync()).ShouldEqual(1);
+        _indexName = ReadModelIndexPlan.Resolve(definition.Indexes.Single(), schema, ProjectedColumns.ForSchema(schema), DatabaseType.SqlServer)!.Name(DatabaseType.SqlServer, Table);
+        (await _context.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID({Table}) AND name={_indexName} AND is_disabled=0").SingleAsync()).ShouldEqual(1);
     }
 
     async Task Because()
@@ -57,6 +58,19 @@ public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFix
     {
         _inserted.ShouldEqual(JsonSerializer.Serialize(new { total = 1E-7 }));
         _updated.ShouldEqual(JsonSerializer.Serialize(new { total = 1E21 }));
+    }
+
+    [Fact]
+    async Task should_compare_nested_values_as_bounded_text()
+    {
+        var value = JsonSerializer.Serialize(1E21);
+        (await _context.Database.SqlQuery<string>($"SELECT [id] AS [Value] FROM [exponent_indexes] WHERE CAST(JSON_VALUE([details], '$.\"total\"') AS nvarchar(450))={value}").SingleAsync()).ShouldEqual(_key.Value);
+    }
+
+    [Fact]
+    async Task should_order_nested_numbers_lexically()
+    {
+        (await _context.Database.SqlQuery<string>($"SELECT [id] AS [Value] FROM [exponent_indexes] WHERE CAST(JSON_VALUE([details], '$.\"total\"') AS nvarchar(450)) < N'2'").SingleAsync()).ShouldEqual(_key.Value);
     }
 
     async Task Destroy()

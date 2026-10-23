@@ -22,7 +22,7 @@ public class and_the_provider_is_sqlite : given.an_indexed_sink
     [Fact] void should_allow_a_second_indexed_shadow() => _secondShadowCount.ShouldEqual(5);
     [Fact] void should_preserve_indexes_on_the_second_promotion() => _secondPromotedCount.ShouldEqual(5);
 
-    [Fact] void should_warn_about_each_unsupported_path_of_the_read_model() => string.Join('\n', Warnings()).ShouldEqual(string.Join('\n', new[] { "lines", "lines.value", "missing", "nested" }.Select(path => $"SQL index for indexed-models at {path} was not created: the path must resolve to a scalar leaf or a standalone ascending PostgreSQL JSON array; composite array indexes are not supported")));
+    [Fact] void should_warn_about_each_unsupported_path_of_the_read_model() => string.Join('\n', Warnings()).ShouldEqual(string.Join('\n', new[] { "lines", "lines.value", "missing", "nested" }.Select(path => $"SQL index for indexed-models at {path} was not created: the path must resolve to a scalar leaf or a standalone PostgreSQL JSON array; composite array indexes are not supported")));
 
     IEnumerable<string> Warnings() => _logger.Warnings.Distinct().Order(StringComparer.Ordinal);
 
