@@ -171,6 +171,11 @@ class [GrainType("reindexconstraints")] Cratis.Chronicle.Events.Constraints.Rein
 
 class [GrainType("reindexconstraintsstep")] Cratis.Chronicle.Events.Constraints.ReindexConstraintsStep
 
+class [GrainType("generationinitializer")] Cratis.Chronicle.Generations.Enablement.GenerationInitializer
+
+interface [GrainInterfaceType("Cratis.Chronicle.Generations.Enablement.IGenerationInitializer")] Cratis.Chronicle.Generations.Enablement.IGenerationInitializer [Version(0)]
+  821C1699: Initialize(Cratis.Chronicle.Concepts.EventStoreName) -> Task<GenerationInitializationResult>
+
 interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaces")] Cratis.Chronicle.Namespaces.INamespaces [Version(0)]
   DCF49287: Ensure(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
   BE5D8DA6: EnsureDefault() -> Task
