@@ -24,8 +24,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// </summary>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromEventSourceId =>
-        CreateKeyResolver(nameof(FromEventSourceId), (_, _, @event) =>
-            Task.FromResult(KeyResolverResult.Resolved(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers))));
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(FromEventSourceId), (_, _, @event) =>
+            Task.FromResult(KeyResolverResult.Resolved(new Key(EventValueProviders.EventSourceId(@event), ArrayIndexers.NoIndexers)))));
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a value from the event content.
@@ -33,15 +33,15 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="eventValueProvider">The actual <see cref="ValueProvider{T}"/> for resolving key.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromEventValueProvider(ValueProvider<AppendedEvent> eventValueProvider) =>
-        CreateKeyResolver(nameof(FromEventValueProvider), (_, _, @event) =>
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(FromEventValueProvider), (_, _, @event) =>
         {
             var key = eventValueProvider(@event);
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
-        });
+        }));
 
     /// <inheritdoc/>
     public KeyResolver FromEventValueProviderWithFallbackToEventSourceId(ValueProvider<AppendedEvent> eventValueProvider) =>
-        CreateKeyResolver(nameof(FromEventValueProviderWithFallbackToEventSourceId), (_, _, @event) =>
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(FromEventValueProviderWithFallbackToEventSourceId), (_, _, @event) =>
         {
             var key = eventValueProvider(@event);
             var willUseFallback = key is null;
@@ -53,7 +53,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             key ??= EventValueProviders.EventSourceId(@event);
 
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
-        });
+        }));
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value which is a composite of a set of <see cref="ValueProvider{T}"/>.
@@ -61,7 +61,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="propertiesWithKeyValueProviders">Target property paths in key and resolvers to use for resolving.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders) =>
-        CreateKeyResolver(nameof(Composite), (_, _, @event) =>
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(Composite), (_, _, @event) =>
         {
             var key = new ExpandoObject();
             foreach (var keyValue in propertiesWithKeyValueProviders)
@@ -72,7 +72,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             }
 
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
-        });
+        }));
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value for a join relationship.
@@ -125,7 +125,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// <param name="parentKeyIsConstant">Whether the parent key is a constant rather than a value derived from the event.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     public KeyResolver FromParentHierarchy(IProjection projection, KeyResolver keyResolver, KeyResolver parentKeyResolver, PropertyPath identifiedByProperty, bool parentKeyIsConstant = false) =>
-        CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
+        PageKeyResolver.Parent(
+            CreateKeyResolver(nameof(FromParentHierarchy), async (eventSequenceStorage, sink, @event) =>
     {
         logger.FromParentHierarchyEntry(@event.Context.EventType.Id.ToString(), @event.Context.EventSourceId.ToString(), @event.Context.SequenceNumber.Value);
 
@@ -251,7 +252,10 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
         return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers(arrayIndexers) });
-    });
+    }),
+            projection,
+            parentKeyResolver,
+            parentKeyIsConstant);
 
     static PropertyPath? GetParentIdentifiedByProperty(IProjection projection)
     {

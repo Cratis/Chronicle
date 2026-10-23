@@ -26,6 +26,8 @@ public abstract class a_prefetch_sink(MongoDBFixture fixture) : when_applying_ch
                 _reads++;
                 return collection.FindAsync(info.ArgAt<FilterDefinition<BsonDocument>>(0), info.ArgAt<FindOptions<BsonDocument, BsonDocument>>(1));
             });
+        intercepted.DeleteOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<CancellationToken>())
+            .Returns(info => collection.DeleteOneAsync(info.ArgAt<FilterDefinition<BsonDocument>>(0), info.ArgAt<CancellationToken>(1)));
         intercepted.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
             .Returns(info =>
             {

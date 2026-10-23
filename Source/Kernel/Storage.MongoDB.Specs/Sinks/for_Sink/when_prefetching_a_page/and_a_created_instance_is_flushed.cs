@@ -20,6 +20,6 @@ public class and_a_created_instance_is_flushed(MongoDBFixture fixture) : given.a
         await _sink.EndBulk();
     }
 
-    [Fact] void should_discard_the_miss_when_the_write_is_flushed() => _state.ShouldNotBeNull();
-    [Fact] void should_read_the_created_instance_after_the_bulk_cache_is_evicted() => _reads.ShouldEqual(2);
+    [Fact] void should_use_the_written_state_instead_of_the_old_miss() => _state.ShouldNotBeNull();
+    [Fact] void should_keep_valid_bulk_state_after_a_flush() => _reads.ShouldEqual(1);
 }

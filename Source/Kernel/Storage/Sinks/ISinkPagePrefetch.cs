@@ -19,7 +19,7 @@ public interface ISinkPagePrefetch
     Task PrefetchPage(IEnumerable<Key> keys);
 
     /// <summary>
-    /// Clears the page's known misses. States already in the bulk cache remain available.
+    /// Discards the page's misses and untouched prefetched hits, preserving pending bulk state.
     /// </summary>
     void ClearPrefetchPage();
 }
