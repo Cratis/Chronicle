@@ -24,8 +24,7 @@ public class and_child_already_exists_in_sink : given.a_flat_child_projection_wi
     {
         // The parent's own event type never occurs on this stream — the resolution used to fall
         // through to re-resolving the child's creation event on every update.
-        Storage.TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(Option<AppendedEvent>.None());
+        Storage.WithParentHistory(BoardKey);
         Storage.GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), (EventSourceId)ChildKey)
             .Returns(EventSequenceNumber.Unavailable);
         Storage.GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), (EventSourceId)BoardKey)
@@ -53,6 +52,6 @@ public class and_child_already_exists_in_sink : given.a_flat_child_projection_wi
     [Fact] void should_resolve_to_the_board_key() => (_result as ResolvedKey).Key.Value.ShouldEqual(BoardKey);
     [Fact] void should_have_array_indexer_for_the_child() => (_result as ResolvedKey).Key.ArrayIndexers.All.Single(_ => _.ArrayProperty == "children").Identifier.ShouldEqual(ChildKey);
     [Fact] void should_query_the_sink_by_the_child_key_path() => _queriedChildPropertyPath.ShouldEqual((PropertyPath)"children.childId");
-    [Fact] void should_not_look_up_parent_events_in_the_event_sequence() => Storage.DidNotReceive().TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
+    [Fact] void should_not_look_up_parent_events_in_the_event_sequence() => Storage.DidNotReceive().GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>());
     [Fact] void should_not_scan_the_event_sequence_for_creation_events() => Storage.DidNotReceive().GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>());
 }

@@ -34,6 +34,11 @@ public class ResolveFutures(
     readonly HashSet<ProjectionFutureId> _failedFutures = [];
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Deferred children use the key and state materialized by the releasing parent event, including that event.
+    /// History-based retries use the same inclusive release boundary (see <see cref="ParentKeyResolutionScope"/>).
+    /// Ordinary resolution remains strictly before the child; later replay-page events cannot reroute a release.
+    /// </remarks>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // If this event was deferred or key is permanently unresolvable, don't try to resolve futures
@@ -59,6 +64,7 @@ public class ResolveFutures(
         }
 
         logger.FoundPendingFutures(futures.Count(), projection.Identifier);
+        using var resolutionScope = ParentKeyResolutionScope.ForDeferredRelease(context.Event.Context.SequenceNumber);
 
         // Keep trying to resolve futures until we can't resolve any more
         // This handles the case where resolving one future creates the parent data needed by another future
@@ -127,20 +133,7 @@ public class ResolveFutures(
                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
 
-                    // Extract the child key from the event content using the IdentifiedByProperty path
-                    // This ensures we get the correct identifier (e.g., HubId) rather than using EventSourceId
-                    // which might be the parent's identifier when UsingParentKeyFromContext is used.
-                    // If the property doesn't exist in the event content (returns null), and the IdentifiedByProperty
-                    // is a simple property name (not a nested path), fall back to using EventSourceId.
-                    // This handles cases like WeightsSetForSimulationConfiguration where the ConfigurationId
-                    // is the EventSourceId and not in the event content.
-                    var childKey = future.IdentifiedByProperty.GetValue(future.Event.Content, ArrayIndexers.NoIndexers);
-                    if (childKey is null && !future.IdentifiedByProperty.Path.Contains('.') && !future.IdentifiedByProperty.Path.Contains('['))
-                    {
-                        // Property doesn't exist in event content and it's a simple property name,
-                        // so use EventSourceId (which is how the event was originally sourced)
-                        childKey = future.Event.Context.EventSourceId;
-                    }
+                    var childKey = GetChildKey(future);
 
                     if (childType is not null && childKey is not null)
                     {
@@ -441,6 +434,19 @@ public class ResolveFutures(
             IEnumerable enumerable => enumerable.OfType<ExpandoObject>(),
             _ => null
         };
+
+    static object? GetChildKey(ProjectionFuture future)
+    {
+        // Extract the child key from content: EventSourceId might be the parent when using a context key.
+        // Fall back to EventSourceId only for a missing simple property (not a nested path).
+        var childKey = future.IdentifiedByProperty.GetValue(future.Event.Content, ArrayIndexers.NoIndexers);
+        var isSimpleProperty = !future.IdentifiedByProperty.Path.Contains('.') && !future.IdentifiedByProperty.Path.Contains('[');
+        if (childKey is null && isSimpleProperty)
+        {
+            childKey = future.Event.Context.EventSourceId;
+        }
+        return childKey;
+    }
 
     void LogFailure(Exception exception, ProjectionFuture future)
     {
