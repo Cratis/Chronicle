@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Cratis.Orleans.Storage.Sql" />
     </ItemGroup>
@@ -35,6 +36,7 @@
       <!-- Override the vulnerable System.Security.Cryptography.Pkcs 9.0.18 pulled in transitively by Microsoft.Data.SqlClient. -->
       <PackageReference Include="System.Security.Cryptography.Pkcs" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+      <PackageReference Include="Azure.Identity" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     </ItemGroup>

@@ -77,6 +77,7 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
+        _silo.AddService<TimeProvider>(TimeProvider.System);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
@@ -115,6 +116,6 @@ public class a_performing_job_step : Specification
         _jobStep = await _silo.CreateGrainAsync<TestableHandleEventsForPartition>(
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
-        _jobStep.SetupForTesting(_observer, _observerSubscriber, "some-partition");
+        _jobStep.SetupForTesting(_observer, _observerSubscriber, "some-partition", subscription);
     }
 }

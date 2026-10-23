@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Data.Common;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
@@ -20,8 +21,8 @@ public static class registration_race
     {
         await using var scope = await database.EventStore("registration-race");
         var options = (DbContextOptions<EventStoreDbContext>)scope.DbContext.GetService<IDbContextOptions>();
-        var firstGate = new save_gate();
-        var secondGate = new save_gate();
+        var firstGate = new command_gate();
+        var secondGate = new command_gate();
         await using var first = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>(options).AddInterceptors(firstGate).Options);
         await using var second = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>(options).AddInterceptors(secondGate).Options);
         var connections = Substitute.For<IDatabase>();
@@ -51,17 +52,33 @@ public static class registration_race
         return (saved.Length, saved.Single().IsReplayable);
     }
 
-    sealed class save_gate : SaveChangesInterceptor
+    sealed class command_gate : DbCommandInterceptor
     {
         internal TaskCompletionSource Arrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
-            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            Arrived.TrySetResult();
-            await Release.Task.WaitAsync(_deadline, cancellationToken);
+            await WaitForRelease(command, cancellationToken);
             return result;
+        }
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            await WaitForRelease(command, cancellationToken);
+            return result;
+        }
+
+        async Task WaitForRelease(DbCommand command, CancellationToken cancellationToken)
+        {
+            if (command.CommandText.Contains("INSERT", StringComparison.OrdinalIgnoreCase) ||
+                command.CommandText.Contains("MERGE", StringComparison.OrdinalIgnoreCase))
+            {
+                Arrived.TrySetResult();
+                await Release.Task.WaitAsync(_deadline, cancellationToken);
+            }
         }
     }
 }

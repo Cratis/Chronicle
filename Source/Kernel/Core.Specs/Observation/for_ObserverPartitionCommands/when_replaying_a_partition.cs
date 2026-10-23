@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Observation.for_ObserverPartitionCommands;
 /// </summary>
 public class when_replaying_a_partition : given.an_observer_grain
 {
-    async Task Because() => await new ReplayPartition(EventStore, Namespace, ObserverIdentifier, string.Empty, Partition).Handle(_grainFactory);
+    async Task Because() => await new ReplayPartition(EventStore, Namespace, ObserverIdentifier, string.Empty, Partition).Handle(_grainFactory, _storage);
+
+    [Fact] void should_address_the_observers_inbox() => _grainFactory.Received(1).GetGrain<IObserver>(_key);
 
     [Fact] void should_replay_the_partition() => _observer.Received(1).ReplayPartition(Partition);
     [Fact] void should_not_recover_the_partition() => _observer.DidNotReceive().TryStartRecoverJobForFailedPartition(Arg.Any<Concepts.Keys.Key>());

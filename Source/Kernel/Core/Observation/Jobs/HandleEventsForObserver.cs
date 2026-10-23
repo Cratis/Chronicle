@@ -37,6 +37,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="options">The kernel configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -49,12 +50,16 @@ public class HandleEventsForObserver(
     IObserverServiceClient observerServiceClient,
     IOptions<ChronicleOptions> options,
     ILogger<HandleEventsForObserver> logger,
-    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
     readonly IOptions<ChronicleOptions> _options = options;
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly SemaphoreSlim _flushGate = new(1, 1);
+    TimeSpan _abandonedDeliveryHold;
+    DeliveryFenceContext? _deliveryFence;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -246,6 +251,7 @@ public class HandleEventsForObserver(
                 : [];
 
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
+            await DrainAbandonedDeliveriesBeforeHandling(currentState.ObserverKey, cancellationToken);
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -325,11 +331,7 @@ public class HandleEventsForObserver(
                             continue;
                         }
 
-                        var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
-                            () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
-                            TransientRetryDelay,
-                            timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
-                            cancellationToken);
+                        var handleEventsResult = await HandlePartitionEvents(partition, partitionEvents, subscriberTimeout, cancellationToken);
                         if (handleEventsResult.TryGetException(out var handleEventsException))
                         {
                             var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
@@ -350,7 +352,7 @@ public class HandleEventsForObserver(
                                 return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                                     CreateResult(_lastDurableCheckpoint) with
                                     {
-                                        TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
+                                        TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage]) { DeliveryFence = _deliveryFence }
                                     },
                                     [shortMessage],
                                     string.Empty));
@@ -932,6 +934,29 @@ public class HandleEventsForObserver(
             string.Empty));
     }
 
+    async Task DrainAbandonedDeliveriesBeforeHandling(ObserverKey observerKey, CancellationToken cancellationToken)
+    {
+        _abandonedDeliveryHold = _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(observerKey)
+            : TimeSpan.Zero;
+        if (_abandonedDeliveryHold <= TimeSpan.Zero) return;
+        var drain = new AbandonedDeliveryDrain(grainFactory, _clock, logger);
+        foreach (var fence in await _observer.GetDeliveryFences())
+        {
+            await drain.Until(fence, cancellationToken);
+            await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
+        }
+    }
+
+    Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> HandlePartitionEvents(Key partition, AppendedEvent[] events, TimeSpan subscriberTimeout, CancellationToken cancellationToken) =>
+        _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? TryHandleEvents(partition, events, subscriberTimeout)
+            : TransientTimeouts.RetryOnceOnTimeout(
+                () => TryHandleEvents(partition, events, subscriberTimeout),
+                TransientRetryDelay,
+                timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
+                cancellationToken);
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
         AppendedEvent[] events,
@@ -943,7 +968,6 @@ public class HandleEventsForObserver(
         {
             var decryptedEvents = await DecryptEvents(events);
             var target = subscriberSelector.Select(_subscription, partition);
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments);
 
             // PerformStep (and everything it calls, including this method) runs off the grain's activation
             // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property
@@ -951,6 +975,8 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();
             var result = page
                 ? await ((IObserverPageSubscriber)subscriber!).OnNextPageWithin(subscriberTimeout, decryptedEvents, subscriberContext)
@@ -959,6 +985,10 @@ public class HandleEventsForObserver(
         }
         catch (Exception ex)
         {
+            if (TransientTimeouts.IsTimeout(ex) && _deliveryFence?.ReleaseBy is { } releaseBy)
+            {
+                await new AbandonedDeliveryDrain(grainFactory, _clock, logger).Until(new(partition, releaseBy, _deliveryFence.Targets ?? []), CancellationToken.None);
+            }
             logger.ErrorHandling(ex, partition);
             return ex;
         }

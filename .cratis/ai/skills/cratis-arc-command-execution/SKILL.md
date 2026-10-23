@@ -24,6 +24,9 @@ Operation execution,
 nesting restrictions, and backend recovery members below are described in
 `cratis-arc-command-operation`, which lists sources and limits.
 
+Read references/occurrence-commands.md when an occurrence handler must execute a
+command under a stable effect name with an atomic receipt and retry classification.
+
 ## When this is the wrong tool
 
 `ICommandPipeline` is for **command-shaped** work that needs authorization and

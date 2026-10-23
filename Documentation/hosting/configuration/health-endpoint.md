@@ -7,6 +7,20 @@ By default Chronicle serves its health check on the main port (35000) — the sa
 
 That is exactly where orchestrator and load-balancer probes run into trouble. A health probe that has to speak TLS — and sometimes validate the certificate — against a port that may be serving a self-signed certificate is awkward at best and broken at worst. The dedicated health port removes that friction: it publishes the health endpoint on its own HTTP/1.1 port where you can turn TLS off.
 
+## Liveness and readiness
+
+Chronicle binds the main and configured dedicated health listeners before starting the Orleans silo.
+
+| Path (default) | Meaning |
+| --- | --- |
+| `/health/live` | Returns 200 once the listener accepts requests, even during silo startup. Use for startup and liveness probes. |
+| `/health` | Readiness: startup has completed, the host has started, and shutdown has not begun. Existing storage checks must also pass. Returns 503 otherwise. |
+| `/health/ready` | Same checks and status as `/health`. |
+
+A different `healthCheckEndpoint` moves all three routes: `/probe` also exposes `/probe/live` and `/probe/ready`. All three remain available on an exclusive health port.
+
+Until ready, the kernel refuses non-health traffic, including the Workbench and static files, with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Catch-up that continues in the background after startup does not hold readiness back. A startup failure still fails the host.
+
 ## Configuration
 
 Set a `health` section with a `port` to expose the health endpoint on a dedicated port. When `port` is not set, nothing changes — the health endpoint stays on the main port.
@@ -44,14 +58,14 @@ The endpoint path is the shared `healthCheckEndpoint` (default `/health`), so wi
 - **`health.port` not set** — the health endpoint is served on the main port (35000), using HTTPS by default or h2c when `tls.enabled=false`, alongside all other traffic.
 - **`health.port` set** — the health endpoint is additionally served on that dedicated HTTP/1.1 port. gRPC is never exposed on it, because gRPC needs HTTP/2 and the dedicated port serves HTTP/1.1 only.
 - **`health.tls` false** — the dedicated port serves HTTP/1.1 in cleartext. It does not change the main port's `tls.enabled` setting. When `health.tls` remains true, the dedicated port requires a certificate from top-level `tls`, even if the main port has TLS disabled; without it, startup fails.
-- **`health.exclusive` true** — the dedicated port answers only the health endpoint; every other path returns 404 on that port. Off by default, so enabling it never changes an existing deployment silently.
+- **`health.exclusive` true** — the dedicated port answers only the health endpoint and its `/live` and `/ready` subpaths; every other path returns 404 on that port. Off by default, so enabling it never changes an existing deployment silently.
 - **`health.port` equal to the main port** — treated as not set, since a second listener cannot bind the port the main listener already owns.
 
 ## Restricting the dedicated port to health only
 
 The dedicated port is an additional listener on the same application rather than a separate, health-only server. By default the other HTTP/1.1 endpoints (Workbench, REST API, OAuth) are therefore reachable on it too, so the default posture is to treat it as an internal, cluster-local probe port and not expose it publicly, especially with TLS disabled.
 
-Set `health.exclusive` to `true` to close that off. The port then serves the health endpoint and nothing else — every other path gets a 404:
+Set `health.exclusive` to `true` to close that off. The port then serves the health endpoint and its `/live` and `/ready` subpaths and nothing else — every other path gets a 404:
 
 ```json
 {
@@ -87,9 +101,12 @@ Publishing the health endpoint on a dedicated plaintext port sidesteps certifica
 ```
 
 ```yaml
+startupProbe:
+  tcpSocket:
+    port: 35000
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health/live
     port: 8080
     scheme: HTTP
 readinessProbe:
@@ -100,6 +117,8 @@ readinessProbe:
 ```
 
 gRPC clients keep using the main port — gRPC is never served on the dedicated HTTP/1.1 port — while the probes target the dedicated port.
+
+Use an HTTP startup probe on `/health/live` at port 8080 instead of TCP if preferred. Readiness must use `/health` or `/health/ready`, never a TCP probe. Raising `failureThreshold` is not the fix for startup restarts caused by backlog: the listener binds independently of silo startup, and the readiness endpoint deliberately remains unready until that startup finishes.
 
 ## Related pages
 

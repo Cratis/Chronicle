@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel.DataAnnotations;
-
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -10,21 +8,10 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class ReadModels
 {
-    int _maxBatchSize = 500;
-
     /// <summary>
-    /// Gets the maximum number of events in a read-model batch. Must be greater than zero.
+    /// Gets the maximum number of items handled as one unit: events per subscriber call when replaying a projection, and documents per fenced sink write.
     /// </summary>
-    [Range(1, int.MaxValue)]
-    public int MaxBatchSize
-    {
-        get => _maxBatchSize;
-        init
-        {
-            Validator.ValidateProperty(value, new ValidationContext(this) { MemberName = nameof(MaxBatchSize) });
-            _maxBatchSize = value;
-        }
-    }
+    public int MaxBatchSize { get; init; } = 500;
 
     /// <summary>
     /// Gets the number of replayed read model versions to retain.

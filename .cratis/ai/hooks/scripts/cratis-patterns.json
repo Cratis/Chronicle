@@ -137,6 +137,57 @@
         "**/bin/**"
       ],
       "message": "Cratis Components 4 has no PrimeReact underneath \u2014 a \u0060primereact/dialog\u0060 import is a leftover from Components 3. Use \u0060CommandDialog\u0060 from \u0060@cratis/components/CommandDialog\u0060 or \u0060Dialog\u0060 from \u0060@cratis/components/Dialogs\u0060."
+    },
+    {
+      "id": "cratis-apex-docs-link",
+      "rule": "discoverability.md \u2014 canonical links",
+      "pattern": "https?://cratis\\.io([/)\u0022\u0027 \u003C]|$)",
+      "paths": [
+        "**/*.md",
+        "**/*.mdx",
+        "**/*.html",
+        "**/*.astro"
+      ],
+      "exclude_paths": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/obj/**",
+        "**/bin/**",
+        "**/.ai-work/**"
+      ],
+      "message": "Discoverability (advisory): the docs host is \u0060https://www.cratis.io\u0060. Link the canonical host, not the bare \u0060cratis.io\u0060."
+    },
+    {
+      "id": "cratis-empty-image-alt",
+      "rule": "discoverability.md \u2014 images carry alt text",
+      "pattern": "!\\[\\]\\(",
+      "paths": [
+        "**/*.md",
+        "**/*.mdx"
+      ],
+      "exclude_paths": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/obj/**",
+        "**/bin/**",
+        "**/.ai-work/**"
+      ],
+      "message": "Discoverability (advisory): an image with empty alt text. Describe the content, or keep it empty only when the image is purely decorative."
+    },
+    {
+      "id": "cratis-package-url-github-only",
+      "rule": "discoverability.md \u2014 package metadata",
+      "pattern": "\u003CPackageProjectUrl\u003E[[:space:]]*https?://github\\.com",
+      "paths": [
+        "**/*.csproj",
+        "**/*.props"
+      ],
+      "exclude_paths": [
+        "**/node_modules/**",
+        "**/obj/**",
+        "**/bin/**"
+      ],
+      "message": "Discoverability (advisory): \u0060PackageProjectUrl\u0060 should point at the product\u0027s docs page \u0060https://www.cratis.io/\u003Cproduct\u003E/\u0060, not only at GitHub."
     }
   ],
   "$cratisAiManaged": "hooks/scripts/cratis-patterns.json"

@@ -30,6 +30,8 @@ Use portable fields: `name`, `description`, `license`, `compatibility`, `metadat
 
 An explicit trigger clause (`Use when`, `Load when`, `Read when` or an equivalent) and neutral voice are required even with `SKILL_AUTHORING_MODE=warn`. Negative routing and meta-language findings follow that switch; the 700-character target is guidance, not a gate.
 
+The overlap lint warns when positive trigger token sets have Jaccard similarity (intersection / union) **>= 0.4**, compared before rounding. It lowercases ASCII word tokens, deduplicates them and removes routing boilerplate and common function words. Only the explicit `Use when` (or equivalent) clause counts, stopping at negative routing; empty triggers never match. The warning stays advisory even in strict mode: shared vocabulary is a review signal, not proof of competing scope. Sharpen the trigger and add a sibling pointer rather than padding it with unrelated words.
+
 ## 3. Budget and progressive disclosure
 
 Target at most 400 body lines and 16,000 characters; the hard limits remain 500 lines and 20,000 characters. A warning starts above the 16,000-character target, so a body that outgrows it is split before it nears the hard limit; characters only approximate tokens.
@@ -83,7 +85,9 @@ When changing a description, run trigger evaluations before and after when autho
 
 ## 11. Always-on content
 
-Keep `general.md` to facts needed in every session, at most 200 lines. Warn above 24,000 bytes and above 91,000 combined bytes for rules without `paths`; line length alone can hide context bloat. Review globally applied Copilot instructions above 4,000 characters. These budgets leave room for source and task context, rather than promising a token count.
+Keep `general.md` to facts needed in every session, at most 200 lines. Warn above 24,000 bytes and above 91,000 combined bytes for rules without `paths`; line length alone can hide context bloat. Review globally applied Copilot instructions above 4,000 characters. These budgets leave room for source and task context, rather than promising a token count. The corpus verification caps the rule bytes each harness loads at session start and fails above a cap: displace or demote text to an on-demand skill, or raise the cap in a reviewed change.
+
+Every proposed rule names its enforcement: analyzer-enforceable, CI-enforceable or judgment-shaped. The first two ship as the analyzer, lint or CI check, with at most a one-line pointer in prose; only judgment-shaped rules are written out, because prose does not enforce itself and costs context in every session that loads it.
 
 Use path-scoped rules for file-specific invariants and skills for particular operations. Hooks and CI enforce mechanical constraints; natural-language rules do not replace permission controls.
 

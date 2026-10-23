@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_finding_in_primary;
@@ -32,5 +33,7 @@ public class and_a_transient_promotion_finishes_before_the_last_attempt : given.
 
     [Fact] void should_retry_without_propagating_the_transient_failure() => _error.ShouldBeNull();
     [Fact] void should_return_the_promoted_instance() => _result.ShouldNotBeNull();
+    [Fact] void should_not_warn_for_a_transient_promotion() => _logger.Entries.Any(entry => entry.Level == LogLevel.Warning).ShouldBeFalse();
+    [Fact] void should_log_the_transient_window_at_debug() => _logger.Entries.Count(entry => entry.Level == LogLevel.Debug).ShouldEqual(2);
     [Fact] void should_stop_after_the_successful_third_attempt() => _listCollectionsCalls.ShouldEqual(3);
 }
