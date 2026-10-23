@@ -375,13 +375,14 @@ jobs:
 
   specs-sql:
     runs-on: ubuntu-latest
-    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
-    timeout-minutes: 45
+    # The SQL Server collection took 21-27 minutes as one job (about 20 s of database setup per class), so it
+    # runs in four parts; keep this list equal to SHARDS in .github/scripts/sql-spec-filter.py.
+    timeout-minutes: 30
     needs: [dotnet-build]
     strategy:
       fail-fast: false
       matrix:
-        shard: [postgresql, sqlserver, remaining]
+        shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

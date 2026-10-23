@@ -46,6 +46,35 @@ class SqlSpecFilters(unittest.TestCase):
                 self.assertEqual([expected], [shard for shard, expression in expressions.items()
                                               if selected(expression, name)])
 
+    def test_every_sql_server_class_lands_in_exactly_one_part(self):
+        for index in range(9):
+            self.write(f"server{index}", "SqlServerCollection", f"server_{index}")
+        classes = filters.provider_classes(self.root)
+        parts = [shard for shard in filters.SHARDS if shard.startswith("sqlserver-")]
+        self.assertEqual(filters.SQLSERVER_PARTS, len(parts))
+        expressions = {part: filters.test_filter(classes, part) for part in parts}
+        for name in classes["sqlserver"]:
+            with self.subTest(name=name):
+                self.assertEqual(1, sum(selected(expression, name + "should_store")
+                                        for expression in expressions.values()))
+        for name in classes["postgresql"]:
+            self.assertFalse(any(selected(expression, name + "should_store")
+                                 for expression in expressions.values()))
+
+    def test_workflow_matrix_lists_every_shard(self):
+        workflow = (filters.SPEC_ROOT.parents[2] / ".github/workflows/dotnet-build.yml").read_text(encoding="utf-8")
+        self.assertIn("shard: [" + ", ".join(filters.SHARDS) + "]", workflow)
+
+    def test_repository_sql_server_parts_are_nonempty(self):
+        classes = filters.provider_classes(filters.SPEC_ROOT)
+        for shard in filters.SHARDS:
+            if shard.startswith("sqlserver-"):
+                self.assertTrue(filters.test_filter(classes, shard))
+
+    def test_unknown_sql_server_part_fails(self):
+        with self.assertRaisesRegex(ValueError, "Unknown SQL Server part"):
+            filters.test_filter(filters.provider_classes(self.root), "sqlserver-9")
+
     def test_missing_provider_fails(self):
         (self.root / "postgres.cs").unlink()
         with self.assertRaisesRegex(ValueError, "nonempty, unique postgresql"):

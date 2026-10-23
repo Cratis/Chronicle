@@ -9,6 +9,11 @@ import re
 
 SPEC_ROOT = Path(__file__).resolve().parents[2] / "Source/Kernel/Storage.Sql.Specs"
 COLLECTIONS = {"postgresql": "PostgreSqlCollection", "sqlserver": "SqlServerCollection"}
+# SQL Server specs pay roughly 20 s of database setup per class, so that collection is split across this
+# many jobs (sqlserver-1 .. sqlserver-N), each with its own container. Classes are dealt round-robin in
+# sorted order, so every class lands in exactly one part.
+SQLSERVER_PARTS = 4
+SHARDS = ["postgresql", *(f"sqlserver-{part}" for part in range(1, SQLSERVER_PARTS + 1)), "remaining"]
 
 
 def provider_classes(root):
@@ -40,11 +45,19 @@ def test_filter(classes, shard):
         # The complement includes new uncollected specs automatically, exactly once.
         return "&".join(f"FullyQualifiedName!~{name}"
                         for names in classes.values() for name in names)
+    if shard.startswith("sqlserver-"):
+        part = int(shard.removeprefix("sqlserver-"))
+        if not 1 <= part <= SQLSERVER_PARTS:
+            raise ValueError(f"Unknown SQL Server part {shard}")
+        names = classes["sqlserver"][part - 1::SQLSERVER_PARTS]
+        if not names:
+            raise ValueError(f"SQL Server part {shard} has no spec classes")
+        return "|".join(f"FullyQualifiedName~{name}" for name in names)
     return "|".join(f"FullyQualifiedName~{name}" for name in classes[shard])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("shard", choices=[*COLLECTIONS, "remaining"])
+    parser.add_argument("shard", choices=[*COLLECTIONS, *SHARDS[1:-1], "remaining"])
     args = parser.parse_args()
     print(test_filter(provider_classes(SPEC_ROOT), args.shard))
