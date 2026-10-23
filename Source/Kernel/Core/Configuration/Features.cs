@@ -35,8 +35,10 @@ public class Features
     /// </summary>
     /// <remarks>
     /// Experimental and reserved. Rebuilding a namespaced projection is to build its next generation into its own destination
-    /// while the active generation keeps handling live events. Only the seams exist so far, so the setting has no effect yet and
-    /// rebuilds use the legacy replay path whatever its value.
+    /// while the active generation keeps handling live events. Only the seams exist so far, so rebuilds use the legacy replay
+    /// path whatever its value. When enabled, every write of a MongoDB sink runs in a transaction fenced by the owner epoch of
+    /// its generation. Fenced transactions are capped by ReadModels.MaxBatchSize and require a replica set or mongos;
+    /// a standalone MongoDB server is refused at startup.
     /// </remarks>
     public bool ProjectionGenerations { get; init; }
 }
