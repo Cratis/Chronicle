@@ -297,6 +297,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
         {
             await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
+
+            // Every database and namespace schema has a connection string of its own, so each one keeps an
+            // Npgsql pool of its own. A wipe keeps the databases, and without releasing the idle connections
+            // here every reset carries the previous run's pools forward until the server refuses new clients.
+            NpgsqlConnection.ClearAllPools();
         }
         else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
         {
