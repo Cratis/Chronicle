@@ -25,6 +25,8 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
     readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly string _databaseName = $"fenced_sink_{Guid.NewGuid():N}";
     Exception? _error;
+    Exception? _admittedError;
+    bool _revocationWaited;
     BsonDocument _persisted;
 
     async Task Because()
@@ -35,7 +37,7 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
         var token = await gates.Claim("integration/models", 1);
         var probe = Substitute.For<IFencedBatchProbe>();
         var pause = false;
-        probe.BeforeAdmission(Arg.Any<FenceBatchId>()).Returns(async _ =>
+        probe.BeforeCommit(Arg.Any<FenceBatchId>()).Returns(async _ =>
         {
             if (!pause)
             {
@@ -59,21 +61,29 @@ public class when_a_stale_writer_commits_after_revocation(ChronicleInProcessFixt
         await sink.ApplyChanges(key, SettingCountTo(1), 1UL);
         pause = true;
         var pending = Catch.Exception(() => sink.ApplyChanges(key, SettingCountTo(2), 2UL));
+        Task? revocation = null;
         try
         {
             await _reached.Task.WaitAsync(TimeSpan.FromSeconds(30));
-            await gates.Revoke(token.MaterializationKey, token.Generation);
+            revocation = gates.Revoke(token.MaterializationKey, token.Generation);
+            await Task.WhenAny(revocation, Task.Delay(200));
+            _revocationWaited = !revocation.IsCompleted;
         }
         finally
         {
             _release.TrySetResult();
         }
-        _error = await pending;
+        _admittedError = await pending;
+        await revocation;
+        pause = false;
+        _error = await Catch.Exception(() => sink.ApplyChanges(key, SettingCountTo(3), 3UL));
         _persisted = await database.GetCollection<BsonDocument>(readModel.ContainerName).Find(Builders<BsonDocument>.Filter.Eq("_id", "one")).SingleAsync();
     }
 
     [Fact] public void should_reject_the_stale_commit() => Assert.IsType<FenceRevoked>(_error);
-    [Fact] public void should_preserve_the_committed_document() => Assert.Equal(1, _persisted["count"].AsInt32);
+    [Fact] public void should_wait_for_the_admitted_commit_before_completing_revocation() => Assert.True(_revocationWaited);
+    [Fact] public void should_commit_the_admitted_transaction_before_revocation_completes() => Assert.Null(_admittedError);
+    [Fact] public void should_preserve_the_pre_revocation_commit() => Assert.Equal(2, _persisted["count"].AsInt32);
 
     async Task Destroy() => await _client.DropDatabaseAsync(_databaseName);
 
