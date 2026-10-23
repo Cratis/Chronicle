@@ -24,7 +24,14 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
         }
 
         await using var scope = await database.EventStore(eventStore);
-        await scope.DbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
+        if (await scope.DbContext.Namespaces.FindAsync(name.ToString()) is not null)
+        {
+            return;
+        }
+
+        await scope.DbContext.Namespaces.Insert(
+            new Namespace { Name = name.ToString(), Created = created },
+            (requested, existing) => requested.Created = existing.Created);
         await scope.DbContext.SaveChangesAsync();
     }
 

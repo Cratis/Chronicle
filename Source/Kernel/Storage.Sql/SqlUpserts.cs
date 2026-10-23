@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal static class SqlUpserts
 {
     static readonly ConditionalWeakTable<DbContext, HashSet<object>> _inserts = new();
+    static readonly ConditionalWeakTable<object, Action<object>> _collisionMerges = new();
 
     /// <summary>
     /// Stage an upsert, remembering which inserts may converge with a concurrent writer.
@@ -33,6 +34,22 @@ internal static class SqlUpserts
     }
 
     /// <summary>
+    /// Stage a known-missing row, merging persisted values if another writer inserts it first.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="set">The entity set.</param>
+    /// <param name="entity">The desired values.</param>
+    /// <param name="mergeCollision">The merge to apply when an insert loses a race.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task Insert<TEntity>(this DbSet<TEntity> set, TEntity entity, Action<TEntity, TEntity> mergeCollision)
+        where TEntity : class
+    {
+        await set.AddAsync(entity);
+        _inserts.GetValue(set.Entry(entity).Context, _ => new(ReferenceEqualityComparer.Instance)).Add(entity);
+        _collisionMerges.Add(entity, existing => mergeCollision(entity, (TEntity)existing));
+    }
+
+    /// <summary>
     /// Save staged changes, recovering only unique collisions on inserts explicitly requested as upserts.
     /// </summary>
     /// <param name="context">The context saving the changes.</param>
@@ -41,11 +58,18 @@ internal static class SqlUpserts
     /// <returns>The number of saved entries.</returns>
     internal static async Task<int> SaveChanges(DbContext context, Func<Task<int>> save, CancellationToken cancellationToken)
     {
+        var collisions = 0;
         while (true)
         {
             try
             {
-                return await save();
+                var saved = await save();
+                if (collisions > 0)
+                {
+                    SqlStorageTelemetry.RecoveredCollision("tracked-upsert", collisions);
+                }
+
+                return saved;
             }
             catch (DbUpdateException error) when (StorageWriteConflicts.IsUnique(error))
             {
@@ -64,6 +88,11 @@ internal static class SqlUpserts
                         continue;
                     }
 
+                    if (_collisionMerges.TryGetValue(entry.Entity, out var merge))
+                    {
+                        merge(existing.ToObject());
+                    }
+
                     entry.OriginalValues.SetValues(existing);
                     entry.State = EntityState.Modified;
                     inserts.Remove(entry.Entity);
@@ -76,6 +105,8 @@ internal static class SqlUpserts
                 {
                     throw;
                 }
+
+                collisions++;
             }
         }
     }

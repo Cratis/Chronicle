@@ -90,6 +90,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             // propagates: nothing was persisted, so the candidate must never be handed back.
             var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
                 ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            SqlStorageTelemetry.RecoveredCollision("encryption-key");
             return new(winner, revision);
         }
     }
