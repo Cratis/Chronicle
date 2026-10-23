@@ -828,6 +828,7 @@ public class Sink(
             {
                 _isBulkMode = false;
                 _bulkWindowId = null;
+                _bulkWindowIsReplay = false;
                 _bulkWindowHasFailedWrites = false;
                 _inFlight.Clear();
                 ClearBulkOperations();
