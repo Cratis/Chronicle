@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="readModel">The <see cref="ReadModelDefinition"/> the context is for.</param>
 /// <param name="database">The <see cref="IMongoDatabase"/> to use.</param>
 /// <param name="logger">Optional <see cref="ILogger{T}"/> for logging refused destructive operations.</param>
+/// <param name="writes">Optional sink write executor.</param>
 /// <remarks>
 /// Every destructive operation - clearing, dropping and renaming - is guarded by <see cref="SinkCollectionGuards"/>, so it only
 /// ever touches the collection this sink owns in its current lifecycle phase, and fails loudly otherwise.
@@ -26,7 +28,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public class SinkCollections(
     ReadModelDefinition readModel,
     IMongoDatabase database,
-    ILogger<SinkCollections>? logger = null) : ISinkCollections
+    ILogger<SinkCollections>? logger,
+    ISinkWrites? writes) : ISinkCollections
 {
     const int NamespaceNotFound = 26;
     const int NamespaceExists = 48;
@@ -34,6 +37,17 @@ public class SinkCollections(
     readonly SinkCollectionNames _names = SinkCollectionNames.For(readModel.ContainerName);
     readonly ILogger<SinkCollections> _logger = logger ?? NullLogger<SinkCollections>.Instance;
     bool _isReplaying;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SinkCollections"/> class using unfenced writes.
+    /// </summary>
+    /// <param name="readModel">The read model definition.</param>
+    /// <param name="database">The destination database.</param>
+    /// <param name="logger">The optional diagnostic logger.</param>
+    public SinkCollections(ReadModelDefinition readModel, IMongoDatabase database, ILogger<SinkCollections>? logger = null)
+        : this(readModel, database, logger, UnfencedSinkWrites.Instance)
+    {
+    }
 
     /// <inheritdoc/>
     public string PromotingCollectionName => _names.Promoting;
@@ -165,7 +179,7 @@ public class SinkCollections(
     {
         var name = collection.CollectionNamespace.CollectionName;
         Guard(SinkCollectionOperation.Clear, name, () => SinkCollectionGuards.ThrowIfCannotClear(_names, isReplaying, name));
-        await collection.DeleteManyAsync(FilterDefinition<BsonDocument>.Empty);
+        await (writes ?? UnfencedSinkWrites.Instance).DeleteMany(collection, FilterDefinition<BsonDocument>.Empty);
     }
 
     void Guard(SinkCollectionOperation operation, string collection, Action guard)

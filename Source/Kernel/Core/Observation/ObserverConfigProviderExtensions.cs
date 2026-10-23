@@ -12,6 +12,20 @@ namespace Cratis.Chronicle.Observation;
 public static class ObserverConfigProviderExtensions
 {
     /// <summary>
+    /// Gets the effective hold for an abandoned client delivery.
+    /// </summary>
+    /// <param name="provider">The configuration provider.</param>
+    /// <param name="key">The observer key.</param>
+    /// <returns>The hold, or zero when fencing is disabled.</returns>
+    public static async Task<TimeSpan> GetAbandonedDeliveryHoldForObserver(this IConfigurationForObserverProvider provider, ObserverKey key)
+    {
+        var config = await provider.GetFor(key);
+        return config.AbandonedDeliveryHold <= 0 || config.SubscriberTimeout <= 0
+            ? TimeSpan.Zero
+            : TimeSpan.FromSeconds(Math.Max(config.SubscriberTimeout, config.AbandonedDeliveryHold));
+    }
+
+    /// <summary>
     /// Gets the timeout for observer subscriber request.
     /// </summary>
     /// <param name="provider">The configuration provider.</param>

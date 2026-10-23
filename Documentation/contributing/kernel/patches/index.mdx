@@ -51,6 +51,8 @@ Create a patch by implementing `ICanApplyPatch`:
 - **File naming**: Use descriptive names (e.g., `RenameReactors.cs`, `MigrateEventSchema.cs`)
 - **Class naming**: Match the file name (the `Name` property is auto-derived from the type name)
 
+Never delete a shipped patch. If its work is superseded, keep its name and version and make `Up()` a no-op. Mixed-version clusters may still discover the older implementation during an upgrade.
+
 ### Dependencies
 
 Patches can inject any services registered in the DI container:
@@ -89,11 +91,23 @@ Write comprehensive specs for your patches:
 
 1. **Server Initialization**: Chronicle server starts
 2. **Patch Discovery**: `PatchManager` grain discovers all `ICanApplyPatch` implementations
-3. **Version Check**: Current system version is retrieved from storage
+3. **Version Check**: The patching kernel high-water mark is checked, then the current system version is retrieved from storage
 4. **Patch Selection**: Patches newer than current version are selected
 5. **Sequential Application**: Patches are applied in ascending version order
-6. **Version Update**: System version is updated to latest applied patch
+6. **Version Update**: System version is updated to the latest applied patch; after a successful run, the patching kernel high-water mark is recorded even if no patches were pending
 7. **Normal Startup**: Chronicle continues with normal initialization
+
+### Mixed-version Clusters
+
+Patch selection uses the last applied **patch version**, while a separate **patching kernel version** records the newest kernel that successfully completed patching. They are not the event-store generation floor: an older kernel skips patching with a warning when the recorded kernel version is newer, but continues starting. Generation-floor admission still runs first and can refuse an incompatible kernel independently.
+
+`IPatchManager` is versioned so that a new kernel's startup call cannot be served by an older interface implementation. If an activation has the interface but runs an older kernel than the caller, it requests relocation and deactivates. Startup retries a bounded number of times; local-preferred placement lets the caller's newer silo host the activation. Exhausting relocation retries fails startup rather than silently omitting patches. The legacy `ApplyPatches()` call remains available to older callers.
+
+The high-water mark uses system-information record `Id = 1` in MongoDB and SQL, separate from the last patch version at `Id = 0`. In-memory storage keeps the same separation. Successful patching never lowers the mark. Failed patching does not advance it. Each patch application logs the running kernel version without changing the stored patch schema.
+
+Development placeholder versions `1.0.0` and `0.0.0` (or an unreadable version) bypass this gate with a warning and record no kernel version. Release builds must stamp the server executable's informational version; build metadata is excluded from version comparisons.
+
+Rolling back does not call `Down()` or clear the high-water mark. An older kernel continues without patching. Resetting the mark is an explicit manual recovery action, never an automatic downgrade: stop all kernels, restore a known-compatible backup, and only then remove the patching-kernel record if the recovery requires patch execution again. Never lower it while a newer kernel can still patch the store.
 
 ### Error Handling
 

@@ -41,7 +41,7 @@ public class ApplicationStorage(IDatabase database) : IApplicationStorage
 
     /// <inheritdoc/>
     public Task Create(Application application, CancellationToken cancellationToken = default) =>
-        _collection.InsertOneAsync(application, cancellationToken: cancellationToken);
+        _collection.InsertOnce(application, _ => _.Id == application.Id, cancellationToken);
 
     /// <inheritdoc/>
     public Task Update(Application application, CancellationToken cancellationToken = default) =>

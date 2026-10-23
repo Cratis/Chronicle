@@ -117,7 +117,6 @@ public class ReminderTable(IDatabase database) : IReminderTable
             entity.Id = existing.Id;
         }
         await dbContext.Reminders.Upsert(entity);
-        await dbContext.SaveChangesAsync();
         return entity.ETag;
     }
 

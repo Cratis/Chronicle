@@ -38,22 +38,68 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
-        var sourceChanged = !_sources.TryGetValue(type.Id, out var previousSource) || previousSource != source;
-        _sources[type.Id] = source;
+        lock (_publishing)
+        {
+            var changed = RegisterSimple(type, schema, owner, source, visibility, origin);
+            PublishIfChanged(changed);
+        }
 
-        // Unspecified means the client said nothing, which must not undo what a newer client declared.
-        _visibilities.TryGetValue(type.Id, out var previousVisibility);
-        var effectiveVisibility = visibility == EventTypeVisibility.Unspecified ? previousVisibility : visibility;
-        _origins.TryGetValue(type.Id, out var previousOrigin);
-        sourceChanged |= previousVisibility != effectiveVisibility || (previousOrigin ?? string.Empty) != origin;
-        _visibilities[type.Id] = effectiveVisibility;
-        _origins[type.Id] = origin;
-
-        return RegisterDefinition(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []), sourceChanged);
+        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
+        // anyone to invalidate.
+        return Task.FromResult(false);
     }
 
     /// <inheritdoc/>
-    public Task<bool> Register(EventTypeDefinition definition) => RegisterDefinition(definition, false);
+    public Task<bool> Register(EventTypeDefinition definition)
+    {
+        lock (_publishing)
+        {
+            PublishIfChanged(ApplyDefinition(definition, false));
+        }
+
+        return Task.FromResult(false);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The whole batch is applied under one lock and the latest schemas are published at most once, after the last
+    /// event type has been applied. Registering thousands of event types one at a time would otherwise rebuild and
+    /// publish the complete set for every one of them.
+    /// </remarks>
+    public Task<IEnumerable<EventTypeId>> Register(IEnumerable<EventTypeToRegister> eventTypes)
+    {
+        var mutated = new List<EventTypeId>();
+
+        lock (_publishing)
+        {
+            foreach (var eventType in eventTypes)
+            {
+                var definition = eventType.Definition;
+                var generations = definition.Generations.ToList();
+
+                // A single generation without migrations is exactly what the simple registration expresses - anything
+                // else needs the full definition.
+                var changed = generations.Count == 1 && !definition.Migrations.Any()
+                    ? RegisterSimple(
+                        new EventType(definition.Id, generations[0].Generation, definition.Tombstone),
+                        generations[0].Schema,
+                        definition.Owner,
+                        eventType.Source,
+                        eventType.Visibility,
+                        eventType.Origin)
+                    : ApplyDefinition(definition, false);
+
+                if (changed)
+                {
+                    mutated.Add(definition.Id);
+                }
+            }
+
+            PublishIfChanged(mutated.Count > 0);
+        }
+
+        return Task.FromResult<IEnumerable<EventTypeId>>(mutated);
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() => Task.FromResult(Latest());
@@ -162,7 +208,23 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
             Migrations = incoming.Migrations.Any() ? incoming.Migrations : existing.Migrations
         };
 
-    Task<bool> RegisterDefinition(EventTypeDefinition definition, bool sourceChanged)
+    bool RegisterSimple(EventType type, JsonSchema schema, EventTypeOwner owner, EventTypeSource source, EventTypeVisibility visibility, string origin)
+    {
+        var sourceChanged = !_sources.TryGetValue(type.Id, out var previousSource) || previousSource != source;
+        _sources[type.Id] = source;
+
+        // Unspecified means the client said nothing, which must not undo what a newer client declared.
+        _visibilities.TryGetValue(type.Id, out var previousVisibility);
+        var effectiveVisibility = visibility == EventTypeVisibility.Unspecified ? previousVisibility : visibility;
+        _origins.TryGetValue(type.Id, out var previousOrigin);
+        sourceChanged |= previousVisibility != effectiveVisibility || (previousOrigin ?? string.Empty) != origin;
+        _visibilities[type.Id] = effectiveVisibility;
+        _origins[type.Id] = origin;
+
+        return ApplyDefinition(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []), sourceChanged);
+    }
+
+    bool ApplyDefinition(EventTypeDefinition definition, bool sourceChanged)
     {
         lock (_publishing)
         {
@@ -175,13 +237,18 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
             if (changed)
             {
                 _definitions[definition.Id] = merged;
-                _changes.OnNext(Latest());
             }
-        }
 
-        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
-        // anyone to invalidate.
-        return Task.FromResult(false);
+            return changed;
+        }
+    }
+
+    void PublishIfChanged(bool changed)
+    {
+        if (changed)
+        {
+            _changes.OnNext(Latest());
+        }
     }
 
     IEnumerable<EventTypeSchema> Latest() => [.. _definitions.Values.Select(LatestFor).OfType<EventTypeSchema>()];

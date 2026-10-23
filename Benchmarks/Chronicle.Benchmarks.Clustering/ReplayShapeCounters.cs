@@ -15,13 +15,20 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     bool _measuring;
     long _mongoCommands;
     long _grainCalls;
+    Dictionary<string, long> _mongoCommandsByName = new(StringComparer.Ordinal);
+    Dictionary<string, long> _grainCallsByMethod = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
     public Task Invoke(IIncomingGrainCallContext context)
     {
         lock (_gate)
         {
-            if (_measuring) _grainCalls++;
+            if (_measuring)
+            {
+                _grainCalls++;
+                var method = $"{context.InterfaceName}.{context.MethodName}";
+                _grainCallsByMethod[method] = _grainCallsByMethod.GetValueOrDefault(method) + 1;
+            }
         }
         return context.Invoke();
     }
@@ -46,6 +53,8 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         lock (_gate)
         {
             _mongoCommands = 0;
+            _mongoCommandsByName = new(StringComparer.Ordinal);
+            _grainCallsByMethod = new(StringComparer.Ordinal);
             _grainCalls = 0;
             _measuring = true;
         }
@@ -54,24 +63,27 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// <summary>
     /// Closes the window atomically with the final counts.
     /// </summary>
-    /// <returns>Commands and incoming grain invocations started in the window.</returns>
-    internal (long MongoCommands, long GrainCalls) Stop()
+    /// <returns>Commands and incoming grain invocations started in the window, in total and by name.</returns>
+    internal (long MongoCommands, IReadOnlyDictionary<string, long> MongoCommandsByName, long GrainCalls, IReadOnlyDictionary<string, long> GrainCallsByMethod) Stop()
     {
         lock (_gate)
         {
             _measuring = false;
-            return (_mongoCommands, _grainCalls);
+            return (_mongoCommands, new SortedDictionary<string, long>(_mongoCommandsByName, StringComparer.Ordinal), _grainCalls, new SortedDictionary<string, long>(_grainCallsByMethod, StringComparer.Ordinal));
         }
     }
 
     /// <summary>
     /// Counts one driver command started in the window.
     /// </summary>
-    internal void OnCommand()
+    /// <param name="commandName">The driver command name, such as find or update.</param>
+    internal void OnCommand(string commandName)
     {
         lock (_gate)
         {
-            if (_measuring) _mongoCommands++;
+            if (!_measuring) return;
+            _mongoCommands++;
+            _mongoCommandsByName[commandName] = _mongoCommandsByName.GetValueOrDefault(commandName) + 1;
         }
     }
 }

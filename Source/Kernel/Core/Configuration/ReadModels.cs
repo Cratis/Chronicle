@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class ReadModels
 {
     /// <summary>
+    /// Gets the maximum number of items handled as one unit: events per subscriber call when replaying a projection, and documents per fenced sink write.
+    /// </summary>
+    public int MaxBatchSize { get; init; } = 500;
+
+    /// <summary>
     /// Gets the number of replayed read model versions to retain.
     /// Older replayed collections are removed when a new replay starts.
     /// </summary>

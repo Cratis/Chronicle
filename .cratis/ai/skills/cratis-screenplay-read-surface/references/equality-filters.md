@@ -40,8 +40,8 @@ Each binding refusal reports PLAY0268 with its query/filter and reason:
 | `filter ... from ...` or context-derived `by` | Typed query context sources are not admitted; a caller argument must not stand in for trusted context |
 | Filter on a single-result query | Equality filters are admitted only for collections |
 | `scoped to` | The named scope has no portable executable scope contract |
-| `performer` | Query implementation code is opaque, not a portable declarative lookup |
-| Composite `by` block | Multipart lookup admission remains deferred (Screenplay#599) |
+| `performer` | Query implementation code is opaque. Requires Screenplay 4.220.1 (`screenplay --version`) for it to be an opaque read (PLAY0270 information) left out of the executable model; older compilers refuse it with PLAY0268 and leave the model unbound |
+| `by` block on a collection query | A composite lookup is admitted only for an optional single-instance query; narrow a list by composite-keyed read-model parts with equality filters instead |
 | Filter on a collection/composite property, missing property or mismatched nominal type | The v14 filter contract requires a same-named scalar primitive, concept or enum property with the same type |
 
 Keep those intents when the domain needs them; never drop a context source or

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
@@ -14,5 +15,6 @@ public class EventStoreInitialization
     /// Gets or sets the marker identifier: 1 for first-time kernel setup, 2 for observer enablement.
     /// </summary>
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public int Id { get; set; }
 }

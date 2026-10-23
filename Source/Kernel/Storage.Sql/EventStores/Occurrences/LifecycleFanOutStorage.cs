@@ -33,6 +33,7 @@ public class LifecycleFanOutStorage(Func<Task<DbContextScope<EventStoreDbContext
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
+            SqlStorageTelemetry.RecoveredCollision("lifecycle-fan-out");
             return false;
         }
     }

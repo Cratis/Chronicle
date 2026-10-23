@@ -3,6 +3,18 @@
 
 using BenchmarkDotNet.Running;
 
+if (args.Contains("--fence-cost", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostScenario.Run();
+    return;
+}
+
+if (args.Contains("--fence-ddl", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.FenceCostDdlScenario.Run();
+    return;
+}
+
 if (args.Contains("--rebuild-live", StringComparer.Ordinal))
 {
     await Cratis.Chronicle.Benchmarks.Clustering.LiveRebuildScenario.Run();

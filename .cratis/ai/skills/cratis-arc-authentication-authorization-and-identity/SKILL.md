@@ -160,11 +160,15 @@ protect plain HTTP snapshots, waits and long polls; older versions leave them un
 
 ### Validators are not an authorization boundary
 
-A `[ProtectedDecision]` command runs only certified, parameterless validators and
-refuses validators with constructor dependencies. A permission or ownership rule
-that depends on state does not belong in a validator (or in an `[Unprotected]`
-one): put it in `Provide()`/`Handle()` with `DecisionRead<T>` or `IDecisionReads`,
-and see the command-validation and Chronicle guidance.
+Authorization runs before validation, so a caller who may not act never reaches a
+validator. Express who may act through policies, roles and `[Authorize]`, not a
+validator. A state rule ("the order is still open") belongs in a
+`CommandValidator<T>` with the read model as a constructor parameter; under read
+protection `On` that read guards the append, under `Off` (the default) it is a
+hint, and in an `[Unprotected]` command it is advisory. A state-dependent
+permission or ownership rule (this member owns the order) may sit there too, with
+the same limit. Under `[ProtectedDecision]` without `On`, only a parameterless
+validator runs; see the command-validation and Chronicle guidance.
 
 Read [authorization](references/authorization.md) for the guest rules, evaluation
 order, the two baselines, default access under Arc's two hosting models, the
@@ -251,8 +255,9 @@ To run locally with an identity, supply the forwarded headers yourself — see
   method directly.
 - Observable queries that serve private or revocable data have an emission guard
   backed by current session and membership state.
-- Permission and ownership rules in `[ProtectedDecision]` commands live in
-  `Provide()`/`Handle()`, not in validators.
+- State-dependent permission and ownership rules are guarded: read protection `On`
+  with the read model in the validator or handler, or `[ProtectedDecision]` commands
+  with the rule in `Provide()`/`Handle()`. Under `Off` they are hints.
 - Discovery endpoints (`/.cratis/commands`, `/.cratis/queries`,
   `/.cratis/identity-details/schema`, `/.cratis/users`, `/.cratis/tenants`) are
   tested under Production settings; introspection is restricted or disabled where it
