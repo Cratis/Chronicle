@@ -12,17 +12,46 @@ types**, so adding a parameter - even an optional one that every caller still co
 method. The other release cannot decode the call, and the new silo crashes on startup with
 `TypeLoadException: Unable to resolve type alias ("inv", ..., "<hash>")`. That is how 19.70 to 19.106 broke (#5272).
 
-Within a major release, for every grain interface in `Source/Kernel/Core`:
+Within a major release, for every grain interface in `Source/Kernel/Core` (anything deriving from `IGrainWith...Key`
+or `IGrainObserver`):
 
-- **Never change or remove a method** - not a parameter, not its type, not the return type. Add a new method beside it
-  and have the old one forward to it. Remove the old one only in a major release.
-- **Raise `[Version]` when an interface gains a method.** It routes a call that needs the new method to a silo that has
-  it, instead of to an activation on an older silo. Add `using Orleans.CodeGeneration;` at the top of the file and
-  write `[Version(n)]`; qualifying it in place fails, because inside a `Cratis.*` namespace `Orleans` resolves to
-  `Cratis.Orleans`.
-- **Never move or rename a grain interface, grain class or a type a custom codec writes the name of** (the
-  `Cratis.Orleans.Serialization` codecs). The name is on the wire; moving `ConceptSerializer` broke 19.4 to 19.13 (#4325).
+| You want to | Do this |
+| --- | --- |
+| Add a method | Add it, and put `[Version(n)]` on that interface, one higher than its current version. No attribute means 0, so the first one is `[Version(1)]`; the current version of every interface is in `OrleansContracts.txt`. |
+| Add a parameter, or change a parameter or return type | Do **not** edit the method. Add a new method beside it, raise `[Version]`, and have the old one forward to the new one. Remove the old one only in a major release. |
+| Remove or rename a method | Not within a major. Keep it serving and remove it in the next major. |
+| Rename or move a grain interface or grain class | Not within a major. The full name is on the wire. |
+| Change only a method's body or XML docs | Nothing; the wire identity is unchanged. |
+
+`[Version]` routes a call that needs the new method to a silo that has it, instead of to an activation on an older
+silo. Raise it only on the interface that gained a method, never on every interface at once: raising it everywhere
+makes every call from a new silo seek a new silo and moves every grain during a rollout. Write it with a `using`, not
+qualified in place, because inside a `Cratis.*` namespace `Orleans` resolves to `Cratis.Orleans`:
+
+```csharp
+using Orleans.CodeGeneration;
+
+namespace Cratis.Chronicle.Projections;
+
+[Version(1)]
+public interface IProjectionsManager : IGrainWithStringKey
+{
+    // Existing methods unchanged, including this one, which now forwards to the new overload.
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+
+    // New: the extra parameter is a new method, so the interface goes from version 0 to 1.
+    Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version, bool replayOnChange);
+}
+```
+
+Beyond the interfaces:
+
+- **Never move or rename a type a custom codec writes the name of** (the `Cratis.Orleans.Serialization` codecs). The
+  name is on the wire; moving `ConceptSerializer` broke 19.4 to 19.13 (#4325).
 - **Types passed between silos only gain properties.** Renaming, retyping or removing one is not caught by any gate.
+- **Treat a Cratis.Orleans upgrade as a grain interface change.** Its job, job-step, worker and state-machine grain
+  interfaces are outside `OrleansContracts.txt` and the gate. Read its release notes for grain interface changes, and
+  take a release that breaks them only in a Chronicle major. Cratis.Orleans follows the same rule.
 
 `Source/Kernel/Core/OrleansContracts.txt` records every grain interface, its version, each method's wire identity and
 every grain class. It is generated, never hand-edited - except to delete a retained removed method in a major release.
