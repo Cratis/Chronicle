@@ -65,6 +65,17 @@ public interface IProjectionPipeline
     Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
 
     /// <summary>
+    /// Prepares the pipeline for a page of events that is about to be handled, one partition run at a time.
+    /// </summary>
+    /// <param name="events">The events of the page, in the order they will be handled.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called once per page before any of its events are handled. It is an optimization only: the default does nothing,
+    /// and a failure is logged and ignored, so it must never be required for correct handling.
+    /// </remarks>
+    Task PreparePage(IReadOnlyList<AppendedEvent> events) => Task.CompletedTask;
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
