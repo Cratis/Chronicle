@@ -72,7 +72,7 @@ same representation as the decimal itself.
 | MongoDB | Decimal128 | Decimal128 |
 | PostgreSQL | JSON decimal literal | NUMERIC |
 | SQL Server | JSON decimal literal | DECIMAL(38,18) |
-| SQLite | JSON decimal literal | Invariant decimal text in TEXT, plus a generated numeric sort key |
+| SQLite | JSON decimal literal | Invariant decimal text in a TEXT column |
 | In-memory | CLR decimal | CLR decimal |
 
 The JSON payload on the wire remains a number, not an extended JSON object or a floating-point
@@ -108,30 +108,10 @@ SQL read models before relying on exact decimal writes. Replay creates a fresh t
 mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
 REAL columns and SQL Server's former DECIMAL(18,2) columns.
 
-### Kernel shadow columns
-
-SQL shadow columns are registered centrally, outside the projected columns and the EF model. They
-are nullable without a default, are never materialized or released, and do not change the original
-read-model properties. The current registry contains:
-
-| Name pattern | Provider | Storage | Index |
-| --- | --- | --- | --- |
-| `__order_{column}` | SQLite, scalar decimal properties including decimal keys | Generated VIRTUAL TEXT | When the decimal property declares an index |
-
-If a schema property collides with a shadow name (case-insensitively), the schema property wins:
-the shadow is skipped and the kernel logs a warning. Registration still succeeds, but an operation
-requiring that shadow refuses explicitly rather than using the schema property's value.
-
-Existing tables gain missing shadows additively, without rewriting data. The registry also owns
-indexes under `chronicle_shx_`, independently of declared `chronicle_idx_` indexes. Declared-index
-reconciliation and table-renaming logic ignore shadow indexes, so old kernels cannot remove them.
-After an old kernel promotes a replay table without shadows, ordinary EF reads and writes remain
-unaffected. A shadow-specific operation repairs missing columns and indexes and retries once.
-SQLite catalog probes include generated columns, so a restart does not attempt to add them again.
-
-SQLite's original TEXT decimal columns preserve digits but still sort lexicographically in ad-hoc
-SQL (`"10"` precedes `"9"`). Existing REAL-affinity tables still require replay for exact values;
-non-text legacy values have NULL ordering keys. No floating-point conversion recovers lost precision.
+SQLite's new TEXT columns preserve decimal digits but compare and sort lexicographically, not
+numerically: `"10"` sorts before `"9"`. Do not use their native ordering or range comparisons as
+numeric decimal operations. Existing REAL-affinity columns can coerce invariant decimal text back
+to a binary floating-point value until replay replaces the table.
 
 Replay cannot undo precision already lost from the original event content. Check the source events
 before assuming that a replay will recover an amount.

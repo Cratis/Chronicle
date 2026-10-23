@@ -16,10 +16,4 @@ public class Sql
     /// poll the database on this interval and re-emit only when the result actually changes.
     /// </remarks>
     public int LiveQueryPollIntervalSeconds { get; init; } = 2;
-
-    /// <summary>
-    /// Gets the finite timeout in seconds for shadow-index CREATE and DROP statements and their reconciliation deadline.
-    /// Must be positive. The default is ten minutes; ordinary SQL commands retain their own timeout.
-    /// </summary>
-    public int ShadowIndexDdlTimeoutSeconds { get; init; } = 600;
 }
