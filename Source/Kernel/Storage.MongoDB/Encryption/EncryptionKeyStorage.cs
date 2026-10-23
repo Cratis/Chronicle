@@ -37,10 +37,10 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
 
         var id = new EncryptionKeyId(identifier, actualRevision);
-        await collection.ReplaceOneAsync(
+        await DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(
             _ => _.Id == id,
             new EncryptionKeyForIdentifier(id, key.Public, key.Private),
-            new ReplaceOptions() { IsUpsert = true });
+            new ReplaceOptions() { IsUpsert = true }));
     }
 
     /// <inheritdoc/>
@@ -218,10 +218,10 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     async Task UpsertErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasure erasure)
     {
         var collection = GetErasureCollection(eventStore, eventStoreNamespace);
-        await collection.ReplaceOneAsync(
+        await DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(
             _ => _.Id == identifier,
             new EncryptionKeyErasureForIdentifier(identifier, erasure.ErasedThrough, [.. erasure.ErasedKeyFingerprints], erasure.NewKeyAllowed),
-            new ReplaceOptions { IsUpsert = true });
+            new ReplaceOptions { IsUpsert = true }));
     }
 
     IMongoCollection<EncryptionKeyErasureForIdentifier> GetErasureCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace) =>
