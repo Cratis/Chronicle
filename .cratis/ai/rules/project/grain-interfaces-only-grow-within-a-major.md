@@ -49,9 +49,10 @@ Beyond the interfaces:
 - **Never move or rename a type a custom codec writes the name of** (the `Cratis.Orleans.Serialization` codecs). The
   name is on the wire; moving `ConceptSerializer` broke 19.4 to 19.13 (#4325).
 - **Types passed between silos only gain properties.** Renaming, retyping or removing one is not caught by any gate.
-- **Treat a Cratis.Orleans upgrade as a grain interface change.** Its job, job-step, worker and state-machine grain
-  interfaces are outside `OrleansContracts.txt` and the gate. Read its release notes for grain interface changes, and
-  take a release that breaks them only in a Chronicle major. Cratis.Orleans follows the same rule.
+- **Treat a Cratis.Orleans major upgrade as a grain interface change.** Its job, job-step, worker and state-machine
+  grain interfaces are outside this repository's `OrleansContracts.txt` and gate. Cratis.Orleans records and gates
+  them the same way against its own latest release, so a minor or patch of it keeps them compatible; a major of it
+  may break them, so take one only in a Chronicle major.
 
 `Source/Kernel/Core/OrleansContracts.txt` records every grain interface, its version, each method's wire identity and
 every grain class. It is generated, never hand-edited - except to delete a retained removed method in a major release.
