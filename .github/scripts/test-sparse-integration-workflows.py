@@ -269,6 +269,18 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py gate", step["run"])
         self.assertEqual("always()", job["if"])
 
+    def test_requested_run_names_the_head_and_skipped_matrix_fails(self):
+        self.assertIn("github.event.pull_request.head.sha", self.requested["run-name"])
+        gate = self.requested["jobs"]["hot-core-gate-requested"]["steps"][0]
+        self.assertEqual("${{ github.event.pull_request.head.sha }}", gate["env"]["HEAD_SHA"])
+        run = gate["run"]
+        self.assertIn('if [ -z "$ALL_PROVIDERS" ]', run)
+        self.assertLess(run.index('-z "$ALL_PROVIDERS"'), run.index('if [ "$TOUCHED" != "true" ]'))
+
+    def test_gate_reads_the_current_pull_request_number(self):
+        step = next(step for step in self.hot_core["jobs"]["hot-core-gate"]["steps"] if step.get("name") == "Decide")
+        self.assertEqual("${{ github.event.pull_request.number }}", step["env"]["PR_NUMBER"])
+
     def test_evidence_job_name_matches_the_requested_workflow(self):
         spec = importlib.util.spec_from_file_location("evaluate_hot_core_gate",
                                                       WORKFLOWS.parent / "scripts/evaluate-hot-core-gate.py")

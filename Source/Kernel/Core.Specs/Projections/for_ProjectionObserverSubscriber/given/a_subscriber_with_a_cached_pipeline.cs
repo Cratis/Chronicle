@@ -26,6 +26,8 @@ namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
     protected ProjectionObserverSubscriber _subscriber;
+    protected IProjectionChangesetNotifier _notifier;
+    protected IExpandoObjectConverter _expandoObjectConverter;
     protected ProjectionDefinition _definition;
     protected IProjection _projectionGrain;
     protected IStorage<ProjectionDefinition> _stateStorage;
@@ -49,7 +51,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _projectionGrain = Substitute.For<IProjection>();
         _projectionGrain.GetDefinition().Returns(_definition);
         silo.AddProbe(_ => _projectionGrain);
-        silo.AddProbe(_ => Substitute.For<IProjectionChangesetNotifier>());
+        _notifier = Substitute.For<IProjectionChangesetNotifier>();
+        silo.AddProbe(_ => _notifier);
 
         var readModel = new ReadModelDefinition(
             _definition.ReadModel,
@@ -71,7 +74,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _storage.GetEventStore(_key.EventStore).Projections.Has(_key.ObserverId).Returns(true);
         _storage.GetEventStore(_key.EventStore).Projections.Get(_key.ObserverId).Returns(_definition);
         silo.AddService(_storage);
-        silo.AddService(Substitute.For<IExpandoObjectConverter>());
+        _expandoObjectConverter = silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _factory = Substitute.For<IProjectionFactory>();
         _projection = Substitute.For<EngineProjection>();
 

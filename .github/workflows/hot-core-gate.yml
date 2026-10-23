@@ -196,6 +196,7 @@ jobs:
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
           DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
           RUN_INTEGRATION: ${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 .github/scripts/evaluate-hot-core-gate.py gate
