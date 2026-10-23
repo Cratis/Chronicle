@@ -38,6 +38,11 @@ public class ReplayObserverPartition(
     /// </remarks>
     public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
     {
+        if (State.Request is null)
+        {
+            return await base.Resume();
+        }
+
         try
         {
             await EnsureReplaySupported();
@@ -68,6 +73,11 @@ public class ReplayObserverPartition(
     /// <inheritdoc/>
     protected override async Task<bool> CanResume()
     {
+        if (State.Request is null)
+        {
+            return false;
+        }
+
         await EnsureReplaySupported();
         return await base.CanResume();
     }
