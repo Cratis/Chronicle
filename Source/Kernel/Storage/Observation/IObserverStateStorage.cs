@@ -42,14 +42,14 @@ public interface IObserverStateStorage
     /// Save the state of an observer.
     /// </summary>
     /// <param name="state"><see cref="ObserverState"/> to save.</param>
-    /// <param name="owner">The event sequence addressed by the writing activation. Defaults to the event log for direct callers.</param>
+    /// <param name="owner">The event sequence addressed by the writing activation.</param>
     /// <returns>Whether the state was saved. False means another sequence owns the record.</returns>
     /// <remarks>
     /// A missing owner on legacy state counts as unowned; the next successful save stamps it.
     /// During a rolling upgrade an old kernel can replace a record without its owner, temporarily disabling
     /// this guard until a new kernel writes it again. Full protection requires all kernels to be upgraded.
     /// </remarks>
-    Task<bool> Save(ObserverState state, EventSequenceId? owner = null);
+    Task<bool> Save(ObserverState state, EventSequenceId owner);
 
     /// <summary>
     /// Stamps ownership on an existing state record without creating one.

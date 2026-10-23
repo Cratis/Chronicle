@@ -30,12 +30,12 @@ public class with_postgresql_existing_null_control(PostgreSqlFixture fixture) : 
         database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), () => { })));
         _storage = new(EventStoreName.System, EventStoreNamespaceName.Default, database);
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

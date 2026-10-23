@@ -77,9 +77,8 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// fields the observer state does not own — such as legacy per-partition counts that are still awaiting
     /// migration on the next load — are left untouched instead of being wiped by a full replace.
     /// </remarks>
-    public async Task<bool> Save(Chronicle.Storage.Observation.ObserverState state, EventSequenceId? owner = null)
+    public async Task<bool> Save(Chronicle.Storage.Observation.ObserverState state, EventSequenceId owner)
     {
-        owner ??= EventSequenceId.Log;
         var document = state.ToMongoDB();
         var update = Builders<ObserverState>.Update
             .Set(_ => _.Owner, owner)

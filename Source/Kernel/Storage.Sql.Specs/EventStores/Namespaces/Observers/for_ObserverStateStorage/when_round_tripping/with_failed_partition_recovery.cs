@@ -33,7 +33,7 @@ public class with_failed_partition_recovery : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition] });
+        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition] }, Concepts.EventSequences.EventSequenceId.Log);
         _restored = (await _storage.Get("observer")).FailedPartitions.Single();
     }
 

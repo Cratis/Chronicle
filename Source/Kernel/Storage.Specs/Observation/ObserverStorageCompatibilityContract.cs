@@ -66,12 +66,12 @@ public abstract class ObserverStorageCompatibilityContract : Specification
     }
     [Fact] public async Task should_allow_a_refused_initialization_attempt()
     {
-        await OpenObservers().Save(new() { Identifier = "observer", Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job"]) });
+        await OpenObservers().Save(new() { Identifier = "observer", Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job"]) }, EventSequenceId.Log);
         (await Check()).ShouldBeNull();
     }
     [Fact] public async Task should_allow_an_observer_awaiting_registration()
     {
-        await OpenObservers().Save(new() { Identifier = "observer", Initialization = new(ObserverInitializationState.AwaitingRegistration, []) });
+        await OpenObservers().Save(new() { Identifier = "observer", Initialization = new(ObserverInitializationState.AwaitingRegistration, []) }, EventSequenceId.Log);
         (await Check()).ShouldBeNull();
     }
     [Fact] public async Task should_refuse_an_initialized_store_without_a_control_record()
@@ -129,17 +129,21 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         (await OpenObservers().Get("observer")).TypeSetControl!.Revision.Value.ShouldEqual(1L);
     }
 
-    Task SaveInitialization(ObserverInitializationState state) => OpenObservers().Save(new()
-    {
-        Identifier = "observer",
-        Initialization = new(state, [])
-    });
+    Task SaveInitialization(ObserverInitializationState state) => OpenObservers().Save(
+        new()
+        {
+            Identifier = "observer",
+            Initialization = new(state, [])
+        },
+        EventSequenceId.Log);
 
-    Task SaveControl() => OpenObservers().Save(new()
-    {
-        Identifier = "observer",
-        TypeSetControl = new(new(1), new("reactor", ObserverFilters.None), new Dictionary<Concepts.Events.EventTypeId, ObserverTypeSetMember>(), [])
-    });
+    Task SaveControl() => OpenObservers().Save(
+        new()
+        {
+            Identifier = "observer",
+            TypeSetControl = new(new(1), new("reactor", ObserverFilters.None), new Dictionary<Concepts.Events.EventTypeId, ObserverTypeSetMember>(), [])
+        },
+        EventSequenceId.Log);
 
     async Task<Exception> Check(bool supportsInitializedObservers = false)
     {

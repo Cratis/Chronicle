@@ -31,7 +31,7 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         _saved = await context.Observers.SingleAsync();
     }

@@ -66,10 +66,8 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public async Task<bool> Save(Observation.ObserverState state, EventSequenceId? owner = null)
+    public async Task<bool> Save(Observation.ObserverState state, EventSequenceId owner)
     {
-        owner ??= EventSequenceId.Log;
-
         // EF change-tracking rejects a null primary key. Mirror the Get path tolerance: an
         // observer whose grain key decoded to an empty ObserverId has no real identity to
         // persist, and MongoDB's ReplaceOneAsync(IsUpsert: true) silently accepts the same

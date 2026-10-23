@@ -39,9 +39,8 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
             .ToArray());
 
     /// <inheritdoc/>
-    public Task<bool> Save(ObserverState state, EventSequenceId? owner = null)
+    public Task<bool> Save(ObserverState state, EventSequenceId owner)
     {
-        owner ??= EventSequenceId.Log;
         while (true)
         {
             if (!_states.TryGetValue(state.Identifier, out var existing))
