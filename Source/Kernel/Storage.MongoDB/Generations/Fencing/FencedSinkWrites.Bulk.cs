@@ -9,7 +9,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 public sealed partial class FencedSinkWrites
 {
     /// <inheritdoc/>
-    public async Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts = null)
+    public Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken) =>
+        BulkWrite(collection, requests, null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts, CancellationToken cancellationToken)
     {
         if (_splitting.Value)
         {
@@ -26,7 +30,7 @@ public sealed partial class FencedSinkWrites
             await Run(
                 async _ =>
                 {
-                    await BulkWrite(collection, requests, cancellationToken, guardedUpserts);
+                    await BulkWrite(collection, requests, guardedUpserts, cancellationToken);
                     return true;
                 },
                 cancellationToken);
@@ -40,7 +44,7 @@ public sealed partial class FencedSinkWrites
             var failedAt = error.WriteErrors.Min(writeError => writeError.Index);
             if (failedAt > 0)
             {
-                await BulkWrite(collection, requests.Take(failedAt).ToList(), cancellationToken, guardedUpserts);
+                await BulkWrite(collection, requests.Take(failedAt).ToList(), guardedUpserts, cancellationToken);
             }
             if (!UnfencedSinkWrites.IsRejectedGuardedUpsert(error, requests, guardedUpserts))
             {
@@ -49,7 +53,7 @@ public sealed partial class FencedSinkWrites
             var remaining = requests.Skip(failedAt + 1).ToArray();
             if (remaining.Length > 0)
             {
-                await BulkWrite(collection, remaining, cancellationToken, guardedUpserts);
+                await BulkWrite(collection, remaining, guardedUpserts, cancellationToken);
             }
         }
     }
@@ -78,7 +82,7 @@ public sealed partial class FencedSinkWrites
         {
             try
             {
-                await BulkWrite(collection, chunk, cancellationToken, guardedUpserts);
+                await BulkWrite(collection, chunk, guardedUpserts, cancellationToken);
             }
             catch (MongoBulkWriteException<BsonDocument> error)
             {

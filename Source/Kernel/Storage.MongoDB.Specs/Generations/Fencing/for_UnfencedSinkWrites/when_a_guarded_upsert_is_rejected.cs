@@ -20,7 +20,7 @@ public class when_a_guarded_upsert_is_rejected(ReplicaSetMongoDBFixture fixture)
     {
         var rejected = new UpdateOneModel<BsonDocument>(new BsonDocument { { "_id", 2 }, { "watermark", new BsonDocument("$lt", 10) } }, new BsonDocument("$set", new BsonDocument("watermark", 10))) { IsUpsert = true };
         WriteModel<BsonDocument>[] operations = [Insert(1), rejected, Insert(3), new UpdateOneModel<BsonDocument>(new BsonDocument("_id", 3), new BsonDocument("$set", new BsonDocument("afterInsert", true)))];
-        _error = await Catch.Exception(() => new UnfencedSinkWrites().BulkWrite(_models, operations, CancellationToken.None, new HashSet<WriteModel<BsonDocument>> { rejected }));
+        _error = await Catch.Exception(() => new UnfencedSinkWrites().BulkWrite(_models, operations, new HashSet<WriteModel<BsonDocument>> { rejected }, CancellationToken.None));
         _count = await Count();
         _last = await _models.Find(new BsonDocument("_id", 3)).SingleAsync();
     }

@@ -1485,7 +1485,7 @@ public partial class Sink(
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await writes.BulkWrite(Collection, remaining, cancellationToken, batch.GuardedUpserts).WaitAsync(cancellationToken);
+                await writes.BulkWrite(Collection, remaining, batch.GuardedUpserts, cancellationToken).WaitAsync(cancellationToken);
                 break;
             }
             catch (MongoBulkWriteException<BsonDocument> ex)

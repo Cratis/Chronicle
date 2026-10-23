@@ -86,8 +86,19 @@ public interface ISinkWrites
     /// <param name="collection">The collection to write.</param>
     /// <param name="requests">The write models, in order.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
-    /// <param name="guardedUpserts">Requests whose duplicate primary key means their watermark guard rejected them.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="MongoBulkWriteException{T}">A write failed; every request before the first failed index has been written.</exception>
-    Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts = null);
+    Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Executes an ordered bulk write, continuing past explicitly guarded upserts rejected by their primary key.
+    /// </summary>
+    /// <param name="collection">The collection to write.</param>
+    /// <param name="requests">The write models, in order.</param>
+    /// <param name="guardedUpserts">Requests whose duplicate primary key means their watermark guard rejected them.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop waiting with.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>Implementations predating guarded upserts retain their original ordered failure behavior.</remarks>
+    Task BulkWrite(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts, CancellationToken cancellationToken) =>
+        BulkWrite(collection, requests, cancellationToken);
 }
