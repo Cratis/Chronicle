@@ -87,6 +87,22 @@ is applied on each HTTP send, including sends from long-lived external-service c
 A `401` invalidates the rejected token and retries the same request once with a fresh token;
 other responses do not trigger an OAuth retry. Receivers should remain idempotent.
 
+## Managed identity
+
+To call a receiver protected by Microsoft Entra without storing a secret, register the webhook with
+the .NET builder's `WithManagedIdentity(scope, clientId)` method. The kernel requests tokens with its
+own managed identity or workload identity. `scope` is required, for example
+`api://<receiver-application-id>/.default`; `clientId` is optional and selects a user-assigned
+identity (leave it out for the system-assigned identity). The Workbench offers the same option as
+**Managed identity**.
+
+<ChronicleClientTabs snippet="webhooks/index/managed-identity" />
+
+Tokens are cached and refreshed shortly before expiry, and a `401` triggers one refresh and retry.
+If the kernel has no managed identity, the delivery fails and is retried like any failed delivery.
+See [Call Entra-protected endpoints from webhooks](../hosting/azure.md#call-entra-protected-endpoints-from-webhooks)
+for the hosting details.
+
 ## Pin the generation your endpoint understands
 
 To keep an endpoint on the event shape it knows, opt in per webhook with the .NET

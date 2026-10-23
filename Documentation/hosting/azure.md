@@ -97,7 +97,21 @@ A webhook the kernel calls can authenticate with OAuth client credentials. In th
 | `clientSecret` | Its client secret, read from your secret store |
 | `scope` | `api://<receiver-application-id>/.default` |
 
-Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Webhooks use a client secret: unlike the storage and resolver settings above, they do not use the kernel's managed identity. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.md#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
+Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.md#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
+
+### Use the kernel's managed identity instead of a secret
+
+To avoid storing a client secret, register the webhook with `WithManagedIdentity(scope, clientId)`. The kernel then requests the token with its own Azure identity, as in the [managed identity example](../webhooks/index.md#managed-identity):
+
+| Argument | Entra value |
+| --- | --- |
+| `scope` | `api://<receiver-application-id>/.default` |
+| `clientId` | Optional. The client id of a user-assigned managed identity or workload identity. Leave it out to use the system-assigned identity |
+
+- No secret is stored with the webhook definition.
+- When the kernel runs with workload identity (for example on AKS), it sees `AZURE_FEDERATED_TOKEN_FILE` and uses the federated token. Without it, the kernel uses its managed identity. For workload identity, an empty `clientId` falls back to `AZURE_CLIENT_ID`.
+- Tokens are cached per client id and scope, and refreshed shortly before expiry. A `401` invalidates the token and retries the request once with a fresh one.
+- If the kernel host has no usable managed identity, token acquisition fails and the delivery fails. It is retried like any failed delivery and is never reported as delivered.
 
 ## Plan for availability
 
