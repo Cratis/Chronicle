@@ -26,6 +26,7 @@ public class when_getting_last_instances_of_any(MongoDBFixture fixture) : Indexi
 
     async Task Establish()
     {
+        await _database.EnsureIndexesForEventSequence(EventSequenceId.Log);
         var collection = _database.GetEventSequenceCollectionFor(EventSequenceId.Log);
         _sources = Enumerable.Range(0, 1001).Select(index => new EventSourceId($"source-{index}")).ToArray();
         await collection.InsertManyAsync(_sources.Select((source, index) => AnEvent((ulong)index, source, "parent")));
@@ -33,8 +34,6 @@ public class when_getting_last_instances_of_any(MongoDBFixture fixture) : Indexi
         _intercepted = Substitute.For<IMongoCollection<Event>>();
         _intercepted.DocumentSerializer.Returns(collection.DocumentSerializer);
         _intercepted.Settings.Returns(collection.Settings);
-        _intercepted.AggregateAsync(Arg.Any<PipelineDefinition<Event, Event>>(), Arg.Any<AggregateOptions>(), Arg.Any<CancellationToken>())
-            .Returns(info => collection.AggregateAsync(info.ArgAt<PipelineDefinition<Event, Event>>(0), info.ArgAt<AggregateOptions>(1)));
         _intercepted.FindAsync(Arg.Any<FilterDefinition<Event>>(), Arg.Any<FindOptions<Event, Event>>(), Arg.Any<CancellationToken>())
             .Returns(info => collection.FindAsync(info.ArgAt<FilterDefinition<Event>>(0), info.ArgAt<FindOptions<Event, Event>>(1)));
         var database = Substitute.For<IEventStoreNamespaceDatabase>();
@@ -61,7 +60,7 @@ public class when_getting_last_instances_of_any(MongoDBFixture fixture) : Indexi
     [Fact] void should_return_each_distinct_source_including_the_second_chunk() => _results.Count.ShouldEqual(1002);
     [Fact] void should_include_missing_sources() => _results[new EventSourceId("missing")].TryGetValue(out _).ShouldBeFalse();
     [Fact] void should_not_match_any_type_when_no_types_are_requested() => _emptyTypes[_sources[0]].TryGetValue(out _).ShouldBeFalse();
-    [Fact] void should_issue_one_aggregate_per_chunk() => _intercepted.Received(3).AggregateAsync(Arg.Any<PipelineDefinition<Event, Event>>(), Arg.Any<AggregateOptions>(), Arg.Any<CancellationToken>());
+    [Fact] void should_issue_one_find_per_chunk() => _intercepted.Received(3).FindAsync(Arg.Any<FilterDefinition<Event>>(), Arg.Is<FindOptions<Event, Event>>(options => options.BatchSize == 1000 && options.Sort == null), Arg.Any<CancellationToken>());
     [Fact]
     void should_take_the_later_matching_event_in_the_whole_log()
     {

@@ -19,20 +19,33 @@ public partial class EventSequenceStorage
             var filter = Builders<Event>.Filter.And(
                 Builders<Event>.Filter.In(@event => @event.EventSourceId, sources),
                 Builders<Event>.Filter.In(@event => @event.Type, types));
-            using var cursor = await _collection.Aggregate()
-                .Match(filter)
-                .Sort(Builders<Event>.Sort.Descending(@event => @event.SequenceNumber))
-                .Group(@event => @event.EventSourceId, group => group.First())
-                .ToCursorAsync();
-            while (await cursor.MoveNextAsync())
+            var latest = await ReadLastInstances(filter);
+            foreach (var @event in latest)
             {
-                foreach (var @event in cursor.Current)
-                {
-                    results[@event.EventSourceId] = await converter.ToAppendedEvent(@event);
-                }
+                results[@event.EventSourceId] = await converter.ToAppendedEvent(@event);
             }
         }
 
         return results;
+    }
+
+    async Task<IEnumerable<Event>> ReadLastInstances(FilterDefinition<Event> filter)
+    {
+        // Equality on both eventSourceId and type is bounded by the eventSourceId_eventTypeId index, so only the page's
+        // matching events are read. The latest per source is picked here, so no server-side sort or grouping is needed.
+        using var cursor = await _collection.Find(filter, new FindOptions { BatchSize = 1000 }).ToCursorAsync();
+        var latest = new Dictionary<EventSourceId, Event>();
+        while (await cursor.MoveNextAsync())
+        {
+            foreach (var @event in cursor.Current)
+            {
+                if (!latest.TryGetValue(@event.EventSourceId, out var previous) || @event.SequenceNumber > previous.SequenceNumber)
+                {
+                    latest[@event.EventSourceId] = @event;
+                }
+            }
+        }
+
+        return latest.Values;
     }
 }
