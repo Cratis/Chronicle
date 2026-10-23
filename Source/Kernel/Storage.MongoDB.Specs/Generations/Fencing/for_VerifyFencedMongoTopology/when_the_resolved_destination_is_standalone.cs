@@ -17,6 +17,8 @@ public class when_the_resolved_destination_is_standalone : Specification
     void Establish()
     {
         var resolved = Substitute.For<IMongoDatabase>();
+        resolved.Client.Returns(Substitute.For<IMongoClient>());
+        resolved.DatabaseNamespace.Returns(new DatabaseNamespace("models"));
         resolved.RunCommandAsync(Arg.Any<Command<BsonDocument>>(), Arg.Any<ReadPreference>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new BsonDocument("isWritablePrimary", true)));
         var database = Substitute.For<IDatabase>();

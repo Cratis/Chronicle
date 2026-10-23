@@ -14,6 +14,8 @@ public class when_server_is_mongos : Specification
     void Establish()
     {
         _database = Substitute.For<IMongoDatabase>();
+        _database.Client.Returns(Substitute.For<IMongoClient>());
+        _database.DatabaseNamespace.Returns(new DatabaseNamespace("models"));
         _database.RunCommandAsync(Arg.Any<Command<BsonDocument>>(), Arg.Any<ReadPreference>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new BsonDocument("msg", "isdbgrid")));
     }
