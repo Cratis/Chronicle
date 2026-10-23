@@ -69,4 +69,19 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
         // never blocks its grain turn on the downstream push to a client stream.
         await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, readModelKey, readModel, change)));
     }
+
+    /// <inheritdoc/>
+    public async Task NotifyMany(EventStoreNamespaceName namespaceName, IReadOnlyList<ReadModelChangeNotification> notifications)
+    {
+        if (notifications.Count == 0)
+        {
+            return;
+        }
+
+        logger.Notifying(this.GetPrimaryKeyString(), _subscribers.Count, namespaceName, notifications[0].ReadModelKey);
+        foreach (var notification in notifications)
+        {
+            await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, notification.ReadModelKey, notification.ReadModel, notification.Change)));
+        }
+    }
 }

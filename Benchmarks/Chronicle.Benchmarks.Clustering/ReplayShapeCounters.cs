@@ -25,13 +25,20 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     bool _measuring;
     long _mongoCommands;
     long _grainCalls;
+    Dictionary<string, long> _mongoCommandsByName = new(StringComparer.Ordinal);
+    Dictionary<string, long> _grainCallsByMethod = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
     public Task Invoke(IIncomingGrainCallContext context)
     {
         lock (_gate)
         {
-            if (_measuring) _grainCalls++;
+            if (_measuring)
+            {
+                _grainCalls++;
+                var method = $"{context.InterfaceName}.{context.MethodName}";
+                _grainCallsByMethod[method] = _grainCallsByMethod.GetValueOrDefault(method) + 1;
+            }
         }
         return context.Invoke();
     }
@@ -56,6 +63,8 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
         lock (_gate)
         {
             _mongoCommands = 0;
+            _mongoCommandsByName = new(StringComparer.Ordinal);
+            _grainCallsByMethod = new(StringComparer.Ordinal);
             _grainCalls = 0;
             foreach (var tag in _mongoFindCommandsByTag.Keys.ToArray())
             {
@@ -69,12 +78,14 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// Closes the window atomically with the final counts.
     /// </summary>
     /// <returns>Commands, incoming grain invocations, and find commands grouped by call-site comment started in the window.</returns>
-    internal (long MongoCommands, long GrainCalls, IReadOnlyDictionary<string, long> MongoFindCommandsByTag) Stop()
+    internal (long MongoCommands, IReadOnlyDictionary<string, long> MongoCommandsByName, long GrainCalls, IReadOnlyDictionary<string, long> GrainCallsByMethod, IReadOnlyDictionary<string, long> MongoFindCommandsByTag) Stop()
+
     {
         lock (_gate)
         {
             _measuring = false;
-            return (_mongoCommands, _grainCalls, new Dictionary<string, long>(_mongoFindCommandsByTag, StringComparer.Ordinal));
+            return (_mongoCommands, new SortedDictionary<string, long>(_mongoCommandsByName, StringComparer.Ordinal), _grainCalls, new SortedDictionary<string, long>(_grainCallsByMethod, StringComparer.Ordinal), new Dictionary<string, long>(_mongoFindCommandsByTag, StringComparer.Ordinal));
+
         }
     }
 
@@ -83,11 +94,13 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
     /// </summary>
     /// <param name="command">The command started by the MongoDB driver.</param>
     internal void OnCommand(CommandStartedEvent command)
+
     {
         lock (_gate)
         {
             if (!_measuring) return;
             _mongoCommands++;
+            _mongoCommandsByName[command.CommandName] = _mongoCommandsByName.GetValueOrDefault(command.CommandName) + 1;
             if (command.CommandName != "find") return;
             var tag = command.Command.TryGetValue("comment", out var comment) && comment.IsString
                 ? comment.AsString
@@ -98,6 +111,7 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
                 count = _mongoFindCommandsByTag[tag];
             }
             _mongoFindCommandsByTag[tag] = count + 1;
+
         }
     }
 }
