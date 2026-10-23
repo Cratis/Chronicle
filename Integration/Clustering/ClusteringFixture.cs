@@ -108,6 +108,11 @@ public class ClusteringFixture : IAsyncLifetime
     protected virtual short SiloCount => 2;
 
     /// <summary>
+    /// Gets whether the silos have separate event-sequence and observer roles instead of the default roles.
+    /// </summary>
+    protected virtual bool SplitRoles => true;
+
+    /// <summary>
     /// Configures the backing store without replacing cluster membership.
     /// </summary>
     /// <param name="builder">The kernel builder.</param>
@@ -238,11 +243,14 @@ public class ClusteringFixture : IAsyncLifetime
                 // (reactors, reducers, projections). This forces every event and read model to cross
                 // the silo boundary — exercising Orleans serialization end-to-end.
                 var isEventSequencesSilo = siloOptions.SiloName == EventSequencesSiloName;
-                services.Configure<Configuration.ChronicleOptions>(options =>
+                if (SplitRoles)
                 {
-                    options.Clustering.Roles.EventSequences = isEventSequencesSilo;
-                    options.Clustering.Roles.Observers = SiloCount == 1 || !isEventSequencesSilo;
-                });
+                    services.Configure<Configuration.ChronicleOptions>(options =>
+                    {
+                        options.Clustering.Roles.EventSequences = isEventSequencesSilo;
+                        options.Clustering.Roles.Observers = SiloCount == 1 || !isEventSequencesSilo;
+                    });
+                }
             })
             .ConfigureSilo((siloOptions, siloBuilder) =>
             {
