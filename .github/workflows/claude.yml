@@ -14,7 +14,7 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    types: [opened]
   pull_request_review:
     types: [submitted]
 
@@ -29,13 +29,15 @@ jobs:
     # Only start a runner when Claude is actually addressed. Without this gate the
     # workflow booted a runner and checked out the repository for every comment,
     # review and issue event in the repository (~150 runs/week), even though the
-    # action itself then found no @claude mention and did nothing. Issue opened /
-    # assigned events stay ungated because assignment is itself the signal.
+    # action itself then found no @claude mention and did nothing. Issues are gated the
+    # same way: claude-code-action only acts on an opened issue whose title or body holds
+    # the trigger phrase, and on an assignment only when `assignee_trigger` is set (it is
+    # not), so `assigned` events and unaddressed issues started a runner for nothing.
     if: >-
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues')
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
