@@ -10,8 +10,17 @@ using Grpc.Core;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public sealed partial class ClusterLoad : IAsyncDisposable
+/// <summary>
+/// Appends a steady stream of events to a cluster while its membership changes, and verifies none was lost or doubled.
+/// </summary>
+/// <param name="transitions">
+/// How many nodes the scenario takes down. Appends forwarded to a node that is going away fail until the cluster
+/// notices, so the failure budget grows with each one rather than being shared by them all.
+/// </param>
+public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
 {
+    const int FailureBudgetPerTransition = 30;
+
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _observed = new();
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _acknowledged = new();
     readonly ConcurrentQueue<Guid> _unknown = new();
@@ -83,16 +92,25 @@ public sealed partial class ClusterLoad : IAsyncDisposable
         // Such attempts are allowed in the log at most once, but every acknowledged append must be there exactly once.
         var allowed = acknowledged.Select(append => append.Id).Concat(_unknown).ToHashSet();
         var stored = await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []);
-        await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
-        var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
-        var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
-        Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
-        storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
-        storedIds.All(allowed.Contains).ShouldBeTrue();
-        acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
-        acknowledged.All(append => stored.Any(@event => @event.Context.SequenceNumber == append.Sequence && ((ClusterEventAppended)@event.Content).Id == append.Id)).ShouldBeTrue();
-        storedSequences.Zip(storedSequences.Skip(1), (first, next) => next == first + 1).All(contiguous => contiguous).ShouldBeTrue();
-        VerifyObservations(stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)), _observed);
+        var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
+        try
+        {
+            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
+            var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
+            var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
+            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
+            storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
+            storedIds.All(allowed.Contains).ShouldBeTrue();
+            acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
+            acknowledged.All(append => stored.Any(@event => @event.Context.SequenceNumber == append.Sequence && ((ClusterEventAppended)@event.Content).Id == append.Id)).ShouldBeTrue();
+            storedSequences.Zip(storedSequences.Skip(1), (first, next) => next == first + 1).All(contiguous => contiguous).ShouldBeTrue();
+            VerifyObservations(storedEvents, _observed);
+        }
+        catch
+        {
+            await ClusterLoadDiagnostics.Dump(_reactor, storedEvents, _observed, Console.Out);
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -129,9 +147,12 @@ public sealed partial class ClusterLoad : IAsyncDisposable
     // down qualify; a refused connection to any other silo is a real failure.
     internal static bool IsAppendToDepartedSilo(string? exceptionType, string message, ICollection<(string Address, int Generation)> departed)
     {
-        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" ||
-            !message.StartsWith("Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to endpoint S", StringComparison.Ordinal) ||
-            !message.Contains("ConnectionRefused", StringComparison.Ordinal))
+        // Orleans reports the refused connection itself once, then - while it backs off before trying the silo
+        // again - fails every send to it with "will retry after" instead. Both are the same departed silo.
+        const string ConnectionFailed = "Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to ";
+        var refused = message.StartsWith($"{ConnectionFailed}endpoint S", StringComparison.Ordinal) && message.Contains("ConnectionRefused", StringComparison.Ordinal);
+        var backingOff = message.StartsWith($"{ConnectionFailed}S", StringComparison.Ordinal) && message.Contains(", will retry after ", StringComparison.Ordinal);
+        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" || !(refused || backingOff))
         {
             return false;
         }
@@ -207,12 +228,12 @@ public sealed partial class ClusterLoad : IAsyncDisposable
     void Failed(string reason)
     {
         Console.WriteLine($"Failed append: {reason}");
-        if (++_failures > 30)
+        if (++_failures > FailureBudgetPerTransition * transitions)
         {
-            throw new InvalidOperationException("More than 30 append attempts failed during the membership transition.");
+            throw new InvalidOperationException($"More than {FailureBudgetPerTransition * transitions} append attempts failed during {transitions} membership transition(s).");
         }
     }
 
-    [GeneratedRegex(@"Unable to connect to endpoint S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)\.", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant)]
     private static partial Regex DepartedEndpoint();
 }

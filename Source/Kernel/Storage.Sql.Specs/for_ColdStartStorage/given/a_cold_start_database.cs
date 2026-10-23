@@ -23,6 +23,11 @@ public class a_cold_start_database : Specification
     readonly RenameWinner _renameWinner = new();
     readonly List<SqliteConnection> _connections = [];
 
+    /// <summary>
+    /// Gets whether the contexts use a retrying execution strategy, as SQL Server and PostgreSQL do in production.
+    /// </summary>
+    protected virtual bool UsesRetryingExecutionStrategy => false;
+
     async Task Establish()
     {
         var storeOptions = (await Options<EventStoreDbContext>()).AddInterceptors(_insertWinner, _renameWinner);
@@ -73,7 +78,16 @@ public class a_cold_start_database : Specification
         var connection = new SqliteConnection($"DataSource=cold-start-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         _connections.Add(connection);
         await connection.OpenAsync();
-        return new DbContextOptionsBuilder<T>().UseSqlite(connection.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
+        return new DbContextOptionsBuilder<T>()
+            .UseSqlite(connection.ConnectionString, sqlite =>
+            {
+                if (UsesRetryingExecutionStrategy)
+                {
+                    sqlite.ExecutionStrategy(dependencies => new RetryingExecutionStrategy(dependencies));
+                }
+            })
+            .AddConceptAsSupport()
+            .WithoutServiceProviderCaching();
     }
 
     async Task Destroy()

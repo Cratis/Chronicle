@@ -148,11 +148,17 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
 
         try
         {
-            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
-            await scope.DbContext.Observers.AddAsync(renamed);
-            await scope.DbContext.SaveChangesAsync();
-            await scope.DbContext.Observers.Where(observer => observer.Id == currentId).ExecuteDeleteAsync();
-            await transaction.CommitAsync();
+            // A user-initiated transaction must run inside the execution strategy, since SQL Server and
+            // PostgreSQL use retrying strategies that refuse transactions started outside them.
+            await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                scope.DbContext.ChangeTracker.Clear();
+                await using var transaction = await scope.DbContext.Database.BeginTransactionAsync();
+                await scope.DbContext.Observers.AddAsync(renamed);
+                await scope.DbContext.SaveChangesAsync();
+                await scope.DbContext.Observers.Where(observer => observer.Id == currentId).ExecuteDeleteAsync();
+                await transaction.CommitAsync();
+            });
         }
         catch (DbUpdateException)
         {

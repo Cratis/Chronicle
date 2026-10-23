@@ -95,6 +95,13 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public TimeSpan LiveQueryPollingInterval { get; } = TimeSpan.FromSeconds(options.Value.Sql.LiveQueryPollIntervalSeconds);
 
+    /// <summary>
+    /// Gets whether runtime schema operations are read-only.
+    /// </summary>
+    internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
+
     bool UsesBindings => options.Value.Storage.ConnectionDetails.GetDatabaseType() is DatabaseType.PostgreSql or DatabaseType.SqlServer;
 
     /// <inheritdoc/>
@@ -116,7 +123,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 #pragma warning restore CA2000
         try
         {
-            if (UsesBindings)
+            if (UsesBindings && !VerifySchema)
             {
                 await _databaseNames.ReserveCluster(dbContext);
             }
@@ -178,11 +185,15 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         {
             connectionString = SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved);
         }
+        else if (UsesBindings)
+        {
+            connectionString = VerifySchema
+                ? KnownConnectionString(identity)
+                : _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime))));
+        }
         else
         {
-            connectionString = UsesBindings
-                ? _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime))))
-                : ConnectionStringFor($"+es+{eventStore}+{@namespace}");
+            connectionString = ConnectionStringFor($"+es+{eventStore}+{@namespace}");
         }
 
         var schema = _resolution.SchemaFor(resolved);
