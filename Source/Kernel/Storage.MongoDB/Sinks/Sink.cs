@@ -1070,16 +1070,18 @@ public partial class Sink(
 
         foreach (var indexDefinition in readModel.Indexes)
         {
-            var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
+            ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
+            var indexName = ReadModelIndexKeys.Name(indexDefinition);
+            var keys = ReadModelIndexKeys.For(indexDefinition);
 
-            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
+            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
             if (await IsIndexPresent(candidates, indexName, collation))
             {
                 continue;
             }
 
             var indexModel = new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending(indexDefinition.PropertyPath.Path),
+                keys,
                 new CreateIndexOptions { Name = indexName, Background = true });
 
             await collection.Indexes.CreateOneAsync(indexModel);
@@ -1260,8 +1262,8 @@ public partial class Sink(
             static (_, current, incoming) => Math.Max(current, incoming),
             eventSequenceNumber);
 
-    static bool HasMatchingKeyAndOptions(BsonDocument index, string propertyPath) =>
-        index.GetValue("key", BsonNull.Value).Equals(new BsonDocument(propertyPath, 1)) &&
+    static bool HasMatchingKeyAndOptions(BsonDocument index, BsonDocument keys) =>
+        index.GetValue("key", BsonNull.Value).Equals(keys) &&
         index.GetValue("unique", false) == false &&
         index.GetValue("prepareUnique", false) == false &&
         index.GetValue("sparse", false) == false &&
