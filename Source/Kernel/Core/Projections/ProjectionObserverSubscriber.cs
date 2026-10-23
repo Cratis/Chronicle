@@ -21,6 +21,7 @@ using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
+using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -45,12 +46,14 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
+/// <param name="engineProjectionsManager">The silo-local engine <see cref="EngineProjectionsManager"/>, whose projection fingerprint reveals a definition change this subscriber was not notified about.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionObserverSubscriber(
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
     IStorage storage,
+    EngineProjectionsManager engineProjectionsManager,
     ILogger<ProjectionObserverSubscriber> logger) : Grain, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
@@ -131,6 +134,12 @@ public class ProjectionObserverSubscriber(
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
             var isNewInstance = false;
 
+            var staleFailure = await RefreshWhenEngineHasNewerDefinition();
+            if (staleFailure is not null)
+            {
+                return staleFailure;
+            }
+
             foreach (var @event in events)
             {
                 var sequenceNumber = @event.Context.SequenceNumber;
@@ -139,33 +148,10 @@ public class ProjectionObserverSubscriber(
                 // in the old pin. Only an unhandled type may be skipped; a generation mismatch must be processed.
                 if (_projection?.Accepts(@event.Context.EventType) == false)
                 {
-                    // SetDefinition waits for this subscriber's notification. Calling that grain here
-                    // could deadlock, so re-check shared storage directly before deciding to skip.
-                    var definitions = storage.GetEventStore(_key.EventStore).Projections;
-                    if (!await definitions.Has(_key.ObserverId))
+                    var failure = await RefreshFromStoredDefinition(lastSuccessfullyObservedEvent);
+                    if (failure is not null)
                     {
-                        logger.PipelineNotReady(_key);
-                        return new(
-                            ObserverSubscriberState.Failed,
-                            lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                            ["Projection definition no longer exists."],
-                            string.Empty);
-                    }
-
-                    var current = await definitions.Get(_key.ObserverId);
-                    if (ProjectionFactory.DefinitionFingerprintFor(_definition) != ProjectionFactory.DefinitionFingerprintFor(current))
-                    {
-                        _definition = current;
-                        projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
-                        await HandlePipeline();
-                        if (_pipeline is null)
-                        {
-                            return new(
-                                ObserverSubscriberState.Failed,
-                                lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                                _pipelineBuildFailure?.GetAllMessages() ?? ["Projection pipeline is not yet ready — will be retried."],
-                                _pipelineBuildFailure?.StackTrace ?? string.Empty);
-                        }
+                        return failure;
                     }
                 }
 
@@ -262,6 +248,62 @@ public class ProjectionObserverSubscriber(
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty);
         }
+    }
+
+    async Task<ObserverSubscriberResult?> RefreshWhenEngineHasNewerDefinition()
+    {
+        // The definition notification from the Projection grain is best effort (the grain may have been
+        // deactivated or re-placed, losing its registrations). The engine on this silo is registered with a
+        // changed definition before any replay starts, so its fingerprint is the cheap, authoritative signal.
+        if (!engineProjectionsManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var current) ||
+            current.DefinitionFingerprint == _projection?.DefinitionFingerprint)
+        {
+            return null;
+        }
+
+        logger.RefreshingStalePipeline(_key);
+        var latest = await engineProjectionsManager.GetCurrent(_key.EventStore, _key.Namespace, _key.ObserverId);
+        return latest is null
+            ? DefinitionGone(null)
+            : await RefreshFromStoredDefinition(null);
+    }
+
+    async Task<ObserverSubscriberResult?> RefreshFromStoredDefinition(AppendedEvent? lastSuccessfullyObservedEvent)
+    {
+        // SetDefinition waits for this subscriber's notification. Calling that grain here
+        // could deadlock, so re-check shared storage directly.
+        var definitions = storage.GetEventStore(_key.EventStore).Projections;
+        if (!await definitions.Has(_key.ObserverId))
+        {
+            return DefinitionGone(lastSuccessfullyObservedEvent);
+        }
+
+        var current = await definitions.Get(_key.ObserverId);
+        if (ProjectionFactory.DefinitionFingerprintFor(_definition) == ProjectionFactory.DefinitionFingerprintFor(current))
+        {
+            return null;
+        }
+
+        _definition = current;
+        projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
+        await HandlePipeline();
+        return _pipeline is null
+            ? new(
+                ObserverSubscriberState.Failed,
+                lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+                _pipelineBuildFailure?.GetAllMessages() ?? ["Projection pipeline is not yet ready — will be retried."],
+                _pipelineBuildFailure?.StackTrace ?? string.Empty)
+            : null;
+    }
+
+    ObserverSubscriberResult DefinitionGone(AppendedEvent? lastSuccessfullyObservedEvent)
+    {
+        logger.PipelineNotReady(_key);
+        return new(
+            ObserverSubscriberState.Failed,
+            lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
+            ["Projection definition no longer exists."],
+            string.Empty);
     }
 
     async Task HandlePipeline()
