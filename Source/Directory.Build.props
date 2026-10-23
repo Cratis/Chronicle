@@ -74,6 +74,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <!-- xUnit v3 test projects are executables. A project that must stay on xUnit v2 sets UseXunitV2=true. -->
         <OutputType Condition="'$(UseXunitV2)'!='true'">Exe</OutputType>
+        <!-- Keep each spec on its own per-fact instance and its original display name until a project opts in. -->
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
