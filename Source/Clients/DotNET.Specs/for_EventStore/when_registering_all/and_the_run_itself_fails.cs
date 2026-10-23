@@ -30,7 +30,7 @@ public class and_the_run_itself_fails : given.an_event_store_with_a_projection_t
     async Task Because()
     {
         await _projections.Discover();
-        _thrown = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrown = await Catch.Exception(_eventStore.RegisterAll);
         _outcome = _eventStore.Registration;
     }
 

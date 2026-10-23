@@ -21,7 +21,7 @@ public class and_the_first_reconciliation_fails : given.an_event_sequence_with_p
             return Task.CompletedTask;
         });
         _captureIsSubscribed = false;
-        _initialError = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+        _initialError = await Catch.Exception(_silo.TimerRegistry.FireAllAsync);
     }
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();

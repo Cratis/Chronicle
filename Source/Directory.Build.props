@@ -92,6 +92,12 @@
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs" />
     </ItemGroup>
 
+    <PropertyGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
+        <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications' experimental resource types (see the 5.0 upgrade guide).
+             xUnit1051: cancellation-token propagation in existing specs is adopted incrementally, not as part of this migration. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
         <PackageReference Include="Cratis.Specifications.XUnit.v3" />
         <PackageReference Include="xunit.v3.mtp-off" />

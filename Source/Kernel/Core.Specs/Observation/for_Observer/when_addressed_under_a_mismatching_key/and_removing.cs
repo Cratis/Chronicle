@@ -7,7 +7,7 @@ public class and_removing : given.an_observer_under_a_mismatching_key
 {
     Exception? _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.Remove());
+    async Task Because() => _error = await Catch.Exception(_observer.Remove);
 
     [Fact] void should_reject_the_operation() => _error.ShouldBeOfExactType<ObserverKeyDoesNotMatchDefinition>();
     [Fact] void should_name_the_event_sequence_of_the_definition() => _error!.Message.ShouldContain(_definitionEventSequenceId.Value);

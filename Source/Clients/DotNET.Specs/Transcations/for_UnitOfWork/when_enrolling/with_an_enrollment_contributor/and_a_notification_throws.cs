@@ -20,7 +20,7 @@ public class and_a_notification_throws : given.a_contributed_unit
     async Task Because()
     {
         _enrollmentError = Catch.Exception(() => Stage());
-        _commitError = await Catch.Exception(() => _unitOfWork.Commit());
+        _commitError = await Catch.Exception(_unitOfWork.Commit);
         await _unitOfWork.Rollback();
     }
 

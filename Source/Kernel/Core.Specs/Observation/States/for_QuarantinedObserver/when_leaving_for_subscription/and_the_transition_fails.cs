@@ -19,7 +19,7 @@ public class and_the_transition_fails : given.a_quarantined_observer_state
 
     async Task Because()
     {
-        _error = await Catch.Exception(() => _state.LeaveForSubscription());
+        _error = await Catch.Exception(_state.LeaveForSubscription);
         _canTransitionToDisconnectedAfterwards = await _state.CanTransitionTo<Disconnected>(_storedState);
     }
 
