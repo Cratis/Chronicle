@@ -14,6 +14,10 @@ public partial class HandleEventsForObserver
         bucket is not null && result.State == ObserverSubscriberState.Failed &&
         (!page || (result.FailedPartition is not null && result.FailedAt.IsActualValue));
 
+    static AppendedEvent[] FilterBucketEvents(ReplayBucket? bucket, AppendedEvent[] events) => bucket is null
+        ? events
+        : events.Where(@event => ReplayBuckets.For(@event.Context.EventSourceId, bucket.Count) == bucket).ToArray();
+
     (JobStepResult? Result, EventSequenceNumber LastSuccessful) FailureResult(
         ReplayBucket? bucket,
         Key partition,
@@ -29,10 +33,6 @@ public partial class HandleEventsForObserver
         return (JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
             CreateResult(_lastDurableCheckpoint), result.ExceptionMessages, result.ExceptionStackTrace)), context.LastSuccessful);
     }
-
-    static AppendedEvent[] FilterBucketEvents(ReplayBucket? bucket, AppendedEvent[] events) => bucket is null
-        ? events
-        : events.Where(@event => ReplayBuckets.For(@event.Context.EventSourceId, bucket.Count) == bucket).ToArray();
 
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessful, bool Handled, AppendedEvent[] Remaining)> HandlePage(
         (HandleEventsForObserverState State, TimeSpan Timeout) context,

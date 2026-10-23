@@ -103,7 +103,7 @@ public class ReplayObserver(
             : 0;
         if (bucketCount > 0)
         {
-            return ProjectionReplayBuckets.Prepare(request, bucketCount, State.ReplayBucketSteps, arguments => CreateStep<IHandleEventsForObserver>(arguments));
+            return ProjectionReplayBuckets.Prepare(request, bucketCount, State.ReplayBucketSteps, CreateStep<IHandleEventsForObserver>);
         }
 
         if (request.ObserverType == ObserverType.Projection)

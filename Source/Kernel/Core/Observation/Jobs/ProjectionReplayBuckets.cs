@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
@@ -16,6 +15,14 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 internal static class ProjectionReplayBuckets
 {
+    /// <summary>
+    /// Gets the number of replay buckets to use for a projection replay, or zero when the replay must stay ordered.
+    /// </summary>
+    /// <param name="request">The <see cref="ReplayObserverRequest"/> being prepared.</param>
+    /// <param name="observer">The <see cref="IObserver"/> being replayed.</param>
+    /// <param name="options">The <see cref="ChronicleOptions"/>, if any.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding projection definitions.</param>
+    /// <returns>The bucket count, or zero for an ordered replay.</returns>
     internal static async Task<int> CountFor(ReplayObserverRequest request, IObserver observer, ChronicleOptions? options, IStorage storage)
     {
         if (!Enabled(options))
@@ -34,8 +41,14 @@ internal static class ProjectionReplayBuckets
             : 0;
     }
 
-    static bool Enabled(ChronicleOptions? options) => options?.Jobs.ProjectionRebuildBuckets > 0 && options.ReadModels.GuardSinkWritesOnWatermark;
-
+    /// <summary>
+    /// Prepares one replay step per bucket and records its progress entry.
+    /// </summary>
+    /// <param name="request">The <see cref="ReplayObserverRequest"/> being prepared.</param>
+    /// <param name="count">The number of buckets.</param>
+    /// <param name="progress">The progress entries to add each bucket step to.</param>
+    /// <param name="createStep">Creates a job step from its arguments.</param>
+    /// <returns>The prepared job steps.</returns>
     internal static IImmutableList<JobStepDetails> Prepare(
         ReplayObserverRequest request,
         int count,
@@ -59,4 +72,6 @@ internal static class ProjectionReplayBuckets
 
         return steps.ToImmutable();
     }
+
+    static bool Enabled(ChronicleOptions? options) => options?.Jobs.ProjectionRebuildBuckets > 0 && options.ReadModels.GuardSinkWritesOnWatermark;
 }
