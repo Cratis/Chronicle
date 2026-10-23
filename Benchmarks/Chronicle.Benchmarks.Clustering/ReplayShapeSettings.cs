@@ -33,7 +33,7 @@ internal sealed record ReplayShapeSettings(int Roots, int Depth, int Events, int
             mix);
         if (settings.Depth > 2) throw new ArgumentException("REPLAY_DEPTH must be 1 or 2; this model-bound shape defines only two child levels.");
         if (settings.RemovePercent > 100) throw new ArgumentException("REPLAY_REMOVE_PERCENT must be between 0 and 100.");
-        var minimumEvents = settings.Roots + (2L * settings.Roots * settings.Depth) + (long)Math.Ceiling(settings.Roots * settings.RemovePercent / 100d);
+        var minimumEvents = settings.Roots + (2L * settings.Roots * settings.Depth) + (long)Math.Ceiling((long)settings.Roots * settings.RemovePercent / 100d);
         if (settings.Events < minimumEvents) throw new ArgumentException("REPLAY_EVENTS must allow root/child creation, at least one update per child, and leaf removals.");
         return settings;
     }
