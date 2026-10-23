@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Data;
 using System.Dynamic;
 using System.Reflection;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
@@ -21,34 +23,16 @@ public partial class Sink
     /// <inheritdoc/>
     public async Task<IsolatedReplaceResult> ReplaceIsolated(Key key, ExpandoObject? state, EventSequenceNumber watermark)
     {
-        var id = GetIdString(key);
-        var bound = checked((long)watermark.Value);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
-        var rows = scope.DbContext.Entries.Where(BuildIdPredicate(id));
-        var eligible = rows.Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == null || EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) <= bound);
-        if (state is null)
+        try
         {
-            return await RemoveIsolated(rows, eligible);
+            return await ReplaceIsolatedAttempt(key, state, watermark);
         }
-
-        var replacement = ReplacementEntity(key, state, bound);
-        if (await eligible.ExecuteUpdateAsync(setters => SetReplacementValues(setters, replacement)) > 0)
+        catch (Exception exception) when (StorageWriteConflicts.IsUnique(exception) || StorageWriteConflicts.IsTransactionConflict(exception))
         {
-            return IsolatedReplaceResult.Replaced;
+            // Retry a refused transaction once with a fresh scope/snapshot. Further contention is an
+            // error, not evidence that a newer watermark superseded this replacement.
+            return await ReplaceIsolatedAttempt(key, state, watermark);
         }
-        if (await rows.AnyAsync())
-        {
-            return IsolatedReplaceResult.Superseded;
-        }
-        scope.DbContext.Entries.Add(replacement);
-        if (await TryInsertIsolated(scope.DbContext, id))
-        {
-            return IsolatedReplaceResult.Replaced;
-        }
-
-        // A concurrent insert won. Re-evaluate its watermark in the database, never blindly overwrite it.
-        return await eligible.ExecuteUpdateAsync(setters => SetReplacementValues(setters, replacement)) > 0
-            ? IsolatedReplaceResult.Replaced : IsolatedReplaceResult.Superseded;
     }
 
     static async Task<IsolatedReplaceResult> RemoveIsolated(IQueryable<DynamicReadModelEntity> rows, IQueryable<DynamicReadModelEntity> eligible)
@@ -59,6 +43,42 @@ public partial class Sink
 
     static void AddReplacementSetter<T>(UpdateSettersBuilder<DynamicReadModelEntity> setters, string name, object? value) =>
         setters.SetProperty(row => EF.Property<T>(row, name), value is null ? default : (T)value);
+
+    async Task<IsolatedReplaceResult> ReplaceIsolatedAttempt(Key key, ExpandoObject? state, EventSequenceNumber watermark)
+    {
+        var bound = checked((long)watermark.Value);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        return await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            scope.DbContext.ChangeTracker.Clear();
+
+            // Serialize both existing rows and missing-key decisions. A competing insert/update/delete
+            // either precedes this snapshot, waits for it, or forces a serialization/deadlock retry.
+            await using var transaction = await scope.DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            var rows = scope.DbContext.Entries.Where(BuildIdPredicate(GetIdString(key)));
+            var eligible = rows.Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == null || EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) <= bound);
+            var result = state is null
+                ? await RemoveIsolated(rows, eligible)
+                : await WriteIsolated(scope.DbContext, rows, eligible, ReplacementEntity(key, state, bound));
+            await transaction.CommitAsync();
+            return result;
+        });
+    }
+
+    async Task<IsolatedReplaceResult> WriteIsolated(ReadModelDbContext context, IQueryable<DynamicReadModelEntity> rows, IQueryable<DynamicReadModelEntity> eligible, DynamicReadModelEntity replacement)
+    {
+        if (await eligible.ExecuteUpdateAsync(setters => SetReplacementValues(setters, replacement)) > 0)
+        {
+            return IsolatedReplaceResult.Replaced;
+        }
+        if (await rows.AnyAsync())
+        {
+            return IsolatedReplaceResult.Superseded;
+        }
+        context.Entries.Add(replacement);
+        await context.SaveChangesAsync();
+        return IsolatedReplaceResult.Replaced;
+    }
 
     DynamicReadModelEntity ReplacementEntity(Key key, ExpandoObject state, long watermark)
     {

@@ -164,6 +164,7 @@ public partial class Sink(
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
+        await SettleGuardedBulkReads();
         if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
         {
             return bulkAnswer;
@@ -503,7 +504,17 @@ public partial class Sink(
         if (CanBuffer(options))
         {
             var cacheKey = converter.ToBsonValue(key).ToString()!;
-            if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () => ForgetBulkState(cacheKey)))
+            if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () =>
+            {
+                if (options.Mode == SinkWriteMode.GuardedUpsert)
+                {
+                    InvalidateGuardedBulkState(key);
+                }
+                else
+                {
+                    ForgetBulkState(cacheKey);
+                }
+            }))
             {
                 return await FlushBulkIfNeeded();
             }
@@ -628,14 +639,23 @@ public partial class Sink(
             ArrayFilters = write.Converted.ArrayFilters
         };
         var hasJoined = changeset.HasJoined();
-        var cacheState = hasJoined ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
+        var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
 
         void WhenQueued()
         {
-            cacheState?.Invoke();
-            if (options.Mode == SinkWriteMode.GuardedUpsert && updateModel.IsUpsert)
+            // Guarded writes may be rejected without failing the batch. Neither their state nor their
+            // watermark is a safe answer for another operation in this bulk window.
+            if (options.Mode == SinkWriteMode.GuardedUpsert)
             {
-                _guardedBulkUpserts.Add(updateModel);
+                InvalidateGuardedBulkState(write.Key);
+                if (updateModel.IsUpsert)
+                {
+                    _guardedBulkUpserts.Add(updateModel);
+                }
+            }
+            else
+            {
+                cacheState?.Invoke();
             }
         }
 
@@ -654,7 +674,11 @@ public partial class Sink(
             return;
         }
 
-        if (_isBulkMode && !changeset.HasJoined())
+        if (options.Mode == SinkWriteMode.GuardedUpsert)
+        {
+            writes.AfterCommit(() => EvictBulkState(write.Key));
+        }
+        else if (_isBulkMode && !changeset.HasJoined())
         {
             writes.AfterCommit(CreateCacheState(write.Key, changeset, write.EventSequenceNumber));
         }
@@ -734,6 +758,7 @@ public partial class Sink(
 
     void ClearBulkState()
     {
+        _bulkHasGuardedWrites = false;
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
@@ -933,6 +958,7 @@ public partial class Sink(
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
+        await SettleGuardedBulkReads();
         if (_isBulkMode)
         {
             var pathSegments = childPropertyPath.Segments.ToArray();

@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public partial class Sink
 {
     readonly HashSet<WriteModel<BsonDocument>> _guardedBulkUpserts = [];
+    bool _bulkHasGuardedWrites;
 
     /// <inheritdoc/>
     public bool SupportsIsolatedReplace => true;
@@ -65,6 +66,23 @@ public partial class Sink
     static bool IsDuplicateId(MongoWriteException exception) =>
         exception.WriteError.Category == ServerErrorCategory.DuplicateKey &&
         exception.WriteError.Message.Contains("index: _id_", StringComparison.Ordinal);
+
+    async Task SettleGuardedBulkReads()
+    {
+        if (_isBulkMode && _bulkHasGuardedWrites)
+        {
+            // Eviction alone would read past an accepted but still buffered write. Settle first so
+            // the next fold sees accepted state, never an optimistic state the guard could reject.
+            var drained = await DrainBulk();
+            EvictDrainedCache(drained.Batches);
+        }
+    }
+
+    void InvalidateGuardedBulkState(Key key)
+    {
+        _bulkHasGuardedWrites = true;
+        EvictBulkState(key);
+    }
 
     FilterDefinition<BsonDocument> AtOrBelowWatermark(EventSequenceNumber watermark) =>
         Builders<BsonDocument>.Filter.Or(
