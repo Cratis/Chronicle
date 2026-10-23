@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Orleans.Hosting;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
 namespace Cratis.Chronicle.Clustering;
@@ -15,6 +15,12 @@ namespace Cratis.Chronicle.Clustering;
 /// </summary>
 public static class SiloRolesExtensions
 {
+    static readonly MethodInfo _addMetadata = typeof(SiloMetadata).GetMethod(
+        "AddMetadata",
+        BindingFlags.Instance | BindingFlags.NonPublic,
+        [typeof(IEnumerable<KeyValuePair<string, string>>)])
+        ?? throw new MissingMethodException(typeof(SiloMetadata).FullName, "AddMetadata");
+
     /// <summary>
     /// Adds Chronicle roles to silo metadata without replacing host metadata.
     /// </summary>
@@ -42,13 +48,8 @@ public static class SiloRolesExtensions
         // only merge Chronicle's keys into the options.
         if (builder.Services.Any(_ => _.ServiceType == typeof(ISiloMetadataCache)))
         {
-            builder.Services.AddOptions<SiloMetadata>().Configure(siloMetadata =>
-            {
-                foreach (var (key, value) in metadata)
-                {
-                    siloMetadata.Metadata[key] = value;
-                }
-            });
+            // Orleans only exposes merging through its internal AddMetadata, which UseSiloMetadata itself calls.
+            builder.Services.AddOptions<SiloMetadata>().Configure(siloMetadata => _addMetadata.Invoke(siloMetadata, [metadata]));
             return builder;
         }
 

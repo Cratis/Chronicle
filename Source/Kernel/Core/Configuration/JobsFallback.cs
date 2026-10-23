@@ -11,10 +11,10 @@ public enum JobsFallback
     /// <summary>
     /// Allow job steps on any compatible silo.
     /// </summary>
-    AnySilo,
+    AnySilo = 0,
 
     /// <summary>
     /// Wait for a job worker silo. Reserved until durable waiting is supported.
     /// </summary>
-    Wait
+    Wait = 1
 }

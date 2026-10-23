@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Configuration;
 using Cratis.Monads;
-using Orleans.Runtime;
 using Orleans.Runtime.MembershipService.SiloMetadata;
 
 namespace Cratis.Chronicle.Clustering;
@@ -14,9 +13,21 @@ namespace Cratis.Chronicle.Clustering;
 /// <param name="metadataCache">The silo metadata cache.</param>
 public class SiloRoles(ISiloMetadataCache metadataCache) : ISiloRoles
 {
+    /// <summary>
+    /// The silo metadata key for the role metadata format version.
+    /// </summary>
     internal const string VersionKey = "cratis.chronicle.roles.v";
+    /// <summary>
+    /// The silo metadata key for the event sequences role.
+    /// </summary>
     internal const string EventSequencesKey = "cratis.chronicle.role.eventSequences";
+    /// <summary>
+    /// The silo metadata key for the observers role.
+    /// </summary>
     internal const string ObserversKey = "cratis.chronicle.role.observers";
+    /// <summary>
+    /// The silo metadata key for the jobs role.
+    /// </summary>
     internal const string JobsKey = "cratis.chronicle.role.jobs";
 
     /// <inheritdoc/>
