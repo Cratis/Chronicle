@@ -59,6 +59,35 @@ public partial class Database
         return result;
     }
 
+    /// <summary>
+    /// Builds read-only options for generation floor discovery, including the configured authentication provider.
+    /// </summary>
+    /// <param name="target">The resolved database target.</param>
+    /// <typeparam name="T">The database context type.</typeparam>
+    /// <returns>The configured context options.</returns>
+    internal DbContextOptions<T> ReadOptions<T>(SqlTarget target)
+        where T : DbContext
+    {
+        var builder = new DbContextOptionsBuilder<T>();
+        var connectionString = target.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite
+            ? new SqliteConnectionStringBuilder(target.ConnectionString) { Mode = SqliteOpenMode.ReadOnly }.ConnectionString
+            : target.ConnectionString;
+        builder.UseDatabaseFromConnectionString(connectionString).UseApplicationServiceProvider(serviceProvider).AddConceptAsSupport();
+
+        // Native Entra authentication supplies the password from the data source, the same way BuildOptions does.
+        var entra = connectionString.GetDatabaseType() == DatabaseType.PostgreSql ? _resolution.PostgreSqlEntra : null;
+        if (entra is not null)
+        {
+            builder.UseNpgsql(connectionString, _ => _.ConfigureDataSource(entra.Configure));
+        }
+
+        if (target.Request is not null && entra is null)
+        {
+            builder.AddInterceptors(new ResolvedIdentityInterceptor(_resolution.Resolver, target.Request));
+        }
+        return builder.Options;
+    }
+
     static bool MissingGenerationTable(Exception error) => error switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UndefinedTable,
@@ -125,20 +154,5 @@ public partial class Database
             ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
             : new SqlDatabaseCatalog(options.Value.Storage.ConnectionDetails).ConnectionString(physicalName);
         return TargetFor(identity, ConnectionPurpose.Runtime, connectionString, resolved);
-    }
-
-    DbContextOptions<T> ReadOptions<T>(SqlTarget target)
-        where T : DbContext
-    {
-        var builder = new DbContextOptionsBuilder<T>();
-        var connectionString = target.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite
-            ? new SqliteConnectionStringBuilder(target.ConnectionString) { Mode = SqliteOpenMode.ReadOnly }.ConnectionString
-            : target.ConnectionString;
-        builder.UseDatabaseFromConnectionString(connectionString).UseApplicationServiceProvider(serviceProvider).AddConceptAsSupport();
-        if (target.Request is not null)
-        {
-            builder.AddInterceptors(new ResolvedIdentityInterceptor(_resolution.Resolver, target.Request));
-        }
-        return builder.Options;
     }
 }
