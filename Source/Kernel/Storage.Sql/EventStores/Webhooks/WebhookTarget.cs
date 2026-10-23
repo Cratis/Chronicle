@@ -51,6 +51,16 @@ public class WebhookTarget
     public string OAuthScope { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the managed identity client identifier, empty for the system-assigned identity.
+    /// </summary>
+    public string? ManagedIdentityClientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the managed identity scope.
+    /// </summary>
+    public string? ManagedIdentityScope { get; set; }
+
+    /// <summary>
     /// Gets or sets the headers.
     /// </summary>
     [Json]

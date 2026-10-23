@@ -366,6 +366,18 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
 | `TestTimeoutSeconds` | `30` | Timeout for the registration reachability probe. |
 
+### Managed identity approval
+
+Managed identity webhooks lend the kernel's own Azure identity to the receiver. **Configure these global operator allow-lists and the receiver's host allow-list first**, before registering a webhook. There are no per-event-store managed identity options.
+
+| `Webhooks:ManagedIdentity` key | Default | Purpose |
+|---|---|---|
+| `AllowedScopes` | `[]` | Empty disables managed identity webhooks. Complete scopes match ignoring case; no prefix or wildcard matching. |
+| `AllowedClientIds` | `[]` | Non-empty client ids must match an entry exactly. |
+| `AllowSystemAssigned` | `false` | Permit an empty client id, including workload identity's `AZURE_CLIENT_ID` default. |
+
+Managed identity receivers must match `AllowedHosts` even when `Validation` is `Warn`. Existing `EventStoreAllowedHosts` overrides and wildcard subdomain rules still apply. Registration and delivery enforce approval before requesting a token. Other authorization types keep their existing validation behavior. See [Managed identity setup](../webhooks/index.mdx#managed-identity) for JSON and environment variable examples.
+
 ### Delivery retry policy
 
 Webhook delivery uses one HTTP attempt at a time. The observer owns retries, a finite
