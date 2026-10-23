@@ -13,6 +13,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Jobs.Placement;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
@@ -111,6 +112,10 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
             .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
+
+            // Register at least one release before applying to job steps: the calling silo resolves placement,
+            // independently of the grain interface versioning configured above.
+            .AddPlacementDirector<JobWorkerPlacementStrategy, JobWorkerPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()

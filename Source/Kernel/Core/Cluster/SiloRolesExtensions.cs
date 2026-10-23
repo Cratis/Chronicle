@@ -31,6 +31,7 @@ public static class SiloRolesExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<ChronicleOptions>, ClusterRolesValidator>());
         builder.Services.AddOptions<ChronicleOptions>().ValidateOnStart();
         builder.Services.TryAddSingleton<ISiloRoles, SiloRoles>();
+        builder.Services.TryAddSingleton<IRoleEligibility, RoleEligibility>();
 
         // Orleans accepts a dictionary, not an options factory. Populate it from the final Chronicle options
         // immediately before Orleans merges it into SiloMetadata; do not snapshot options during registration.

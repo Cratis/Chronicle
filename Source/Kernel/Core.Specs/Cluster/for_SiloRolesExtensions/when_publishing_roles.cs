@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Cluster.for_SiloRolesExtensions;
 public class when_publishing_roles : Specification
 {
     IHost _host;
+    IServiceCollection _services;
     SiloMetadata _metadata;
 
     void Establish() => _host = new HostBuilder().UseOrleans(silo =>
@@ -19,6 +20,7 @@ public class when_publishing_roles : Specification
         silo.UseSiloMetadata(new Dictionary<string, string> { ["host.before"] = "kept" });
         silo.AddChronicleSiloRoles();
         silo.UseSiloMetadata(new Dictionary<string, string> { ["host.after"] = "also kept" });
+        _services = silo.Services;
         silo.Services.Configure<ChronicleOptions>(options =>
         {
             options.Clustering.Roles.EventSequences = false;
@@ -32,6 +34,7 @@ public class when_publishing_roles : Specification
 
     [Fact] void should_preserve_existing_host_metadata() => _metadata.Metadata["host.before"].ShouldEqual("kept");
     [Fact] void should_preserve_later_host_metadata() => _metadata.Metadata["host.after"].ShouldEqual("also kept");
+    [Fact] void should_register_role_eligibility() => _services.Single(_ => _.ServiceType == typeof(IRoleEligibility)).ImplementationType.ShouldEqual(typeof(RoleEligibility));
     [Fact] void should_publish_the_version() => _metadata.Metadata["cratis.chronicle.roles.v"].ShouldEqual("1");
     [Fact] void should_publish_the_final_event_sequences_role() => _metadata.Metadata["cratis.chronicle.role.eventSequences"].ShouldEqual("false");
     [Fact] void should_publish_the_final_observers_role() => _metadata.Metadata["cratis.chronicle.role.observers"].ShouldEqual("false");
