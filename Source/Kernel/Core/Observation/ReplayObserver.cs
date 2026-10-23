@@ -22,6 +22,9 @@ namespace Cratis.Chronicle.Observation;
 [BelongsTo(WellKnownServices.Observers)]
 public record ReplayObserver(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
+    /// <summary>
+    /// The message reported when the observer did not start a replay job.
+    /// </summary>
     internal const string ReplayNotStartedMessage = "Replay could not be started for this observer.";
 
     /// <summary>
