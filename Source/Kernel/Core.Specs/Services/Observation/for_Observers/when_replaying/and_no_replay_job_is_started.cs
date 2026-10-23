@@ -4,13 +4,12 @@
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Orleans.Jobs;
-using Grpc.Core;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_replaying;
 
 public class and_no_replay_job_is_started : given.all_dependencies
 {
-    Exception _exception;
+    ReplayResponse _response;
 
     void Establish()
     {
@@ -19,17 +18,14 @@ public class and_no_replay_job_is_started : given.all_dependencies
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(observer);
     }
 
-    async Task Because() => _exception = await Catch.Exception(async () => await _observers.Replay(new Replay
+    async Task Because() => _response = await _observers.Replay(new Replay
     {
         EventStore = "some-event-store",
         Namespace = "some-namespace",
         ObserverId = "some-observer",
         EventSequenceId = "event-log"
-    }));
+    });
 
-    [Fact] void should_report_a_failed_precondition() =>
-        ((RpcException)_exception).StatusCode.ShouldEqual(StatusCode.FailedPrecondition);
-
-    [Fact] void should_explain_why_replay_was_not_started() =>
-        ((RpcException)_exception).Status.Detail.ShouldEqual(ReplayObserver.ReplayNotStartedMessage);
+    [Fact] void should_report_that_no_job_was_started_so_clients_return_not_set() =>
+        _response.JobId.ShouldEqual(JobId.NotSet.Value.ToString());
 }

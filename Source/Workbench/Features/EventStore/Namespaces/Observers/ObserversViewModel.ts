@@ -76,6 +76,9 @@ export class ObserversViewModel {
                 commandResult
                     .onException((error) => {
                         this._dialogs.showConfirmation('Replay', `Replay ${observerId} failed: ${error}`, DialogButtons.Ok);
+                    })
+                    .onValidationFailure((validationResults) => {
+                        this._dialogs.showConfirmation('Replay', `Replay ${observerId} was not started: ${validationResults.map(_ => _.message).join('; ')}`, DialogButtons.Ok);
                     });
             }
         }

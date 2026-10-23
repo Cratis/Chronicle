@@ -8,9 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Cratis.Reactive;
-using Grpc.Core;
 using ProtoBuf.Grpc;
 
 // Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
@@ -63,12 +61,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
+        // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
         var jobId = await (await grainFactory.GetObserver(command, storage)).Replay();
-        if (jobId == JobId.NotSet)
-        {
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, Chronicle.Observation.ReplayObserver.ReplayNotStartedMessage));
-        }
-
         return new ReplayResponse { JobId = jobId.Value.ToString() };
     }
 
