@@ -92,6 +92,11 @@ internal sealed class ConnectionService(
                         {
                             await KeepRegistered(connectedClients, request);
                         }
+                        else if (openConnections.HasLapsed(request.ConnectionId))
+                        {
+                            subject.OnCompleted();
+                            break;
+                        }
 
                         subject.OnNext(new ConnectionKeepAlive
                         {
