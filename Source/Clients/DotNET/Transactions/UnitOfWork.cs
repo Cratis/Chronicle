@@ -44,6 +44,7 @@ public partial class UnitOfWork : IUnitOfWork
     EventSequenceNumber? _lastCommittedEventSequenceNumber = EventSequenceNumber.Unavailable;
     Action<IUnitOfWork> _onCompleted;
     bool _isCommitted;
+    Exception? _commitFailure;
     bool _isRolledBack;
     bool _completing;
     bool _hasOrderedBatch;
@@ -420,6 +421,22 @@ public partial class UnitOfWork : IUnitOfWork
     /// <returns><see langword="true"/> if the unit was rolled back; otherwise <see langword="false"/>.</returns>
     internal bool WasRolledBack() => _isRolledBack;
 
+    /// <summary>
+    /// Gets the exception a commit of this unit threw, when it threw rather than returning a result.
+    /// </summary>
+    /// <returns>The exception, or <see langword="null"/> if the commit returned normally or has not run.</returns>
+    /// <remarks>
+    /// A commit that throws still completes the unit, so whether events were appended is unknown; its
+    /// <see cref="IsSuccess"/> must not be read as the outcome.
+    /// </remarks>
+    internal Exception? CommitFailure()
+    {
+        lock (_decisionLock)
+        {
+            return _commitFailure;
+        }
+    }
+
     static bool ConcurrencyScopesAreSemanticallyEqual(ConcurrencyScope first, ConcurrencyScope second)
     {
         if (first.SequenceNumber != second.SequenceNumber ||
@@ -582,9 +599,16 @@ public partial class UnitOfWork : IUnitOfWork
             }
             if (IsEnforcingReadProtection && _appendManyResult.IsSuccess) _readProtectionFrameLease!().CommittedSuccessfully();
         }
-        catch (Exception exception) when (appendOwner is not null || protectedCommit || _effectReceipt is not null)
+        catch (Exception exception)
         {
-            _appendManyResult = AppendManyResult.Failed(CorrelationId, [new AppendError(exception.Message)]);
+            lock (_decisionLock)
+            {
+                _commitFailure = exception;
+            }
+            if (appendOwner is not null || protectedCommit || _effectReceipt is not null)
+            {
+                _appendManyResult = AppendManyResult.Failed(CorrelationId, [new AppendError(exception.Message)]);
+            }
             throw;
         }
         finally
