@@ -271,11 +271,12 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-  # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
-  # requested PR path waits for successful specs (implicit success() also blocks cancellation).
+  # Requested PR path: builds in parallel with the specs, so integration does not wait for
+  # specs and then for this build in sequence. The integration job still requires successful
+  # specs before any shard runs; a red spec costs only this one build.
   dotnet-build-development-requested:
     if: github.event_name == 'pull_request' && inputs.integration_requested
-    needs: [wire-compatibility, grain-compatibility, specs]
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
