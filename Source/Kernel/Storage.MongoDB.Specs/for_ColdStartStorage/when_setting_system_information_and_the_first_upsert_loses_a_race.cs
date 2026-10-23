@@ -18,5 +18,5 @@ public class when_setting_system_information_and_the_first_upsert_loses_a_race :
     async Task Because() => _result = await Catch.Exception(() => _storage.SetSystemInformation(new Chronicle.Storage.SystemInformation(new SemanticVersion(1, 0, 0))));
 
     [Fact] void should_not_fail() => _result.ShouldBeNull();
-    [Fact] void should_retry_the_upsert_once() => _collection.ReceivedWithAnyArgs(2).ReplaceOneAsync(default(FilterDefinition<MongoDBSystemInformation>)!, default(MongoDBSystemInformation)!, default(ReplaceOptions)!, default);
+    [Fact] void should_retry_the_upsert_once() => _collection.ReceivedWithAnyArgs(2).ReplaceOneAsync(default!, default!, default(ReplaceOptions)!, default);
 }

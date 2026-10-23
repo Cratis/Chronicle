@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.MongoDB.for_ColdStartStorage.given;
+using Cratis.Chronicle.Storage.Security;
 
 namespace Cratis.Chronicle.Storage.MongoDB.for_ColdStartStorage;
 

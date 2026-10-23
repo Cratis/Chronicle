@@ -18,5 +18,5 @@ public class when_setting_system_information_and_every_upsert_hits_a_duplicate_k
     async Task Because() => _result = await Catch.Exception(() => _storage.SetSystemInformation(new Chronicle.Storage.SystemInformation(new SemanticVersion(1, 0, 0))));
 
     [Fact] void should_surface_the_duplicate_key_error() => _result.ShouldBeOfExactType<MongoWriteException>();
-    [Fact] void should_only_retry_once() => _collection.ReceivedWithAnyArgs(2).ReplaceOneAsync(default(FilterDefinition<MongoDBSystemInformation>)!, default(MongoDBSystemInformation)!, default(ReplaceOptions)!, default);
+    [Fact] void should_only_retry_once() => _collection.ReceivedWithAnyArgs(2).ReplaceOneAsync(default!, default!, default(ReplaceOptions)!, default);
 }
