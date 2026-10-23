@@ -92,16 +92,25 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         // Such attempts are allowed in the log at most once, but every acknowledged append must be there exactly once.
         var allowed = acknowledged.Select(append => append.Id).Concat(_unknown).ToHashSet();
         var stored = await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []);
-        await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
-        var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
-        var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
-        Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
-        storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
-        storedIds.All(allowed.Contains).ShouldBeTrue();
-        acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
-        acknowledged.All(append => stored.Any(@event => @event.Context.SequenceNumber == append.Sequence && ((ClusterEventAppended)@event.Content).Id == append.Id)).ShouldBeTrue();
-        storedSequences.Zip(storedSequences.Skip(1), (first, next) => next == first + 1).All(contiguous => contiguous).ShouldBeTrue();
-        VerifyObservations(stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)), _observed);
+        var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
+        try
+        {
+            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
+            var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
+            var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
+            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
+            storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
+            storedIds.All(allowed.Contains).ShouldBeTrue();
+            acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
+            acknowledged.All(append => stored.Any(@event => @event.Context.SequenceNumber == append.Sequence && ((ClusterEventAppended)@event.Content).Id == append.Id)).ShouldBeTrue();
+            storedSequences.Zip(storedSequences.Skip(1), (first, next) => next == first + 1).All(contiguous => contiguous).ShouldBeTrue();
+            VerifyObservations(storedEvents, _observed);
+        }
+        catch
+        {
+            await ClusterLoadDiagnostics.Dump(_reactor, storedEvents, _observed, Console.Out);
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()
