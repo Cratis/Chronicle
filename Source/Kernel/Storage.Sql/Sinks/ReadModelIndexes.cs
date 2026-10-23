@@ -81,9 +81,9 @@ internal static class ReadModelIndexes
         var storedTable = PrimaryKeyNames.TableIdentifier(databaseType, table);
         var indexes = databaseType switch
         {
-            DatabaseType.PostgreSql => database.SqlQuery<StoredIndex>($"SELECT i.relname AS \"Name\", a.attname AS \"Column\" FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0] WHERE t.relname = {storedTable} AND n.nspname = current_schema() AND x.indnatts = 1 AND NOT x.indisprimary AND left(i.relname, 14) = {ReadModelIndexNames.Prefix}"),
-            DatabaseType.SqlServer => database.SqlQuery<StoredIndex>($"SELECT i.name AS [Name], c.name AS [Column] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND ic.key_ordinal = 1 AND i.is_primary_key = 0 AND LEFT(i.name, 14) = {ReadModelIndexNames.Prefix}"),
-            _ => database.SqlQuery<StoredIndex>($"SELECT i.name AS Name, c.name AS \"Column\" FROM pragma_index_list({storedTable}) i JOIN pragma_index_info(i.name) c WHERE substr(i.name, 1, 14) = {ReadModelIndexNames.Prefix}")
+            DatabaseType.PostgreSql => database.SqlQuery<StoredIndex>($"SELECT i.relname AS \"Name\", a.attname AS \"Column\" FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0] WHERE t.relname = {storedTable} AND n.nspname = current_schema() AND x.indnatts = 1 AND NOT x.indisunique AND left(i.relname, 14) = {ReadModelIndexNames.Prefix}"),
+            DatabaseType.SqlServer => database.SqlQuery<StoredIndex>($"SELECT i.name AS [Name], c.name AS [Column] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND ic.key_ordinal = 1 AND i.is_unique = 0 AND LEFT(i.name, 14) = {ReadModelIndexNames.Prefix}"),
+            _ => database.SqlQuery<StoredIndex>($"SELECT i.name AS Name, c.name AS \"Column\" FROM pragma_index_list({storedTable}) i JOIN pragma_index_info(i.name) c WHERE i.\"unique\" = 0 AND substr(i.name, 1, 14) = {ReadModelIndexNames.Prefix}")
         };
         foreach (var index in await indexes.ToListAsync())
         {
@@ -110,9 +110,9 @@ internal static class ReadModelIndexes
         var storedTable = PrimaryKeyNames.TableIdentifier(type, table);
         var names = type switch
         {
-            DatabaseType.PostgreSql => await database.SqlQuery<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND tablename={storedTable}").ToListAsync(),
-            DatabaseType.SqlServer => await database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND name IS NOT NULL").ToListAsync(),
-            _ => await database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name={storedTable}").ToListAsync()
+            DatabaseType.PostgreSql => await database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_class t ON t.oid=x.indrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname=current_schema() AND t.relname={storedTable} AND NOT x.indisunique").ToListAsync(),
+            DatabaseType.SqlServer => await database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND name IS NOT NULL AND is_unique=0").ToListAsync(),
+            _ => await database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({storedTable}) WHERE \"unique\" = 0").ToListAsync()
         };
         var helper = context.GetService<ISqlGenerationHelper>();
         foreach (var name in names.Where(name => name.StartsWith(ReadModelIndexNames.Prefix, StringComparison.Ordinal) && !expected.Contains(name)))
