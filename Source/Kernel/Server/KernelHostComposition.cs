@@ -43,9 +43,10 @@ internal static class KernelHostComposition
     internal static void MapKernelHealthChecks(this WebApplication app, string endpoint)
     {
         var path = endpoint.Trim().TrimEnd('/');
-        if (!path.StartsWith('/')) path = $"/{path}";
-        app.MapHealthChecks(path).AllowAnonymous();
-        app.MapHealthChecks($"{path}/ready").AllowAnonymous();
-        app.MapHealthChecks($"{path}/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+        if (path.StartsWith('/')) path = path[1..];
+        var prefix = path.Length == 0 ? string.Empty : $"/{path}";
+        app.MapHealthChecks(prefix.Length == 0 ? "/" : prefix).AllowAnonymous();
+        app.MapHealthChecks($"{prefix}/ready").AllowAnonymous();
+        app.MapHealthChecks($"{prefix}/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
     }
 }
