@@ -19,7 +19,7 @@ public class when_writing_state : given.the_provider
 
     Task Because() => provider.WriteStateAsync("name", _grainId, _state);
 
-    [Fact] void should_get_event_store() => storage.Received().GetEventStore(_observerKey.EventStore);
+    [Fact] void should_get_event_store() => storage.Received(1).GetEventStore(_observerKey.EventStore);
     [Fact] void should_get_namespace() => eventStoreStorage.Received(1).GetNamespace(_observerKey.Namespace);
     [Fact] void should_get_failed_partitions() => eventStoreNamespaceStorage.FailedPartitions.Received(1);
     [Fact] void should_save_failed_partition_state() => _failedPartitionsStorage.Received(1).Save(_observerKey.ObserverId, _state.State);
