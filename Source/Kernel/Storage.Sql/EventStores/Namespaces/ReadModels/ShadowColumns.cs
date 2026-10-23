@@ -20,7 +20,10 @@ internal static partial class ShadowColumns
 {
     static readonly Definition[] _definitions =
     [
-        new("__order_{column}", provider => provider == DatabaseType.Sqlite, "TEXT", context => context.Columns.Where(SqliteDecimalSortKey.IsDecimal), SqliteDecimalSortKey.SqlExpressionFor, column => column.IsIndexed)
+        new("__order_{column}", provider => provider == DatabaseType.Sqlite, "TEXT", context => context.Columns.Where(SqliteDecimalSortKey.IsDecimal), SqliteDecimalSortKey.SqlExpressionFor, column => column.IsIndexed),
+        new("__compositeKey", provider => provider == DatabaseType.Sqlite, "TEXT", context => context.Columns.Where(column => column.IsCompositeKey), null, _ => true),
+        new("__compositeKey", provider => provider == DatabaseType.PostgreSql, "VARCHAR(850)", context => context.Columns.Where(column => column.IsCompositeKey), null, _ => true),
+        new("__compositeKey", provider => provider == DatabaseType.SqlServer, "NVARCHAR(850)", context => context.Columns.Where(column => column.IsCompositeKey), null, _ => true)
     ];
 
     /// <summary>

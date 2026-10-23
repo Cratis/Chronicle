@@ -211,6 +211,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
 
         return _noFailedPartitions;
     }
@@ -227,6 +228,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
 
     async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
+        // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
+        // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
         foreach (var joined in changeset.Changes.OfType<Joined>())
         {
             await ApplyJoinedChange(scope, joined, eventSequenceNumber);
