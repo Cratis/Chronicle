@@ -8,6 +8,8 @@
 # Repeat that expression in names, conditions and concurrency (env is unavailable in these contexts).
 name: Requested Integration
 
+run-name: "Requested Integration${{ format(' - PR #{0} @ {1}', github.event.pull_request.number, github.event.pull_request.head.sha) }}"
+
 concurrency:
   # A called .NET workflow uses the caller's github.workflow/ref; this extra PR/label
   # suffix keeps its concurrency group distinct from the caller's while it runs.
@@ -75,7 +77,10 @@ jobs:
           INTEGRATION: ${{ needs.requested-integration.result }}
           ALL_PROVIDERS: ${{ needs.requested-integration.outputs.all_providers }}
           FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          echo "Requested integration for PR head $HEAD_SHA (merge commit $GITHUB_SHA)." >> "$GITHUB_STEP_SUMMARY"
+
           if [ "$FORK" = "true" ]; then
             echo "::notice title=Integration unavailable for fork PR::The fork's token cannot push the integration image. Ask a maintainer to run workflow_dispatch on a trusted branch containing these changes."
             echo "Integration was not run for this fork PR. Ask a maintainer to use workflow_dispatch on a trusted branch containing the changes." >> "$GITHUB_STEP_SUMMARY"
@@ -90,6 +95,12 @@ jobs:
 
           if [ "$INTEGRATION" != "success" ]; then
             echo "::error::Requested integration did not pass ($INTEGRATION)."
+            exit 1
+          fi
+
+          # A skipped inner job leaves the reusable workflow result as success; the matrix output proves it ran.
+          if [ -z "$ALL_PROVIDERS" ]; then
+            echo "::error::The integration matrix did not run for $HEAD_SHA (skipped)."
             exit 1
           fi
 

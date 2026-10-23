@@ -40,7 +40,7 @@ public partial class Observer
     /// The counts are merged into what is pending for the partition and event type and the call returns, so a burst of
     /// reports from many job steps does not turn into a burst of storage writes inside this non-reentrant grain. They
     /// are made durable together by <see cref="FlushPendingHandledCounts"/> after at most
-    /// <see cref="Cratis.Chronicle.Configuration.Observers.WriteCoalescingInterval"/> seconds, or sooner once
+    /// <see cref="Configuration.Observers.WriteCoalescingInterval"/> seconds, or sooner once
     /// <see cref="MaxPendingHandledCountPartitions"/> partitions are pending. The call never waits for the flush; only
     /// when write coalescing is turned off does it make the counts durable before returning.
     /// A report a step sends again after a timeout is recognized by <see cref="HandledEventsReportDeduplication"/>
@@ -52,33 +52,28 @@ public partial class Observer
         if (IsRetired || _removed || !_observerExists) return;
         if (!_handledEventsReports.TryTake(reportedBy, partition, handledUpTo)) return;
 
-        if (countsPerEventType.Count > 0)
+        MergeHandledCounts(partition, countsPerEventType);
+        await FlushOrScheduleHandledCounts();
+    }
+
+    /// <inheritdoc/>
+    public async Task ReportHandledEventsBatch(JobStepId reportedBy, IReadOnlyList<Jobs.HandledEventsReport> reports)
+    {
+        foreach (var report in reports)
         {
-            if (!_pendingHandledCounts.TryGetValue(partition, out var pending))
+            Skips.JobReported(report.Partition);
+        }
+
+        if (IsRetired || _removed || !_observerExists) return;
+        foreach (var report in reports)
+        {
+            if (_handledEventsReports.TryTake(reportedBy, report.Partition, report.HandledUpTo))
             {
-                pending = [];
-                _pendingHandledCounts[partition] = pending;
-            }
-
-            foreach (var (eventTypeId, count) in countsPerEventType)
-            {
-                pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+                MergeHandledCounts(report.Partition, report.Counts);
             }
         }
 
-        if (_writeCoalescingInterval <= TimeSpan.Zero)
-        {
-            await FlushPendingHandledCounts();
-            return;
-        }
-
-        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
-        {
-            BringCoalescedWriteForward();
-            return;
-        }
-
-        EnsureCoalescedWriteTimer();
+        await FlushOrScheduleHandledCounts();
     }
 
     /// <inheritdoc/>
@@ -188,6 +183,40 @@ public partial class Observer
         };
     }
 
+    void MergeHandledCounts(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        if (countsPerEventType.Count > 0)
+        {
+            if (!_pendingHandledCounts.TryGetValue(partition, out var pending))
+            {
+                pending = [];
+                _pendingHandledCounts[partition] = pending;
+            }
+
+            foreach (var (eventTypeId, count) in countsPerEventType)
+            {
+                pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+            }
+        }
+    }
+
+    async Task FlushOrScheduleHandledCounts()
+    {
+        if (_writeCoalescingInterval <= TimeSpan.Zero)
+        {
+            await FlushPendingHandledCounts();
+            return;
+        }
+
+        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
+        {
+            BringCoalescedWriteForward();
+            return;
+        }
+
+        EnsureCoalescedWriteTimer();
+    }
+
     /// <summary>
     /// Makes the handled-event counts reported since the last flush durable, with one state write for all of them.
     /// </summary>
@@ -216,12 +245,17 @@ public partial class Observer
             try
             {
                 var countsStorage = GetObserverHandledCountsStorage();
-                foreach (var (partition, counts) in pending)
+                foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
                 {
-                    await countsStorage.Increment(_observerId, partition, counts);
-                    written.Add(partition);
-                    State = WithIncrementedRunningTotals(State, counts);
-                    RecordedHandlingState();
+                    await countsStorage.Increment(_observerId, chunk
+                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
+                        .ToArray());
+                    foreach (var (partition, counts) in chunk)
+                    {
+                        written.Add(partition);
+                        State = WithIncrementedRunningTotals(State, counts);
+                        RecordedHandlingState();
+                    }
                 }
 
                 await WriteStateAsync();
@@ -652,7 +686,7 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// The in-memory state has already advanced when this is called; the write is deferred until
-    /// <see cref="Cratis.Chronicle.Configuration.Observers.StatePersistenceBatchInterval"/> progress-only batches have accumulated (any other
+    /// <see cref="Configuration.Observers.StatePersistenceBatchInterval"/> progress-only batches have accumulated (any other
     /// state write flushes it sooner, and the watchdog and deactivation flush it on their own cadence). Because
     /// catch-up (<see cref="CatchUp"/>) always resumes from the last persisted <see cref="ObserverState.NextEventSequenceNumber"/>
     /// and observers are idempotent, a crash between debounced writes only re-scans events the observer had already
