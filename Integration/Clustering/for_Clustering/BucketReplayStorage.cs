@@ -20,7 +20,7 @@ public class BucketReplayStorage : DispatchProxy
         (name, result) => name == nameof(IEventStoreStorage.GetNamespace) ? DecorateNamespace((IEventStoreNamespaceStorage)result!, checkpoint) : result);
 
     static IEventStoreNamespaceStorage DecorateNamespace(IEventStoreNamespaceStorage target, ReplayCursorCheckpoint checkpoint) => Wrap(target,
-        (name, result) => name == nameof(IEventStoreNamespaceStorage.GetEventSequence) ? Wrap((IEventSequenceStorage)result!, (_, value) => checkpoint.Observe(value)) : result);
+        (name, result) => name == nameof(IEventStoreNamespaceStorage.GetEventSequence) ? Wrap((IEventSequenceStorage)result!, checkpoint.Observe) : result);
 
     static T Wrap<T>(T target, Func<string, object?, object?> observe)
         where T : class

@@ -17,6 +17,7 @@ public class BucketReplayFixture : ClusteringFixture
     protected override void ConfigureFixtureServices(IServiceCollection services)
     {
         ConfigureBuckets(services);
+        services.AddSingleton<IIncomingGrainCallFilter>(Checkpoint);
         var descriptor = services.Last(service => service.ServiceType == typeof(IStorage));
         services.AddSingleton<IStorage>(provider => BucketReplayStorage.Decorate(ResolveStorage(descriptor, provider), Checkpoint));
     }
