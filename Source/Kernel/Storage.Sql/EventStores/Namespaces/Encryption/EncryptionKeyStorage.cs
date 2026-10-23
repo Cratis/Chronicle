@@ -39,7 +39,6 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             PublicKey = key.Public,
             PrivateKey = key.Private
         });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -240,6 +239,5 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ErasedKeyFingerprints = string.Join(',', erasure.ErasedKeyFingerprints),
             NewKeyAllowed = erasure.NewKeyAllowed
         });
-        await dbContext.SaveChangesAsync();
     }
 }

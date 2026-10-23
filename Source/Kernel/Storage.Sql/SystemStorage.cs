@@ -51,6 +51,5 @@ public class SystemStorage(IDatabase database) : ISystemStorage
             Id = SystemInformationId,
             Version = systemInformation.Version.ToString(),
         });
-        await scope.DbContext.SaveChangesAsync();
     }
 }

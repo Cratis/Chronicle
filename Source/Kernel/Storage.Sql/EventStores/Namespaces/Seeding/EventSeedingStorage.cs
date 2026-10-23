@@ -40,7 +40,5 @@ public class EventSeedingStorage(EventStoreName eventStore, EventStoreNamespaceN
 
         var entity = EventSeedingConverters.ToEntity(data, jsonSerializerOptions);
         await scope.DbContext.EventSeeds.Upsert(entity);
-
-        await scope.DbContext.SaveChangesAsync();
     }
 }

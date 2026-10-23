@@ -58,7 +58,6 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
         await scope.DbContext.Reactors.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
