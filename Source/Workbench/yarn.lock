@@ -8183,7 +8183,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0":
+"vite@npm:8.2.4, vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0":
   version: 8.2.4
   resolution: "vite@npm:8.2.4"
   dependencies:
@@ -8502,6 +8502,7 @@ __metadata:
     typescript-eslint: "npm:8.68.0"
     typescript-for-eslint: "npm:typescript@6.0.3"
     usehooks-ts: "npm:3.1.1"
+    vite: "npm:8.2.4"
     vite-plugin-commonjs: "npm:0.10.4"
     vite-tsconfig-paths: "npm:6.1.1"
     vitest: "npm:4.1.11"
