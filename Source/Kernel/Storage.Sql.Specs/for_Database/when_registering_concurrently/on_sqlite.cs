@@ -21,7 +21,7 @@ public class on_sqlite : given.a_sqlite_database
         };
         _listener.SetMeasurementEventCallback<int>((_, value, tags, _) =>
         {
-            if (ReferenceEquals(Activity.Current, _activity) && tags.ToArray().Any(tag => tag.Key == "operation" && Equals(tag.Value, "tracked-upsert")))
+            if (ReferenceEquals(Activity.Current, _activity))
             {
                 _collisions += value;
             }
@@ -41,7 +41,7 @@ public class on_sqlite : given.a_sqlite_database
         _activity.Dispose();
     }
 
-    [Fact] void should_count_one_recovered_collision() => _collisions.ShouldEqual(1);
+    [Fact] void should_not_recover_any_collision() => _collisions.ShouldEqual(0);
     [Fact] void should_keep_one_registration() => _saved.Count.ShouldEqual(1);
     [Fact] void should_store_the_last_completed_writer() => _saved.IsReplayable.ShouldBeFalse();
 }

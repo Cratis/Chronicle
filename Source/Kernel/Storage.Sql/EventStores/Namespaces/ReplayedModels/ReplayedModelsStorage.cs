@@ -24,8 +24,6 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
         var entry = ReplayedModelsConverters.ToReplayedModelOccurrence(occurrence);
 
         await scope.DbContext.ReplayedModels.Upsert(entry);
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

@@ -51,8 +51,7 @@ public class SqlTokenStorage(IDatabase database, JsonSerializerOptions jsonSeria
         }
         else
         {
-            await scope.DbContext.Tokens.Upsert(ToEntity(token));
-            await scope.DbContext.SaveChangesAsync(cancellationToken);
+            await scope.DbContext.Tokens.Upsert(ToEntity(token), cancellationToken);
         }
     }
 
