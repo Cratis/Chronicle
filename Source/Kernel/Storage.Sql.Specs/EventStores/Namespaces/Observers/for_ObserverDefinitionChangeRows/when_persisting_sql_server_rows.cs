@@ -1,17 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.for_ObserverDefinitionChangeRows;
 
 [Collection(SqlServerCollection.Name)]
 public class when_persisting_sql_server_rows(SqlServerFixture fixture) : DefinitionChangeRowsContract
 {
+    static readonly ServiceProvider _services = new ServiceCollection().BuildServiceProvider();
+
     string _connectionString;
 
     async Task Establish()
@@ -26,14 +27,9 @@ public class when_persisting_sql_server_rows(SqlServerFixture fixture) : Definit
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 
     /// <summary>
-    /// Creates a context with the kernel's own option set and EF Core's provider cache kept on. The rows open many
-    /// contexts, so an uncached provider would rebuild the model for every context, and matching the kernel's options
-    /// reuses its cached provider instead of adding one more towards EF's limit of twenty.
+    /// Creates a context through the kernel's own option builder, with EF Core's provider cache kept on. The rows open
+    /// many contexts, so an uncached provider would rebuild the model for every context, and building the options the
+    /// way the kernel does reuses its cached provider instead of adding one more towards EF's limit of twenty.
     /// </summary>
-    NamespaceDbContext CreateContext()
-    {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport();
-        return new(builder.Options);
-    }
+    NamespaceDbContext CreateContext() => new(Database.BuildOptions<NamespaceDbContext>(_services, _connectionString));
 }
