@@ -46,7 +46,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async ValueTask InitializeAsync()
+    public async Task InitializeAsync()
     {
         _container = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
             .WithEnvironment("ACCEPT_EULA", "Y")
@@ -60,7 +60,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
+    public async Task DisposeAsync()
     {
         if (_container is not null)
         {

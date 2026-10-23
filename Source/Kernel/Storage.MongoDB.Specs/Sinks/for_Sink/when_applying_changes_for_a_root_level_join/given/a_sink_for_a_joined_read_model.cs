@@ -68,7 +68,7 @@ public abstract class a_sink_for_a_joined_read_model<TReadModel>(MongoDBFixture 
     protected abstract string JoinKey { get; }
 
     /// <inheritdoc/>
-    public async ValueTask InitializeAsync()
+    public async Task InitializeAsync()
     {
         _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
@@ -102,7 +102,7 @@ public abstract class a_sink_for_a_joined_read_model<TReadModel>(MongoDBFixture 
     }
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+    public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
     static AppendedEvent CreateEvent()
     {

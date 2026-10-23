@@ -3,6 +3,8 @@
         <AssemblyName>Cratis.Chronicle.Storage.Sql.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <!-- Referenced by the xUnit v2 Integration projects, so this spec family stays on xUnit v2. -->
+        <UseXunitV2>true</UseXunitV2>
         <IsPackable>false</IsPackable>
         <!-- Microsoft.Data.SqlClient cannot connect in globalization-invariant mode. -->
         <InvariantGlobalization>false</InvariantGlobalization>

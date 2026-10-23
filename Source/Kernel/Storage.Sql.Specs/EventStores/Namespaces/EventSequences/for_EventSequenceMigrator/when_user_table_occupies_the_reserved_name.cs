@@ -18,7 +18,7 @@ public class when_user_table_occupies_the_reserved_name : given.a_named_tag_migr
     async Task Because()
     {
         await using var context = CreateContext();
-        _error = await Catch.Exception(context.EnsureTableExists);
+        _error = await Catch.Exception(() => context.EnsureTableExists());
         await using var command = _connection.CreateCommand();
         command.CommandText = "SELECT UserData FROM \"__cratis_named_tags\"";
         _userRowSurvived = (string?)await command.ExecuteScalarAsync() == "owned by user";

@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Specifications;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
-[assembly: Xunit.TestFramework(typeof(Cratis.Chronicle.Storage.MongoDB.MongoDBTestFramework))]
+[assembly: TestFramework(
+    "Cratis.Chronicle.Storage.MongoDB.MongoDBTestFramework",
+    "Cratis.Chronicle.Storage.MongoDB.Specs")]
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -11,10 +14,13 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// xUnit test framework that initializes the server-faithful MongoDB serialization setup before discovering or
 /// executing specs.
 /// </summary>
-public sealed class MongoDBTestFramework : SpecificationTestFramework
+/// <param name="messageSink">The diagnostic message sink.</param>
+public sealed class MongoDBTestFramework(IMessageSink messageSink)
+    : XunitTestFramework(InitializeSerialization(messageSink))
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBTestFramework"/> class.
-    /// </summary>
-    public MongoDBTestFramework() => SpecSerializationSetup.Initialize();
+    static IMessageSink InitializeSerialization(IMessageSink messageSink)
+    {
+        SpecSerializationSetup.Initialize();
+        return messageSink;
+    }
 }

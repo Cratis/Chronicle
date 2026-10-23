@@ -3,10 +3,9 @@
         <AssemblyName>Cratis.Chronicle.Storage.MongoDB.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <!-- Referenced by the xUnit v2 Integration projects, so this spec family stays on xUnit v2. -->
+        <UseXunitV2>true</UseXunitV2>
         <IsPackable>false</IsPackable>
-        <!-- The project registers its own SpecificationTestFramework subclass, so the package must not emit its own TestFramework attribute. -->
-        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
-        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
     </PropertyGroup>
 
     <ItemGroup>

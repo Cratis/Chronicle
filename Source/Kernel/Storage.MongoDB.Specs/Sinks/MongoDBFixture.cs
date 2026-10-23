@@ -22,7 +22,7 @@ public sealed class MongoDBFixture : IAsyncLifetime
         ?? $"mongodb://localhost:{_container!.GetMappedPublicPort(MongoDBPort)}/?directConnection=true";
 
     /// <inheritdoc/>
-    public async ValueTask InitializeAsync()
+    public async Task InitializeAsync()
     {
         if (MongoDBSpecDatabaseNames.ExternalConnectionString is not null)
         {
@@ -42,7 +42,7 @@ public sealed class MongoDBFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
+    public async Task DisposeAsync()
     {
         if (_container is not null)
         {

@@ -24,6 +24,6 @@ public class when_round_tripping_a_delivery_fence : Specification
     }
 
     [Fact] void should_preserve_the_original_deadline() => _result.DeliveryFence!.ReleaseBy.ShouldEqual(_context.ReleaseBy);
-    [Fact] void should_preserve_the_original_identity() => _result.DeliveryFence!.Targets.ShouldContainOnly(_context.Targets);
+    [Fact] void should_preserve_the_original_identity() => _result.DeliveryFence!.Targets.ShouldContainOnly(_context.Targets!);
     [Fact] void should_preserve_the_timeout_kind() => _result.Kind.ShouldEqual(FailureKind.Timeout);
 }

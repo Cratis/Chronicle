@@ -11,8 +11,7 @@ public sealed class FactAttribute : Xunit.FactAttribute
     /// <summary>
     /// Initializes a new instance of the <see cref="FactAttribute"/> class.
     /// </summary>
-    public FactAttribute([System.Runtime.CompilerServices.CallerFilePath] string? sourceFilePath = null, [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = -1)
-        : base(sourceFilePath, sourceLineNumber)
+    public FactAttribute()
     {
         var provider = Environment.GetEnvironmentVariable("CHRONICLE_SQL_SPECS_PROVIDER");
         if (provider?.Equals("SQLite", StringComparison.OrdinalIgnoreCase) == false)

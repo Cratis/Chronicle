@@ -42,7 +42,7 @@ public class and_a_placeholder_is_initialized_in_a_bulk_window(context ctx) : IC
         public IDictionary<string, object?> ReplayCached = default!;
         public IDictionary<string, object?> ReplayStored = default!;
 
-        public async ValueTask InitializeAsync()
+        public async Task InitializeAsync()
         {
             _client = new MongoClient(fixture.ConnectionString);
             var schema = await JsonSchema.FromJsonAsync("""
@@ -82,7 +82,7 @@ public class and_a_placeholder_is_initialized_in_a_bulk_window(context ctx) : IC
             ReplayStored = (await _sink.FindOrDefault(key))!;
         }
 
-        public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
         async Task<IDictionary<string, object?>> InitializePlaceholder(Key key)
         {

@@ -32,7 +32,7 @@ public class and_child_added_has_child_identifier_change_in_same_changeset(conte
         public Exception? Error;
         public ExpandoObject? Result;
 
-        public async ValueTask InitializeAsync()
+        public async Task InitializeAsync()
         {
             _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
@@ -59,7 +59,7 @@ public class and_child_added_has_child_identifier_change_in_same_changeset(conte
             Result = await _sink.FindOrDefault(_key);
         }
 
-        public async ValueTask DisposeAsync()
+        public async Task DisposeAsync()
         {
             if (_databaseName is not null)
             {

@@ -39,7 +39,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
         public BsonDocument JoinedExisting = default!;
         public BsonDocument JoinedUnrelated = default!;
 
-        public async ValueTask InitializeAsync()
+        public async Task InitializeAsync()
         {
             var settings = MongoClientSettings.FromConnectionString(fixture.ConnectionString);
             settings.ClusterConfigurator = cluster => cluster
@@ -76,7 +76,7 @@ public class and_a_legacy_null_inside_an_array_element_is_recreated(context ctx)
             JoinedUnrelated = await Find("joined-unrelated");
         }
 
-        public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
         void OnCommandStarted(CommandStartedEvent started)
         {

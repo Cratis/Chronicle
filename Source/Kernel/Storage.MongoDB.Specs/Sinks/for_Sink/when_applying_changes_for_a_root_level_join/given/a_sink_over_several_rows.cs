@@ -117,7 +117,7 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     protected virtual IReadOnlyCollection<PropertyDifference> RootPropertyDifferences => [];
 
     /// <inheritdoc/>
-    public async ValueTask InitializeAsync()
+    public async Task InitializeAsync()
     {
         _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
@@ -163,7 +163,7 @@ public abstract class a_sink_over_several_rows(MongoDBFixture fixture) : IAsyncL
     }
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+    public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
     /// <summary>
     /// Determine whether a row is unchanged by the join.

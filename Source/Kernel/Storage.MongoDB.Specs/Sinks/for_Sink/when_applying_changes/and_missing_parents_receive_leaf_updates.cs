@@ -33,7 +33,7 @@ public class and_missing_parents_receive_leaf_updates(context ctx) : IClassFixtu
         public BsonDocument JoinedNullResult = default!;
         public BsonDocument JoinedExistingResult = default!;
 
-        public async ValueTask InitializeAsync()
+        public async Task InitializeAsync()
         {
             _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
@@ -141,7 +141,7 @@ public class and_missing_parents_receive_leaf_updates(context ctx) : IClassFixtu
             JoinedExistingResult = await Find("join-existing");
         }
 
-        public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
         async Task<BsonDocument> Find(string id) => await _collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleAsync();
 

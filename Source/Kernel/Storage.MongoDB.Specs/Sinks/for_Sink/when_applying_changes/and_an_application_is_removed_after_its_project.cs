@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
+using Xunit.Abstractions;
 using context = Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes.and_an_application_is_removed_after_its_project.context;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes;
@@ -32,7 +33,7 @@ public class and_an_application_is_removed_after_its_project(context ctx, ITestO
         IMongoCollection<BsonDocument> _collection = default!;
         Sink _sink = default!;
 
-        public async ValueTask InitializeAsync()
+        public async Task InitializeAsync()
         {
             var settings = MongoClientSettings.FromConnectionString(fixture.ConnectionString);
             settings.ClusterConfigurator = builder => builder.Subscribe<CommandStartedEvent>(command =>
@@ -55,7 +56,7 @@ public class and_an_application_is_removed_after_its_project(context ctx, ITestO
             _collection = collections.GetCollection();
         }
 
-        public async ValueTask DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
 
         public async Task Verify(string state, bool bulk, ITestOutputHelper output)
         {
