@@ -4,12 +4,14 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Configuration;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 #pragma warning disable SA1204 // Static helpers placed after the public methods that drive them.
@@ -25,9 +27,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{ReadModelMigrator}"/> for logging.</param>
+/// <param name="options">The kernel configuration, including the shadow-index DDL timeout.</param>
 public class ReadModelMigrator(
     ITableMigrator<ReadModelDbContext> tableMigrator,
-    ILogger<ReadModelMigrator> logger) : IReadModelMigrator
+    ILogger<ReadModelMigrator> logger,
+    IOptions<ChronicleOptions>? options = null) : IReadModelMigrator
 {
     static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
 
@@ -104,7 +108,7 @@ public class ReadModelMigrator(
             await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
-        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context));
+        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, options?.Value.Sql, logger));
         _columnMigrations.TryAdd(cacheKey, true);
     }
 

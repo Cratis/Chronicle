@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
@@ -24,15 +25,24 @@ internal static class ShadowColumnIndexes
     /// Ensures the registry's shadow indexes on the physical table and removes obsolete shadow indexes.
     /// </summary>
     /// <param name="context">The read-model context.</param>
+    /// <param name="configuration">The configured SQL options, or defaults.</param>
+    /// <param name="logger">The migration logger for visible DDL failures.</param>
+    /// <param name="cancellationToken">An available caller token, linked with the configured reconciliation deadline.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context)
+    internal static async Task Ensure(ReadModelDbContext context, Configuration.Sql? configuration = null, ILogger<ReadModelMigrator>? logger = null, CancellationToken cancellationToken = default)
     {
+        configuration ??= new();
+        var timeout = configuration.ShadowIndexDdlTimeoutSeconds;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeout);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(timeout));
+        var execution = new ReadModelIndexOperations.Execution(Online: true, CommandTimeout: timeout, Logger: logger, CancellationToken: deadline.Token);
         var key = $"{context.Database.GetConnectionString()}:{context.TableName}";
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync();
+        await gate.WaitAsync(deadline.Token);
         try
         {
-            await EnsureIndexes(context);
+            await EnsureIndexes(context, execution);
         }
         finally
         {
@@ -40,21 +50,21 @@ internal static class ShadowColumnIndexes
         }
     }
 
-    static async Task EnsureIndexes(ReadModelDbContext context)
+    static async Task EnsureIndexes(ReadModelDbContext context, ReadModelIndexOperations.Execution execution)
     {
         var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
         if (ShadowColumns.For(context).Count == 0) return;
-        var indexes = await Existing(context).ToArrayAsync();
+        var indexes = await Existing(context).ToArrayAsync(execution.CancellationToken);
         foreach (var index in indexes.Where(index => !index.IsValid || !expected.Contains(index.Column)))
         {
-            await ReadModelIndexOperations.Drop(context, (context.TableName, index.Name), execution: new(Online: true, CommandTimeout: 0));
+            await ReadModelIndexOperations.Drop(context, (context.TableName, index.Name), execution);
         }
         foreach (var column in expected.Where(column => !indexes.Any(index => index.IsValid && index.Column == column)))
         {
             // Names must survive renames untouched. A unique suffix avoids a name still owned by a revert table.
             var name = ReadModelIndexNames.For(context.Database.GetDatabaseType(), context.TableName, $"{column}_{Guid.NewGuid():N}")
                 .Replace(ReadModelIndexNames.Prefix, Prefix, StringComparison.Ordinal);
-            await ReadModelIndexOperations.Ensure(context, (context.TableName, column, name), execution: new(Online: true, CommandTimeout: 0));
+            await ReadModelIndexOperations.Ensure(context, (context.TableName, column, name), execution);
         }
     }
 
