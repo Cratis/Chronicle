@@ -122,8 +122,16 @@ public partial class Observer
         }
     }
 
+    /// <summary>
+    /// Gets whether kernel-initiated reconciliation must leave the subscription alone.
+    /// </summary>
+    /// <returns>True when reconciliation must not run.</returns>
+    /// <remarks>
+    /// Reconciling sets the definition's event sequence to this key's, so an activation whose definition lives on
+    /// another event sequence would otherwise move the definition back to itself.
+    /// </remarks>
     bool CannotReconcileSubscription() =>
-        _removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired ||
+        _removed || IsRetired || !KeyOwnsDefinition || State.AlertDisposition == AlertDisposition.Retired ||
         IsQuarantined || State.RunningState == ObserverRunningState.Quarantined ||
         _recoverSubscriptionAfterQuarantine || _retryRecoveryAfterQuarantine;
 
