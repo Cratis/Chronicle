@@ -35,7 +35,8 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
     "serviceId": "chronicle",
     "roles": {
       "eventSequences": true,
-      "observers": true
+      "observers": true,
+      "jobs": true
     }
   }
 }
@@ -77,6 +78,7 @@ After a node is lost, observers can lag behind the event log until the observer 
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
+| jobsFallback | string | AnySilo | Fallback when no Jobs silo is available. Only `AnySilo` is currently supported; `Wait` is rejected at startup until durable waiting is supported. This option does not change placement yet. |
 | type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
 | gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
@@ -145,6 +147,27 @@ A node that only processes observers (reactors, reducers, projections):
   }
 }
 ```
+
+## Jobs role and metadata
+
+All three roles (`eventSequences`, `observers` and `jobs`) default to `true`. Startup refuses a node
+with all three disabled. Existing configurations that disable both older roles remain valid because
+`jobs` defaults to `true`.
+
+Set `clustering.roles.jobs` to `false` (environment variable
+`Cratis__Chronicle__Clustering__Roles__Jobs=false`) to reduce that silo's concurrent job step budget.
+This is a foundation for dedicated job workers, not placement enforcement: job steps can still run on
+any compatible silo. Job controllers are unchanged. See [Job throttling](job-throttling.md) for the
+reduced budget and its override.
+
+Silos advertise version `1` under `cratis.chronicle.roles.v` and Boolean strings under
+`cratis.chronicle.role.eventSequences`, `cratis.chronicle.role.observers` and
+`cratis.chronicle.role.jobs` in Orleans silo metadata. Chronicle merges these namespaced keys with
+host-provided metadata; unrelated keys are preserved. A silo without recognized, complete metadata
+has unknown roles. Advertising roles does not change the placement behavior described below.
+
+`clustering.jobsFallback` defaults to `AnySilo`. `Wait` is reserved and rejected at startup until
+durable waiting support is available (Cratis/Orleans#129). Do not configure `Wait` yet.
 
 ## Behavior
 

@@ -6,6 +6,7 @@ using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
@@ -81,12 +82,13 @@ public static class ChronicleServerSiloBuilderExtensions
         // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
         // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
         // so the cap has to be folded in here to keep the effective limit unchanged.
+        builder.AddChronicleSiloRoles();
         builder.Services.TryAddSingleton<IOptions<Cratis.Orleans.Jobs.JobsOptions>>(sp =>
         {
             var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
             return Options.Create(new Cratis.Orleans.Jobs.JobsOptions
             {
-                MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
+                MaxParallelSteps = chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(chronicleOptions.Clustering.Roles.Jobs, chronicleOptions.Observers.MaxConcurrentPartitions),
                 DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
                 CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
                 StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,
