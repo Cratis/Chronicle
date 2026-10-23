@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 
@@ -90,12 +91,30 @@ def rerun_target(gate_runs, head_sha, pr_head_sha):
     return None
 
 
+# GitHub answers 5xx now and then, and a timeout is no verdict either: retry those a bounded number of times,
+# then fail closed as before. Client errors (4xx) are never retried.
+RETRY_DELAYS = (5, 15)
+
+
+def transient(error):
+    if isinstance(error, subprocess.TimeoutExpired):
+        return True
+    stderr = error.stderr or ""
+    return re.search(r"HTTP 5\d\d", stderr) is not None
+
+
 def api(path, *, method="GET", paginate=False):
     command = ["gh", "api", "-X", method, path]
     if paginate:
         command += ["--paginate", "--slurp"]
-    result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=30)
-    return json.loads(result.stdout) if result.stdout.strip() else None
+    for delay in (*RETRY_DELAYS, None):
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=30)
+            return json.loads(result.stdout) if result.stdout.strip() else None
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            if delay is None or not transient(error):
+                raise
+            time.sleep(delay)
 
 
 def collection(path, key):
@@ -108,7 +127,9 @@ def workflow_runs(repo, workflow, head_sha):
 
 
 def with_jobs(repo, run):
-    return dict(run, jobs=collection(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest", "jobs"))
+    # Keep the page small: GitHub 502s on every attempt for runs with ~145 jobs at the default page size.
+    return dict(run, jobs=collection(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page=30",
+                                     "jobs"))
 
 
 def recorded(path):
