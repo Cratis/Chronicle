@@ -8,9 +8,11 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -71,6 +73,30 @@ class Planning(unittest.TestCase):
             with self.subTest(repetitions=repetitions, before=before, after=after):
                 with self.assertRaisesRegex(ValueError, message):
                     bench.validate_inputs(repetitions, before, after)
+
+    def test_timeout_bounds(self):
+        for timeout in (0, -1, 3001, 100000):
+            with self.subTest(timeout=timeout), self.assertRaisesRegex(ValueError, "timeout_seconds must be 1-3000"):
+                bench.validate_inputs(3, "a", "b", timeout)
+        bench.validate_inputs(3, "a", "b", 3000)
+
+    def test_replay_size_validation(self):
+        for size in ("medium", "large", "garbage", "", "0", "-1", "1.5"):
+            with self.subTest(size=size), self.assertRaisesRegex(ValueError, "replay-shape size"):
+                bench.validate_size("replay-shape", size)
+        for size in ("small", "15000"):
+            bench.validate_size("replay-shape", size)
+
+    def test_budget_estimate_uses_measured_pair(self):
+        session = bench.RunSession(None, {}, 10, 100)
+        session.started = 0
+        session.longest = 1
+        session.completed = [{"warmup": True, "durationSeconds": 1}]
+        with patch.object(bench.time, "monotonic", return_value=50):
+            self.assertTrue(session.has_budget(False))
+            session.completed += [{"warmup": False, "durationSeconds": 20},
+                                  {"warmup": False, "durationSeconds": 25}]
+            self.assertFalse(session.has_budget(False))
 
     def test_last_object(self):
         self.assertEqual(bench.extract_record('log\n{"a": 1}\n[]\n{"b": 2}\nteardown'), {"b": 2})
@@ -241,10 +267,98 @@ class Execution(unittest.TestCase):
         self.assertEqual(bench.run(self.args), 1)
         self.assertEqual(json.loads((self.results / "run.json").read_text())["status"], "INCOMPLETE")
 
+    def descendant_stub(self, trigger):
+        self.stub.write_text('import json, os, subprocess, sys, time\n'
+                             'from pathlib import Path\n'
+                             'counter = Path(os.environ["STUB_COUNT_FILE"])\n'
+                             'count = int(counter.read_text()) if counter.exists() else 0\n'
+                             'counter.write_text(str(count + 1))\n'
+                             f'if count == {trigger}:\n'
+                             '    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])\n'
+                             '    Path(os.environ["STUB_PID_FILE"]).write_text(str(child.pid))\n'
+                             '    time.sleep(60)\n'
+                             'print(json.dumps({"Verdict": "passed", "Settings": {}}))\n')
+        os.environ["STUB_COUNT_FILE"] = str(self.root / "counter")
+        os.environ["STUB_PID_FILE"] = str(self.root / "descendant.pid")
+        self.addCleanup(self.cleanup_descendant)
+
+    def cleanup_descendant(self):
+        pid_file = self.root / "descendant.pid"
+        if pid_file.exists():
+            pid = int(pid_file.read_text())
+            if self.descendant_alive(pid):
+                os.kill(pid, signal.SIGKILL)
+
+    def descendant_alive(self, pid):
+        result = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True)
+        # A killed orphan may briefly remain as a zombie until the runner's init reaps it.
+        state = result.stdout.strip()
+        return bool(state) and not state.startswith("Z")
+
+    def assert_descendant_stopped(self):
+        pid = int((self.root / "descendant.pid").read_text())
+        deadline = time.monotonic() + 2
+        while self.descendant_alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.02)
+        if self.descendant_alive(pid):
+            os.kill(pid, signal.SIGKILL)
+            self.fail("descendant survived the process-group kill")
+
     def test_wall_timeout_records_and_kills_process_group(self):
-        with patch.object(bench, "wall_timeout", return_value=0.05), patch.dict(os.environ, {"STUB_SLEEP": "2"}):
+        self.descendant_stub(trigger=0)
+        with patch.object(bench, "wall_timeout", return_value=0.5):
             self.assertEqual(bench.run(self.args), 1)
-        self.assertEqual(self.runs()[0]["status"], "timed-out")
+        result = self.runs()[0]
+        self.assertEqual(result["status"], "timed-out")
+        self.assertFalse(result["budgetExhausted"])
+        self.assertEqual(json.loads((self.results / "run.json").read_text())["status"], "FAILED")
+        self.assert_descendant_stopped()
+
+    def test_late_slowdown_exhausts_budget_and_kills_descendant(self):
+        self.descendant_stub(trigger=4)
+        with patch.dict(os.environ, RUN_BUDGET_SECONDS="3"):
+            started = time.monotonic()
+            self.assertEqual(bench.run(self.args), 1)
+            self.assertLess(time.monotonic() - started, 4.5)
+        runs = self.runs()
+        self.assertEqual(len(runs), 5)
+        self.assertEqual(runs[-1]["status"], "timed-out")
+        self.assertTrue(runs[-1]["budgetExhausted"])
+        self.assertLess(runs[-1]["exitCode"], 0)
+        self.assertEqual(json.loads((self.results / "run.json").read_text())["status"], "INCOMPLETE")
+        self.assert_descendant_stopped()
+
+    def test_replay_run_rejects_invalid_size(self):
+        self.args.target = "replay-shape"
+        with patch.dict(os.environ, SIZE="medium"), self.assertRaisesRegex(ValueError, "replay-shape size"):
+            bench.run(self.args)
+        self.assertFalse((self.results / "runs").exists())
+
+    def test_run_rejects_oversized_timeout(self):
+        with patch.dict(os.environ, TIMEOUT_SECONDS="3001"), self.assertRaisesRegex(ValueError, "timeout_seconds"):
+            bench.run(self.args)
+        self.assertFalse((self.results / "runs").exists())
+
+    def assert_partial_summary(self, expected_status, before, after):
+        summary = self.root / "summary.md"
+        self.assertEqual(bench.compare(argparse.Namespace(results=self.results, summary=summary)), 0)
+        text = summary.read_text()
+        self.assertIn(f"Cell status: **{expected_status}**", text)
+        self.assertIn("Partial medians:", text)
+        self.assertIn(f"before: {before}", text)
+        self.assertIn(f"after: {after}", text)
+
+    def test_failed_comparison_reports_partial_medians_and_counts(self):
+        with patch.dict(os.environ, STUB_EXIT="2"):
+            self.assertEqual(bench.run(self.args), 1)
+        self.assert_partial_summary("FAILED", "0 passed / 1 measured / 2 requested", "0 passed / 1 measured / 2 requested")
+
+    def test_incomplete_comparison_reports_partial_medians_and_counts(self):
+        self.descendant_stub(trigger=4)
+        with patch.dict(os.environ, RUN_BUDGET_SECONDS="3"):
+            self.assertEqual(bench.run(self.args), 1)
+        self.assert_descendant_stopped()
+        self.assert_partial_summary("INCOMPLETE", "1 passed / 1 measured / 2 requested", "1 passed / 2 measured / 2 requested")
 
     def test_cli_matrix_output(self):
         output = self.root / "output"
@@ -253,6 +367,15 @@ class Execution(unittest.TestCase):
         result = subprocess.run([sys.executable, "-B", str(SCRIPT), "matrix"], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(output.read_text().removeprefix("matrix="))["include"][0]["cell"], "rebuild-S2-two")
+
+    def test_cli_rejects_timeout_and_replay_size(self):
+        for overrides, message in [({"TIMEOUT_SECONDS": "3001"}, "timeout_seconds"),
+                                   ({"TARGET": "replay-shape", "SIZE": "medium"}, "replay-shape size")]:
+            env = dict(os.environ, TARGET="rebuild", SCENARIOS="S2", TOPOLOGIES="two", BEFORE_SHA="a", AFTER_SHA="b")
+            env.update(overrides)
+            result = subprocess.run([sys.executable, "-B", str(SCRIPT), "matrix"], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn(message, result.stderr)
 
     def test_build_both_sides_and_overlay_only_benchmarks(self):
         harness = self.root / "harness"

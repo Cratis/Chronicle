@@ -49,9 +49,11 @@ def append_summary(text, path=None):
             stream.write(text + "\n")
 
 
-def validate_inputs(repetitions, before, after):
+def validate_inputs(repetitions, before, after, timeout_seconds=1200):
     if not 1 <= int(repetitions) <= 10:
         raise ValueError("repetitions must be 1-10")
+    if not 1 <= int(timeout_seconds) <= 3000:
+        raise ValueError("timeout_seconds must be 1-3000")
     for side, ref in zip(SIDES, (before, after)):
         if not ref.strip():
             raise ValueError(f"{side} ref must not be empty or whitespace")
@@ -81,8 +83,17 @@ def validated_list(value, choices, label):
     return items
 
 
+def validate_size(target, size):
+    if target != "replay-shape" or size == "small":
+        return
+    if not size.isdecimal() or int(size) <= 0:
+        raise ValueError("replay-shape size must be small or a positive numeric event count")
+
+
 def plan(_args):
-    validate_inputs(os.environ["REPETITIONS"], os.environ["BEFORE_SHA"], os.environ["AFTER_SHA"])
+    validate_inputs(os.environ["REPETITIONS"], os.environ["BEFORE_SHA"], os.environ["AFTER_SHA"],
+                    os.environ.get("TIMEOUT_SECONDS", "1200"))
+    validate_size(os.environ["TARGET"], os.environ.get("SIZE", "small"))
     cells = matrix(os.environ["TARGET"], os.environ["SCENARIOS"], os.environ["TOPOLOGIES"])
     line = "matrix=" + json.dumps({"include": cells})
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
@@ -244,8 +255,21 @@ def wall_timeout(timeout):
     return timeout + 180
 
 
+def wait_for_exit(process, timeout, deadline):
+    remaining = max(0, deadline - time.monotonic())
+    limit = wall_timeout(timeout)
+    try:
+        return process.wait(timeout=min(limit, remaining)), False, False
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        return process.wait(), True, remaining <= limit
+
+
 def execute(args, side, info, attempt):
-    seq, warmup, timeout = attempt
+    seq, warmup, timeout, deadline = attempt
     directory = Path(info["directory"])
     launcher = args.launcher or ["dotnet", str(directory / PROJECT / "bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll")]
     command = launcher + (["--rebuild", args.scenario] if args.target == "rebuild" else ["--replay-shape"])
@@ -253,16 +277,12 @@ def execute(args, side, info, attempt):
     started_at = datetime.now(timezone.utc).isoformat()
     started = time.monotonic()
     timed_out = False
+    budget_exhausted = False
     with base.with_suffix(".stdout.log").open("w") as stdout, base.with_suffix(".stderr.log").open("w") as stderr:
         try:
             process = subprocess.Popen(command, cwd=directory, env=child_environment(args, info["sha"], warmup, timeout),
                                        stdout=stdout, stderr=stderr, start_new_session=True)
-            try:
-                exit_code = process.wait(timeout=wall_timeout(timeout))
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                os.killpg(process.pid, signal.SIGKILL)
-                exit_code = process.wait()
+            exit_code, timed_out, budget_exhausted = wait_for_exit(process, timeout, deadline)
         except OSError as error:
             stderr.write(str(error))
             exit_code = 1
@@ -272,7 +292,7 @@ def execute(args, side, info, attempt):
     result = {"seq": seq, "side": side, "sha": info["sha"], "warmup": warmup, "exitCode": exit_code,
               "status": classify(args.target, exit_code, record, raw_stderr, timed_out),
               "durationSeconds": time.monotonic() - started, "startedAt": started_at,
-              "record": record, "stderrTail": raw_stderr[-12000:]}
+              "record": record, "stderrTail": raw_stderr[-12000:], "budgetExhausted": budget_exhausted}
     write_json(base.with_suffix(".json"), result)
     print(f"{seq:02d} {side} {'warmup' if warmup else 'measured'}: {result['status']}", flush=True)
     return result
@@ -281,9 +301,10 @@ def execute(args, side, info, attempt):
 def run(args):
     repetitions = int(os.environ.get("REPETITIONS", "3"))
     sides = read_json(args.results / "sides.json")
-    validate_inputs(repetitions, sides["before"]["sha"], sides["after"]["sha"])
     timeout = int(os.environ.get("TIMEOUT_SECONDS", "1200"))
-    budget = float(os.environ.get("RUN_BUDGET_SECONDS", "4500"))
+    validate_inputs(repetitions, sides["before"]["sha"], sides["after"]["sha"], timeout)
+    validate_size(args.target, os.environ.get("SIZE", "small"))
+    budget = float(os.environ.get("RUN_BUDGET_SECONDS", "3300"))
     if timeout <= 0 or budget <= 0:
         raise ValueError("timeout and run budget must be positive")
     (args.results / "runs").mkdir(parents=True, exist_ok=True)
@@ -320,17 +341,24 @@ class RunSession:
     def measure(self, measured_order):
         schedule = [(side, True) for side in SIDES] + [(side, False) for side in measured_order]
         for side, warmup in schedule:
-            if not self.has_budget():
+            if not self.has_budget(warmup):
                 return "INCOMPLETE"
-            result = execute(self.args, side, self.sides[side], (len(self.completed) + 1, warmup, self.timeout))
+            attempt = (len(self.completed) + 1, warmup, self.timeout, self.started + self.budget)
+            result = execute(self.args, side, self.sides[side], attempt)
             self.completed.append(result)
             self.longest = max(self.longest, result["durationSeconds"])
+            if result["budgetExhausted"]:
+                return "INCOMPLETE"
             if self.stop_after_failure(warmup):
                 return "FAILED"
         return "COMPLETE"
 
-    def has_budget(self):
-        return self.budget - (time.monotonic() - self.started) > 1.5 * self.longest
+    def has_budget(self, warmup):
+        measured = measured_runs(self.completed)
+        estimate = max((item["durationSeconds"] for item in measured), default=self.longest)
+        # Re-estimate from full-size runs, reserving a whole pair when starting the next pair.
+        runs_needed = 1 if warmup or len(measured) % 2 else 2
+        return self.budget - (time.monotonic() - self.started) > 1.5 * estimate * runs_needed
 
     def stop_after_failure(self, warmup):
         if warmup:
@@ -472,10 +500,22 @@ def format_stats(value):
     return f"{value['median']:.6g} ({spread:.2f}%)" if spread is not None else f"{value['median']:.6g} (no spread)"
 
 
+def partial_summary(manifest, runs):
+    if manifest["status"] == "COMPLETE":
+        return []
+    lines = ["**Partial medians: this cell did not complete successfully. Only passed measured runs contribute.**", ""]
+    for side in SIDES:
+        measured = runs_for_side(runs, side)
+        lines.append(f"- {side}: {len(passed_records(measured))} passed / {len(measured)} measured / "
+                     f"{manifest['repetitions']} requested")
+    return lines + [""]
+
+
 def markdown(comparison, context):
     manifest, sides, machine_info, runs = context
     lines = [f"# Paired benchmark: {manifest['target']} / {manifest['cell']}", "",
              f"Cell status: **{manifest['status']}**", ""]
+    lines.extend(partial_summary(manifest, runs))
     for side in SIDES:
         info = sides[side]
         lines.append(f"- {side.title()}: `{info['sha'][:12]}`; harness `{info['harnessSha']}`; overlaid: {info['overlaid']}")
