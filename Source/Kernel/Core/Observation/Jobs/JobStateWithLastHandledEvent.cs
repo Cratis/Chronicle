@@ -46,6 +46,11 @@ public class JobStateWithLastHandledEvent : JobState
     public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the bucket assignments and durable progress. Empty for legacy and ordered jobs.
+    /// </summary>
+    public IList<ReplayBucketStep> ReplayBucketSteps { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the failed partition keys captured before the replay began.
     /// </summary>
     public IList<Key> FailedPartitionKeys { get; set; } = [];

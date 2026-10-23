@@ -3,9 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver;
 
@@ -16,12 +18,14 @@ namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver;
 /// <param name="storage">The <see cref="IStorage"/> for accessing key indexes.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="options">The replay configuration.</param>
 public class TestableReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<ReplayObserver> logger)
-    : ReplayObserver(replayStateServiceClient, storage, jsonSerializerOptions, logger), IGrainType
+    ILogger<ReplayObserver> logger,
+    IOptions<ChronicleOptions>? options = null)
+    : ReplayObserver(replayStateServiceClient, storage, jsonSerializerOptions, logger, options), IGrainType
 {
     /// <inheritdoc/>
     public Type GrainType => typeof(IReplayObserver);

@@ -13,6 +13,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public class HandleEventsForObserverState : JobStepState
 {
     /// <summary>
+    /// Gets or sets the replay bucket. Null retains ordered processing for legacy steps.
+    /// </summary>
+    public ReplayBucket? Bucket { get; set; }
+
+    /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.
     /// </summary>
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;

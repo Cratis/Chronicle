@@ -6,6 +6,8 @@
   href: architecture.mdx
 - name: Eventual Consistency
   href: eventual-consistency.mdx
+- name: Parallel rebuilds
+  href: parallel-rebuilds.md
 - name: Registration lifecycle
   href: registration-lifecycle.md
 - name: Register a read model explicitly

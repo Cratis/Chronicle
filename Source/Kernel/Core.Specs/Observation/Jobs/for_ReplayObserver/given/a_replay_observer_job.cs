@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
@@ -15,6 +16,7 @@ using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
 using Orleans.Utilities;
@@ -42,6 +44,8 @@ public class a_replay_observer_job : Specification
     protected JobKey _jobKey;
     protected ReplayObserverRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
+
+    protected virtual ChronicleOptions CreateOptions() => new();
 
     protected static IObserverKeys CreateKeys(params Key[] keys) => new ObserverKeysForTesting(keys);
 
@@ -82,6 +86,7 @@ public class a_replay_observer_job : Specification
         _jobTypes.GetFor(Arg.Any<Type>())
             .Returns(Result<JobType, IJobTypes.GetForError>.Success(new JobType("ReplayObserver")));
 
+        _silo.AddService(Options.Create(CreateOptions()));
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(_replayServiceClient);
         _silo.AddService(_storage);

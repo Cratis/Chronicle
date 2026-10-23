@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
-public class HandleEventsForObserver(
+public partial class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
@@ -74,6 +74,7 @@ public class HandleEventsForObserver(
     IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
+    HashSet<Key> _bucketFailedPartitions = [];
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -155,6 +156,7 @@ public class HandleEventsForObserver(
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
         State.SkipFailedPartitions = request.SkipFailedPartitions;
+        State.Bucket = request.Bucket;
         return ValueTask.CompletedTask;
     }
 
@@ -193,6 +195,7 @@ public class HandleEventsForObserver(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
         _replayReports = DeliversPages ? new() : null;
+        _bucketFailedPartitions = [];
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -262,6 +265,7 @@ public class HandleEventsForObserver(
                     .ToArray();
                 var eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsRead, nonRedactionEventTypeIds);
                 eventsToHandle = _subscription.Filters.Apply(eventsToHandle);
+                eventsToHandle = FilterBucketEvents(currentState.Bucket, eventsToHandle);
 
                 var usePages = DeliversPages &&
                     _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
@@ -279,30 +283,15 @@ public class HandleEventsForObserver(
                         return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(_lastDurableCheckpoint)));
                     }
 
+                    var fallbackEvents = unit;
                     if (usePages)
                     {
-                        var dispatched = false;
-                        var pageResult = await TryHandleEvents(ObserverSubscriberKey.AllPartitions, unit, subscriberTimeout, page: true, onPageDispatch: () => dispatched = true);
-                        if (dispatched && pageResult.TryGetException(out var pageException))
-                        {
-                            return await HandlePageDispatchException(unit[0], pageException);
-                        }
-
-                        if (pageResult.TryGetResult(out var pageHandled))
-                        {
-                            var (result, lastSuccessful) = await HandleSubscriberResult(
-                                currentState,
-                                unit[0].Context.EventSourceId,
-                                pageHandled.Result,
-                                pageHandled.HandledEvents,
-                                lastSuccessfullyHandledEventSequenceNumber,
-                                cancellationToken,
-                                page: true);
-                            lastSuccessfullyHandledEventSequenceNumber = lastSuccessful;
-                            if (result is not null) return result;
-                            if (!await FlushReplayReports()) return ClosedResult();
-                            continue;
-                        }
+                        var (result, lastSuccessful, handledPage, remaining) = await HandlePage(
+                            (currentState, subscriberTimeout), unit, lastSuccessfullyHandledEventSequenceNumber, cancellationToken);
+                        lastSuccessfullyHandledEventSequenceNumber = lastSuccessful;
+                        if (result is not null) return result;
+                        if (handledPage) continue;
+                        fallbackEvents = remaining;
 
                         // Only preparation failures can fall back: a dispatched page may still be applying events,
                         // so re-sending its runs could apply them twice.
@@ -315,7 +304,7 @@ public class HandleEventsForObserver(
                     // would layer state onto a parent that never materialized and silently produce an inconsistent read
                     // model. Halting preserves the same global-order contract live observation relies on and surfaces
                     // the failure through PartitionFailed so it can be recovered before more state is built on top of it.
-                    foreach (var partitionEvents in GetConsecutivePartitionBatches(unit))
+                    foreach (var partitionEvents in GetConsecutivePartitionBatches(fallbackEvents))
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
@@ -325,7 +314,7 @@ public class HandleEventsForObserver(
                         }
 
                         var partition = partitionEvents[0].Context.EventSourceId;
-                        if (failedPartitions.Contains(partition))
+                        if (failedPartitions.Contains(partition) || _bucketFailedPartitions.Contains(partition))
                         {
                             logger.SkippingFailedPartition(partition);
                             continue;
@@ -363,6 +352,12 @@ public class HandleEventsForObserver(
                             if (!Advanced(await FlushFromWork()))
                             {
                                 return ClosedResult();
+                            }
+
+                            if (currentState.Bucket is not null)
+                            {
+                                _bucketFailedPartitions.Add(partition);
+                                continue;
                             }
 
                             return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
@@ -861,7 +856,7 @@ public class HandleEventsForObserver(
         return true;
     }
 
-    async Task<(JobStepResult Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleFailedSubscriberResult(
+    async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandleFailedSubscriberResult(
         HandleEventsForObserverState currentState,
         Key partition,
         ObserverSubscriberResult eventObserverResult,
@@ -906,12 +901,7 @@ public class HandleEventsForObserver(
             return (ClosedResult(), lastSuccessfullyHandledEventSequenceNumber);
         }
 
-        return (
-            JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                CreateResult(_lastDurableCheckpoint),
-                eventObserverResult.ExceptionMessages,
-                eventObserverResult.ExceptionStackTrace)),
-            lastSuccessfullyHandledEventSequenceNumber);
+        return FailureResult(currentState.Bucket, partition, eventObserverResult, (lastSuccessfullyHandledEventSequenceNumber, page));
     }
 
     async Task<JobStepResult> HandlePageDispatchException(AppendedEvent firstEvent, Exception exception)

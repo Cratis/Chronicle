@@ -6,9 +6,12 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -22,11 +25,14 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="options">The replay configuration.</param>
+[method: ActivatorUtilitiesConstructor]
 public class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
+    ILogger<ReplayObserver> logger,
+    IOptions<ChronicleOptions>? options = null) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <summary>
     /// The number of times the observer is notified that the replay concluded before it is left to the observer's watchdog.
@@ -44,6 +50,18 @@ public class ReplayObserver(
     internal const int ActiveStepWindow = 16;
 
     /// <summary>
+    /// Initializes an ordered replay job for callers using the original constructor.
+    /// </summary>
+    /// <param name="replayStateServiceClient">The replay service client.</param>
+    /// <param name="storage">The storage.</param>
+    /// <param name="jsonSerializerOptions">The serializer options.</param>
+    /// <param name="logger">The logger.</param>
+    public ReplayObserver(IObserverServiceClient replayStateServiceClient, IStorage storage, JsonSerializerOptions jsonSerializerOptions, ILogger<ReplayObserver> logger)
+        : this(replayStateServiceClient, storage, jsonSerializerOptions, logger, null)
+    {
+    }
+
+    /// <summary>
     /// Gets the notification of the observer that the replay concluded, once the job has concluded.
     /// </summary>
     /// <remarks>
@@ -59,7 +77,9 @@ public class ReplayObserver(
     internal TimeSpan NotificationRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <inheritdoc/>
-    protected override int? MaxActiveSteps => ActiveStepWindow;
+    protected override int? MaxActiveSteps => State.ReplayBucketSteps.Count > 0
+        ? Math.Min(ActiveStepWindow, State.ReplayBucketSteps.Count)
+        : ActiveStepWindow;
 
     /// <inheritdoc/>
     /// <remarks>
@@ -76,6 +96,15 @@ public class ReplayObserver(
         State.ReplayStartedAt = DateTimeOffset.UtcNow;
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
         State.ReplayPartitionSteps.Clear();
+        State.ReplayBucketSteps.Clear();
+
+        var bucketCount = request.ObserverType == ObserverType.Projection
+            ? await ProjectionReplayBuckets.CountFor(request, observer, options?.Value, storage)
+            : 0;
+        if (bucketCount > 0)
+        {
+            return ProjectionReplayBuckets.Prepare(request, bucketCount, State.ReplayBucketSteps, arguments => CreateStep<IHandleEventsForObserver>(arguments));
+        }
 
         if (request.ObserverType == ObserverType.Projection)
         {
@@ -216,6 +245,12 @@ public class ReplayObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
+        if (State.ReplayBucketSteps.Count > 0)
+        {
+            ReplayBucketProgress.Record(State.ReplayBucketSteps, jobStepId, result, jsonSerializerOptions);
+            State.LastHandledEventSequenceNumber = ReplayBucketProgress.Position(State.ReplayBucketSteps);
+            State.HandledAllEvents = State.ReplayBucketSteps.All(step => step.Completed);
+        }
         if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
             handled?.LastHandledEventSequenceNumber.IsActualValue == true)
         {

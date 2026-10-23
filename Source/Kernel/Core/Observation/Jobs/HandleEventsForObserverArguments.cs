@@ -23,6 +23,11 @@ public record HandleEventsForObserverArguments(
     EventObservationState EventObservationState,
     IEnumerable<EventType> EventTypes) : IObserverJobRequest
 {
+    /// <summary>
+    /// Gets the replay bucket, or null for an ordered step, including steps stored before bucket support.
+    /// </summary>
+    public ReplayBucket? Bucket { get; init; }
+
     /// <inheritdoc/>
     public ObserverReaderScope? ReaderScope { get; init; }
 

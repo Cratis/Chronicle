@@ -221,6 +221,13 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (Jobs.ProjectionRebuildBuckets is < 0 or > 64)
+        {
+            yield return new ValidationResult(
+                "Jobs.ProjectionRebuildBuckets must be between 0 and 64.",
+                [$"{nameof(Jobs)}.{nameof(Jobs.ProjectionRebuildBuckets)}"]);
+        }
+
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(

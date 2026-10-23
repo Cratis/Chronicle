@@ -17,6 +17,12 @@ public class Jobs
     public int? MaxParallelSteps { get; init; }
 
     /// <summary>
+    /// Gets the number of parallel buckets for partition-independent projection rebuilds, from 0 through 64.
+    /// Zero disables bucketed rebuilds. Enable only after every silo has been upgraded to support buckets.
+    /// </summary>
+    public int ProjectionRebuildBuckets { get; init; }
+
+    /// <summary>
     /// Gets the time threshold for considering a job as dead in the water.
     /// Jobs in preparation state with no steps that were created before this threshold are candidates for cleanup.
     /// Defaults to 1 hour.
