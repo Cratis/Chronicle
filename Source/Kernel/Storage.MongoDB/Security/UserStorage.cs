@@ -61,7 +61,9 @@ public class UserStorage(IDatabase database) : IUserStorage
     public async Task Create(User user)
     {
         var collection = GetCollection();
-        await collection.InsertOnce(user, _ => _.Id == user.Id);
+        // A stored user with this id was created from the same user event stream; the volatile fields
+        // (security stamp, timestamps) differ on every run, so any existing row is an acceptable winner.
+        await collection.InsertOnce(user, _ => _.Id == user.Id, _ => true);
     }
 
     /// <inheritdoc/>

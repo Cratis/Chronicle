@@ -35,10 +35,30 @@ internal static class DuplicateKeyConvergence
     /// <param name="isSameKey">Expression matching the stored document that holds the same key.</param>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>Awaitable task.</returns>
+    public static Task InsertOnce<TDocument>(
+        this IMongoCollection<TDocument> collection,
+        TDocument document,
+        Expression<Func<TDocument, bool>> isSameKey,
+        CancellationToken cancellationToken = default) =>
+        collection.InsertOnce(document, isSameKey, winner => winner.ToBsonDocument().Equals(document.ToBsonDocument()), cancellationToken);
+
+    /// <summary>
+    /// Insert a document once. If another writer already inserted the same key, the insert converges when
+    /// <paramref name="isEquivalent"/> accepts the stored winner; otherwise the winner is never overwritten and the
+    /// duplicate key error is rethrown.
+    /// </summary>
+    /// <typeparam name="TDocument">Type of document.</typeparam>
+    /// <param name="collection">The <see cref="IMongoCollection{TDocument}"/> to insert into.</param>
+    /// <param name="document">The document to insert.</param>
+    /// <param name="isSameKey">Expression matching the stored document that holds the same key.</param>
+    /// <param name="isEquivalent">Decides whether the stored winner is an acceptable outcome of this insert.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>Awaitable task.</returns>
     public static async Task InsertOnce<TDocument>(
         this IMongoCollection<TDocument> collection,
         TDocument document,
         Expression<Func<TDocument, bool>> isSameKey,
+        Func<TDocument, bool> isEquivalent,
         CancellationToken cancellationToken = default)
     {
         try
@@ -49,7 +69,7 @@ internal static class DuplicateKeyConvergence
         {
             using var cursor = await collection.FindAsync(isSameKey, cancellationToken: cancellationToken);
             var winner = await cursor.FirstOrDefaultAsync(cancellationToken);
-            if (winner is null || !winner.ToBsonDocument().Equals(document.ToBsonDocument()))
+            if (winner is null || !isEquivalent(winner))
             {
                 throw;
             }
