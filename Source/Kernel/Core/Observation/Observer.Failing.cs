@@ -430,7 +430,16 @@ public partial class Observer
 
         // This bypasses the failed partitions storage provider, so it checks ownership against storage the way the
         // provider does.
-        await storage.ThrowIfKeyDoesNotOwnStoredDefinition(_observerKey);
+        try
+        {
+            await storage.ThrowIfKeyDoesNotOwnStoredDefinition(_observerKey);
+        }
+        catch (ObserverKeyDoesNotMatchDefinition)
+        {
+            await RelinquishOwnershipIfMoved();
+            return;
+        }
+
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
@@ -438,6 +447,8 @@ public partial class Observer
 
     async Task RegisterRetryReminder(FailedPartition failure)
     {
+        if (!_observerExists || !KeyOwnsDefinition) return;
+
         if (failure.Deferral is { } deferral)
         {
             await RegisterDeferralReminder(failure, deferral);

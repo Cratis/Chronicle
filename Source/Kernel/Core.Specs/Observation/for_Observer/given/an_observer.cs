@@ -210,6 +210,7 @@ public class an_observer : Specification
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
         _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(_ => _stateStorage.State with { Identifier = _observerId });
+        _eventStoreNamespaceStorage.Observers.Save(Arg.Any<ObserverState>(), Arg.Any<EventSequenceId>()).Returns(true);
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);

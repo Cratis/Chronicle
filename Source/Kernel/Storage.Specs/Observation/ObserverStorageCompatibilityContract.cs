@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Observation;
@@ -22,6 +23,41 @@ public abstract class ObserverStorageCompatibilityContract : Specification
     /// <returns>The observer state storage.</returns>
     protected abstract IObserverStateStorage OpenObservers();
 
+    [Fact] public async Task should_stamp_and_round_trip_the_owner()
+    {
+        (await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 42 }, EventSequenceId.Log)).ShouldBeTrue();
+        (await OpenObservers().Get("observer")).Owner.ShouldEqual(EventSequenceId.Log);
+        (await OpenObservers().Get("observer")).LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)42);
+    }
+    [Fact] public async Task should_accept_the_same_owner()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        (await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 43 }, EventSequenceId.Log)).ShouldBeTrue();
+        (await OpenObservers().Get("observer")).LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)43);
+    }
+    [Fact] public async Task should_refuse_another_owner_without_changing_progress()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 42 }, EventSequenceId.Log);
+        (await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 99 }, "another-sequence")).ShouldBeFalse();
+        var stored = await OpenObservers().Get("observer");
+        stored.Owner.ShouldEqual(EventSequenceId.Log);
+        stored.LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)42);
+    }
+    [Fact] public async Task should_only_change_the_owner_when_claiming()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 42 }, EventSequenceId.Log);
+        await OpenObservers().ClaimOwnership("observer", "another-sequence");
+        var stored = await OpenObservers().Get("observer");
+        stored.Owner.ShouldEqual((EventSequenceId)"another-sequence");
+        stored.LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)42);
+        (await OpenObservers().Save(stored with { LastHandledEventSequenceNumber = 99 }, EventSequenceId.Log)).ShouldBeFalse();
+        (await OpenObservers().Save(stored with { LastHandledEventSequenceNumber = 43 }, "another-sequence")).ShouldBeTrue();
+    }
+    [Fact] public async Task should_not_create_state_when_claiming_a_missing_observer()
+    {
+        await OpenObservers().ClaimOwnership("observer", "another-sequence");
+        (await OpenObservers().GetAll()).ShouldBeEmpty();
+    }
     [Fact] public async Task should_allow_a_missing_legacy_observer() => (await Check()).ShouldBeNull();
     [Fact] public async Task should_allow_store_setup_before_observer_enablement()
     {

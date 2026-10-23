@@ -17,6 +17,7 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            Owner = state.Owner,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -57,6 +58,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -90,6 +92,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,

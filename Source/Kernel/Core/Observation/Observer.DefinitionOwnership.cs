@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation.States;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -31,6 +33,11 @@ public partial class Observer
         {
             // Failed-partition cleanup checks the stored definition, not this activation's claimed copy.
             await observerDefinition.WriteStateAsync();
+            var eventStore = storage.GetEventStore(_observerKey.EventStore);
+            foreach (var @namespace in await eventStore.Namespaces.GetAll())
+            {
+                await eventStore.GetNamespace(@namespace.Name).Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+            }
         }
     }
 
@@ -42,7 +49,41 @@ public partial class Observer
     /// Failed partitions are stored by observer identifier alone, like the definition, so an inert activation writing
     /// them would overwrite those of the real observer. The storage provider refuses such a write as well.
     /// </remarks>
-    Task WriteFailedPartitions() => KeyOwnsDefinition ? failures.WriteStateAsync() : Task.CompletedTask;
+    async Task WriteFailedPartitions()
+    {
+        if (!KeyOwnsDefinition) return;
+        try
+        {
+            await failures.WriteStateAsync();
+        }
+        catch (ObserverKeyDoesNotMatchDefinition)
+        {
+            await RelinquishOwnershipIfMoved();
+        }
+    }
+
+    /// <summary>
+    /// Makes an activation inert after its stored definition moves to another sequence.
+    /// </summary>
+    /// <returns>Whether the activation relinquished ownership.</returns>
+    async Task<bool> RelinquishOwnershipIfMoved()
+    {
+        await observerDefinition.ReadStateAsync();
+        if (KeyOwnsDefinition) return false;
+        if (!_observerExists) return true;
+
+        _observerExists = false;
+        _subscription = ObserverSubscription.Unsubscribed;
+        _pendingHandledCounts.Clear();
+        _pendingRetryReminders.Clear();
+        _failureStateWritePending = false;
+        await TransitionTo<Disconnected>();
+        await RemoveFailedPartitionReminders();
+        await UnregisterReminderNamed(AlertReminderName);
+        logger.LostOwnershipToAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
+        DeactivateOnIdle();
+        return true;
+    }
 
     /// <summary>
     /// Throws when this activation does not own the stored definition.

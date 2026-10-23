@@ -50,6 +50,8 @@ public partial class Observer
             return;
         }
 
+        if (await RelinquishOwnershipIfMoved()) return;
+
         await CheckConnectedClient();
         await RecoverIfStuck();
         await FlushDebouncedProgressState();

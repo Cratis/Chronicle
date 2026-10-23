@@ -20,6 +20,7 @@ public static class ObserverStateConverters
         new()
         {
             Id = definition.Identifier,
+            Owner = definition.Owner?.Value,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
             DeliveryFences = definition.DeliveryFences is null ? null : JsonSerializer.Serialize(definition.DeliveryFences, ObserverStateJson.Options),
             Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
@@ -96,6 +97,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner is null ? null : new Concepts.EventSequences.EventSequenceId(state.Owner),
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
             DeliveryFences = state.DeliveryFences is null ? null : JsonSerializer.Deserialize<Observation.DeliveryFenceState[]>(state.DeliveryFences, ObserverStateJson.Options),
             Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),

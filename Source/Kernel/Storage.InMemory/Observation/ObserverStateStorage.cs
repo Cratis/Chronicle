@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -38,21 +39,45 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
             .ToArray());
 
     /// <inheritdoc/>
-    public Task Save(ObserverState state)
+    public Task<bool> Save(ObserverState state, EventSequenceId? owner = null)
     {
-        _states.AddOrUpdate(
-            state.Identifier,
-            (_, incoming) => incoming,
-            (_, existing, incoming) => incoming with
+        owner ??= EventSequenceId.Log;
+        while (true)
+        {
+            if (!_states.TryGetValue(state.Identifier, out var existing))
             {
-                TypeSetControl = incoming.TypeSetControl is not null &&
-                    (existing.TypeSetControl is null || incoming.TypeSetControl.Revision.Value >= existing.TypeSetControl.Revision.Value)
-                        ? incoming.TypeSetControl
-                        : existing.TypeSetControl,
-                Initialization = incoming.Initialization ?? existing.Initialization
-            },
-            state);
-        _allSubject.OnNext(Snapshot());
+                if (!_states.TryAdd(state.Identifier, state with { Owner = owner })) continue;
+            }
+            else
+            {
+                if (existing.Owner is not null && existing.Owner != owner) return Task.FromResult(false);
+                var incoming = state with
+                {
+                    Owner = owner,
+                    TypeSetControl = state.TypeSetControl is not null &&
+                        (existing.TypeSetControl is null || state.TypeSetControl.Revision.Value >= existing.TypeSetControl.Revision.Value)
+                            ? state.TypeSetControl
+                            : existing.TypeSetControl,
+                    Initialization = state.Initialization ?? existing.Initialization
+                };
+                if (!_states.TryUpdate(state.Identifier, incoming, existing)) continue;
+            }
+
+            _allSubject.OnNext(Snapshot());
+            return Task.FromResult(true);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task ClaimOwnership(ObserverId observerId, EventSequenceId owner)
+    {
+        while (_states.TryGetValue(observerId, out var existing))
+        {
+            if (!_states.TryUpdate(observerId, existing with { Owner = owner }, existing)) continue;
+            _allSubject.OnNext(Snapshot());
+            break;
+        }
+
         return Task.CompletedTask;
     }
 

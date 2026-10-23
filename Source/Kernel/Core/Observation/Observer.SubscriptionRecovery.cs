@@ -79,6 +79,8 @@ public partial class Observer
         ObserverFilters? filters = default)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (await RelinquishOwnershipIfMoved()) return;
+
         // Unlike explicit registration, this serialized operation has no authority to release quarantine,
         // replace recovery owed to an operator clearance, or reload a stored cursor over live progress.
         if (CannotReconcileSubscription()) return;

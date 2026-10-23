@@ -230,6 +230,12 @@ public partial class Observer(
             }
 
             await FlushDebouncedProgressState();
+            if (!_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
             {
                 await TransitionTo<Disconnected>();
@@ -556,6 +562,12 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
+        if (!KeyOwnsDefinition || !_observerExists)
+        {
+            await UnregisterReminderNamed(reminderName);
+            return;
+        }
+
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
@@ -733,7 +745,26 @@ public partial class Observer(
                 DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
-            await base.WriteStateAsync();
+            try
+            {
+                await base.WriteStateAsync();
+            }
+            catch (ObserverKeyDoesNotMatchDefinition)
+            {
+                if (await RelinquishOwnershipIfMoved()) return;
+                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
+                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+                try
+                {
+                    await base.WriteStateAsync();
+                }
+                catch (ObserverKeyDoesNotMatchDefinition)
+                {
+                    if (await RelinquishOwnershipIfMoved()) return;
+                    throw;
+                }
+            }
+
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;

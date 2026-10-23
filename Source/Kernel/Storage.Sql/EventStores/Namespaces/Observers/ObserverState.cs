@@ -19,6 +19,12 @@ public class ObserverState
     public required ObserverId Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the owning event sequence, or null for legacy, unowned state.
+    /// </summary>
+    [ConcurrencyCheck]
+    public string? Owner { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]
