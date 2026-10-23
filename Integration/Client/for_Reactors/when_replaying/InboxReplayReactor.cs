@@ -15,10 +15,13 @@ public class InboxReplayReactor : IReactor
     public int LiveHandled;
     public int ReplayHandled;
     public EventObservationState ReplayObservationState;
+    readonly object _lock = new();
+    readonly List<(int Count, bool Replay, TaskCompletionSource Signal)> _waiters = [];
 
     public Task On(InboxReplayEvent @event, EventContext context)
     {
         Interlocked.Increment(ref LiveHandled);
+        Notify();
         return Task.CompletedTask;
     }
 
@@ -27,15 +30,37 @@ public class InboxReplayReactor : IReactor
     {
         ReplayObservationState = context.ObservationState;
         Interlocked.Increment(ref ReplayHandled);
+        Notify();
         return Task.CompletedTask;
     }
 
-    public async Task WaitTillHandled(int count, bool replay = false)
+    public Task WaitTillHandled(int count, bool replay = false)
     {
-        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-        while ((replay ? Volatile.Read(ref ReplayHandled) : Volatile.Read(ref LiveHandled)) < count)
+        var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_lock)
         {
-            await Task.Delay(50, cts.Token);
+            if (Handled(replay) >= count)
+            {
+                return Task.CompletedTask;
+            }
+
+            _waiters.Add((count, replay, signal));
+        }
+
+        return signal.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+    }
+
+    int Handled(bool replay) => replay ? Volatile.Read(ref ReplayHandled) : Volatile.Read(ref LiveHandled);
+
+    void Notify()
+    {
+        lock (_lock)
+        {
+            foreach (var waiter in _waiters.Where(_ => Handled(_.Replay) >= _.Count).ToArray())
+            {
+                _waiters.Remove(waiter);
+                waiter.Signal.TrySetResult();
+            }
         }
     }
 }
