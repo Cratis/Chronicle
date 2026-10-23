@@ -11,12 +11,13 @@ public class with_a_collapsing_projection : given.a_performing_job_step
 
     void Establish()
     {
-        _subscriber = Substitute.For<ICollapsingProjectionObserverSubscriber>();
+        _subscriber = Substitute.For<ICollapsingProjectionObserverSubscriber, IProjectionObserverSubscriber>();
         _jobStep.SetupForTesting(_observer, _subscriber, "some-partition");
         _eventCursor.MoveNext().Returns(Task.FromResult(false));
     }
 
     Task Because() => _jobStep.InvokePerformStep(_performState);
 
-    [Fact] async Task should_release_the_shared_activation() => await _subscriber.Received(1).ReleaseAfterPartition();
+    [Fact] async Task should_keep_the_shared_activation_warm() => await ((IProjectionObserverSubscriber)_subscriber).DidNotReceive().ReleaseAfterPartition();
+    [Fact] void should_not_expose_partition_release_on_the_shared_interface() => typeof(ICollapsingProjectionObserverSubscriber).GetMethods().ShouldNotContain(method => method.Name == nameof(IProjectionObserverSubscriber.ReleaseAfterPartition));
 }

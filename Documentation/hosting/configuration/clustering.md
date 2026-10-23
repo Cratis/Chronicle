@@ -207,20 +207,22 @@ is eligible, its exception says `No compatible silo is eligible for the Jobs rol
 ### Projection subscriber locality
 
 Kernel projection subscribers use Orleans' built-in prefer-local placement. A cold partition normally
-activates beside its live observer; during replay or catch-up it activates beside the partition job
-step instead. The subscriber key is unchanged, including the subscription's silo address. Client
-reactors and reducers retain their client-addressed routing.
+activates beside its live observer. Full projection replay and catch-up use one streaming observer
+step; cold subscribers prefer that step's silo. These streaming steps leave subscriber activations to
+Orleans' normal idle collection. The subscriber key is unchanged, including the subscription's silo
+address. Client reactors and reducers retain their client-addressed routing.
 
-A partition step requests subscriber deactivation after success, failure or cancellation. Release is
-best effort: a failure is logged without changing the step result. Orleans drains the activation before
-reactivation, allowing the next delivery to choose locality again. Subscriber fields contain only
-rebuildable definitions, pipeline references and caches; delivery is awaited before release. No durable
-checkpoint or sink state is discarded.
+Partition steps used for retries, failed-partition replay and per-partition catch-up request subscriber
+deactivation after success, failure or cancellation. This release applies only to partitioned kernel
+projection subscribers, not collapsing projections. Release is best effort: a failure is logged without
+changing the step result. Orleans drains the activation before reactivation, allowing the next delivery
+to choose locality again. Subscriber fields contain only rebuildable definitions, pipeline references
+and caches; delivery is awaited before release. No durable checkpoint or sink state is discarded.
 
 This is a preference, not a dedicated role or a migration of a warm activation. A collapsing projection
-keeps its shared all-partitions activation and its existing serialization; it does not fan out by job
-step. The built-in strategy needs no new server-side registration during rolling upgrades. Complete
-the upgrade on all silos to get the new release behavior consistently.
+keeps its shared all-partitions activation warm and retains its existing serialization; it does not fan
+out or release after each partition step. The built-in strategy needs no new server-side registration
+during rolling upgrades. Complete the upgrade on all silos to get the new release behavior consistently.
 
 ### Rolling upgrades
 

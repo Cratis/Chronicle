@@ -424,8 +424,7 @@ class [GrainType("patterncapturesubscriptions")] Cratis.Chronicle.Patterns.Patte
 
 class [GrainType("patternminer")] Cratis.Chronicle.Patterns.PatternMiner
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(1)]
-  C9EEF4F2: ReleaseAfterPartition() -> Task
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation")] Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation [Version(0)]
 

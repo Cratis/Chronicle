@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
@@ -40,6 +41,7 @@ public class TestableHandleEventsForPartition(
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);
+    static readonly FieldInfo _isCollapsingProjectionField = typeof(HandleEventsForPartition).GetField("_isCollapsingProjection", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _eventSourceIdField = typeof(HandleEventsForPartition).GetField("_eventSourceId", BindingFlags.NonPublic | BindingFlags.Instance);
 
     /// <inheritdoc/>
@@ -66,6 +68,7 @@ public class TestableHandleEventsForPartition(
         _observerField.SetValue(this, observer);
         _subscriberField.SetValue(this, subscriber);
         _eventSourceIdField.SetValue(this, eventSourceId);
+        _isCollapsingProjectionField.SetValue(this, subscriber is ICollapsingProjectionObserverSubscriber);
     }
 
     /// <summary>

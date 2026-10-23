@@ -113,6 +113,20 @@ public class HandleEventsForPartition(
         }
     }
 
+    /// <summary>
+    /// Resolves the subscriber identity used by both partition-step preparation and reactivation.
+    /// </summary>
+    /// <param name="subscription">The observer subscription.</param>
+    /// <param name="partition">The partition to deliver.</param>
+    /// <returns>The subscriber key with the selected delivery address.</returns>
+    internal ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
+    {
+        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+            ? SiloAddress.Zero
+            : subscriberSelector.Select(subscription, partition).SiloAddress;
+        return subscription.GetSubscriberKeyFor(partition, siloAddress);
+    }
+
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
     {
@@ -597,28 +611,16 @@ public class HandleEventsForPartition(
     {
         try
         {
-            switch (_subscriber)
+            // A collapsing projection keeps its shared activation warm across partition steps.
+            if (!_isCollapsingProjection && _subscriber is IProjectionObserverSubscriber projection)
             {
-                case IProjectionObserverSubscriber projection:
-                    await projection.ReleaseAfterPartition();
-                    break;
-                case ICollapsingProjectionObserverSubscriber collapsingProjection:
-                    await collapsingProjection.ReleaseAfterPartition();
-                    break;
+                await projection.ReleaseAfterPartition();
             }
         }
         catch (Exception exception)
         {
             logger.FailedReleasingSubscriber(exception, partition);
         }
-    }
-
-    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
-    {
-        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
-            ? SiloAddress.Zero
-            : subscriberSelector.Select(subscription, partition).SiloAddress;
-        return subscription.GetSubscriberKeyFor(partition, siloAddress);
     }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
