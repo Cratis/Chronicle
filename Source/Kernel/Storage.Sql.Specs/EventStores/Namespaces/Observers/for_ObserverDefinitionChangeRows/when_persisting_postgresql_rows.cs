@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.for_ObserverDefinitionChangeRows;
