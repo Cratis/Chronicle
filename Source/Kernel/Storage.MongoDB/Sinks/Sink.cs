@@ -44,7 +44,7 @@ public class Sink(
     IChangesetConverter changesetConverter,
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
-    ILogger<Sink> logger) : ISink, IDisposable
+    ILogger<Sink> logger) : ISink, ISinkPagePrefetch, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class without a logger.
@@ -85,6 +85,7 @@ public class Sink(
     readonly List<BulkBatch> _inFlight = [];
     readonly Dictionary<BulkBatch, BulkOutcome> _unreportedBulkOutcomes = [];
     readonly Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    readonly SinkPagePrefetch _pagePrefetch = new(converter);
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
 
@@ -133,6 +134,31 @@ public class Sink(
 
     /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
+
+    /// <summary>
+    /// Prefetches one page of read-model keys into the open bulk window. Does nothing outside bulk mode.
+    /// </summary>
+    /// <param name="keys">The page's root keys.</param>
+    /// <returns>A task representing the read-only prefetch.</returns>
+    public Task PrefetchPage(IEnumerable<Key> keys) => _isBulkMode
+        ? _pagePrefetch.Prefetch(Collection, keys, SeedPrefetchedState)
+        : Task.CompletedTask;
+
+    /// <summary>
+    /// Clears the current page's known misses. States already held in the bulk cache remain available.
+    /// </summary>
+    public void ClearPrefetchPage() => _pagePrefetch.Clear();
+
+    void SeedPrefetchedState(Key key, BsonDocument instance)
+    {
+        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        if (!_bulkPendingDeletes.ContainsKey(cacheKey) &&
+            _bulkStateCache.TryAdd(cacheKey, expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration())))
+        {
+            _bulkKeysByCacheKey[cacheKey] = key;
+            SeedBulkWatermark(key, instance);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -217,7 +243,7 @@ public class Sink(
         }
 
         answer = default;
-        return _bulkPendingDeletes.ContainsKey(cacheKey);
+        return _bulkPendingDeletes.ContainsKey(cacheKey) || _pagePrefetch.IsKnownMiss(cacheKey);
     }
 
     void SeedBulkWatermark(Key key, BsonDocument instance)
@@ -462,6 +488,7 @@ public class Sink(
 
     void EvictBulkCache(string cacheKey)
     {
+        _pagePrefetch.Forget(cacheKey);
         _bulkStateCache.TryRemove(cacheKey, out _);
         _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
         _bulkWatermarks.TryRemove(cacheKey, out _);
@@ -656,6 +683,7 @@ public class Sink(
 
     void ClearBulkState()
     {
+        ClearPrefetchPage();
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
