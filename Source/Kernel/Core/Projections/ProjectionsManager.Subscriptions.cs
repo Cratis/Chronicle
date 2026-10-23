@@ -161,8 +161,12 @@ public partial class ProjectionsManager
     bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
         !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
 
-    bool IsBeingReplaced(ProjectionDefinition definition) =>
-        _registeringDefinitions.TryGetValue(definition.Identifier, out var registering) && registering != definition;
+    bool IsBeingReplaced(ProjectionDefinition definition)
+    {
+        var replaced = _registeringDefinitions.TryGetValue(definition.Identifier, out var registering) && registering != definition;
+        if (replaced) _skippedWhileRegistering = true;
+        return replaced;
+    }
 
     async Task SetProjectionDefinition(ProjectionDefinition definition)
     {

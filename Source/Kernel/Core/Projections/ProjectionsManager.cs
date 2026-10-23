@@ -74,6 +74,7 @@ public partial class ProjectionsManager(
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
+    bool _skippedWhileRegistering;
 
     EventStoreName _eventStoreName = EventStoreName.NotSet;
     IGrainTimer? _subscribeTimer;
@@ -116,6 +117,14 @@ public partial class ProjectionsManager(
         finally
         {
             _registeringDefinitions.Clear();
+
+            // A pass that skipped a definition because it was announced here must not leave it unsubscribed
+            // when the announcement ends, whatever way the registration ended.
+            if (_skippedWhileRegistering)
+            {
+                _skippedWhileRegistering = false;
+                ScheduleResubscribeProjectionsThatAreNotSubscribed();
+            }
         }
     }
 
@@ -198,6 +207,10 @@ public partial class ProjectionsManager(
             }
 
             definitionList = definitionList.Except(olderThanStored).ToList();
+            foreach (var definition in olderThanStored)
+            {
+                _registeringDefinitions.Remove(definition.Identifier);
+            }
         }
 
         if (fullSetOwner is not null && IsOlderThanAnyRetirableBy(fullSetOwner.Value, registrant, version))
@@ -216,6 +229,14 @@ public partial class ProjectionsManager(
         var changedDefinitions = (await GetChangedDefinitions(definitionList)).ToList();
         var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
         changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
+
+        // Only a definition that is actually being replaced may block subscribe passes. An unchanged
+        // re-registration compares unequal by instance, so leaving it announced would keep it dark.
+        foreach (var identifier in _registeringDefinitions.Keys.Except(changedDefinitions.Select(definition => definition.Identifier)).ToArray())
+        {
+            _registeringDefinitions.Remove(identifier);
+        }
+
         var failures = new Dictionary<ProjectionId, Exception>();
 
         if (changedDefinitions.Count == 0)
