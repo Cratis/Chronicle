@@ -76,9 +76,10 @@ public interface IMaterializationBindingStorage
     /// <param name="expectedActive">The expectedActive.</param>
     /// <param name="expectedEpoch">The expectedEpoch.</param>
     /// <param name="candidate">The candidate.</param>
+    /// <param name="rollbackWindow">How long the retired generation remains restorable.</param>
     /// <param name="receipt">The receipt.</param>
     /// <returns>The recorded storage outcome.</returns>
-    Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt);
+    Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt);
 
     /// <summary>
     /// Finds every generation claiming the physical container.

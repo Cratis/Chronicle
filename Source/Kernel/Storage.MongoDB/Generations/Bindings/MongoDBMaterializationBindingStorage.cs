@@ -15,10 +15,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 /// <summary>Stores bindings with receipt-first, majority-committed publication.</summary>
 /// <param name="database">The read-model database resolver.</param>
 /// <param name="gates">The gate writes joining publication.</param>
-public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates) : IMaterializationBindingStorage
+/// <param name="timeProvider">The clock used for lifecycle stamps.</param>
+public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null) : IMaterializationBindingStorage
 {
     static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
     static readonly UpdateDefinitionBuilder<BsonDocument> _update = Builders<BsonDocument>.Update;
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc/>
     public async Task<MaterializationBinding?> Get(EventStoreName store, MaterializationKey key)
@@ -96,7 +98,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     public Task<GenerationTransitionResult> TryAbandon(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => Transition(store, key, generation, MaterializationGenerationState.Abandoned);
 
     /// <inheritdoc/>
-    public async Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
+    public async Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt)
     {
         var db = await Prepared(store, key);
         for (var attempt = 0; ; attempt++)
@@ -109,7 +111,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                 if (previous is not null)
                 {
                     await session.AbortTransactionAsync();
-                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate);
+                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate, rollbackWindow);
                 }
                 var doc = await Bindings(db).Find(session, Id(key)).FirstOrDefaultAsync();
                 if (doc is null)
@@ -118,8 +120,9 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                     return new(MaterializationPublicationResult.UnknownMaterialization, MaterializationGeneration.Unspecified, ServingEpoch.Unset);
                 }
                 var binding = MaterializationBindingDocuments.Binding(doc);
+                var now = _timeProvider.GetUtcNow();
                 var outcome = Decide(binding, expectedActive, expectedEpoch, candidate);
-                if (outcome.Result == MaterializationPublicationResult.Published && !await Publish(db, session, binding, expectedActive, expectedEpoch, candidate, receipt))
+                if (outcome.Result == MaterializationPublicationResult.Published && !await Publish(db, session, binding, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, now))
                 {
                     await session.AbortTransactionAsync();
                     if (attempt >= 4)
@@ -128,7 +131,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                     }
                     continue;
                 }
-                await Receipts(db).InsertOneAsync(session, MaterializationBindingDocuments.Receipt(key, expectedActive, expectedEpoch, candidate, receipt, outcome));
+                await Receipts(db).InsertOneAsync(session, MaterializationBindingDocuments.Receipt(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, outcome, now));
                 await session.CommitTransactionAsync();
                 return outcome;
             }
@@ -142,7 +145,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                 var previous = await Receipts(db).WithReadConcern(ReadConcern.Majority).Find(ReceiptId(receipt)).FirstOrDefaultAsync();
                 if (previous is not null)
                 {
-                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate);
+                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate, rollbackWindow);
                 }
                 if (attempt >= 4) throw;
             }
@@ -181,14 +184,17 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         return new(MaterializationPublicationResult.Published, candidate, epoch.Next());
     }
 
-    async Task<bool> Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
+    async Task<bool> Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt, DateTimeOffset now)
     {
         var filter = Id(binding.Key) & _filter.Eq("active", (int)active.Value) & _filter.Eq("epoch", (long)epoch.Value)
             & _filter.ElemMatch("generations", _filter.Eq("generation", (int)candidate.Value) & _filter.Eq("state", (int)MaterializationGenerationState.Following));
         var update = _update.Set("active", (int)candidate.Value).Set("epoch", (long)epoch.Next().Value)
             .Set("destination", binding.Generations.Single(_ => _.Identity.Generation == candidate).Identity.Destination.Value)
             .Set("lastReceipt", receipt.Value.ToString("N")).Set("generations.$[candidate].state", (int)MaterializationGenerationState.Active)
-            .Set("generations.$[old].state", (int)MaterializationGenerationState.Retired).Set("generations.$[old].supersededBy", (int)candidate.Value);
+            .Set("generations.$[candidate].promotedAt", MaterializationBindingDocuments.Timestamp(now))
+            .Set("generations.$[old].state", (int)MaterializationGenerationState.Retired).Set("generations.$[old].supersededBy", (int)candidate.Value)
+            .Set("generations.$[old].retiredAt", MaterializationBindingDocuments.Timestamp(now))
+            .Set("generations.$[old].rollbackDeadline", MaterializationBindingDocuments.Timestamp(now + rollbackWindow));
         var result = await Bindings(db).UpdateOneAsync(session, filter, update, new UpdateOptions
         {
             ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new("candidate.generation", (int)candidate.Value)), new BsonDocumentArrayFilterDefinition<BsonDocument>(new("old.generation", (int)active.Value))]
