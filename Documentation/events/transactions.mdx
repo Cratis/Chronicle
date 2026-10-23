@@ -82,7 +82,7 @@ A caller that owns the request, such as a command pipeline, can take over comple
 
 The `IUnitOfWorkCompletionClaim` exposes `Commit()` and `Rollback()`. Both return a `UnitOfWorkCompletionResult` and are idempotent: once the unit is completed, they return the same `Result`. Append outcomes and technical failures are reported in the result rather than thrown:
 
-- `Outcome` is `Committed`, `Failed` (constraint violations, concurrency violations or append errors), `RolledBack` or `Unknown` (the commit failed technically, so the outcome is not known; `Exception` holds the cause).
+- `Outcome` is `Committed`, `Failed` (constraint violations, concurrency violations or append errors), `RolledBack` or `Unknown`. `Failed` means Chronicle refused the commit and reported why in the violations and errors. `Unknown` means the commit failed technically and `Exception` holds the cause: the events may or may not have been appended, so never report an `Unknown` result as rolled back.
 - `ConcurrencyViolations`, `DecisionConflicts`, `ConstraintViolations` and `Errors` list what went wrong. A decision conflict is derived from a concurrency violation, so the violation appears in both lists.
 - `IsSuccess`, `HasConflicts` and `HasConstraintViolations` summarize the result.
 
