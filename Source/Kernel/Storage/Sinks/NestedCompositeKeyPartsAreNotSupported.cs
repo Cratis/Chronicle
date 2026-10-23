@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
-/// The exception that is thrown when a part of a composite key holds a nested object instead of a flat value.
+/// The exception that is thrown when a part of a composite key holds a value that is not a supported flat scalar.
 /// </summary>
 /// <param name="part">The name of the part that holds the nested value.</param>
 public class NestedCompositeKeyPartsAreNotSupported(string part) : Exception($"The composite key part '{part}' holds a nested value. Composite key parts must be flat values.")

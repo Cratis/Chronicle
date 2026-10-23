@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// <para>
 /// Values are formatted using invariant formatting: decimals without trailing zeros, Guids in the <c language="csharp">D</c> format, dates and times
 /// in the round-trip <c language="csharp">O</c> format (<see cref="DateTime"/> and <see cref="DateTimeOffset"/> normalized to UTC), enums as their
-/// underlying number, booleans as <see langword="true"/> or <see langword="false"/> and concepts as the value they hold. Nested objects are refused.
+/// underlying number, booleans as <see langword="true"/> or <see langword="false"/> and concepts as the value they hold. Only these scalar types are supported; anything else, such as a dictionary, a collection or an object, is refused.
 /// </para>
 /// <para>
 /// Because every value carries its length the encoding is injective: a separator inside a value cannot collide with another key, and a
@@ -40,7 +40,7 @@ public static class CompositeKeyEncoding
     /// </summary>
     /// <param name="parts">The parts of the key by name.</param>
     /// <returns>The canonical encoded key.</returns>
-    /// <exception cref="NestedCompositeKeyPartsAreNotSupported">A part holds a nested object.</exception>
+    /// <exception cref="NestedCompositeKeyPartsAreNotSupported">A part holds a value that is not a supported scalar.</exception>
     public static string Encode(IEnumerable<KeyValuePair<string, object?>> parts)
     {
         var builder = new StringBuilder(Prefix);
@@ -102,8 +102,8 @@ public static class CompositeKeyEncoding
             DateOnly date => date.ToString("O", CultureInfo.InvariantCulture),
             TimeOnly time => time.ToString("O", CultureInfo.InvariantCulture),
             TimeSpan timeSpan => timeSpan.ToString("c", CultureInfo.InvariantCulture),
-            IDictionary<string, object?> => throw new NestedCompositeKeyPartsAreNotSupported(name),
-            _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+            sbyte or byte or short or ushort or int or uint or long or ulong => Convert.ToString(value, CultureInfo.InvariantCulture),
+            _ => throw new NestedCompositeKeyPartsAreNotSupported(name)
         };
     }
 }

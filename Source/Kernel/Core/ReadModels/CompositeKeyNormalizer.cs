@@ -23,8 +23,10 @@ public static class CompositeKeyNormalizer
     [
         typeof(string),
         typeof(bool),
+        typeof(sbyte),
         typeof(byte),
         typeof(short),
+        typeof(ushort),
         typeof(int),
         typeof(uint),
         typeof(long),
