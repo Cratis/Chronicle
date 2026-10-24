@@ -13,6 +13,9 @@ internal static partial class SinkLogging
     [LoggerMessage(LogLevel.Warning, "SQL index for {ReadModel} at {PropertyPath} was not created: {Reason}")]
     internal static partial void IndexNotCreated(this ILogger<Sink> logger, string readModel, string propertyPath, string reason);
 
+    [LoggerMessage(LogLevel.Warning, "SQL array index for {ReadModel} at {PropertyPath}: direction is ignored because PostgreSQL GIN indexes are unordered")]
+    internal static partial void ArrayIndexDirectionIgnored(this ILogger<Sink> logger, string readModel, string propertyPath);
+
     [LoggerMessage(LogLevel.Warning, "SQL index for {ReadModel} at {PropertyPath} could not be created; the read model keeps working without it")]
     internal static partial void IndexCreationFailed(this ILogger<Sink> logger, Exception exception, string readModel, string propertyPath);
 

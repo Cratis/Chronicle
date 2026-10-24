@@ -7,4 +7,10 @@ namespace Cratis.Chronicle.ReadModels;
 /// Attribute for specifying that a property on a read model should be indexed.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
-public sealed class IndexAttribute : Attribute;
+public sealed class IndexAttribute : Attribute
+{
+    /// <summary>
+    /// Gets or sets whether the property is indexed in descending order.
+    /// </summary>
+    public bool IsDescending { get; set; }
+}

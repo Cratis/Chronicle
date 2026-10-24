@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel.DataAnnotations;
-
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -10,27 +8,35 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class ReadModels
 {
-    int _maxBatchSize = 500;
-
     /// <summary>
-    /// Gets the maximum number of events in a read-model batch. Must be greater than zero.
+    /// Gets the maximum number of items handled as one unit: events per subscriber call when replaying a projection, and documents per fenced sink write.
     /// </summary>
-    [Range(1, int.MaxValue)]
-    public int MaxBatchSize
-    {
-        get => _maxBatchSize;
-        init
-        {
-            Validator.ValidateProperty(value, new ValidationContext(this) { MemberName = nameof(MaxBatchSize) });
-            _maxBatchSize = value;
-        }
-    }
+    public int MaxBatchSize { get; init; } = 500;
 
     /// <summary>
     /// Gets the number of replayed read model versions to retain.
     /// Older replayed collections are removed when a new replay starts.
     /// </summary>
     public int ReplayedVersionsToKeep { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the snapshot retention count. This is an alias of <see cref="ReplayedVersionsToKeep"/>; either configuration key sets the same value.
+    /// </summary>
+    public int SnapshotsToKeep
+    {
+        get => ReplayedVersionsToKeep;
+        init => ReplayedVersionsToKeep = value;
+    }
+
+    /// <summary>
+    /// Gets how long retired generations keep following for rollback. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan RollbackWindow { get; init; } = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Gets the maximum number of retired generations that keep following. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public int MaxFollowingRetiredGenerations { get; init; } = 1;
 
     /// <summary>
     /// Gets a value indicating whether a read model write is made conditional on the incoming event advancing the

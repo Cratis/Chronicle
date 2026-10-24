@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -9,9 +10,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <summary>
 /// The boundary for direct multi-document data mutations, which cannot identify all affected cached keys.
 /// </summary>
+/// <remarks>
+/// Every mutation invalidates the owning sink's read-only prefetch first and then runs through the sink's
+/// <see cref="ISinkWrites"/>, so it joins the changeset's fenced batch when one is open.
+/// </remarks>
 /// <param name="collections">The sink's current collection context.</param>
+/// <param name="writes">The <see cref="ISinkWrites"/> executing the mutation, fenced or not.</param>
 /// <param name="invalidatePrefetch">The owning sink's optional prefetch invalidation.</param>
-internal sealed class SinkMultiDocumentWrites(ISinkCollections collections, Action? invalidatePrefetch = null)
+internal sealed class SinkMultiDocumentWrites(ISinkCollections collections, ISinkWrites writes, Action? invalidatePrefetch = null)
 {
     /// <summary>Invalidates read-only prefetch state before a multi-document operation or its join drain.</summary>
     internal void BeforeWrite() => invalidatePrefetch?.Invoke();
@@ -24,6 +30,6 @@ internal sealed class SinkMultiDocumentWrites(ISinkCollections collections, Acti
     internal Task<UpdateResult> UpdateManyAsync(FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options)
     {
         BeforeWrite();
-        return collections.GetCollection().UpdateManyAsync(filter, update, options);
+        return writes.UpdateMany(collections.GetCollection(), filter, update, options);
     }
 }

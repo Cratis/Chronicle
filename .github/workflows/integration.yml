@@ -342,8 +342,7 @@ jobs:
       matrix:
         # RollingUpgrade starts the cluster on the latest release and replaces its nodes with this build one at a
         # time under load, so silos of both releases call each other's grains (#5272). It runs on PostgreSQL.
-        # RollingUpgrade is skipped until #5246 / #5300; restore it together with the spec
-        provider: [PostgreSql, SqlServer]
+        provider: [PostgreSql, SqlServer, RollingUpgrade]
 
     steps:
       - name: Checkout code
@@ -373,6 +372,17 @@ jobs:
           echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
           echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
+          # The client under test must report a version above the previous release. The compatibility check
+          # orders the two sides by protocol version, and an unstamped build reports 1.0.0, so it would be
+          # treated as the older side and refused for every additive contract element (#5353).
+          if [[ ! "$release_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Cannot derive a client version from release tag '${release_tag}'."
+            exit 1
+          fi
+          client_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          echo "Client under test is stamped ${client_version}"
+          echo "CRATIS_CHRONICLE_CLIENT_VERSION=${client_version}" >> "$GITHUB_ENV"
+
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -398,6 +408,15 @@ jobs:
 
       - name: Restore SQL clustering project
         run: dotnet restore Integration/SqlClustering/SqlClustering.csproj
+
+      # Only the client side is rebuilt with the stamped version: the new kernel image keeps the shared build, and
+      # the client then compares as newer than both the previous release and this build's kernel.
+      - name: Rebuild the client under test with a version above the previous release
+        if: matrix.provider == 'RollingUpgrade'
+        run: >-
+          dotnet build Integration/SqlClustering/SqlClustering.csproj --no-restore -c Release
+          -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
 
       - name: Pre-pull images
         uses: nick-fields/retry@v3

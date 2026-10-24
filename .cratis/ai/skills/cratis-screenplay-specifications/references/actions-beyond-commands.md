@@ -8,7 +8,17 @@ A slice is not always set off by a command. Name what does:
 | A view no event builds - its query has a `performer` | `given readmodel` …, `when query <Query>`, `then result` / `then no result` |
 | An automation driven by the clock | `given clock "<instant>"`, `when clock "<later instant>"` |
 | An automation driven by an application trigger | `when trigger <Trigger>` with the values it carries |
-| A translation driven by a capture | `given capture <Capture>` (the record as it was), `when capture <Capture>` (as it is now) |
+| A translation driven by a record capture | `given capture <Capture>` (the record as it was), `when capture <Capture>` (as it is now) |
+| A capture with `source events` | `given <FromEvent>`, `when append <FromEvent>`; capture-record fixtures are PLAY0701 |
+
+A first record is `added` only, including child and nested records; field-change,
+`and`/`or` and transition guards need earlier state for the same key. For first sight
+add a separate `when added` append; for an update seed `given capture`. Requires
+Screenplay 4.175.0 or later (`screenplay --version`); older record evaluators treat
+first-record fields as changed. Complete cases: captures-and-reactions
+[record capture specifications](../../cratis-screenplay-captures-and-reactions/references/record-capture-specifications.md).
+Event captures use the typed event fixtures and overlay rules in
+[public event captures](../../cratis-screenplay-automations-and-translations/references/public-events-and-direction.md).
 
 Use `given clock`, never `given time`, to state the scenario occurrence time and
 assert a value mapped from `$context.occurred`. In a command's `produces`, that

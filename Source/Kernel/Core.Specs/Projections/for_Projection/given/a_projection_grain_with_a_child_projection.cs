@@ -16,6 +16,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
@@ -66,6 +67,13 @@ public class a_projection_grain_with_a_child_projection : Specification
         _rootProjection.GetOperationTypeFor(Arg.Any<EventType>()).Returns(_ => RootOperationType);
         _rootProjection.GetKeyResolverFor(Arg.Any<EventType>())
             .Returns(new KeyResolver((_, _, _) => Task.FromResult<KeyResolverResult>(new ResolvedKey(_rootKey))));
+
+        // The multi-instance path initializes new instances from the projection's initial state and key schema.
+        _rootProjection.InitialModelState.Returns(new ExpandoObject());
+        var rootSchema = new JsonSchema();
+        rootSchema.Properties["id"] = new JsonSchemaProperty("id", new JsonObject { ["type"] = "string" }, rootSchema);
+        _rootProjection.TargetReadModelSchema.Returns(rootSchema);
+        _childProjection.ChildrenPropertyPath.Returns(PropertyPath.Root);
 
         CaptureContextFrom(_rootProjection, _ => _rootContext = _);
         CaptureContextFrom(_childProjection, _ => _childContext = _);

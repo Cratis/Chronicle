@@ -247,15 +247,31 @@ public partial class Observer
         {
             await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
         }
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
-        {
-            ReplaysAllEventTypes = !retainOtherCounts,
-            ReaderScope = ReaderScope
-        });
 
+        // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
+        // may interleave those awaits: events below this cursor were already handled or belong to existing
+        // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
+        var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
         Skips.JobStarted(partition);
+        RecordedHandlingState();
         await WriteStateAsync();
+        try
+        {
+            await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
+            {
+                ReplaysAllEventTypes = !retainOtherCounts,
+                ReaderScope = ReaderScope,
+                HeldBackFrom = heldBackFrom
+            });
+        }
+        catch
+        {
+            // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
+            // back to catch-up from the captured bound, as a refused replay does, and report the failure.
+            await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
+            throw;
+        }
     }
 
     async Task<bool> TransitionToReplayIfNeeded(int recovery)

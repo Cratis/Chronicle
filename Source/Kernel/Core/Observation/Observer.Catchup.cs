@@ -337,6 +337,21 @@ public partial class Observer
 
     async Task ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
     {
+        if (!lastHandledEventSequenceNumber.IsActualValue && !fromStartWhenNothingRead)
+        {
+            logger.LastHandledEventIsNotActualValue();
+            return;
+        }
+
+        // With no read position the partition has no known position beyond its start, so catch-up begins there.
+        var fromSequenceNumber = lastHandledEventSequenceNumber.IsActualValue ? lastHandledEventSequenceNumber.Next() : EventSequenceNumber.First;
+        await ProbeAndStartCatchupJobFrom(partition, fromSequenceNumber);
+    }
+
+    async Task ProbeAndStartCatchupJobFrom(Key partition, EventSequenceNumber fromSequenceNumber)
+    {
+        if (!fromSequenceNumber.IsActualValue) return;
+
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
@@ -347,14 +362,6 @@ public partial class Observer
             logger.PartitionToCatchUpIsFailing(partition);
             return;
         }
-        if (!lastHandledEventSequenceNumber.IsActualValue && !fromStartWhenNothingRead)
-        {
-            logger.LastHandledEventIsNotActualValue();
-            return;
-        }
-
-        // With no read position the partition has no known position beyond its start, so catch-up begins there.
-        var fromSequenceNumber = lastHandledEventSequenceNumber.IsActualValue ? lastHandledEventSequenceNumber.Next() : EventSequenceNumber.First;
         Skips.ProbedFrom(partition, fromSequenceNumber);
         var needCatchupResult = await NeedsCatchup(partition, fromSequenceNumber);
         await needCatchupResult.Match(

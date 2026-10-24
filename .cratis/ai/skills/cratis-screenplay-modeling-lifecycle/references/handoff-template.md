@@ -23,6 +23,7 @@ Updated: <date> by <agent> (<actual model, or "model: not exposed">)
 Mode: design | executable | renderable
 Model root: <path>
 Source identity: <commit+digest from the source-identity helper> / ws <revision> cat <catalogRevision> (ws only where available)
+Acceptance: <meaning: role @handle (language) at identity | not yet>; <commit: role @handle | not yet>   (mirror of the trailers; one user by default)
 Phase: <current>  Next: <phase + skill>
 Active: <scope> by <agent> since <time> | none   (a stale value means an interrupted run)
 

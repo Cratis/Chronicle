@@ -28,4 +28,10 @@ public record ReplayObserverPartitionRequest(
     /// Gets whether this replay includes all event types, so a successfully replayed partition can resolve an old failure.
     /// </summary>
     public bool ReplaysAllEventTypes { get; init; }
+
+    /// <summary>
+    /// Gets the first position withheld from live delivery when the partition entered replay.
+    /// </summary>
+    /// <remarks>Legacy persisted jobs have no safe bound and deserialize as unavailable; refusal then quarantines the partition.</remarks>
+    public EventSequenceNumber HeldBackFrom { get; init; } = EventSequenceNumber.Unavailable;
 }

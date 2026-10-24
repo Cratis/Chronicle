@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_replaying_after_parent_key_changes.and_the_children_keep_their_live_roots.context;
 
@@ -27,17 +28,20 @@ public class and_the_children_keep_their_live_roots(context context) : Given<con
             var handler = EventStore.Projections.GetHandlerFor<RootProjection>();
             await handler.WaitTillSubscribed();
             await handler.WaitTillActive();
+            var last = EventSequenceNumber.First;
             for (var index = 0; index < Roots.Length; index++)
             {
                 await EventStore.EventLog.Append(_parent, new ParentAssigned(Roots[index]));
                 var appended = await EventStore.EventLog.Append(Children[index], new ChildRecorded(_parent, Children[index], $"Child {index}"));
                 await handler.WaitTillReachesEventSequenceNumber(appended.SequenceNumber);
+                last = appended.SequenceNumber;
             }
 
             Live = await ReadRoots();
             var job = await EventStore.Projections.Replay(handler.Id);
             await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
             await handler.WaitTillActive();
+            await handler.WaitTillReachesEventSequenceNumber(last);
             Replayed = await ReadRoots();
         }
 
@@ -46,31 +50,14 @@ public class and_the_children_keep_their_live_roots(context context) : Given<con
             var result = new List<Root>();
             foreach (var root in Roots)
             {
-                result.Add(await WaitForRoot(root));
+                result.Add(await ReadRoot(root));
             }
 
             return result.ToArray();
         }
 
-        async Task<Root> WaitForRoot(string id)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(30);
-            while (true)
-            {
-                var root = await EventStore.ReadModels.GetInstanceById<Root>(id);
-                if (root?.Children.Count == 1)
-                {
-                    return root;
-                }
-
-                if (DateTime.UtcNow >= deadline)
-                {
-                    return root ?? throw new InvalidOperationException($"Root '{id}' was not projected within 30 seconds.");
-                }
-
-                await Task.Delay(50);
-            }
-        }
+        async Task<Root> ReadRoot(string id) =>
+            await EventStore.ReadModels.GetInstanceById<Root>(id) ?? throw new InvalidOperationException($"Root '{id}' was not projected.");
     }
 
     [Fact]

@@ -26,6 +26,12 @@ public record FailedPartition(
     /// </summary>
     public bool IsQuarantined { get; init; }
 
+    /// <summary>Gets the explicit webhook receiver policy.</summary>
+    public WebhookFailureDisposition? WebhookDisposition { get; init; }
+
+    /// <summary>Gets the last automatic recovery that reset the episode budget.</summary>
+    public Guid? WebhookRecoveryId { get; init; }
+
     /// <summary>
     /// Gets the number of attempts made before the retry budget was last reset.
     /// </summary>

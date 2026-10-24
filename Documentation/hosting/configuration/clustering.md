@@ -6,16 +6,18 @@ description: Configure how multiple Chronicle Server nodes form one Orleans clus
 Clustering configuration controls how multiple Chronicle Server nodes form one Orleans cluster and how grain workloads are distributed across them. This enables horizontal scale out and assigning specific roles to different nodes—for example, dedicating some nodes to event sequences and others to observers (reactors, reducers, projections).
 
 > [!WARNING]
-> The clustering type defaults to `Localhost`, which is single-node membership, regardless of storage
-> type. A deployment with multiple nodes must explicitly select `MongoDB` with MongoDB storage, or `Sql`
-> with SQL Server or PostgreSQL storage, on every node. Nodes left on `Localhost` do not join one cluster,
-> even when they share storage. The localhost-clustering warning is only logged for non-local MongoDB
-> storage; it is not a safeguard for SQL deployments.
+> The clustering type defaults to `Localhost`, which means **one active node per kernel storage**,
+> not one independent node per container. A single-writer lease guards this rule by default on MongoDB,
+> PostgreSQL, SQL Server and SQLite. A second node waits without activating grains or processing events,
+> then fails startup if its acquisition timeout expires. Changing `clusterId` or `serviceId` does not
+> bypass this guard. `InMemory` is process-local and never takes a lease.
 >
-> All nodes must share the same cluster database, `clusterId` and `serviceId`. Configure the type through
-> `clustering.type` in `chronicle.json` or `Cratis__Chronicle__Clustering__Type`. Unsupported combinations
-> fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB` requires MongoDB storage.
-> SQLite and in-memory storage do not support multi-node clustering.
+> A deployment with multiple active nodes must explicitly select `MongoDB` with MongoDB storage, or `Sql`
+> with SQL Server or PostgreSQL storage, on every node. These modes use cluster membership rather than
+> the single-writer lease. All nodes must share the same cluster database, `clusterId` and `serviceId`.
+> Configure the type through `clustering.type` in `chronicle.json` or `Cratis__Chronicle__Clustering__Type`.
+> Unsupported combinations fail at startup: `Sql` requires `MsSql` or `PostgreSql` storage, and `MongoDB`
+> requires MongoDB storage. SQLite and in-memory storage do not support multi-node clustering.
 
 ## Use cases
 
@@ -91,6 +93,9 @@ After a node is lost, observers can lag behind the event log until the observer 
 | tableRefreshTimeout | timespan | Orleans default | Interval between fetching membership table updates. Applies to `MongoDB` and `Sql` clustering. |
 | iAmAliveTablePublishTimeout | timespan | Orleans default | Interval between publishing this silo's heartbeat to the membership table. Applies to `MongoDB` and `Sql` clustering. |
 | numProbedSilos | number | Orleans default | Number of other silos each silo probes for liveness. Applies to `MongoDB` and `Sql` clustering. |
+| singleWriterLease.enabled | boolean or null | null (automatic) | Enables the lease for `Localhost` on persistent storage. Set `false` only when another mechanism guarantees one writer. Does not enable a lease for `MongoDB` or `Sql` clustering, or `InMemory` storage. |
+| singleWriterLease.ttl | timespan | 00:00:30 | Database lease lifetime; minimum five seconds. |
+| singleWriterLease.acquireTimeout | timespan | 00:02:00 | Maximum startup wait. Zero makes one acquisition attempt; negative values are invalid. |
 | roles.eventSequences | boolean | true | When `true`, event sequence grains can be activated on this node. When `false`, event sequence grains will not be placed on this node. |
 | roles.observers | boolean | true | When `true`, observer grains (reactors, reducers, projections) can be activated on this node. When `false`, observer grains will not be placed on this node. |
 
@@ -98,6 +103,33 @@ The optional membership settings above keep the Orleans defaults when omitted. T
 `hh:mm:ss` format. Configure the same values on every node. Shorter timeouts detect failures sooner,
 but can also mark healthy nodes as failed during network delays or heavy load. Orleans validates the
 membership options at startup; these settings do not change localhost clustering.
+
+## Single-writer lease
+
+The node acquires the fixed `kernel` lease in the system/cluster database **before** Orleans runtime
+initialization. No grains, observer rehydration or processing start until acquisition succeeds. Waiting
+nodes are not ready. Acquisition waits at most `acquireTimeout`; the timeout error identifies the last
+known holder, host and expiry. Temporary storage failures are retried within that budget.
+
+The holder renews every TTL/3. If it cannot confirm a renewal for TTL/2 (15 seconds by default), it marks
+readiness unhealthy, logs at Critical level and requests shutdown with a nonzero process exit code. A
+watchdog forces process termination before the original TTL expires if graceful shutdown gets stuck.
+A renewal rejected because ownership was lost fences the process immediately. Set the TTL so that half
+of it comfortably exceeds the host's shutdown timeout. Your restart policy must restart failed processes.
+
+During normal shutdown, renewal continues until the silo has stopped its grains and runtime services;
+then the lease is released. After SIGKILL, a crash or a lost release, a successor waits at most the
+remaining TTL rather than requiring manual cleanup. The lease row/document remains for diagnostics;
+expiry is not driven by a MongoDB TTL index.
+
+PostgreSQL, SQL Server and MongoDB use **database server time** for acquisition, renewal and expiry, not
+the application's wall clock. MongoDB requires version 5.0 or later for server-time `$dateAdd` update pipelines.
+SQLite uses the host clock: sharing a SQLite file across hosts with unsynchronized clocks is unsupported,
+as are network shares without reliable file locking.
+
+Disabling `singleWriterLease.enabled` preserves unguarded single-node behavior. If storage is remote,
+the server warns about the risk, including for PostgreSQL and SQL Server. This is an escape hatch, not a
+way to scale out. See [Production scaling](../production.md#scaling) for safe replacement deployments.
 
 ## Configuration examples
 
@@ -145,6 +177,12 @@ A node that only processes observers (reactors, reducers, projections):
   }
 }
 ```
+
+## Startup and probes
+
+The kernel binds port 35000 and any dedicated health port before starting the Orleans silo. Use `tcpSocket` on port 35000 or `/health/live` for a startup probe, `/health/live` for liveness, and `/health` or `/health/ready` for readiness. Readiness waits for silo startup (including Chronicle's startup task) and host startup, and fails once shutdown begins. Background catch-up can continue after readiness succeeds.
+
+An open TCP port is not readiness. Non-health requests receive HTTP 503 with `Retry-After` or gRPC `Unavailable` until ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts: separate listener liveness from silo readiness. See [Health Endpoint](health-endpoint.md) for dedicated-port probe examples.
 
 ## Behavior
 

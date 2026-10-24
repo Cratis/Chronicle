@@ -15,5 +15,5 @@ public class when_a_step_ran_out_of_attempts_getting_past_a_timeout : given.a_st
     async Task Because() => await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(_observer, _timedOut, _options);
 
     [Fact] void should_report_the_partition_failed_once() =>
-        _observer.Received(1).PartitionFailed(_partition, (EventSequenceNumber)42ul, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Timeout);
+        _observer.Received(1).PartitionFailedWithDeliveryFence(_partition, (EventSequenceNumber)42ul, Arg.Any<IEnumerable<string>>(), string.Empty, FailureKind.Timeout, default);
 }

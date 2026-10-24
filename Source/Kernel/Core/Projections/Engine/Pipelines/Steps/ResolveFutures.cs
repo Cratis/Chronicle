@@ -95,7 +95,7 @@ public class ResolveFutures(
                         {
                             parentKey = TypeConversion.Convert(type, parentKey);
                         }
-                        catch (InvalidCastException)
+                        catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException or ArgumentException)
                         {
                             // Keep original value — Contains() normalizes types during comparison
                         }

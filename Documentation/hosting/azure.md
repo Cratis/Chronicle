@@ -28,7 +28,20 @@ The kernel supports every Entra mode of the `Authentication` keyword, so `Active
 
 ## Store events in Azure Database for PostgreSQL
 
-PostgreSQL has no `Authentication=` mode in the connection string. Chronicle does not fetch an Entra token for Npgsql itself. The one supported path is a [connection resolver](configuration/storage-connection-resolution.md) that returns an Entra access token as `identity.accessToken`, which Chronicle then uses as the password:
+PostgreSQL has no `Authentication=` mode in the connection string. Enable native Entra authentication and give the PostgreSQL name of the identity as `Username`. Provision that identity in Azure Database for PostgreSQL and grant it the permissions to read, write and migrate Chronicle's tables, as for Azure SQL above.
+
+```bash
+Cratis__Chronicle__Storage__Type=PostgreSql
+Cratis__Chronicle__Storage__ConnectionDetails='Host=myserver.postgres.database.azure.com;Database=chronicle;Username=chronicle-kernel;SSL Mode=VerifyFull'
+Cratis__Chronicle__Storage__PostgreSqlEntra__Enabled=true
+Cratis__Chronicle__Storage__PostgreSqlEntra__ManagedIdentityClientId='<managed-identity-client-id>'
+```
+
+Chronicle uses `DefaultAzureCredential` to request a token for `https://ossrdbms-aad.database.windows.net/.default`. Omit `ManagedIdentityClientId` for a system-assigned managed identity. On AKS, use the workload identity environment variables described above; the default credential chain also supports developer credentials locally. `Username` is the PostgreSQL principal, not the managed identity client id.
+
+Npgsql obtains a password from the provider whenever it opens a new physical connection. Chronicle shares the token between connections and refreshes it when five minutes or less remain before expiry. Startup checks, database provisioning and schema locks use the same authentication. Native authentication is disabled by default. Do not supply a password or return credentials from a resolver when it is enabled; a resolver may still place databases and select schemas.
+
+The existing [connection resolver](configuration/storage-connection-resolution.md) token path remains available with native authentication disabled. The resolver returns an Entra token as `identity.accessToken`, which Chronicle uses as the password:
 
 ```json
 {
@@ -37,14 +50,7 @@ PostgreSQL has no `Authentication=` mode in the connection string. Chronicle doe
 }
 ```
 
-Your resolver requests the token for the `https://ossrdbms-aad.database.windows.net/.default` scope and sets `expiresAt` before the token expires. Chronicle applies the identity every time a connection opens, so a refreshed token takes effect without a restart.
-
-To use token authentication on PostgreSQL you therefore need a resolver, in the `identity` slot or the `connection` slot. Without one, authenticate with a user name and password in `connectionDetails`. Set the storage type and a connection string without a password:
-
-```bash
-Cratis__Chronicle__Storage__Type=PostgreSql
-Cratis__Chronicle__Storage__ConnectionDetails='Host=myserver.postgres.database.azure.com;Database=chronicle;Username=chronicle-kernel;SSL Mode=Require'
-```
+Your resolver requests the same PostgreSQL scope and sets `expiresAt` before the token expires. Chronicle applies the resolved identity each time a connection opens, so a refreshed token takes effect without a restart.
 
 ## Resolve tenant databases over HTTP with Entra ID
 
@@ -97,7 +103,32 @@ A webhook the kernel calls can authenticate with OAuth client credentials. In th
 | `clientSecret` | Its client secret, read from your secret store |
 | `scope` | `api://<receiver-application-id>/.default` |
 
-Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Webhooks use a client secret: unlike the storage and resolver settings above, they do not use the kernel's managed identity. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.md#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
+Chronicle discovers the token endpoint from `<authority>/.well-known/openid-configuration`, requests a token with the `client_credentials` grant and the scope, and refreshes it shortly before expiry. A `401` triggers one refresh and retry. Keep the secret in your secret store. See [OAuth client credentials](../webhooks/index.md#oauth-client-credentials) for the details, and [external services](../clients/dotnet/external-services.md) for the same scope on external service registrations.
+
+### Use the kernel's managed identity instead of a secret
+
+This lends the kernel's own Azure identity to the webhook receiver, not the registering client's identity. **First configure the operator allow-lists**, before registering a webhook:
+
+```bash
+Cratis__Chronicle__Webhooks__AllowedHosts__0=receiver.example
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedScopes__0=api://receiver/.default
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowedClientIds__0=<managed-identity-client-id>
+Cratis__Chronicle__Webhooks__ManagedIdentity__AllowSystemAssigned=false
+```
+
+Scopes and client ids are global operator settings only. Empty `AllowedScopes` disables managed identity webhooks; non-empty client ids must match `AllowedClientIds` exactly. An empty client id requires `AllowSystemAssigned=true`, including workload identity's environment default. Scope matching is exact ignoring case. The receiver must match the existing host allow-list even in `Warn` mode; event-store host overrides and wildcard subdomains keep their existing meaning. See [Managed identity](../webhooks/index.mdx#managed-identity) for the JSON configuration and defaults.
+
+Then register the webhook with `WithManagedIdentity(scope, clientId)`. The kernel requests the token with its own Azure identity, as in the [managed identity example](../webhooks/index.mdx#managed-identity):
+
+| Argument | Entra value |
+| --- | --- |
+| `scope` | `api://<receiver-application-id>/.default` |
+| `clientId` | An approved user-assigned managed identity or workload identity client id. Omit only when `AllowSystemAssigned=true` |
+
+- No secret is stored with the webhook definition.
+- When the kernel runs with workload identity (for example on AKS), it sees `AZURE_FEDERATED_TOKEN_FILE` and uses the federated token. Without it, the kernel uses its managed identity. For workload identity, an empty `clientId` falls back to `AZURE_CLIENT_ID`.
+- Tokens are cached per client id and scope, and refreshed shortly before expiry. A `401` discards Chronicle's cached token and the Azure credential instance that supplied it, then retries once. Azure Identity and the identity endpoint control their own caching, so the retry is not guaranteed to receive a different access token.
+- If the kernel host has no usable managed identity, token acquisition fails and the delivery fails. It is retried like any failed delivery and is never reported as delivered.
 
 ## Plan for availability
 

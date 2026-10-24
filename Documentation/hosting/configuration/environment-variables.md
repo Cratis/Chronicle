@@ -50,7 +50,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
 | Cratis__Chronicle__Observers__MaximumBackoffDelay | Maximum observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__DefinitionEvolution | Read-model evolution policy: `Automatic`, `PartialOnly`, or `Manual` |
-| Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum events per read-model batch (default 500; must be greater than zero). Projection replay splits event pages at this limit. |
+| Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
@@ -69,6 +69,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
 | Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
 | Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |

@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts;
@@ -150,7 +148,7 @@ public partial class ReadModels(
                     TypeId = GetSinkTypeIdFor(typeof(TReadModel))
                 },
                 Schema = schemaGenerator.GenerateForReadModel(typeof(TReadModel)).ToJson(),
-                Indexes = GetIndexesForType(typeof(TReadModel), string.Empty),
+                Indexes = GetIndexesForType(typeof(TReadModel)),
                 ObserverType = observerType,
                 ObserverIdentifier = observerIdentifier
             }
@@ -561,67 +559,5 @@ public partial class ReadModels(
     bool IsPassive(Type readModelType) =>
         readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType));
 
-    List<IndexDefinition> GetIndexesForType(Type type, string prefix)
-    {
-        var indexes = new List<IndexDefinition>();
-        var visitedTypes = new HashSet<Type>();
-        CollectIndexes(type, prefix, indexes, visitedTypes);
-        return indexes;
-    }
-
-    void CollectIndexes(Type type, string prefix, List<IndexDefinition> indexes, HashSet<Type> visitedTypes)
-    {
-        if (visitedTypes.Contains(type))
-        {
-            return;
-        }
-        visitedTypes.Add(type);
-
-        // The record shorthand — [Index] on a positional parameter, without the property: target. The
-        // attribute is valid on both a property and a parameter, and C# binds it to the *parameter* on a
-        // positional record whenever the attribute allows it, so looking only at properties misses the form
-        // the documentation recommends — and misses it silently, producing no index at all. The same
-        // shorthand is honored for [Subject] (see SubjectResolver), so a reader expects it here too.
-        var indexedParameterNames = IndexedParameterNames(type);
-
-        foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            var propertyPath = string.IsNullOrEmpty(prefix)
-                ? namingPolicy.GetPropertyName(property.Name)
-                : $"{prefix}.{namingPolicy.GetPropertyName(property.Name)}";
-
-            if (Attribute.IsDefined(property, typeof(IndexAttribute)) || indexedParameterNames.Contains(property.Name))
-            {
-                indexes.Add(new IndexDefinition { PropertyPath = propertyPath });
-            }
-
-            var propertyType = property.PropertyType;
-
-            // Check if it's a collection type (IList<T>, IEnumerable<T>, etc.)
-            if (propertyType.IsGenericType && typeof(IEnumerable).IsAssignableFrom(propertyType))
-            {
-                var elementType = propertyType.GetGenericArguments().FirstOrDefault();
-                if (elementType?.IsPrimitive == false && elementType != typeof(string))
-                {
-                    CollectIndexes(elementType, propertyPath, indexes, visitedTypes);
-                }
-            }
-            else if (!propertyType.IsPrimitive && propertyType != typeof(string) && !propertyType.IsValueType)
-            {
-                // Recurse into complex types
-                CollectIndexes(propertyType, propertyPath, indexes, visitedTypes);
-            }
-        }
-
-        static HashSet<string> IndexedParameterNames(Type type)
-        {
-            var primaryConstructor = type.GetConstructors().MaxBy(constructor => constructor.GetParameters().Length);
-
-            return primaryConstructor is null
-                ? []
-                : [.. primaryConstructor.GetParameters()
-                    .Where(parameter => parameter.IsDefined(typeof(IndexAttribute), inherit: false))
-                    .Select(parameter => parameter.Name!)];
-        }
-    }
+    List<IndexDefinition> GetIndexesForType(Type type) => new ReadModelIndexes(namingPolicy).For(type);
 }

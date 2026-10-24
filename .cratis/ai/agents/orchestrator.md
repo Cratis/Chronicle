@@ -14,6 +14,7 @@ tools:
   - Glob
   - Bash
   - Agent
+modelTier: scoped
 ---
 <!-- cratis-ai-managed: agents/orchestrator.md -->
 
@@ -168,8 +169,7 @@ For implementation, the applicable changed-lane gates must pass. Mark unrelated 
 - [ ] `npx tsc -b` — zero TypeScript errors (if frontend present)
 - [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
 - [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
-- [ ] `code-reviewer` finds no blocking issues
-- [ ] `security-reviewer` finds no vulnerabilities
+- [ ] Code and security reviews approve the scoped change; combine their reports using `.cratis/ai/rules/review-reports.md`, preserving each reviewer's findings and scope limits
 - [ ] All documentation is complete and accurate (if required)
 - [ ] PR description follows the pull request template and the release-note contract in `pull-requests.md`; test and review notes are in a PR comment
 

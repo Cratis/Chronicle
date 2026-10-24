@@ -88,6 +88,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
+        silo.AddService<TimeProvider>(TimeProvider.System);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
@@ -274,6 +275,9 @@ public class an_observer : Specification
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
                 Attempts = partition.Attempts.ToArray(),
+                WebhookDisposition = partition.WebhookDisposition,
+                WebhookRecoveryId = partition.WebhookRecoveryId,
+                AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
                 Deferral = partition.Deferral,
                 RecoveryCursor = partition.RecoveryCursor
             }).ToArray()

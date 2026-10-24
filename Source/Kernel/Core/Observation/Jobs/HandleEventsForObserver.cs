@@ -37,6 +37,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="options">The kernel configuration.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
@@ -49,12 +50,16 @@ public class HandleEventsForObserver(
     IObserverServiceClient observerServiceClient,
     IOptions<ChronicleOptions> options,
     ILogger<HandleEventsForObserver> logger,
-    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
 
     readonly IOptions<ChronicleOptions> _options = options;
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly SemaphoreSlim _flushGate = new(1, 1);
+    TimeSpan _abandonedDeliveryHold;
+    DeliveryFenceContext? _deliveryFence;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -66,7 +71,7 @@ public class HandleEventsForObserver(
     EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
-    IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
+    IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
 
@@ -246,6 +251,7 @@ public class HandleEventsForObserver(
                 : [];
 
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
+            await DrainAbandonedDeliveriesBeforeHandling(currentState.ObserverKey, cancellationToken);
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -325,11 +331,7 @@ public class HandleEventsForObserver(
                             continue;
                         }
 
-                        var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
-                            () => TryHandleEvents(partition, partitionEvents, subscriberTimeout),
-                            TransientRetryDelay,
-                            timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
-                            cancellationToken);
+                        var handleEventsResult = await HandlePartitionEvents(partition, partitionEvents, subscriberTimeout, cancellationToken);
                         if (handleEventsResult.TryGetException(out var handleEventsException))
                         {
                             var exceptionMessages = handleEventsException.GetAllMessages().ToArray();
@@ -350,7 +352,7 @@ public class HandleEventsForObserver(
                                 return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                                     CreateResult(_lastDurableCheckpoint) with
                                     {
-                                        TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage])
+                                        TransientFailure = new(partition, lastEventSequenceNumberAttempted, [shortMessage]) { DeliveryFence = _deliveryFence }
                                     },
                                     [shortMessage],
                                     string.Empty));
@@ -552,7 +554,7 @@ public class HandleEventsForObserver(
     {
         if (start)
         {
-            _windows = null;
+            _bulkWindowPin = null;
             _checkpointFailure = null;
             _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
             _durableCheckpoints.Persisted();
@@ -567,7 +569,8 @@ public class HandleEventsForObserver(
         return new(
             _lastHandled,
             new(_subscription.ObserverKey, ObserverType.Projection),
-            State.EventObservationState == EventObservationState.Replay);
+            State.EventObservationState == EventObservationState.Replay,
+            start);
     }
 
     /// <summary>
@@ -595,18 +598,20 @@ public class HandleEventsForObserver(
     /// <param name="capture">The <see cref="FlushCapture"/> the windows were confirmed for.</param>
     /// <param name="windows">The windows confirmed per silo.</param>
     /// <returns>The last confirmed durable event sequence number.</returns>
-    /// <exception cref="BulkWindowLost">A window confirmed earlier is no longer present on its silo.</exception>
+    /// <exception cref="BulkWindowLost">The windows no longer match the range-start pin on a silo.</exception>
     async Task<EventSequenceNumber> CommitFlush(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows)
     {
         try
         {
-            if (_windows is not null && _windows.Any(previous =>
-                previous.Value.Length > 0 && (!windows.TryGetValue(previous.Key, out var current) || previous.Value.Except(current).Any())))
+            if (capture.Start)
+            {
+                // Only the range-start flush sets the pin, including silos with no open window.
+                _bulkWindowPin = windows.ToDictionary(_ => _.Key, _ => _.Value.ToArray());
+            }
+            else if (!MatchesBulkWindowPin(windows))
             {
                 throw new BulkWindowLost();
             }
-
-            _windows = windows;
             var handled = capture.Handled;
             if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
             {
@@ -932,6 +937,29 @@ public class HandleEventsForObserver(
             string.Empty));
     }
 
+    async Task DrainAbandonedDeliveriesBeforeHandling(ObserverKey observerKey, CancellationToken cancellationToken)
+    {
+        _abandonedDeliveryHold = _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(observerKey)
+            : TimeSpan.Zero;
+        if (_abandonedDeliveryHold <= TimeSpan.Zero) return;
+        var drain = new AbandonedDeliveryDrain(grainFactory, _clock, logger);
+        foreach (var fence in await _observer.GetDeliveryFences())
+        {
+            await drain.Until(fence, cancellationToken);
+            await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
+        }
+    }
+
+    Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> HandlePartitionEvents(Key partition, AppendedEvent[] events, TimeSpan subscriberTimeout, CancellationToken cancellationToken) =>
+        _subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? TryHandleEvents(partition, events, subscriberTimeout)
+            : TransientTimeouts.RetryOnceOnTimeout(
+                () => TryHandleEvents(partition, events, subscriberTimeout),
+                TransientRetryDelay,
+                timeout => logger.RetryingAfterTimeout(partition, TransientTimeouts.ShortMessageFor(timeout)),
+                cancellationToken);
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         Key partition,
         AppendedEvent[] events,
@@ -943,7 +971,6 @@ public class HandleEventsForObserver(
         {
             var decryptedEvents = await DecryptEvents(events);
             var target = subscriberSelector.Select(_subscription, partition);
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments);
 
             // PerformStep (and everything it calls, including this method) runs off the grain's activation
             // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property
@@ -951,6 +978,8 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();
             var result = page
                 ? await ((IObserverPageSubscriber)subscriber!).OnNextPageWithin(subscriberTimeout, decryptedEvents, subscriberContext)
@@ -959,6 +988,10 @@ public class HandleEventsForObserver(
         }
         catch (Exception ex)
         {
+            if (TransientTimeouts.IsTimeout(ex) && _deliveryFence?.ReleaseBy is { } releaseBy)
+            {
+                await new AbandonedDeliveryDrain(grainFactory, _clock, logger).Until(new(partition, releaseBy, _deliveryFence.Targets ?? []), CancellationToken.None);
+            }
             logger.ErrorHandling(ex, partition);
             return ex;
         }
@@ -1031,5 +1064,14 @@ public class HandleEventsForObserver(
         return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
     }
 
-    sealed record FlushCapture(EventSequenceNumber Handled, ObserverDetails Observer, bool IsReplay);
+    /// <summary>
+    /// Checks every silo against the range-start pin; a missing silo or pin means no window.
+    /// </summary>
+    /// <param name="windows">The windows confirmed per silo.</param>
+    /// <returns>Whether every silo still has exactly its pinned windows.</returns>
+    bool MatchesBulkWindowPin(IReadOnlyDictionary<SiloAddress, Guid[]> windows) =>
+        (_bulkWindowPin?.Keys ?? []).Union(windows.Keys).All(silo =>
+            (_bulkWindowPin?.GetValueOrDefault(silo) ?? []).ToHashSet().SetEquals(windows.GetValueOrDefault(silo) ?? []));
+
+    sealed record FlushCapture(EventSequenceNumber Handled, ObserverDetails Observer, bool IsReplay, bool Start);
 }

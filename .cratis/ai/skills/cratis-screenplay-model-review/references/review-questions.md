@@ -38,8 +38,9 @@ needs; a "no" is a finding only when it has a business consequence.
 
 ## For each slice and the model as a whole
 1. Does each slice depend on other slices only through event contracts, `invokes` and explicitly
-   recorded cross-slice `reads` of another slice's view (F7)? A `reads` is unprotected (a
-   stored-state rule over it stays not enforced) and couples the slice to that view's interface:
+   recorded cross-slice `reads` of another slice's view (F7)? Check protected-command
+   opt-in/admission and absence/conflict cases separately from target realization;
+   legacy and trigger reads remain unprotected. The view interface is a dependency:
    check that it is recorded, not implied.
 2. Could two people work on two slices at the same time without reading each other's
    declarations, given only the events' fields (A8)?
