@@ -12,6 +12,18 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// </summary>
 internal static partial class EventStoreSubscriptionsManagerLogging
 {
+    [LoggerMessage(LogLevel.Information, "Subscription manager activated for target '{TargetEventStore}', activation {ActivationDiagnosticId}, loaded definition count {DefinitionCount} (-1 means unavailable without enumeration)")]
+    internal static partial void ManagerActivated(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName targetEventStore, Guid activationDiagnosticId, int definitionCount);
+
+    [LoggerMessage(LogLevel.Information, "Subscription manager memory read for target '{TargetEventStore}', activation {ActivationDiagnosticId}, definition count {DefinitionCount} (-1 means unavailable without enumeration)")]
+    internal static partial void ManagerDefinitionsRead(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName targetEventStore, Guid activationDiagnosticId, int definitionCount);
+
+    [LoggerMessage(LogLevel.Information, "Subscription definition write starting for target '{TargetEventStore}', activation {ActivationDiagnosticId}, subscription '{SubscriptionId}', memory count before update {DefinitionCount}")]
+    internal static partial void DefinitionWriteStarting(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName targetEventStore, Guid activationDiagnosticId, EventStoreSubscriptionId subscriptionId, int definitionCount);
+
+    [LoggerMessage(LogLevel.Information, "Subscription definition WriteStateAsync completed for target '{TargetEventStore}', activation {ActivationDiagnosticId}, subscription '{SubscriptionId}', written state count {DefinitionCount}; not a storage readback")]
+    internal static partial void DefinitionWriteCompleted(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName targetEventStore, Guid activationDiagnosticId, EventStoreSubscriptionId subscriptionId, int definitionCount);
+
     [LoggerMessage(LogLevel.Information, "Subscribing event store subscription '{SubscriptionId}' in namespace '{Namespace}'")]
     internal static partial void Subscribing(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, EventStoreNamespaceName @namespace);
 

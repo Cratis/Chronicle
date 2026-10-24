@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo hosting the reactor stream, or null for a hostless in-process harness.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -38,6 +39,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
+    ILocalSiloDetails? localSiloDetails,
     IReactorMediator reactorMediator,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
@@ -116,12 +118,7 @@ internal sealed class Reactors(
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
 
-                var key = new ConnectedObserverKey(
-                    registration.Reactor.ReactorId,
-                    registration.EventStore,
-                    registration.Namespace,
-                    registration.Reactor.EventSequenceId,
-                    registration.ConnectionId);
+                var key = StreamKey(registration);
 
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
@@ -215,5 +212,18 @@ internal sealed class Reactors(
 
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
+    }
+
+    ConnectedObserverKey StreamKey(RegisterReactor registration)
+    {
+        var key = new ConnectedObserverKey(
+            registration.Reactor.ReactorId,
+            registration.EventStore,
+            registration.Namespace,
+            registration.Reactor.EventSequenceId,
+            registration.ConnectionId);
+        var host = localSiloDetails?.SiloAddress.ToParsableString() ?? "unavailable: hostless in-process harness";
+        logger.ReactorStreamHost(key.ToString(), registration.ConnectionId, host);
+        return key;
     }
 }

@@ -65,6 +65,7 @@ internal sealed class ConnectionService(
         _ = Task.Run(
             async () =>
             {
+                logger.ControlStreamHost(request.ConnectionId, localSiloDetails.SiloAddress.ToParsableString());
                 await Register(connectedClients, request);
                 openConnections.Opened(request, DateTimeOffset.UtcNow);
 
@@ -277,6 +278,7 @@ internal sealed class ConnectionService(
         try
         {
             logger.RegisteringClientAgain(request.ConnectionId);
+            logger.ControlStreamHost(request.ConnectionId, localSiloDetails.SiloAddress.ToParsableString());
             await connectedClients.OnClientRestored(
                 request.ConnectionId,
                 request.ClientVersion,

@@ -13,7 +13,15 @@ public class and_the_client_is_no_longer_connected : given.a_reactor_grain_with_
         _connectedClients.IsConnected(_client.ConnectionId).Returns(false);
     }
 
-    Task Because() => _grain.KeepSubscription(_connectionDefinition);
+    async Task Because()
+    {
+        await _grain.KeepSubscription(_connectionDefinition);
+        await _grain.KeepSubscription(_connectionDefinition);
+    }
 
     [Fact] Task should_not_restore_the_subscription() => WasRestored(0);
+    [Fact] async Task should_still_check_the_registry_on_each_keep() => await _connectedClients.Received(2).IsConnected(_client.ConnectionId);
+    [Fact] void should_log_the_missing_registry_client_only_once() => _logger.Messages
+        .Count(message => message.Contains("IsConnected is false", StringComparison.Ordinal))
+        .ShouldEqual(1);
 }

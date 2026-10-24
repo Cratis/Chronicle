@@ -10,7 +10,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
-using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -36,8 +35,9 @@ public class an_observation_stream : Specification
             });
         var reactors = new Reactors(
             Substitute.For<IGrainFactory>(),
+            CreateLocalSiloDetails(),
             mediator,
-            Substitute.For<IStorage>(),
+            Substitute.For<Cratis.Chronicle.Storage.IStorage>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
             Options.Create(new ChronicleOptions()),
@@ -51,6 +51,13 @@ public class an_observation_stream : Specification
             Reactor = new Contracts.Observation.Reactors.ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    static ILocalSiloDetails CreateLocalSiloDetails()
+    {
+        var details = Substitute.For<ILocalSiloDetails>();
+        details.SiloAddress.Returns(SiloAddress.Zero);
+        return details;
     }
 
     protected void Reply(ulong deliveryId = 0) => _messages.OnNext(new(new(new ReactorResult
