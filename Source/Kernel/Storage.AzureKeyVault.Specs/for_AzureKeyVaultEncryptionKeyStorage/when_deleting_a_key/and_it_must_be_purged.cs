@@ -13,7 +13,7 @@ public class and_it_must_be_purged(and_it_must_be_purged.context ctx) : IClassFi
     {
         public List<string> RecoverableSecrets = [];
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             EncryptionKeyIdentifier identifier = Guid.NewGuid().ToString();

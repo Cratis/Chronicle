@@ -25,10 +25,38 @@ namespace Cratis.Chronicle.XUnit.Integration.Packaging.for_the_embedded_kernel_c
 public class when_checking_that_every_dependency_travels_with_it : Specification
 {
     IReadOnlyCollection<string> _uncovered;
+    IReadOnlyCollection<string> _uncoveredV3;
+    IReadOnlyCollection<string> _missingFromV3;
 
     void Because()
     {
-        var package = ProjectFile("Source/Clients/XUnit.Integration/XUnit.Integration.csproj");
+        const string v2Project = "Source/Clients/XUnit.Integration/XUnit.Integration.csproj";
+        const string v3Project = "Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj";
+        _uncovered = UncoveredDependencies(v2Project);
+        _uncoveredV3 = UncoveredDependencies(v3Project);
+        var (v2Packages, _) = ProjectFileDependencies.Read(ProjectFile(v2Project));
+        var (v3Packages, _) = ProjectFileDependencies.Read(ProjectFile(v3Project));
+        _missingFromV3 = v2Packages
+            .Except(["xunit", "Cratis.Specifications.XUnit"], StringComparer.OrdinalIgnoreCase)
+            .Except(v3Packages, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    [Fact]
+    void should_declare_every_package_the_embedded_kernel_needs() =>
+        string.Join(", ", _uncovered).ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_declare_every_package_the_v3_embedded_kernel_needs() =>
+        string.Join(", ", _uncoveredV3).ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_preserve_the_v2_non_xunit_dependency_closure_in_v3() =>
+        string.Join(", ", _missingFromV3).ShouldEqual(string.Empty);
+
+    static IReadOnlyCollection<string> UncoveredDependencies(string projectPath)
+    {
+        var package = ProjectFile(projectPath);
         var (declared, references) = ProjectFileDependencies.Read(package);
 
         var embedded = ClosureOf(references.Where(_ => _.IsEmbedded).Select(_ => Resolve(package, _.Include)));
@@ -42,17 +70,13 @@ public class when_checking_that_every_dependency_travels_with_it : Specification
         // declared at all. See PrivatePackageRuntimeAssemblyRegex in the packaging project.
         var packed = PackedRuntimeAssemblies(package);
 
-        _uncovered =
+        return
         [
             .. embedded
                 .Where(_ => !covered.Contains(_) && !packed.IsMatch($"{_}.dll"))
                 .Order(StringComparer.OrdinalIgnoreCase)
         ];
     }
-
-    [Fact]
-    void should_declare_every_package_the_embedded_kernel_needs() =>
-        string.Join(", ", _uncovered).ShouldEqual(string.Empty);
 
     static Regex PackedRuntimeAssemblies(FileInfo project)
     {

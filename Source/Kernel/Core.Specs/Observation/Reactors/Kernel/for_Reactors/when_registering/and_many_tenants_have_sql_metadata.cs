@@ -24,7 +24,7 @@ public class and_many_tenants_have_sql_metadata : given.persistent_registrations
         _reactors.DiscoverAndRegister(_eventStore, (EventStoreNamespaceName)$"tenant-{tenant}")));
 
     [Fact] async Task should_not_rewrite_unchanged_persistent_metadata() => await _definitions.DidNotReceive().Save(Arg.Any<ReactorDefinition>());
-    [Fact] void should_have_non_null_empty_tags() => _original.Tags!.ShouldBeEmpty();
+    [Fact] void should_have_non_null_empty_tags() => _original.Tags.ShouldBeEmpty();
     [Fact] void should_have_unrestricted_source_sentinel() => _original.Filters!.EventSourceType.ShouldEqual(EventSourceType.Unspecified);
     [Fact] void should_have_unrestricted_stream_sentinel() => _original.Filters!.EventStreamType!.IsAll.ShouldBeTrue();
     [Fact] void should_preserve_the_persisted_definition() => ReferenceEquals(_original, _persisted.Values.Single()).ShouldBeTrue();
