@@ -367,7 +367,6 @@ public partial class HandleEventsForPartition(
                 logger.HandledAllEvents(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            await ConfirmBulkWindowDurability();
             return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
             {
                 LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
