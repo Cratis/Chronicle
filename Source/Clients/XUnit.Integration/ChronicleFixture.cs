@@ -40,8 +40,17 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleFixture"/> class.
     /// </summary>
-    protected ChronicleFixture()
+    protected ChronicleFixture() : this(null)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleFixture"/> class with fixture-owned hooks.
+    /// </summary>
+    /// <param name="lifecycleHooks">The optional lifecycle hooks, assigned before virtual startup.</param>
+    private protected ChronicleFixture(FixtureLifecycleHooks? lifecycleHooks)
+    {
+        LifecycleHooks = lifecycleHooks;
         _timings = new IntegrationTimings(
             GetType().FullName ?? GetType().Name,
             Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable",
@@ -84,7 +93,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             {
                 if (_container is null)
                 {
-                    _container = _timings.Measure("container-build-and-auxiliary-start", () => BuildContainer(Network));
+                    _container = _timings.Measure("container-build-and-auxiliary-start", BuildOwnedContainer);
                     StartContainer(_container).GetAwaiter().GetResult();
                 }
                 return _container;
@@ -121,6 +130,11 @@ public abstract class ChronicleFixture : IChronicleFixture
     internal KernelFixtureCertificate? KernelCertificate { get; set; }
 
     /// <summary>
+    /// Gets the fixture-owned hooks assigned before startup.
+    /// </summary>
+    internal FixtureLifecycleHooks? LifecycleHooks { get; }
+
+    /// <summary>
     /// Gets the logger factory for creating loggers.
     /// </summary>
     protected ILoggerFactory LoggerFactory { get; }
@@ -134,8 +148,8 @@ public abstract class ChronicleFixture : IChronicleFixture
             var failure = await Cleanup(() => new ValueTask(DisposeContextStorage()), null);
             failure = await Cleanup(
                 () => KernelCertificate is { } certificate
-                    ? certificate.DisposeAfter(() => _container?.DisposeAsync() ?? ValueTask.CompletedTask)
-                    : _container?.DisposeAsync() ?? ValueTask.CompletedTask,
+                    ? certificate.DisposeAfter(() => DisposeKernelContainer(() => _container?.DisposeAsync() ?? ValueTask.CompletedTask))
+                    : DisposeKernelContainer(() => _container?.DisposeAsync() ?? ValueTask.CompletedTask),
                 failure);
             failure = await Cleanup(Network.DisposeAsync, failure);
             if (failure is not null) ExceptionDispatchInfo.Throw(failure);
@@ -236,6 +250,22 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Disposes an owned container through the optional fixture hook.
+    /// </summary>
+    /// <param name="container">The owned container.</param>
+    /// <returns>The disposal operation.</returns>
+    internal ValueTask DisposeOwnedContainer(IContainer container) => DisposeOwnedContainer(container, container.DisposeAsync);
+
+    /// <summary>
+    /// Disposes an optional owned container through the optional fixture hook.
+    /// </summary>
+    /// <param name="container">The owned container, when built.</param>
+    /// <param name="realDispose">The native disposal operation.</param>
+    /// <returns>The disposal operation.</returns>
+    internal ValueTask DisposeOwnedContainer(IContainer? container, Func<ValueTask> realDispose) =>
+        container is not null && LifecycleHooks?.Dispose is { } dispose ? dispose(container, realDispose) : realDispose();
+
+    /// <summary>
     /// Starts a fresh MongoDB storage identity for a test context.
     /// </summary>
     /// <returns>The prefix for the new context.</returns>
@@ -307,6 +337,21 @@ public abstract class ChronicleFixture : IChronicleFixture
         await _contextStorage!.DropDatabases(client);
     }
 
+    ValueTask DisposeKernelContainer(Func<ValueTask> realDispose) =>
+        _container is { } container && LifecycleHooks?.Dispose is { } dispose ? dispose(container, realDispose) : realDispose();
+
+    Task StartOwnedContainer(IContainer container) => LifecycleHooks?.Start is { } start
+        ? start(container, () => container.StartAsync())
+        : container.StartAsync();
+
+    IContainer BuildOwnedContainer()
+    {
+        LifecycleHooks?.BeforeBuild?.Invoke();
+        var container = BuildContainer(Network);
+        LifecycleHooks?.ContainerBuilt?.Invoke(container);
+        return container;
+    }
+
     Task StartContainer(IContainer container) => _started
         ? Task.CompletedTask
         : _timings.Run("container-start-total", () => StartContainerCore(container));
@@ -325,7 +370,7 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 failure = null;
 
-                await _timings.Run("container-start-attempt", () => container.StartAsync());
+                await _timings.Run("container-start-attempt", () => StartOwnedContainer(container));
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
@@ -349,8 +394,8 @@ public abstract class ChronicleFixture : IChronicleFixture
                 // anything.
                 try
                 {
-                    await container.DisposeAsync();
-                    container = BuildContainer(Network);
+                    await DisposeOwnedContainer(container);
+                    container = BuildOwnedContainer();
                     _container = container;
                 }
                 catch (Exception cleanup)

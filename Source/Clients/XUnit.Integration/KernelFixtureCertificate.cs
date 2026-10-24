@@ -61,7 +61,7 @@ internal sealed class KernelFixtureCertificate
         try
         {
             Directory.CreateDirectory(directory, DirectoryMode);
-            createCertificate ??= _ => CreateCertificate();
+            createCertificate ??= _ => CreateCertificate("localhost");
             using var certificate = createCertificate(directory);
             var path = System.IO.Path.Combine(directory, "kernel.pfx");
             using var stream = new FileStream(path, new FileStreamOptions
@@ -87,6 +87,13 @@ internal sealed class KernelFixtureCertificate
             throw;
         }
     }
+
+    /// <summary>
+    /// Creates owned material for an alternate DNS name in TLS refusal specifications.
+    /// </summary>
+    /// <param name="hostName">The sole DNS name to include.</param>
+    /// <returns>The owned certificate material.</returns>
+    internal static KernelFixtureCertificate CreateForHost(string hostName) => Create(_ => CreateCertificate(hostName));
 
     /// <summary>
     /// Keeps cleanup failures attached to the original failure without replacing it.
@@ -121,14 +128,17 @@ internal sealed class KernelFixtureCertificate
         if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
     }
 
-    static X509Certificate2 CreateCertificate()
+    static X509Certificate2 CreateCertificate(string hostName)
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=localhost", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest($"CN={hostName}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var names = new SubjectAlternativeNameBuilder();
-        names.AddDnsName("localhost");
-        names.AddIpAddress(IPAddress.Loopback);
-        names.AddIpAddress(IPAddress.IPv6Loopback);
+        names.AddDnsName(hostName);
+        if (string.Equals(hostName, "localhost", StringComparison.Ordinal))
+        {
+            names.AddIpAddress(IPAddress.Loopback);
+            names.AddIpAddress(IPAddress.IPv6Loopback);
+        }
         request.CertificateExtensions.Add(names.Build());
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, critical: true));
         request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, critical: true));

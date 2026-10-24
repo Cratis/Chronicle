@@ -24,6 +24,19 @@ namespace Cratis.Chronicle.Integration;
 /// </summary>
 public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleConfigurableFixture"/> class.
+    /// </summary>
+    public ChronicleConfigurableFixture()
+    {
+    }
+
+    internal ChronicleConfigurableFixture(XUnit.Integration.FixtureLifecycleHooks lifecycleHooks) : base(lifecycleHooks)
+    {
+    }
+
+    internal Task ResetForLifecycleProofAsync() => ResetOutOfProcessKernelState();
+
     const string MongoReplicaSetCommand = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null";
 
     const string MongoDbHostName = "chronicle-mongodb";
@@ -149,7 +162,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             Exception? failure = null;
             try
             {
-                await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+                await DisposeAuxiliaryContainer(_databaseContainer, () => _databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
             }
             catch (Exception error)
             {
@@ -157,7 +170,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             }
             try
             {
-                await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+                await DisposeAuxiliaryContainer(_outOfProcessMongoContainer, () => _outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
             }
             catch (Exception error)
             {
@@ -352,6 +365,12 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
+    ValueTask DisposeAuxiliaryContainer(IContainer? container, Func<ValueTask> realDispose) =>
+        container is not null && LifecycleHooks?.Dispose is { } dispose ? dispose(container, realDispose) : realDispose();
+
+    XUnit.Integration.KernelFixtureCertificate CreateKernelCertificate() =>
+        LifecycleHooks?.CreateMaterial?.Invoke() ?? XUnit.Integration.KernelFixtureCertificate.Create();
+
     IContainer BuildOutOfProcessKernelContainer(INetwork network, string connectionDetails)
     {
         var storageType = Options.StorageProvider switch
@@ -367,7 +386,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // container's still-bound ports while Docker tears it down. The actual mapped
         // port is exposed through KernelGrpcHostPort and forwarded to the in-process
         // silo + the reset client.
-        var certificate = KernelCertificate ??= XUnit.Integration.KernelFixtureCertificate.Create();
+        var certificate = KernelCertificate ??= CreateKernelCertificate();
         const string certificatePath = "/run/chronicle-fixture/kernel.pfx";
         var builder = new ContainerBuilder(_imageName)
             .WithImage(_imageName)
@@ -485,6 +504,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
+        LifecycleHooks?.ContainerBuilt?.Invoke(_outOfProcessMongoContainer);
         _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
 
         timing?.Success();
@@ -510,6 +530,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithDatabase(_outOfProcessSqlDatabaseName)
             .Build();
 
+        LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
 
         timing?.Success();
@@ -559,6 +580,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         }
 
         _databaseContainer = builder.Build();
+        LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
         try
         {
             _databaseContainer.StartAsync().GetAwaiter().GetResult();
@@ -571,6 +593,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             // container so Testcontainers does not reuse the failed instance or its host port.
             _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
             _databaseContainer = builder.Build();
+            LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
             _databaseContainer.StartAsync().GetAwaiter().GetResult();
         }
 
@@ -619,10 +642,12 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             // losing RPC settles before channel disposal and the guard's join cannot leave bootstrap work.
             using var handler = new SocketsHttpHandler();
             handler.SslOptions.RemoteCertificateValidationCallback = Connections.CertificateLoader.CreateServerCertificateValidationCallback(
-                skipTlsValidation: false, pinnedCertificateHash: KernelCertificate!.Hash);
+                skipTlsValidation: false, pinnedCertificateHash: LifecycleHooks?.ResetPin?.Invoke(KernelCertificate!.Hash) ?? KernelCertificate!.Hash);
             using var channel = GrpcChannel.ForAddress($"https://localhost:{KernelGrpcHostPort}", new GrpcChannelOptions { HttpHandler = handler });
             var server = channel.Intercept(new ResetCancellationInterceptor(deadline, cancellationToken)).CreateGrpcService<Contracts.Host.IServer>();
-            await server.ResetKernelState();
+            var reset = server.ResetKernelState();
+            LifecycleHooks?.ResetIssued?.Invoke(reset);
+            await reset;
             attempt?.Success();
         },
         () => DateTime.UtcNow < deadline,
