@@ -16,6 +16,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 internal static partial class SinkLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Bulk window '{PreviousWindow}' for read model '{ReadModel}' was replaced by {Mode} window '{Window}', discarding {QueuedOperationCount} queued operations and {InFlightBatchCount} in-flight write batches; a step that pinned it fails with BulkWindowLost and resumes from its last durable checkpoint")]
+    internal static partial void OpenBulkWindowReplaced(this ILogger<Sink> logger, ReadModelIdentifier readModel, Guid previousWindow, Guid window, string mode, int queuedOperationCount, int inFlightBatchCount);
+
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' failed for partition '{Partition}' at operation {OperationIndex}: error {Code} ({Category}): {ErrorMessage}")]
     internal static partial void BulkWriteErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string partition, int operationIndex, int code, ServerErrorCategory category, string errorMessage);
 
