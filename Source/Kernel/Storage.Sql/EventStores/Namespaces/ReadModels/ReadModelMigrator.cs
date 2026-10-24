@@ -28,10 +28,12 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{ReadModelMigrator}"/> for logging.</param>
 /// <param name="options">The kernel configuration, including the shadow-index DDL timeout.</param>
+/// <param name="timeProvider">The clock used for shadow-index DDL deadlines, or the system clock.</param>
 public class ReadModelMigrator(
     ITableMigrator<ReadModelDbContext> tableMigrator,
     ILogger<ReadModelMigrator> logger,
-    IOptions<ChronicleOptions>? options = null) : IReadModelMigrator
+    IOptions<ChronicleOptions>? options = null,
+    TimeProvider? timeProvider = null) : IReadModelMigrator
 {
     static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
 
@@ -108,7 +110,8 @@ public class ReadModelMigrator(
             await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
-        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, options?.Value.Sql, logger));
+        var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
+        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
         _columnMigrations.TryAdd(cacheKey, true);
     }
 
