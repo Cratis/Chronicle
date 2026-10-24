@@ -13,6 +13,9 @@
 
     <ItemGroup>
         <Compile Include="../XUnit.Integration/**/*.cs" Exclude="../XUnit.Integration/bin/**;../XUnit.Integration/obj/**;../XUnit.Integration/ChronicleClientFixture.Lifetime.cs" LinkBase="Shared" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3.Specs" />
     </ItemGroup>
 
