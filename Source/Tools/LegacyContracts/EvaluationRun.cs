@@ -8,14 +8,16 @@ namespace Cratis.Chronicle.Tools.LegacyContracts;
 
 record EvaluationRun(int ExitCode, IReadOnlyList<RowVerdict> Rows, string? Error, string Mode = "report")
 {
-    public static EvaluationRun Read(string manifest, string issues, string jobs, Func<IReadOnlyList<TestResult>> readTests, string? mode = null)
+    public static EvaluationRun ReadStructural(string manifest, string issues, string? mode = null) => Read(manifest, issues, "{}", () => [], mode, structural: true);
+
+    public static EvaluationRun Read(string manifest, string issues, string jobs, Func<IReadOnlyList<TestResult>> readTests, string? mode = null, bool structural = false)
     {
         try
         {
             var matrix = Matrix.Parse(manifest);
             var enforcement = mode ?? matrix.Enforcement;
             Matrix.ValidateMode(enforcement);
-            var rows = MatrixEvaluation.Evaluate(matrix, JsonInput.Read<OwnerIssue[]>(issues), JsonInput.Read<Dictionary<string, JobResult>>(jobs), readTests());
+            var rows = MatrixEvaluation.Evaluate(matrix, JsonInput.Read<OwnerIssue[]>(issues), JsonInput.Read<Dictionary<string, JobResult>>(jobs), readTests(), structural);
             return new(rows.Any(_ => _.Fails(enforcement)) ? 1 : 0, rows, null, enforcement);
         }
         catch (Exception ex) when (ex is CannotEvaluate or JsonException or XmlException or IOException or UnauthorizedAccessException or ArgumentException)

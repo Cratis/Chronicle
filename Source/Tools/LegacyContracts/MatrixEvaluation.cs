@@ -9,21 +9,23 @@ static class MatrixEvaluation
         Matrix matrix,
         IReadOnlyList<OwnerIssue> issues,
         IReadOnlyDictionary<string, JobResult> jobs,
-        IReadOnlyList<TestResult> tests)
+        IReadOnlyList<TestResult> tests,
+        bool structural = false)
     {
         if (issues.Any(_ => _ is null))
         {
             throw new CannotEvaluate("Issue input contains a null issue.");
         }
 
-        return matrix.Rows.Select(row => EvaluateRow(row, issues, jobs, tests)).ToArray();
+        return matrix.Rows.Select(row => EvaluateRow(row, issues, jobs, tests, structural)).ToArray();
     }
 
     static RowVerdict EvaluateRow(
         MatrixRow row,
         IReadOnlyList<OwnerIssue> issues,
         IReadOnlyDictionary<string, JobResult> jobs,
-        IReadOnlyList<TestResult> tests)
+        IReadOnlyList<TestResult> tests,
+        bool structural)
     {
         if (row.Owners.Length == 0)
         {
@@ -43,7 +45,9 @@ static class MatrixEvaluation
                 : new(row.Id, RowVerdictKind.Pending, 0, 0, string.Join("; ", row.RequiredProofs));
         }
 
-        return EvaluateProofs(row, jobs, tests);
+        return structural
+            ? new(row.Id, RowVerdictKind.Green, 0, 0, "Ownership and status checked; executable proofs are evaluated by the PR-time Legacy Contracts job.")
+            : EvaluateProofs(row, jobs, tests);
     }
 
     static OwnerIssue FindOwner(int number, IReadOnlyList<OwnerIssue> issues)

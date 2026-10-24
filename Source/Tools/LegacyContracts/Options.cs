@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Tools.LegacyContracts;
 
-record Options(string? Manifest, string? Issues, string? Jobs, string? Trx, string? Mode, bool GitHub, bool SelfTest)
+record Options(string? Manifest, string? Issues, string? Jobs, string? Trx, string? Mode, bool GitHub, bool SelfTest, bool Structural)
 {
-    public const string Usage = "LegacyContracts --manifest <json> --issues <json> --jobs <json> --trx <directory> [--mode report|release] [--github] | --self-test";
+    public const string Usage = "LegacyContracts --manifest <json> --issues <json> --jobs <json> --trx <directory> [--mode report|release] [--github] | --manifest <json> --issues <json> --structural [--mode report|release] [--github] | --self-test";
 
     static readonly string[] _requiredOptions = ["--manifest", "--issues", "--jobs", "--trx"];
 
@@ -14,13 +14,15 @@ record Options(string? Manifest, string? Issues, string? Jobs, string? Trx, stri
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         var github = false;
         var selfTest = false;
+        var structural = false;
         for (var index = 0; index < args.Length; index++)
         {
             var option = args[index];
-            if (string.Equals(option, "--github", StringComparison.Ordinal) || string.Equals(option, "--self-test", StringComparison.Ordinal))
+            if (string.Equals(option, "--github", StringComparison.Ordinal) || string.Equals(option, "--self-test", StringComparison.Ordinal) || string.Equals(option, "--structural", StringComparison.Ordinal))
             {
                 github |= string.Equals(option, "--github", StringComparison.Ordinal);
                 selfTest |= string.Equals(option, "--self-test", StringComparison.Ordinal);
+                structural |= string.Equals(option, "--structural", StringComparison.Ordinal);
             }
             else if (_requiredOptions.Contains(option, StringComparer.Ordinal) || string.Equals(option, "--mode", StringComparison.Ordinal))
             {
@@ -35,7 +37,8 @@ record Options(string? Manifest, string? Issues, string? Jobs, string? Trx, stri
             }
         }
 
-        if (!selfTest && _requiredOptions.Any(_ => !values.ContainsKey(_)))
+        var required = structural ? _requiredOptions.Take(2) : _requiredOptions;
+        if (!selfTest && required.Any(_ => !values.ContainsKey(_)))
         {
             throw new CannotEvaluate(Usage);
         }
@@ -46,6 +49,6 @@ record Options(string? Manifest, string? Issues, string? Jobs, string? Trx, stri
             Matrix.ValidateMode(mode);
         }
 
-        return new(values.GetValueOrDefault("--manifest"), values.GetValueOrDefault("--issues"), values.GetValueOrDefault("--jobs"), values.GetValueOrDefault("--trx"), mode, github, selfTest);
+        return new(values.GetValueOrDefault("--manifest"), values.GetValueOrDefault("--issues"), values.GetValueOrDefault("--jobs"), values.GetValueOrDefault("--trx"), mode, github, selfTest, structural);
     }
 }

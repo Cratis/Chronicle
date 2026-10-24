@@ -68,10 +68,23 @@ static class SelfTest
             Case("a_runnable_row_has_no_jobs", clean.WithRow(row with { Jobs = [] }), 2, null),
             Case("a_runnable_row_has_no_planted_proofs", clean.WithRow(row with { PlantedDefects = [] }), 2, null),
             Case("row_ids_are_duplicated", clean with { Matrix = clean.Matrix with { Rows = [row, row] } }, 2, null),
+            StructuralCase("a_structural_runnable_row_without_results", clean with { Trx = null, Jobs = new Dictionary<string, JobResult>(StringComparer.Ordinal) }, 0, RowVerdictKind.Green),
+            StructuralCase("a_structural_completed_runnable_owner", clean with { Issues = [new(5222, "CLOSED", "COMPLETED", false)] }, 0, RowVerdictKind.Green),
+            StructuralCase("a_structural_pending_row_in_report_mode", pending, 0, RowVerdictKind.Pending),
+            StructuralCase("a_structural_pending_row_in_release_mode", pending with { Matrix = pending.Matrix with { Enforcement = "release" } }, 1, RowVerdictKind.Pending),
+            StructuralCase("a_structural_unowned_row_in_report_mode", clean.WithRow(row with { Owners = [] }), 1, RowVerdictKind.Unowned),
+            StructuralCase("a_structural_unowned_row_in_release_mode", clean with { Matrix = clean.Matrix with { Enforcement = "release", Rows = [row with { Owners = [] }] } }, 1, RowVerdictKind.Unowned),
+            StructuralCase("a_structural_stale_pending_row_in_report_mode", pending with { Issues = [new(5222, "CLOSED", "COMPLETED", false)] }, 1, RowVerdictKind.StalePending),
+            StructuralCase("a_structural_stale_pending_row_in_release_mode", pending with { Matrix = pending.Matrix with { Enforcement = "release" }, Issues = [new(5222, "CLOSED", "COMPLETED", false)] }, 1, RowVerdictKind.StalePending),
+            StructuralCase("a_structural_owner_closed_without_completion", clean with { Issues = [new(5222, "CLOSED", "NOT_PLANNED", false)] }, 1, RowVerdictKind.Unowned),
+            StructuralCase("a_structural_issue_lookup_failed", clean with { Issues = [] }, 2, null),
+            StructuralCase("a_structural_manifest_has_no_rows", clean with { Matrix = clean.Matrix with { Rows = [] } }, 2, null),
             new("the_manifest_is_incomplete", () => EvaluationRun.Read("{}", "[]", "{}", () => []), 2, null),
             new("the_manifest_is_malformed", () => EvaluationRun.Read("{", "[]", "{}", () => []), 2, null)
         ];
     }
+
+    static SelfTestCase StructuralCase(string name, EvaluationFixture fixture, int exitCode, RowVerdictKind? verdict) => new(name, fixture.EvaluateStructural, exitCode, verdict);
 
     static SelfTestCase Case(string name, EvaluationFixture fixture, int exitCode, RowVerdictKind? verdict) => new(name, fixture.Evaluate, exitCode, verdict);
 }

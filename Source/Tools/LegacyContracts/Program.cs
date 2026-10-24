@@ -11,12 +11,11 @@ try
         return SelfTest.Run(Console.Out) == 0 ? 0 : 1;
     }
 
-    var run = EvaluationRun.Read(
-        await File.ReadAllTextAsync(options.Manifest!),
-        await File.ReadAllTextAsync(options.Issues!),
-        await File.ReadAllTextAsync(options.Jobs!),
-        () => TestResults.Read(options.Trx!),
-        options.Mode);
+    var manifest = await File.ReadAllTextAsync(options.Manifest!);
+    var issues = await File.ReadAllTextAsync(options.Issues!);
+    var run = options.Structural
+        ? EvaluationRun.ReadStructural(manifest, issues, options.Mode)
+        : EvaluationRun.Read(manifest, issues, await File.ReadAllTextAsync(options.Jobs!), () => TestResults.Read(options.Trx!), options.Mode);
     var report = ReportRenderer.Text(run);
     await Console.Out.WriteAsync(report);
     if (options.GitHub)

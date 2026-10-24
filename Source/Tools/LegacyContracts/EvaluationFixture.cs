@@ -27,6 +27,8 @@ record EvaluationFixture(Matrix Matrix, OwnerIssue[] Issues, IReadOnlyDictionary
         }
     };
 
+    public EvaluationRun EvaluateStructural() => EvaluationRun.ReadStructural(JsonSerializer.Serialize(Matrix), JsonSerializer.Serialize(Issues));
+
     public EvaluationRun Evaluate() => EvaluationRun.Read(
         JsonSerializer.Serialize(Matrix),
         JsonSerializer.Serialize(Issues),
