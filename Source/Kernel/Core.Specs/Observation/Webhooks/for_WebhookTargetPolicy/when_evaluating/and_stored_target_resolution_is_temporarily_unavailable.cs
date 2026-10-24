@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookTargetPolicy.when_eva
 
 public class and_stored_target_resolution_is_temporarily_unavailable : given.a_target_policy
 {
-    Exception _error;
+    WebhookTargetValidation _firstResult;
     WebhookTargetValidation _retryResult;
     readonly SocketException _dnsError = new((int)SocketError.TryAgain);
 
@@ -23,10 +23,11 @@ public class and_stored_target_resolution_is_temporarily_unavailable : given.a_t
 
     async Task Because()
     {
-        _error = await Catch.Exception(async () => await _policy.EvaluateForDelivery("https://receiver.example/hook"));
+        _firstResult = await _policy.EvaluateForDelivery("https://receiver.example/hook");
         _retryResult = await _policy.EvaluateForDelivery("https://receiver.example/hook");
     }
 
-    [Fact] void should_propagate_the_temporary_failure() => _error.ShouldEqual(_dnsError);
+    [Fact] void should_not_allow_an_unvalidated_target() => _firstResult.IsAllowed.ShouldBeFalse();
+    [Fact] void should_explain_that_validation_can_be_retried() => _firstResult.Reason.ShouldEqual("Webhook target host resolution is temporarily unavailable. Please retry.");
     [Fact] void should_allow_the_target_after_dns_recovers() => _retryResult.IsAllowed.ShouldBeTrue();
 }

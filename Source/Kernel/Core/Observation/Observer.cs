@@ -925,11 +925,7 @@ public partial class Observer(
             if (webhookSubscription)
             {
                 await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-                if (!await ValidateStoredWebhookTarget())
-                {
-                    _subscriptionSetupFailed = false;
-                    return;
-                }
+                if (!await ValidateStoredWebhookTarget()) return;
             }
 
             if (recovering)

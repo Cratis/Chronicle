@@ -124,6 +124,7 @@ public partial class Observer
             await ReconcileWebhookProbe();
             return;
         }
+        if (allowQuarantinedWebhook && !await ValidateStoredWebhookTarget()) return;
         await TransitionTo<Disconnected>();
         if (CannotReconcileSubscription(allowQuarantinedWebhook)) return;
         await RecoverAfterSubscribing(leavesQuarantine: false);
