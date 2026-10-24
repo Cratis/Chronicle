@@ -65,10 +65,14 @@ exit_status=$?
 if [ "$shutdown_requested" = true ]; then
   # A trap interrupts wait with 128 + signal, not the server's exit status. Re-wait
   # after every interruption, even if the server exited while the trap was running.
+  exit_status=127
   while :; do
     wait_signal_count=$signal_count
     wait "$server_pid"
-    exit_status=$?
+    wait_status=$?
+    # A late signal can cause another iteration after the server was already reaped.
+    [ "$wait_status" -eq 127 ] && break
+    exit_status=$wait_status
     [ "$signal_count" -eq "$wait_signal_count" ] && break
   done
 
