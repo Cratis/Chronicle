@@ -14,12 +14,12 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creating;
@@ -81,9 +81,7 @@ public class and_child_parent_key_uses_event_source_id_with_non_string_child_key
             },
             new { name = "Ada Lovelace" }.AsExpandoObject());
 
-        _eventSequenceStorage
-            .TryGetLastInstanceOfAny(_userId, Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(_userAdded.Id)))
-            .Returns(new Option<AppendedEvent>(parentEvent));
+        _eventSequenceStorage.WithParentHistory(_userId, parentEvent);
     }
 
     async Task Because()

@@ -96,7 +96,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
         _sink = Substitute.For<ISink>();
 
         // When looking up parent event by EventSourceId (ParentKey), return the root event
-        _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(_rootEvent);
+        _storage.WithParentHistory(ParentKey, _rootEvent);
 
         // The child is not in the sink yet — the direct child-key lookup misses and the
         // resolution falls through to the parent-key strategies under test.
