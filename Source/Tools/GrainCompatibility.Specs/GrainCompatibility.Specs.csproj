@@ -9,5 +9,11 @@
 
     <ItemGroup>
         <ProjectReference Include="../GrainCompatibility/GrainCompatibility.csproj" />
+        <ProjectReference Include="../../Kernel/Core/Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../Kernel/Core/OrleansContracts.txt" Link="OrleansContracts.txt" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="../../Kernel/Core/GrainPayloadContracts.txt" Link="GrainPayloadContracts.txt" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
