@@ -73,8 +73,10 @@
             silently re-run the other. They used to share DisableProxyGenerator, which meant enabling TypeScript
             proxies also regenerated the gRPC contracts and dropped contract methods.
 
-            Both run by default now. Observers is the one service still hand-written - it carries methods Core has
-            no artifact for - and NonDerivedGrpcServices keeps the generator off it.
+            gRPC contracts run by default. TypeScript proxies run only with DEVELOPMENT (Debug or
+            EnableDevelopmentSymbol), since a smaller non-development surface would prune development proxies.
+            Observers is the one service still hand-written - it carries methods Core has no artifact for - and
+            NonDerivedGrpcServices keeps the generator off it.
         -->
         <DisableGrpcContractGeneration Condition="'$(DisableGrpcContractGeneration)' == ''">false</DisableGrpcContractGeneration>
         <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
@@ -85,7 +87,7 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true' and ('$(Configuration)' == 'Debug' or '$(EnableDevelopmentSymbol)' == 'true')">
         <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Features</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
         <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
@@ -95,7 +97,7 @@
         <CratisProxiesOutputPath></CratisProxiesOutputPath>
     </PropertyGroup>
 
-    <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+    <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true' and ('$(Configuration)' == 'Debug' or '$(EnableDevelopmentSymbol)' == 'true')">
         <!-- Build-only: it generates TypeScript at build time and carries no runtime assets, so it must not flow
              to anything consuming this project as a package. -->
         <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" PrivateAssets="all" />
