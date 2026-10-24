@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <ProjectReference Include="../../Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
@@ -16,7 +16,7 @@
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="NSubstitute" />
-        <!-- Direct pin: Cratis.Arc.MongoDB floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
-        <PackageReference Include="Castle.Core" />
+        <!-- Direct pin: Cratis.Arc.MongoDB floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. The downgrade is deliberate, so NU1605 is allowed for this reference only. -->
+        <PackageReference Include="Castle.Core" NoWarn="NU1605" />
     </ItemGroup>
 </Project>

@@ -22,7 +22,7 @@ public class when_client_instance_disconnects(context _context)
         public int TargetCountAfterDisconnect { get; private set; }
         public string RemainingInstance { get; private set; } = string.Empty;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             RemainingInstance = fixture.EventSequencesSiloAddress.ToParsableString();
 
@@ -66,7 +66,7 @@ public class when_client_instance_disconnects(context _context)
             SecondRound = signal.Handled;
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_have_a_single_fan_out_target_left() => _context.TargetCountAfterDisconnect.ShouldEqual(1);
