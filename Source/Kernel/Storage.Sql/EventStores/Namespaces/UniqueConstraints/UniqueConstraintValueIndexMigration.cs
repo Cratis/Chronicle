@@ -28,7 +28,7 @@ internal static class UniqueConstraintValueIndexMigration
     internal static async Task EnsureValueIndexIsUnique(string tableName, DbContext context, ILogger<UniqueConstraintMigrator> logger)
     {
         // Hold off writers across the guards and DDL, including writers in other silos.
-        await using var transaction = context.Database.CurrentTransaction is null ? await context.Database.BeginTransactionAsync() : null;
+        await using var transaction = await BeginOwnedTransaction(context.Database);
         var sql = context.GetService<ISqlGenerationHelper>();
         var table = sql.DelimitIdentifier(tableName);
         var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
@@ -37,10 +37,7 @@ internal static class UniqueConstraintValueIndexMigration
         var indexState = await ReadIndexState(context, tableName);
         if (indexState == 1)
         {
-            if (transaction is not null)
-            {
-                await transaction.CommitAsync();
-            }
+            await CommitOwned(transaction);
             return;
         }
 
@@ -57,16 +54,19 @@ internal static class UniqueConstraintValueIndexMigration
             await context.Database.ExecuteSqlRawAsync($"CREATE {(duplicates == 0 ? "UNIQUE " : string.Empty)}INDEX {index} ON {table} ({sql.DelimitIdentifier("Value")})");
         }
 
-        if (transaction is not null)
-        {
-            await transaction.CommitAsync();
-        }
+        await CommitOwned(transaction);
 
         if (duplicates > 0 && _warnedTables.TryAdd($"{context.Database.GetConnectionString()}:{tableName}", true))
         {
             logger.FallingBackToNonUniqueIndex(tableName, duplicates);
         }
     }
+
+    // Join an enclosing caller's transaction; that caller commits it.
+    static async Task<IDbContextTransaction?> BeginOwnedTransaction(DatabaseFacade database) =>
+        database.CurrentTransaction is null ? await database.BeginTransactionAsync() : null;
+
+    static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
 
     /// <summary>
     /// Locks a delimited table against concurrent silo writers for the current transaction.
