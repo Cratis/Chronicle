@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// </summary>
 internal static partial class ReadModelMigratorLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Shadow-index DDL failed for index {IndexName} on table {TableName}")]
+    internal static partial void ShadowIndexDdlFailed(this ILogger<ReadModelMigrator> logger, string tableName, string indexName, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Creating read model table {TableName}")]
     internal static partial void CreatingReadModelTable(this ILogger<ReadModelMigrator> logger, string tableName);
 

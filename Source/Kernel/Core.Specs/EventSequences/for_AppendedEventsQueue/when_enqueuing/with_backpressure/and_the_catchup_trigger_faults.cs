@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing.with_observer_that_is_unreachable.given;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Traces;
@@ -13,41 +14,36 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing.with_backpressure;
 
-/// <summary>
-/// The whole no-loss guarantee of the spill rests on the catch-up actually starting. If the CatchUp trigger faults
-/// (transport/job-subsystem failure), the queue must not swallow it: the failure is observed and the trigger is
-/// retried a bounded number of times rather than silently stranding the spilled observer behind the gap.
-/// </summary>
 public class and_the_catchup_trigger_faults : given.all_dependencies
 {
-    /// <summary>Mirrors AppendedEventsQueue.MaxCatchupTriggerAttempts — the bounded number of catch-up start attempts.</summary>
-    const int ExpectedAttempts = 3;
-    const int ChannelCapacity = 1;
-
-    /// <summary>
-    /// How long to let the retry loop settle after it reached the expected attempt count, before the count is read.
-    /// The backoff between attempt N and N+1 is 200ms * N, so waiting well past 200ms * ExpectedAttempts lets an
-    /// unbounded loop take at least one more attempt and makes the exact-count assertion detect it.
-    /// </summary>
-    const int SettleMilliseconds = 1000;
-
     readonly EventType _eventType = new("faulting-catchup-event", 1);
-    readonly TaskCompletionSource _blockObserver = new();
-    ObserverKey _observerKey;
+    readonly TaskCompletionSource _blockObserver = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _enteredObserver = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _catchupStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly CatchupClock _clock = new();
     IObserver _observer;
     AppendedEventsQueue _queue;
-    int _observedCatchupAttempts;
+    int _attempts;
 
     async Task Establish()
     {
-        _observerKey = new ObserverKey("faulting-observer", "store", "ns", "seq");
+        var observerKey = new ObserverKey("faulting-observer", "store", "ns", "seq");
         _observer = Substitute.For<IObserver>();
-        _observer
-            .Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>())
-            .Returns(_ => _blockObserver.Task);
-        _observer.CatchUp().Returns(Task.FromException(new InvalidOperationException("catch-up could not be started")));
-        _grainFactory.GetGrain<IObserver>(_observerKey).Returns(_observer);
-
+        _observer.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(_ =>
+        {
+            _enteredObserver.TrySetResult();
+            return _blockObserver.Task;
+        });
+        _observer.CatchUp().Returns(_ =>
+        {
+            if (Interlocked.Increment(ref _attempts) < 4)
+            {
+                return Task.FromException(new InvalidOperationException("catch-up could not be started"));
+            }
+            _catchupStarted.TrySetResult();
+            return Task.CompletedTask;
+        });
+        _grainFactory.GetGrain<IObserver>(observerKey).Returns(_observer);
         _queue = new AppendedEventsQueue(
             _taskFactory,
             _grainFactory,
@@ -55,49 +51,38 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
             new ActivitySource<AppendedEventsQueue>(),
             Options.Create(new ChronicleOptions
             {
-                Events = new Configuration.Events { QueueBoundedCapacity = ChannelCapacity }
+                Events = new Configuration.Events { QueueBoundedCapacity = 1 }
             }),
-            Substitute.For<ILogger<AppendedEventsQueue>>());
-
-        await _queue.Subscribe(_observerKey, [_eventType]);
+            Substitute.For<ILogger<AppendedEventsQueue>>())
+        {
+            CatchupTimeProvider = _clock
+        };
+        await _queue.Subscribe(observerKey, [_eventType]);
     }
 
     async Task Because()
     {
-        var eventSourceId = new EventSourceId("faulting-partition");
-        AppendedEvent MakeEvent() => AppendedEvent.Empty() with
+        var @event = AppendedEvent.Empty() with
         {
-            Context = EventContext.Empty with
-            {
-                EventType = _eventType,
-                EventSourceId = eventSourceId
-            }
+            Context = EventContext.Empty with { EventType = _eventType, EventSourceId = "faulting-partition" }
         };
-
-        // Fill the channel so the third enqueue overflows and spills the observer to catch-up.
-        await _queue.Enqueue([MakeEvent()]);
-        await Task.Delay(100);
-        await _queue.Enqueue([MakeEvent()]);
-        await _queue.Enqueue([MakeEvent()]);
-
-        // Wait for the background catch-up trigger to observe the fault and exhaust its bounded retries.
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (DateTime.UtcNow < deadline && CatchupAttempts() < ExpectedAttempts)
-        {
-            await Task.Delay(20);
-        }
-
-        // Reading the count the moment it reaches the bound cannot tell a bounded loop from an unbounded one.
-        // Let the loop settle first, so a loop that kept retrying is caught by the exact-count assertion.
-        await Task.Delay(SettleMilliseconds);
-
-        _observedCatchupAttempts = CatchupAttempts();
-        _blockObserver.SetResult();
+        await _queue.Enqueue([@event]);
+        await _enteredObserver.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _queue.Enqueue([@event]);
+        await _queue.Enqueue([@event]);
+        await _clock.AdvanceNextDelay();
+        await _clock.AdvanceNextDelay();
+        await _clock.AdvanceNextDelay();
+        await _catchupStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        _blockObserver.TrySetResult();
+        await _queue.AwaitQueueDepletion(500, 10);
     }
 
-    int CatchupAttempts() =>
-        _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.CatchUp));
+    void Destroy()
+    {
+        _blockObserver.TrySetResult();
+        _queue?.Dispose();
+    }
 
-    [Fact] void should_observe_the_fault_and_retry_exactly_the_bounded_number_of_times() =>
-        _observedCatchupAttempts.ShouldEqual(ExpectedAttempts);
+    [Fact] void should_keep_retrying_beyond_the_old_three_attempt_limit() => _observer.Received(4).CatchUp();
 }
