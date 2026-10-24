@@ -52,6 +52,14 @@ public class Projection(
     IOptions<ChronicleOptions> options,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
+    /// <summary>
+    /// How many times the grain checks that the observer re-subscribed before it falls back to a recommendation (about 1.5 minutes).
+    /// </summary>
+    const int MaxReplayAttempts = 20;
+
+    static readonly TimeSpan _initialReplayBackoff = TimeSpan.FromMilliseconds(250);
+    static readonly TimeSpan _maxReplayBackoff = TimeSpan.FromSeconds(5);
+
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
     readonly Dictionary<EventStoreNamespaceName, EngineProjection> _projectionsByNamespace = new();
     string _identifierPropertyName = "id";
@@ -629,7 +637,7 @@ public class Projection(
                     logger.ProjectionEvolutionNeedsNoAction(key.ProjectionId, @namespace);
                     break;
                 case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
-                    this.ScheduleInSeparateTurn(() => ReplayProjection(key, @namespace));
+                    this.ScheduleInSeparateTurn(() => ReplayProjectionWhenSubscribed(key, @namespace, 0));
                     break;
                 default:
                     await AddReplayRecommendation(key, @namespace, currentDefinition);
@@ -638,11 +646,42 @@ public class Projection(
         }
     }
 
-    async Task ReplayProjection(ProjectionKey key, EventStoreNamespaceName @namespace)
+    async Task ReplayProjectionWhenSubscribed(ProjectionKey key, EventStoreNamespaceName @namespace, int attempt)
     {
-        logger.AutoReplayingProjection(key.ProjectionId, @namespace);
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+
+        // The replay job reads the event types the observer is subscribed with. The manager re-subscribes only after
+        // SetDefinition has returned, so replaying right away would use the previous definition's event types.
+        if (!await ObserverIsSubscribedWithCurrentEventTypes(observer, @namespace))
+        {
+            if (attempt < MaxReplayAttempts)
+            {
+                var delay = TimeSpan.FromMilliseconds(Math.Min(_maxReplayBackoff.TotalMilliseconds, _initialReplayBackoff.TotalMilliseconds * Math.Pow(2, attempt)));
+                this.ScheduleInSeparateTurn(() => ReplayProjectionWhenSubscribed(key, @namespace, attempt + 1), delay);
+                return;
+            }
+
+            logger.ObserverNeverResubscribed(key.ProjectionId, @namespace);
+            await AddReplayRecommendation(key, @namespace, State);
+            return;
+        }
+
+        logger.AutoReplayingProjection(key.ProjectionId, @namespace);
         await observer.Replay();
+    }
+
+    async Task<bool> ObserverIsSubscribedWithCurrentEventTypes(IObserver observer, EventStoreNamespaceName @namespace)
+    {
+        if (State.SubscribesToAllEvents)
+        {
+            return true;
+        }
+
+        // Compared by id: the observer is subscribed with the delivery-specific generations of the registered
+        // definition, while this grain's projection always resolves compatibility generations.
+        var expected = (await GetOrCreateProjectionForNamespace(@namespace)).EventTypes.Select(_ => _.Id).ToHashSet();
+        var subscribed = (await observer.GetDefinition()).EventTypes.Select(_ => _.Id).ToHashSet();
+        return expected.SetEquals(subscribed);
     }
 
     async Task AddReplayRecommendation(

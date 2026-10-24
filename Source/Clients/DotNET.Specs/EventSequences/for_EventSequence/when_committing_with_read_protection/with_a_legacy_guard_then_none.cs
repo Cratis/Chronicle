@@ -14,7 +14,7 @@ public class with_a_legacy_guard_then_none : given.a_trusted_commit
         _unit.AddEvent(EventSequenceId.Log, "source", "second", Causation.Unknown(), concurrencyScope: ConcurrencyScope.None);
     }
 
-    async Task Because() => _error = await Catch.Exception(() => Commit());
+    async Task Because() => _error = await Catch.Exception(Commit);
 
     [Fact] void should_refuse_weakening_the_guard() => _error.ShouldBeOfExactType<DuplicateConcurrencyScopeForEventSourceId>();
     [Fact] void should_not_send_the_request() => _request.ShouldBeNull();
