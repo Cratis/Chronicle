@@ -78,7 +78,7 @@ public abstract class and_the_key_is_composite<THarness> : given.an_accumulating
 
     static void ShouldBeTheKey(object? key)
     {
-        var parts = (key as IDictionary<string, object?>)!;
+        var parts = key as IDictionary<string, object?>;
         parts.ShouldNotBeNull();
         Convert.ToString(parts["first"], CultureInfo.InvariantCulture).ShouldEqual(First);
         Convert.ToString(parts["second"], CultureInfo.InvariantCulture).ShouldEqual("42");
