@@ -11,6 +11,13 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// <param name="type">The command type.</param>
 public class CommandDefinition(Type type)
 {
+    /// <summary>
+    /// Arc turns a returned validation result into the command result's validation errors rather than a response value.
+    /// It is matched by name because the command's assembly is loaded in an isolated context, where Arc's type is not the
+    /// generator's own.
+    /// </summary>
+    const string ValidationResultTypeName = "Cratis.Arc.Validation.ValidationResult";
+
     /// <summary>Gets the command type.</summary>
     public Type Type { get; } = type;
 
@@ -85,6 +92,6 @@ public class CommandDefinition(Type type)
             returnType = returnType.GetGenericArguments()[0];
         }
 
-        return returnType == typeof(void) ? null : returnType;
+        return returnType == typeof(void) || returnType.FullName == ValidationResultTypeName ? null : returnType;
     }
 }
