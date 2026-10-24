@@ -18,7 +18,7 @@ static class ProtocolVersionOrder
     /// <returns>Whether the version can be used to establish ordering on connect.</returns>
     public static bool IsKnown(string version) =>
         !string.IsNullOrWhiteSpace(version) &&
-        version is not ("1.0.0" or "1.0.0.0") &&
+        Core(version) is not ("1.0.0" or "1.0.0.0") &&
         Version.TryParse(Core(version), out var parsed) && parsed.Build >= 0;
 
     /// <summary>

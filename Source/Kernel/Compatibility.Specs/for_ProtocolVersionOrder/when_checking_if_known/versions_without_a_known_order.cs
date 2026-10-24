@@ -8,7 +8,7 @@ public class versions_without_a_known_order : Specification
     string[] _versions;
     string[] _knownVersions;
 
-    void Establish() => _versions = [null!, string.Empty, "   ", "1.0.0", "1.0.0.0", "garbage", "19.109", "19.109.invalid"];
+    void Establish() => _versions = [null!, string.Empty, "   ", "1.0.0", "1.0.0.0", "1.0.0+abc123", "1.0.0-local", "garbage", "19.109", "19.109.invalid"];
 
     void Because() => _knownVersions = [.. _versions.Where(ProtocolVersionOrder.IsKnown)];
 
