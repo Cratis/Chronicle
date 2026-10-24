@@ -14,7 +14,7 @@ import { ordinaryProjects, ordinaryFilter, inventory } from './mixed-specs-selec
 // Preserve the existing import surface for contract consumers.
 export { runProcess } from './mixed-specs-process.mjs';
 export { parseXml, validateTrx, validateCoverage } from './mixed-specs-results.mjs';
-export { v3Projects, shippingProjects, ordinaryFilter, validateSelection, inventory } from './mixed-specs-selection.mjs';
+export { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, validateSelection, inventory } from './mixed-specs-selection.mjs';
 const fail = message => { throw new Error(message); };
 
 // dotnet-coverage documents ONE child command string. Quote each argument for
@@ -54,7 +54,7 @@ export async function main(args = process.argv.slice(2), { root = process.cwd(),
     const filters = [...settings.matchAll(/<TestCaseFilter>([^<]+)<\/TestCaseFilter>/g)];
     if (timeouts.length !== 1 || filters.length !== 1 || Number(timeouts[0][1]) <= 0) fail('Unsupported runsettings: expected one deadline and filter');
     const filter = `(${ordinaryFilter})&(${decode(filters[0][1])})`;
-    const infos = await inventory(root, execute); // All 30 tests + 2 shipping consumers, before launching any test.
+    const infos = await inventory(root, execute); // All 31 spec projects + 3 shipping packages, before launching any test.
     await mkdir(path.join(root, 'coverage-results'), { recursive: true });
     const output = await mkdtemp(path.join(root, 'coverage-results', 'mixed-'));
     for (const info of ordinaryProjects(infos)) {

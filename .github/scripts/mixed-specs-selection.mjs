@@ -19,7 +19,14 @@ export const v3Projects = [
     ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
     ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'SqlClustering'].map(x => `Integration/${x}`)
 ].map(project);
-export const shippingProjects = ['Source/Clients/Testing', 'Source/Clients/XUnit.Integration'].map(project);
+// Shipping packages are libraries, not spec runners. Each one declares the xunit generation it ships against:
+// Cratis.Chronicle.Testing has none, XUnit.Integration is the xunit v2 package and XUnit.Integration.v3 the v3 one.
+export const shippingRunners = {
+    [project('Source/Clients/Testing')]: 'none',
+    [project('Source/Clients/XUnit.Integration')]: 'v2',
+    [project('Source/Clients/XUnit.Integration.v3')]: 'v3'
+};
+export const shippingProjects = Object.keys(shippingRunners);
 export const ordinaryFilter = 'FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.';
 const fail = message => { throw new Error(message); };
 
@@ -67,16 +74,16 @@ function packageChecker(projectPath, resolved, runtime) {
     };
 }
 function validateRunnerPackages(projectPath, { ids, resolved, check }) {
-    const needsSpecs = projectPath !== shippingProjects[0];
-    // Every spec project runs on xunit v3. A shipping package may or may not reference xunit
-    // (Cratis.Chronicle.Testing does not); when it does, assets and runtime must still agree.
-    const testProject = !shippingProjects.includes(projectPath);
-    check('xunit.v3.extensibility.core', testProject || resolved.has('xunit.v3.extensibility.core'));
-    check('xunit.extensibility.core', false);
-    check('cratis.specifications.xunit.v3', needsSpecs);
-    check('cratis.specifications.xunit', false);
-    if (ids.includes('cratis.specifications.xunit.v3') !== needsSpecs) fail(`${projectPath}: ambiguous evaluated v3 reference`);
-    if (ids.includes('cratis.specifications.xunit')) fail(`${projectPath}: v2 specifications reference`);
+    // Every spec project runs on xunit v3. A shipping package resolves exactly its declared generation,
+    // never both, and its assets and runtime must agree.
+    const runner = shippingRunners[projectPath] ?? 'v3';
+    const v2 = runner === 'v2', v3 = runner === 'v3';
+    check('xunit.v3.extensibility.core', v3);
+    check('xunit.extensibility.core', v2);
+    check('cratis.specifications.xunit.v3', v3);
+    check('cratis.specifications.xunit', v2);
+    if (ids.includes('cratis.specifications.xunit.v3') !== v3) fail(`${projectPath}: ambiguous evaluated v3 specifications reference`);
+    if (ids.includes('cratis.specifications.xunit') !== v2) fail(`${projectPath}: ambiguous evaluated v2 specifications reference`);
     if (!shippingProjects.includes(projectPath) && !resolved.has('xunit.v3.mtp-off')) fail(`${projectPath}: MTP-off selection missing`);
 }
 export function validateSelection(projectPath, evaluated, assets, deps) {

@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { v3Projects, shippingProjects, ordinaryFilter, childCommand, invocation,
+import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCommand, invocation,
     validateTrx, validateCoverage, validateSelection, parseXml, runProcess, runProject, main } from './run-mixed-specs.mjs';
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
@@ -27,9 +27,11 @@ async function fixture() {
 const trx = (outcome = 'Passed', name = 'Specs.theory(value: &quot;a&amp;b&quot;)') => `<?xml version="1.0"?><TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Results><UnitTestResult testId="case1" testName="${name}" outcome="${outcome}" /></Results><TestDefinitions><UnitTest id="case1"><TestMethod className="Specs.theory" name="case" /></UnitTest></TestDefinitions><ResultSummary><Counters total="1" executed="1" passed="${outcome === 'Passed' ? 1 : 0}" failed="${outcome === 'Failed' ? 1 : 0}" error="0" /></ResultSummary></TestRun>`;
 const coverage = (filename = 'Source/Library/Decision.cs', hits = '1') => `<coverage><packages><package><classes><class filename="${filename}"><lines><line number="1" hits="${hits}" /></lines></class></classes></package></packages></coverage>`;
 function graph(projectPath = v3Projects[0]) {
+    // Mirrors the real references: spec projects and XUnit.Integration.v3 are v3, XUnit.Integration is v2, Testing has none.
     const shipping = shippingProjects.includes(projectPath);
-    const testing = projectPath === shippingProjects[0];
-    const packages = [...(testing ? [] : ['xunit.v3.extensibility.core']), ...(!shipping ? ['xunit.v3.mtp-off'] : []), ...(testing ? [] : ['cratis.specifications.xunit.v3'])];
+    const runner = shippingRunners[projectPath] ?? 'v3';
+    const runnerPackages = { none: [], v2: ['xunit.extensibility.core', 'cratis.specifications.xunit'], v3: ['xunit.v3.extensibility.core', 'cratis.specifications.xunit.v3'] }[runner];
+    const packages = [...runnerPackages, ...(!shipping ? ['xunit.v3.mtp-off'] : [])];
     const libraries = Object.fromEntries(packages.map(id => [`${id}/1.2.3`, { type: 'package' }]));
     return {
         evaluated: { Properties: { IsTestProject: String(!shipping), OutputType: shipping ? 'Library' : 'Exe', TargetFramework: 'net10.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
@@ -37,10 +39,10 @@ function graph(projectPath = v3Projects[0]) {
     };
 }
 
-test('exact 31 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
+test('exact 31 executable v3 + 3 shipping boundary, not a Storage prefix heuristic', () => {
     assert.equal(v3Projects.length, 31);
-    assert.equal(shippingProjects.length, 2);
-    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 33);
+    assert.deepEqual(Object.values(shippingRunners), ['none', 'v2', 'v3']);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 34);
     assert.ok(v3Projects.includes(benchmarkProject));
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
     assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 6);
@@ -55,15 +57,24 @@ test('exact 31 executable v3 + 2 shipping boundary, not a Storage prefix heurist
     }
 });
 
-test('xunit is required for spec projects and optional but consistent for shipping packages', () => {
-    const [testing, integration] = shippingProjects;
-    const plain = graph(testing);
-    assert.equal(validateSelection(testing, plain.evaluated, plain.assets, plain.deps).project, testing);
-    const withXunit = graph(integration);
-    assert.equal(validateSelection(integration, withXunit.evaluated, withXunit.assets, withXunit.deps).project, integration);
+test('spec projects need xunit v3 and each shipping package resolves exactly its declared generation', () => {
+    const [testing, integration, integrationV3] = shippingProjects;
+    for (const p of shippingProjects) {
+        const g = graph(p);
+        assert.equal(validateSelection(p, g.evaluated, g.assets, g.deps).project, p);
+    }
     const halfXunit = graph(testing);
     halfXunit.assets.libraries['xunit.v3.extensibility.core/1.2.3'] = { type: 'package' };
     assert.throws(() => validateSelection(testing, halfXunit.evaluated, halfXunit.assets, halfXunit.deps), /resolved\/runtime mismatch for xunit.v3.extensibility.core/);
+    const bothGenerations = graph(integration);
+    for (const libraries of [bothGenerations.assets.libraries, bothGenerations.deps.libraries]) libraries['xunit.v3.extensibility.core/1.2.3'] = { type: 'package' };
+    assert.throws(() => validateSelection(integration, bothGenerations.evaluated, bothGenerations.assets, bothGenerations.deps), /mismatch for xunit.v3.extensibility.core/);
+    const v2InV3Package = graph(integrationV3);
+    for (const libraries of [v2InV3Package.assets.libraries, v2InV3Package.deps.libraries]) libraries['xunit.extensibility.core/2.9.3'] = { type: 'package' };
+    assert.throws(() => validateSelection(integrationV3, v2InV3Package.evaluated, v2InV3Package.assets, v2InV3Package.deps), /mismatch for xunit.extensibility.core/);
+    const missingV2Specs = graph(integration);
+    missingV2Specs.evaluated.Items.PackageReference = missingV2Specs.evaluated.Items.PackageReference.filter(x => x.Identity !== 'cratis.specifications.xunit');
+    assert.throws(() => validateSelection(integration, missingV2Specs.evaluated, missingV2Specs.assets, missingV2Specs.deps), /v2 specifications reference/);
     const missingRunner = graph(v3Projects[0]);
     for (const libraries of [missingRunner.assets.libraries, missingRunner.deps.libraries]) delete libraries['xunit.v3.extensibility.core/1.2.3'];
     missingRunner.evaluated.Items.PackageReference = missingRunner.evaluated.Items.PackageReference.filter(x => x.Identity !== 'xunit.v3.extensibility.core');
@@ -196,7 +207,7 @@ test('MOCK stale results are rejected before launch', async () => {
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
 });
 
-test('MOCK whole ordinary dispatch validates all 33, launches 24 once, keeps SQL/integration separate', async () => {
+test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL/integration separate', async () => {
     const { root } = await fixture();
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
@@ -218,7 +229,7 @@ test('MOCK whole ordinary dispatch validates all 33, launches 24 once, keeps SQL
             await writeFile(assets, JSON.stringify(g.assets));
             return { code: 0, stdout: JSON.stringify(g.evaluated) };
         }
-        assert.equal(queried.length, 33, 'validate every selection before any child');
+        assert.equal(queried.length, 34, 'validate every selection before any child');
         launched.push(args);
         assert.equal(options.timeout, 1234);
         const directory = path.dirname(args[8]);
