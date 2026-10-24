@@ -77,6 +77,8 @@ Chronicle uses MongoDB transactions, and its observers, projections, and observa
 Aspire's `builder.AddMongoDB("mongo")` starts a **standalone** `mongod`, so it does not work as Chronicle storage on its own — point `WithMongoDB` at a replica set instead.
 :::
 
+The development image still bundles MongoDB, and `WithMongoDB` does not change that. `WithMongoDB` sets `Cratis__Chronicle__Storage__Type` to `MongoDB`, and the image's entrypoint starts its embedded single-node replica set whenever the storage type is `MongoDB` (the default), so in run mode the bundled `mongod` starts next to your external one and Chronicle does not use it. A SQL storage type skips it. To run the development image without the bundled `mongod`, select `latest-development-slim` with `WithImageTag("latest-development-slim")`. Only the slim tag and the production tag lack an embedded MongoDB.
+
 `mongo` can be any `IResourceBuilder<IResourceWithConnectionString>` that resolves to a replica set, including:
 
 - A MongoDB Atlas connection string (`builder.AddConnectionString("...")`) — Atlas clusters are always replica sets.
@@ -149,7 +151,7 @@ Chronicle exposes the following ports:
 |-------|---------------|--------------------------------------------|
 | 35000 | `grpc`        | Primary Chronicle service — gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) |
 
-The `grpc` endpoint is registered automatically when you call `AddCratisChronicle()`. `ChronicleResource` no longer exposes a separate `management` endpoint — everything is served on the single `grpc` endpoint.
+The `grpc` endpoint is registered automatically when you call `AddCratisChronicle()`. `ChronicleResource` no longer exposes a separate `management` endpoint — everything is served on the single `grpc` endpoint. An AppHost that pins a `management` endpoint, or an older sample that does, is wiring a port the resource does not register; remove it and use `chronicle.GrpcEndpoint` or the resource's connection string.
 
 ## Complete Example
 
