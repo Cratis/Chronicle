@@ -176,7 +176,7 @@ If every tenant shares the one database, drop the `ConnectionResolution` lines a
 ## See also
 
 - [Production deployment](production.md)
-- [Host the kernel on Azure Container Apps and App Service](azure-container-hosting.md)
+- [Host the kernel on Container Apps, App Service or Cloud Run](azure-container-hosting.md)
 - [Storage](configuration/storage.mdx)
 - [Storage connection resolution](configuration/storage-connection-resolution.md)
 - [Health endpoint](configuration/health-endpoint.md)
