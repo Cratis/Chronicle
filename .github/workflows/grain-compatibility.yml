@@ -27,6 +27,7 @@ on:
 env:
   DOTNET_VERSION: "10.0.x"
   CONTRACTS_PATH: Source/Kernel/Core/OrleansContracts.txt
+  PAYLOAD_CONTRACTS_PATH: Source/Kernel/Core/GrainPayloadContracts.txt
 
 jobs:
   grain-compatibility:
@@ -127,6 +128,31 @@ jobs:
       - name: Build the comparison
         if: steps.baseline.outputs.skip == 'false'
         run: dotnet build Source/Tools/GrainCompatibility/GrainCompatibility.csproj -c Release
+
+      - name: Build the payload inventory specs
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet build Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release -p:CratisProxiesOutputPath=
+
+      - name: Check the payload inventory matches Core
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet test Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release --no-build --settings specs.runsettings
+
+      - name: Compare payload contracts with the baseline release
+        if: steps.baseline.outputs.skip == 'false'
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "$TAG:$PAYLOAD_CONTRACTS_PATH" 2>/dev/null; then
+            echo "::notice title=Payload compatibility baseline not yet available::$TAG predates the payload snapshot. This gate starts comparing with the first release that carries it."
+            exit 0
+          fi
+
+          PAYLOAD_BASELINE="$RUNNER_TEMP/grain-compatibility/GrainPayloadContracts.txt"
+          git show "$TAG:$PAYLOAD_CONTRACTS_PATH" > "$PAYLOAD_BASELINE"
+          dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release -- \
+            --payload-baseline "$PAYLOAD_BASELINE" --payload-current "$PAYLOAD_CONTRACTS_PATH" \
+            --baseline-name "$TAG" --github
 
       # A gate that stopped detecting breaks would pass every change. This plants each kind of break and fails
       # unless every one is still found.
