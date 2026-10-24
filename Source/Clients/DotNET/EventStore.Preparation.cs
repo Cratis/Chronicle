@@ -76,15 +76,22 @@ public partial class EventStore
         _storeArtifacts?.Prepare();
 
         // Finalize identities before schema, migration, source, constraint or observer construction.
+        if (_nominatesClientObservers && !ClientObserverHosting.IsAvailable(Connection))
+        {
+            throw new ClientObserversRequireKeepAlive(_nominatedObserverKind ?? "Reactor", _nominatedObserverId ?? "(nominated)");
+        }
+
+        // Reads and constraint violation messages depend on local discovery of everything except client-hosted observers.
+        var discoverObservers = _registrationMode == RegistrationMode.Inline;
         await EventTypes.Discover();
         await EventSources.Discover();
         await Task.WhenAll(
             Constraints.Discover(),
-            Reactors.Discover(),
+            discoverObservers ? Reactors.Discover() : Task.CompletedTask,
             Reducers.Discover(),
             Projections.Discover(),
-            Seeding.Discover(),
-            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+            discoverObservers ? Seeding.Discover() : Task.CompletedTask,
+            discoverObservers && Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
         var report = BuildDiscoveryReport();
         if (report is not null)
         {

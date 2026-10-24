@@ -73,6 +73,10 @@ public partial class EventStore : IEventStore
     readonly ArtifactIdentityDriftDetector? _identityDriftDetector;
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     readonly bool _autoDiscoverAndRegister;
+    readonly RegistrationMode _registrationMode;
+    readonly bool _nominatesClientObservers;
+    readonly string? _nominatedObserverKind;
+    readonly string? _nominatedObserverId;
     readonly StoreClientArtifactsProvider? _storeArtifacts;
     SingleFlightRegistration? _registerAllFlight;
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
@@ -139,7 +143,20 @@ public partial class EventStore : IEventStore
         DecisionReadJsonOptions = jsonSerializerOptions;
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
         _preparation = new(PublishLocalPreparationFailure);
+        _registrationMode = options.Value.RegistrationMode;
         var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
+        var nominatedType = explicitSnapshot.Types.FirstOrDefault(_ => _.Kind is ExplicitArtifactKind.Reactor or ExplicitArtifactKind.Reducer);
+        _nominatesClientObservers = !explicitSnapshot.Reactors.IsEmpty || nominatedType is not null;
+        if (!explicitSnapshot.Reactors.IsEmpty)
+        {
+            _nominatedObserverKind = "Reactor";
+            _nominatedObserverId = explicitSnapshot.Reactors[0].Id.Value;
+        }
+        else if (nominatedType is not null)
+        {
+            _nominatedObserverKind = nominatedType.Kind == ExplicitArtifactKind.Reactor ? "Reactor" : "Reducer";
+            _nominatedObserverId = nominatedType.Type.FullName ?? nominatedType.Type.Name;
+        }
         _storeArtifacts = new(clientArtifactsProvider, explicitSnapshot);
         clientArtifactsProvider = _storeArtifacts;
         _clientArtifactsProvider = clientArtifactsProvider;
@@ -766,8 +783,30 @@ public partial class EventStore : IEventStore
     {
         Preparation.VerifyRegistrationLease();
 
+        // Another process of the application registered the artifacts at deployment time.
+        if (_registrationMode == RegistrationMode.AtDeployment)
+        {
+            return;
+        }
+
         // Ensure the event store exists before registering artifacts.
         await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
+
+        if (_registrationMode == RegistrationMode.EventTypesOnly)
+        {
+            await registerEventTypes();
+            return;
+        }
+
+        var hostsClientObservers = ClientObserverHosting.IsAvailable(Connection);
+        if (!hostsClientObservers)
+        {
+            var skipped = _clientArtifactsProvider.Reactors.Count() + _clientArtifactsProvider.Reducers.Count();
+            if (skipped > 0)
+            {
+                _logger.ClientObserversNotRegistered(skipped);
+            }
+        }
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
@@ -779,16 +818,19 @@ public partial class EventStore : IEventStore
         // seeded events arrive at the kernel before observers are registered
         await Task.WhenAll(
             Constraints.Register(),
-            Reactors.Register(),
-            Reducers.Register(),
+            hostsClientObservers ? Reactors.Register() : Task.CompletedTask,
+            hostsClientObservers ? Reducers.Register() : Task.CompletedTask,
             Projections.Register(),
-            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
+            hostsClientObservers && Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
 
-        // Auto-subscribe to any external event stores referenced by observers
-        await RegisterExternalEventStoreSubscriptionsAsync();
+        if (hostsClientObservers)
+        {
+            // Auto-subscribe to any external event stores referenced by observers
+            await RegisterExternalEventStoreSubscriptionsAsync();
 
-        // Start watching read models for any registered read model reactors
-        ReadModelReactors.Start();
+            // Start watching read models for any registered read model reactors
+            ReadModelReactors.Start();
+        }
 
         // Seed events only after all observers are registered
         if (Seeding is EventSeeding nativeSeeding)

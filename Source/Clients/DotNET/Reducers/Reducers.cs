@@ -470,6 +470,7 @@ public partial class Reducers : IReducers
 
     void RegisterReducer(IReducerHandler handler)
     {
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {
             GenerationDeliveryValidation.Validate(handler.EventTypes);

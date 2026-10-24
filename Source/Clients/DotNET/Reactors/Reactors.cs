@@ -554,6 +554,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     void RegisterReactor(ReactorRegistration registration)
     {
         var handler = registration.Handler;
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {
             GenerationDeliveryValidation.Validate(handler.EventTypes);

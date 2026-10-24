@@ -39,6 +39,7 @@ dotnet add package Cratis.Chronicle.AspNetCore
 ## .NET-specific pages
 
 - [Health checks](./health-checks.md)
+- [Short-lived processes](./short-lived-processes.md)
 - [Explicit artifact registration](./explicit-artifacts)
 - [Console quickstart](/chronicle/get-started/console/)
 - [ASP.NET Core hosting](/chronicle/get-started/aspnetcore/)

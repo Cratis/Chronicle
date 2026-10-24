@@ -29,6 +29,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
+    const string SkipKeepAliveKey = "skipKeepAlive";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -289,6 +290,20 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether to skip the keep-alive connection on connect.
+    /// </summary>
+    /// <remarks>
+    /// Skipping keep-alive avoids the long-lived keep-alive stream and its watchdog, which suits short-lived
+    /// processes such as command line tools, functions and jobs. A client that skips keep-alive cannot host
+    /// reactors or reducers, as the kernel has no live connection to deliver events on.
+    /// </remarks>
+    public bool SkipKeepAlive
+    {
+        get => ContainsKey(SkipKeepAliveKey) && Convert.ToBoolean(this[SkipKeepAliveKey]);
+        set => this[SkipKeepAliveKey] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the load balancer strategy to use when multiple servers are available.
     /// </summary>
     public string? LoadBalancer
@@ -410,6 +425,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipCompatibilityCheck=true");
         }
 
+        if (SkipKeepAlive)
+        {
+            queryParams.Add("skipKeepAlive=true");
+        }
+
         if (ContainsKey(LoadBalancerKey))
         {
             queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
@@ -444,6 +464,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != ApiKeyKey &&
                 keyStr != SkipTlsValidationKey &&
                 keyStr != SkipCompatibilityCheckKey &&
+                keyStr != SkipKeepAliveKey &&
                 keyStr != LoadBalancerKey &&
                 keyStr != SrvNameServerKey &&
                 keyStr != CertificatePathKey &&
