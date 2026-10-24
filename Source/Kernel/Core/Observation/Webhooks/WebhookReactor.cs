@@ -113,6 +113,19 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
     }
 
     /// <summary>
+    /// Handles managed identity authorization being set for a webhook.
+    /// </summary>
+    /// <param name="event">The authorization configuration.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task ManagedIdentityAuthorizationSet(ManagedIdentityAuthorizationSetForWebhook @event, EventContext eventContext)
+    {
+        var webhookId = new WebhookId(eventContext.EventSourceId.Value);
+        var manager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
+        await manager.SetAuthorization(webhookId, new ManagedIdentityAuthorization(@event.ClientId, @event.Scope));
+    }
+
+    /// <summary>
     /// Handles event types being set for a webhook.
     /// </summary>
     /// <param name="event">The event containing the event types.</param>

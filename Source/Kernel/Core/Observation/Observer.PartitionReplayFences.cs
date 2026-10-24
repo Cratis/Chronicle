@@ -108,10 +108,29 @@ public partial class Observer
         }
     }
 
-    async Task RollBackPartitionReplayFence(Key partition, bool addedFence)
+    /// <summary>
+    /// Releases the replay marker a replay request added when its job could not be started.
+    /// </summary>
+    /// <remarks>
+    /// When no job owns a marker this call added, the untouched partition goes back to catch-up from the captured bound,
+    /// as a refused replay does; the release is idempotent with the refusal notification a refused job sends itself.
+    /// A marker another replay already held stays with that replay. If a replay job for the partition is known to be
+    /// still unfinished, the marker stays with it and reconciliation hands it off once the job concludes.
+    /// </remarks>
+    /// <param name="partition">The partition the replay was requested for.</param>
+    /// <param name="heldBackFrom">The first event held back from live delivery for the replay.</param>
+    /// <param name="addedFence">Whether this request added the marker.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task ReleaseUnstartedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom, bool addedFence)
     {
         if (!addedFence) return;
-        State.ReplayingPartitions.Remove(partition);
-        await WriteStateAsync();
+        var lookup = await GetPartitionReplayJobs();
+        if (lookup.TryGetResult(out var jobs) && jobs.Any(job => IsUnfinishedPartitionReplay(job, partition)))
+        {
+            await ReconcilePartitionReplayFences();
+            return;
+        }
+
+        await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
     }
 }

@@ -36,6 +36,7 @@ public partial class Observer
     /// <inheritdoc/>
     public void Dispose()
     {
+        _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
         _partitionReplayReconciliationStopped = true;

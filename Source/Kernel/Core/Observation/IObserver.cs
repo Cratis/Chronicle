@@ -396,6 +396,22 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Releases a refused full replay without changing progress or resolving failed partitions.
+    /// </summary>
+    /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedReplay();
+
+    /// <summary>
+    /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
+    /// </summary>
+    /// <param name="partition">The partition whose replay was refused.</param>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <remarks>Does not advance progress or resolve failed partitions. Unknown bounds quarantine the partition; retired, removed and non-replaying partitions are unchanged.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
+
+    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>

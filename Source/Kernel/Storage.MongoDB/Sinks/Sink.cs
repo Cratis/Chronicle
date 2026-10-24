@@ -143,6 +143,7 @@ public partial class Sink(
     volatile bool _isBulkMode;
     volatile CollectionState? _primaryState;
     BulkWindowId? _bulkWindowId;
+    bool _bulkWindowIsReplay;
     bool _bulkWindowHasFailedWrites;
 
     /// <summary>
@@ -700,20 +701,60 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk()
+    public Task BeginBulk() => BeginBulk(isReplay: false);
+
+    Task BeginBulk(bool isReplay)
     {
         _bulkCancellation.Token.ThrowIfCancellationRequested();
+        if (_bulkWindowIsReplay && !isReplay)
+        {
+            collections.AbandonReplay();
+        }
+
         lock (_bulkLock)
         {
-            _isBulkMode = true;
-            _bulkWindowId = new(Guid.NewGuid());
-            _bulkWindowHasFailedWrites = false;
-            _inFlight.Clear();
-            ClearBulkOperations();
+            OpenBulkWindow(isReplay);
         }
 
         ClearBulkState();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task ResumeBulk() => ResumeBulk(isReplay: false);
+
+    Task ResumeBulk(bool isReplay)
+    {
+        _bulkCancellation.Token.ThrowIfCancellationRequested();
+        if (_bulkWindowIsReplay && !isReplay)
+        {
+            collections.AbandonReplay();
+        }
+
+        lock (_bulkLock)
+        {
+            // Preserve queued writes only when they belong to the collection this mode will flush to.
+            var hasOpenWindow = _isBulkMode && _bulkWindowId is not null;
+            if (hasOpenWindow && _bulkWindowIsReplay == isReplay)
+            {
+                return Task.CompletedTask;
+            }
+
+            OpenBulkWindow(isReplay);
+        }
+
+        ClearBulkState();
+        return Task.CompletedTask;
+    }
+
+    void OpenBulkWindow(bool isReplay)
+    {
+        _isBulkMode = true;
+        _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowIsReplay = isReplay;
+        _bulkWindowHasFailedWrites = false;
+        _inFlight.Clear();
+        ClearBulkOperations();
     }
 
     /// <inheritdoc/>
@@ -831,6 +872,7 @@ public partial class Sink(
             {
                 _isBulkMode = false;
                 _bulkWindowId = null;
+                _bulkWindowIsReplay = false;
                 _bulkWindowHasFailedWrites = false;
                 _inFlight.Clear();
                 ClearBulkOperations();
@@ -882,7 +924,7 @@ public partial class Sink(
         // none of them until something rebuilds the sink. Recreating them is exactly what the declaration on the
         // read model is for (#3942).
         await EnsureIndexes();
-        await BeginBulk();
+        await BeginBulk(isReplay: true);
     }
 
     /// <inheritdoc/>
@@ -890,7 +932,7 @@ public partial class Sink(
     {
         await collections.ResumeReplay(context);
         await EnsureIndexes();
-        await BeginBulk();
+        await ResumeBulk(isReplay: true);
     }
 
     /// <inheritdoc/>
@@ -1028,16 +1070,18 @@ public partial class Sink(
 
         foreach (var indexDefinition in readModel.Indexes)
         {
-            var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
+            ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
+            var indexName = ReadModelIndexKeys.Name(indexDefinition);
+            var keys = ReadModelIndexKeys.For(indexDefinition);
 
-            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, indexDefinition.PropertyPath.Path));
+            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
             if (await IsIndexPresent(candidates, indexName, collation))
             {
                 continue;
             }
 
             var indexModel = new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending(indexDefinition.PropertyPath.Path),
+                keys,
                 new CreateIndexOptions { Name = indexName, Background = true });
 
             await collection.Indexes.CreateOneAsync(indexModel);
@@ -1218,8 +1262,8 @@ public partial class Sink(
             static (_, current, incoming) => Math.Max(current, incoming),
             eventSequenceNumber);
 
-    static bool HasMatchingKeyAndOptions(BsonDocument index, string propertyPath) =>
-        index.GetValue("key", BsonNull.Value).Equals(new BsonDocument(propertyPath, 1)) &&
+    static bool HasMatchingKeyAndOptions(BsonDocument index, BsonDocument keys) =>
+        index.GetValue("key", BsonNull.Value).Equals(keys) &&
         index.GetValue("unique", false) == false &&
         index.GetValue("prepareUnique", false) == false &&
         index.GetValue("sparse", false) == false &&

@@ -6,7 +6,6 @@ using System.Dynamic;
 using System.Globalization;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -78,22 +77,7 @@ public partial class InMemorySink(
     {
         if (key.Value is ExpandoObject expandoKey)
         {
-            // Each part is length-prefixed so that a separator inside a value cannot make two
-            // different composite keys produce the same storage key.
-            var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key, StringComparer.Ordinal))
-            {
-                if (value is null)
-                {
-                    stringBuilder.Append('~');
-                    continue;
-                }
-
-                var part = value.ToString() ?? string.Empty;
-                stringBuilder.Append(part.Length).Append(':').Append(part);
-            }
-
-            return stringBuilder.ToString();
+            return CompositeKeyEncoding.Encode(expandoKey);
         }
 
         if (_keyTargetType is not null)

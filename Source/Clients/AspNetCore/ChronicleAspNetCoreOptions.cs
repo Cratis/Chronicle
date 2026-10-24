@@ -37,4 +37,9 @@ public class ChronicleAspNetCoreOptions : Cratis.Chronicle.ChronicleClientOption
     /// </summary>
     [Required]
     public string NamespaceHttpHeader { get; set; } = "x-cratis-tenant-id";
+
+    /// <summary>
+    /// Gets the settings for the request unit of work.
+    /// </summary>
+    public ChronicleUnitOfWorkOptions UnitOfWork { get; } = new();
 }

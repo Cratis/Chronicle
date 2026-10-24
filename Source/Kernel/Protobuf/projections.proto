@@ -74,6 +74,11 @@ message IEnumerable_ProjectionWithDeclaration {
 }
 message IndexDefinition {
    string PropertyPath = 1;
+   repeated IndexProperty Properties = 2;
+}
+message IndexProperty {
+   string Path = 1;
+   bool Descending = 2;
 }
 message JoinDefinition {
    string On = 1;

@@ -378,7 +378,8 @@ jobs:
 
   specs-sql:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
+    timeout-minutes: 45
     needs: [dotnet-build]
     strategy:
       fail-fast: false
