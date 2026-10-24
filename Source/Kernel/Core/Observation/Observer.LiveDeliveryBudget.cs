@@ -75,14 +75,14 @@ public partial class Observer
             await WriteStateAsync();
             var startResult = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
                 new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
-            if (startResult is not null && startResult.TryGetResult(out _))
+            if (startResult?.TryGetResult(out _) is true)
             {
                 Skips.JobStarted(partition);
                 return true;
             }
 
             // A refused start leaves no job to deliver the batch, so it is delivered live instead.
-            var error = startResult is not null && startResult.TryGetError(out var startError) ? startError : default;
+            var error = startResult?.TryGetError(out var startError) is true ? startError : default;
             LogLiveBatchHandOverRefused(logger, partition, error);
             State.CatchingUpPartitions.Remove(partition);
             await WriteStateAsync();
