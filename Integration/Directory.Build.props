@@ -2,6 +2,11 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
+        <!-- Match Source's Specifications 5 type-discovery and incremental cancellation-token migration settings. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
         <IsPackable>false</IsPackable>
         <ImplicitUsings>true</ImplicitUsings>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -13,21 +18,21 @@
 
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\Testing\Testing.csproj" />
-        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration\XUnit.Integration.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration.v3\XUnit.Integration.v3.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Infrastructure\Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Cratis.Fundamentals" />
-        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.v3.mtp-off" />
         <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="Cratis.Specifications.XUnit.v3" />
         <PackageReference Include="System.Private.Uri" />
     </ItemGroup>
 

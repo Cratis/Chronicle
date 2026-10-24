@@ -3,8 +3,9 @@
         <AssemblyName>Cratis.Chronicle.Storage.InMemory.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.InMemory</RootNamespace>
         <IsTestProject>true</IsTestProject>
-        <!-- Referenced by the xUnit v2 Integration projects, so this spec family stays on xUnit v2. -->
-        <UseXunitV2>true</UseXunitV2>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
