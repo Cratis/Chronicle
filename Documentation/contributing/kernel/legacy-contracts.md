@@ -42,6 +42,14 @@ Completed owner issues remain valid for runnable rows. Closed-as-not-planned or 
 
 The tool exits `0` for the active mode's passing policy, `1` for a policy failure, and `2` when it cannot evaluate. Malformed inputs, missing TRX files, missing job results, and failed issue lookups must never become green results. Job skipping cannot excuse absent or failing test proofs.
 
+## Before publishing
+
+Both a release-labelled merge and a manual `workflow_dispatch` publish run a structural ledger gate before the `release` job can create a tag or release. It fetches owner issue states and evaluates ownership and row status without downloading TRX artifacts or rerunning spec jobs. Runnable rows with valid open or completed owners pass structurally; their executable proofs remain the responsibility of the PR-time Legacy Contracts job.
+
+The gate uses the manifest's `enforcement`: pending rows warn in `report` mode and block tagging in `release` mode. Unowned and stale-pending rows fail in either mode; unavailable or invalid inputs, including an empty matrix, cannot pass. The PR cutting the first generation minor changes enforcement to `release`. CODEOWNERS requests maintainer review for ledger changes; required status checks remain a repository-owner setting.
+
+Run this check locally with `--manifest .github/legacy-contracts.json --issues issues.json --structural`, optionally adding `--mode release` to exercise strict enforcement. It reports row counts and does not certify executable compatibility proofs.
+
 ## Wire a pending row
 
 1. Keep its issue numbers in `owners`. Use real Chronicle issues, never pull request numbers. The evaluator consumes their current state, completion reason, and pull-request marker.
@@ -69,4 +77,4 @@ dotnet run --project Source/Tools/LegacyContracts -c Release -- \
 
 The evaluator reports each row's verdict, test count, planted-proof count, and reason. Add `--github` for annotations and the step summary. `--mode release` evaluates strict policy locally without changing the manifest; it fails while pending or skipped rows remain. This increment leaves the committed policy in report mode.
 
-For a manual GitHub run, supply a build run ID containing the specs artifacts and that run's upstream jobs JSON. Use matching source and results; a manual run without those artifacts cannot evaluate compatibility. Publish wiring, review ownership, and required-check policy are outside this increment.
+For a manual GitHub run, supply a build run ID containing the specs artifacts and that run's upstream jobs JSON. Use matching source and results; a manual run without those artifacts cannot evaluate compatibility. The structural publish gate above needs only the manifest and issue states; configuring required checks is a separate repository-owner action.

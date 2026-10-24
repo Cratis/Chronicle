@@ -74,7 +74,67 @@ permissions:
   id-token: write
 
 jobs:
+  # Check the ledger before release-action can create a tag, including manual publishes.
+  legacy-contracts:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build the matrix evaluator
+        run: |
+          set -euo pipefail
+          dotnet build Source/Tools/LegacyContracts/LegacyContracts.csproj --configuration Release
+
+      - name: Prove the matrix evaluator rejects planted failures
+        run: |
+          set -euo pipefail
+          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll --self-test
+
+      - name: Fetch owner issue states
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p legacy-contract-inputs
+          jq -er '[.rows[].owners[]] | unique | .[]' .github/legacy-contracts.json > legacy-contract-inputs/owners.txt
+          : > legacy-contract-inputs/issues.ndjson
+          while IFS= read -r number; do
+            gh api "repos/$REPOSITORY/issues/$number" > legacy-contract-inputs/issue.json
+            jq -e --argjson number "$number" '
+              select(.number == $number and (.state == "open" or .state == "closed")) |
+              {number, state: (.state | ascii_upcase),
+               stateReason: (if .state_reason == null then null else (.state_reason | ascii_upcase) end),
+               isPullRequest: has("pull_request")}
+            ' legacy-contract-inputs/issue.json >> legacy-contract-inputs/issues.ndjson
+          done < legacy-contract-inputs/owners.txt
+          jq -s '.' legacy-contract-inputs/issues.ndjson > legacy-contract-inputs/issues.json
+
+      - name: Evaluate the ledger before tagging
+        run: |
+          set -euo pipefail
+          dotnet Source/Tools/LegacyContracts/bin/Release/net10.0/LegacyContracts.dll \
+            --manifest .github/legacy-contracts.json \
+            --issues legacy-contract-inputs/issues.json \
+            --structural \
+            --github
+
   release:
+    needs: [legacy-contracts]
     # A pull request closed without merging has nothing to release. Skipping early also keeps those runs from
     # doing any work at all, on top of the concurrency key above keeping them out of each other's way.
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true

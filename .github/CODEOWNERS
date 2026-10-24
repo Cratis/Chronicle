@@ -61,6 +61,8 @@
 
 # The contracts that decide all of the above. Weakening the hot-core list, the gate, or this file
 # should cost the same review as changing the code they protect.
+# The legacy contract ledger controls the pre-tag publish barrier.
+/.github/legacy-contracts.json @Cratis/core
 /.github/CODEOWNERS @Cratis/core
 /.github/hot-core-paths.txt @Cratis/core
 /.github/workflows/hot-core-gate.yml @Cratis/core
