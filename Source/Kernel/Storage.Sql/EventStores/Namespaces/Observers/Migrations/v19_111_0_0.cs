@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.Migratio
 /// Adds nullable durable partition replay completions without changing legacy rows.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_110_0_0)}")]
-public class v19_110_0_0 : Migration
+[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_111_0_0)}")]
+public class v19_111_0_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)
