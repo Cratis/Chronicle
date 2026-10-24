@@ -81,6 +81,29 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    static IJobsManager CreateJobsManager()
+    {
+        var jobsManager = Substitute.For<IJobsManager>();
+        jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<ReplayObserverPartitionRequest>())
+            .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
+        return jobsManager;
+    }
+
+    static IJobStorage CreateJobStorage()
+    {
+        var jobStorage = Substitute.For<IJobStorage>();
+        jobStorage.GetJobs<IReplayObserverPartition, JobState>()
+            .Returns(Task.FromResult<Catch<IImmutableList<JobState>, Cratis.Orleans.Storage.Jobs.JobError>>(ImmutableList<JobState>.Empty));
+
+        // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
+        jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        {
+            Id = call.Arg<JobId>(),
+            Status = JobStatus.Running
+        }));
+        return jobStorage;
+    }
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -128,7 +151,7 @@ public class an_observer : Specification
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
-        _jobsManager = Substitute.For<IJobsManager>();
+        _jobsManager = CreateJobsManager();
         _observerAlerts = Substitute.For<IObserverAlerts>();
         ApplyAlertReports();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -169,14 +192,8 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
         _eventStoreNamespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequenceStorage);
 
-        // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
-        _jobStorage = Substitute.For<IJobStorage>();
+        _jobStorage = CreateJobStorage();
         _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
-        {
-            Id = call.Arg<JobId>(),
-            Status = JobStatus.Running
-        }));
         _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.

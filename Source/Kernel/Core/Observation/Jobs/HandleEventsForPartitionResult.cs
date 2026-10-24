@@ -13,6 +13,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEventSequenceNumber)
 {
     /// <summary>
+    /// Gets whether a partition replay took ownership of the remaining catch-up work.
+    /// </summary>
+    public bool FencedByPartitionReplay { get; init; }
+
+    /// <summary>
     /// Gets the durable deferral when this step stopped without completing delivery.
     /// </summary>
     public PartitionDeferral? Deferral { get; init; }

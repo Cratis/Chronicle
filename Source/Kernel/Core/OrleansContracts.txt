@@ -224,6 +224,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   056816D9: HasFailedPartitions() -> Task<bool>
   2155BE82: IsCatchUpBackedOff() -> Task<bool>
   C6C2E50F: IsObserverQuarantined() -> Task<bool>
+  596AC3D7: IsPartitionFenced(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Orleans.Jobs.JobId) -> Task<bool>
   D7377A80: IsPreparingCatchup() -> Task<bool>
   4ADEF14F: IsSubscribed() -> Task<bool>
   01607419: IsSubscriptionEstablished() -> Task<bool>
@@ -237,6 +238,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   8B2111ED: PartitionReplayPartiallyCompleted(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   9AC9A52B: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   C0602201: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[]) -> Task
+  3F09E59E: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[], Cratis.Orleans.Jobs.JobId) -> Task
   0A60681D: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[]) -> Task
   5ECFAFDB: PartitionsFailed(System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition>) -> Task
   A1B6D3B8: ReconcileSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, bool, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task

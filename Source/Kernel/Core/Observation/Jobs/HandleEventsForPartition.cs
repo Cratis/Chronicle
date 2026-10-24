@@ -236,7 +236,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
+                if (await IsDeliveryClosed(currentState))
                 {
                     return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
                 }
@@ -248,6 +248,7 @@ public class HandleEventsForPartition(
                         TransientRetryDelay,
                         timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
                         cancellationToken);
+                if (IsFencedDelivery(handleEventsResult)) return FencedResult(lastSuccessfullyHandledEventSequenceNumber, lastScannedEventSequenceNumber);
                 if (_subscriber is IWebhookObserverSubscriber && cancellationToken.IsCancellationRequested)
                 {
                     LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
@@ -270,7 +271,7 @@ public class HandleEventsForPartition(
                 }
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
                 {
-                    var (eventObserverResult, handledEvents) = handledEventsResult;
+                    var (eventObserverResult, handledEvents, _) = handledEventsResult;
                     if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
                     {
                         handledCount = events.Current.Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
@@ -495,6 +496,12 @@ public class HandleEventsForPartition(
         return count == filtered.Length ? filtered : filtered[..count];
     }
 
+    static bool IsFencedDelivery(Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents, bool Fenced), None> delivery) =>
+        delivery.TryGetResult(out var batch) && batch.Fenced;
+
+    static JobStepResult FencedResult(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned) =>
+        JobStepResult.Succeeded(CreateResult(lastHandled) with { LastScannedEventSequenceNumber = lastScanned, FencedByPartitionReplay = true });
+
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
@@ -542,6 +549,14 @@ public class HandleEventsForPartition(
         return true;
     }
 
+    async Task<bool> IsDeliveryClosed(HandleEventsForPartitionState state) =>
+        (state.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) &&
+        !await _observer.CanResumeFailedPartition(state.Partition, state.EpisodeId, state.DeferralId);
+
+    async Task<bool> IsPartitionReplayFenced(HandleEventsForPartitionState state) =>
+        state.EventObservationState != EventObservationState.Replay && _subscriber is not IWebhookObserverSubscriber &&
+        await _observer.IsPartitionFenced(state.Partition, JobId);
+
     JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
         JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
@@ -567,7 +582,7 @@ public class HandleEventsForPartition(
         }
     }
 
-    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
+    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents, bool Fenced), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
         ObserverSubscriberContext subscriberContext,
@@ -584,11 +599,15 @@ public class HandleEventsForPartition(
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
+                if (await IsPartitionReplayFenced(state))
+                {
+                    return (default!, [], true);
+                }
                 subscriberContext = subscriberContext.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
                 _deliveryFence = AbandonedDeliveryDrain.Capture(_deliverySubscription, state.Partition, _deliveryTarget, subscriberContext);
                 var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
                 var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
-                return (result, decryptedEvents);
+                return (result, decryptedEvents, false);
             }
 
             logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);

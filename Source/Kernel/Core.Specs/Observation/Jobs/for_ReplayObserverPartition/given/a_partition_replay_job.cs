@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserverPartition.given;
 
 public class a_partition_replay_job : Specification
 {
+    protected readonly JobId _jobId = JobId.New();
     protected TestKitSilo _silo = new();
     protected TestableReplayObserverPartition _job;
     protected IObserver _observer;
@@ -69,6 +70,6 @@ public class a_partition_replay_job : Specification
         _silo.AddProbe(_ => _observer);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(typeof(TestableReplayObserverPartition).FullName!);
-        _job = await _silo.CreateGrainAsync<TestableReplayObserverPartition>(Guid.Parse("55555555-5555-5555-5555-555555555555"), new JobKey("event-store", "namespace"));
+        _job = await _silo.CreateGrainAsync<TestableReplayObserverPartition>(_jobId.Value, new JobKey("event-store", "namespace"));
     }
 }

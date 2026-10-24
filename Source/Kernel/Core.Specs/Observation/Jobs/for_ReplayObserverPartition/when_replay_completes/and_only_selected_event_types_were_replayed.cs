@@ -23,5 +23,5 @@ public class and_only_selected_event_types_were_replayed : given.a_partition_rep
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_report_partition_replay_as_not_proven_complete() => _observer.Received(1).PartitionReplayed((Key)"some-partition", _lastHandled, Arg.Any<EventSequenceNumber>(), Arg.Is<EventType[]>(_ => _.Length == 0));
+    [Fact] void should_report_partition_replay_as_not_proven_complete() => _observer.Received(1).PartitionReplayed((Key)"some-partition", _lastHandled, Arg.Any<EventSequenceNumber>(), Arg.Is<EventType[]>(_ => _.Length == 0), _jobId);
 }

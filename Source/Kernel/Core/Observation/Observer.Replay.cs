@@ -84,18 +84,18 @@ public partial class Observer
         CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, []);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, EventSequenceNumber.Unavailable);
+        CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, replayedEventTypes);
 
     /// <inheritdoc/>
-    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
+    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, []);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
+        CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, replayedEventTypes);
 
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
@@ -185,6 +185,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
+        State.CatchingUpPartitions.Remove(partition);
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -247,15 +248,28 @@ public partial class Observer
         {
             await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
         }
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
-        {
-            ReplaysAllEventTypes = !retainOtherCounts,
-            ReaderScope = ReaderScope
-        });
-
-        State.ReplayingPartitions.Add(partition);
-        Skips.JobStarted(partition);
+        var addedFence = State.ReplayingPartitions.Add(partition);
         await WriteStateAsync();
+        try
+        {
+            var started = await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
+            {
+                ReplaysAllEventTypes = !retainOtherCounts,
+                ReaderScope = ReaderScope
+            });
+            if (started.IsSuccess)
+            {
+                Skips.JobStarted(partition);
+                return;
+            }
+        }
+        catch
+        {
+            await RollBackPartitionReplayFence(partition, addedFence);
+            throw;
+        }
+
+        await RollBackPartitionReplayFence(partition, addedFence);
     }
 
     async Task<bool> TransitionToReplayIfNeeded(int recovery)

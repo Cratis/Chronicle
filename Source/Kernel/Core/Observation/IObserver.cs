@@ -441,6 +441,25 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes);
 
     /// <summary>
+    /// Notify that an identified partition replay finished before its job status is persisted.
+    /// </summary>
+    /// <param name="partition">The replayed partition.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
+    /// <param name="lastScannedEventSequenceNumber">The last event read by the replay.</param>
+    /// <param name="replayedEventTypes">The event types proved handled by the replay.</param>
+    /// <param name="jobId">The completing replay job.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes, JobId jobId);
+
+    /// <summary>
+    /// Checks whether a partition is fenced by a partition replay before delivering a batch.
+    /// </summary>
+    /// <param name="partition">The partition to check.</param>
+    /// <param name="ownJob">The job requesting delivery, excluded from the replay job lookup.</param>
+    /// <returns>Whether delivery must stop until the partition replay finishes.</returns>
+    Task<bool> IsPartitionFenced(Key partition, JobId ownJob);
+
+    /// <summary>
     /// Notify that the partition has failed.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>

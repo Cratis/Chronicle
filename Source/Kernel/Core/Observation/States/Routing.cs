@@ -98,9 +98,9 @@ public class Routing(
 
         logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _nextUnhandledEventSequenceNumber);
 
-        // We should not be having any partitions to catch up or replay at this point, routing will figure out if we need to catch up the observer
+        // Routing figures out whether catch-up is needed, but partition replay fences belong to their jobs.
+        // Activation reconciles those fences only after a successful job lookup.
         state.CatchingUpPartitions.Clear();
-        state.ReplayingPartitions.Clear();
 
         return await EvaluateState(state);
     }

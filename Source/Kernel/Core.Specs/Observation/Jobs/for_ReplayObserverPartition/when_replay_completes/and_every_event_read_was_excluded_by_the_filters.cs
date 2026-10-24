@@ -27,5 +27,5 @@ public class and_every_event_read_was_excluded_by_the_filters : given.a_partitio
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_complete_the_partition_replay_without_claiming_a_handled_event() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, _lastScanned, Arg.Any<EventType[]>());
+    [Fact] void should_complete_the_partition_replay_without_claiming_a_handled_event() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, _lastScanned, Arg.Any<EventType[]>(), _jobId);
 }

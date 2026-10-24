@@ -41,6 +41,11 @@ public class JobStateWithLastHandledEvent : JobState
     public bool HandledAllEvents { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a partition replay owns the remaining catch-up work.
+    /// </summary>
+    public bool FencedByPartitionReplay { get; set; }
+
+    /// <summary>
     /// Gets or sets the per-partition replay steps and their successfully handled watermarks.
     /// </summary>
     public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
@@ -94,6 +99,8 @@ public class JobStateWithLastHandledEvent : JobState
         {
             return;
         }
+
+        FencedByPartitionReplay |= handleEventsResult.FencedByPartitionReplay;
 
         // Completion is the step's own status, independent of whether the handled watermark moves: a resumed step
         // that finds everything left excluded by filters completes with the watermark it already had.

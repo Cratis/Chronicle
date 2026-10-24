@@ -21,6 +21,10 @@ public class CatchUpObserverPartition(
     protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
+
+        // Replay completion releases the marker and decides whether a successor is needed. Reporting catch-up
+        // here could start another fenced job, or clear a successor's marker if replay has already completed.
+        if (State.FencedByPartitionReplay) return;
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
         {
