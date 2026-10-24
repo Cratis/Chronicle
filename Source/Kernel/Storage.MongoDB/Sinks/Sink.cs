@@ -47,7 +47,7 @@ public partial class Sink(
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
     ILogger<Sink> logger,
-    ISinkWrites writes) : ISink, IDisposable
+    ISinkWrites writes) : ISink, ISinkCompositeKeyLookup, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class writing without a fence.
@@ -186,13 +186,20 @@ public partial class Sink(
 
     /// <inheritdoc/>
     /// <exception cref="ReadModelPrimaryIsChanging">Promotion prevents a reliable answer; the caller can retry.</exception>
-    public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
+    public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key) => WithPrimaryRetry(async () =>
+    {
+        var documents = await ReadPrimary(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)), 0);
+        var instance = documents.SingleOrDefault();
+        return instance is null ? null : expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
+    });
+
+    async Task<T> WithPrimaryRetry<T>(Func<Task<T>> read)
     {
         for (var attempt = 0; ; attempt++)
         {
             try
             {
-                return await ReadPrimaryOrDefault(key);
+                return await read();
             }
             catch (ReadModelPrimaryIsChanging)
             {
@@ -208,7 +215,7 @@ public partial class Sink(
         }
     }
 
-    async Task<ExpandoObject?> ReadPrimaryOrDefault(Key key)
+    async Task<IReadOnlyList<BsonDocument>> ReadPrimary(FilterDefinition<BsonDocument> filter, int limit)
     {
         var collection = collections.GetCollection(readModel.ContainerName);
 
@@ -216,11 +223,11 @@ public partial class Sink(
         // which must still detect a primary created, removed or replaced while the read was in flight.
         var before = _primaryState ??= await GetPrimaryState(collection.Database);
 
-        using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
-        var instance = result.SingleOrDefault();
-        if (instance is not null)
+        using var result = await collection.FindAsync(filter, new FindOptions<BsonDocument, BsonDocument> { Limit = limit == 0 ? null : limit });
+        var documents = await result.ToListAsync();
+        if (documents.Count > 0)
         {
-            return expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
+            return documents;
         }
 
         var after = await GetPrimaryState(collection.Database);
@@ -229,7 +236,7 @@ public partial class Sink(
             throw new ReadModelPrimaryIsChanging(readModel.ContainerName);
         }
 
-        return null;
+        return [];
     }
 
     async Task<CollectionState> GetPrimaryState(IMongoDatabase database)
