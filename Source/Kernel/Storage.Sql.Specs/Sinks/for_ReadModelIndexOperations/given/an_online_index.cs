@@ -18,8 +18,13 @@ public abstract class an_online_index : Specification
 {
     protected readonly Commands _commands = new();
     protected ISqlSinkHarness _harness;
+    protected bool _existsAfterEnsure;
+    protected bool _existsAfterRepeatedEnsure;
+    protected bool _existsAfterDrop;
 
     protected abstract ISqlSinkHarness CreateHarness();
+
+    protected abstract Task<bool> IndexExistsInCatalog(ReadModelDbContext context);
 
     void Establish()
     {
@@ -39,8 +44,11 @@ public abstract class an_online_index : Specification
         await context.EnsureTableExists();
         const string Name = "chronicle_shx_online_shadows_value";
         await ReadModelIndexOperations.Ensure(context, (context.TableName, "value"), Name, online: true);
+        _existsAfterEnsure = await IndexExistsInCatalog(context);
         await ReadModelIndexOperations.Ensure(context, (context.TableName, "value"), Name, online: true);
+        _existsAfterRepeatedEnsure = await IndexExistsInCatalog(context);
         await ReadModelIndexOperations.Drop(context, context.TableName, Name, online: true);
+        _existsAfterDrop = await IndexExistsInCatalog(context);
     }
 
     void Destroy() => _harness.Dispose();
