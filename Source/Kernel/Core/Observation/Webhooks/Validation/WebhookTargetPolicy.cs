@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Net.Sockets;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
@@ -138,7 +139,7 @@ public class WebhookTargetPolicy(
         {
             addresses = await resolver.Resolve(target.DnsSafeHost, cancellationToken);
         }
-        catch (System.Net.Sockets.SocketException)
+        catch (SocketException exception) when (exception.SocketErrorCode is not (SocketError.TryAgain or SocketError.TimedOut))
         {
             return Decision("Webhook target host could not be resolved.");
         }
