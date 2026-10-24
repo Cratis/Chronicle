@@ -18,7 +18,9 @@ public sealed class SqlServerFixture : IAsyncLifetime
     const int Port = 1433;
     const int DatabaseInUse = 3702;
     const string Password = "Chronicle4476!Test";
+#pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
+#pragma warning restore CA2213
     SqlCommandTimings? _commandTimings;
 
     internal IntegrationTimings Timings { get; } = new(nameof(SqlServerFixture), "sql-specs", "mssql");
@@ -74,7 +76,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
             .WithEnvironment("ACCEPT_EULA", "Y")
@@ -88,7 +90,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
