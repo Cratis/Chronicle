@@ -66,20 +66,35 @@ public class a_root_join : Specification
             {"type":"object","properties":{"id":{"type":"string","format":"guid"},"joinValue":{"type":"string"},"name":{"type":"string"}}}
             """);
         var readModel = new ReadModelDefinition(
-            "test-model", "test-model", "test-model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []);
+            "test-model",
+            "test-model",
+            "test-model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
+            []);
         var definition = new ProjectionDefinition(
-            ProjectionOwner.Client, EventSequenceId.Log, "test-projection", "test-model", true, true, new(),
+            ProjectionOwner.Client,
+            EventSequenceId.Log,
+            "test-projection",
+            "test-model",
+            true,
+            true,
+            new(),
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>
             {
                 [_joinedEventType] = new("joinValue", new Dictionary<PropertyPath, string> { ["name"] = "name" }, JoinKey),
                 [new EventType("OtherJoined", EventTypeGeneration.First)] = new("joinValue", new Dictionary<PropertyPath, string> { ["name"] = "name" }, JoinKey)
             },
-            new Dictionary<PropertyPath, ChildrenDefinition>(), [],
+            new Dictionary<PropertyPath, ChildrenDefinition>(),
+            [],
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-            new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>(),
+            new Dictionary<EventType, RemovedWithDefinition>(),
+            new Dictionary<EventType, RemovedWithJoinDefinition>(),
             AutoMap: AutoMap.Disabled);
         _projection = await factory.Create(eventStore, @namespace, definition, readModel, []);
         _sink = new InMemorySink(readModel, formats);

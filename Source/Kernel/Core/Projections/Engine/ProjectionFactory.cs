@@ -1183,7 +1183,7 @@ public class ProjectionFactory(
             return keyResolvers.FromEventSourceId;
         }
 
-        return keyResolvers.FromEventValueProvider(EventValueProviders.EventContent(key));
+        return keyResolvers.FromEventValueProvider(new EventContentExpressionResolver().Resolve(key));
     }
 
     void WarnUnsupportedRootJoinKey(Projection projection, ProjectionDefinition definition)
@@ -1192,14 +1192,14 @@ public class ProjectionFactory(
         {
             logger.UnsupportedRootJoinKey(projection.Identifier.Value, key.Value);
         }
-    }
 
-    static PropertyExpression? FindUnsupportedRootJoinKey(ProjectionDefinition definition)
-    {
-        var unsupportedKey = definition.Join.Values.Select(join => join.Key).FirstOrDefault(key =>
-            !string.IsNullOrEmpty(key.Value) && key != WellKnownExpressions.EventSourceId &&
-            !new EventContentExpressionResolver().CanResolve(key));
-        return unsupportedKey ?? definition.Nested?.Values.Select(FindUnsupportedRootJoinKey).FirstOrDefault(key => key is not null);
+        static PropertyExpression? FindUnsupportedRootJoinKey(ProjectionDefinition definition)
+        {
+            var unsupportedKey = definition.Join.Values.Select(join => join.Key).FirstOrDefault(key =>
+                !string.IsNullOrEmpty(key.Value) && key != WellKnownExpressions.EventSourceId &&
+                !new EventContentExpressionResolver().CanResolve(key));
+            return unsupportedKey ?? definition.Nested?.Values.Select(FindUnsupportedRootJoinKey).FirstOrDefault(key => key is not null);
+        }
     }
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolver(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)
