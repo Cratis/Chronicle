@@ -14,12 +14,14 @@ public class when_kernel_exits : Cratis.Specifications.Specification
         await using var owner = new OwnedFixture();
         owner.Construct();
         using var client = OwnedFixture.Client();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await client.Containers.PauseContainerAsync(owner.Kernel.Id, timeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
         Task? reset = null;
         Task? native = null;
         try
         {
+            using var pauseTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var pause = client.Containers.PauseContainerAsync(owner.Kernel.Id, pauseTimeout.Token);
+            ObserveDelayedFault(pause);
+            await pause.WaitAsync(TimeSpan.FromSeconds(15));
             var state = await client.Containers.InspectContainerAsync(owner.Kernel.Id).WaitAsync(TimeSpan.FromSeconds(10));
             state.State.Paused.ShouldBeTrue();
             reset = owner.Fixture!.ResetForLifecycleProofAsync();
@@ -68,20 +70,53 @@ public class when_kernel_exits : Cratis.Specifications.Specification
 
     static async Task KillAndUnpause(DockerClient client, string id)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var kill = client.Containers.KillContainerAsync(id, new ContainerKillParameters { Signal = "SIGKILL" }, timeout.Token);
+        using var killTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Task? kill = null;
         try
         {
-            await client.Containers.UnpauseContainerAsync(id, timeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
+            try
+            {
+                kill = client.Containers.KillContainerAsync(id, new ContainerKillParameters { Signal = "SIGKILL" }, killTimeout.Token);
+                ObserveDelayedFault(kill);
+            }
+            finally
+            {
+                // Recovery has its own token even when pause completion or kill issuance is ambiguous.
+                await UnpauseOwnedContainer(client, id);
+            }
+        }
+        finally
+        {
+            if (kill is not null) await kill.WaitAsync(TimeSpan.FromSeconds(15));
+        }
+        using var exitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var exit = await client.Containers.WaitContainerAsync(id, exitTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
+        exit.StatusCode.ShouldNotEqual(0);
+    }
+
+    static async Task UnpauseOwnedContainer(DockerClient client, string id)
+    {
+        using var unpauseTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            await client.Containers.UnpauseContainerAsync(id, unpauseTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
         }
         catch (DockerApiException)
         {
             // A completed kill may already have unpaused and stopped this same owned container.
-            var state = await client.Containers.InspectContainerAsync(id).WaitAsync(TimeSpan.FromSeconds(10));
+            using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
             state.State.Running.ShouldBeFalse();
         }
-        await kill.WaitAsync(TimeSpan.FromSeconds(15));
-        var exit = await client.Containers.WaitContainerAsync(id, timeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
-        exit.StatusCode.ShouldNotEqual(0);
     }
+
+    /// <summary>
+    /// Observes native faults that may arrive after a watchdog expires; a watchdog only bounds the wait.
+    /// </summary>
+    /// <param name="operation">The native operation to observe.</param>
+    static void ObserveDelayedFault(Task operation) => _ = operation.ContinueWith(
+        completed => _ = completed.Exception,
+        CancellationToken.None,
+        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+        TaskScheduler.Default);
 }
