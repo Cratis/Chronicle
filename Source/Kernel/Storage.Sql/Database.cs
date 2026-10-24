@@ -17,6 +17,8 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
@@ -81,6 +83,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    readonly Lazy<ILogger> _liveQueryLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(LiveQuery).FullName!));
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
     readonly DatabaseNameResolver _databaseNames = new(
         SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
@@ -107,6 +110,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// Gets whether runtime schema operations are read-only.
     /// </summary>
     internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    /// <summary>
+    /// Gets the logger for live-query polling diagnostics.
+    /// </summary>
+    internal ILogger LiveQueryLogger => _liveQueryLogger.Value;
 
     bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
 
