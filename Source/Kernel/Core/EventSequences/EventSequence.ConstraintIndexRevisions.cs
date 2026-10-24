@@ -32,10 +32,23 @@ public partial class EventSequence
 
         foreach (var definition in affected)
         {
+            // Revisions extend closing coverage into history, even when activation started at the tail.
+            if (definition is ClosesStreamConstraintDefinition && _closingCoverageStarts.TryGetValue(definition.Name, out var start) && position < start)
+            {
+                _closingCoverageStarts[definition.Name] = position;
+            }
             MarkConstraintIndexPending(definition.Name, position);
         }
         UpdateConstraintIndexWatermark();
         _constraintIndexReplay = null;
+        if (State.ConstraintIndexCatchUpBelow is not null && affected.Any(definition => _catchUpDefinitionNames.Contains(definition.Name)))
+        {
+            // Both the staged history and the live exclusions may contain the old content. Rebuild them
+            // from storage after the revision rather than letting a later catch-up turn restore old claims.
+            _catchUpReplay = null;
+            _catchUpExcluded.Clear();
+            _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+        }
         await WriteStateAsync();
 
         // Only entries stamped at exactly this position can belong to the old content; anything else was claimed by

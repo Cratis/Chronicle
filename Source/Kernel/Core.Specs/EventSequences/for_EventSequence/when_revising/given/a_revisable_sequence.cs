@@ -28,11 +28,13 @@ public class a_revisable_sequence : for_EventSequence.given.an_event_sequence_wi
     {
         _eventSequenceStorage.GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => _log.GetEventAt(call.ArgAt<EventSequenceNumber>(0)));
         _eventSequenceStorage.Revise(Arg.Any<EventSequenceNumber>(), Arg.Any<EventType>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<IEnumerable<IdentityId>>(), Arg.Any<DateTimeOffset>(), Arg.Any<ExpandoObject>(), Arg.Any<EventHash>())
-            .Returns(_ =>
+            .Returns(call =>
             {
                 _storageRevised = true;
                 _watermarkWhenStorageRevised = _snapshots.Written?.ConstraintIndexWatermark;
-                return _failRevise ? Task.FromException(new for_EventSequence.given.SimulatedStateWriteError()) : Task.CompletedTask;
+                return _failRevise
+                    ? Task.FromException(new for_EventSequence.given.SimulatedStateWriteError())
+                    : _log.Revise(call.ArgAt<EventSequenceNumber>(0), call.ArgAt<EventType>(1), call.ArgAt<CorrelationId>(2), call.ArgAt<IEnumerable<Causation>>(3), call.ArgAt<IEnumerable<IdentityId>>(4), call.ArgAt<DateTimeOffset>(5), call.ArgAt<ExpandoObject>(6), call.ArgAt<EventHash>(7));
             });
         await Seed(0);
         _stateWritesBeforeRevise = _snapshots.Snapshots.Count;
