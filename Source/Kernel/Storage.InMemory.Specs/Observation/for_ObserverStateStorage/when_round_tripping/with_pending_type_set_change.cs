@@ -29,7 +29,7 @@ public class with_pending_type_set_change : Specification
             ],
             PendingChange = new(new(8), _started, new(42), [new("event-b")], [new(_operation, new("event-a"))])
         };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = control }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
         await _storage.Rename("observer", "renamed");
         _renamed = await _storage.Get("renamed");

@@ -37,6 +37,7 @@ public partial class Observer
     public async Task TryRecoverAllFailedPartitions()
     {
         if (IsRetired || _removed) return;
+        await ThrowIfKeyDoesNotOwnDefinition();
 
         await ReconcilePartitionDeferrals();
         _recoveryOfAllFailedPartitionsRequested = true;

@@ -14,9 +14,9 @@ public class with_non_decreasing_revisions(MongoDBFixture fixture) : given.a_per
     async Task Because()
     {
         var updated = _control with { Registrations = [new("$replacement", null, [], EventGenerationDelivery.Pinned)] };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated }, Concepts.EventSequences.EventSequenceId.Log);
         _sameRevision = await _storage.Get("observer");
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated with { Revision = new(8) } });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated with { Revision = new(8) } }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

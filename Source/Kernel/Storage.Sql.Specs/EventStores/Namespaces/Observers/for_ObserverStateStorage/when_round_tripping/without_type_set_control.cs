@@ -14,7 +14,7 @@ public class without_type_set_control : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "legacy-observer" });
+        await _storage.Save(new() { Identifier = "legacy-observer" }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("legacy-observer");
         _missing = await _storage.Get("missing-observer");
         await using var context = CreateContext();
