@@ -16,6 +16,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 internal static partial class SinkLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Composite-key lookup in collection '{Collection}' has {PartCount} parts and requires a collection scan")]
+    internal static partial void CompositeKeyCollectionScan(this ILogger<Sink> logger, string collection, int partCount);
+
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' failed for partition '{Partition}' at operation {OperationIndex}: error {Code} ({Category}): {ErrorMessage}")]
     internal static partial void BulkWriteErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string partition, int operationIndex, int code, ServerErrorCategory category, string errorMessage);
 
