@@ -30,17 +30,19 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
 
             if (json is null)
             {
-                return new ReleaseResponse { HasError = true, Error = "Invalid JSON payload." };
+                return new ReleaseResponse { HasError = true, Error = "Invalid JSON payload.", Strict = request.Strict };
             }
 
-            var released = await schemaMetadataManager.Release(
-                (EventStoreName)request.EventStore,
-                (EventStoreNamespaceName)request.Namespace,
-                schema,
-                request.Subject,
-                json);
-
-            return new ReleaseResponse { Payload = released.ToJsonString() };
+            var released = await ReleaseContent(request, schema, json);
+            return new ReleaseResponse { Payload = released.ToJsonString(), Strict = request.Strict };
+        }
+        catch (SchemaMetadataActionFailed ex) when (request.Strict)
+        {
+            return StrictFailure(request, ex.PropertyPath);
+        }
+        catch (Exception) when (request.Strict)
+        {
+            return StrictFailure(request);
         }
         catch (JsonException ex)
         {
@@ -61,6 +63,23 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     /// <inheritdoc/>
     public Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default) =>
         GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyFor(request.Identifier);
+
+    Task<JsonObject> ReleaseContent(ReleaseRequest request, JsonSchema schema, JsonObject json) =>
+        request.Strict
+            ? schemaMetadataManager.ReleaseStrict((EventStoreName)request.EventStore, (EventStoreNamespaceName)request.Namespace, schema, request.Subject, json)
+            : schemaMetadataManager.Release((EventStoreName)request.EventStore, (EventStoreNamespaceName)request.Namespace, schema, request.Subject, json);
+
+    ReleaseResponse StrictFailure(ReleaseRequest request, string? propertyPath = null)
+    {
+        logger.FailedToReleaseStrictly(request.EventStore, request.Namespace, request.Subject, propertyPath ?? string.Empty);
+        return new ReleaseResponse
+        {
+            HasError = true,
+            Error = "Protected content could not be released.",
+            FailedProperties = propertyPath is null ? [] : [propertyPath],
+            Strict = true
+        };
+    }
 
     IPIIManager GetPIIManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         grainFactory.GetGrain<IPIIManager>(Guid.Empty, new PIIManagerKey(eventStore, @namespace));

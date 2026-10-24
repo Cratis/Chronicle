@@ -12,4 +12,7 @@ internal static partial class ComplianceServiceLogMessages
 {
     [LoggerMessage(LogLevel.Error, "Failed to release compliance for event store '{EventStore}' namespace '{Namespace}' subject '{Subject}'")]
     internal static partial void FailedToRelease(this ILogger<ComplianceService> logger, string eventStore, string @namespace, string subject, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Failed to strictly release compliance for event store '{EventStore}' namespace '{Namespace}' subject '{Subject}' property '{PropertyPath}'")]
+    internal static partial void FailedToReleaseStrictly(this ILogger<ComplianceService> logger, string eventStore, string @namespace, string subject, string propertyPath);
 }

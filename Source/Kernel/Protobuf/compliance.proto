@@ -18,11 +18,14 @@ message ReleaseRequest {
    string Subject = 3;
    string Schema = 4;
    string Payload = 5;
+   bool Strict = 6;
 }
 message ReleaseResponse {
    string Payload = 1;
    bool HasError = 2;
    string Error = 3;
+   repeated string FailedProperties = 4;
+   bool Strict = 5;
 }
 service Compliance {
    rpc AllowNewEncryptionKey (AllowNewEncryptionKeyRequest) returns (.google.protobuf.Empty);
