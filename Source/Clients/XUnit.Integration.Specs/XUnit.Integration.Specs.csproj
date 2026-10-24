@@ -8,5 +8,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../XUnit.Integration/XUnit.Integration.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 </Project>

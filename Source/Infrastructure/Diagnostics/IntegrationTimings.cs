@@ -6,10 +6,11 @@ using System.Text.Json;
 
 namespace Cratis.Chronicle.Diagnostics;
 
-// Internal, opt-in test diagnostics. Never include application data in these records.
+/// <summary>
+/// Internal, opt-in test diagnostics. Never include application data in these records.
+/// </summary>
 internal sealed class IntegrationTimings
 {
-    static readonly bool _enabled = Environment.GetEnvironmentVariable("CHRONICLE_INTEGRATION_TIMINGS") == "1";
     static readonly AsyncLocal<Phase?> _current = new();
     static readonly object _outputLock = new();
     static readonly string _clockDomain = Guid.NewGuid().ToString("N");
@@ -26,11 +27,25 @@ internal sealed class IntegrationTimings
     int _completed;
     bool _outputFailed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntegrationTimings"/> class writing to the process outputs.
+    /// </summary>
+    /// <param name="type">The type being measured.</param>
+    /// <param name="mode">The mode label.</param>
+    /// <param name="provider">The provider label.</param>
     internal IntegrationTimings(string type, string mode = "unavailable", string provider = "unavailable")
-        : this(_enabled ? Write : null, Stopwatch.GetTimestamp, Stopwatch.Frequency, type, (mode, provider))
+        : this(Enabled ? Write : null, Stopwatch.GetTimestamp, Stopwatch.Frequency, type, (mode, provider))
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntegrationTimings"/> class.
+    /// </summary>
+    /// <param name="write">The record writer, or null when not recording.</param>
+    /// <param name="clock">The clock returning timestamps.</param>
+    /// <param name="frequency">The clock frequency in ticks per second.</param>
+    /// <param name="type">The type being measured.</param>
+    /// <param name="labels">The optional mode and provider labels.</param>
     internal IntegrationTimings(Action<string>? write, Func<long> clock, long frequency, string type, (string Mode, string Provider)? labels = null)
     {
         _write = write;
@@ -41,11 +56,48 @@ internal sealed class IntegrationTimings
         _started = write is null ? 0 : clock();
     }
 
-    internal static bool Enabled => _enabled;
-    internal bool IsRecording => _write is not null;
+    /// <summary>
+    /// Gets a value indicating whether timings are enabled for this process.
+    /// </summary>
+    internal static bool Enabled { get; } = Environment.GetEnvironmentVariable("CHRONICLE_INTEGRATION_TIMINGS") == "1";
 
+    /// <summary>
+    /// Gets the ambient phase, if any.
+    /// </summary>
     internal static Phase? CurrentPhase => _current.Value;
 
+    /// <summary>
+    /// Gets a value indicating whether this instance is recording.
+    /// </summary>
+    internal bool IsRecording => _write is not null;
+
+    /// <summary>
+    /// Begins a phase in the ambient phase of the current context.
+    /// </summary>
+    /// <param name="name">The phase name.</param>
+    /// <returns>The phase, or null when not recording.</returns>
+    internal static Phase? BeginCurrent(string name) => _current.Value?.Owner.Begin(name);
+
+    /// <summary>
+    /// Writes an already formatted record, never failing the caller.
+    /// </summary>
+    /// <param name="record">The record to write.</param>
+    internal static void Replay(string record)
+    {
+        if (!Enabled) return;
+        try { Write(record); }
+        catch
+        {
+            try { Console.Error.WriteLine("CHRONICLE_INTEGRATION_TIMING_WARNING kernel replay unavailable; report is incomplete"); }
+            catch { /* Diagnostics cannot replace the fixture outcome. */ }
+        }
+    }
+
+    /// <summary>
+    /// Begins a phase.
+    /// </summary>
+    /// <param name="name">The phase name.</param>
+    /// <returns>The phase, or null when not recording.</returns>
     internal Phase? Begin(string name)
     {
         if (_write is null) return null;
@@ -56,10 +108,21 @@ internal sealed class IntegrationTimings
         return phase;
     }
 
-    internal static Phase? BeginCurrent(string name) => _current.Value?.Owner.Begin(name);
-
+    /// <summary>
+    /// Runs an asynchronous action, measuring it when recording.
+    /// </summary>
+    /// <param name="name">The phase name.</param>
+    /// <param name="action">The action to run.</param>
+    /// <returns>A task representing the action.</returns>
     internal Task Run(string name, Func<Task> action) => _write is null ? action() : RunMeasured(name, action);
 
+    /// <summary>
+    /// Runs a synchronous action, measuring it when recording.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="name">The phase name.</param>
+    /// <param name="action">The action to run.</param>
+    /// <returns>The result of the action.</returns>
     internal T Measure<T>(string name, Func<T> action)
     {
         if (_write is null) return action();
@@ -74,6 +137,48 @@ internal sealed class IntegrationTimings
         {
             phase?.Failure();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Emits the summary record once.
+    /// </summary>
+    internal void Complete()
+    {
+        if (_write is null || Interlocked.Exchange(ref _completed, 1) != 0) return;
+        Emit("CHRONICLE_INTEGRATION_SUMMARY ", null, ("finished", _open == 0 && !_outputFailed ? "complete" : "partial", Elapsed(_started)));
+    }
+
+    /// <summary>
+    /// Emits an aggregate record for a named set of commands.
+    /// </summary>
+    /// <param name="name">The aggregate name.</param>
+    /// <param name="totals">The totals.</param>
+    internal void Aggregate(string name, CommandTotals totals)
+    {
+        if (_write is null) return;
+        using var phase = Phase.CreateDetached(this, name, Interlocked.Increment(ref _sequence), _started);
+        Emit("CHRONICLE_INTEGRATION_TIMING ", phase, (totals.Failures > 0 ? "failure" : "success", totals.Observed ? "complete" : "partial", totals.ElapsedMs), totals);
+    }
+
+    static string Label(string name) => Environment.GetEnvironmentVariable(name) ?? "unavailable";
+
+    static void Write(string record)
+    {
+        lock (_outputLock)
+        {
+            var path = Environment.GetEnvironmentVariable("CHRONICLE_INTEGRATION_TIMINGS_FILE");
+
+            // Write the sidecar first: xUnit may suppress successful-test console output.
+            try
+            {
+                if (!string.IsNullOrEmpty(path)) File.AppendAllText($"{path}.{Environment.ProcessId}.jsonl", record + Environment.NewLine);
+            }
+            finally
+            {
+                // A broken sidecar must not prevent the primary channel from receiving the record.
+                Console.WriteLine(record);
+            }
         }
     }
 
@@ -92,28 +197,12 @@ internal sealed class IntegrationTimings
         }
     }
 
-    internal void Complete()
-    {
-        if (_write is null || Interlocked.Exchange(ref _completed, 1) != 0) return;
-        Emit("CHRONICLE_INTEGRATION_SUMMARY ", null, ("finished", _open == 0 && !_outputFailed ? "complete" : "partial", Elapsed(_started)));
-    }
-
     double Elapsed(long started) => (_clock() - started) * 1000d / _frequency;
-
-    internal readonly record struct CommandTotals(double ElapsedMs, int Count, int Failures, bool Observed);
-
-    internal void Aggregate(string name, CommandTotals totals)
-    {
-        if (_write is null) return;
-        var phase = new Phase(this, name, null, Interlocked.Increment(ref _sequence), _started);
-        Emit("CHRONICLE_INTEGRATION_TIMING ", phase, (totals.Failures > 0 ? "failure" : "success", totals.Observed ? "complete" : "partial", totals.ElapsedMs), totals);
-    }
-
-    static string Label(string name) => Environment.GetEnvironmentVariable(name) ?? "unavailable";
 
     void Emit(string prefix, Phase? phase, (string Outcome, string Completeness, double Elapsed) result, CommandTotals? aggregate = null)
     {
-        phase ??= new Phase(this, "instance", null, Interlocked.Increment(ref _sequence), _started);
+        using var detached = phase is null ? Phase.CreateDetached(this, "instance", Interlocked.Increment(ref _sequence), _started) : null;
+        phase ??= detached!;
         var counts = aggregate ?? new CommandTotals(result.Elapsed, 1, 0, true);
         try
         {
@@ -134,6 +223,7 @@ internal sealed class IntegrationTimings
                 parent = phase.Parent?.Sequence,
                 parentInstance = phase.Parent?.Owner._instance,
                 phase = phase.Name,
+
                 // Process-monotonic coordinates allow union accounting across recorder instances.
                 startMs = phase.Started * 1000d / _frequency,
                 elapsedMs = result.Elapsed,
@@ -152,74 +242,85 @@ internal sealed class IntegrationTimings
         catch
         {
             _outputFailed = true;
+
             // Diagnostics must never replace a test failure, including a broken console/sidecar.
             try { Console.Error.WriteLine("CHRONICLE_INTEGRATION_TIMING_WARNING output unavailable; report is incomplete"); }
             catch { /* The diagnostic channel itself is unavailable; preserve the original outcome. */ }
         }
     }
 
-    internal static void Replay(string record)
-    {
-        if (!_enabled) return;
-        try { Write(record); }
-        catch
-        {
-            try { Console.Error.WriteLine("CHRONICLE_INTEGRATION_TIMING_WARNING kernel replay unavailable; report is incomplete"); }
-            catch { /* Diagnostics cannot replace the fixture outcome. */ }
-        }
-    }
+    /// <summary>
+    /// Represents the totals of a set of observed commands.
+    /// </summary>
+    /// <param name="ElapsedMs">The total elapsed milliseconds.</param>
+    /// <param name="Count">The number of commands.</param>
+    /// <param name="Failures">The number of failed commands.</param>
+    /// <param name="Observed">Whether all commands were observed.</param>
+    internal readonly record struct CommandTotals(double ElapsedMs, int Count, int Failures, bool Observed);
 
-    static void Write(string record)
-    {
-        lock (_outputLock)
-        {
-            var path = Environment.GetEnvironmentVariable("CHRONICLE_INTEGRATION_TIMINGS_FILE");
-            // Write the sidecar first: xUnit may suppress successful-test console output.
-            try
-            {
-                if (!string.IsNullOrEmpty(path)) File.AppendAllText($"{path}.{Environment.ProcessId}.jsonl", record + Environment.NewLine);
-            }
-            finally
-            {
-                // A broken sidecar must not prevent the primary channel from receiving the record.
-                Console.WriteLine(record);
-            }
-        }
-    }
-
+    /// <summary>
+    /// Represents a measured phase, closed when disposed.
+    /// </summary>
+    /// <param name="owner">The owning recorder.</param>
+    /// <param name="name">The phase name.</param>
+    /// <param name="parent">The parent phase, if any.</param>
+    /// <param name="sequence">The sequence number.</param>
+    /// <param name="started">The start timestamp.</param>
     internal sealed class Phase(IntegrationTimings owner, string name, Phase? parent, long sequence, long started) : IDisposable
     {
         string _outcome = "unobserved";
         int _disposed;
-
-        internal IntegrationTimings Owner { get; } = owner;
-        internal string Name { get; } = name;
-        internal Phase? Parent { get; } = parent;
-        internal long Sequence { get; } = sequence;
-        internal long Started { get; } = started;
         int _polls;
         int _retries;
         int _targets;
         int _tables = -1;
 
-        internal int Targets => _targets;
-        internal int? Tables => _tables < 0 ? null : _tables;
-        internal void Target() => Interlocked.Increment(ref _targets);
-        internal void TablesObserved() => Interlocked.CompareExchange(ref _tables, 0, -1);
-        internal void Table() => Interlocked.Increment(ref _tables);
+        /// <summary>
+        /// Gets the owning recorder.
+        /// </summary>
+        internal IntegrationTimings Owner { get; } = owner;
 
+        /// <summary>
+        /// Gets the phase name.
+        /// </summary>
+        internal string Name { get; } = name;
+
+        /// <summary>
+        /// Gets the parent phase.
+        /// </summary>
+        internal Phase? Parent { get; } = parent;
+
+        /// <summary>
+        /// Gets the sequence number.
+        /// </summary>
+        internal long Sequence { get; } = sequence;
+
+        /// <summary>
+        /// Gets the start timestamp.
+        /// </summary>
+        internal long Started { get; } = started;
+
+        /// <summary>
+        /// Gets the number of observed targets.
+        /// </summary>
+        internal int Targets => _targets;
+
+        /// <summary>
+        /// Gets the number of observed tables, or null when not observed.
+        /// </summary>
+        internal int? Tables => _tables < 0 ? null : _tables;
+
+        /// <summary>
+        /// Gets the number of polls.
+        /// </summary>
         internal int Polls => _polls;
+
+        /// <summary>
+        /// Gets the number of retries.
+        /// </summary>
         internal int Retries => _retries;
 
-        internal void Poll() => Interlocked.Increment(ref _polls);
-        internal void Retry() => Interlocked.Increment(ref _retries);
-        internal void Success() => _outcome = "success";
-        internal void SuccessUnlessIncomplete(bool successful, bool timedOut)
-        {
-            if (successful && !timedOut) Success();
-        }
-        internal void Failure() => _outcome = "failure";
-
+        /// <inheritdoc/>
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
@@ -227,5 +328,63 @@ internal sealed class IntegrationTimings
             Interlocked.Decrement(ref Owner._open);
             Owner.Emit("CHRONICLE_INTEGRATION_TIMING ", this, (_outcome, "complete", Owner.Elapsed(Started)));
         }
+
+        /// <summary>
+        /// Creates a phase that is only used to describe a record and never alters the ambient state.
+        /// </summary>
+        /// <param name="owner">The owning recorder.</param>
+        /// <param name="name">The phase name.</param>
+        /// <param name="sequence">The sequence number.</param>
+        /// <param name="started">The start timestamp.</param>
+        /// <returns>The detached phase.</returns>
+        internal static Phase CreateDetached(IntegrationTimings owner, string name, long sequence, long started)
+        {
+            return new Phase(owner, name, null, sequence, started) { _disposed = 1 };
+        }
+
+        /// <summary>
+        /// Records an observed target.
+        /// </summary>
+        internal void Target() => Interlocked.Increment(ref _targets);
+
+        /// <summary>
+        /// Records that tables were observed.
+        /// </summary>
+        internal void TablesObserved() => Interlocked.CompareExchange(ref _tables, 0, -1);
+
+        /// <summary>
+        /// Records an observed table.
+        /// </summary>
+        internal void Table() => Interlocked.Increment(ref _tables);
+
+        /// <summary>
+        /// Records a poll.
+        /// </summary>
+        internal void Poll() => Interlocked.Increment(ref _polls);
+
+        /// <summary>
+        /// Records a retry.
+        /// </summary>
+        internal void Retry() => Interlocked.Increment(ref _retries);
+
+        /// <summary>
+        /// Marks the phase successful.
+        /// </summary>
+        internal void Success() => _outcome = "success";
+
+        /// <summary>
+        /// Marks the phase successful when it completed without timing out.
+        /// </summary>
+        /// <param name="successful">Whether the work succeeded.</param>
+        /// <param name="timedOut">Whether the work timed out.</param>
+        internal void SuccessUnlessIncomplete(bool successful, bool timedOut)
+        {
+            if (successful && !timedOut) Success();
+        }
+
+        /// <summary>
+        /// Marks the phase failed.
+        /// </summary>
+        internal void Failure() => _outcome = "failure";
     }
 }

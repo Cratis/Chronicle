@@ -6,29 +6,53 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
-// Testcontainers streams successful kernel output here; no full container log is buffered.
+/// <summary>
+/// Testcontainers streams successful kernel output here; no full container log is buffered.
+/// </summary>
+/// <param name="write">The writer receiving the timing records.</param>
 internal sealed class IntegrationTimingOutput(Action<string> write) : Stream
 {
     const int MaximumLineBytes = 16384;
+#if NET8_0
+    readonly object _lineLock = new();
+#else
+    readonly Lock _lineLock = new();
+#endif
     readonly byte[] _line = new byte[MaximumLineBytes];
     int _length;
     bool _overflow;
 
-    internal IntegrationTimingOutput() : this(IntegrationTimings.Replay) { }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IntegrationTimingOutput"/> class replaying records to the process outputs.
+    /// </summary>
+    internal IntegrationTimingOutput()
+        : this(IntegrationTimings.Replay)
+    {
+    }
 
+    /// <inheritdoc/>
     public override bool CanRead => false;
+
+    /// <inheritdoc/>
     public override bool CanSeek => false;
+
+    /// <inheritdoc/>
     public override bool CanWrite => true;
+
+    /// <inheritdoc/>
     public override long Length => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public override long Position
     {
         get => throw new NotSupportedException();
         set => throw new NotSupportedException();
     }
 
+    /// <inheritdoc/>
     public override void Write(byte[] buffer, int offset, int count)
     {
-        lock (_line)
+        lock (_lineLock)
         {
             for (var index = offset; index < offset + count; index++)
             {
@@ -36,6 +60,32 @@ internal sealed class IntegrationTimingOutput(Action<string> write) : Stream
             }
         }
     }
+
+    /// <inheritdoc/>
+    public override void Flush()
+    {
+    }
+
+    /// <inheritdoc/>
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public override void SetLength(long value) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) WarnIfUnfinished();
+        base.Dispose(disposing);
+    }
+
+    static bool IsTiming(string line) =>
+        line.StartsWith("CHRONICLE_INTEGRATION_TIMING ", StringComparison.Ordinal) ||
+        line.StartsWith("CHRONICLE_INTEGRATION_SUMMARY ", StringComparison.Ordinal) ||
+        line.StartsWith("CHRONICLE_INTEGRATION_TIMING_WARNING ", StringComparison.Ordinal);
 
     void Append(byte value)
     {
@@ -68,26 +118,10 @@ internal sealed class IntegrationTimingOutput(Action<string> write) : Stream
         _overflow = false;
     }
 
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing) WarnIfUnfinished();
-        base.Dispose(disposing);
-    }
-
     void WarnIfUnfinished()
     {
         if (_length == 0) return;
         if (!IsTiming(Encoding.UTF8.GetString(_line, 0, _length))) return;
         write("CHRONICLE_INTEGRATION_TIMING_WARNING kernel output ended mid-line; report may be incomplete");
     }
-
-    static bool IsTiming(string line) =>
-        line.StartsWith("CHRONICLE_INTEGRATION_TIMING ", StringComparison.Ordinal) ||
-        line.StartsWith("CHRONICLE_INTEGRATION_SUMMARY ", StringComparison.Ordinal) ||
-        line.StartsWith("CHRONICLE_INTEGRATION_TIMING_WARNING ", StringComparison.Ordinal);
-
-    public override void Flush() { }
-    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
 }
