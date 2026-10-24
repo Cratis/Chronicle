@@ -36,10 +36,10 @@ function graph(projectPath = v3Projects[0]) {
     };
 }
 
-test('exact 30 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
-    assert.equal(v3Projects.length, 30);
+test('exact 31 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
+    assert.equal(v3Projects.length, 31);
     assert.equal(shippingProjects.length, 2);
-    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 32);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 33);
     assert.ok(v3Projects.includes(benchmarkProject));
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
     assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 6);
@@ -179,7 +179,7 @@ test('MOCK stale results are rejected before launch', async () => {
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
 });
 
-test('MOCK whole ordinary dispatch validates all 32, launches 23 once, keeps SQL/integration separate', async () => {
+test('MOCK whole ordinary dispatch validates all 33, launches 24 once, keeps SQL/integration separate', async () => {
     const { root } = await fixture();
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
@@ -201,7 +201,7 @@ test('MOCK whole ordinary dispatch validates all 32, launches 23 once, keeps SQL
             await writeFile(assets, JSON.stringify(g.assets));
             return { code: 0, stdout: JSON.stringify(g.evaluated) };
         }
-        assert.equal(queried.length, 32, 'validate every selection before any child');
+        assert.equal(queried.length, 33, 'validate every selection before any child');
         launched.push(args);
         assert.equal(options.timeout, 1234);
         const directory = path.dirname(args[8]);
@@ -215,9 +215,9 @@ test('MOCK whole ordinary dispatch validates all 32, launches 23 once, keeps SQL
     };
     await main([], { root, execute });
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
-    assert.equal(launched.length, 23);
-    assert.equal(launched.filter(args => args[0] === 'tool').length, 23);
-    assert.equal(new Set(launched.map(args => args[8])).size, 23);
+    assert.equal(launched.length, 24);
+    assert.equal(launched.filter(args => args[0] === 'tool').length, 24);
+    assert.equal(new Set(launched.map(args => args[8])).size, 24);
     assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
 });
 

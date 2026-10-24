@@ -359,7 +359,7 @@ jobs:
         run: tar -I zstd -xf build-output-release.tar.zst
 
       # Release artifacts contain bin, not obj. Restore current evaluated package inputs
-      # before comparing all 30 test + 2 shipping selections with the built runtime graph.
+      # before comparing all 31 test + 2 shipping selections with the built runtime graph.
       - name: Add GitHub Package Registry to NuGet
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
