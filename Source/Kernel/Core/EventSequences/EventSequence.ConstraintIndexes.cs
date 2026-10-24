@@ -152,7 +152,7 @@ public partial class EventSequence
     }
 
     bool IsGovernedByPendingIndex(EventTypeId type) => _pendingConstraintIndexes.Keys
-        .Concat(_rebuildingConstraintIndexes.Keys)
+        .Concat(_rebuildingConstraintIndexes.Keys.Where(IsUniqueConstraint))
         .Concat(State.ConstraintIndexCatchUpRefusing ?? [])
         .Concat(_constraintIndexPosition < State.SequenceNumber ? _indexedDefinitions.Keys : [])
         .Any(name =>
