@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reactive.Linq;
@@ -68,6 +70,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
     readonly IReadOnlyList<ProjectedColumn> _columns;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
+    readonly LegacyCompositeKey? _compositeKey;
+    readonly ConcurrentDictionary<string, bool> _reportedKeyRebuildFailures = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -119,6 +123,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
         _columns = ProjectedColumns.ForSchema(_schema, _indexes);
+        _compositeKey = LegacyCompositeKey.For(_schema, _columns.First(c => c.IsKey));
     }
 
     /// <inheritdoc/>
@@ -156,7 +161,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         var id = GetIdString(key);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
-        return entity is null ? null : MaterializeExpando(entity);
+        return entity is null ? null : MaterializeInstance(entity);
     }
 
     /// <inheritdoc/>
@@ -474,7 +479,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
         var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
-        return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
+        return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
     }
 
     /// <inheritdoc/>
@@ -494,7 +499,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         }
 
         return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, ObservedPageComparer.Instance)
-            .Select(pages => pages.Single().Entries.Select(MaterializeExpando).ToArray().AsEnumerable())
+            .Select(pages => pages.Single().Entries.Select(MaterializeInstance).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
                 Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, QueriedTableNameFor(occurrence), error)));
     }
@@ -633,7 +638,11 @@ public partial class Sink : ISink, ICanReconcileIndexes
         return scope.DbContext.Entries.Entry(fresh);
     }
 
-    ExpandoObject MaterializeExpando(DynamicReadModelEntity entity)
+    ExpandoObject MaterializeExpando(DynamicReadModelEntity entity) => Materialize(entity, rebuildCompositeKey: false);
+
+    ExpandoObject MaterializeInstance(DynamicReadModelEntity entity) => Materialize(entity, rebuildCompositeKey: true);
+
+    ExpandoObject Materialize(DynamicReadModelEntity entity, bool rebuildCompositeKey)
     {
         // Build a JsonObject from the row's column values so that the schema-aware
         // IExpandoObjectConverter can reconstitute concept-typed identifiers (e.g. UserId =>
@@ -643,6 +652,11 @@ public partial class Sink : ISink, ICanReconcileIndexes
         // raw column values through JsonSerializer to get a JsonNode-shaped JSON document that
         // matches what the converter expects to parse.
         var dict = ToJsonNodeValues(entity);
+        if (rebuildCompositeKey)
+        {
+            RebuildCompositeKey(dict);
+        }
+
         var json = (JsonObject)JsonSerializer.SerializeToNode(dict, ReadModelDbContext.JsonSerializerOptions)!;
         var result = _expandoObjectConverter.ToExpandoObject(json, _schema);
         var resultDictionary = (IDictionary<string, object?>)result;
@@ -650,6 +664,37 @@ public partial class Sink : ISink, ICanReconcileIndexes
         ReattachSinkOwnedValues(entity, resultDictionary);
 
         return result;
+    }
+
+    void RebuildCompositeKey(Dictionary<string, object?> values)
+    {
+        if (_compositeKey is null)
+        {
+            return;
+        }
+
+        var keyColumn = _columns.First(c => c.IsKey);
+        if (!TryGetStoredId(values, keyColumn.Name, out var storedId))
+        {
+            return;
+        }
+
+        if (_compositeKey.TryRebuild(storedId, out var key, out var reason))
+        {
+            values[keyColumn.Name] = key;
+        }
+        else if (_reportedKeyRebuildFailures.TryAdd(reason, true))
+        {
+            _logger.CompositeKeyNotRebuilt(_tableName, reason);
+        }
+    }
+
+    static bool TryGetStoredId(Dictionary<string, object?> values, string keyColumnName, [NotNullWhen(true)] out string? storedId)
+    {
+        storedId = null;
+        return values.TryGetValue(keyColumnName, out var stored)
+            && stored is JsonValue storedValue
+            && storedValue.TryGetValue(out storedId);
     }
 
     Dictionary<string, object?> ToJsonNodeValues(DynamicReadModelEntity entity)
@@ -786,7 +831,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         if (key.Value is ExpandoObject expandoKey)
         {
             var parts = expandoKey
-                .OrderBy(kv => kv.Key)
+                .OrderBy(kv => kv.Key, LegacyCompositeKey.PartOrder)
                 .Select(kv => kv.Value?.ToString() ?? string.Empty);
             return string.Join('_', parts);
         }
