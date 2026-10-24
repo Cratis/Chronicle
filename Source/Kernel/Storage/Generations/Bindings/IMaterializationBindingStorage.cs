@@ -76,6 +76,18 @@ public interface IMaterializationBindingStorage
     /// <param name="expectedActive">The expectedActive.</param>
     /// <param name="expectedEpoch">The expectedEpoch.</param>
     /// <param name="candidate">The candidate.</param>
+    /// <param name="receipt">The receipt.</param>
+    /// <returns>The recorded storage outcome.</returns>
+    Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt);
+
+    /// <summary>
+    /// Publishes a Following candidate atomically with gate revocation and a durable receipt.
+    /// </summary>
+    /// <param name="store">The store.</param>
+    /// <param name="key">The key.</param>
+    /// <param name="expectedActive">The expectedActive.</param>
+    /// <param name="expectedEpoch">The expectedEpoch.</param>
+    /// <param name="candidate">The candidate.</param>
     /// <param name="rollbackWindow">How long the retired generation remains restorable.</param>
     /// <param name="receipt">The receipt.</param>
     /// <returns>The recorded storage outcome.</returns>

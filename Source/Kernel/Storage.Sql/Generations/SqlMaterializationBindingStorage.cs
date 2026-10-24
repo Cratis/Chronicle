@@ -33,6 +33,10 @@ public sealed class SqlMaterializationBindingStorage : IMaterializationBindingSt
     public Task<GenerationTransitionResult> TryAbandon(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => throw new MaterializationBindingsNotSupported();
 
     /// <inheritdoc/>
+    public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt) =>
+        TryPublish(store, key, expectedActive, expectedEpoch, candidate, TimeSpan.Zero, receipt);
+
+    /// <inheritdoc/>
     public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) => throw new MaterializationBindingsNotSupported();
 
     /// <inheritdoc/>

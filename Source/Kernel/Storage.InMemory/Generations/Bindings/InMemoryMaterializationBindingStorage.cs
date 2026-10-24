@@ -97,6 +97,10 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     public Task<GenerationTransitionResult> TryAbandon(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => Transition(store, key, generation, MaterializationGenerationState.Abandoned);
 
     /// <inheritdoc/>
+    public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt) =>
+        TryPublish(store, key, expectedActive, expectedEpoch, candidate, TimeSpan.Zero, receipt);
+
+    /// <inheritdoc/>
     public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) =>
         Activate(store, new(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, false));
 
