@@ -4,6 +4,8 @@
   href: production.md
 - name: Azure and Entra ID
   href: azure.md
+- name: Azure Container Apps and App Service
+  href: azure-container-hosting.md
 - name: Rolling Deploy
   href: rolling-deploy.md
 - name: Alerting on Observer Failures
