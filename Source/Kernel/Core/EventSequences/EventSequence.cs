@@ -767,12 +767,6 @@ public partial class EventSequence(
         EventSourceName? eventSource,
         EventPublication? publication)
     {
-        using var span = activitySource.Append();
-        span?.Activity?.Tag(_eventSequenceKey.EventStore);
-        span?.Activity?.Tag(_eventSequenceKey.Namespace);
-        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
-        span?.Activity?.Tag(eventType);
-        span?.Activity?.Tag(eventSourceType, eventSourceId);
         AppendedEvent committed;
         try
         {
@@ -1037,6 +1031,7 @@ public partial class EventSequence(
         EventStreamId eventStreamId,
         CorrelationId correlationId)
     {
+        Activity.Current?.RecordFailure(ex);
         if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
         _metrics?.FailedAppending(eventSourceId, eventType.Id);
         logger.ErrorAppending(

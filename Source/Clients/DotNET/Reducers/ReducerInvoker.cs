@@ -127,7 +127,10 @@ public class ReducerInvoker : IReducerInvoker
                             currentModelState,
                             lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ex.GetAllMessages(),
-                            ex.StackTrace ?? string.Empty);
+                            ex.StackTrace ?? string.Empty)
+                {
+                    ErrorType = ex.GetType().FullName
+                };
             }
         }
 
@@ -135,7 +138,8 @@ public class ReducerInvoker : IReducerInvoker
                 currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
-                string.Empty) { DispatchedEvents = dispatched };
+                string.Empty)
+        { DispatchedEvents = dispatched };
     }
 
     /// <summary>

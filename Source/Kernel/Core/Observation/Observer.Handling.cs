@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -96,7 +97,12 @@ public partial class Observer
 
         try
         {
-            await HandleEventsForPartition(partition, events);
+            await HandleEventsForPartition(partition, events, span?.Activity);
+        }
+        catch (Exception ex)
+        {
+            span?.Activity?.RecordFailure(ex);
+            throw;
         }
         finally
         {
@@ -182,6 +188,15 @@ public partial class Observer
             HandledEventCountPerEventType = perEventType
         };
     }
+
+    static string FailureKindCode(FailureKind kind) => kind switch
+    {
+        FailureKind.Handling => "handling",
+        FailureKind.Timeout => "timeout",
+        FailureKind.Disconnected => "disconnected",
+        FailureKind.WaitingForHandler => "waiting_for_handler",
+        _ => "unknown"
+    };
 
     void MergeHandledCounts(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
@@ -377,7 +392,7 @@ public partial class Observer
         }
     }
 
-    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events)
+    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
@@ -442,6 +457,7 @@ public partial class Observer
 
         var failed = false;
         var failureKind = FailureKind.Unknown;
+        Exception? failureException = null;
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -562,6 +578,7 @@ public partial class Observer
                 {
                     failed = true;
                     failureKind = ex.ToFailureKind();
+                    failureException = ex;
                     exceptionMessages = ex.GetAllMessages().ToArray();
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
@@ -580,6 +597,8 @@ public partial class Observer
 
                 if (failed)
                 {
+                    if (failureException is not null) activity?.RecordFailure(failureException);
+                    else activity?.RecordFailure(FailureKindCode(failureKind));
                     await RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
                 }
                 else
@@ -599,6 +618,7 @@ public partial class Observer
             }
             catch (Exception ex)
             {
+                activity?.RecordFailure(ex);
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
             }
         }
