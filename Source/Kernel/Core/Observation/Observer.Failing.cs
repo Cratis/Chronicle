@@ -97,6 +97,7 @@ public partial class Observer
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         await CancelWebhookProbe();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (IsQuarantined)
@@ -124,7 +125,7 @@ public partial class Observer
             {
                 failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
                 failure.Deferral = null;
-                await failures.WriteStateAsync();
+                await WriteFailedPartitions();
                 logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
             }
         }
@@ -141,6 +142,7 @@ public partial class Observer
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         await CancelWebhookProbe();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         FailedPartition? failure;
@@ -162,7 +164,7 @@ public partial class Observer
             logger.ClearingPartitionQuarantine(partition);
             failures.State.ClearQuarantine(partition);
             ChangeAlertState();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
             _metrics?.PartitionQuarantineCleared();
         }
         finally
@@ -189,6 +191,7 @@ public partial class Observer
     public async Task ClearFailedPartitions()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         if (Failures.HasFailedPartitions)
         {
@@ -250,7 +253,8 @@ public partial class Observer
         Guid? deferralId,
         PartitionFailureContext context)
     {
-        if (IsRetired || _removed)
+        // An activation that does not own the definition is not the observer that failed; it records nothing.
+        if (IsRetired || _removed || !KeyOwnsDefinition)
         {
             return;
         }
@@ -339,7 +343,7 @@ public partial class Observer
                 // Fence old reports before the partition write. A crash between the two writes reports whichever
                 // partition level actually committed. Reports alone are coalesced, never these source writes.
                 await WriteStateAsync();
-                await failures.WriteStateAsync();
+                await WriteFailedPartitions();
             }
         }
         finally
@@ -384,7 +388,7 @@ public partial class Observer
             quarantineObserver = ShouldQuarantineObserver(config);
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -427,11 +431,14 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task SaveFailedPartition(Key partition)
     {
-        if (!Failures.TryGet(partition, out var failure))
+        if (!KeyOwnsDefinition || !Failures.TryGet(partition, out var failure))
         {
             return;
         }
 
+        // This bypasses the failed partitions storage provider, so it checks ownership against storage the way the
+        // provider does.
+        await storage.ThrowIfKeyDoesNotOwnStoredDefinition(_observerKey);
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
@@ -474,7 +481,7 @@ public partial class Observer
             State = State with { FailedPartitionCount = 0 };
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -502,7 +509,7 @@ public partial class Observer
 
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
             return true;
         }
         finally
