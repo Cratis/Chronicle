@@ -140,6 +140,16 @@ These counters show suspicions, not proof. A catch-up job may have delivered an 
 
 When one of them increases, see [An observer may have skipped events](/chronicle/troubleshooting/#an-observer-may-have-skipped-events).
 
+### Spills to catch-up
+
+The appended-events queue counts every time it moves an observer from live delivery to catch-up. The instrument has the appended-events queue tags `EventStore`, `Namespace`, `EventSequenceId` and `QueueId`, plus `ObserverId` and `Reason`.
+
+| Instrument | Prometheus name | Counts |
+| --- | --- | --- |
+| `chronicle-appended-events-queue-observers-spilled-to-catchup` | `chronicle_appended_events_queue_observers_spilled_to_catchup_total` | Observers moved from live delivery to catch-up, once per observer and spill. |
+
+`Reason` is `QueueFull` when the queue overflowed, `DispatchFailed` when delivery to the observer failed, and `FragmentedBacklog` when the observer's share of one dispatch would have needed more than 256 sequential per-partition deliveries. Like the failure counters, an observer only has a series once it has been spilled.
+
 ### Open alert incident metrics
 
 Open alert incident metrics are enabled by default. To opt out, set

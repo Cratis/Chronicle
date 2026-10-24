@@ -43,4 +43,10 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Queue was disposed before catch-up could be started for spilled observer {ObserverKey}; it stays behind until it re-subscribes or reactivates")]
     internal static partial void SpillCatchupTriggerAbandonedOnDispose(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
+    [LoggerMessage(LogLevel.Debug, "Live backlog for observer {ObserverKey} spans more than {Limit} partition runs; spilling it to catch-up")]
+    internal static partial void SpillingFragmentedObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int limit);
+
+    [LoggerMessage(LogLevel.Debug, "Observer {ObserverKey} was spilled again while its catch-up was being started; starting catch-up again")]
+    internal static partial void CatchupRequestedAgain(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
 }
