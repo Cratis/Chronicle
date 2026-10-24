@@ -109,7 +109,7 @@ function productionFile(filename) {
     const relative = normalized.startsWith('Source/') ? normalized : normalized.match(/(?:^|\/)Source\/(.+)$/)?.[0].replace(/^\//, '');
     if (!relative) return;
     if (!relative.endsWith('.cs')) return;
-    const excluded = part => part === '..' || /(?:\.Specs$|^Integration$|^given$|^when_|^for_)/.test(part);
+    const excluded = part => ['..', 'obj', 'bin'].includes(part) || /(?:\.Specs$|^Integration$|^given$|^when_|^for_)/.test(part);
     if (!relative.split('/').some(excluded)) return relative;
 }
 export async function validateCoverage(xml, root) {

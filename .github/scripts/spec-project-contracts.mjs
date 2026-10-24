@@ -28,11 +28,14 @@ function evaluatedProject(directory, project) {
     };
 }
 
-test('CI workflows and scripts forbid test-host dispatch without spec-name carve-outs', async () => {
+test('CI workflows, scripts and actions forbid test-host dispatch without spec-name carve-outs', async () => {
     await assertExecutableSpecRunners(root);
     const directory = await fixture();
     await mkdir(path.join(directory, '.github/workflows'), { recursive: true });
     await mkdir(path.join(directory, '.github/scripts'), { recursive: true });
+    await mkdir(path.join(directory, '.github/actions/nested'), { recursive: true });
+    const action = path.join(directory, '.github/actions/nested/action.yml');
+    await writeFile(action, 'runs:\n  using: composite\n  steps: []');
     const workflow = path.join(directory, '.github/workflows/negative.yml');
     const script = path.join(directory, '.github/scripts/negative.sh');
     await writeFile(script, '#!/bin/bash\necho valid');
@@ -43,6 +46,16 @@ test('CI workflows and scripts forbid test-host dispatch without spec-name carve
     await writeFile(workflow, 'run: echo valid');
     await writeFile(script, ['dotnet', '\\\n', 'test'].join(' '));
     await assert.rejects(assertExecutableSpecRunners(directory), /negative.sh:1/);
+    await writeFile(script, '#!/bin/bash\necho valid');
+    await writeFile(action, `runs:\n  using: composite\n  steps:\n    - run: ${['dotnet', 'test', 'Some.Specs.csproj'].join(' ')}\n      shell: bash`);
+    await assert.rejects(assertExecutableSpecRunners(directory), /actions\/nested\/action.yml:4/);
+    await writeFile(action, 'runs:\n  using: composite\n  steps: []');
+    const actionScript = path.join(directory, '.github/actions/nested/runner.py');
+    const command = ['dotnet', 'test'].join(' ');
+    await writeFile(actionScript, `"""Mentions the command ${command} as documentation."""\nimport subprocess\nsubprocess.run('${command}', shell=True)`);
+    await assert.rejects(assertExecutableSpecRunners(directory), /actions\/nested\/runner.py:3/);
+    await writeFile(actionScript, `"""Mentions the command ${command} as documentation."""\nprint('valid')`);
+    await assertExecutableSpecRunners(directory);
 });
 
 test('single project runner preserves filter composition, deadline, coverage and Release evaluation', async () => {

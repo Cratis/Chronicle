@@ -100,9 +100,13 @@ test('TRX preserves escaped theory/display identities and definition linkage', (
 
 test('coverage fails closed for empty/malformed/missing/fixture-only/zero-hit reports', async () => {
     const { root } = await fixture();
+    for (const segment of ['obj', 'bin']) {
+        await mkdir(path.join(root, 'Source/Library', segment, 'Release/net10.0'), { recursive: true });
+        await writeFile(path.join(root, 'Source/Library', segment, 'Release/net10.0/Generated.cs'), '// generated mock source');
+    }
     assert.equal(await validateCoverage(coverage(), root), 'Source/Library/Decision.cs');
     assert.equal(await validateCoverage(coverage('/agent/repo/Source/Library/Decision.cs'), root), 'Source/Library/Decision.cs');
-    for (const bad of ['', '<coverage><packages /></coverage>', '<coverage>', coverage('Source/Library.Specs/Test.cs'), coverage('Integration/Api/Test.cs'), coverage('Source/Library/given/Test.cs'), coverage('Source/Library/Decision.cs', '0'), coverage('Source/../outside.cs'), coverage('Source/Library/Missing.cs')]) await assert.rejects(validateCoverage(bad, root));
+    for (const bad of ['', '<coverage><packages /></coverage>', '<coverage>', coverage('Source/Library.Specs/Test.cs'), coverage('Integration/Api/Test.cs'), coverage('Source/Library/given/Test.cs'), coverage('Source/Library/Decision.cs', '0'), coverage('Source/../outside.cs'), coverage('Source/Library/Missing.cs'), coverage('Source/Library/obj/Release/net10.0/Generated.cs'), coverage('/agent/repo/Source/Library/bin/Release/net10.0/Generated.cs'), coverage('Source\\Library\\obj\\Release\\net10.0\\Generated.cs')]) await assert.rejects(validateCoverage(bad, root));
 });
 
 test('MOCK collector nonzero 37 is exact; missing output cannot rescue or replace it', async () => {
