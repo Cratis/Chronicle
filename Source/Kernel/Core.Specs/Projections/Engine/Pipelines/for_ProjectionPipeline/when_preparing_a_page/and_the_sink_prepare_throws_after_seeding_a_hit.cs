@@ -28,5 +28,5 @@ public class and_the_sink_prepare_throws_after_seeding_a_hit : given.a_page_pipe
 
     [Fact] void should_use_normal_handling_after_the_prepare_failure() => _result.ShouldEqual("root-0:2,root-1:2");
     [Fact] void should_discard_all_partial_sink_preparation() => _sinkReads.ShouldEqual(4);
-    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(2).TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
+    [Fact] void should_discard_prepared_parent_entries() => _storage.Received(4).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
 }

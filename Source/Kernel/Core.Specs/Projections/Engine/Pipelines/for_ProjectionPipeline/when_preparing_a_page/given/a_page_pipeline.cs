@@ -13,7 +13,6 @@ using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.for_ProjectionPipeline.when_preparing_a_page.given;
@@ -28,6 +27,7 @@ public class a_page_pipeline : Specification
     protected IProjection _projection;
     protected AppendedEvent[] _events;
     protected Dictionary<EventSourceId, AppendedEvent> _parents;
+    protected List<AppendedEvent> _additionalParents = [];
     protected Dictionary<string, ExpandoObject> _documents;
     protected Dictionary<string, ExpandoObject> _prepared;
     protected int _sinkReads;
@@ -43,17 +43,15 @@ public class a_page_pipeline : Specification
         _documents = new();
         _prepared = new();
         _parents = new();
-        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)index, $"parent-{index % 2}")).ToArray();
+        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)(10 + index), $"parent-{index % 2}")).ToArray();
         for (var index = 0; index < 2; index++)
         {
-            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)(100 + index), $"root-{index}");
+            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)(1 + index), $"root-{index}");
             _documents[$"root-{index}"] = new ExpandoObject();
             ((IDictionary<string, object?>)_documents[$"root-{index}"])["count"] = 0;
         }
-        _storage.GetLastInstancesOfAny(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(call => Task.FromResult<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>>(call.ArgAt<IEnumerable<EventSourceId>>(0).ToDictionary(source => source, source => new Option<AppendedEvent>(_parents[source]))));
-        _storage.TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(call => Task.FromResult(new Option<AppendedEvent>(_parents[call.Arg<EventSourceId>()])));
+        _storage.GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(ReadParentHistory(call.ArgAt<IEnumerable<EventSourceId>>(0), call.ArgAt<EventSequenceNumber>(2), call.ArgAt<EventSequenceNumber>(3))));
         ConfigureSink();
         ConfigureProjection();
         _pipeline = CreatePipeline();
@@ -78,6 +76,16 @@ public class a_page_pipeline : Specification
         foreach (var @event in _events) await pipeline.Handle(@event);
         return string.Join(',', _documents.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}:{((IDictionary<string, object?>)pair.Value)["count"]}"));
     }
+
+    protected IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>> ReadParentHistory(IEnumerable<EventSourceId> sources, EventSequenceNumber from, EventSequenceNumber upTo) =>
+        sources.ToDictionary(source => source, source =>
+        {
+            var history = _parents.Values.Concat(_additionalParents)
+                .Where(@event => @event.Context.EventSourceId == source && @event.Context.SequenceNumber <= upTo)
+                .OrderBy(@event => @event.Context.SequenceNumber).ToArray();
+            var predecessor = history.LastOrDefault(@event => @event.Context.SequenceNumber < from);
+            return (IReadOnlyList<AppendedEvent>)history.Where(@event => ReferenceEquals(@event, predecessor) || @event.Context.SequenceNumber >= from).ToArray();
+        });
 
     protected void ResetCounts()
     {

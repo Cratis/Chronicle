@@ -14,7 +14,7 @@ public class and_a_partition_is_replayed_after_parent_history_changes : given.a_
         await HandlePage(_pipeline);
         await _pipeline.EndBulk();
         ResetCounts();
-        _parents[new("parent-0")] = EventFor("parent-0", _parentType, 100, "root-1");
+        _parents[new("parent-0")] = EventFor("parent-0", _parentType, 1, "root-1");
         await _pipeline.ResumeReplay(_replayContext);
         await _pipeline.PreparePage(_events);
         _result = await HandlePage(_pipeline);

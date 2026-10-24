@@ -22,7 +22,7 @@ internal sealed class ProjectionPagePreparation(IEventSequenceStorage storage, I
     /// <returns>A task representing preparation.</returns>
     internal async Task Prepare(IProjection projection, IReadOnlyList<AppendedEvent> events)
     {
-        var reads = new PageParentReads(storage);
+        var reads = new PageParentReads(storage, events[0].Context.SequenceNumber, events.Max(@event => @event.Context.SequenceNumber.Value));
         var roots = new List<Key>();
         do
         {

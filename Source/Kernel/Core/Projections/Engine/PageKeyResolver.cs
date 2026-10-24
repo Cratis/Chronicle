@@ -33,6 +33,7 @@ internal sealed class PageKeyResolver(KeyResolver resolver, Func<AppendedEvent, 
     internal static KeyResolver Parent(KeyResolver resolver, IProjection projection, KeyResolver parentKeyResolver, bool constant) =>
         new PageKeyResolver(resolver, async (@event, reads) =>
         {
+            using var scope = ParentKeyResolutionScope.ForChild(@event.Context.SequenceNumber);
             var parentKey = await Plan(parentKeyResolver, @event, reads);
             if (parentKey?.Value is null) return null;
             var parent = projection.HasParent ? projection.Parent! : projection;

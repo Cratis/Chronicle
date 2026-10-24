@@ -22,10 +22,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// session. Replaying a hierarchy repeats the same parent/creation-event lookups once per child event;
 /// caching them collapses those repeats to a single storage query per distinct pair.
 /// <para>
-/// Only the position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
-/// <see cref="TryGetLastInstanceOfAny"/>) are cached — they read only the immutable event log. Every
-/// other member, and all sink-dependent resolution, passes straight through so live behavior is
-/// unchanged. The caches are consulted only while a session is active and are cleared at both session
+/// Position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
+/// <see cref="TryGetLastInstanceOfAny"/>) are memoized. Bounded parent history is cached only for the
+/// prepared page interval, including missing sources; older predecessors are fetched on demand.
+/// All sink-dependent resolution passes straight through so live behavior is unchanged. The caches are consulted only while a session is active and are cleared at both session
 /// boundaries, so a cached value can never leak into live event handling (see <see cref="IReplayScopedCache"/>).
 /// </para>
 /// <para>
@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// </para>
 /// </remarks>
 /// <param name="inner">The underlying <see cref="IEventSequenceStorage"/> that performs the actual work.</param>
-internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
+internal sealed partial class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
 {
     readonly ConcurrentDictionary<string, Task<EventSequenceNumber>> _headSequenceNumbers = new();
     readonly ConcurrentDictionary<string, Task<Option<AppendedEvent>>> _lastInstances = new();
@@ -96,15 +96,6 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>> GetInstancesOfAnyInRange(
-        IEnumerable<EventSourceId> eventSourceIds,
-        IEnumerable<EventTypeId> eventTypes,
-        EventSequenceNumber from,
-        EventSequenceNumber upTo,
-        CancellationToken cancellationToken = default) =>
-        inner.GetInstancesOfAnyInRange(eventSourceIds, eventTypes, from, upTo, cancellationToken);
-
-    /// <inheritdoc/>
     public void BeginPreparedPage()
     {
         ClearPreparedPage();
@@ -115,6 +106,7 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public void ClearPreparedPage()
     {
         _preparingPage = false;
+        _parentHistory.Clear();
         foreach (var key in _preparedKeys.Keys) _lastInstances.TryRemove(key, out _);
         _preparedKeys.Clear();
     }

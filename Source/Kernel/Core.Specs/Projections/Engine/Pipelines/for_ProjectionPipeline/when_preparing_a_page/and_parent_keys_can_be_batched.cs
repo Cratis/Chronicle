@@ -26,6 +26,11 @@ public class and_parent_keys_can_be_batched : given.a_page_pipeline
     [Fact] void should_produce_identical_results() => _preparedResult.ShouldEqual(_baseline);
     [Fact] void should_batch_the_sink_reads_once() => _sinkBatches.ShouldEqual(1);
     [Fact] void should_not_read_sink_documents_individually() => _preparedSinkReads.ShouldEqual(0);
-    [Fact] void should_batch_the_parent_reads_once() => _storage.Received(1).GetLastInstancesOfAny(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>());
-    [Fact] void should_not_read_parent_events_individually() => _storage.DidNotReceive().TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>());
+    [Fact] void should_batch_the_parent_reads_once() => _storage.Received(1).GetInstancesOfAnyInRange(
+        Arg.Is<IEnumerable<EventSourceId>>(sources => sources.OrderBy(source => source.Value).SequenceEqual(new EventSourceId[] { new("parent-0"), new("parent-1") })),
+        Arg.Is<IEnumerable<EventTypeId>>(types => types.SequenceEqual(new[] { _parentType.Id })),
+        10,
+        13,
+        Arg.Any<CancellationToken>());
+    [Fact] void should_not_read_parent_events_individually() => _storage.DidNotReceive().GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(sources => sources.Count() == 1), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>());
 }
