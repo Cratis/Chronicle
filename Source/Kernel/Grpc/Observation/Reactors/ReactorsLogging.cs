@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Reactor stream for {ObserverKey}, connection {ConnectionId}, installs local callbacks on silo {StreamHost}")]
+    internal static partial void ReactorStreamHost(this ILogger<Reactors> logger, string observerKey, ConnectionId connectionId, string streamHost);
+
     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reactor delivery {DeliveryId} for partition {Partition}")]
     internal static partial void UnknownDeliveryResult(this ILogger<Reactors> logger, ulong deliveryId, string partition);
 

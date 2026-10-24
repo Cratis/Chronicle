@@ -183,6 +183,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
                     grainFactory,
+                    sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(),
                     sp.GetRequiredService<IReactorMediator>(),
                     sp.GetRequiredService<IStorage>(),
                     jsonSerializerOptions,

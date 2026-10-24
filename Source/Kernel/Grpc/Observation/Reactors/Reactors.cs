@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo hosting the reactor stream.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -38,6 +39,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
+    ILocalSiloDetails localSiloDetails,
     IReactorMediator reactorMediator,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
@@ -122,6 +124,8 @@ internal sealed class Reactors(
                     registration.Namespace,
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
+
+                logger.ReactorStreamHost(key.ToString(), registration.ConnectionId, localSiloDetails.SiloAddress.ToParsableString());
 
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,

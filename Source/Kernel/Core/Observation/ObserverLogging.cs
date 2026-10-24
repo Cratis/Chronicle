@@ -190,8 +190,11 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
-    [LoggerMessage(LogLevel.Debug, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
-    internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
+    [LoggerMessage(LogLevel.Debug, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about, targeting silo {TargetSilo}; running state {RunningState}, subscribed {IsSubscribed}")]
+    internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId, string targetSilo, ObserverRunningState runningState, bool isSubscribed);
+
+    [LoggerMessage(LogLevel.Information, "Client {ConnectionId} restore targeting silo {TargetSilo} rejected: {Reason}; running state {RunningState}, subscribed {IsSubscribed}. Restore rejection diagnostic changed")]
+    internal static partial void ClientRestorationRejected(this ILogger<Observer> logger, ConnectionId connectionId, string targetSilo, string reason, ObserverRunningState runningState, bool isSubscribed);
 
     [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
     internal static partial void PromotingSupersededClient(this ILogger<Observer> logger, ConnectionId connectionId);
