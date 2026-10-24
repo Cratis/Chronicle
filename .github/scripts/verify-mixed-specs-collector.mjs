@@ -50,7 +50,7 @@ async function probeChild(args) {
 }
 export function collectorArgs(directory, probeArgs) {
     return ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'probe.cobertura.xml'),
-        childCommand([process.execPath, probeScript, '--probe-child', ...probeArgs])];
+        childCommand(process.execPath, [probeScript, '--probe-child', ...probeArgs])];
 }
 export function isAlive(pid) {
     try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; }

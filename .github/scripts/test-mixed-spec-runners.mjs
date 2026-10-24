@@ -133,15 +133,16 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
     assert.throws(() => validateSelection('Source/New.Specs/New.Specs.csproj', g.evaluated, g.assets, g.deps));
 });
 
-test('documented collector grammar has one safely quoted literal child argument', () => {
+test('documented collector grammar has one child argument with a bare executable and quoted arguments', () => {
     const info = { runner: 'v3', dll: '/a folder/Different.Assembly.dll' };
     const filter = 'FullyQualifiedName~a&FullyQualifiedName!~b|Name="quoted"';
     const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123 });
     assert.deepEqual(call.args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/fresh output/coverage.cobertura.xml']);
     assert.equal(call.args.length, 10);
-    assert.equal(call.args[9], '"dotnet" "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx"');
-    assert.equal(childCommand(['a\\', 'a\\"b', '$(touch evil);&|']), '"a\\\\" "a\\\\\\"b" "$(touch evil);&|"');
-    assert.throws(() => childCommand(['line\nbreak']));
+    assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx"');
+    assert.equal(childCommand('dotnet', ['a\\', 'a\\"b', '$(touch evil);&|']), 'dotnet "a\\\\" "a\\\\\\"b" "$(touch evil);&|"');
+    assert.throws(() => childCommand('dotnet', ['line\nbreak']));
+    for (const executable of ['"dotnet"', '/a folder/dotnet', 'dotnet;rm', '']) assert.throws(() => childCommand(executable, []), /plain path/);
     assert.equal(call.timeout, 123);
     assert.ok(!call.args.includes('--timeout'));
 });
@@ -286,7 +287,7 @@ test('MOCK collector acceptance: exact 37 over the documented single-child gramm
     const args = collectorArgs('/out', ['exit', '37']);
     assert.deepEqual(args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/out/probe.cobertura.xml']);
     assert.equal(args.length, 10);
-    assert.equal(args.at(-1), childCommand([process.execPath, probeScript, '--probe-child', 'exit', '37']));
+    assert.equal(args.at(-1), childCommand(process.execPath, [probeScript, '--probe-child', 'exit', '37']));
     await verifyExit('/out', async (command, actual, options) => {
         assert.equal(command, 'dotnet');
         assert.deepEqual(actual, args);
