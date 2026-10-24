@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.given;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.for_TableMigrator.when_ensuring_a_table;

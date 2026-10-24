@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.for_ObserverStateStorage.given;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.given;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;

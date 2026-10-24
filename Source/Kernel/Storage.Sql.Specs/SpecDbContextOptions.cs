@@ -32,7 +32,7 @@ public static class SpecDbContextOptions
     public static DbContextOptions<TContext> ForConnection<TContext>(string connectionString)
         where TContext : DbContext => connectionString.GetDatabaseType() == DatabaseType.PostgreSql
             ? Kernel<TContext>(connectionString)
-            : new DbContextOptionsBuilder<TContext>().UseDatabaseFromConnectionString(connectionString).Options;
+            : (DbContextOptions<TContext>)new DbContextOptionsBuilder<TContext>().UseDatabaseFromConnectionString(connectionString).Options;
 
     /// <summary>
     /// Disables EF Core's internal service provider cache for the options being built.
