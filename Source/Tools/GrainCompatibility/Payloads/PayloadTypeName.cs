@@ -10,12 +10,24 @@ public static class PayloadTypeName
 {
     static readonly Dictionary<Type, string> _keywords = new()
     {
-        [typeof(void)] = "void", [typeof(object)] = "object", [typeof(string)] = "string",
-        [typeof(bool)] = "bool", [typeof(char)] = "char", [typeof(byte)] = "byte",
-        [typeof(sbyte)] = "sbyte", [typeof(short)] = "short", [typeof(ushort)] = "ushort",
-        [typeof(int)] = "int", [typeof(uint)] = "uint", [typeof(long)] = "long",
-        [typeof(ulong)] = "ulong", [typeof(float)] = "float", [typeof(double)] = "double",
-        [typeof(decimal)] = "decimal", [typeof(nint)] = "nint", [typeof(nuint)] = "nuint"
+        [typeof(void)] = "void",
+        [typeof(object)] = "object",
+        [typeof(string)] = "string",
+        [typeof(bool)] = "bool",
+        [typeof(char)] = "char",
+        [typeof(byte)] = "byte",
+        [typeof(sbyte)] = "sbyte",
+        [typeof(short)] = "short",
+        [typeof(ushort)] = "ushort",
+        [typeof(int)] = "int",
+        [typeof(uint)] = "uint",
+        [typeof(long)] = "long",
+        [typeof(ulong)] = "ulong",
+        [typeof(float)] = "float",
+        [typeof(double)] = "double",
+        [typeof(decimal)] = "decimal",
+        [typeof(nint)] = "nint",
+        [typeof(nuint)] = "nuint"
     };
 
     /// <summary>
