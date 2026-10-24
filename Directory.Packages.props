@@ -20,8 +20,8 @@
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
     <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.26.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.26.1" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.136.4" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.136.4" />
