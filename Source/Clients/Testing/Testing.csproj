@@ -68,9 +68,6 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Orleans.Streaming" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" PrivateAssets="all"/> -->
-        <PackageReference Include="xunit">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
     </ItemGroup>
 
     <!-- Pack Orleans, the kernel's Screenplay compiler and Roslyn runtime assemblies into lib/ so they are
