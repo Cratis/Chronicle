@@ -19,6 +19,9 @@ namespace Cratis.Chronicle.ReadModels;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReadModelsManager)]
 public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) : Grain<ReadModelsManagerState>, IReadModelsManager
 {
+    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _completed = new();
+    readonly HashSet<ReadModelIdentifier> _pendingEvictions = new();
+
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
@@ -33,25 +36,25 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
 
         EnsureSinglePublisher(definitions);
 
-        // A reconnecting client re-registers every read model it has, nearly always unchanged. Only definitions that
-        // are new or differ by value are persisted and pushed to their read model grain; doing it for the whole set
-        // on every call made registration O(read models) in Mongo writes and grain calls, and with this grain being
-        // non-reentrant the stacked retries of every client could never drain.
+        // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
+        // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
+        definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||
+            !ReadModelDefinitionComparison.Equals(completed, definition)).ToArray();
+        if (!definitions.Any()) return;
+
         var readModels = State.ReadModels.ToList();
         var modified = new List<ReadModelDefinition>();
-        var changed = new List<ReadModelDefinition>();
         foreach (var definition in definitions)
         {
+            _completed.Remove(definition.Identifier);
             var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
             if (existing is not null)
             {
-                if (existing.IsEquivalentTo(definition))
-                {
-                    continue;
-                }
-
+                // A fresh activation must also reconcile an equal persisted definition: the previous
+                // activation may have persisted it and then failed before evicting the old pipelines.
+                _pendingEvictions.Add(definition.Identifier);
+                if (ReadModelDefinitionComparison.Equals(existing, definition)) continue;
                 readModels.Remove(existing);
-                changed.Add(definition);
             }
 
             readModels.Add(definition);
@@ -63,65 +66,34 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
             await Persist(readModels, modified);
         }
 
-        foreach (var definition in modified)
+        foreach (var definition in definitions)
         {
             var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
             await readModelGrain.SetDefinition(definition);
         }
 
-        foreach (var definition in changed)
+        foreach (var identifier in _pendingEvictions.ToArray())
         {
-            await EvictProjectionsTargeting(definition.Identifier);
+            await EvictProjectionsTargeting(identifier);
+            _pendingEvictions.Remove(identifier);
+        }
+
+        foreach (var definition in definitions)
+        {
+            _completed[definition.Identifier] = definition;
         }
     }
 
     /// <inheritdoc/>
-    public async Task RegisterSingle(ReadModelDefinition definition)
-    {
-        definition.Sink.EnsureReadModelSupported();
-        EnsureSinglePublisher([definition]);
-        var readModels = State.ReadModels.ToList();
-        var existing = readModels.Find(_ => _.Identifier == definition.Identifier);
-        if (existing?.IsEquivalentTo(definition) == true)
-        {
-            return;
-        }
-
-        if (existing is not null)
-        {
-            readModels.Remove(existing);
-        }
-
-        readModels.Add(definition);
-        await Persist(readModels, [definition]);
-
-        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
-        await readModelGrain.SetDefinition(definition);
-
-        if (existing is not null)
-        {
-            await EvictProjectionsTargeting(definition.Identifier);
-        }
-    }
+    public Task RegisterSingle(ReadModelDefinition definition) => Register([definition]);
 
     /// <inheritdoc/>
     public async Task UpdateDefinition(ReadModelDefinition definition)
     {
         definition.Sink.EnsureReadModelSupported();
         EnsureSinglePublisher([definition]);
-        var readModels = State.ReadModels.ToList();
-        var existing = readModels.Find(_ => _.Identifier == definition.Identifier) ?? throw new ReadModelNotFound(definition.Identifier);
-        readModels.Remove(existing);
-        readModels.Add(definition);
-        await Persist(readModels, [definition]);
-
-        var readModelGrain = GrainFactory.GetReadModel(definition.Identifier, this.GetPrimaryKeyString());
-        await readModelGrain.SetDefinition(definition);
-
-        if (!existing.IsEquivalentTo(definition))
-        {
-            await EvictProjectionsTargeting(definition.Identifier);
-        }
+        if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier)) throw new ReadModelNotFound(definition.Identifier);
+        await Register([definition]);
     }
 
     /// <inheritdoc/>
