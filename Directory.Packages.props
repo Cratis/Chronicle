@@ -19,9 +19,9 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.0" />
+    <!-- 7.25.1 is the minimum Cratis.Orleans 1.27.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.1" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.136.4" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.136.4" />
@@ -164,7 +164,7 @@
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
-    <PackageVersion Include="SharpCompress" Version="0.50.5" />
+    <PackageVersion Include="SharpCompress" Version="0.50.7" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
