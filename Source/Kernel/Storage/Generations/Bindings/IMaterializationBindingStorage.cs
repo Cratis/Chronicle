@@ -76,9 +76,23 @@ public interface IMaterializationBindingStorage
     /// <param name="expectedActive">The expectedActive.</param>
     /// <param name="expectedEpoch">The expectedEpoch.</param>
     /// <param name="candidate">The candidate.</param>
+    /// <param name="rollbackWindow">How long the retired generation remains restorable.</param>
     /// <param name="receipt">The receipt.</param>
     /// <returns>The recorded storage outcome.</returns>
-    Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt);
+    Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt);
+
+    /// <summary>
+    /// Restores a retired generation atomically while its rollback window remains open.
+    /// </summary>
+    /// <param name="store">The event store.</param>
+    /// <param name="key">The materialization key.</param>
+    /// <param name="expectedActive">The expected active generation.</param>
+    /// <param name="expectedEpoch">The expected serving epoch.</param>
+    /// <param name="candidate">The retired generation to restore.</param>
+    /// <param name="rollbackWindow">The displaced generation's rollback window.</param>
+    /// <param name="receipt">The idempotency receipt.</param>
+    /// <returns>The recorded restore outcome.</returns>
+    Task<MaterializationPublication> TryRestore(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt);
 
     /// <summary>
     /// Finds every generation claiming the physical container.
