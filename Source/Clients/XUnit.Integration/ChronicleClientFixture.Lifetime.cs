@@ -5,9 +5,5 @@ using Xunit;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
-/// <summary>
-/// Provides the xUnit v2 fixture lifetime contract.
-/// </summary>
-/// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
 public abstract partial class ChronicleClientFixture<TChronicleFixture> : IAsyncLifetime
     where TChronicleFixture : IChronicleFixture;

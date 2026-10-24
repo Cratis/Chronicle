@@ -7,6 +7,8 @@
         <Description>xUnit v3 integration-testing support for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Fixtures and helpers for integration tests against an in-process kernel. Must not be referenced together with Cratis.Chronicle.XUnit.Integration.</Description>
         <PackageTags>event-sourcing;event-store;cqrs;testing;xunit;integration-testing;dotnet;chronicle</PackageTags>
         <IsTestProject>false</IsTestProject>
+        <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications 5's experimental resource types. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

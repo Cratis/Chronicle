@@ -291,7 +291,10 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         DisposeServicesScope();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes the fixture: resets or bootstraps the environment, then runs the scenario setup.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public async Task InitializeAsync()
     {
         await Timings.Run("initialize", async () =>
@@ -301,7 +304,10 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         });
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Disposes the fixture, running every cleanup step and rethrowing the failures together.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public virtual async Task DisposeAsync()
     {
         try

@@ -13,7 +13,9 @@ namespace Cratis.Chronicle.XUnit.Integration.for_ChronicleClientFixture.when_run
 public sealed class runner_owned_fixture : ChronicleClientFixture<runner_owned_fixture.IRunnerChronicleFixture>
 {
     readonly ServiceProvider _rootServices;
+#pragma warning disable CA2213 // The base fixture owns and disposes the factory returned from CreateWebApplicationFactory
     readonly test_web_application_factory _factory;
+#pragma warning restore CA2213
     int _disposeCount;
 
     /// <summary>
@@ -41,7 +43,9 @@ public sealed class runner_owned_fixture : ChronicleClientFixture<runner_owned_f
     public bool ScopeIsAlive => !Services.GetRequiredService<scope_lifetime>().IsDisposed;
 
     /// <inheritdoc/>
+#pragma warning disable CA2215 // Throwing proves the v3 runner never takes the synchronous disposal path
     public override void Dispose() => throw new InvalidOperationException("xUnit v3 must use only async fixture disposal");
+#pragma warning restore CA2215
 
     /// <inheritdoc/>
     public override async Task DisposeAsync()

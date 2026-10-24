@@ -5,14 +5,12 @@ using Xunit;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
-/// <summary>
-/// Adapts the Task-based fixture hooks to the xUnit v3 lifetime contract.
-/// </summary>
-/// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
 public abstract partial class ChronicleClientFixture<TChronicleFixture> : IAsyncLifetime
     where TChronicleFixture : IChronicleFixture
 {
+    /// <inheritdoc/>
     ValueTask IAsyncLifetime.InitializeAsync() => new(InitializeAsync());
 
+    /// <inheritdoc/>
     ValueTask IAsyncDisposable.DisposeAsync() => new(DisposeAsync());
 }

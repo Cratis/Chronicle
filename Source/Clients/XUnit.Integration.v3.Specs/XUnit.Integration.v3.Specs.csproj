@@ -7,6 +7,8 @@
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
+        <!-- CRSPECEXP01: see XUnit.Integration.v3.csproj. xUnit1051: cancellation-token propagation is not adopted in the linked v2 specs. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
