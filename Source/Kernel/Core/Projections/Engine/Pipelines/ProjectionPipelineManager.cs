@@ -117,6 +117,24 @@ public class ProjectionPipelineManager(
     }
 
     /// <inheritdoc/>
+    public IProjectionPipeline CreateIsolated(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EngineProjection projection,
+        ISink sink)
+    {
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
+
+        // Never cached and never keyed like the live pipeline, so the live pipeline, its handle lock and its cache entry stay as they are.
+        // The pipeline holds its own lock, so the key is released again rather than accumulating one entry per rebuild.
+        var isolatedKey = $"{KeyHelper.Combine(eventStore, @namespace, projection.Identifier)}/isolated/{Guid.NewGuid():N}";
+        var pipeline = Build(eventStore, @namespace, projection, namespaceStorage, sink, projectionFutures, isolatedKey, null);
+        _handleLocks.TryRemove(isolatedKey, out _);
+        return pipeline;
+    }
+
+    /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
 

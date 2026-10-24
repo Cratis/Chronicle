@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Storage.Sinks;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -35,6 +36,20 @@ public interface IProjectionPipelineManager
     /// the generation's destination explicitly. It never uses the sink's replay mode.
     /// </remarks>
     Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, MaterializationGenerationIdentity generation);
+
+    /// <summary>
+    /// Create a projection pipeline that writes to the supplied sink instead of the projection's own.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the pipeline is for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
+    /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
+    /// <param name="sink">The <see cref="ISink"/> the pipeline reads and writes through.</param>
+    /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
+    /// <remarks>
+    /// The pipeline is never cached, so every call returns a new instance, and it never evicts or replaces the pipeline
+    /// that serves live events. Sinks is not consulted, so the live sink and its replay mode are untouched.
+    /// </remarks>
+    IProjectionPipeline CreateIsolated(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, ISink sink);
 
     /// <summary>
     /// Evict any projection pipeline for a specific projection identifier.

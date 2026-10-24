@@ -41,4 +41,12 @@ public class Features
     /// a standalone MongoDB server is refused at startup.
     /// </remarks>
     public bool ProjectionGenerations { get; init; }
+
+    /// <summary>
+    /// Whether replaying a single partition of an eligible projection rebuilds it in isolation, out of sight of the live read model. Default false.
+    /// </summary>
+    /// <remarks>
+    /// Reserved. Nothing consults it yet, so partition replays behave as they always have whatever its value.
+    /// </remarks>
+    public bool IsolatedPartitionReplay { get; init; }
 }
