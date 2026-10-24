@@ -205,5 +205,5 @@ internal static class ReadModelSnapshotReader
         Concepts.ReadModels.ReadModelDefinition ReadModelDefinition,
         IReadOnlyList<AppendedEvent> Events,
         bool UsesPinnedDelivery,
-        IDictionary<EventType, EventTypeSchema> EventTypeSchemas);
+        IDictionary<Concepts.Events.EventType, EventTypeSchema> EventTypeSchemas);
 }
