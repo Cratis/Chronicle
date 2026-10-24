@@ -71,15 +71,15 @@ public abstract class a_string_array_round_trip(MongoDBFixture fixture) : a_pari
             model.ShouldNotBeNull();
             if (_values[index - 1] is null)
             {
-                model!.InvolvedUsers.ShouldBeNull();
+                model.InvolvedUsers.ShouldBeNull();
                 model.AssigneeLogins.ShouldBeNull();
             }
             else
             {
-                model!.InvolvedUsers.ShouldNotBeNull();
+                model.InvolvedUsers.ShouldNotBeNull();
                 model.AssigneeLogins.ShouldNotBeNull();
-                model.InvolvedUsers!.ToArray().ShouldEqual(_values[index - 1]);
-                model.AssigneeLogins!.ToArray().ShouldEqual(_values[index - 1]);
+                model.InvolvedUsers.ToArray().ShouldEqual(_values[index - 1]);
+                model.AssigneeLogins.ToArray().ShouldEqual(_values[index - 1]);
             }
         }
 

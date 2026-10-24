@@ -16,6 +16,9 @@ internal static partial class ProjectionPipelineLogMessages
     [LoggerMessage(LogLevel.Warning, "Error while performing projection pipeline step {StepType} for event {SequenceNumber}")]
     internal static partial void ErrorPerformingStep(this ILogger<ProjectionPipeline> logger, Exception ex, Type stepType, ulong sequenceNumber);
 
+    [LoggerMessage(LogLevel.Debug, "Optional projection page preparation failed; ordinary event handling will resolve reads")]
+    internal static partial void PagePreparationFailed(this ILogger<ProjectionPipeline> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Completed all projection pipeline steps for event {SequenceNumber}")]
     internal static partial void CompletedAllSteps(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber);
 }
