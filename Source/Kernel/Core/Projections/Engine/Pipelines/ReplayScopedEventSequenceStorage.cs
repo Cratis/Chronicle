@@ -37,15 +37,18 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// </para>
 /// </remarks>
 /// <param name="inner">The underlying <see cref="IEventSequenceStorage"/> that performs the actual work.</param>
-internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache
+internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
 {
     readonly ConcurrentDictionary<string, Task<EventSequenceNumber>> _headSequenceNumbers = new();
     readonly ConcurrentDictionary<string, Task<Option<AppendedEvent>>> _lastInstances = new();
+    readonly ConcurrentDictionary<string, byte> _preparedKeys = new();
+    volatile bool _preparingPage;
     volatile bool _active;
 
     /// <inheritdoc/>
     public void BeginReplaySession()
     {
+        ClearPreparedPage();
         _headSequenceNumbers.Clear();
         _lastInstances.Clear();
         _active = true;
@@ -54,6 +57,7 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     /// <inheritdoc/>
     public void EndReplaySession()
     {
+        ClearPreparedPage();
         _active = false;
         _headSequenceNumbers.Clear();
         _lastInstances.Clear();
@@ -99,6 +103,41 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
         EventSequenceNumber upTo,
         CancellationToken cancellationToken = default) =>
         inner.GetInstancesOfAnyInRange(eventSourceIds, eventTypes, from, upTo, cancellationToken);
+
+    /// <inheritdoc/>
+    public void BeginPreparedPage()
+    {
+        ClearPreparedPage();
+        _preparingPage = true;
+    }
+
+    /// <inheritdoc/>
+    public void ClearPreparedPage()
+    {
+        _preparingPage = false;
+        foreach (var key in _preparedKeys.Keys) _lastInstances.TryRemove(key, out _);
+        _preparedKeys.Clear();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>> GetLastInstancesOfAny(IEnumerable<EventSourceId> eventSourceIds, IEnumerable<EventTypeId> eventTypes)
+    {
+        var types = eventTypes.ToArray();
+        var results = await inner.GetLastInstancesOfAny(eventSourceIds, types);
+        if (_active)
+        {
+            foreach (var (source, result) in results)
+            {
+                var key = BuildKey(source, types.Select(type => type.Value));
+                if (_lastInstances.TryAdd(key, Task.FromResult(result)) && _preparingPage)
+                {
+                    _preparedKeys.TryAdd(key, 0);
+                }
+            }
+        }
+
+        return results;
+    }
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => inner.EnsureIndexes();

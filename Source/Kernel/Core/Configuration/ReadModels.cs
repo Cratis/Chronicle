@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -8,6 +10,22 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class ReadModels
 {
+    int _maxBatchSize = 500;
+
+    /// <summary>
+    /// Gets the maximum number of events in a read-model batch. Must be greater than zero.
+    /// </summary>
+    [Range(1, int.MaxValue)]
+    public int MaxBatchSize
+    {
+        get => _maxBatchSize;
+        init
+        {
+            Validator.ValidateProperty(value, new ValidationContext(this) { MemberName = nameof(MaxBatchSize) });
+            _maxBatchSize = value;
+        }
+    }
+
     /// <summary>
     /// Gets the number of replayed read model versions to retain.
     /// Older replayed collections are removed when a new replay starts.

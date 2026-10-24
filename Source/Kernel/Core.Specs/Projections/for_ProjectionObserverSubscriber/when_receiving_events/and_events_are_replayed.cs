@@ -29,5 +29,6 @@ public class and_events_are_replayed : given.a_pinned_subscriber
     async Task Because() => _result = await _subscriber.OnNext("the-partition", [_event], new(null));
 
     [Fact] void should_handle_the_replay_event_successfully() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
+    [Fact] void should_not_send_page_notifications() => _notifier.DidNotReceive().NotifyMany(_key.Namespace, Arg.Any<IReadOnlyList<ReadModelChangeNotification>>());
     [Fact] void should_keep_notifying_connected_watchers() => _notifier.Received(1).Notify(_key.Namespace, "the-partition", Arg.Any<JsonObject>(), Arg.Any<ReadModelChangeContext>());
 }
