@@ -47,7 +47,7 @@ public partial class Sink(
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
     ILogger<Sink> logger,
-    ISinkWrites writes) : ISink, ISinkCompositeKeyLookup, IDisposable
+    ISinkWrites writes) : ISink, ISinkCompositeKeyLookup, ISinkPagePrefetch, IDisposable
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class writing without a fence.
@@ -111,6 +111,8 @@ public partial class Sink(
     readonly List<BulkBatch> _inFlight = [];
     readonly Dictionary<BulkBatch, BulkOutcome> _unreportedBulkOutcomes = [];
     readonly Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    readonly SinkPagePrefetch _pagePrefetch = new(converter);
+    readonly ConcurrentDictionary<string, Key> _prefetchedCacheKeys = new();
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
 
@@ -139,6 +141,7 @@ public partial class Sink(
     /// </remarks>
     readonly ConcurrentDictionary<string, long> _bulkPendingDeletes = new();
     long _pendingDeleteVersion;
+    SinkMultiDocumentWrites? _directWrites;
     int _currentBulkSize;
     volatile bool _isBulkMode;
     volatile CollectionState? _primaryState;
@@ -161,6 +164,44 @@ public partial class Sink(
 
     /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
+
+    /// <summary>
+    /// Prefetches one page of read-model keys into the open bulk window. Does nothing outside bulk mode.
+    /// </summary>
+    /// <param name="keys">The page's root keys.</param>
+    /// <returns>A task representing the read-only prefetch.</returns>
+    public Task PrefetchPage(IEnumerable<Key> keys)
+    {
+        if (!_isBulkMode) return Task.CompletedTask;
+        ClearPrefetchPage();
+        return _pagePrefetch.Prefetch(Collection, keys, SeedPrefetchedState);
+    }
+
+    /// <summary>
+    /// Discards the page's misses and untouched prefetched hits, preserving pending bulk state.
+    /// </summary>
+    public void ClearPrefetchPage()
+    {
+        var prefetched = _prefetchedCacheKeys.ToArray();
+        _prefetchedCacheKeys.Clear();
+        _pagePrefetch.Clear();
+        foreach (var (cacheKey, key) in prefetched)
+        {
+            if (!_bulkPendingDeletes.ContainsKey(cacheKey)) EvictBulkState(key);
+        }
+    }
+
+    void SeedPrefetchedState(Key key, BsonDocument instance)
+    {
+        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        if (!_bulkPendingDeletes.ContainsKey(cacheKey) &&
+            _bulkStateCache.TryAdd(cacheKey, expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration())))
+        {
+            _bulkKeysByCacheKey[cacheKey] = key;
+            _prefetchedCacheKeys[cacheKey] = key;
+            SeedBulkWatermark(key, instance);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
@@ -261,7 +302,7 @@ public partial class Sink(
         }
 
         answer = default;
-        return _bulkPendingDeletes.ContainsKey(cacheKey);
+        return _bulkPendingDeletes.ContainsKey(cacheKey) || _pagePrefetch.IsKnownMiss(cacheKey);
     }
 
     void SeedBulkWatermark(Key key, BsonDocument instance)
@@ -350,6 +391,7 @@ public partial class Sink(
 
         // A dropped join flush reports every partition of its batch, not just this writer's, and the write still runs.
         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
+        InvalidatePrefetchBeforeJoin(changeset);
         var joinBatch = await FlushBeforeJoin(changeset, options);
         IEnumerable<FailedPartition> failures;
         try
@@ -389,6 +431,11 @@ public partial class Sink(
     static Key PartitionFor(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) =>
         changeset.Incoming is { } incoming ? (Key)incoming.Context.EventSourceId : key;
 
+    void InvalidatePrefetchBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        if (changeset.HasJoined()) DirectWrites.BeforeWrite();
+    }
+
     async Task<IEnumerable<FailedPartition>> WriteAfterJoin(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
@@ -398,7 +445,18 @@ public partial class Sink(
     {
         // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
         // removes from all has to find the documents still holding it, so the children are removed only afterwards.
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        UpdateDefinitionAndArrayFilters converted;
+        if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
+        {
+            converted = await converterWithDirectWrites.ToUpdateDefinition(key, changeset, eventSequenceNumber, DirectWrites);
+        }
+        else
+        {
+            // Alternate converters cannot expose their affected keys; do not retain read-only prefetch across them.
+            DirectWrites.BeforeWrite();
+            converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        }
+
         await RemoveChildrenFromAll(changeset);
 
         // ChangesetConverter has already executed the correctly filtered UpdateMany for the root join.
@@ -547,6 +605,8 @@ public partial class Sink(
 
     void EvictBulkCache(string cacheKey)
     {
+        _pagePrefetch.Forget(cacheKey);
+        _prefetchedCacheKeys.TryRemove(cacheKey, out _);
         _bulkStateCache.TryRemove(cacheKey, out _);
         _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
         _bulkWatermarks.TryRemove(cacheKey, out _);
@@ -697,6 +757,7 @@ public partial class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         return () =>
         {
+            _prefetchedCacheKeys.TryRemove(cacheKey, out _);
             _bulkStateCache[cacheKey] = changeset.CurrentState;
             _bulkKeysByCacheKey[cacheKey] = key;
             _bulkPendingDeletes.TryRemove(cacheKey, out _);
@@ -806,6 +867,7 @@ public partial class Sink(
 
     void ClearBulkState()
     {
+        ClearPrefetchPage();
         _bulkHasGuardedWrites = false;
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
@@ -1813,7 +1875,7 @@ public partial class Sink(
         var identifiedByProperty = childRemoved.IdentifiedByProperty.ToMongoDB();
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
-        await writes.UpdateMany(Collection, filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+        await DirectWrites.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
     }
 
     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)
@@ -1865,6 +1927,8 @@ public partial class Sink(
     }
 
     IMongoCollection<BsonDocument> Collection => collections.GetCollection();
+
+    SinkMultiDocumentWrites DirectWrites => _directWrites ??= new(collections, writes, ClearPrefetchPage);
 
     /// <summary>
     /// The reasons a bulk write failed: the error for each operation the server rejected, and the first error
