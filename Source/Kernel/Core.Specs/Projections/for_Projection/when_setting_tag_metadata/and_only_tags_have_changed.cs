@@ -58,7 +58,7 @@ public class and_only_tags_have_changed : Specification
         _persisted = await _grain.GetDefinition();
     }
 
-    [Fact] void should_keep_the_new_tags() => _persisted.Tags!.ShouldContainOnly("Analytics");
+    [Fact] void should_keep_the_new_tags() => _persisted.Tags.ShouldContainOnly("Analytics");
     [Fact] async Task should_write_the_projection_state() => await _stateStorage.Received(1).WriteStateAsync();
     [Fact] void should_keep_last_updated() => _persisted.LastUpdated.ShouldEqual(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
     [Fact] void should_not_schedule_a_replay() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);

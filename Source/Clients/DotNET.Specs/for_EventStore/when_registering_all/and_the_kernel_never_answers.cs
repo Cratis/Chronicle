@@ -32,7 +32,7 @@ public class and_the_kernel_never_answers : given.an_event_store_with_a_projecti
     async Task Because()
     {
         await _projections.Discover();
-        _thrown = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrown = await Catch.Exception(_eventStore.RegisterAll);
         _outcome = _eventStore.Registration;
     }
 

@@ -62,7 +62,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder(SqlServerContainerImage.Name)
             .WithEnvironment("ACCEPT_EULA", "Y").WithEnvironment("MSSQL_SA_PASSWORD", Password)
@@ -74,5 +74,5 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync() => await _container.DisposeAsync();
+    public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 }
