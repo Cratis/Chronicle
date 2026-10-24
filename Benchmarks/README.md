@@ -269,6 +269,57 @@ These are diagnostic measurements, not BenchmarkDotNet publisher input. The defa
 need raising on slower machines, particularly at 300k events. Keep the machine idle during replay
 and compare the same workload settings and counter boundaries across revisions.
 
+## Missed-events catch-up shape (MongoDB)
+
+`--catch-up-shape` measures ordinary catch-up after an existing observer falls behind, **not replay**.
+It runs one silo with ephemeral MongoDB and no Docker, a single event type, and events appended
+round-robin across sources. The observer is either a plain projection setting one property per source
+(no children or joins), or a no-op reactor. Only the selected diagnostic observer is registered at runtime.
+
+From the repository root:
+
+```sh
+CATCHUP_SOURCES=100 CATCHUP_EVENTS=10000 CATCHUP_OBSERVER=projection \
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --catch-up-shape
+```
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `CATCHUP_SOURCES` | `100` | Source pool; at most `min(sources, events)` sources are used. |
+| `CATCHUP_EVENTS` | `10000` | Backlog events, excluding the initial marker. |
+| `CATCHUP_OBSERVER` | `projection` | `projection` or `reactor`; run separately to compare their job shapes. |
+| `CATCHUP_BATCH_SIZE` | `100` | Events per append during backlog seeding. |
+| `CATCHUP_TIMEOUT_SECONDS` | `180` | Bound for seeding, registration, database reads and catch-up waits. |
+
+The scenario handles a marker, unsubscribes the observer, appends the backlog, verifies it is still
+disconnected at the marker, and resubscribes the **same** definition and event types. It never requests
+replay or a rebuild. Timing and counters start just before resubscription and stop after reaching the
+backlog tail with no failed partitions, quarantine or unfinished jobs. The marker, backlog seeding,
+final projection snapshot check and post-catch-up observer-state sampling are outside that window.
+
+One JSON result line (`Scenario = "interleaved-catch-up"`) reports events/s, duration, settings, marker
+and tail positions, managed allocations/GC deltas, grain-call counts, and Mongo command counts and
+commands/event bucketed as `database/collection/command`. Database-level commands use `(database)`;
+`getMore` uses its `collection` field. This separates read-model writes, observer/key-index bookkeeping,
+jobs and event-log reads. Allocations are process-wide; counters include readiness polling and silo
+housekeeping during the measured window. Mongo monitoring covers Chronicle client-manager clients,
+not Orleans persistence/membership or Arc clients.
+
+The result names `CatchUpObserver` and includes actual job grain calls by type/method. It is refused
+unless `CatchUpObserver.Start` ran for the diagnostic observer and **no** `ReplayObserver` activity was
+seen. Projection mode additionally checks every final source/value and fingerprints the ordinally
+sorted `source:value` lines (SHA-256, UTF-8, LF-separated, no trailing LF). Reactor mode deliberately
+does no handler work; its durable position and finished job prove completion. Existing `--replay-shape`
+output remains unchanged.
+
+After catch-up, the scenario reads the `$system.patterns` document directly from the event-store
+namespace's `observers` collection twice, at least 60 seconds apart. Each timestamped sample reports
+whether the document exists, `nextEventSequenceNumber`, `lastHandledEventSequenceNumber`, the count
+of `inFlightPartitions`, and `handledEventCount`. Samples are printed individually with
+`Scenario = "catch-up-patterns-state"` and included in the final result. The expected handled count
+includes the marker: `CATCHUP_EVENTS + 1`. These samples report state without requiring it to settle,
+so a stuck system observer remains visible in the measurement.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
