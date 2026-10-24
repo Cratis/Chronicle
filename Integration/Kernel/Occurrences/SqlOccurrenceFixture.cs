@@ -22,7 +22,7 @@ public sealed class SqlOccurrenceFixture : OccurrenceFixture
 
     protected override short SiloCount => 1;
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         await _database.StartAsync();
         _options = new()
@@ -40,7 +40,7 @@ public sealed class SqlOccurrenceFixture : OccurrenceFixture
         }
     }
 
-    public override async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         try
         {
