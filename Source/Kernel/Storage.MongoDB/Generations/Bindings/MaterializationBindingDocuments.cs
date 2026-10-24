@@ -43,7 +43,8 @@ internal static class MaterializationBindingDocuments
         { "createdAt", record.CreatedAt.ToString("O", CultureInfo.InvariantCulture) },
         { "supersededBy", record.SupersededBy is null ? BsonNull.Value : checked((int)record.SupersededBy.Value) },
         { "promotedAt", Timestamp(record.PromotedAt) }, { "retiredAt", Timestamp(record.RetiredAt) },
-        { "rollbackDeadline", Timestamp(record.RollbackDeadline) }
+        { "rollbackDeadline", Timestamp(record.RollbackDeadline) },
+        { "rolledBackFrom", record.RolledBackFrom is null ? BsonNull.Value : checked((int)record.RolledBackFrom.Value) }
     };
 
     /// <summary>
@@ -60,7 +61,8 @@ internal static class MaterializationBindingDocuments
         document["supersededBy"].IsBsonNull ? null : new(checked((uint)document["supersededBy"].AsInt32)),
         PromotedAt: Timestamp(document, "promotedAt"),
         RetiredAt: Timestamp(document, "retiredAt"),
-        RollbackDeadline: Timestamp(document, "rollbackDeadline"));
+        RollbackDeadline: Timestamp(document, "rollbackDeadline"),
+        RolledBackFrom: document.GetValue("rolledBackFrom", BsonNull.Value) is { IsBsonNull: false } from ? new(checked((uint)from.AsInt32)) : null);
 
     /// <summary>
     /// Converts or prepares materialization storage values.
@@ -91,35 +93,27 @@ internal static class MaterializationBindingDocuments
     /// <summary>
     /// Converts or prepares materialization storage values.
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="expectedActive">The expectedActive.</param>
-    /// <param name="expectedEpoch">The expectedEpoch.</param>
-    /// <param name="candidate">The candidate.</param>
-    /// <param name="rollbackWindow">The rollback window.</param>
-    /// <param name="receipt">The receipt.</param>
+    /// <param name="request">The activation request.</param>
     /// <param name="outcome">The outcome.</param>
     /// <param name="now">The publication time.</param>
     /// <returns>The stored representation or decoded value.</returns>
-    internal static BsonDocument Receipt(MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt, MaterializationPublication outcome, DateTimeOffset now) => new()
+    internal static BsonDocument Receipt(MaterializationPublicationRequest request, MaterializationPublication outcome, DateTimeOffset now) => new()
     {
-        { "_id", receipt.Value.ToString("N") }, { "key", key.Value }, { "expectedActive", checked((int)expectedActive.Value) },
-        { "expectedEpoch", expectedEpoch.Value }, { "candidate", checked((int)candidate.Value) }, { "result", (int)outcome.Result },
+        { "_id", request.Receipt.Value.ToString("N") }, { "key", request.Key.Value }, { "expectedActive", checked((int)request.Active.Value) },
+        { "expectedEpoch", request.Epoch.Value }, { "candidate", checked((int)request.Candidate.Value) }, { "result", (int)outcome.Result },
         { "active", checked((int)outcome.Active.Value) }, { "epoch", outcome.Epoch.Value }, { "at", now.UtcDateTime },
-        { "rollbackWindow", rollbackWindow.Ticks }
+        { "rollbackWindow", request.RollbackWindow.Ticks }, { "restore", request.Restore }
     };
 
     /// <summary>
     /// Converts or prepares materialization storage values.
     /// </summary>
     /// <param name="receipt">The receipt.</param>
-    /// <param name="key">The key.</param>
-    /// <param name="active">The active.</param>
-    /// <param name="epoch">The epoch.</param>
-    /// <param name="candidate">The candidate.</param>
-    /// <param name="rollbackWindow">The rollback window.</param>
+    /// <param name="request">The activation request.</param>
     /// <returns>The stored representation or decoded value.</returns>
-    internal static MaterializationPublication Outcome(BsonDocument receipt, MaterializationKey key, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, TimeSpan rollbackWindow) => new(
-        receipt["key"].AsString == key.Value && receipt["expectedActive"].AsInt32 == active.Value && receipt["expectedEpoch"].AsInt64 == epoch.Value && receipt["candidate"].AsInt32 == candidate.Value && receipt.GetValue("rollbackWindow", BsonNull.Value) == new BsonInt64(rollbackWindow.Ticks)
+    internal static MaterializationPublication Outcome(BsonDocument receipt, MaterializationPublicationRequest request) => new(
+        (receipt["key"].AsString, receipt["expectedActive"].AsInt32, receipt["expectedEpoch"].AsInt64, receipt["candidate"].AsInt32, receipt.GetValue("rollbackWindow", BsonNull.Value), receipt.GetValue("restore", false).AsBoolean)
+            == (request.Key.Value, checked((int)request.Active.Value), request.Epoch.Value, checked((int)request.Candidate.Value), new BsonInt64(request.RollbackWindow.Ticks), request.Restore)
             ? (MaterializationPublicationResult)receipt["result"].AsInt32 : MaterializationPublicationResult.ReceiptConflict,
         new(checked((uint)receipt["active"].AsInt32)),
         new(checked((uint)receipt["epoch"].AsInt64)));

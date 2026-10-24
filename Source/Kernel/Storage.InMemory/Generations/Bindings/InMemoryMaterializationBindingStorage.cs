@@ -18,7 +18,7 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly object _lock = new();
     readonly Dictionary<(EventStoreName Store, string Key), MaterializationBinding> _bindings = [];
-    readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, PublicationReceiptId Receipt), (MaterializationKey Key, MaterializationGeneration Active, ServingEpoch Epoch, MaterializationGeneration Candidate, TimeSpan RollbackWindow, MaterializationPublication Outcome)> _receipts = [];
+    readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, PublicationReceiptId Receipt), (MaterializationPublicationRequest Request, MaterializationPublication Outcome)> _receipts = [];
     readonly Dictionary<(EventStoreName Store, string Gate), long> _gates = [];
 
     /// <inheritdoc/>
@@ -97,45 +97,12 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     public Task<GenerationTransitionResult> TryAbandon(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => Transition(store, key, generation, MaterializationGenerationState.Abandoned);
 
     /// <inheritdoc/>
-    public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt)
-    {
-        lock (_lock)
-        {
-            var receiptKey = (store, key.Namespace, receipt);
-            if (_receipts.TryGetValue(receiptKey, out var previous))
-            {
-                return Task.FromResult((previous.Key, previous.Active, previous.Epoch, previous.Candidate, previous.RollbackWindow) == (key, expectedActive, expectedEpoch, candidate, rollbackWindow) ? previous.Outcome : previous.Outcome with { Result = MaterializationPublicationResult.ReceiptConflict });
-            }
-            if (!_bindings.TryGetValue((store, key.Value), out var binding))
-            {
-                return Task.FromResult(new MaterializationPublication(MaterializationPublicationResult.UnknownMaterialization, MaterializationGeneration.Unspecified, ServingEpoch.Unset));
-            }
-            var result = (binding.Active == expectedActive && binding.Epoch == expectedEpoch, binding.Generations.Any(_ => _.Identity.Generation == candidate && _.State == MaterializationGenerationState.Following)) switch
-            {
-                (false, _) => MaterializationPublicationResult.StaleBinding,
-                (true, false) => MaterializationPublicationResult.CandidateNotFollowing,
-                _ => MaterializationPublicationResult.Published
-            };
-            if (result == MaterializationPublicationResult.Published)
-            {
-                var now = _timeProvider.GetUtcNow();
-                var gate = new GenerationGateId(key, candidate);
-                var epoch = Revoke(store, gate);
-                Revoke(store, new(key, expectedActive));
-                var records = binding.Generations.Select(record => record switch
-                {
-                    _ when record.Identity.Generation == candidate => record with { State = MaterializationGenerationState.Active, PromotedAt = now },
-                    _ when record.Identity.Generation == expectedActive => record with { State = MaterializationGenerationState.Retired, SupersededBy = candidate, RetiredAt = now, RollbackDeadline = now + rollbackWindow },
-                    _ => record
-                }).ToArray();
-                binding = binding with { Active = candidate, Destination = records.Single(_ => _.Identity.Generation == candidate).Identity.Destination, Epoch = expectedEpoch.Next(), LastReceipt = receipt, Fence = new(gate, epoch), Generations = Array.AsReadOnly(records) };
-                _bindings[(store, key.Value)] = binding;
-            }
-            var outcome = new MaterializationPublication(result, binding.Active, binding.Epoch);
-            _receipts.Add(receiptKey, (key, expectedActive, expectedEpoch, candidate, rollbackWindow, outcome));
-            return Task.FromResult(outcome);
-        }
-    }
+    public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) =>
+        Activate(store, new(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, false));
+
+    /// <inheritdoc/>
+    public Task<MaterializationPublication> TryRestore(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) =>
+        Activate(store, new(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, true));
 
     /// <inheritdoc/>
     public Task<IReadOnlyCollection<GenerationContainerClaim>> GetClaims(EventStoreName store, EventStoreNamespaceName ns, ReadModelContainerName container)
@@ -144,6 +111,39 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
         {
             return Task.FromResult<IReadOnlyCollection<GenerationContainerClaim>>(_bindings.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == ns).SelectMany(_ => _.Value.Generations).Where(_ => _.Identity.Destination == container).Select(_ => new GenerationContainerClaim(_.Identity.Destination, _.Identity.Generation, _.State)).ToArray());
         }
+    }
+
+    Task<MaterializationPublication> Activate(EventStoreName store, MaterializationPublicationRequest request)
+    {
+        lock (_lock)
+        {
+            var receiptKey = (store, request.Key.Namespace, request.Receipt);
+            if (_receipts.TryGetValue(receiptKey, out var previous))
+            {
+                return Task.FromResult(previous.Request == request ? previous.Outcome : previous.Outcome with { Result = MaterializationPublicationResult.ReceiptConflict });
+            }
+            if (!_bindings.TryGetValue((store, request.Key.Value), out var binding))
+            {
+                return Task.FromResult(new MaterializationPublication(MaterializationPublicationResult.UnknownMaterialization, MaterializationGeneration.Unspecified, ServingEpoch.Unset));
+            }
+            var now = _timeProvider.GetUtcNow();
+            var outcome = request.Decide(binding, now);
+            if (outcome.Result == MaterializationPublicationResult.Published)
+            {
+                _bindings[(store, request.Key.Value)] = Publish(store, binding, request, now);
+            }
+            _receipts.Add(receiptKey, (request, outcome));
+            return Task.FromResult(outcome);
+        }
+    }
+
+    MaterializationBinding Publish(EventStoreName store, MaterializationBinding binding, MaterializationPublicationRequest request, DateTimeOffset now)
+    {
+        var gate = new GenerationGateId(request.Key, request.Candidate);
+        var epoch = Revoke(store, gate);
+        Revoke(store, new(request.Key, request.Active));
+        var records = binding.Generations.Select(record => request.Apply(record, now)).ToArray();
+        return binding with { Active = request.Candidate, Destination = records.Single(_ => _.Identity.Generation == request.Candidate).Identity.Destination, Epoch = request.Epoch.Next(), LastReceipt = request.Receipt, Fence = new(gate, epoch), Generations = Array.AsReadOnly(records) };
     }
 
     Task<GenerationTransitionResult> Transition(EventStoreName store, MaterializationKey key, MaterializationGeneration generation, MaterializationGenerationState target)
