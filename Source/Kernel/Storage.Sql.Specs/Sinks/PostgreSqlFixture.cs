@@ -18,6 +18,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     const int Port = 5432;
     readonly ConcurrentDictionary<Type, Lazy<Task<string>>> _templates = new();
     IContainer _container;
+    NpgsqlDataSource _adminDataSource;
 
     /// <summary>
     /// Gets the connection string for the container.
@@ -68,21 +69,35 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
+        // The isolated test container is disposable; durability is not part of these contracts.
         _container = new ContainerBuilder("postgres:16-alpine")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
             .WithEnvironment("POSTGRES_DB", "chronicle")
+            .WithCommand("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off", "-c", "max_connections=200")
+            .WithTmpfsMount("/var/lib/postgresql/data")
             .WithPortBinding(Port, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chronicle"))
             .Build();
         await _container.StartAsync();
+        _adminDataSource = NpgsqlDataSource.Create(ConnectionString);
     }
 
     /// <inheritdoc/>
     public async Task DisposeAsync()
     {
-        if (_container is not null)
+        try
         {
-            await _container.DisposeAsync();
+            if (_adminDataSource is not null)
+            {
+                await _adminDataSource.DisposeAsync();
+            }
+        }
+        finally
+        {
+            if (_container is not null)
+            {
+                await _container.DisposeAsync();
+            }
         }
     }
 
@@ -107,8 +122,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     async Task Execute(string sql)
     {
-        await using var dataSource = NpgsqlDataSource.Create(ConnectionString);
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = _adminDataSource.CreateCommand(sql);
         await command.ExecuteNonQueryAsync();
     }
 }
