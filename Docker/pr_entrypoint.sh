@@ -2,6 +2,7 @@
 set -e
 
 /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
+mongod_pid=$!
 
 # Wait for MongoDB to start
 until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
@@ -40,12 +41,42 @@ else
 fi
 
 ./Cratis.Chronicle.Server &
+server_pid=$!
+shutdown_requested=false
+signal_count=0
 
+forward_signal() {
+  shutdown_requested=true
+  signal_count=$((signal_count + 1))
+  # The server may have exited just before the signal arrived.
+  kill -s "$1" "$server_pid" 2>/dev/null || true
+}
+trap 'forward_signal TERM' TERM
+trap 'forward_signal INT' INT
+
+# Allow at least 30 seconds of container stop grace for the host's 10-second shutdown
+# timeout and the subsequent embedded MongoDB shutdown.
 # wait -n decides the exit status exactly as it did before; it is captured rather than left to
 # set -e only so the failure can be described on the way out.
 set +e
 wait -n
 exit_status=$?
+
+if [ "$shutdown_requested" = true ]; then
+  # A trap interrupts wait with 128 + signal, not the server's exit status. Re-wait
+  # after every interruption, even if the server exited while the trap was running.
+  while :; do
+    wait_signal_count=$signal_count
+    wait "$server_pid"
+    exit_status=$?
+    [ "$signal_count" -eq "$wait_signal_count" ] && break
+  done
+
+  # Keep storage available until the server has drained. Cleanup must not replace
+  # the server's exit status, including when mongod has already exited.
+  kill -TERM "$mongod_pid" 2>/dev/null || true
+  wait "$mongod_pid" || true
+fi
 set -e
 
 if [ "$exit_status" -ne 0 ]; then
