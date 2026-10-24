@@ -69,6 +69,7 @@ public partial class Observer
     {
         if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
         if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        ForgetRecoveryStart(partition);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionNotRecovered(partition);
         await RegisterRetryReminder(failure);
@@ -82,6 +83,7 @@ public partial class Observer
         try
         {
             if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            ForgetRecoveryStart(partition);
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
             Skips.Delivered(partition, lastHandledEventSequenceNumber);
@@ -471,6 +473,7 @@ public partial class Observer
                 _alertEndings[partition.Id] = reason;
                 await RemoveReminder(partition);
                 failures.State.Remove(partition.Partition);
+                ForgetRecoveryStart(partition.Partition);
             }
 
             State = State with { FailedPartitionCount = 0 };
@@ -499,6 +502,7 @@ public partial class Observer
             {
                 _alertEndings[failure.Id] = AlertClearedReason.Recovered;
                 failures.State.Remove(partition);
+                ForgetRecoveryStart(partition);
                 State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
             }
 

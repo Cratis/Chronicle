@@ -15,7 +15,7 @@ public partial class Observer
     /// Check whether the recovery job for the current failure episode and deferral of a partition was already started.
     /// </summary>
     /// <param name="failure">The <see cref="FailedPartition"/>.</param>
-    /// <param name="window">How long a started recovery counts as in flight; <see cref="TimeSpan.Zero"/> means until a new deferral or the failure is removed.</param>
+    /// <param name="window">How long a started recovery counts as in flight; <see cref="TimeSpan.Zero"/> means until it finishes, a new deferral, or the failure is removed.</param>
     /// <returns>True if a recovery job was already started for it, false if not.</returns>
     /// <remarks>
     /// The record is in memory only. It stops matching on a new deferral, and it is lost on reactivation, where the
@@ -24,8 +24,13 @@ public partial class Observer
     bool RecoveryAlreadyStarted(FailedPartition failure, TimeSpan window)
     {
         if (!_recoveryStarts.TryGetValue(failure.Partition, out var start)) return false;
-        if (start.Episode != failure.Id || start.Deferral != failure.Deferral?.Id) return false;
-        return window <= TimeSpan.Zero || _clock.GetUtcNow() - start.StartedAt < window;
+        if (start.Episode == failure.Id && start.Deferral == failure.Deferral?.Id)
+        {
+            if (window <= TimeSpan.Zero || _clock.GetUtcNow() - start.StartedAt < window) return true;
+        }
+
+        ForgetRecoveryStart(failure.Partition);
+        return false;
     }
 
     void RecordRecoveryStart(FailedPartition failure) =>
