@@ -368,6 +368,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     static ContainerBuilder WithTimingOutput(ContainerBuilder builder)
     {
         if (!IntegrationTimings.Enabled) return builder;
+
         // Never forward the host sidecar path or any connection details as timing metadata.
         builder = builder.WithEnvironment("CHRONICLE_INTEGRATION_TIMINGS", "1")
             .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(
@@ -424,6 +425,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timing = IntegrationTimings.BeginCurrent("auxiliary-mongo-start");
         timing?.Failure();
+
         // Initiate the replica set using the docker-network hostname as the member name so
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
@@ -466,6 +468,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         using var timing = IntegrationTimings.BeginCurrent("auxiliary-postgresql-start");
         timing?.Failure();
+
         // The module waits for TCP pg_isready, which the temporary init server cannot satisfy.
         _databaseContainer = new PostgreSqlBuilder("postgres:16")
             .WithHostname(PostgreSqlHostName)
@@ -530,6 +533,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
         {
             timing?.Retry();
+
             // Only a process that exited during startup warrants another attempt. Build a new
             // container so Testcontainers does not reuse the failed instance or its host port.
             _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -558,6 +562,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timing = IntegrationTimings.BeginCurrent("oop-reset-total");
         timing?.Failure();
+
         // skipTlsValidation because the container serves a self-signed development certificate.
         var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
         var options = new ChronicleClientOptions
