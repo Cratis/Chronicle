@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
@@ -25,14 +24,11 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage) : IGrainSt
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).Observers;
-        var stored = await observers.Get(observerKey.ObserverId);
-
-        // Keep a stored event sequence as it is, so an activation under another sequence can tell that the record is
-        // not its own. A missing record is on no sequence yet; the key's sequence is the one registering it claims.
-        actualGrainState.State = stored with
+        actualGrainState.State = await observers.Get(observerKey.ObserverId);
+        actualGrainState.State = actualGrainState.State with
         {
             Identifier = observerKey.ObserverId,
-            EventSequenceId = stored.EventSequenceId == EventSequenceId.Unspecified ? observerKey.EventSequenceId : stored.EventSequenceId
+            EventSequenceId = observerKey.EventSequenceId
         };
     }
 
@@ -42,15 +38,7 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage) : IGrainSt
         var actualGrainState = (grainState as IGrainState<ObserverDefinition>)!;
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
-        // Definitions are stored by observer identifier alone. Only an activation on the definition's own event
-        // sequence may write it, so one addressed on another sequence can never overwrite the real observer's.
-        var definition = actualGrainState.State!;
-        if (definition.EventSequenceId != observerKey.EventSequenceId)
-        {
-            throw new ObserverKeyDoesNotMatchDefinition(observerKey, definition.EventSequenceId);
-        }
-
         var observers = storage.GetEventStore(observerKey.EventStore).Observers;
-        await observers.Save(definition);
+        await observers.Save(actualGrainState.State!);
     }
 }

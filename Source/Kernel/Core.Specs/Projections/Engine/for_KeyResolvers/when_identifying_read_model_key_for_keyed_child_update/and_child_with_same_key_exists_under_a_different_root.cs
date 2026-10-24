@@ -25,13 +25,12 @@ public class and_child_with_same_key_exists_under_a_different_root : given.a_fla
         Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
             .Returns(new Option<Key>(new Key(OtherRootKey, ArrayIndexers.NoIndexers)));
 
-        Storage.TryGetLastInstanceOfAny(BoardKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(RootCreatedEventType.Id)))
-            .Returns(new Option<AppendedEvent>(RootCreatedEvent));
+        Storage.WithParentHistory(BoardKey, RootCreatedEvent);
     }
 
     async Task Because() => _result = await CreateResolverUnderTest()(Storage, Sink, ChildMovedEvent);
 
     [Fact] void should_resolve_to_the_board_key() => (_result as ResolvedKey).Key.Value.ShouldEqual(BoardKey);
     [Fact] void should_not_resolve_to_the_other_root() => (_result as ResolvedKey).Key.Value.ShouldNotEqual(OtherRootKey);
-    [Fact] void should_fall_back_to_the_event_sequence() => Storage.Received(1).TryGetLastInstanceOfAny(BoardKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(RootCreatedEventType.Id)));
+    [Fact] void should_fall_back_to_the_event_sequence() => Storage.Received(1).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(ids => ids.Contains((EventSourceId)BoardKey)), Arg.Is<IEnumerable<EventTypeId>>(types => types.Contains(RootCreatedEventType.Id)), ChildMovedEvent.Context.SequenceNumber, ChildMovedEvent.Context.SequenceNumber - 1);
 }

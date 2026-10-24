@@ -21,8 +21,8 @@ internal static class ReplayShapeScenario
     {
         var settings = ReplayShapeSettings.Read();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(settings.TimeoutSeconds));
-        var counters = new ReplayShapeCounters();
-        await using var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo, counters.Configure);
+        var counters = new BenchmarkCounters(nameof(ReplayShapeReadModel));
+        await using var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo, counters.Configure, includeReplayShape: true);
         await Console.Error.WriteLineAsync($"{DateTimeOffset.UtcNow:O} Starting single-silo fixture.");
         await fixture.Start().WaitAsync(deadline.Token);
         var dataset = new ReplayShapeDataset(fixture, settings);

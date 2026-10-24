@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Solution>
+    <Folder Name="/Benchmarks/">
+        <Project Path="Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj" />
+    </Folder>
     <Folder Name="/Source/Clients/">
         <Project Path="Source/Clients/Aspire/Aspire.csproj" />
         <Project Path="Source/Clients/Aspire.Specs/Aspire.Specs.csproj" />

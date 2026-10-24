@@ -29,7 +29,7 @@ public partial class Observer
             _pendingRetryReminders.Remove(failure.Id);
             Failures.Defer(partition, deferral);
             ChangeAlertState();
-            await WriteFailedPartitions();
+            await failures.WriteStateAsync();
             await WriteStateAsync();
         }
         finally
@@ -78,9 +78,7 @@ public partial class Observer
 
     async Task ReconcilePartitionDeferrals()
     {
-        // The deferrals of an activation that does not own the definition are the real observer's; a reminder for
-        // them would only keep reactivating this inert grain.
-        if (IsRetired || _removed || !KeyOwnsDefinition) return;
+        if (IsRetired || _removed) return;
         foreach (var failure in Failures.Partitions.Where(_ => _.Deferral is not null && !_.IsQuarantined).ToArray())
         {
             await RegisterDeferralReminder(failure, failure.Deferral!);

@@ -73,6 +73,10 @@ public static class WebhookDefinitionConverters
                 target.OAuthAuthorization.ClientId,
                 target.OAuthAuthorization.ClientSecret) { Scope = target.OAuthAuthorization.Scope };
         }
+        else if (target.ManagedIdentityAuthorization is not null)
+        {
+            authorization = new Concepts.Security.ManagedIdentityAuthorization(target.ManagedIdentityAuthorization.ClientId, target.ManagedIdentityAuthorization.Scope);
+        }
         else
         {
             authorization = WebhookAuthorization.None;
@@ -109,7 +113,12 @@ public static class WebhookDefinitionConverters
                 ClientSecret = oauth.ClientSecret,
                 Scope = oauth.Scope
             },
-            none => { });
+            none => { },
+            managedIdentity => mongoTarget.ManagedIdentityAuthorization = new ManagedIdentityAuthorization
+            {
+                ClientId = managedIdentity.ClientId.Value,
+                Scope = managedIdentity.Scope.Value
+            });
 
         return mongoTarget;
     }

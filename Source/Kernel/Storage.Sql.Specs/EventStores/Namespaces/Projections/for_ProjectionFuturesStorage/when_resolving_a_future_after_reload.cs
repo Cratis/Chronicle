@@ -12,6 +12,8 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Projections.for_ProjectionFuturesStorage;
@@ -73,7 +75,7 @@ public class when_resolving_a_future_after_reload : given.a_futures_storage
             new Changeset<AppendedEvent, ExpandoObject>(comparer, rootEvent, root),
             ProjectionOperationType.None,
             NeedsInitialState: false);
-        _step = new(_futures, new ProjectionFuturesTracker(), Substitute.For<ITypeFormats>(), comparer, Substitute.For<ILogger<ResolveFutures>>());
+        _step = new(_futures, new ProjectionFuturesTracker(), Substitute.For<ITypeFormats>(), comparer, Substitute.For<ILogger<ResolveFutures>>(), Substitute.For<IEventSequenceStorage>(), Substitute.For<ISink>());
     }
 
     async Task Because() => _result = await _step.Perform(_projection, _context);

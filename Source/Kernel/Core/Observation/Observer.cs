@@ -213,10 +213,6 @@ public partial class Observer(
         RegisterWatchdog(config.WatchdogInterval);
         _webhookProbe = State.WebhookProbe;
         await InitializeAlertState();
-        if (!KeyOwnsDefinition)
-        {
-            logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
-        }
     }
 
     /// <inheritdoc/>
@@ -303,7 +299,6 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
-        await ThrowIfKeyDoesNotOwnDefinition();
         await CancelWebhookProbe();
         if (IsQuarantined)
         {
@@ -325,7 +320,6 @@ public partial class Observer(
         logger.RemovingObserver();
 
         ThrowIfSealed();
-        await ThrowIfKeyDoesNotOwnDefinition();
 
         // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
         // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
@@ -440,12 +434,10 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        var storageWasReset = await ReloadObserverState();
+        await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
-        await ClaimDefinitionForKey();
-        await ApplyPendingStartAtTail(storageWasReset);
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -796,7 +788,7 @@ public partial class Observer(
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
 
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
+    bool CannotWriteState() => _stateWritingSuspended || !_observerExists;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -911,11 +903,10 @@ public partial class Observer(
             // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
             // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
             // Recovery retains live progress rather than reloading a stale persisted position.
-            var storageWasReset = false;
             if (!recovering)
             {
                 var wasQuarantined = IsQuarantined;
-                storageWasReset = await ReloadObserverState();
+                var storageWasReset = await ReloadObserverState();
 
                 await observerDefinition.ReadStateAsync();
                 await failures.ReadStateAsync();
@@ -929,10 +920,6 @@ public partial class Observer(
             }
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
-
-            // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
-            await ClaimDefinitionForKey();
-            await ApplyPendingStartAtTail(storageWasReset);
             await BeginAlertLifecycle();
             var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
             if (webhookSubscription)
@@ -1010,7 +997,6 @@ public partial class Observer(
 
         observerDefinition.State = observerDefinition.State with
         {
-            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
@@ -1037,7 +1023,6 @@ public partial class Observer(
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
-            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = GetOwner<TObserverSubscriber>(),
             EventTypes = [],
