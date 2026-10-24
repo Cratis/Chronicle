@@ -36,12 +36,10 @@ internal static partial class ObserverMetrics
     [Counter<int>("chronicle-observer-successful-observations", "Number of successful observations per observer in a given event store and namespace")]
     internal static partial void SuccessfulObservation(this IMeterScope<Observer> meter);
 
-    // The failure counters below are written by hand rather than with the [Counter<int>] attribute.
-    // The generator emits Meter.CreateCounter<T>(name, description) and the second positional parameter of
-    // that method is the unit, so the description ends up as the unit and the description stays empty.
-    // Exporters that put the unit in the metric name (the Prometheus exporters do) then produce names such as
-    // chronicle_observer_partitions_failed_Number_of_failed_partitions_..._total with an empty HELP.
-    // Remove this, and use the attribute again, once Cratis/Fundamentals#1138 is fixed and consumed.
+    // Cratis.Metrics.Roslyn 7.25.0 includes the instrument-name fix from Cratis/Fundamentals#1138.
+    // Keep these counters hand-written for now so their failure-path initialization and tagging remain unchanged.
+    // Revisit the implementation with the convention-name migration in Cratis/Chronicle#4459, rather than
+    // combining that migration with this generator fix. Hand-written counters are no longer needed for clean names.
     //
     // A counter is only recorded when something happens, so an observer has a series on these instruments from its
     // first failure, and never before. Recording a zero when the observer activates would give every observer
