@@ -44,7 +44,7 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
             // offending pair but the batch it happens to sit in.
             EventStore.Seeding.ForEventSource(TheOffice, [new OfficeOpened("Bergen"), new BadgeIssued("A-1", "First holder")]);
             EventStore.Seeding.ForEventSource(TheOtherOffice, [new BadgeIssued("A-1", "Second holder")]);
-            FirstFailure = await Catch.Exception(() => EventStore.Seeding.Register());
+            FirstFailure = await Catch.Exception(EventStore.Seeding.Register);
 
             EventsAfterTheRejectedRun = (await AllSeededEvents()).Count;
 

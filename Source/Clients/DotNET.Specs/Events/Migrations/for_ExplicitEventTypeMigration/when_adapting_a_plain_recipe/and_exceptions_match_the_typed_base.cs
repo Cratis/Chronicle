@@ -41,13 +41,13 @@ public class and_exceptions_match_the_typed_base : Specification
         _failures.Constructor = null;
         IEventTypeMigration[] migrations = [CreatePlain(), CreateTyped()];
         _failures.Upcast = _upcastFailure;
-        _upcastErrors = migrations.Select(migration => Catch.Exception(() => migration.Upcast(new EventMigrationBuilder()))).ToArray();
+        _upcastErrors = migrations.Select(migration => Catch.Exception(() => migration.Upcast(new EventMigrationBuilder()))!).ToArray();
         _failures.Upcast = null;
         _failures.Downcast = _downcastFailure;
-        _downcastErrors = migrations.Select(migration => Catch.Exception(() => migration.Downcast(new EventMigrationBuilder()))).ToArray();
+        _downcastErrors = migrations.Select(migration => Catch.Exception(() => migration.Downcast(new EventMigrationBuilder()))!).ToArray();
         _failures.Downcast = null;
         _failures.Map = _mapFailure;
-        _mapErrors = migrations.Select(migration => Catch.Exception(() => migration.Upcast(new EventMigrationBuilder()))).ToArray();
+        _mapErrors = migrations.Select(migration => Catch.Exception(() => migration.Upcast(new EventMigrationBuilder()))!).ToArray();
     }
 
     void Destroy() => _services.Dispose();
