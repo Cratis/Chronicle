@@ -15,6 +15,7 @@ export const v3Projects = [
     ...['Compatibility', 'Concepts', 'Core', 'Server', 'Storage.AzureKeyVault', 'Storage.Vault'].map(x => `Source/Kernel/${x}.Specs`),
     ...['GrainCompatibility', 'GrpcCodeGenerator', 'LegacyContracts', 'ProtoGenerator', 'WireCompatibility'].map(x => `Source/Tools/${x}.Specs`),
     'Source/Clients/XUnit.Integration.Specs',
+    'Source/Clients/XUnit.Integration.v3.Specs',
     ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
     ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'SqlClustering'].map(x => `Integration/${x}`)
 ].map(project);
