@@ -37,6 +37,17 @@ public class an_observer_with_partition_replay_jobs : for_Observer.given.an_obse
             .Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>, JobError>.Success(_jobs)));
     }
 
+    protected void SetCatchupJobs(params JobState[] jobs) =>
+        _jobStorage.GetJobs<ICatchUpObserverPartition, JobState>()
+            .Returns(Task.FromResult(Catch<IImmutableList<JobState>, JobError>.Success(jobs.ToImmutableList())));
+
+    protected JobState CatchupJob(JobId id, JobStatus status = JobStatus.Running) => new()
+    {
+        Id = id,
+        Status = status,
+        Request = new CatchUpObserverPartitionRequest(_observerKey, _definitionStorage.State.Type, _partition, 49UL, _definitionStorage.State.EventTypes)
+    };
+
     protected JobState ReplayJob(JobId id) => ReplayJob(id, _partition);
 
     protected JobState ReplayJob(JobId id, Key partition, JobStatus? status = null, ObserverKey? observerKey = null) => new()

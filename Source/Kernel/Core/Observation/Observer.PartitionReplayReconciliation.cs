@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation;
@@ -86,10 +87,35 @@ public partial class Observer
         }
         if (pending.Length > 0)
         {
-            if (pending.Any(record => !record.HandingOff)) await PreparePartitionReplayHandoff(partition, pending);
+            if (!await PrepareDrainedPartitionReplayHandoff(partition, pending)) return;
             await FinishPartitionReplayHandoff(partition);
         }
         await ForgetFinalizedPartitionReplays(partition);
+    }
+
+    async Task<bool> PrepareDrainedPartitionReplayHandoff(Key partition, PartitionReplayCompletionState[] pending)
+    {
+        if (pending.All(record => record.HandingOff)) return true;
+        if (await HasUnfinishedPartitionCatchups(partition) || !CanProcessPartitionReplaySnapshot) return false;
+
+        // No await separates the drain decision from prepare removing the marker; recovery excludes marked partitions.
+        await PreparePartitionReplayHandoff(partition, pending);
+        return true;
+    }
+
+    async Task<bool> HasUnfinishedPartitionCatchups(Key partition)
+    {
+        var jobStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs;
+        var lookup = await jobStorage.GetJobs<ICatchUpObserverPartition, JobState>();
+        if (!lookup.TryGetResult(out var jobs)) return true;
+
+        // Use the shared terminal-status rule: stopped predecessors still own unfinished work.
+        var predecessors = jobs.Where(job => IsRunningPartitionCatchup(job, partition)).ToArray();
+        foreach (var job in predecessors.Where(job => job.Status == JobStatus.Stopped))
+        {
+            logger.WaitingForStoppedPartitionCatchup(_observerId, partition, job.Id);
+        }
+        return predecessors.Length > 0;
     }
 
     async Task ForgetFinalizedPartitionReplays(Key partition)
@@ -141,6 +167,8 @@ public partial class Observer
         State.CatchingUpPartitions.Remove(partition);
         if (!jobs.Any(job => IsRunningPartitionCatchup(job, partition)))
             return await StartCatchupJobIfNeeded(partition, FurthestOf(pending.LastHandledEventSequenceNumber, pending.LastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+
+        // Predecessors drained before prepare lifted the fence; a post-prepare job is safe to adopt, including after a crash.
         State.CatchingUpPartitions.Add(partition);
         Skips.JobStarted(partition);
         return true;
