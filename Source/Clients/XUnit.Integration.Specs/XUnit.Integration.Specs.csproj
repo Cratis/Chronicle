@@ -3,13 +3,12 @@
         <AssemblyName>Cratis.Chronicle.XUnit.Integration.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>true</IsTestProject>
-        <!-- Exercises the shipping xUnit v2 harness, so it stays on xUnit v2. -->
-        <UseXunitV2>true</UseXunitV2>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../XUnit.Integration/XUnit.Integration.csproj" />
+        <!-- The v3 harness compiles the shared harness sources, so the specs cover that logic once, on xUnit v3. -->
+        <ProjectReference Include="../XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 </Project>

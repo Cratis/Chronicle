@@ -16,16 +16,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/**/*.cs" LinkBase="for_ChronicleClientFixture" />
-        <Compile Include="../XUnit.Integration.Specs/for_ChronicleOrleansFixture/**/*.cs" LinkBase="for_ChronicleOrleansFixture" />
-        <Compile Include="../XUnit.Integration.Specs/for_EventAppendCollection/**/*.cs" LinkBase="for_EventAppendCollection" />
-        <Compile Include="../XUnit.Integration.Specs/for_MongoDBContextStorage/**/*.cs" LinkBase="for_MongoDBContextStorage" />
-        <Compile Include="../XUnit.Integration.Specs/Packaging/for_the_embedded_kernel_closure/*.cs" LinkBase="Packaging/for_the_embedded_kernel_closure" />
-        <PackageReference Remove="xunit" />
-        <PackageReference Remove="Cratis.Specifications.XUnit" />
-        <!-- Microsoft.NET.Test.Sdk, xunit.runner.visualstudio and NSubstitute come from Source/Directory.Build.props. -->
-        <PackageReference Include="xunit.v3.mtp-off" />
-        <PackageReference Include="Cratis.Specifications.XUnit.v3" />
+        <!-- The shared harness specs run once, in XUnit.Integration.Specs; only their test host context is reused here. -->
+        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/given/*.cs" LinkBase="for_ChronicleClientFixture/given" />
+        <!-- xunit.v3.mtp-off, Cratis.Specifications.XUnit.v3, Microsoft.NET.Test.Sdk, xunit.runner.visualstudio and NSubstitute come from Source/Directory.Build.props. -->
     </ItemGroup>
 
     <ItemGroup>
