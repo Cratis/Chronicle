@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using DotNet.Testcontainers.Builders;
-using Microsoft.EntityFrameworkCore;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -22,7 +22,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     internal IntegrationTimings Timings { get; } = new(nameof(SqlServerFixture), "sql-specs", "mssql");
 
-    internal T Track<T>(T context) where T : DbContext
+    internal T Track<T>(T context)
+        where T : DbContext
     {
         if (!IntegrationTimings.Enabled) return context;
         if (_commandTimings is null)

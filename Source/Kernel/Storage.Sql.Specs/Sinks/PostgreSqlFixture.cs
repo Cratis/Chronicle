@@ -24,7 +24,8 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     internal IntegrationTimings Timings { get; } = new(nameof(PostgreSqlFixture), "sql-specs", "postgresql");
 
-    internal T Track<T>(T context) where T : DbContext
+    internal T Track<T>(T context)
+        where T : DbContext
     {
         if (!IntegrationTimings.Enabled) return context;
         if (_commandTimings is null)
