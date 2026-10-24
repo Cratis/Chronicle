@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
@@ -40,9 +41,11 @@ public partial class HandleEventsForPartition
     {
         _bulkWindowPin = null;
         _bulkObserver = null;
-        if (!subscription.IsCollapsingProjection && !subscription.SubscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber))) return;
+        var isReducer = subscription.SubscriberType.IsAssignableTo(typeof(IReducerObserverSubscriber));
+        var isProjection = subscription.IsCollapsingProjection || subscription.SubscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber));
+        if (!isReducer && !isProjection) return;
 
-        _bulkObserver = new(currentState.ObserverKey, ObserverType.Projection);
+        _bulkObserver = new(currentState.ObserverKey, isReducer ? ObserverType.Reducer : ObserverType.Projection);
         _bulkReplay = currentState.EventObservationState.HasFlag(EventObservationState.Replay);
         var windows = await observerServiceClient.FlushAllFor(_bulkObserver, _bulkReplay);
         _bulkWindowPin = windows.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
