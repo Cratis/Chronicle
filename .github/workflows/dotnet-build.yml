@@ -179,6 +179,19 @@ jobs:
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
+      # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
+      # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the
+      # packages are restored from a feed. Pack what publish packs from the build above, into a local feed that is
+      # never pushed, and restore one isolated consumer per package with those warnings as errors.
+      - name: Verify packed client packages restore for consumers
+        env:
+          PACKED_VERSION: 0.0.0-pr.${{ github.event.pull_request.number || github.run_number }}
+        run: |
+          set -euo pipefail
+          feed="$RUNNER_TEMP/packed"
+          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
+          bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
+
       # Ordinary PRs can check the local Dockerfile against the Release binaries built above.
       # No DEVELOPMENT-symbol build, registry login or image push is needed for this smoke check.
       - name: Verify local Docker image without push
