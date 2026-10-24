@@ -23,7 +23,7 @@ public sealed class AzureKeyVaultFixture : IAsyncLifetime
     public SecretClient SecretClient { get; private set; } = default!;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var certDir = Path.Combine(Path.GetTempPath(), $"keyvaultemulator-{Guid.NewGuid():N}");
         Directory.CreateDirectory(certDir);
@@ -38,7 +38,7 @@ public sealed class AzureKeyVaultFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {

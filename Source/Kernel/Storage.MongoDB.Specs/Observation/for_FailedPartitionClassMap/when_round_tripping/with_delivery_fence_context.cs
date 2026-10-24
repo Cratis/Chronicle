@@ -43,7 +43,7 @@ public class with_delivery_fence_context : Specification
 
     [Fact] void should_keep_both_attempts() => _restored.Attempts.Count().ShouldEqual(2);
     [Fact] void should_keep_the_original_deadline() => _restored.Attempts.First().DeliveryFence!.ReleaseBy.ShouldEqual(_expected.ReleaseBy);
-    [Fact] void should_keep_the_original_targets() => _restored.Attempts.First().DeliveryFence!.Targets.ShouldContainOnly(_expected.Targets!);
+    [Fact] void should_keep_the_original_targets() => _restored.Attempts.First().DeliveryFence!.Targets.ShouldContainOnly(_expected.Targets);
     [Fact] void should_keep_a_null_delivery_fence() => _restored.LastAttempt.DeliveryFence.ShouldBeNull();
     [Fact] void should_keep_the_timeout_kinds() => _restored.Attempts.All(attempt => attempt.Kind == FailureKind.Timeout).ShouldBeTrue();
 }

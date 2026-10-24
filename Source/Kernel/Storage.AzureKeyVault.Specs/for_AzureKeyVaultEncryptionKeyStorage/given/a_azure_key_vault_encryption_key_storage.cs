@@ -22,14 +22,14 @@ public class a_azure_key_vault_encryption_key_storage(AzureKeyVaultFixture fixtu
     protected AzureKeyVaultFixture Fixture => fixture;
 
     /// <inheritdoc/>
-    public virtual Task InitializeAsync()
+    public virtual ValueTask InitializeAsync()
     {
         _eventStore = $"test-store-{Guid.NewGuid():N}";
         _namespace = "default";
         _storage = new AzureKeyVaultEncryptionKeyStorage(fixture.SecretClient);
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public virtual Task DisposeAsync() => Task.CompletedTask;
+    public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
