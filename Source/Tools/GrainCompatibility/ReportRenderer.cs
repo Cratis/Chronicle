@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Tools.GrainCompatibility.Payloads;
+
 namespace Cratis.Chronicle.Tools.GrainCompatibility;
 
 /// <summary>
@@ -26,6 +28,35 @@ public static class ReportRenderer
             .. breaks.Count == 0
                 ? [$"Every grain contract of {baselineName} is still served, so silos of both can run in one cluster."]
                 : Breaks(baselineName, breaks)
+        ];
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    /// <summary>
+    /// Renders the payload comparison as text.
+    /// </summary>
+    /// <param name="baselineName">What the baseline is called.</param>
+    /// <param name="baseline">The baseline payload contracts.</param>
+    /// <param name="current">The current payload contracts.</param>
+    /// <param name="breaks">The breaks found.</param>
+    /// <returns>The report.</returns>
+    public static string ToText(string baselineName, PayloadContractManifest baseline, PayloadContractManifest current, IReadOnlyList<ContractBreak> breaks)
+    {
+        IEnumerable<string> lines =
+        [
+            $"Baseline ({baselineName}): {baseline.Types.Count} payload types.",
+            $"Current: {current.Types.Count} payload types.",
+            string.Empty,
+            .. breaks.Count == 0
+                ? new[] { $"Every payload contract of {baselineName} is still served, so silos of both can run in one cluster." }
+                : [
+                    $"{breaks.Count} payload change(s) mean silos of {baselineName} and of this build cannot run in one cluster:",
+                    .. breaks.Select(_ => $"  {_.Kind} in {_.Subject}: {_.Description}"),
+                    string.Empty,
+                    "Payload contracts only grow within a major: keep existing members and types; add new ones instead.",
+                    "See Documentation/contributing/kernel/grain-interfaces.mdx."
+                ]
         ];
 
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
