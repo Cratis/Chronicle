@@ -11,6 +11,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 {
   "observers": {
     "subscriberTimeout": 30,
+    "liveDeliveryBudget": 100,
     "abandonedDeliveryHold": 300,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
@@ -29,6 +30,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
+| liveDeliveryBudget | number | 100 | Maximum events delivered inline in one live call. Larger batches are deferred to partition catch-up without advancing the live position. `0` or less disables the limit. Catch-up and replay are unaffected |
 | abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
 | maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
@@ -69,7 +71,16 @@ Giving up abandons the wait, not the work. For gRPC reactors and reducers, Chron
 open after the timeout and fences that partition before recovery can send another batch. Raising the setting past
 the transport's own response timeout does not extend the transport's wait.
 
-Set it to `0` to wait indefinitely. This also disables abandoned-delivery fencing.
+Set it to `0` to wait indefinitely during catch-up and replay. This also disables abandoned-delivery fencing.
+Live delivery still bounds its wait to five seconds below the effective Orleans response timeout (the larger of
+its response and system-response timeouts), including when `subscriberTimeout` is `0`. A shorter positive
+subscriber timeout remains unchanged. If the response timeout is at most five seconds, the live wait is reduced
+to a minimal positive duration rather than becoming indefinite.
+
+Live batches exceeding `liveDeliveryBudget` (default **100 events**) are deferred to a partition catch-up job
+before calling the subscriber. The job starts at the batch's first unhandled event; the live position does not
+advance merely because the batch was deferred. A batch at the limit is delivered live. Set the budget to `0`
+or less to disable this handoff. This setting does not limit catch-up or replay batch sizes.
 
 ## Abandoned client deliveries
 

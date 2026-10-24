@@ -36,6 +36,15 @@ public class Observers
     public int SubscriberTimeout { get; init; } = 30;
 
     /// <summary>
+    /// Gets the maximum number of events delivered inline in one live observer call. Zero or less disables the limit.
+    /// </summary>
+    /// <remarks>
+    /// Larger batches are handed to a partition catch-up job without advancing the live position. Catch-up and replay
+    /// are not limited by this budget.
+    /// </remarks>
+    public int LiveDeliveryBudget { get; init; } = 100;
+
+    /// <summary>
     /// Gets the maximum time in seconds to hold an abandoned client delivery after its timeout.
     /// A non-positive value disables fencing. Positive values are at least the subscriber timeout.
     /// </summary>
