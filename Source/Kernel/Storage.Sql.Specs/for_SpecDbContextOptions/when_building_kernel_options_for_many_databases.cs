@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.for_ObserverStateStorage.given;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.given;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -22,6 +23,9 @@ public class when_building_kernel_options_for_many_databases : Specification
     IModelSource[] _readModelSources;
     IModelSource[] _interceptedSources;
     IModelSource[] _uncachedSources;
+    IModelSource[] _inspectionSources;
+    IModelSource[] _schemaLockSources;
+    IModelSource[] _uniqueConstraintSources;
 
     void Establish() => _databases = Enumerable.Range(0, 25)
         .Select(index => $"Host=localhost;Database=cache_guard_{index};Username=postgres;Password=postgres")
@@ -35,7 +39,10 @@ public class when_building_kernel_options_for_many_databases : Specification
         _clusterSources = ModelSources(connection => new ClusterDbContext(new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(connection))
             .UseNpgsql(connection, options => options.EnableRetryOnFailure(2, TimeSpan.Zero, null)).Options));
         _eventSequenceSources = ModelSources(connection => new EventSequenceDbContext(SpecDbContextOptions.Kernel<EventSequenceDbContext>(connection), "events", Substitute.For<IEventSequenceMigrator>()));
-        _readModelSources = ModelSources(connection => new ReadModelDbContext(SpecDbContextOptions.Kernel<ReadModelDbContext>(connection), "read_model", readModelColumns, Substitute.For<IReadModelMigrator>()));
+        _readModelSources = ModelSources(connection => new ReadModelDbContext(SpecDbContextOptions.ForConnection<ReadModelDbContext>(connection), "read_model", readModelColumns, Substitute.For<IReadModelMigrator>()));
+        _inspectionSources = ModelSources(connection => new DbContext(SpecDbContextOptions.ForConnection<DbContext>(connection)));
+        _schemaLockSources = ModelSources(connection => new SchemaLockDbContext(SpecDbContextOptions.Kernel<SchemaLockDbContext>(connection)));
+        _uniqueConstraintSources = ModelSources(connection => new UniqueConstraintDbContext(SpecDbContextOptions.Kernel<UniqueConstraintDbContext>(connection), "claims", Substitute.For<IUniqueConstraintMigrator>()));
         _interceptedSources = ModelSources(connection => new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>(SpecDbContextOptions.Kernel<NamespaceDbContext>(connection))
             .AddInterceptors(new ControlWriteBarrier()).Options));
         _uncachedSources = ModelSources(
@@ -50,6 +57,9 @@ public class when_building_kernel_options_for_many_databases : Specification
     [Fact] void should_share_membership_services_with_retries() => _clusterSources.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldEqual(1);
     [Fact] void should_share_event_sequence_services() => _eventSequenceSources.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldEqual(1);
     [Fact] void should_share_read_model_services() => _readModelSources.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldEqual(1);
+    [Fact] void should_share_inspection_services_with_the_kernel() => _inspectionSources.All(source => ReferenceEquals(source, _namespaceSources[0])).ShouldBeTrue();
+    [Fact] void should_share_schema_lock_services_with_the_kernel() => _schemaLockSources.All(source => ReferenceEquals(source, _namespaceSources[0])).ShouldBeTrue();
+    [Fact] void should_share_unique_constraint_services() => _uniqueConstraintSources.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldEqual(1);
     [Fact] void should_share_services_with_per_context_interceptors() => _interceptedSources.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldEqual(1);
     [Fact] void should_detect_distinct_providers_when_caching_is_disabled() => _uncachedSources[0].ShouldNotBeSame(_uncachedSources[1]);
 

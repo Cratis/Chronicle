@@ -43,7 +43,7 @@ public abstract class an_extended_index_sink : Specification
         _definition = new("extended", Table, "Extended", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "extended", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new("details.total"), new("lines.productId") { Properties = [new("lines.productId", true)] }]);
         var sink = (Sink)_harness.CreateSink(_definition);
         await sink.GetInstances();
-        _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+        _context = new(SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString));
         _type = _context.Database.GetDatabaseType();
         _helper = _context.GetService<ISqlGenerationHelper>();
         var json = _type == DatabaseType.PostgreSql ? "CAST({2} AS jsonb)" : "{2}";

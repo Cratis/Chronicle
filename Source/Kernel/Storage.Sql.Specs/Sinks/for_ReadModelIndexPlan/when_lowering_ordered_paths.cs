@@ -24,7 +24,7 @@ public class when_lowering_ordered_paths : Specification
         _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"details":{"type":"object","properties":{"total":{"type":"number"},"count":{"type":"integer"},"active":{"type":"boolean"},"quote'key":{"type":"string"}}},"lines":{"type":"array","items":{"type":"object","properties":{"productId":{"type":"string"}}}}}}""");
         _columns = ProjectedColumns.ForSchema(_schema);
         await using var sqlite = new DbContext(new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:").Options);
-        await using var postgres = new DbContext(new DbContextOptionsBuilder().UseNpgsql("Host=localhost;Database=indexes").Options);
+        await using var postgres = new DbContext(SpecDbContextOptions.Kernel<DbContext>("Host=localhost;Database=indexes"));
         await using var sqlServer = new DbContext(new DbContextOptionsBuilder().UseSqlServer("Server=localhost;Database=indexes").Options);
         _sqlite = sqlite.GetService<ISqlGenerationHelper>();
         _postgres = postgres.GetService<ISqlGenerationHelper>();

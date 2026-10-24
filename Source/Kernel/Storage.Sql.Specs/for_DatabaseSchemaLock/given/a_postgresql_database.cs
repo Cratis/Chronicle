@@ -14,7 +14,7 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : a_database
 
     internal override DbConnection NewConnection() => new NpgsqlConnection(ConnectionString);
 
-    internal override DbContextOptionsBuilder<SchemaLockDbContext> Configure(DbContextOptionsBuilder<SchemaLockDbContext> builder) => builder.UseNpgsql(ConnectionString);
+    internal override DbContextOptionsBuilder<SchemaLockDbContext> Configure(DbContextOptionsBuilder<SchemaLockDbContext> builder) => new(SpecDbContextOptions.Kernel<SchemaLockDbContext>(ConnectionString));
 
     internal override async Task CreateDatabase() => ConnectionString = await fixture.CreateDatabase();
 

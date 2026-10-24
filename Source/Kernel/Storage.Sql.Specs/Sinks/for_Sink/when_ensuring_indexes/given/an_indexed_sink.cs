@@ -76,7 +76,7 @@ public abstract class an_indexed_sink : Specification
 
     async Task<IndexRow[]> Indexes(string table)
     {
-        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options;
+        var options = SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString);
         await using var context = new DbContext(options);
         var query = context.Database.GetDatabaseType() switch
         {
