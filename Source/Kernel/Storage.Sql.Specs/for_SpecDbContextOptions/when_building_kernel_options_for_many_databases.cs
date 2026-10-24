@@ -29,12 +29,13 @@ public class when_building_kernel_options_for_many_databases : Specification
 
     void Because()
     {
+        ProjectedColumn[] readModelColumns = [new("Id", typeof(string), IsKey: true, IsJson: false, IsArray: false, IsNullable: false)];
         _namespaceSources = ModelSources(connection => new NamespaceDbContext(SpecDbContextOptions.Kernel<NamespaceDbContext>(connection)));
         _eventStoreSources = ModelSources(connection => new EventStoreDbContext(SpecDbContextOptions.Kernel<EventStoreDbContext>(connection)));
         _clusterSources = ModelSources(connection => new ClusterDbContext(new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(connection))
             .UseNpgsql(connection, options => options.EnableRetryOnFailure(2, TimeSpan.Zero, null)).Options));
         _eventSequenceSources = ModelSources(connection => new EventSequenceDbContext(SpecDbContextOptions.Kernel<EventSequenceDbContext>(connection), "events", Substitute.For<IEventSequenceMigrator>()));
-        _readModelSources = ModelSources(connection => new ReadModelDbContext(SpecDbContextOptions.Kernel<ReadModelDbContext>(connection), "read_model", [], Substitute.For<IReadModelMigrator>()));
+        _readModelSources = ModelSources(connection => new ReadModelDbContext(SpecDbContextOptions.Kernel<ReadModelDbContext>(connection), "read_model", readModelColumns, Substitute.For<IReadModelMigrator>()));
         _interceptedSources = ModelSources(connection => new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>(SpecDbContextOptions.Kernel<NamespaceDbContext>(connection))
             .AddInterceptors(new ControlWriteBarrier()).Options));
         _uncachedSources = ModelSources(
