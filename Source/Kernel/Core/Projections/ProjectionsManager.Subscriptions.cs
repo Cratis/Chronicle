@@ -19,6 +19,13 @@ public partial class ProjectionsManager
 
     Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
     {
+        // A fresh pass (namespace added, activation) subscribes even quarantined observers, which a reconciling
+        // pass leaves alone. Joining a pending reconciling pass would lose that, so a fresh pass always runs.
+        if (!reconcile)
+        {
+            return RunNamespaceSubscriptionPass(@namespace, reconcile);
+        }
+
         if (_namespaceSubscriptions.TryGetValue(@namespace, out var pending))
         {
             return pending;
