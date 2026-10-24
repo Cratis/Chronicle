@@ -6,9 +6,10 @@
   <ItemGroup>
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
-    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0.0 transitively, but the SDK
-         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types. -->
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
+    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0 transitively, but the SDK
+         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types.
+         10.0.1 is the minimum Microsoft.CodeAnalysis.Workspaces.Common 5.9.0 declares. -->
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.1" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.13" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
@@ -19,9 +20,9 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.0" />
+    <!-- Cratis.Orleans 1.27.2 requires at least 7.25.1; a lower pin fails restore with NU1605. -->
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.1" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.136.4" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.136.4" />
@@ -164,7 +165,7 @@
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
-    <PackageVersion Include="SharpCompress" Version="0.50.5" />
+    <PackageVersion Include="SharpCompress" Version="0.50.7" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
