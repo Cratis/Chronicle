@@ -43,10 +43,10 @@ public class a_page_pipeline : Specification
         _documents = new();
         _prepared = new();
         _parents = new();
-        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)index, $"parent-{index % 2}")).ToArray();
+        _events = Enumerable.Range(0, 4).Select(index => EventFor($"child-{index}", _childType, (ulong)(10 + index), $"parent-{index % 2}")).ToArray();
         for (var index = 0; index < 2; index++)
         {
-            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)(100 + index), $"root-{index}");
+            _parents[$"parent-{index}"] = EventFor($"parent-{index}", _parentType, (ulong)index, $"root-{index}");
             _documents[$"root-{index}"] = new ExpandoObject();
             ((IDictionary<string, object?>)_documents[$"root-{index}"])["count"] = 0;
         }
@@ -54,6 +54,10 @@ public class a_page_pipeline : Specification
             .Returns(call => Task.FromResult<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>>(call.ArgAt<IEnumerable<EventSourceId>>(0).ToDictionary(source => source, source => new Option<AppendedEvent>(_parents[source]))));
         _storage.TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>())
             .Returns(call => Task.FromResult(new Option<AppendedEvent>(_parents[call.Arg<EventSourceId>()])));
+        _storage.GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>>(call.ArgAt<IEnumerable<EventSourceId>>(0)
+                .Where(source => _parents.TryGetValue(source, out var parent) && parent.Context.SequenceNumber <= call.ArgAt<EventSequenceNumber>(3))
+                .ToDictionary(source => source, source => (IReadOnlyList<AppendedEvent>)[_parents[source]])));
         ConfigureSink();
         ConfigureProjection();
         _pipeline = CreatePipeline();
