@@ -12,7 +12,7 @@ public class when_a_retry_reminder_arrives_after_a_new_deferral : given.a_webhoo
         await Remind();
         await _observer.PartitionFailed("partition", 42UL, ["timed out"], string.Empty, FailureKind.Timeout, _failure.Id, _deferral.Id);
         _failure.Deferral.ShouldNotBeNull();
-        _failure.Deferral!.Id.ShouldNotEqual(_deferral.Id);
+        _failure.Deferral.Id.ShouldNotEqual(_deferral.Id);
         _failure.Deferral = _failure.Deferral with { Until = DateTimeOffset.UtcNow.AddMinutes(-1) };
         await Remind();
     }
