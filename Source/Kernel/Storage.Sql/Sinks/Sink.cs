@@ -40,7 +40,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// only touch the modified columns — matching MongoDB's <c language="csharp">$set</c> semantics and removing the
 /// stale-snapshot overwrite class of bug that whole-document upserts suffered from.
 /// </summary>
-public partial class Sink : ISink, ICanReconcileIndexes
+public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
 {
     static readonly IEnumerable<FailedPartition> _noFailedPartitions = [];
 
