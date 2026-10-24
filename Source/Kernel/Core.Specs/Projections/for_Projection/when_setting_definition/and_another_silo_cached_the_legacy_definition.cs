@@ -51,6 +51,7 @@ public class and_another_silo_cached_the_legacy_definition : given.a_projection_
         namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
         _observer = Substitute.For<Observation.IObserver>();
+        _observer.GetDefinition().Returns(Storage.Observation.ObserverDefinition.Empty);
         _silo.AddProbe(_ => _observer);
     }
 

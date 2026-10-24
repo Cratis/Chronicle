@@ -51,14 +51,14 @@ public abstract class MongoDBSpecification(ChronicleInProcessFixture fixture) : 
     public virtual void SetName(string name) { }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await InvokeChain("Establish", baseFirst: true);
         await InvokeChain("Because", baseFirst: true);
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await InvokeChain("Cleanup", baseFirst: false);
         await InvokeChain("Destroy", baseFirst: false);

@@ -40,7 +40,7 @@ public class and_two_namespaces_have_different_scopes : Specification
     static async Task<List<Key>> Enumerate(IObserverKeyIndex index)
     {
         var keys = new List<Key>();
-        await foreach (var key in index.GetKeys(EventSequenceNumber.First))
+        await foreach (var key in index.GetKeys(EventSequenceNumber.First).WithCancellation(TestContext.Current.CancellationToken))
         {
             keys.Add(key);
         }

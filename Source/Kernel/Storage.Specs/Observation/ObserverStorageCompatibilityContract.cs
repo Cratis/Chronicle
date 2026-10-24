@@ -105,7 +105,7 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         TypeSetControl = new(new(1), new("reactor", ObserverFilters.None), new Dictionary<Concepts.Events.EventTypeId, ObserverTypeSetMember>(), [])
     });
 
-    async Task<Exception> Check(bool supportsInitializedObservers = false)
+    async Task<Exception?> Check(bool supportsInitializedObservers = false)
     {
         var state = await OpenObservers().Get("observer");
         return await Catch.Exception(() => OpenStore().EnsureObserverCompatibility(state, supportsInitializedObservers));

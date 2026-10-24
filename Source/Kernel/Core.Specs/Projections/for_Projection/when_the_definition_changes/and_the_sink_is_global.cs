@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Projections.for_Projection.when_the_definition_change
 public class and_the_sink_is_global : given.a_projection_grain_with_replay_on_definition_change
 {
     IRecommendationsManager _recommendations;
-    IObserver _observer;
 
     void Establish()
     {
@@ -23,8 +22,6 @@ public class and_the_sink_is_global : given.a_projection_grain_with_replay_on_de
             for_ProjectionsManager.given.a_projections_manager_grain.CreateReadModelDefinition(_definition.ReadModel));
         _recommendations = Substitute.For<IRecommendationsManager>();
         _silo.AddProbe(_ => _recommendations);
-        _observer = Substitute.For<IObserver>();
-        _silo.AddProbe(_ => _observer);
     }
 
     async Task Because()

@@ -29,7 +29,7 @@ public class when_the_transaction_fails_after_the_gate_writes(ReplicaSetMongoDBF
             return epoch;
         });
     }
-    async Task Because() => _error = await Catch.Exception(async () => await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _receipt));
+    async Task Because() => _error = await Catch.Exception(async () => await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _rollbackWindow, _receipt));
     [Fact] void should_surface_the_failure() => _error.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] async Task should_not_change_the_binding()
     {

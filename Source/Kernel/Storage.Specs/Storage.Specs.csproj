@@ -3,6 +3,9 @@
         <AssemblyName>Cratis.Chronicle.Storage.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 

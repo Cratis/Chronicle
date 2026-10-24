@@ -21,8 +21,8 @@ public class and_the_gates_are_not_revoked_twice(ReplicaSetMongoDBFixture fixtur
     }
     async Task Because()
     {
-        await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _receipt);
-        await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _receipt);
+        await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _rollbackWindow, _receipt);
+        await _storage.TryPublish(_store, _key, MaterializationGeneration.First, new(1), _candidate, _rollbackWindow, _receipt);
     }
     [Fact] async Task should_revoke_the_previous_active_once() => (await GateWrites.CurrentEpoch(Database, new(_key, MaterializationGeneration.First))).ShouldEqual(8L);
     [Fact] async Task should_revoke_the_candidate_once() => (await GateWrites.CurrentEpoch(Database, new(_key, _candidate))).ShouldEqual(10L);

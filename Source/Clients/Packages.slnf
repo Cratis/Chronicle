@@ -11,6 +11,7 @@
       "Source/Clients/Testing/Testing.csproj",
       "Source/Clients/Workbench/Workbench.csproj",
       "Source/Clients/XUnit.Integration/XUnit.Integration.csproj",
+      "Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj",
       "Source/Kernel/Contracts/Contracts.csproj"
     ]
   }

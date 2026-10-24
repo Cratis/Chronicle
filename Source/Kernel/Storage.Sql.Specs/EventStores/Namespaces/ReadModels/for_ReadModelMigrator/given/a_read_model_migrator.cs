@@ -65,7 +65,7 @@ public class a_read_model_migrator : Specification
 
     /// <summary>
     /// Returns the column names that physically exist in the given table by querying
-    /// SQLite's <c language="csharp">PRAGMA table_info</c> via the master connection.
+    /// SQLite's <c language="csharp">PRAGMA table_xinfo</c> via the master connection.
     /// Column name is at ordinal 1 (0 = cid, 1 = name, 2 = type, …).
     /// </summary>
     /// <param name="tableName">Name of the table to inspect.</param>
@@ -73,7 +73,7 @@ public class a_read_model_migrator : Specification
     protected async Task<IReadOnlySet<string>> GetActualColumnNamesAsync(string tableName)
     {
         await using var command = _masterConnection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info(\"{tableName}\")";
+        command.CommandText = $"PRAGMA table_xinfo(\"{tableName}\")";
 
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await using var reader = await command.ExecuteReaderAsync();

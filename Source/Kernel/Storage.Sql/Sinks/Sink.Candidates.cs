@@ -13,8 +13,29 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 public partial class Sink
 {
+    static bool UsesDecimalSortKey(ReadModelDbContext context, ProjectedColumn column) =>
+        context.Database.IsSqlite() && SqliteDecimalSortKey.IsDecimal(column);
+
+    static Task<List<DynamicReadModelEntity>> DecimalCandidates(ReadModelDbContext context, ProjectedColumn column, decimal value, bool tracking)
+    {
+        var shadow = SqliteDecimalSortKey.ColumnNameFor(column.Name);
+        var helper = context.GetService<ISqlGenerationHelper>();
+        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{helper.DelimitIdentifier(shadow)} = {{0}}";
+        return ShadowColumns.Access(context, shadow, () =>
+        {
+#pragma warning disable EF1002 // All identifiers are provider-delimited and the sort key is parameterized.
+            var query = context.Entries.FromSqlRaw(sql, SqliteDecimalSortKey.For(value));
+#pragma warning restore EF1002
+            return (tracking ? query : query.AsNoTracking()).ToListAsync();
+        });
+    }
+
     async Task<List<DynamicReadModelEntity>> CandidateEntries(ReadModelDbContext context, ProjectedColumn column, object? value, bool tracking = true)
     {
+        if (UsesDecimalSortKey(context, column) && UnwrapConceptValue(value) is decimal number)
+        {
+            return await DecimalCandidates(context, column, number, tracking);
+        }
         IQueryable<DynamicReadModelEntity> query = context.Entries;
         if (value is not null)
         {
@@ -62,8 +83,8 @@ public partial class Sink
         var type = Nullable.GetUnderlyingType(column.ClrType) ?? column.ClrType;
 
         // Loose comparison can match temporal ToString values with differing fractional
-        // seconds, and SQLite decimal materialization rounds binary floating-point values.
-        // Neither is safely narrowed by exact SQL equality.
+        // seconds. Other numeric representations of a SQLite decimal also remain advisory;
+        // only an actual decimal (including an unwrapped concept) uses exact canonical narrowing.
         if (type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeOnly) ||
             type == typeof(TimeSpan) || (type == typeof(decimal) && databaseType == DatabaseType.Sqlite))
         {

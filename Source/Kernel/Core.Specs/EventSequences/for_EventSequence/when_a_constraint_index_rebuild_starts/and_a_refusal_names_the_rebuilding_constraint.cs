@@ -22,6 +22,6 @@ public class and_a_refusal_names_the_rebuilding_constraint : given.a_rebuilding_
         await Tick();
     }
 
-    [Fact] void should_preserve_the_rebuilding_constraint_refusal() => _stateStorage.State.ConstraintIndexCatchUpRefusing!.ShouldContain(_uniqueDefinition.Name);
+    [Fact] void should_preserve_the_rebuilding_constraint_refusal() => _stateStorage.State.ConstraintIndexCatchUpRefusing.ShouldContain(_uniqueDefinition.Name);
     [Fact] void should_catch_up_the_other_constraint() => _claimWrites.ShouldBeGreaterThan(0);
 }

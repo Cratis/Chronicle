@@ -17,7 +17,7 @@ public class and_retrieving_by_that_revision(context ctx) : IClassFixture<contex
         public EncryptionKeyRevision Revision;
         public EncryptionKey? Result;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Identifier = Guid.NewGuid().ToString();

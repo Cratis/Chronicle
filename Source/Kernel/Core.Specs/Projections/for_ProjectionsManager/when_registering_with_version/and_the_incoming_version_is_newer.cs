@@ -23,7 +23,7 @@ public class and_the_incoming_version_is_newer : given.a_projections_manager_gra
 
     async Task Because() => await _grain.Register([_incoming], version: "2.0.0");
 
-    [Fact] void should_replace_the_stored_definition() => _state.Projections.Single().Tags!.ShouldContainOnly("Changed");
+    [Fact] void should_replace_the_stored_definition() => _state.Projections.Single().Tags.ShouldContainOnly("Changed");
     [Fact] void should_store_the_new_version() => _state.Projections.Single().Version.ShouldEqual("2.0.0");
     [Fact] async Task should_set_the_projection_definition() => await _projectionGrain.Received(1).SetDefinition(Arg.Is<ProjectionDefinition>(definition => definition.Version == "2.0.0"));
     [Fact] void should_not_recommend_anything() => _recommendationsManager.DidNotReceiveWithAnyArgs().Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(default!, default!);

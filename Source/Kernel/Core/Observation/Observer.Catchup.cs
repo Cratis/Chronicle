@@ -17,6 +17,7 @@ public partial class Observer
     const int MinimumZeroWorkLapsBeforeBackingOff = 2;
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
+    static readonly TimeSpan[] _staleCatchUpRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
 
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
@@ -192,9 +193,9 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
-        var settleInObserving = NoteCatchUpLap(madeProgress);
+        var settleInObserving = await NoteCatchUpLap(madeProgress);
 
-        if (IsRetired || _removed) return;
+        if (IsRetired || _removed || _staleCatchUpRetryTimer is not null) return;
         if (!IsQuarantined)
         {
             if (settleInObserving)
@@ -228,14 +229,19 @@ public partial class Observer
     /// <remarks>
     /// A lap that moved nothing reaches the same verdict when routed again, so it neither resets the consecutive
     /// recovery count nor gets to start the next lap right away: from the second consecutive one the observer settles
-    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed.
+    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed. When events of its
+    /// types still exist at Next, three short timer retries precede that backoff without increasing its initial delay.
     /// </remarks>
-    bool NoteCatchUpLap(bool madeProgress)
+    async Task<bool> NoteCatchUpLap(bool madeProgress)
     {
+        _staleCatchUpRetryTimer?.Dispose();
+        _staleCatchUpRetryTimer = null;
         if (madeProgress)
         {
             _catchupRecoveryAttempts = 0;
             _zeroWorkCatchUps = 0;
+            _staleCatchUpLaps = 0;
+            _deferredStaleCatchUpLaps = 0;
             _catchUpBackoffUntil = default;
             return false;
         }
@@ -243,15 +249,76 @@ public partial class Observer
         _zeroWorkCatchUps++;
         _metrics?.ZeroWorkCatchUp();
         logger.CatchUpProducedNoWork(_zeroWorkCatchUps);
-        if (_zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
+        if (await RetryStaleCatchUpLap() || _zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
         {
             return false;
         }
 
-        var exponent = Math.Min(_zeroWorkCatchUps - MinimumZeroWorkLapsBeforeBackingOff, 10);
+        var firstBackedOffLap = Math.Max(MinimumZeroWorkLapsBeforeBackingOff, _deferredStaleCatchUpLaps + 1);
+        var exponent = Math.Clamp(_zeroWorkCatchUps - firstBackedOffLap, 0, 10);
         var backoff = TimeSpan.FromTicks(Math.Min(_catchUpBackoffBase.Ticks << exponent, _catchUpBackoffCap.Ticks));
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
         return true;
+    }
+
+    async Task<bool> RetryStaleCatchUpLap()
+    {
+        EventSequenceNumber tail;
+        try
+        {
+            var subscription = await GetSubscription();
+            tail = await _eventSequence.GetTailSequenceNumberForEventTypes(subscription.EventTypes);
+        }
+        catch (Exception exception)
+        {
+            logger.CatchUpTypeTailLookupFailed(exception);
+            _staleCatchUpLaps = 0;
+            return false;
+        }
+
+        if (!tail.IsActualValue || tail < State.NextEventSequenceNumber)
+        {
+            _staleCatchUpLaps = 0;
+            return false;
+        }
+
+        if (_staleCatchUpLaps >= _staleCatchUpRetryDelays.Length)
+        {
+            logger.StaleCatchUpRetriesExhausted(_staleCatchUpLaps, State.NextEventSequenceNumber, tail);
+            return false;
+        }
+
+        var delay = _staleCatchUpRetryDelays[_staleCatchUpLaps++];
+        _deferredStaleCatchUpLaps++;
+        _catchUpBackoffUntil = default;
+        logger.RetryingStaleCatchUp(_staleCatchUpLaps, delay, State.NextEventSequenceNumber, tail);
+        ScheduleStaleCatchUpRetry(delay);
+        return true;
+    }
+
+    void ScheduleStaleCatchUpRetry(TimeSpan delay)
+    {
+        var ownershipEpoch = _catchUpOwnershipEpoch;
+        _staleCatchUpRetryTimer = this.RegisterGrainTimer(
+            async cancellationToken =>
+            {
+                // Disposing a grain timer cancels the token it hands its callback, so read the token first.
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _staleCatchUpRetryTimer?.Dispose();
+                _staleCatchUpRetryTimer = null;
+                if (IsRetired || _removed || IsQuarantined ||
+                    ownershipEpoch != _catchUpOwnershipEpoch || State.RunningState == ObserverRunningState.Replaying || !await IsSubscribed())
+                {
+                    return;
+                }
+
+                await TransitionTo<Routing>();
+            },
+            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
     }
 
     /// <summary>

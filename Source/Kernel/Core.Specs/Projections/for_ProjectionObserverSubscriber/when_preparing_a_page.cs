@@ -19,6 +19,7 @@ public class when_preparing_a_page : given.a_page_subscriber
 
     async Task Because() => await _subscriber.OnNextPage(_events, new(null));
 
+    [Fact] void should_clear_the_prepared_pipeline_at_page_end() => _cachedPipeline.Received(1).ClearPreparedPage();
     [Fact] void should_prepare_once() => _cachedPipeline.Received(1).PreparePage(Arg.Any<IReadOnlyList<AppendedEvent>>());
     [Fact] void should_prepare_with_the_whole_page_in_order() => _prepared.Select(_ => _.Context.SequenceNumber).ShouldEqual(_events.Select(_ => _.Context.SequenceNumber));
     [Fact] void should_prepare_before_handling_any_event() => _handledWhenPrepared.ShouldEqual(0);

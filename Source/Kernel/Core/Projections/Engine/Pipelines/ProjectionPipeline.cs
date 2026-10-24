@@ -31,7 +31,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
 /// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
 /// so there is nothing to shadow and nothing to rename.</param>
-public class ProjectionPipeline(
+public partial class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
     IChangesetStorage changesetStorage,
@@ -67,6 +67,8 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = true;
         replayScopedCache.BeginReplaySession();
         if (generation is not null)
         {
@@ -80,6 +82,8 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = true;
         replayScopedCache.BeginReplaySession();
         return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
     }
@@ -87,6 +91,8 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = false;
         replayScopedCache.EndReplaySession();
         if (generation is not null)
         {
@@ -108,6 +114,8 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task LeaveReplay()
     {
+        ClearPreparedPage();
+        _isReplaying = false;
         replayScopedCache.EndReplaySession();
         if (generation is not null)
         {
@@ -134,10 +142,18 @@ public class ProjectionPipeline(
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
+    public Task<IEnumerable<FailedPartition>> EndBulk()
+    {
+        ClearPreparedPage();
+        return sink.EndBulk();
+    }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => sink.EndBulk(cancellationToken);
+    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
+    {
+        ClearPreparedPage();
+        return sink.EndBulk(cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)

@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Auditing.for_CausationManager;
 
+[PerFactSpecificationLifecycle]
 public class when_adding_two_causations : Specification
 {
     const string FirstType = "FirstType";

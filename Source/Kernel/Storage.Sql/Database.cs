@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -275,6 +276,19 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type.ToString());
+        try
+        {
+            await timings.Run("sql-wipe-total", WipeCore);
+        }
+        finally
+        {
+            timings.Complete();
+        }
+    }
+
+    async Task WipeCore()
+    {
         if (options.Value.Clustering.Type == ClusteringType.Sql)
         {
             throw new SqlClusteringPreventsKernelStateReset();
@@ -377,6 +391,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             return;
         }
 
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-sqlite");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqliteConnection($"Data Source={filePath};Pooling=False");
         try
         {
@@ -424,6 +441,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             await history.ExecuteNonQueryAsync();
         }
 
+        timing?.TablesObserved();
         foreach (var table in tables.Where(_ =>
             (!keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory"))
             && (!keepLease || (_ != WellKnownTableNames.SingleWriterLeases && _ != "__EFMigrationsHistory"))))
@@ -434,9 +452,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
+            timing?.Table();
         }
 
         await transaction.CommitAsync();
+        timing?.Success();
     }
 
     static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
@@ -487,6 +507,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     static async Task TruncateAllPostgreSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-postgresql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new NpgsqlConnection(connectionString);
         try
         {
@@ -511,6 +534,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         await using var cmd = new NpgsqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 
     static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
@@ -558,6 +582,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     static async Task TruncateAllMsSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-mssql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqlConnection(connectionString);
         try
         {
@@ -585,6 +612,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         await using var cmd = new SqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 #endif
 

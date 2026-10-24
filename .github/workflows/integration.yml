@@ -127,6 +127,9 @@ jobs:
       - name: Restore Client project
         run: dotnet restore Integration/Client/Client.csproj
 
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
       # Docker Hub rate limits or transient registry timeouts. MCR-hosted
@@ -179,9 +182,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
-            -p:DisableDockerBuild=true \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Client integration tests ran
@@ -232,6 +233,9 @@ jobs:
       - name: Restore Kernel project
         run: dotnet restore Integration/Kernel/Kernel.csproj
 
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
         uses: nick-fields/retry@v3
@@ -254,8 +258,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Kernel integration tests ran
@@ -303,6 +306,9 @@ jobs:
       - name: Restore Clustering project
         run: dotnet restore Integration/Clustering/Clustering.csproj
 
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:
           # The retry script owns --results-directory; point it at ./coverage-results so the
@@ -315,8 +321,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Clustering integration tests ran
@@ -442,11 +447,8 @@ jobs:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           TESTCONTAINERS_RYUK_DISABLED: true
         run: >-
-          dotnet test Integration/SqlClustering/SqlClustering.csproj --no-build -c Release
-          -p:DisableDockerBuild=true
+          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
           --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
-          --logger "trx;LogFileName=sql-clustering-${{ matrix.provider }}.trx"
-          --logger "console;verbosity=normal"
           --results-directory coverage-results
 
       - name: Assert SQL clustering specifications ran

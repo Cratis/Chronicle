@@ -24,7 +24,7 @@ public class when_completion_callback_fails : Specification
             var owner = unit.ClaimDecisionReadCommitOwnership();
             await unit.CommitAsOwner(owner);
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            Task<Exception> inherited = null!;
+            Task<Exception?> inherited = null!;
             _callbackError = await Catch.Exception(() => frame.RunAfterCommit(log =>
             {
                 inherited = Task.Run(async () =>
@@ -35,7 +35,7 @@ public class when_completion_callback_fails : Specification
                 throw new OperationCanceledException("Completion canceled");
             }));
             release.SetResult();
-            _inheritedError = await inherited;
+            _inheritedError = (await inherited)!;
             _readError = await Catch.Exception(() => _store.EventLog.GetTailSequenceNumber());
         }
         _cleanupError = await Catch.Exception(() => _store.EventLog.GetTailSequenceNumber());

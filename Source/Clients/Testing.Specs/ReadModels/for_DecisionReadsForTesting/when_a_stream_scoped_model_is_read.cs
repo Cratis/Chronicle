@@ -8,6 +8,7 @@ using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.Testing.ReadModels.for_DecisionReadsForTesting;
 
+[PerFactSpecificationLifecycle]
 public class when_a_stream_scoped_model_is_read : Specification
 {
     EventStoreForTesting _store;

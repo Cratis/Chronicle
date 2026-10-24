@@ -116,26 +116,12 @@ public class ResolveFutures(
                     // chain needed to navigate from root to the parent. For parents nested beyond one level,
                     // this searches through intermediate array collections to find the matching parent and
                     // records the identifier of each intermediate element.
-                    var parentExistsInCurrentState = TryFindParentWithIndexers(
-                        context.Changeset.CurrentState,
-                        context.Changeset,
-                        context.Key.Value,
-                        childProjection,
-                        future.ParentPath,
-                        future.ParentIdentifiedByProperty,
-                        parentKey,
-                        out var parentIndexers);
-
-                    var retriedKey = parentExistsInCurrentState ? null : await RetryDeferredKey(childProjection, context, future);
-                    if (!parentExistsInCurrentState && retriedKey is null)
+                    var (parentFound, parentIndexers, retriedKey) = await FindParentForFuture(childProjection, context, future, parentKey);
+                    if (!parentFound)
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
                         continue;
-                    }
-                    if (retriedKey is not null)
-                    {
-                        parentIndexers = retriedKey.Key.ArrayIndexers.All.SkipLast(1).ToList();
                     }
 
                     logger.ParentExistsInCurrentState(future.Id);
@@ -144,7 +130,7 @@ public class ResolveFutures(
                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
                     var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
 
-                    var childKey = retriedKey?.Key.ArrayIndexers.All.Last().Identifier ?? GetChildKey(future);
+                    var childKey = ChildKeyFor(future, retriedKey);
 
                     if (childType is not null && childKey is not null)
                     {
@@ -181,22 +167,7 @@ public class ResolveFutures(
                         JoinKey = childKey ?? key.Value
                     };
 
-                    if (retriedKey is not null)
-                    {
-                        // A different event needs a fresh key memo, not the releasing parent's cached results.
-                        futureContext = new ProjectionEventContext(
-                            key,
-                            future.Event,
-                            futureChangeset,
-                            futureContext.OperationType,
-                            context.NeedsInitialState,
-                            retriedKey.JoinKey ?? childKey ?? key.Value)
-                        {
-                            GenerationDelivery = context.GenerationDelivery,
-                            IsNewInstance = context.IsNewInstance
-                        };
-                        futureContext.MemoizeResolvedKey(childProjection.GetKeyResolverFor(future.Event.Context.EventType), retriedKey with { Key = key });
-                    }
+                    futureContext = WithFreshKeyMemo(futureContext, context, childProjection, future, retriedKey, childKey);
 
                     ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
@@ -490,6 +461,106 @@ public class ResolveFutures(
         return childKey;
     }
 
+    static object? ChildKeyFor(ProjectionFuture future, ResolvedKey? retriedKey) =>
+        retriedKey?.Key.ArrayIndexers.All.Last().Identifier ?? GetChildKey(future);
+
+    static ProjectionEventContext WithFreshKeyMemo(
+        ProjectionEventContext futureContext,
+        ProjectionEventContext context,
+        IProjection childProjection,
+        ProjectionFuture future,
+        ResolvedKey? retriedKey,
+        object? childKey)
+    {
+        if (retriedKey is null)
+        {
+            return futureContext;
+        }
+
+        // A different event needs a fresh key memo, not the releasing parent's cached results.
+        var fresh = new ProjectionEventContext(
+            futureContext.Key,
+            future.Event,
+            futureContext.Changeset,
+            futureContext.OperationType,
+            context.NeedsInitialState,
+            retriedKey.JoinKey ?? childKey ?? futureContext.Key.Value)
+        {
+            GenerationDelivery = context.GenerationDelivery,
+            IsNewInstance = context.IsNewInstance
+        };
+        fresh.MemoizeResolvedKey(childProjection.GetKeyResolverFor(future.Event.Context.EventType), retriedKey with { Key = futureContext.Key });
+        return fresh;
+    }
+
+    static bool IsLeafOfFuture(ArrayIndexer[] indexers, ProjectionFuture future)
+    {
+        if (indexers.Length == 0)
+        {
+            return false;
+        }
+
+        var leaf = indexers[^1];
+        return leaf.ArrayProperty == future.ChildPath && leaf.IdentifierProperty == future.IdentifiedByProperty;
+    }
+
+    static bool MatchesParentChain(IProjection childProjection, ProjectionEventContext context, ProjectionFuture future, ResolvedKey resolved, ArrayIndexer[] indexers)
+    {
+        var parentKey = future.ParentPath.IsRoot ? resolved.Key.Value : indexers.LastOrDefault(indexer => indexer.ArrayProperty == future.ParentPath)?.Identifier;
+        if (parentKey is null)
+        {
+            return false;
+        }
+
+        if (!TryFindParentWithIndexers(
+            context.Changeset.CurrentState,
+            context.Changeset,
+            context.Key.Value,
+            childProjection,
+            future.ParentPath,
+            future.ParentIdentifiedByProperty,
+            parentKey,
+            out var parentIndexers))
+        {
+            return false;
+        }
+
+        // A matching leaf alone is insufficient when the resolver selected a different ancestor chain.
+        var expectedParents = indexers.SkipLast(1).ToArray();
+        return parentIndexers.Count == expectedParents.Length && parentIndexers.Zip(expectedParents).All(pair => IsSameIndexer(pair.First, pair.Second));
+    }
+
+    static bool IsSameIndexer(ArrayIndexer actual, ArrayIndexer expected) =>
+        IsSamePosition(actual, expected) && KeyValueEquality.AreEqual(actual.Identifier, expected.Identifier);
+
+    static bool IsSamePosition(ArrayIndexer actual, ArrayIndexer expected) =>
+        actual.ArrayProperty == expected.ArrayProperty && actual.IdentifierProperty == expected.IdentifierProperty;
+
+    async Task<(bool Found, List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey)> FindParentForFuture(
+        IProjection childProjection,
+        ProjectionEventContext context,
+        ProjectionFuture future,
+        object parentKey)
+    {
+        if (TryFindParentWithIndexers(
+            context.Changeset.CurrentState,
+            context.Changeset,
+            context.Key.Value,
+            childProjection,
+            future.ParentPath,
+            future.ParentIdentifiedByProperty,
+            parentKey,
+            out var parentIndexers))
+        {
+            return (true, parentIndexers, null);
+        }
+
+        var retriedKey = await RetryDeferredKey(childProjection, context, future);
+        return retriedKey is null
+            ? (false, parentIndexers, null)
+            : (true, retriedKey.Key.ArrayIndexers.All.SkipLast(1).ToList(), retriedKey);
+    }
+
     async Task<ResolvedKey?> RetryDeferredKey(IProjection childProjection, ProjectionEventContext context, ProjectionFuture future)
     {
         if (!IsParentEvent(childProjection, context.EventType.Id))
@@ -505,31 +576,7 @@ public class ResolveFutures(
         }
 
         var indexers = resolved.Key.ArrayIndexers.All.ToArray();
-        if (indexers.Length == 0 || indexers[^1].ArrayProperty != future.ChildPath || indexers[^1].IdentifierProperty != future.IdentifiedByProperty)
-        {
-            return null;
-        }
-
-        var parentKey = future.ParentPath.IsRoot ? resolved.Key.Value : indexers.LastOrDefault(indexer => indexer.ArrayProperty == future.ParentPath)?.Identifier;
-        if (parentKey is null || !TryFindParentWithIndexers(
-            context.Changeset.CurrentState,
-            context.Changeset,
-            context.Key.Value,
-            childProjection,
-            future.ParentPath,
-            future.ParentIdentifiedByProperty,
-            parentKey,
-            out var parentIndexers))
-        {
-            return null;
-        }
-
-        // A matching leaf alone is insufficient when the resolver selected a different ancestor chain.
-        var expectedParents = indexers.SkipLast(1).ToArray();
-        return parentIndexers.Count == expectedParents.Length && parentIndexers.Zip(expectedParents).All(pair =>
-            pair.First.ArrayProperty == pair.Second.ArrayProperty &&
-            pair.First.IdentifierProperty == pair.Second.IdentifierProperty &&
-            KeyValueEquality.AreEqual(pair.First.Identifier, pair.Second.Identifier)) ? resolved : null;
+        return IsLeafOfFuture(indexers, future) && MatchesParentChain(childProjection, context, future, resolved, indexers) ? resolved : null;
     }
 
     void LogFailure(Exception exception, ProjectionFuture future)

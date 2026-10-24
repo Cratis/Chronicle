@@ -28,5 +28,5 @@ public class when_saving_a_definition_with_an_existing_name : given.a_constraint
     }
 
     [Fact] void should_have_only_one_definition() => _definitions.Count().ShouldEqual(1);
-    [Fact] void should_have_replaced_with_the_latest_definition() => _definitions.Single().ShouldEqual(_second);
+    [Fact] void should_have_replaced_with_the_latest_definition() => ReferenceEquals(_definitions.Single(), _second).ShouldBeTrue();
 }

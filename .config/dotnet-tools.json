@@ -2,6 +2,13 @@
   "version": 1,
   "isRoot": true,
   "tools": {
+    "dotnet-coverage": {
+      "version": "18.12.0",
+      "commands": [
+        "dotnet-coverage"
+      ],
+      "rollForward": false
+    },
     "dotnet-ilrepack": {
       "version": "2.0.44",
       "commands": [
