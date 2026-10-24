@@ -30,6 +30,23 @@ public class ImmediateProjection(
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
+    /// <summary>
+    /// The maximum lifetime of a session activation without explicit dehydration.
+    /// </summary>
+    internal static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// The one-shot, non-keep-alive session expiry timer options.
+    /// </summary>
+    internal static readonly GrainTimerCreationOptions SessionTimerOptions = new()
+    {
+        DueTime = SessionLifetime,
+        Period = Timeout.InfiniteTimeSpan,
+        Interleave = false,
+        KeepAlive = false
+    };
+
+    IGrainTimer? _sessionExpiry;
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
     ReadModelDefinition? _readModelDefinition;
@@ -46,11 +63,23 @@ public class ImmediateProjection(
 
         _projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
         await _projection.SubscribeDefinitionsChanged(GetSelfGrainReference());
+        if (_projectionKey.SessionId is not null)
+        {
+            _sessionExpiry = this.RegisterGrainTimer(
+                _ =>
+                {
+                    DeactivateSession();
+                    return Task.CompletedTask;
+                },
+                SessionTimerOptions);
+        }
     }
 
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        _sessionExpiry?.Dispose();
+        _sessionExpiry = null;
         if (_projection is not null)
         {
             await _projection.UnsubscribeDefinitionsChanged(GetSelfGrainReference());
@@ -137,7 +166,7 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public Task Dehydrate()
     {
-        DeactivateOnIdle();
+        DeactivateSession();
         return Task.CompletedTask;
     }
 
@@ -146,6 +175,11 @@ public class ImmediateProjection(
     /// </summary>
     /// <returns>The observer reference for this grain.</returns>
     protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
+
+    /// <summary>
+    /// Requests deactivation of this session after its current work completes.
+    /// </summary>
+    protected virtual void DeactivateSession() => DeactivateOnIdle();
 
     SingleReadModelProjectionState GetInitialState()
     {
