@@ -302,9 +302,15 @@ public partial class Observer
         _staleCatchUpRetryTimer = this.RegisterGrainTimer(
             async cancellationToken =>
             {
+                // Disposing a grain timer cancels the token it hands its callback, so read the token first.
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 _staleCatchUpRetryTimer?.Dispose();
                 _staleCatchUpRetryTimer = null;
-                if (cancellationToken.IsCancellationRequested || IsRetired || _removed || IsQuarantined ||
+                if (IsRetired || _removed || IsQuarantined ||
                     ownershipEpoch != _catchUpOwnershipEpoch || State.RunningState == ObserverRunningState.Replaying || !await IsSubscribed())
                 {
                     return;
