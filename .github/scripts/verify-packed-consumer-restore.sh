@@ -5,6 +5,7 @@
 # Proves every Chronicle package about to ship restores for a consumer on each framework it ships.
 # A pin below a transitive dependency's requirement (NU1605) must fail the pull request, not the release.
 # CI uses a non-publishable 0.0.0-pr.N version; these packed packages are never pushed.
+# Each package gets its own consumer so other top-level references cannot hide dependency downgrades.
 # PACKED_RESTORE_ERRORS defaults to "NU1605;NU1608". Setting it explicitly selects which warnings
 # become errors instead of treating all warnings as errors (for example, PACKED_RESTORE_ERRORS=NU1605).
 # Usage: verify-packed-consumer-restore.sh <version> <feed-dir>
@@ -22,7 +23,14 @@ self_test() (
     cat > "$root/package.nuspec" <<'NUSPEC'
 <package><metadata><id>Cratis.Chronicle.SelfTest</id><version>0.0.0-pr.1</version><dependencies><group targetFramework="netstandard2.0" /></dependencies></metadata></package>
 NUSPEC
-    (cd "$root" && zip -q "$root/feed/arbitrary.name.nupkg" package.nuspec)
+    mkdir -p "$root/lib/netstandard2.0" "$root/analyzers/dotnet/cs"
+    : > "$root/lib/netstandard2.0/_._"
+    : > "$root/analyzers/dotnet/cs/MockAnalyzer.dll"
+    (cd "$root" && zip -q "$root/feed/arbitrary.name.nupkg" package.nuspec lib/netstandard2.0/_._)
+    cat > "$root/second.nuspec" <<'NUSPEC'
+<package><metadata><id>Cratis.Chronicle.OtherPackage</id><version>0.0.0-pr.1</version></metadata></package>
+NUSPEC
+    (cd "$root" && zip -q "$root/feed/second.nupkg" second.nuspec analyzers/dotnet/cs/MockAnalyzer.dll)
     cat > "$root/bin/dotnet" <<'DOTNET'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -32,8 +40,9 @@ grep -Fq "<WarningsAsErrors>${PACKED_RESTORE_ERRORS:-NU1605;NU1608}</WarningsAsE
 strict=true
 [ -z "${PACKED_RESTORE_ERRORS+x}" ] || strict=false
 grep -Fq "<TreatWarningsAsErrors>$strict</TreatWarningsAsErrors>" "$2"
-case "$2" in
-    */net8.0/*) echo 'error NU1605: planted downgrade'; exit 1 ;;
+grep -Fq '<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>' "$2"
+case "$2|$3" in
+    */Cratis.Chronicle.SelfTest/Consumer.csproj\|-p:TargetFrameworks=net8.0) echo 'error NU1605: planted downgrade'; exit 1 ;;
 esac
 DOTNET
     chmod +x "$root/bin/dotnet"
@@ -44,10 +53,13 @@ DOTNET
     fi
     [ "$status" -eq 1 ] || fail "Self-test could not run (exit $status)."
     grep -q 'NU1605: planted downgrade' "$root/result"
-    grep -q 'net8.0: FAIL (exit 1)' "$root/result"
-    grep -q 'net9.0: PASS (exit 0)' "$root/result"
-    grep -q 'net10.0: PASS (exit 0)' "$root/result"
-    echo 'Self-test: detected 1 planted downgrade and checked all 3 TFM outcomes.'
+    grep -q 'Cratis.Chronicle.SelfTest | net8.0 | FAIL | 1' "$root/result"
+    grep -q 'Cratis.Chronicle.SelfTest | net9.0 | PASS | 0' "$root/result"
+    grep -q 'Cratis.Chronicle.SelfTest | net10.0 | PASS | 0' "$root/result"
+    grep -q 'Cratis.Chronicle.OtherPackage | net8.0 | PASS | 0' "$root/result"
+    grep -q 'Cratis.Chronicle.OtherPackage | net9.0 | PASS | 0' "$root/result"
+    grep -q 'Cratis.Chronicle.OtherPackage | net10.0 | PASS | 0' "$root/result"
+    echo 'Self-test: detected 1 planted downgrade and checked all 6 package/TFM outcomes.'
 )
 
 if [ "${1:-}" = --self-test ]; then
@@ -87,10 +99,7 @@ cat > "$WORK_DIR/nuget.config" <<CONFIG
 </configuration>
 CONFIG
 
-for tfm in net8.0 net9.0 net10.0; do
-    mkdir -p "$WORK_DIR/$tfm"
-    : > "$WORK_DIR/$tfm/references"
-done
+: > "$WORK_DIR/consumers"
 
 count=0
 shopt -s nullglob
@@ -106,16 +115,21 @@ for package in "$LOCAL_FEED"/*.nupkg; do
     count=$((count + 1))
     echo "Discovered: $id $version"
 
-    # Dependency groups describe shipped TFMs; fall back to lib folders if groups do not name any.
-    frameworks="$(tr '<' '\n' < "$WORK_DIR/package.nuspec" | sed -n 's/^group[[:space:]][^>]*targetFramework="\([^"]*\)".*/\1/p')"
-    if [ -z "$frameworks" ]; then
-        unzip -Z1 "$package" > "$WORK_DIR/entries"
-        frameworks="$(sed -n 's:^lib/\([^/]*\)/.*:\1:p' "$WORK_DIR/entries" | sort -u)"
+    unzip -Z1 "$package" > "$WORK_DIR/entries"
+    lib_frameworks="$(sed -n 's:^lib/\([^/][^/]*\)/.*[^/]$:\1:p' "$WORK_DIR/entries" | sort -u)"
+    if [ -z "$lib_frameworks" ]; then
+        # The only no-lib exception is an analyzer package; restore it on all shipped consumer TFMs.
+        grep -q '^analyzers/.*\.dll$' "$WORK_DIR/entries" || fail "$id $version has neither a lib/ TFM nor analyzers/."
+        frameworks=""
+    else
+        # Dependency groups describe shipped TFMs; fall back to lib folders if groups do not name any.
+        frameworks="$(tr '<' '\n' < "$WORK_DIR/package.nuspec" | sed -n 's/^group[[:space:]][^>]*targetFramework="\([^"]*\)".*/\1/p')"
+        [ -n "$frameworks" ] || frameworks="$lib_frameworks"
     fi
-    applicable=0
+    applicable_tfms=""
     for tfm in net8.0 net9.0 net10.0; do
         applies=0
-        # No framework groups or lib assets means framework-independent (including analyzer-only).
+        # An analyzer-only package applies to all supported frameworks.
         [ -n "$frameworks" ] || applies=1
         while IFS= read -r framework; do
             framework="$(printf '%s' "$framework" | tr '[:upper:]' '[:lower:]')"
@@ -124,40 +138,38 @@ for package in "$LOCAL_FEED"/*.nupkg; do
             esac
         done <<< "$frameworks"
         if [ "$applies" -eq 1 ]; then
-            printf '    <PackageReference Include="%s" Version="[%s]" />\n' "$id" "$VERSION" >> "$WORK_DIR/$tfm/references"
-            applicable=$((applicable + 1))
+            applicable_tfms="${applicable_tfms:+$applicable_tfms;}$tfm"
+            printf '%s %s\n' "$id" "$tfm" >> "$WORK_DIR/consumers"
+            echo "$id $tfm references: $id [$VERSION]"
         fi
     done
-    [ "$applicable" -gt 0 ] || fail "$id $version applies to no consumer TFM (shipped: $frameworks)."
-done
-[ "$count" -gt 0 ] || fail "No Cratis.Chronicle packages at version $VERSION found in $LOCAL_FEED."
-echo "Discovered $count Chronicle packages; no packages excluded."
-
-# Generate every consumer before restoring, so an empty reference set cannot pass unnoticed.
-for tfm in net8.0 net9.0 net10.0; do
-    references="$WORK_DIR/$tfm/references"
-    [ -s "$references" ] || fail "$tfm consumer references zero packages."
-    echo "$tfm references ($(wc -l < "$references" | tr -d ' ') packages):"
-    cat "$references"
-    cat > "$WORK_DIR/$tfm/Consumer.csproj" <<PROJECT
+    [ -n "$applicable_tfms" ] || fail "$id $version applies to no consumer TFM (shipped: $frameworks)."
+    mkdir -p "$WORK_DIR/$id"
+    cat > "$WORK_DIR/$id/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>$tfm</TargetFramework>
+    <TargetFrameworks>$applicable_tfms</TargetFrameworks>
     <TreatWarningsAsErrors>$TREAT_WARNINGS_AS_ERRORS</TreatWarningsAsErrors>
     <WarningsAsErrors>$RESTORE_ERRORS</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-$(cat "$references")
+    <PackageReference Include="$id" Version="[$VERSION]" />
   </ItemGroup>
 </Project>
 PROJECT
+    # Validate the generated project, not just the discovery list, before any restore can pass.
+    grep -q '<PackageReference ' "$WORK_DIR/$id/Consumer.csproj" || fail "$id consumer references zero packages."
 done
+[ "$count" -gt 0 ] || fail "No Cratis.Chronicle packages at version $VERSION found in $LOCAL_FEED."
+echo "Discovered $count Chronicle packages; no packages excluded."
+[ -s "$WORK_DIR/consumers" ] || fail 'Zero consumers were generated.'
 
 failed=0
-: > "$WORK_DIR/summary"
-for tfm in net8.0 net9.0 net10.0; do
-    echo "Restoring $tfm consumer..."
-    if dotnet restore "$WORK_DIR/$tfm/Consumer.csproj" --configfile "$WORK_DIR/nuget.config"; then
+printf 'Package | TFM | Result | Exit\n' > "$WORK_DIR/summary"
+while read -r id tfm; do
+    echo "Restoring $id $tfm consumer..."
+    # Select one framework from this package's multi-targeted project for an exact per-TFM verdict.
+    if dotnet restore "$WORK_DIR/$id/Consumer.csproj" "-p:TargetFrameworks=$tfm" --configfile "$WORK_DIR/nuget.config"; then
         status=0
         result=PASS
     else
@@ -165,8 +177,8 @@ for tfm in net8.0 net9.0 net10.0; do
         result=FAIL
         failed=1
     fi
-    printf '%s: %s (exit %s)\n' "$tfm" "$result" "$status" >> "$WORK_DIR/summary"
-done
+    printf '%s | %s | %s | %s\n' "$id" "$tfm" "$result" "$status" >> "$WORK_DIR/summary"
+done < "$WORK_DIR/consumers"
 echo "Restore summary ($count packages discovered):"
 cat "$WORK_DIR/summary"
 exit "$failed"
