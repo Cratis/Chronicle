@@ -34,7 +34,7 @@ public class when_appending_an_event_with_reactor_reducer_and_projection(context
         public bool IsEventSequenceGrainOnEventSequencesSilo { get; private set; }
         public bool IsObserverGrainOnObserversSilo { get; private set; }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var eventStore = fixture.ClientEventStore;
             ReactorSignal = fixture.ReactorSignal;
@@ -89,7 +89,7 @@ public class when_appending_an_event_with_reactor_reducer_and_projection(context
             });
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_have_reactor_called() => _context.ReactorSignal.HandledCount.ShouldEqual(1);
