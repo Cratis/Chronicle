@@ -6,9 +6,13 @@
 from dataclasses import dataclass
 from itertools import product
 import importlib.util
+import json
+import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
+import tempfile
 import unittest
 
 import yaml
@@ -312,13 +316,36 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
         self.assertIn("set -euo pipefail", run)
         self.assertIn("sql-spec-filter.py '${{ matrix.shard }}'", run)
-        self.assertIn('Storage.Sql.Specs.csproj --no-build', run)
+        self.assertIn('run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj', run)
+        self.assertIn('--coverage', run)
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertIn("&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        selection = subprocess.run(
+            ["node", "--input-type=module", "-e", """
+                import { ordinaryProjects, v3Projects, shippingProjects }
+                    from './.github/scripts/mixed-specs-selection.mjs';
+                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
+                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+            """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
+        projects = json.loads(selection.stdout)
+        self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
+        self.assertEqual(24, len(set(projects)))
+        self.assertIn("Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", projects)
+        self.assertIn("Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj", projects)
+        self.assertEqual("ubuntu-latest", jobs["specs-other"]["runs-on"])
+        prepare = next(step["run"] for step in jobs["specs-other"]["steps"]
+                       if step["name"] == "Build Azure Key Vault specs when absent from solution")
+        self.assertIn('if [ "$listed" = false ]; then', prepare)
+        self.assertIn("dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release", prepare)
+        self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
+        self.assertFalse(any(project.startswith("Integration/") for project in projects))
+        self.assertIn('--coverage', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
@@ -447,6 +474,110 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             results["integration"] = "skipped"
             context = ConditionContext("pull_request", False, results, actor=actor)
             self.assertFalse(condition_allows(coverage, context))
+
+
+VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+
+
+class IntegrationSingleBuildContracts(unittest.TestCase):
+    def test_every_lane_consumes_current_run_outputs_without_a_fallback_build(self):
+        jobs = workflow("integration.yml")["jobs"]
+        lanes = ("client", "kernel", "clustering", "sql-clustering")
+        for lane in lanes:
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
+                self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
+                extract = next(step for step in steps if step["name"] == "Extract build output")
+                self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
+                self.assertLess(steps.index(download), steps.index(extract))
+                self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
+                for step in steps:
+                    command = step.get("run", "")
+                    if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
+                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # previous release so the compatibility check orders the two sides correctly (#5353).
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
+                        self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
+                        self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
+                        self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
+                        self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                        continue
+                    self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
+
+        producers = workflow("dotnet-build.yml")["jobs"]
+        for name in ("dotnet-build-development", "dotnet-build-development-requested"):
+            steps = producers[name]["steps"]
+            pack = next(step["run"] for step in steps if step["name"] == "Pack DEVELOPMENT build output")
+            self.assertIn("set -euo pipefail", pack)
+            self.assertIn("Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering", pack)
+            self.assertIn('test -d "$project/bin/Release/net10.0"', pack)
+            self.assertIn("exit 1", pack)
+            self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
+
+    def test_effective_test_arguments_survive_every_retry_and_missing_outputs(self):
+        root = WORKFLOWS.parents[1]
+        jobs = workflow("integration.yml")["jobs"]
+        union = "FullyQualifiedName~Example.A.|FullyQualifiedName~Example.B."
+        bindings = {"matrix.filter": union, "matrix.namespace": "Example.Namespace",
+                    "matrix.provider": "PostgreSql"}
+        for lane in ("client", "kernel", "clustering", "sql-clustering"):
+            steps = jobs[f"{lane}-integration-specs"]["steps"]
+            command = next(step["run"] for step in steps
+                           if step["name"].startswith(("Run Client", "Run Kernel", "Run Clustering", "Run SQL clustering")))
+            command = re.sub(r"\$\{\{ (.*?) \}\}", lambda match: bindings[match[1]], command)
+            expected_filter = (union if lane == "client" else
+                               "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
+                               if lane == "sql-clustering" else "FullyQualifiedName~Example.Namespace")
+            for missing in (False, True):
+                with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory)
+                    fake = path / "node"
+                    fake.write_text("""#!/usr/bin/env python3
+import json, os, pathlib, sys
+args = sys.argv[1:]
+log = pathlib.Path(os.environ['CALLS'])
+calls = json.loads(log.read_text()) if log.exists() else []
+calls.append(args)
+log.write_text(json.dumps(calls))
+if os.environ['MISSING'] == '1':
+    sys.exit(1)
+results = pathlib.Path(args[args.index('--results-directory') + 1])
+results.mkdir(parents=True, exist_ok=True)
+failed = len(calls) < 3
+(results / 'results.trx').write_text(
+    '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
+    '<UnitTestResult testName="Example.A.should_work" outcome="' +
+    ('Failed' if failed else 'Passed') + '" /></TestRun>')
+sys.exit(1 if failed else 0)
+""", encoding="utf-8")
+                    fake.chmod(0o755)
+                    env = dict(os.environ, PATH=f"{path}{os.pathsep}{os.environ['PATH']}",
+                               CALLS=str(path / "calls.json"), MISSING=str(int(missing)),
+                               TEST_RESULTS_DIR=str(path / "results"), TEST_MAX_ATTEMPTS="3")
+                    # SQL clustering intentionally has no retry wrapper.
+                    if lane == "sql-clustering":
+                        command_to_run = command.replace("--results-directory coverage-results",
+                                                         f"--results-directory {shlex.quote(str(path / 'results'))}")
+                    else:
+                        command_to_run = command
+                    result = subprocess.run(["bash", "-c", command_to_run], cwd=root, env=env,
+                                            capture_output=True, text=True, check=False)
+                    calls = json.loads((path / "calls.json").read_text())
+                    count = 1 if missing or lane == "sql-clustering" else 3
+                    self.assertEqual(count, len(calls), result.stdout + result.stderr)
+                    self.assertEqual(0 if not missing and count == 3 else 1, result.returncode)
+                    self.assert_test_arguments(lane, calls, expected_filter)
+
+    def assert_test_arguments(self, lane, calls, expected_filter):
+        project = "SqlClustering" if lane == "sql-clustering" else lane.title()
+        for index, args in enumerate(calls):
+            self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
+            self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertIn("--results-directory", args)
+            self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
+                             args[args.index("--filter") + 1])
 
 
 if __name__ == "__main__":

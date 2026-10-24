@@ -26,6 +26,7 @@ public class a_sink_with_gated_bulk_writes : Specification
 {
     protected Sink _sink;
     protected IMongoCollection<BsonDocument> _collection;
+    protected SinkCollections _collections;
     protected readonly TaskCompletionSource _firstFlushStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly TaskCompletionSource _releaseFirstFlush = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly List<WriteModel<BsonDocument>[]> _batches = [];
@@ -55,7 +56,8 @@ public class a_sink_with_gated_bulk_writes : Specification
         var converter = new MongoDBConverter(expando, formats, readModel, NullLogger<MongoDBConverter>.Instance);
         _collection = Substitute.For<IMongoCollection<BsonDocument>>();
         _collection.CollectionNamespace.Returns(new CollectionNamespace(new DatabaseNamespace("specs"), "bulk"));
-        var collections = new FixedCollections(_collection, new SinkCollections(readModel, new MongoClient().GetDatabase("specs")));
+        _collections = new SinkCollections(readModel, new MongoClient().GetDatabase("specs"));
+        var collections = new FixedCollections(_collection, _collections);
         _sink = new Sink(readModel, converter, collections, new ChangesetConverter(readModel, converter, collections, expando), expando, new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance));
         _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
             .Returns(info => WriteBatch(info.ArgAt<IEnumerable<WriteModel<BsonDocument>>>(0).ToArray()));

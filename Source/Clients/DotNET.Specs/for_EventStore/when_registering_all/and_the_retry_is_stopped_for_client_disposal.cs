@@ -25,7 +25,7 @@ public class and_the_retry_is_stopped_for_client_disposal : given.an_event_store
     async Task Because()
     {
         await _projections.Discover();
-        await Catch.Exception(() => _eventStore.RegisterAll());
+        await Catch.Exception(_eventStore.RegisterAll);
         var retry = _eventStore.PendingBackgroundRegistrationRetry!;
 
         _eventStore.StopBackgroundRegistrationRetry();

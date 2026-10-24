@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -48,6 +49,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 {
 #if DEVELOPMENT
     /// <summary>
+    /// The migration that creates the single-writer lease table, kept in the SQLite cluster file's history across a wipe.
+    /// </summary>
+    const string SingleWriterLeaseMigrationId = "Cluster-SingleWriterLease-v19_105_0";
+
+    /// <summary>
     /// Tables that survive <see cref="Wipe"/> for shared-database backends (PostgreSQL / Microsoft
     /// SQL Server). Identity and Data Protection key material lives in these tables; wiping them
     /// would invalidate the client's JWT (signing keys are rotated when the table is empty) and
@@ -66,6 +72,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         WellKnownTableNames.Tokens,
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,
+
+        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
+        WellKnownTableNames.SingleWriterLeases,
         "__EFMigrationsHistory",
         "DatabaseNames",
         "GenerationFloor",
@@ -267,11 +276,39 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type.ToString());
+        try
+        {
+            await timings.Run("sql-wipe-total", WipeCore);
+        }
+        finally
+        {
+            timings.Complete();
+        }
+    }
+
+    async Task WipeCore()
+    {
         if (options.Value.Clustering.Type == ClusteringType.Sql)
         {
             throw new SqlClusteringPreventsKernelStateReset();
         }
 
+        foreach (var target in (await GenerationStoreTargets()).Values)
+        {
+            await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
+            try
+            {
+                if (await context.GenerationInitializationReceipts.AnyAsync())
+                {
+                    throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+                }
+            }
+            catch (Exception error) when (MissingGenerationTable(error))
+            {
+                // The legacy store has never been initialized.
+            }
+        }
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
         var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
@@ -297,6 +334,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
         {
             await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
+
+            // Every database and namespace schema has a connection string of its own, so each one keeps an
+            // Npgsql pool of its own. A wipe keeps the databases, and without releasing the idle connections
+            // here every reset carries the previous run's pools forward until the server refuses new clients.
+            NpgsqlConnection.ClearAllPools();
         }
         else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
         {
@@ -342,13 +384,16 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     static string PreservedNamesForSql() =>
         string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
 
-    static async Task DropAllSqliteTables(string filePath)
+    static async Task DropAllSqliteTables(string filePath, bool isClusterFile = false)
     {
         if (!File.Exists(filePath))
         {
             return;
         }
 
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-sqlite");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqliteConnection($"Data Source={filePath};Pooling=False");
         try
         {
@@ -384,7 +429,22 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
         }
 
-        foreach (var table in tables.Where(_ => !keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory")))
+        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
+        // Keep the table and its migration-history row so the next migration does not try to create it again.
+        var keepLease = isClusterFile && tables.Contains(WellKnownTableNames.SingleWriterLeases, StringComparer.Ordinal);
+        if (keepLease && !keepFloor && tables.Contains("__EFMigrationsHistory", StringComparer.Ordinal))
+        {
+            await using var history = conn.CreateCommand();
+            history.Transaction = transaction;
+            history.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" <> $lease";
+            history.Parameters.AddWithValue("$lease", SingleWriterLeaseMigrationId);
+            await history.ExecuteNonQueryAsync();
+        }
+
+        timing?.TablesObserved();
+        foreach (var table in tables.Where(_ =>
+            (!keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory"))
+            && (!keepLease || (_ != WellKnownTableNames.SingleWriterLeases && _ != "__EFMigrationsHistory"))))
         {
             await using var dropCmd = conn.CreateCommand();
             dropCmd.Transaction = transaction;
@@ -392,9 +452,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
+            timing?.Table();
         }
 
         await transaction.CommitAsync();
+        timing?.Success();
     }
 
     static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
@@ -445,6 +507,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     static async Task TruncateAllPostgreSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-postgresql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new NpgsqlConnection(connectionString);
         try
         {
@@ -469,6 +534,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         await using var cmd = new NpgsqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 
     static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
@@ -516,6 +582,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     static async Task TruncateAllMsSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-mssql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqlConnection(connectionString);
         try
         {
@@ -543,6 +612,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         await using var cmd = new SqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 #endif
 

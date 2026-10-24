@@ -9,7 +9,6 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
@@ -108,11 +107,11 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
 
         _storage = Substitute.For<IEventSequenceStorage>();
         _sink = Substitute.For<ISink>();
-        _storage.TryGetLastInstanceOfAny(RootKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _rootEventType.Id }))).Returns(new Option<AppendedEvent>(_rootEvent));
-        _storage.TryGetLastInstanceOfAny(FirstLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _firstLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_firstLevelEvent));
-        _storage.TryGetLastInstanceOfAny(SecondLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _secondLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_secondLevelEvent));
-        _storage.TryGetLastInstanceOfAny(ThirdLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _thirdLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_thirdLevelEvent));
-        _storage.TryGetLastInstanceOfAny(ForthLevelKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.SequenceEqual(new List<EventTypeId>() { _forthLevelEventType.Id }))).Returns(new Option<AppendedEvent>(_forthLevelEvent));
+        _storage.WithParentHistory(RootKey, _rootEvent);
+        _storage.WithParentHistory(FirstLevelKey, _firstLevelEvent);
+        _storage.WithParentHistory(SecondLevelKey, _secondLevelEvent);
+        _storage.WithParentHistory(ThirdLevelKey, _thirdLevelEvent);
+        _storage.WithParentHistory(ForthLevelKey, _forthLevelEvent);
     }
 
     async Task Because()

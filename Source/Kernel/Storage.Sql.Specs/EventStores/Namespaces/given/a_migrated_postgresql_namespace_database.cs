@@ -22,12 +22,7 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
-
-        await using (var migrationContext = CreateContext())
-        {
-            await migrationContext.Database.MigrateAsync();
-        }
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
         _database = Substitute.For<IDatabase>();
         _database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
@@ -43,6 +38,6 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
             .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
-        return new NamespaceDbContext(options);
+        return fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new NamespaceDbContext(options)));
     }
 }

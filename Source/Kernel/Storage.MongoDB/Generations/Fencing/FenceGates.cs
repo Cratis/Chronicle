@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.MongoDB.Generations.Gates;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -14,6 +15,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 public class FenceGates(IMongoDatabase database, FenceRetryPolicy retryPolicy) : IFenceGates
 {
     static readonly TransactionOptions _transactionOptions = new(ReadConcern.Snapshot, writeConcern: WriteConcern.WMajority);
+    readonly MongoDBGenerationGateWrites _gateWrites = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FenceGates"/> class with the default retry policy.
@@ -58,14 +60,9 @@ public class FenceGates(IMongoDatabase database, FenceRetryPolicy retryPolicy) :
             {
                 using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
                 session.StartTransaction(_transactionOptions);
-                var gate = await Gates.FindOneAndUpdateAsync(
-                    session,
-                    Builders<BsonDocument>.Filter.Eq("_id", gateId),
-                    Builders<BsonDocument>.Update.Inc(FenceCollections.Epoch, 1L),
-                    new FindOneAndUpdateOptions<BsonDocument> { IsUpsert = true, ReturnDocument = ReturnDocument.After },
-                    cancellationToken);
+                var epoch = await _gateWrites.Revoke(database, session, gateId, cancellationToken);
                 await session.CommitTransactionAsync(cancellationToken);
-                return gate[FenceCollections.Epoch].ToInt64();
+                return epoch;
             },
             cancellationToken);
     }

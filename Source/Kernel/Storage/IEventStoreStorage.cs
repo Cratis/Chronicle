@@ -25,6 +25,11 @@ namespace Cratis.Chronicle.Storage;
 /// </summary>
 public interface IEventStoreStorage
 {
+    /// <summary>
+    /// Gets durable generation initialization evidence.
+    /// </summary>
+    Generations.IGenerationInitializationStorage GenerationInitialization { get; }
+
     /// <summary>Gets the durable generation compatibility floor.</summary>
     Generations.IGenerationFloorStorage GenerationFloor { get; }
 

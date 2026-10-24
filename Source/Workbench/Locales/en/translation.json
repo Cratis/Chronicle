@@ -268,6 +268,8 @@
                         "oauthClientId": "Client ID",
                         "oauthClientSecret": "Client Secret",
                         "oauthScope": "Scope (optional)",
+                        "managedIdentityClientId": "Client ID (optional, leave empty for the system-assigned identity)",
+                        "managedIdentityScope": "Scope (for example api://<receiver-application-id>/.default)",
                         "isActive": "Active",
                         "isReplayable": "Replayable",
                         "test": "Test",
@@ -282,7 +284,8 @@
                     "none": "None",
                     "basic": "Basic",
                     "bearer": "Bearer Token",
-                    "oauth": "OAuth (Client Credentials)"
+                    "oauth": "OAuth (Client Credentials)",
+                    "managedIdentity": "Managed identity"
                 }
             },
             "externalServices": {

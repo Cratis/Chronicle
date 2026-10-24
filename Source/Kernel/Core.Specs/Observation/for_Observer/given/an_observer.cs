@@ -213,6 +213,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns(EventSequenceNumber.Unavailable);
 
@@ -275,6 +276,9 @@ public class an_observer : Specification
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
                 Attempts = partition.Attempts.ToArray(),
+                WebhookDisposition = partition.WebhookDisposition,
+                WebhookRecoveryId = partition.WebhookRecoveryId,
+                AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
                 Deferral = partition.Deferral,
                 RecoveryCursor = partition.RecoveryCursor
             }).ToArray()

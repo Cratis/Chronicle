@@ -44,7 +44,7 @@ public class WebhookDefinitionComparer(
             EventTypesChanged: !first.EventTypes.SequenceEqual(second.EventTypes),
             TargetUrlChanged: first.Target.Url != second.Target.Url,
             TargetHeadersChanged: !AreDictionariesEqual(first.Target.Headers, second.Target.Headers),
-            AuthorizationChanged: !AreAuthorizationsEqual(first.Target.Authorization, second.Target.Authorization),
+            AuthorizationChanged: !AreTargetAuthorizationsEqual(first.Target.Authorization, second.Target.Authorization),
             IsReplayableChanged: first.IsReplayable != second.IsReplayable,
             IsActiveChanged: first.IsActive != second.IsActive,
             OwnerChanged: first.Owner != second.Owner,
@@ -70,6 +70,9 @@ public class WebhookDefinitionComparer(
 
         return true;
     }
+
+    static bool AreTargetAuthorizationsEqual(WebhookAuthorization first, WebhookAuthorization second) =>
+        first.IsT4 ? first.AsT4.Equals(second.Value) : AreAuthorizationsEqual(first, second);
 
     static bool AreAuthorizationsEqual(WebhookAuthorization first, WebhookAuthorization second)
     {

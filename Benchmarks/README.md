@@ -251,6 +251,16 @@ REPLAY_EVENTS=300000 REPLAY_TIMEOUT_SECONDS=14400 dotnet run -c Release --no-bui
 - `GrainCalls` counts all incoming silo grain invocations in the same window, including readiness
   probes and background work; calls bypassing Orleans dispatch are excluded. Neither metric is
   projection-only. The JSON includes both totals, per-workload-event ratios and boundary descriptions.
+- Checkpoint-cadence fields (#5265), all counted in the same window:
+
+  | Field | Meaning |
+  |---|---|
+  | `SinkBulks`, `SinkBulkOpsMean`, `SinkBulkOpsMax` | Sink write bulks and operations per bulk. Insert, update and delete commands on read-model collections are grouped by driver `OperationId`, and array lengths are summed |
+  | `SinkBulksAtOrAbove1000` | Bulks that reached the sink's 1,000-operation limit |
+  | `SinkBulkOpsHistogram` | Bulk counts by operation count: `1`, `2-99`, `100-499`, `500-999`, `1000+` |
+  | `FlushForCalls`, `FlushForCallsPer1000Events` | Checkpoint fan-outs (`IObserverService.FlushFor`) in total and per 1,000 workload events |
+  | `EventCursorPages` | `getMore` commands on the event log plus one; how many cursor pages the readers consumed |
+
 - Seeding and content verification are outside the counter window. Both snapshots independently
   check expected root/child counts, identities, last names and removals, then compare sorted-content
   SHA-256 hashes. A missing, incorrect or changed document fails the run instead of emitting a result.
@@ -258,6 +268,93 @@ REPLAY_EVENTS=300000 REPLAY_TIMEOUT_SECONDS=14400 dotnet run -c Release --no-bui
 These are diagnostic measurements, not BenchmarkDotNet publisher input. The default deadline may
 need raising on slower machines, particularly at 300k events. Keep the machine idle during replay
 and compare the same workload settings and counter boundaries across revisions.
+
+## Missed-events catch-up shape (MongoDB)
+
+`--catch-up-shape` measures ordinary catch-up after an existing observer falls behind, **not replay**.
+It runs one silo with ephemeral MongoDB and no Docker, a single event type, and events appended
+round-robin across sources. The observer is either a plain projection setting one property per source
+(no children or joins), or a no-op reactor. Only the selected diagnostic observer is registered at runtime.
+
+From the repository root:
+
+```sh
+CATCHUP_SOURCES=100 CATCHUP_EVENTS=10000 CATCHUP_OBSERVER=projection \
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --catch-up-shape
+```
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `CATCHUP_SOURCES` | `100` | Source pool; at most `min(sources, events)` sources are used. |
+| `CATCHUP_EVENTS` | `10000` | Backlog events, excluding the initial marker. |
+| `CATCHUP_OBSERVER` | `projection` | `projection` or `reactor`; run separately to compare their job shapes. |
+| `CATCHUP_BATCH_SIZE` | `100` | Events per append during backlog seeding. |
+| `CATCHUP_TIMEOUT_SECONDS` | `180` | Bound for seeding, registration, database reads and catch-up waits. |
+| `CATCHUP_PATTERNS_WAIT_SECONDS` | `900` | Maximum post-timing patterns settlement wait, sampled every 30 seconds. |
+
+The scenario handles a marker, unsubscribes the observer, appends the backlog, verifies it is still
+disconnected at the marker, and resubscribes the **same** definition and event types. It never requests
+replay or a rebuild. Timing and counters start just before resubscription and stop after reaching the
+backlog tail with no failed partitions, quarantine or unfinished jobs. The marker, backlog seeding,
+final projection snapshot check and post-catch-up observer-state sampling are outside that window.
+For the reactor, a benchmark-only grain filter pauses `KeepSubscription` restoration while disconnected,
+waiting for any in-progress restoration before unsubscribing. The delivery stream stays open;
+restoration resumes after explicitly resubscribing the original subscriber. Kernel behavior is unchanged.
+
+One JSON result line (`Scenario = "interleaved-catch-up"`) reports events/s, duration, settings, marker
+and tail positions, managed allocations/GC deltas, grain-call counts, and Mongo command counts and
+commands/event bucketed as `database/collection/command`. Database-level commands use `(database)`;
+`getMore` uses its `collection` field. This separates read-model writes, observer/key-index bookkeeping,
+jobs and event-log reads. Allocations are process-wide; counters include readiness polling and silo
+housekeeping during the measured window. Mongo monitoring covers Chronicle client-manager clients,
+not Orleans persistence/membership or Arc clients.
+
+The result names `CatchUpObserver` and includes actual job grain calls by type/method. It is refused
+unless `CatchUpObserver.Start` ran for the diagnostic observer and **no** `ReplayObserver` activity was
+seen. Projection mode additionally checks every final source/value and fingerprints the ordinally
+sorted `source:value` lines (SHA-256, UTF-8, LF-separated, no trailing LF). Reactor mode deliberately
+does no handler work; its durable position and finished job prove completion. Existing `--replay-shape`
+output remains unchanged.
+
+After catch-up, the scenario reads the `$system.patterns` document directly from the event-store
+namespace's `observers` collection every 30 seconds. Sampling stops when `NextEventSequenceNumber >= tail + 1`,
+`InFlightPartitions == 0`, and two consecutive samples have identical state values, or when
+`CATCHUP_PATTERNS_WAIT_SECONDS` expires. Each timestamped sample reports whether the document exists,
+`nextEventSequenceNumber`, `lastHandledEventSequenceNumber`, the count of `inFlightPartitions`, and
+`handledEventCount`. Timestamps are excluded from the stability comparison. Samples are printed individually
+with `Scenario = "catch-up-patterns-state"` and included in the final result. The expected handled count
+includes the marker: `CATCHUP_EVENTS + 1`. The result also reports `PatternsSettled` and
+`PatternsHandledShortfall` (expected minus the latest handled count, treating a missing count as zero).
+Expiry produces `PatternsSettled: false`. Reads and waits remain outside timing, allocation deltas and
+counters. The handled count is diagnostic, not a correctness assertion: a settled observer can still
+have a handled-count shortfall.
+
+## Live interleaved appends (MongoDB)
+
+`--live-interleave` reuses the catch-up-shape fixture, observer and round-robin dataset, but keeps the
+observer subscribed after handling the marker. It measures how quickly the selected projection or
+reactor and `$system.patterns` reach the tail during bulk or sustained appends. No disconnect, replay
+or rebuild is requested. Zero catch-up jobs is valid; `CatchUpObserverStarts` counts starts for the
+selected observer during the window, revealing spill/resubscribe cycling.
+
+Use the `CATCHUP_*` settings in the table above. This mode additionally accepts
+`CATCHUP_APPEND_INTERVAL_MS` (default `0`, a non-negative integer): the delay **between** seed batches.
+For example, 100 batches separated by 200 ms approximate 20 seconds of sustained load:
+
+```sh
+CATCHUP_SOURCES=100 CATCHUP_EVENTS=10000 CATCHUP_BATCH_SIZE=100 \
+CATCHUP_OBSERVER=projection CATCHUP_APPEND_INTERVAL_MS=200 \
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --live-interleave
+```
+
+The `Scenario = "live-interleave"` JSON result includes seed, observer and patterns elapsed milliseconds
+from seed start, observer and patterns events/s, marker/tail positions, append settings, pattern samples,
+the snapshot fingerprint and the same counters as catch-up-shape. Counters start before seeding and
+stop after patterns settlement, before snapshot verification. Patterns are sampled every 5 seconds
+after the user observer reaches the tail, using the same two-consecutive-stable-states rule described
+above and the `CATCHUP_PATTERNS_WAIT_SECONDS` bound. `PatternsElapsedMilliseconds` includes the sampling
+confirmation delay. Unacknowledged appends, observer or patterns timeouts, and snapshot mismatches fail
+the run with a non-zero exit.
 
 ## Results
 
@@ -269,3 +366,99 @@ https://cratis.github.io/Chronicle/benchmarks/
 ## CI/CD
 
 Benchmarks run nightly and on manual dispatch via `.github/workflows/benchmarks.yml`, not on every push to `main`.
+
+## Rebuild baseline (S1–S4)
+
+Run the clustering executable directly (not BenchmarkDotNet):
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release
+REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
+```
+
+The existing `--rebuild-live` and `--replay-shape` diagnostics remain separate and unchanged.
+S1 updates one source; S2 distributes updates over N/10 sources (at least one).
+S3 creates parents and separately sourced children, with a shared catalog join.
+S4 cycles root updates, removals and re-creations. Source identities and values are
+repeatable from the seed. Baseline root, catalog and child events are separate
+from the older live-rebuild and replay-shape diagnostics, so those projections
+do not process the baseline corpus. Each corpus contains exactly N workload events plus a
+marker initialization and a catalog fact. Live runs continue the same event shapes
+with acknowledged, rate-limited appends and an independent marker every 100 ms.
+Slow appends coalesce timer ticks rather than producing a catch-up burst.
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `REBUILD_MODE` | `live` | `cold` (no concurrent appends) or `live` |
+| `REBUILD_SIZE` | `small` | `small` = 10,000; `medium` = 1,000,000; `large` = 10,000,000; or a positive event count |
+| `REBUILD_SEED` | `5156` | Positive deterministic corpus seed |
+| `REBUILD_TOPOLOGY` | `single` | `single` (one silo), `two` (two silos), `three` (three silos), all roles on each; or `split-jobs` (two silos, roles split as below) |
+| `REBUILD_LIVE_RATE` | `200` | Target workload events/s, excluding the 10 markers/s |
+| `REBUILD_TIMEOUT_SECONDS` | `1200` | Whole-run deadline, including cluster startup and seeding |
+
+With `split-jobs`, silo 0 hosts EventSequences and Observers with Jobs disabled;
+silo 1 hosts only Jobs. This topology requires the cluster Jobs role from
+Chronicle#5167; kernels without it fail before cluster startup with
+`split-jobs needs the cluster Jobs role (Chronicle#5167)` and exit 1.
+Unknown topology names also fail with an explicit error and exit 1.
+The JSON `Environment` block records the topology name and each silo's role
+assignment (`Jobs` is null when the kernel has no separate Jobs role).
+
+One JSON record reports the commit (`GITHUB_SHA`, `COMMIT_SHA`, or Git; otherwise
+`unknown`), kernel and Cratis.Orleans informational versions, OS, CPU count and
+memory available to the process (subject to container limits), and the exact settings.
+`StartupFence` is the acknowledged tail before requesting rebuild; `F` is the tail
+after stopping producers and awaiting their in-flight acknowledgements.
+`SubscribedEventsThroughStartupFence` is the exact seeded subscribed-event count,
+not a subtraction of global sequence numbers. `RebuildEventsPerSecond` divides that
+count by request-to-observed-startup-fence-coverage time, after served promotion.
+`RequestToServedSwapSeconds` detects promotion by a changed Mongo collection UUID;
+`PostSwapCatchUpSeconds` ends when both projections cover F. Polling granularity
+and coverage checks contribute to these raw timings.
+
+`ServedList` reads only the marker by its indexed key from the served Mongo collection,
+not an unfiltered list. `KernelFindByKey` uses the kernel key-lookup API. Both probes
+sample continuously from request through F coverage, including the post-swap catch-up.
+A final sample is taken after stopping that loop; markers first seen only in this
+final sample remain censored rather than contributing an artificially late latency.
+Both reports include submitted/observed/pending/timed-out marker
+counts and nearest-rank p50/p99/max milliseconds of **observed** markers. Unobserved
+markers are right-censored, with elapsed lower bounds in `Censored`; they never
+contribute artificial zero latencies. An empty observed sample has null percentiles.
+Marker latency begins at append acknowledgement and ends at the first sampled
+visibility. Markers are cumulative revisions, so observing a revision covers all
+prior acknowledged revisions. Cold runs have no markers.
+
+`PeakWorkingSetBytes` is sampled and `AllocatedBytes` is the allocation delta; both
+are **process-wide**, including all in-process silos, clients, probes and the twin.
+Per-silo memory is not measurable in this in-process cluster; per-silo grain
+activations are the proxy. After both projections cover F and before teardown,
+`GrainActivations` queries Orleans' `IManagementGrain.GetSimpleGrainStatistics`
+and reports each silo's name and address, `TotalActivations` across all grain
+types, and `ActivationsByGrainType` for the top 15 types by count (ties ordered by
+type name). The total is not truncated to those 15 types.
+Mongo commands and incoming grain calls are counted from request through observed
+startup-fence coverage. They include twin projection work, concurrent live appends,
+probes and background work; Mongo counts exclude Orleans persistence/membership and
+Arc clients. Direct served-collection marker reads use the fixture client and
+are outside the Mongo counter boundary. The per-event ratios divide these totals
+by subscribed seed events.
+`Series` gives metric names `Rebuild/<S>/mongodb/<topology>/<mode>/<metric>` labelled
+`raw`; these are not BenchmarkDotNet samples.
+
+The correctness reference is a separately materialized twin with identical event
+mappings, joins and children, under a different projection/read-model identity. Only
+the measured projection is rebuilt. After both cover F, compare exact document key
+sets and canonical full values, excluding only `__lastHandledEventSequenceNumber`.
+Only the declared unordered `children`/`leaves` collections are sorted by identity;
+other array order remains semantic. `DocumentsCompared`, first `Differences` and
+`Verdict` describe that comparison. Empty comparisons, no observed promotion,
+failed partitions or no acknowledged live append between the rebuild request and
+the observed served swap fail the run
+with a nonzero exit. The live-overlap check does not count appends acknowledged
+during post-swap catch-up. A twin catches rebuild divergence, not a bug common to the
+same definition on both projections; it is not an independent semantic oracle.
+
+Deferred: S5 reducers, S6 statistics union, non-Mongo storage, changed-definition
+rebuilds with a single-threaded reference, scheduled CI, BenchmarkDotNet series,
+S7–S10, failure injection, and the full Small/Medium one/three-silo baseline matrix.

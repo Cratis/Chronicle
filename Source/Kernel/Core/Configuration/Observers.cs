@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -102,6 +104,21 @@ public class Observers
     /// Gets the policy for evolving read models when a projection or reducer definition changes.
     /// </summary>
     public DefinitionEvolutionPolicy DefinitionEvolution { get; init; } = DefinitionEvolutionPolicy.Automatic;
+
+    /// <summary>
+    /// Gets the promotion gate for projection generations. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public PromotionGateMode GenerationPromotion { get; init; } = PromotionGateMode.OnCatchUp;
+
+    /// <summary>
+    /// Gets how long the deployment condition must hold before promotion. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan DeploymentConditionGracePeriod { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Gets how long a generation may remain pending before an alert is raised. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan PendingGenerationAlertAfter { get; init; } = TimeSpan.FromHours(24);
 
     /// <summary>
     /// Gets whether reactors and webhooks should automatically replay when their definition changes.

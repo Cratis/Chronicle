@@ -36,8 +36,10 @@ public partial class Observer
     /// <inheritdoc/>
     public void Dispose()
     {
+        _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
+        _staleCatchUpRetryTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);

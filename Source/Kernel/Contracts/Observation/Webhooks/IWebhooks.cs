@@ -176,6 +176,18 @@ public class AddWebhookRequest
     /// </summary>
     [ProtoMember(16)]
     public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ManagedIdentityClientId.
+    /// </summary>
+    [ProtoMember(18)]
+    public string ManagedIdentityClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ManagedIdentityScope.
+    /// </summary>
+    [ProtoMember(19)]
+    public string ManagedIdentityScope { get; set; } = string.Empty;
 }
 
 /// <summary>
