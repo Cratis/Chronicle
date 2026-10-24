@@ -11,6 +11,7 @@ public class and_the_stored_generation_is_the_pin : given.a_pinned_projection_gr
 
     async Task Because() => await Fold();
 
-    [Fact] void should_not_release_the_event() => _projection.DidNotReceive().ReleaseEvent(Arg.Any<EventType>(), Arg.Any<AppendedEvent>());
-    [Fact] void should_project_the_stored_event() => _projected.Event.ShouldBeSame(_stored);
+    [Fact] void should_release_the_event_even_when_its_generation_matches() => _projection.Received(1).ReleaseEvent(_pin, _stored);
+    [Fact] void should_resolve_the_key_from_the_released_event() => _resolved.ShouldBeSame(_released);
+    [Fact] void should_project_the_released_event() => _projected.Event.ShouldBeSame(_released);
 }

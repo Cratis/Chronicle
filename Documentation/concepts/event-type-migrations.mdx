@@ -127,7 +127,8 @@ to resolve joins or parent keys. A pinned projection can name only one generatio
 across all its clauses, including children and nested objects; registration rejects conflicting pins,
 just as it does for reactors and reducers. Different event types can pin different generations.
 Strongly consistent reads of a pinned projection (`GetInstanceById`, stream-scoped reads, Workbench
-snapshots and previews) use the same generation selection and release as its observer.
+snapshots and previews) use the same generation selection and release as its observer. Like observers,
+a read fails when its pinned generation is unavailable.
 Live, catch-up, and replay use the same generation-selection and release boundary.
 
 For a PDL definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves

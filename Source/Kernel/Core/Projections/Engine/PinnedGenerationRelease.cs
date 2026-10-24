@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 internal static class PinnedGenerationRelease
 {
     /// <summary>
-    /// Releases events whose stored generation differs from the projection's pin, preserving their order.
+    /// Releases every event of a pinned type, including revisions and protected values, preserving their order.
     /// </summary>
     /// <param name="projection">The projection selecting the generations.</param>
     /// <param name="events">The stored events to release.</param>
@@ -29,7 +29,7 @@ internal static class PinnedGenerationRelease
         for (var index = 0; index < released.Length; index++)
         {
             var @event = released[index];
-            if (pinsById.TryGetValue(@event.Context.EventType.Id, out var pin) && pin != @event.Context.EventType)
+            if (pinsById.TryGetValue(@event.Context.EventType.Id, out var pin))
             {
                 released[index] = await projection.ReleaseEvent(pin, @event);
             }
