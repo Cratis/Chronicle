@@ -36,9 +36,10 @@ internal static class UnhashedUniqueConstraintValues
     /// </summary>
     /// <param name="context">The context owning the namespace connection.</param>
     /// <param name="tableName">The catalog-discovered table.</param>
+    /// <param name="repairValueIndex">Whether to repair the per-event-source value column and index; per-value tables key on the value.</param>
     /// <param name="cancellationToken">Cancellation of the cleanup.</param>
     /// <returns>The deleted claim count.</returns>
-    internal static async Task<long> RemoveFrom(DbContext context, string tableName, CancellationToken cancellationToken)
+    internal static async Task<long> RemoveFrom(DbContext context, string tableName, bool repairValueIndex, CancellationToken cancellationToken)
     {
         var table = context.GetService<ISqlGenerationHelper>().DelimitIdentifier(tableName);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
@@ -47,8 +48,11 @@ internal static class UnhashedUniqueConstraintValues
         var deleted = await context.Database.ExecuteSqlRawAsync($"DELETE FROM {table} WHERE {Predicate(context)}", cancellationToken);
 #pragma warning restore EF1002
         // Always perform DDL, even if this silo cached an earlier skipped migration.
-        await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(
-            tableName, context, context.GetService<ILoggerFactory>().CreateLogger<UniqueConstraintMigrator>());
+        if (repairValueIndex)
+        {
+            await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(
+                tableName, context, context.GetService<ILoggerFactory>().CreateLogger<UniqueConstraintMigrator>());
+        }
         await transaction.CommitAsync(cancellationToken);
         return deleted;
     }

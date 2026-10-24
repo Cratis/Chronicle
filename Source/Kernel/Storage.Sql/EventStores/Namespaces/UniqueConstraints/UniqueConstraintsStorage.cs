@@ -36,11 +36,11 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         long values = 0;
         foreach (var table in tables.PerEventSource)
         {
-            sources += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, cancellationToken);
+            sources += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, repairValueIndex: true, cancellationToken);
         }
         foreach (var table in tables.PerValue)
         {
-            values += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, cancellationToken);
+            values += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, repairValueIndex: false, cancellationToken);
         }
         return (sources, values);
     }

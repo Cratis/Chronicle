@@ -15,7 +15,7 @@ public class and_hashed_duplicates_remain : given.a_legacy_sqlite_table
         await _context.EnsureTableExists();
     }
 
-    async Task Because() => _deleted = await UnhashedUniqueConstraintValues.RemoveFrom(_context, TableName, CancellationToken.None);
+    async Task Because() => _deleted = await UnhashedUniqueConstraintValues.RemoveFrom(_context, TableName, repairValueIndex: true, CancellationToken.None);
 
     [Fact] void should_not_delete_hash_shaped_claims() => _deleted.ShouldEqual(0L);
     [Fact] async Task should_keep_both_owners() => (await _context.Entries.CountAsync()).ShouldEqual(2);

@@ -62,12 +62,6 @@ internal static class UniqueConstraintValueIndexMigration
         }
     }
 
-    // Join an enclosing caller's transaction; that caller commits it.
-    static async Task<IDbContextTransaction?> BeginOwnedTransaction(DatabaseFacade database) =>
-        database.CurrentTransaction is null ? await database.BeginTransactionAsync() : null;
-
-    static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
-
     /// <summary>
     /// Locks a delimited table against concurrent silo writers for the current transaction.
     /// </summary>
@@ -87,6 +81,16 @@ internal static class UniqueConstraintValueIndexMigration
 
         // SQLite's transaction owns the write lock before the read checks below.
     }
+
+    /// <summary>
+    /// Begins a transaction unless the caller already owns one; the enclosing caller commits its own transaction.
+    /// </summary>
+    /// <param name="database">The database facade.</param>
+    /// <returns>The owned transaction, or null when joining the caller's.</returns>
+    static async Task<IDbContextTransaction?> BeginOwnedTransaction(DatabaseFacade database) =>
+        database.CurrentTransaction is null ? await database.BeginTransactionAsync() : null;
+
+    static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
 
     static async Task<bool> EnsureSqlServerValueLength(DbContext context, string tableName, string table, string index, ILogger<UniqueConstraintMigrator> logger)
     {

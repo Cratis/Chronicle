@@ -59,7 +59,7 @@ public class when_removing_unhashed_values : Specification
     [Fact] async Task should_keep_only_the_hash_shaped_retained_value() => (await Scalar("SELECT COUNT(*) FROM log_unique_constraint_values")).ShouldEqual(1L);
     [Fact] async Task should_leave_another_sequence_alone() => (await Scalar("SELECT COUNT(*) FROM other_unique_constraint")).ShouldEqual(1L);
     [Fact] async Task should_replace_the_cached_fallback_with_a_unique_index() => (await Scalar("SELECT \"unique\" FROM pragma_index_list('log_unique_constraint') WHERE name = 'IX_log_unique_constraint_Value'")).ShouldEqual(1L);
-    [Fact] async Task should_repair_the_retained_value_index() => (await Scalar("SELECT \"unique\" FROM pragma_index_list('log_unique_constraint_values') WHERE name = 'IX_log_unique_constraint_values_Value'")).ShouldEqual(1L);
+    [Fact] async Task should_not_add_a_redundant_index_to_retained_values_keyed_on_value() => (await Scalar("SELECT COUNT(*) FROM pragma_index_list('log_unique_constraint_values') WHERE name = 'IX_log_unique_constraint_values_Value'")).ShouldEqual(0L);
 
     async Task<long> Scalar(string query)
     {

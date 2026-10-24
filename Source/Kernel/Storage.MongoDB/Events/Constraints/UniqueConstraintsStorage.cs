@@ -185,22 +185,18 @@ public class UniqueConstraintsStorage(
         var collections = new BsonDocument("name", new BsonRegularExpression($"^{Regex.Escape(eventSequenceId.Value)}\\+.+\\+constraint$"));
         using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = collections }, cancellationToken);
         var hash = new BsonRegularExpression("\\A[0-9a-f]{64}\\z");
+
+        // Collection names cannot tell the claim modes apart (a constraint or scope may be named "values"),
+        // so each delete only matches documents of its own shape: per-event-source rows store the value in a
+        // field and the owner in _id, retained per-value rows store the owner in a field and the value in _id.
+        var sourceFilter = Builders<UniqueConstraintIndex>.Filter.Exists(row => row.Value) & !Builders<UniqueConstraintIndex>.Filter.Regex(row => row.Value, hash);
+        var valueFilter = Builders<UniqueConstraintValueIndex>.Filter.Exists(row => row.EventSourceId) & !Builders<UniqueConstraintValueIndex>.Filter.Regex(row => row.Value, hash);
         long sources = 0;
         long values = 0;
         foreach (var name in await names.ToListAsync(cancellationToken))
         {
-            if (name.EndsWith("+values+constraint", StringComparison.Ordinal))
-            {
-                var filter = !Builders<UniqueConstraintValueIndex>.Filter.Regex(row => row.Value, hash);
-                var result = await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(name).DeleteManyAsync(filter, cancellationToken);
-                values += result.DeletedCount;
-            }
-            else
-            {
-                var filter = !Builders<UniqueConstraintIndex>.Filter.Regex(row => row.Value, hash);
-                var result = await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(filter, cancellationToken);
-                sources += result.DeletedCount;
-            }
+            sources += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(sourceFilter, cancellationToken)).DeletedCount;
+            values += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(name).DeleteManyAsync(valueFilter, cancellationToken)).DeletedCount;
         }
         return (sources, values);
     }

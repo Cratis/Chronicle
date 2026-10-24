@@ -51,11 +51,27 @@ public class and_collections_are_discovered : Specification
 
     async Task Because() => _counts = await _storage.RemoveUnhashedValues();
 
-    [Fact] void should_count_both_claim_modes() => _counts.ShouldEqual((3L, 5L));
-    [Fact] void should_use_the_source_value_field() => _sourceFilter.GetElement(0).Name.ShouldEqual(BsonClassMap.LookupClassMap(typeof(UniqueConstraintIndex)).GetMemberMap(nameof(UniqueConstraintIndex.Value)).ElementName);
-    [Fact] void should_use_the_retained_value_id_field() => _valueFilter.GetElement(0).Name.ShouldEqual(BsonClassMap.LookupClassMap(typeof(UniqueConstraintValueIndex)).GetMemberMap(nameof(UniqueConstraintValueIndex.Value)).ElementName);
-    [Fact] void should_use_a_case_sensitive_negated_hash_pattern() => _sourceFilter.GetElement(0).Value["$not"].AsBsonRegularExpression.ShouldEqual(new BsonRegularExpression("\\A[0-9a-f]{64}\\z"));
-    [Fact] void should_use_the_same_hash_pattern_for_retained_claims() => _valueFilter.GetElement(0).Value["$not"].ShouldEqual(_sourceFilter.GetElement(0).Value["$not"]);
+    [Fact] void should_try_both_claim_shapes_in_every_collection() => _counts.ShouldEqual((6L, 10L));
+    [Fact] void should_only_match_source_rows_holding_a_value_field() => Condition(_sourceFilter, SourceValue)["$exists"].ShouldEqual(BsonBoolean.True);
+    [Fact] void should_use_a_case_sensitive_negated_hash_pattern() => Condition(_sourceFilter, SourceValue)["$not"].AsBsonRegularExpression.ShouldEqual(new BsonRegularExpression("\\A[0-9a-f]{64}\\z"));
+    [Fact] void should_only_match_retained_rows_holding_an_owner_field() => Condition(_valueFilter, RetainedOwner)["$exists"].ShouldEqual(BsonBoolean.True);
+    [Fact] void should_use_the_same_hash_pattern_for_retained_values() => Condition(_valueFilter, RetainedValue)["$not"].ShouldEqual(Condition(_sourceFilter, SourceValue)["$not"]);
     [Fact] void should_not_match_another_sequence() => Regex.IsMatch("outbox+unique+constraint", _collectionPattern.Pattern, RegexOptions.None, TimeSpan.FromSeconds(1)).ShouldBeFalse();
+    static string SourceValue => BsonClassMap.LookupClassMap(typeof(UniqueConstraintIndex)).GetMemberMap(nameof(UniqueConstraintIndex.Value)).ElementName;
+    static string RetainedValue => BsonClassMap.LookupClassMap(typeof(UniqueConstraintValueIndex)).GetMemberMap(nameof(UniqueConstraintValueIndex.Value)).ElementName;
+    static string RetainedOwner => BsonClassMap.LookupClassMap(typeof(UniqueConstraintValueIndex)).GetMemberMap(nameof(UniqueConstraintValueIndex.EventSourceId)).ElementName;
+
+    static BsonDocument Condition(BsonDocument filter, string element)
+    {
+        // The driver may render a conjunction flat or as $and; merge every condition for the element either way.
+        var parts = filter.Contains("$and") ? filter["$and"].AsBsonArray.Select(part => part.AsBsonDocument) : [filter];
+        var condition = new BsonDocument();
+        foreach (var part in parts.Where(part => part.Contains(element)))
+        {
+            condition.AddRange(part[element].AsBsonDocument);
+        }
+        return condition;
+    }
+
     [Fact] void should_match_retained_scope_collections() => Regex.IsMatch("event-log+unique+scope+values+constraint", _collectionPattern.Pattern, RegexOptions.None, TimeSpan.FromSeconds(1)).ShouldBeTrue();
 }
