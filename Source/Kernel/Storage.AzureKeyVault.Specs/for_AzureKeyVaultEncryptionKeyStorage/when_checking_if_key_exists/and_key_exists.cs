@@ -15,7 +15,7 @@ public class and_key_exists(context ctx) : IClassFixture<context>
         public EncryptionKeyIdentifier Identifier;
         public bool Result;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Identifier = Guid.NewGuid().ToString();

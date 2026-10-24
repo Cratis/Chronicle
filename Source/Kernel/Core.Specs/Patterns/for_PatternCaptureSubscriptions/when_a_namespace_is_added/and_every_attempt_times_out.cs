@@ -13,7 +13,7 @@ public class and_every_attempt_times_out : given.a_namespace_subscription
     async Task Because()
     {
         await _onNamespaceAdded(_added);
-        _error = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+        _error = await Catch.Exception(_silo.TimerRegistry.FireAllAsync);
     }
 
     [Fact] void should_leave_retries_to_reconciliation() => _capture.Received(1).Subscribe(_added.EventStore, _added.Namespace);

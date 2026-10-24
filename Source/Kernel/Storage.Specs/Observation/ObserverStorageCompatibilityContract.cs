@@ -145,7 +145,7 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         },
         EventSequenceId.Log);
 
-    async Task<Exception> Check(bool supportsInitializedObservers = false)
+    async Task<Exception?> Check(bool supportsInitializedObservers = false)
     {
         var state = await OpenObservers().Get("observer");
         return await Catch.Exception(() => OpenStore().EnsureObserverCompatibility(state, supportsInitializedObservers));

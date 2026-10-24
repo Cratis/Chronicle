@@ -21,6 +21,7 @@ using Orleans.Core;
 using Orleans.TestKit;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
+using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 
@@ -35,6 +36,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     protected IStorage<ProjectionDefinition> _stateStorage;
     protected IProjectionPipelineManager _pipelines;
     protected IProjectionFactory _factory;
+    protected EngineProjectionsManager _engineProjections;
     protected Storage.IStorage _storage;
     protected EngineProjection _projection;
     protected IProjectionPipeline _cachedPipeline;
@@ -87,6 +89,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _projection.Accepts(Arg.Any<EventType>()).Returns(true);
         _factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel, Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_projection);
         silo.AddService(_factory);
+        _engineProjections = Substitute.For<EngineProjectionsManager>();
+        silo.AddService(_engineProjections);
 
         _cachedPipeline = Substitute.For<IProjectionPipeline>();
         _refreshedPipeline = Substitute.For<IProjectionPipeline>();
@@ -109,6 +113,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _subscriber = await silo.CreateGrainAsync<ProjectionObserverSubscriber>(_key.ToString());
         _pipelines.ClearReceivedCalls();
         _factory.ClearReceivedCalls();
+        _engineProjections.ClearReceivedCalls();
     }
 
     protected virtual ProjectionDefinition DefinitionAtActivation() => _definition;
