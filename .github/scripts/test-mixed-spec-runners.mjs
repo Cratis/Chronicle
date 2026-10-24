@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { v3Projects, v2Projects, shippingProjects, ordinaryFilter, childCommand, invocation,
     validateTrx, validateCoverage, validateSelection, parseXml, runProcess, runProject, main } from './run-mixed-specs.mjs';
+import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -187,4 +188,30 @@ test('MOCK external deadline kills collector/child group and rejects incomplete 
     }
     assert.equal(live, false, `MOCK descendant ${pid} still live`);
     await assert.rejects(readFile(path.join(options.directory, 'coverage.cobertura.xml')));
+});
+
+test('MOCK collector acceptance: exact 37 over the documented single-child grammar, wrong/zero exit rejected', async () => {
+    const args = collectorArgs('/p/Probe.dll', '/out', ['exit', '37']);
+    assert.deepEqual(args.slice(0, 5), ['tool', 'run', 'dotnet-coverage', '--', 'collect']);
+    assert.equal(args.at(-1), '"dotnet" "/p/Probe.dll" "exit" "37"');
+    await verifyExit('/p/Probe.dll', '/out', async () => ({ code: 37 }));
+    for (const code of [0, 1, 36]) await assert.rejects(verifyExit('/p/Probe.dll', '/out', async () => ({ code })), /exact child exit 37/);
+});
+
+const deadlineExecute = exitCode => async () => { throw Object.assign(new Error('deadline'), { exitCode }); };
+async function attemptDeadline(pids, { alive = () => false, exitCode = 124 } = {}) {
+    const { directory } = await fixture();
+    await writeFile(path.join(directory, 'owned.pids'), pids);
+    return verifyDeadline('/p/Probe.dll', directory, { execute: deadlineExecute(exitCode), alive, grace: 200 });
+}
+
+test('MOCK collector acceptance: deadline needs 124, both owned PIDs recorded and none alive', async () => {
+    await attemptDeadline('111\n222\n');
+    await assert.rejects(attemptDeadline('111\n222\n', { exitCode: 1 }), /exit 124/);
+    await assert.rejects(attemptDeadline('111\n'), /both owned PIDs/);
+    await assert.rejects(attemptDeadline(''), /both owned PIDs/);
+    await assert.rejects(attemptDeadline('999999991\n999999992\n', { alive: pid => pid === 999999992 }), /alive: 999999992/);
+    const { directory } = await fixture();
+    await assert.rejects(verifyDeadline('/p/Probe.dll', directory, { execute: async () => ({ code: 0 }) }), /got completed/);
+    await assert.rejects(verifyCollector([], async () => ({ code: 37 })), /Usage/);
 });
