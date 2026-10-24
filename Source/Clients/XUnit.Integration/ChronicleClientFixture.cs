@@ -69,17 +69,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
     }
 
-    IntegrationTimings CreateTimings(TChronicleFixture chronicleFixture)
-    {
-        var perContextMongoDB = chronicleFixture is ChronicleFixture { UsesPerContextMongoDBHost: true };
-        return new IntegrationTimings(
-            GetType().FullName ?? GetType().Name,
-            Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? (perContextMongoDB ? "inprocess-per-context" : "unavailable"),
-            Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER") ?? (perContextMongoDB ? "MongoDB" : "unavailable"));
-    }
-
-    internal IntegrationTimings Timings { get; }
-
     /// <summary>
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
@@ -185,6 +174,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
 
     /// <summary>
+    /// Gets the lifecycle timings recorder.
+    /// </summary>
+    internal IntegrationTimings Timings { get; }
+
+    /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for resolving grains.
     /// </summary>
     internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
@@ -247,7 +241,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Create a new <see cref="HttpClient"/> instance.
     /// </summary>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
-    public HttpClient CreateClient() => EnsureInitialized(() => IntegrationHostTimings.Measure(Timings, CurrentWebApplicationFactory!, DatabaseNamePrefix.Length > 0,
+    public HttpClient CreateClient() => EnsureInitialized(() => IntegrationHostTimings.Measure(
+        Timings,
+        CurrentWebApplicationFactory!,
+        DatabaseNamePrefix.Length > 0,
         () => _createClientMethod.Invoke(CurrentWebApplicationFactory, null) as HttpClient))!;
 
     /// <summary>
@@ -255,7 +252,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
-    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => IntegrationHostTimings.Measure(Timings, CurrentWebApplicationFactory!, DatabaseNamePrefix.Length > 0,
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => IntegrationHostTimings.Measure(
+        Timings,
+        CurrentWebApplicationFactory!,
+        DatabaseNamePrefix.Length > 0,
         () => _createClientWithOptionsMethod.Invoke(CurrentWebApplicationFactory, [options]) as HttpClient))!;
 
     /// <summary>
@@ -312,44 +312,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         finally
         {
             Timings.Complete();
-        }
-    }
-
-    async Task DisposeFixture()
-    {
-        var exceptions = new List<Exception>(4);
-
-        await TryCleanup(() => Timings.Run("scenario-destroy", OnDisposeAsync), exceptions);
-        await TryCleanup(() => Timings.Run("services-scope-disposal", DisposeServicesScopeAsync), exceptions);
-
-        if (!_backupPerformed && IsBackupEnabled)
-        {
-            await TryCleanup(
-                async () =>
-                {
-                    await ChronicleFixture.PerformBackupAsync(_name);
-                    _backupPerformed = true;
-                },
-                exceptions);
-        }
-
-        if (DatabaseNamePrefix.Length > 0)
-        {
-            await TryCleanup(() => Timings.Run("host-silo-disposal-per-context", DisposeContextFactory), exceptions);
-        }
-        else
-        {
-            await TryCleanup(() => Timings.Run("storage-remove-cleanup", () => ChronicleFixture.RemoveAllDatabases()), exceptions);
-        }
-
-        if (exceptions.Count == 1)
-        {
-            ExceptionDispatchInfo.Capture(exceptions[0]).Throw();
-        }
-
-        if (exceptions.Count > 1)
-        {
-            throw new AggregateException(exceptions);
         }
     }
 
@@ -456,6 +418,53 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
     }
 
+    IntegrationTimings CreateTimings(TChronicleFixture chronicleFixture)
+    {
+        var perContextMongoDB = chronicleFixture is ChronicleFixture { UsesPerContextMongoDBHost: true };
+        return new IntegrationTimings(
+            GetType().FullName ?? GetType().Name,
+            Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? (perContextMongoDB ? "inprocess-per-context" : "unavailable"),
+            Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER") ?? (perContextMongoDB ? "MongoDB" : "unavailable"));
+    }
+
+    async Task DisposeFixture()
+    {
+        var exceptions = new List<Exception>(4);
+
+        await TryCleanup(() => Timings.Run("scenario-destroy", OnDisposeAsync), exceptions);
+        await TryCleanup(() => Timings.Run("services-scope-disposal", DisposeServicesScopeAsync), exceptions);
+
+        if (!_backupPerformed && IsBackupEnabled)
+        {
+            await TryCleanup(
+                async () =>
+                {
+                    await ChronicleFixture.PerformBackupAsync(_name);
+                    _backupPerformed = true;
+                },
+                exceptions);
+        }
+
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await TryCleanup(() => Timings.Run("host-silo-disposal-per-context", DisposeContextFactory), exceptions);
+        }
+        else
+        {
+            await TryCleanup(() => Timings.Run("storage-remove-cleanup", () => ChronicleFixture.RemoveAllDatabases()), exceptions);
+        }
+
+        if (exceptions.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(exceptions[0]).Throw();
+        }
+
+        if (exceptions.Count > 1)
+        {
+            throw new AggregateException(exceptions);
+        }
+    }
+
     T EnsureInitialized<T>(Func<T> getObject)
     {
         // Idempotent: the shared factory may already exist while this instance's reflection members do not.
@@ -491,7 +500,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         if (_services is null)
         {
             // Services access, not factory allocation, starts the lazy host and silo.
-            var rootServices = IntegrationHostTimings.Measure(Timings, CurrentWebApplicationFactory!, DatabaseNamePrefix.Length > 0,
+            var rootServices = IntegrationHostTimings.Measure(
+                Timings,
+                CurrentWebApplicationFactory!,
+                DatabaseNamePrefix.Length > 0,
                 () => (_servicesProperty!.GetValue(CurrentWebApplicationFactory) as IServiceProvider)!);
             _servicesScope = rootServices.CreateScope();
             _services = _servicesScope.ServiceProvider;

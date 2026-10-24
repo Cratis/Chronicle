@@ -114,34 +114,12 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
+        var phase = _timings.Begin("fixture-disposal");
         try
-        {
-            await _timings.Run("fixture-disposal", DisposeFixture);
-        }
-        finally
-        {
-            _timings.Complete();
-        }
-    }
-
-    async Task DisposeFixture()
-    {
-        if (_contextStorage is null)
-        {
-            await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
-            await Network.DisposeAsync();
-            return;
-        }
-
-        try
-        {
-            await DropContextDatabases();
-        }
-        finally
         {
             try
             {
-                _contextStorage.ResetReaders();
+                await DisposeContextStorage();
             }
             finally
             {
@@ -154,6 +132,18 @@ public abstract class ChronicleFixture : IChronicleFixture
                     await Network.DisposeAsync();
                 }
             }
+
+            phase?.Success();
+        }
+        catch
+        {
+            phase?.Failure();
+            throw;
+        }
+        finally
+        {
+            phase?.Dispose();
+            _timings.Complete();
         }
     }
 
@@ -250,6 +240,23 @@ public abstract class ChronicleFixture : IChronicleFixture
             parameters.HostConfig = hostConfig;
         })
         : builder;
+
+    async Task DisposeContextStorage()
+    {
+        if (_contextStorage is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DropContextDatabases();
+        }
+        finally
+        {
+            _contextStorage.ResetReaders();
+        }
+    }
 
     async Task DropContextDatabases()
     {

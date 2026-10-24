@@ -16,8 +16,14 @@ public class when_disabled : Specification
     async Task Because()
     {
         _phase = _timings.Begin("boot");
-        await _timings.Run("scenario", () => { _calls++; return Task.CompletedTask; });
+        await _timings.Run("scenario", Count);
         _timings.Complete();
+    }
+
+    Task Count()
+    {
+        _calls++;
+        return Task.CompletedTask;
     }
 
     [Fact] void should_not_allocate_a_phase() => _phase.ShouldBeNull();
