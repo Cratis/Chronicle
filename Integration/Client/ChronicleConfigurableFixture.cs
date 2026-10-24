@@ -1,14 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using Cratis.Chronicle.Connections;
+using System.Text;
 using Cratis.Chronicle.Diagnostics;
+using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Grpc.Core;
+using Grpc.Core.Interceptors;
+using Grpc.Net.Client;
 using MongoDB.Driver;
+using ProtoBuf.Grpc.Client;
 using Testcontainers.PostgreSql;
 
 namespace Cratis.Chronicle.Integration;
@@ -65,8 +71,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);
 
+    readonly object _kernelFailureGate = new();
+
     IContainer? _databaseContainer;
     IContainer? _outOfProcessMongoContainer;
+    KernelFailureGuard? _kernelFailureGuard;
 #pragma warning disable CA2213 // _outOfProcessKernelContainer is a reference to the container the base class owns and disposes via base.DisposeAsync.
     IContainer? _outOfProcessKernelContainer;
 #pragma warning restore CA2213
@@ -137,25 +146,33 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         try
         {
+            Exception? failure = null;
             try
             {
-                // The kernel container is owned by the base class (assigned during BuildContainer)
-                // and is disposed by base.DisposeAsync — only the auxiliary containers we built
-                // ourselves need disposing here.
                 await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
             }
-            finally
+            catch (Exception error)
             {
-                try
-                {
-                    await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-                }
-                finally
-                {
-                    // Always runs, so a container that fails to dispose cannot leave the kernel container running.
-                    await base.DisposeAsync();
-                }
+                failure = error;
             }
+            try
+            {
+                await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+            }
+            catch (Exception error)
+            {
+                failure = PreserveCleanupFailure(failure, error);
+            }
+            try
+            {
+                // Base owns every attempted kernel and deletes its TLS material only after disposal succeeds.
+                await base.DisposeAsync();
+            }
+            catch (Exception error)
+            {
+                failure = PreserveCleanupFailure(failure, error);
+            }
+            if (failure is not null) ExceptionDispatchInfo.Throw(failure);
         }
         finally
         {
@@ -163,6 +180,13 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             // the files open, so this is best effort: it succeeds on Linux and macOS and reports what it cannot delete elsewhere.
             DeleteInProcessSqliteDirectory();
         }
+    }
+
+    static Exception PreserveCleanupFailure(Exception? failure, Exception error)
+    {
+        if (failure is null) return error;
+        XUnit.Integration.KernelFixtureCertificate.ReportCleanupFailure(failure, error);
+        return failure;
     }
 
     static string CreateInProcessSqliteDirectory()
@@ -208,6 +232,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // and where the migration cache must be invalidated atomically with the wipe.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
         {
+            if (Volatile.Read(ref _kernelFailureGuard) is { } guard)
+            {
+                await guard.ThrowIfFailed();
+            }
+
             // Only reset the OOP container on the first (unconditional) call. The second call
             // from OnBeforeInitializeAsync uses excludePrefixes to do a selective drop — for
             // out-of-process mode this is a no-op because the first reset already wiped
@@ -338,10 +367,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // container's still-bound ports while Docker tears it down. The actual mapped
         // port is exposed through KernelGrpcHostPort and forwarded to the in-process
         // silo + the reset client.
+        var certificate = KernelCertificate ??= XUnit.Integration.KernelFixtureCertificate.Create();
+        const string certificatePath = "/run/chronicle-fixture/kernel.pfx";
         var builder = new ContainerBuilder(_imageName)
             .WithImage(_imageName)
             .WithPortBinding(35000, assignRandomHostPort: true)
             .WithHostname(ChronicleOutOfProcessFixture.HostName)
+            .WithBindMount(certificate.Path, certificatePath, AccessMode.ReadOnly)
+            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", certificatePath)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
             .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
@@ -368,6 +401,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     static ContainerBuilder WithTimingOutput(ContainerBuilder builder)
     {
         if (!IntegrationTimings.Enabled) return builder;
+
         // Never forward the host sidecar path or any connection details as timing metadata.
         builder = builder.WithEnvironment("CHRONICLE_INTEGRATION_TIMINGS", "1")
             .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(
@@ -424,6 +458,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timing = IntegrationTimings.BeginCurrent("auxiliary-mongo-start");
         timing?.Failure();
+
         // Initiate the replica set using the docker-network hostname as the member name so
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
@@ -466,6 +501,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         using var timing = IntegrationTimings.BeginCurrent("auxiliary-postgresql-start");
         timing?.Failure();
+
         // The module waits for TCP pg_isready, which the temporary init server cannot satisfy.
         _databaseContainer = new PostgreSqlBuilder("postgres:16")
             .WithHostname(PostgreSqlHostName)
@@ -530,6 +566,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
         {
             timing?.Retry();
+
             // Only a process that exited during startup warrants another attempt. Build a new
             // container so Testcontainers does not reuse the failed instance or its host port.
             _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -558,48 +595,79 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timing = IntegrationTimings.BeginCurrent("oop-reset-total");
         timing?.Failure();
-        // skipTlsValidation because the container serves a self-signed development certificate.
-        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
-        var options = new ChronicleClientOptions
+        KernelFailureGuard guard;
+        lock (_kernelFailureGate)
         {
-            ConnectionString = connectionString,
-            EventStore = "Testing",
-            AutoDiscoverAndRegister = false,
-
-            // Reset is a one-shot operation that can take longer than the 5-second keep-alive
-            // watchdog window (especially on SQL backends, where wiping enumerates and truncates
-            // every per-event-store database). If the watchdog tripped mid-call it would dispose
-            // the underlying gRPC channel and the in-flight ResetKernelState RPC would surface as
-            // ObjectDisposedException on Grpc.Net.Client.GrpcChannel. We don't need a watchdog
-            // here because the client lives only for the duration of this single RPC.
-            SkipKeepAlive = true
-        };
-
-        var deadline = DateTime.UtcNow.AddMinutes(2);
-        while (true)
-        {
-            try
-            {
-                using var attempt = IntegrationTimings.BeginCurrent("oop-reset-attempt");
-                attempt?.Failure();
-                timing?.Poll();
-                using var resetClient = new ChronicleClient(options);
-                var eventStore = await resetClient.GetEventStore("Testing");
-                var services = ((Contracts.IChronicleServicesAccessor)eventStore.Connection).Services;
-                await services.Server.ResetKernelState();
-                attempt?.Success();
-                timing?.Success();
-                return;
-            }
-            catch (Exception) when (DateTime.UtcNow < deadline)
-            {
-                timing?.Retry();
-                using var delay = IntegrationTimings.BeginCurrent("oop-reset-retry-delay");
-                delay?.Failure();
-                await Task.Delay(500);
-                delay?.Success();
-            }
+            var container = _outOfProcessKernelContainer!;
+            guard = _kernelFailureGuard ??= new KernelFailureGuard(
+                container.Id,
+                cancellationToken => InspectKernel(container, cancellationToken),
+                cancellationToken => ReadKernelTail(container, cancellationToken),
+                cancellationToken => Task.Delay(500, cancellationToken));
         }
+        await guard.ThrowIfFailed();
+        var deadline = DateTime.UtcNow.AddMinutes(2);
+        await guard.Run(
+        async cancellationToken =>
+        {
+            using var attempt = IntegrationTimings.BeginCurrent("oop-reset-attempt");
+            attempt?.Failure();
+            timing?.Poll();
+
+            // The reset RPC is server-wide; it needs neither event-store bootstrap nor a keep-alive.
+            // Own the channel for this attempt and pass cancellation to the native gRPC call, so the
+            // losing RPC settles before channel disposal and the guard's join cannot leave bootstrap work.
+            using var handler = new SocketsHttpHandler();
+            handler.SslOptions.RemoteCertificateValidationCallback = Connections.CertificateLoader.CreateServerCertificateValidationCallback(
+                skipTlsValidation: false, pinnedCertificateHash: KernelCertificate!.Hash);
+            using var channel = GrpcChannel.ForAddress($"https://localhost:{KernelGrpcHostPort}", new GrpcChannelOptions { HttpHandler = handler });
+            var server = channel.Intercept(new ResetCancellationInterceptor(deadline, cancellationToken)).CreateGrpcService<Contracts.Host.IServer>();
+            await server.ResetKernelState();
+            attempt?.Success();
+        },
+        () => DateTime.UtcNow < deadline,
+        async () =>
+        {
+            timing?.Retry();
+            using var delay = IntegrationTimings.BeginCurrent("oop-reset-retry-delay");
+            delay?.Failure();
+            await Task.Delay(500);
+            delay?.Success();
+        });
+        timing?.Success();
+    }
+
+    static async Task<long?> InspectKernel(IContainer container, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
+        var response = await client.Containers.InspectContainerAsync(container.Id, timeout.Token);
+        return response.State is { Running: false } state &&
+            (string.Equals(state.Status, "exited", StringComparison.Ordinal) || string.Equals(state.Status, "dead", StringComparison.Ordinal))
+            ? state.ExitCode
+            : null;
+    }
+
+    static async Task<string> ReadKernelTail(IContainer container, CancellationToken cancellationToken)
+    {
+        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
+        using var stream = await client.Containers.GetContainerLogsAsync(
+            container.Id,
+            new ContainerLogsParameters { ShowStdout = true, ShowStderr = true, Tail = "64", Follow = false },
+            cancellationToken);
+        var bytes = new byte[16384];
+        var count = 0;
+        while (count < bytes.Length)
+        {
+            var result = await stream.ReadOutputAsync(bytes, count, bytes.Length - count, cancellationToken);
+            if (result.EOF)
+            {
+                break;
+            }
+            count += result.Count;
+        }
+        return Encoding.UTF8.GetString(bytes, 0, count);
     }
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
@@ -626,5 +694,15 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
             await Task.Delay(1000);
         }
+    }
+
+    sealed class ResetCancellationInterceptor(DateTime deadline, CancellationToken cancellationToken) : Interceptor
+    {
+        public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(
+            TRequest request,
+            ClientInterceptorContext<TRequest, TResponse> context,
+            AsyncUnaryCallContinuation<TRequest, TResponse> continuation) =>
+            continuation(request, new ClientInterceptorContext<TRequest, TResponse>(
+                context.Method, context.Host, context.Options.WithCancellationToken(cancellationToken).WithDeadline(deadline)));
     }
 }

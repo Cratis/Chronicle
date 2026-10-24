@@ -39,6 +39,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     IAsyncDisposable? _contextWebApplicationFactory;
 #pragma warning restore CA2213
     bool _backupPerformed;
+    ExceptionDispatchInfo? _kernelFailure;
     string _name = string.Empty;
     IServiceScope? _servicesScope;
     IServiceProvider? _services;
@@ -295,11 +296,19 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        await Timings.Run("initialize", async () =>
+        try
         {
-            await Timings.Run("reset-or-bootstrap", OnBeforeInitializeAsync);
-            await Timings.Run("scenario", OnInitializeAsync);
-        });
+            await Timings.Run("initialize", async () =>
+            {
+                await Timings.Run("reset-or-bootstrap", OnBeforeInitializeAsync);
+                await Timings.Run("scenario", OnInitializeAsync);
+            });
+        }
+        catch (KernelProcessExited exception)
+        {
+            _kernelFailure ??= ExceptionDispatchInfo.Capture(exception);
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -452,6 +461,16 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         else
         {
             await TryCleanup(() => Timings.Run("storage-remove-cleanup", () => ChronicleFixture.RemoveAllDatabases()), exceptions);
+        }
+
+        if (exceptions.Count > 0)
+        {
+            _kernelFailure?.Throw();
+            var kernelFailure = exceptions.OfType<KernelProcessExited>().FirstOrDefault();
+            if (kernelFailure is not null)
+            {
+                ExceptionDispatchInfo.Capture(kernelFailure).Throw();
+            }
         }
 
         if (exceptions.Count == 1)

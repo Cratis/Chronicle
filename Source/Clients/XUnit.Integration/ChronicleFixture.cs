@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Diagnostics;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -60,7 +61,15 @@ public abstract class ChronicleFixture : IChronicleFixture
         // The override is the documented extension point; the base ctor must call it to
         // trigger the lazy build-and-start cycle that every fixture relies on.
 #pragma warning disable MA0056
-        StartContainer(MongoDBContainer).GetAwaiter().GetResult();
+        try
+        {
+            StartContainer(MongoDBContainer).GetAwaiter().GetResult();
+        }
+        catch (Exception failure)
+        {
+            DisposeAfterFailedStart(failure);
+            throw;
+        }
 #pragma warning restore MA0056
     }
 
@@ -107,6 +116,11 @@ public abstract class ChronicleFixture : IChronicleFixture
     public virtual bool UsesPerContextMongoDBHost => false;
 
     /// <summary>
+    /// Gets or sets TLS material shared by this fixture's attempted kernel containers.
+    /// </summary>
+    internal KernelFixtureCertificate? KernelCertificate { get; set; }
+
+    /// <summary>
     /// Gets the logger factory for creating loggers.
     /// </summary>
     protected ILoggerFactory LoggerFactory { get; }
@@ -117,21 +131,14 @@ public abstract class ChronicleFixture : IChronicleFixture
         var phase = _timings.Begin("fixture-disposal");
         try
         {
-            try
-            {
-                await DisposeContextStorage();
-            }
-            finally
-            {
-                try
-                {
-                    await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
-                }
-                finally
-                {
-                    await Network.DisposeAsync();
-                }
-            }
+            var failure = await Cleanup(() => new ValueTask(DisposeContextStorage()), null);
+            failure = await Cleanup(
+                () => KernelCertificate is { } certificate
+                    ? certificate.DisposeAfter(() => _container?.DisposeAsync() ?? ValueTask.CompletedTask)
+                    : _container?.DisposeAsync() ?? ValueTask.CompletedTask,
+                failure);
+            failure = await Cleanup(Network.DisposeAsync, failure);
+            if (failure is not null) ExceptionDispatchInfo.Throw(failure);
 
             phase?.Success();
         }
@@ -209,6 +216,26 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Runs each cleanup step without losing an earlier failure.
+    /// </summary>
+    /// <param name="cleanup">The cleanup step.</param>
+    /// <param name="failure">Any earlier failure.</param>
+    /// <returns>The first failure, if any.</returns>
+    internal static async ValueTask<Exception?> Cleanup(Func<ValueTask> cleanup, Exception? failure)
+    {
+        try
+        {
+            await cleanup();
+        }
+        catch (Exception error)
+        {
+            if (failure is null) return error;
+            KernelFixtureCertificate.ReportCleanupFailure(failure, error);
+        }
+        return failure;
+    }
+
+    /// <summary>
     /// Starts a fresh MongoDB storage identity for a test context.
     /// </summary>
     /// <returns>The prefix for the new context.</returns>
@@ -240,6 +267,18 @@ public abstract class ChronicleFixture : IChronicleFixture
             parameters.HostConfig = hostConfig;
         })
         : builder;
+
+    void DisposeAfterFailedStart(Exception failure)
+    {
+        try
+        {
+            DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception cleanup)
+        {
+            KernelFixtureCertificate.ReportCleanupFailure(failure, cleanup);
+        }
+    }
 
     async Task DisposeContextStorage()
     {
@@ -308,8 +347,17 @@ public abstract class ChronicleFixture : IChronicleFixture
                 // them says a port is the reason, and the tier is wedged for as long as the retries take.
                 // Rebuilding allocates a fresh port, which is the only thing that can make the retry mean
                 // anything.
-                container = BuildContainer(Network);
-                _container = container;
+                try
+                {
+                    await container.DisposeAsync();
+                    container = BuildContainer(Network);
+                    _container = container;
+                }
+                catch (Exception cleanup)
+                {
+                    KernelFixtureCertificate.ReportCleanupFailure(e, cleanup);
+                    ExceptionDispatchInfo.Throw(e);
+                }
 
                 IntegrationTimings.CurrentPhase?.Retry();
                 await _timings.Run("container-start-retry-delay", () => Task.Delay(2000));
