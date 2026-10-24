@@ -179,6 +179,33 @@ public class UniqueConstraintsStorage(
         await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
     /// <inheritdoc/>
+    public async Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
+    {
+        var database = eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+constraint").Database;
+        var collections = new BsonDocument("name", new BsonRegularExpression($"^{Regex.Escape(eventSequenceId.Value)}\\+.+\\+constraint$"));
+        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = collections }, cancellationToken);
+        var hash = new BsonRegularExpression("\\A[0-9a-f]{64}\\z");
+        long sources = 0;
+        long values = 0;
+        foreach (var name in await names.ToListAsync(cancellationToken))
+        {
+            if (name.EndsWith("+values+constraint", StringComparison.Ordinal))
+            {
+                var filter = !Builders<UniqueConstraintValueIndex>.Filter.Regex(row => row.Value, hash);
+                var result = await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(name).DeleteManyAsync(filter, cancellationToken);
+                values += result.DeletedCount;
+            }
+            else
+            {
+                var filter = !Builders<UniqueConstraintIndex>.Filter.Regex(row => row.Value, hash);
+                var result = await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(filter, cancellationToken);
+                sources += result.DeletedCount;
+            }
+        }
+        return (sources, values);
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
     {
         // Both claim shapes store the subject under the same element, so one typed filter serves every collection.
