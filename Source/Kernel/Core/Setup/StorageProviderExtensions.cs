@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Configuration;
@@ -35,9 +34,9 @@ public static class StorageProviderExtensions
             context.EnableReloads<ResilientStorageOptions>();
             var options = context.GetOptions<ResilientStorageOptions>();
 
-            // The downgrade floor and observer-key ownership are deterministic refusals; retrying cannot change them.
+            // A refusal below the observer downgrade floor is a property of this kernel, so retrying cannot change it.
             options.Retry.ShouldHandle = new PredicateBuilder().Handle<Exception>(exception =>
-                exception is not OperationCanceledException and not ObserverKernelBelowDowngradeFloor and not ObserverKeyDoesNotMatchDefinition);
+                exception is not OperationCanceledException and not ObserverKernelBelowDowngradeFloor);
             builder.AddRetry(options.Retry);
             builder.AddTimeout(options.Timeout);
 

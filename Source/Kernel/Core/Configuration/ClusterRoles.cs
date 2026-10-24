@@ -21,10 +21,4 @@ public class ClusterRoles
     /// When false, observer grains will not be placed on this silo.
     /// </summary>
     public bool Observers { get; set; } = true;
-
-    /// <summary>
-    /// Gets whether this silo has the job worker role. Defaults to true.
-    /// Currently advertised for future placement; disabling it reduces the local step budget only.
-    /// </summary>
-    public bool Jobs { get; set; } = true;
 }
