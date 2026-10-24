@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -60,7 +61,7 @@ public sealed class AlertIncidentsMetricsOwnerKeeper(
     Task Start(CancellationToken cancellationToken)
     {
         _cancellation = new();
-        _loop = Task.Run(() => Loop(_cancellation.Token), CancellationToken.None);
+        _loop = DetachedExecution.Run(() => Loop(_cancellation.Token));
         return Task.CompletedTask;
     }
 
