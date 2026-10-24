@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
@@ -15,6 +16,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers.for_Reducers.given;
 
@@ -57,6 +59,7 @@ public class an_observation_stream : Specification
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reducers>(),
+            Options.Create(new ChronicleOptions()),
             NullLogger<Reducers>.Instance);
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer

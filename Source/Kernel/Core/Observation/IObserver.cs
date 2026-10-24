@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation;
@@ -19,12 +20,21 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
+[Version(3)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
     /// Ensure the observer existence.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Interleaved because it does nothing - its whole purpose is to force activation, so there is no
+    /// state for non-reentrancy to protect. Without this it queued behind whatever the observer was
+    /// already doing, and the startup task fans one of these out across every reducer and reactor at
+    /// once: a single slow Subscribe put the whole fan-out past Orleans' response timeout and took the
+    /// silo down with it.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>
@@ -76,11 +86,35 @@ public interface IObserver : IGrainWithStringKey
     Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo);
 
     /// <summary>
+    /// Reports one page of replay handled counts, retaining each partition's deduplication identity.
+    /// </summary>
+    /// <param name="reportedBy">The reporting job step.</param>
+    /// <param name="reports">The counts and last handled sequence number for each partition.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEventsBatch(JobStepId reportedBy, IReadOnlyList<Jobs.HandledEventsReport> reports);
+
+    /// <summary>
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverSubscription> GetSubscription();
+
+    /// <summary>
+    /// Gets active abandoned-delivery fences independently of failure state.
+    /// </summary>
+    /// <returns>The current fences.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<DeliveryFence>> GetDeliveryFences();
+
+    /// <summary>
+    /// Releases the exact version whose original targets have drained.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <param name="releaseBy">The captured fence deadline.</param>
+    /// <returns>A task representing the release.</returns>
+    [AlwaysInterleave]
+    Task ReleaseDeliveryFence(Key partition, DateTimeOffset releaseBy);
 
     /// <summary>
     /// Checks whether a subscription is installed.
@@ -215,6 +249,47 @@ public interface IObserver : IGrainWithStringKey
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
+    /// Checks whether this activation knows a client, as a subscription target or as a superseded registration.
+    /// </summary>
+    /// <remarks>
+    /// An interleaved, read-only hint for the grain holding a client registration. A new activation - after the
+    /// silo that hosted the previous one was lost - starts out knowing no client.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
+    /// <returns>True if the client is known; otherwise false.</returns>
+    [AlwaysInterleave]
+    Task<bool> KnowsClient(ConnectionId connectionId);
+
+    /// <summary>
+    /// Restore the subscription of a connected client that this activation does not know about.
+    /// </summary>
+    /// <remarks>
+    /// The subscription is activation-only state. When the silo hosting an observer is lost, the observer comes back
+    /// on another silo with no subscription while the client stays connected and its registration grain survives.
+    /// The registration grain calls this to put the client back. It does nothing if the client is already known,
+    /// the observer is sealed, retired or quarantined, operator-cleared recovery is still owed, or the namespace no
+    /// longer exists. Like <see cref="ReconcileSubscription"/>, it never ends quarantine or resets live progress.
+    /// </remarks>
+    /// <typeparam name="TObserverSubscriber">The client-owned subscriber type.</typeparam>
+    /// <param name="type">The observer type.</param>
+    /// <param name="eventTypes">The event types the client registered.</param>
+    /// <param name="siloAddress">The silo address of the client's connection.</param>
+    /// <param name="connectedClient">The client to restore.</param>
+    /// <param name="isReplayable">Whether the observer supports replay.</param>
+    /// <param name="filters">Optional event filters.</param>
+    /// <param name="generationDelivery">The generation delivery policy.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RestoreClientSubscription<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        ConnectedClient connectedClient,
+        bool isReplayable = true,
+        ObserverFilters? filters = default,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
     /// Reconcile a kernel subscription in a serialized request without ending quarantine or resetting live progress.
     /// </summary>
     /// <remarks>
@@ -321,6 +396,22 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Releases a refused full replay without changing progress or resolving failed partitions.
+    /// </summary>
+    /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedReplay();
+
+    /// <summary>
+    /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
+    /// </summary>
+    /// <param name="partition">The partition whose replay was refused.</param>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <remarks>Does not advance progress or resolve failed partitions. Unknown bounds quarantine the partition; retired, removed and non-replaying partitions are unchanged.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
+
+    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
@@ -373,15 +464,51 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="exceptionMessages">All exception messages.</param>
     /// <param name="exceptionStackTrace">The exception stacktrace.</param>
     /// <param name="kind">What kind of thing went wrong. Defaults to <see cref="FailureKind.Unknown"/>.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
+    /// <param name="failurePolicy">The internal webhook recovery decision. Other subscribers use the default retry policy.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown);
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
+
+    /// <summary>
+    /// Notify that the partition has failed with the original delivery fence.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="context">The internal recovery policy and optional original delivery identity and deadline.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailedWithDeliveryFence(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, PartitionFailureContext context);
+
+    /// <summary>
+    /// Persist a delivery deadline without consuming an attempt.
+    /// </summary>
+    /// <param name="partition">The partition to defer.</param>
+    /// <param name="deferral">The deadline and first unhandled event.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="expectedDeferralId">The deferral that owned the delivery.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null);
+
+    /// <summary>
+    /// Check recovery ownership and the persisted deadline before delivering.
+    /// </summary>
+    /// <param name="partition">The partition to deliver.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy job.</param>
+    /// <param name="deferralId">The deferral that owns the delivery.</param>
+    /// <returns>Whether delivery may resume now.</returns>
+    [AlwaysInterleave]
+    Task<bool> CanResumeFailedPartition(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Records a projection bulk flush's failed partitions with one alert snapshot for the batch.
     /// </summary>
     /// <param name="failedPartitions">The failures returned by the projection sink.</param>
     /// <returns>Awaitable task.</returns>
-    Task PartitionsFailed(IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition> failedPartitions);
+    Task PartitionsFailed(IReadOnlyCollection<Storage.Sinks.FailedPartition> failedPartitions);
 
     /// <summary>
     /// Notify that the partition has recovered.
@@ -398,29 +525,35 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition that has recovered.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event the recovery handled, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
     /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the recovery read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when it read nothing.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+    Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Notify that a recovery attempt ended without recovering the partition and without recording a new failure.
     /// </summary>
     /// <param name="partition">The partition that is still failed.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// The retry reminder is removed when the recovery starts, so the partition needs another retry scheduled.
     /// </remarks>
     [AlwaysInterleave]
-    Task FailedPartitionNotRecovered(Key partition);
+    Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Notify that the partition has partially recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="episodeId">The recovery episode, or null for a legacy callback.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
+    Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null);
 
     /// <summary>
     /// Check if the observer is currently preparing for a catch-up (between the <see cref="CatchUp"/> call and <see cref="RegisterCatchingUpPartitions"/> being called).

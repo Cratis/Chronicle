@@ -99,6 +99,125 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
+        var (result, notification) = await HandleRun(partition, events);
+        if (result.State != ObserverSubscriberState.Ok)
+        {
+            return result;
+        }
+
+        try
+        {
+            if (notification is not null)
+            {
+                await _changesetNotifier!.Notify(_key.Namespace, notification.ReadModelKey, notification.ReadModel, notification.Change);
+            }
+
+            logger.SuccessfullyHandledAllEvents(_key);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorHandling(ex, _key, result.LastSuccessfulObservation);
+            return new(ObserverSubscriberState.Failed, result.LastSuccessfulObservation, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<ObserverSubscriberResult> OnNextPage(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    {
+        var page = events.ToArray();
+        var notifications = new List<ReadModelChangeNotification>();
+        var lastSuccessful = EventSequenceNumber.Unavailable;
+        ObserverSubscriberResult? failure = null;
+        Key? lastHandledPartition = null;
+        await PreparePage(page);
+        var offset = 0;
+        while (offset < page.Length)
+        {
+            var start = offset;
+            var partition = page[start].Context.EventSourceId;
+            while (offset < page.Length && page[offset].Context.EventSourceId == partition)
+            {
+                offset++;
+            }
+
+            var run = page[start..offset];
+            var (result, notification) = await HandleRun(partition, run);
+            if (result.State != ObserverSubscriberState.Ok)
+            {
+                var failedEvent = result.HandledAnyEvents
+                    ? run.FirstOrDefault(_ => _.Context.SequenceNumber > result.LastSuccessfulObservation) ?? run[^1]
+                    : run[0];
+                failure = result with
+                {
+                    LastSuccessfulObservation = result.HandledAnyEvents ? result.LastSuccessfulObservation : lastSuccessful,
+                    FailedPartition = partition,
+                    FailedAt = failedEvent.Context.SequenceNumber
+                };
+                break;
+            }
+
+            if (notification is not null)
+            {
+                notifications.Add(notification);
+            }
+
+            logger.SuccessfullyHandledAllEvents(_key);
+            lastSuccessful = result.LastSuccessfulObservation;
+            lastHandledPartition = partition;
+        }
+
+        if (notifications.Count > 0)
+        {
+            try
+            {
+                await _changesetNotifier!.NotifyMany(_key.Namespace, notifications);
+            }
+            catch (Exception ex)
+            {
+                // The handled runs are already persisted, so the position stays at the last handled event, as a failed
+                // Notify did for a single run. A run that failed on its own keeps its own failure.
+                logger.ErrorHandling(ex, _key, lastSuccessful);
+                failure ??= new ObserverSubscriberResult(ObserverSubscriberState.Failed, lastSuccessful, ex.GetAllMessages(), ex.StackTrace ?? string.Empty)
+                {
+                    FailedPartition = lastHandledPartition,
+                    FailedAt = lastSuccessful
+                };
+            }
+        }
+
+        return failure ?? ObserverSubscriberResult.Ok(lastSuccessful);
+    }
+
+    async Task PreparePage(AppendedEvent[] page)
+    {
+        if (page.Length == 0)
+        {
+            return;
+        }
+
+        if (_pipeline is null)
+        {
+            await HandlePipeline();
+        }
+
+        if (_pipeline is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _pipeline.PreparePage(page);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedPreparingPage(ex, _key);
+        }
+    }
+
+    async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
+    {
         if (_pipeline is null)
         {
             // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
@@ -110,24 +229,25 @@ public class ProjectionObserverSubscriber(
         {
             if (_pipelineBuildFailure is not null)
             {
-                return new(
+                return (new(
                     ObserverSubscriberState.Failed,
                     EventSequenceNumber.Unavailable,
                     _pipelineBuildFailure.GetAllMessages(),
-                    _pipelineBuildFailure.StackTrace ?? string.Empty);
+                    _pipelineBuildFailure.StackTrace ?? string.Empty), null);
             }
 
             logger.PipelineNotReady(_key);
-            return new(
+            return (new(
                 ObserverSubscriberState.Failed,
                 EventSequenceNumber.Unavailable,
                 ["Projection pipeline is not yet ready — will be retried."],
-                string.Empty);
+                string.Empty), null);
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
         try
         {
+            ReadModelChangeNotification? notification = null;
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
             var isNewInstance = false;
 
@@ -145,11 +265,11 @@ public class ProjectionObserverSubscriber(
                     if (!await definitions.Has(_key.ObserverId))
                     {
                         logger.PipelineNotReady(_key);
-                        return new(
+                        return (new(
                             ObserverSubscriberState.Failed,
                             lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                             ["Projection definition no longer exists."],
-                            string.Empty);
+                            string.Empty), null);
                     }
 
                     var current = await definitions.Get(_key.ObserverId);
@@ -160,11 +280,11 @@ public class ProjectionObserverSubscriber(
                         await HandlePipeline();
                         if (_pipeline is null)
                         {
-                            return new(
+                            return (new(
                                 ObserverSubscriberState.Failed,
                                 lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                                 _pipelineBuildFailure?.GetAllMessages() ?? ["Projection pipeline is not yet ready — will be retried."],
-                                _pipelineBuildFailure?.StackTrace ?? string.Empty);
+                                _pipelineBuildFailure?.StackTrace ?? string.Empty), null);
                         }
                     }
                 }
@@ -247,20 +367,19 @@ public class ProjectionObserverSubscriber(
                     lastSuccessfullyObservedEvent.Context.Occurred,
                     lastSuccessfullyObservedEvent.Context.CorrelationId);
 
-                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model, change);
+                notification = new(partition.ToString(), model, change);
             }
 
-            logger.SuccessfullyHandledAllEvents(_key);
-            return ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber);
+            return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);
         }
         catch (Exception ex)
         {
             logger.ErrorHandling(ex, _key, lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
-            return new(
+            return (new(
                 ObserverSubscriberState.Failed,
                 lastSuccessfullyObservedEvent?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 ex.GetAllMessages(),
-                ex.StackTrace ?? string.Empty);
+                ex.StackTrace ?? string.Empty), null);
         }
     }
 

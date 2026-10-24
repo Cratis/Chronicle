@@ -118,10 +118,13 @@ arguments?, paging?, sorting?)`; `Observe(...)` returns `QueryObservation.Initia
 and buffered `Next()`. Configure principal/policies in `Services`; schemes fail
 closed without HTTP. Chronicle query `Given` can seed keyed models/events.
 
-For guarded commands use `UseDecisionReads()` **before** seeding events. Given
-state, guarded reads and appends share one real in-process log, unlike legacy
-mode above. Pinned models cannot supply guards. Use `OnRoute(route)` and
-`AppendConcurrently` to prove conflicts; `ShouldHaveCompletedStream` proves
+For guarded commands use plain `new CommandScenario<T>()`: it selects the decision
+mode from the command's read-protection mode and dependencies (`UseDecisionReads()`
+is hidden and unnecessary). Given state, guarded reads and appends share one real
+in-process log, unlike legacy mode above; an `Off` command with no protected
+dependency stays in legacy mode. Pinned models cannot supply guards. Use `OnRoute(route)` and
+`AppendConcurrently` with `ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation)`
+to prove conflicts (there is no `scenario.AppendConditions`); `ShouldHaveCompletedStream` proves
 completion and `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)`
 checks admission. See **cratis-application-slice-specifications**,
 `references/query-and-decision-scenarios.md`, for sources and limitations.

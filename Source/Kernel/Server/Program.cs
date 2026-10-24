@@ -8,11 +8,14 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
+using Cratis.Chronicle.Server.Observation.Webhooks;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Antiforgery;
@@ -47,7 +50,18 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-var builder = WebApplication.CreateBuilder(args);
+SchemaCommand schemaCommand;
+try
+{
+    schemaCommand = SchemaCommand.Parse(args);
+}
+catch (ArgumentException exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
+var builder = WebApplication.CreateBuilder(schemaCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 logger = builder.Logging.Services
@@ -62,15 +76,55 @@ logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
-var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+ChronicleOptions chronicleOptions;
+SchemaAction schemaAction;
+try
+{
+    schemaAction = schemaCommand.Action != SchemaAction.None ? schemaCommand.Action
+        : builder.Configuration.GetValue<SchemaAction>($"{ChronicleOptions.SectionPath}:Storage:SchemaAction");
+    if (!Enum.IsDefined(schemaAction))
+    {
+        throw new ArgumentException("Storage.SchemaAction is invalid.");
+    }
+
+    if (schemaAction != SchemaAction.None)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:SchemaMode"] =
+            (schemaAction == SchemaAction.VerifyAndExit ? SchemaMode.Verify : SchemaMode.Migrate).ToString();
+    }
+
+    chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
+    {
+        throw new ArgumentException("Storage.SchemaMode is invalid.");
+    }
+}
+catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
+if (schemaAction != SchemaAction.None)
+{
+    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction);
+}
+
+if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && !SchemaCommandRunner.IsSql(chronicleOptions.Storage.Type))
+{
+    SchemaProvisionerLogging.SchemaModeIgnored(logger, chronicleOptions.Storage.Type);
+}
+
+ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
+var localhostGuard = LocalhostClusteringGuard.Decide(chronicleOptions);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
 if (chronicleOptions.Features.Api)
 {
@@ -146,9 +200,9 @@ hostBuilder
    .UseOrleans(_ =>
    {
         var clustering = chronicleOptions.Clustering;
-        if (clustering.Type == Cratis.Chronicle.Configuration.ClusteringType.MongoDB)
+        if (clustering.Type is ClusteringType.MongoDB or ClusteringType.Sql)
         {
-            // Membership is kept in MongoDB (wired by WithMongoDB below) - nodes sharing the
+            // Membership is wired by WithMongoDB or WithSql below. Nodes sharing the
             // same storage and cluster id form one cluster.
             _.Configure<Orleans.Configuration.ClusterOptions>(options =>
             {
@@ -158,13 +212,7 @@ hostBuilder
 
             // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
             // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
-            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options =>
-            {
-                options.DefunctSiloCleanupPeriod = clustering.DefunctSiloCleanupPeriod > TimeSpan.Zero
-                    ? clustering.DefunctSiloCleanupPeriod
-                    : null;
-                options.DefunctSiloExpiration = clustering.DefunctSiloExpiration;
-            });
+            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
 
             if (clustering.AdvertisedIP is { } advertisedIP)
             {
@@ -177,7 +225,11 @@ hostBuilder
         }
         else
         {
-            if (!isSqlStorage && !isInMemoryStorage && ConnectionStringLocality.IsNonLocal(chronicleOptions.Storage.ConnectionDetails))
+            if (localhostGuard == LocalhostClusteringGuardAction.Lease)
+            {
+                _.AddSingleWriterLease();
+            }
+            else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
             {
                 logger.LocalhostClusteringAgainstSharedStorage();
             }
@@ -185,7 +237,7 @@ hostBuilder
             _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
         }
 
-        // Applies to both clustering types, and to calls a silo makes to itself as well as to a
+        // Applies to all clustering types, and to calls a silo makes to itself as well as to a
         // sibling. Startup work that fans out across everything the server holds grows with the
         // deployment while Orleans' 30 second default does not, so this is the knob that lets an
         // operator get a server that has outgrown it to start again.
@@ -228,6 +280,13 @@ hostBuilder
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
 
+       // Override Core's unavailable-provider fallback after convention binding.
+       services.AddSingleton<IManagedIdentityTokens, AzureIdentityManagedIdentityTokens>();
+
+       // Lets an HTTP storage connection resolver authenticate with Microsoft Entra ID (AzureCredential).
+       // Inert unless storage.connectionResolution configures that authentication type.
+       services.AddAzureConnectionResolverAuthentication();
+
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
 
@@ -267,6 +326,8 @@ hostBuilder
            .ToList();
        foreach (var descriptor in inactiveStorageDescriptors)
            services.Remove(descriptor);
+
+       services.UseDeferredSiloStart();
    });
 
 var app = builder.Build();
@@ -322,6 +383,8 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+
+app.UseMiddleware<KernelStartupGate>();
 
 // Accept the public scheme and client IP only from loopback or explicitly trusted reverse proxies.
 // ASPNETCORE_FORWARDEDHEADERS_ENABLED inserts its own middleware first; use Chronicle's policy
@@ -405,7 +468,7 @@ if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
 app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
-app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
+app.MapKernelHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
 // Lets a client-side load balancer (e.g. LeastConnectionsLoadBalancerStrategy) ask this silo how
 // busy it is before deciding whether to connect to it - anonymous so it can be probed before the
@@ -467,6 +530,8 @@ catch (OperationCanceledException)
     // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
     logger.ServerShutdownDuringStartup();
 }
+
+return 0;
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

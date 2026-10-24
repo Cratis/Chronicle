@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { execFile, spawn } from 'node:child_process';
+import type { CorpusServer } from './CorpusServer.ts';
 import { StdioConnection } from './StdioConnection.ts';
 
 /** Preserve OS/runtime lookup only; never copy arbitrary credentials or descriptor environment values. */
@@ -43,4 +44,15 @@ export function startConnection(project: string, launch: typeof spawn = spawn): 
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
     }));
+}
+
+/** Launch a corpus server verbatim (no shell, no interpolation): the default environment plus its declared literal env only. */
+export function startServer(project: string, server: CorpusServer, launch: typeof spawn = spawn): StdioConnection {
+    return new StdioConnection(launch(server.command, server.args, {
+        cwd: project,
+        env: { ...childEnvironment(), ...server.env },
+        shell: false,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+    }), 30_000, server.id, true);
 }

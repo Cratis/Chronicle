@@ -13,8 +13,6 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened, assigned]
   pull_request_review:
     types: [submitted]
 
@@ -22,31 +20,33 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  id-token: write
+  id-token: write # claude-code-action exchanges the OIDC token for its GitHub App token
 
 jobs:
   claude-response:
-    # Only start a runner when Claude is actually addressed. Without this gate the
-    # workflow booted a runner and checked out the repository for every comment,
-    # review and issue event in the repository (~150 runs/week), even though the
-    # action itself then found no @claude mention and did nothing. Issue opened /
-    # assigned events stay ungated because assignment is itself the signal.
+    # Only start a runner when Claude is actually addressed, and only for people who
+    # can write to the repository. This job holds write permissions, so an outsider's
+    # comment or review must never reach the action: the commenter's association must
+    # be OWNER, MEMBER or COLLABORATOR as well as mentioning @claude. Issues are not a
+    # trigger at all, because an issue body is untrusted input from anyone.
     if: >-
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association) &&
+      (
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues')
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 1
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@8d70a0dd265122bd65b8e09d3d959e65373ae2a1 # v1.0.260
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "Bash(git push),Bash(git commit),Bash(git checkout),Bash(git add)"
+            --allowedTools "Bash(git commit),Bash(git checkout),Bash(git add)"

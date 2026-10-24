@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -58,7 +59,7 @@ public partial class Database
 
     /// <summary>
     /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per physical target to prevent concurrent migration race conditions
-    /// when multiple grains access the same database simultaneously.
+    /// when multiple grains — or multiple kernel processes, through <see cref="DatabaseSchemaLock"/> — access the same database simultaneously.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
     /// <param name="target">The <see cref="SqlTarget"/> the context connects to.</param>
@@ -73,10 +74,23 @@ public partial class Database
         // event-store / namespace targets a per-database isolation name that has not
         // been provisioned yet. This mirrors MongoDB, where each event store and each
         // namespace lives in its own database that the kernel creates on first access.
-        await EnsureDatabaseExists(context, target);
-
         var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
         var cacheKey = (migrationLock, key);
+        if (VerifySchema)
+        {
+            if (_migratedKeys.TryGetValue(cacheKey, out var verified) && verified == migrationLock.Generation)
+            {
+                return;
+            }
+
+            // The release-ordered migrator verifies instead of migrating; only a passing check is cached.
+            await EnsureDatabaseExists(context, target);
+            await context.Database.MigrateAsync();
+            _migratedKeys[cacheKey] = migrationLock.Generation;
+            return;
+        }
+
+        await EnsureDatabaseExists(context, target);
         if (_migratedKeys.TryGetValue(cacheKey, out var generation) && generation == migrationLock.Generation)
         {
             return;
@@ -93,7 +107,9 @@ public partial class Database
 
             try
             {
-                await context.Database.MigrateAsync();
+                // EF Core takes its own migrations lock in the database as well; this one also covers the history
+                // table it creates before taking that lock, and keeps all of Chronicle's schema changes in one queue.
+                await DatabaseSchemaLock.Run(context, () => context.Database.MigrateAsync());
             }
             catch (Exception ex) when (IsAlreadyExistsException(ex))
             {
@@ -123,6 +139,12 @@ public partial class Database
     /// <exception cref="DatabaseDoesNotExist">The database is missing and storage may not create it.</exception>
     async Task EnsureDatabaseExists(DbContext context, SqlTarget target)
     {
+        if (VerifySchema)
+        {
+            await VerifyDatabase(context, target);
+            return;
+        }
+
         var connectionString = target.ConnectionString;
         var databaseType = connectionString.GetDatabaseType();
         if (databaseType is not DatabaseType.PostgreSql and not DatabaseType.SqlServer)
@@ -155,31 +177,18 @@ public partial class Database
                 return;
             }
 
-            var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
-            if (!await creator.ExistsAsync())
+            if (databaseType == DatabaseType.SqlServer && CanCreateSchema)
             {
-                if (!options.Value.Storage.CreateIfMissing)
-                {
-                    throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
-                }
-
-                try
-                {
-                    if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
-                    {
-                        // SQL Server's default logical log filename appends _log to the database name.
-                        // Explicit file names keep that second sysname within 128 units too.
-                        await SqlServerDatabaseCreation.Create(connectionString, _resolution.PrepareRawConnection);
-                    }
-                    else
-                    {
-                        await creator.CreateAsync();
-                    }
-                }
-                catch (Exception ex) when (IsAlreadyExistsException(ex))
-                {
-                    // Another concurrent migrator created the database; safe to ignore.
-                }
+                // Lock in master before probing the target. A peer must not open the new database while
+                // EF is still enabling READ_COMMITTED_SNAPSHOT, which needs exclusive database access.
+                await SqlServerDatabaseCreation.RunWithLock(
+                    connectionString,
+                    _resolution.PrepareRawConnection,
+                    () => CreateDatabase(context, target, databaseType));
+            }
+            else
+            {
+                await CreateDatabase(context, target, databaseType);
             }
 
             _ensuredDatabaseKeys.TryAdd(connectionString, true);
@@ -190,16 +199,56 @@ public partial class Database
         }
     }
 
+    async Task CreateDatabase(DbContext context, SqlTarget target, DatabaseType databaseType)
+    {
+        var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
+        if (!await creator.ExistsAsync())
+        {
+            if (!CanCreateSchema)
+            {
+                throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
+            }
+
+            try
+            {
+                if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
+                {
+                    // SQL Server's default logical log filename appends _log to the database name.
+                    // Explicit file names keep that second sysname within 128 units too.
+                    await SqlServerDatabaseCreation.Create(target.ConnectionString, _resolution.PrepareRawConnection);
+                }
+                else
+                {
+                    await creator.CreateAsync();
+                }
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
+                // PostgreSQL creation and external provisioners do not share the SQL Server master lock.
+            }
+
+            if (context.Database.GetDbConnection() is SqlConnection connection)
+            {
+                // ExistsAsync's failed login to the missing database is cached by the pool. The losing
+                // CreateAsync exits before EF clears that pool, so MigrateAsync would see the cached 4060
+                // and try CREATE DATABASE again even though the schema-lock connection can already open it.
+                SqlConnection.ClearPool(connection);
+            }
+        }
+    }
+
     /// <summary>
     /// Make sure the schema a context keeps its tables in exists, and that the database user lands in it.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/>.</param>
     /// <param name="target">The <see cref="SqlTarget"/> it connects to.</param>
     /// <param name="databaseType">The <see cref="DatabaseType"/>.</param>
+    /// <param name="verify">Whether schema creation must be refused.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="SchemaDoesNotExist">The schema is missing and storage may not create it.</exception>
     /// <exception cref="DefaultSchemaMismatch">The SQL Server user does not have the schema as its default schema.</exception>
-    async Task EnsureSchema(DbContext context, SqlTarget target, DatabaseType databaseType)
+    async Task EnsureSchema(DbContext context, SqlTarget target, DatabaseType databaseType, bool verify = false)
     {
         var key = $"{target.ConnectionString}|{target.Schema}";
         if (string.IsNullOrEmpty(target.Schema) || _ensuredSchemaKeys.ContainsKey(key))
@@ -214,11 +263,11 @@ public partial class Database
         {
             if (databaseType == DatabaseType.PostgreSql)
             {
-                await EnsurePostgreSqlSchema(connection, database, target.Schema);
+                await EnsurePostgreSqlSchema(connection, database, target.Schema, verify);
             }
             else
             {
-                await EnsureSqlServerSchema(connection, database, target.Schema);
+                await EnsureSqlServerSchema(connection, database, target.Schema, verify);
             }
         }
         finally
@@ -229,11 +278,19 @@ public partial class Database
         _ensuredSchemaKeys.TryAdd(key, true);
     }
 
-    async Task EnsurePostgreSqlSchema(System.Data.Common.DbConnection connection, string database, string schema)
+    async Task EnsurePostgreSqlSchema(System.Data.Common.DbConnection connection, string database, string schema, bool verify)
     {
-        if (options.Value.Storage.CreateIfMissing)
+        if (CanCreateSchema && !verify)
         {
-            await Execute(connection, $"CREATE SCHEMA IF NOT EXISTS \"{schema.Replace("\"", "\"\"", StringComparison.Ordinal)}\"");
+            try
+            {
+                await Execute(connection, $"CREATE SCHEMA IF NOT EXISTS \"{schema.Replace("\"", "\"\"", StringComparison.Ordinal)}\"");
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Two concurrent IF NOT EXISTS creations can still collide on the catalog; the schema is there.
+            }
+
             return;
         }
 
@@ -243,16 +300,23 @@ public partial class Database
         }
     }
 
-    async Task EnsureSqlServerSchema(System.Data.Common.DbConnection connection, string database, string schema)
+    async Task EnsureSqlServerSchema(System.Data.Common.DbConnection connection, string database, string schema, bool verify)
     {
         if (await Scalar(connection, "SELECT COUNT(*) FROM sys.schemas WHERE name = @schema", schema) == 0)
         {
-            if (!options.Value.Storage.CreateIfMissing)
+            if (!CanCreateSchema || verify)
             {
                 throw new SchemaDoesNotExist(database, schema);
             }
 
-            await Execute(connection, $"CREATE SCHEMA [{schema.Replace("]", "]]", StringComparison.Ordinal)}]");
+            try
+            {
+                await Execute(connection, $"CREATE SCHEMA [{schema.Replace("]", "]]", StringComparison.Ordinal)}]");
+            }
+            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            {
+                // Another kernel created the schema between the check and the creation (SQL Server 2714).
+            }
         }
 
         await using var command = connection.CreateCommand();

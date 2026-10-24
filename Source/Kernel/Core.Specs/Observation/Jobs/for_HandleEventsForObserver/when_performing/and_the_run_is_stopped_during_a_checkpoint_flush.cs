@@ -21,6 +21,8 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
 
     void Establish()
     {
+        _performState.EventObservationState = EventObservationState.None;
+
         // The first flush is the baseline taken before any event is dispatched; the second is the one the stop interrupts.
         var flushes = 0;
         _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>()).Returns(_ =>
@@ -42,7 +44,7 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
         await _flushStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         _writesBeforeTheStop = _stateStorageStats.Writes;
 
-        _jobStep.Run!.Close();
+        _jobStep.Run.Close();
         _flush.SetResult(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] });
         _result = await performing;
         _writesAfterTheFlushCompleted = _stateStorageStats.Writes;
@@ -52,6 +54,7 @@ public class and_the_run_is_stopped_during_a_checkpoint_flush : given.a_performi
     [Fact] void should_not_write_state_before_the_stop() => _writesBeforeTheStop.ShouldEqual(0);
     [Fact] void should_not_commit_the_flush_after_the_stop() => _writesAfterTheFlushCompleted.ShouldEqual(0);
     [Fact] void should_keep_the_last_durable_checkpoint() => _performState.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
-    [Fact] void should_report_each_batch_handled_before_the_stop() =>
+    [Fact]
+    void should_report_each_batch_handled_before_the_stop() =>
         _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.ReportHandledEvents)).ShouldEqual(_handledBatches.Count);
 }

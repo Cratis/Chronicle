@@ -59,8 +59,7 @@ public class ApplicationStorage(IDatabase database) : IApplicationStorage, IDisp
     public async Task Update(Application application, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        await scope.DbContext.Applications.Upsert(ToEntity(application));
-        await scope.DbContext.SaveChangesAsync(cancellationToken);
+        await scope.DbContext.Applications.Upsert(ToEntity(application), cancellationToken);
         await RefreshSubject();
     }
 

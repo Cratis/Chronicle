@@ -44,7 +44,7 @@ public class WebhookDefinitionComparer(
             EventTypesChanged: !first.EventTypes.SequenceEqual(second.EventTypes),
             TargetUrlChanged: first.Target.Url != second.Target.Url,
             TargetHeadersChanged: !AreDictionariesEqual(first.Target.Headers, second.Target.Headers),
-            AuthorizationChanged: !AreAuthorizationsEqual(first.Target.Authorization, second.Target.Authorization),
+            AuthorizationChanged: !AreTargetAuthorizationsEqual(first.Target.Authorization, second.Target.Authorization),
             IsReplayableChanged: first.IsReplayable != second.IsReplayable,
             IsActiveChanged: first.IsActive != second.IsActive,
             OwnerChanged: first.Owner != second.Owner,
@@ -71,6 +71,9 @@ public class WebhookDefinitionComparer(
         return true;
     }
 
+    static bool AreTargetAuthorizationsEqual(WebhookAuthorization first, WebhookAuthorization second) =>
+        first.IsT4 ? first.AsT4.Equals(second.Value) : AreAuthorizationsEqual(first, second);
+
     static bool AreAuthorizationsEqual(WebhookAuthorization first, WebhookAuthorization second)
     {
         if (first.IsT0 && second.IsT0)
@@ -93,7 +96,8 @@ public class WebhookDefinitionComparer(
             var secondOAuth = second.AsT2;
             return firstOAuth.Authority == secondOAuth.Authority &&
                    firstOAuth.ClientId == secondOAuth.ClientId &&
-                   firstOAuth.ClientSecret == secondOAuth.ClientSecret;
+                   firstOAuth.ClientSecret == secondOAuth.ClientSecret &&
+                   firstOAuth.Scope == secondOAuth.Scope;
         }
 
         return first.IsT3 && second.IsT3;

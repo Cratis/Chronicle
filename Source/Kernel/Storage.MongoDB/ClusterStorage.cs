@@ -8,6 +8,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -29,6 +30,22 @@ public class ClusterStorage(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IClusterStorage
 {
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
+    {
+        var floors = new Dictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>();
+        foreach (var store in (await GetEventStores()).Concat(await DiscoverEventStores()).Append(EventStoreName.System)
+            .Distinct(CaseInsensitiveEventStoreNameComparer.Instance).OrderBy(_ => _.Value, StringComparer.Ordinal))
+        {
+            var collection = database.GetEventStoreDatabase(store).GetCollection<BsonDocument>("generation-floor");
+            if (await new Generations.GenerationFloorStorage(collection).Get() is { } floor)
+            {
+                floors.Add(store, floor);
+            }
+        }
+        return floors;
+    }
+
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
@@ -61,7 +78,21 @@ public class ClusterStorage(
     public async Task SaveEventStore(EventStoreName eventStore)
     {
         var collection = GetCollection();
-        await collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true });
+        await DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true }));
+    }
+
+    async Task<IEnumerable<EventStoreName>> DiscoverEventStores()
+    {
+        var cluster = GetCollection().Database;
+
+        // The cluster name is always the configured prefix followed by the well-known cluster name.
+        var prefix = cluster.DatabaseNamespace.DatabaseName[..^WellKnownDatabaseNames.Chronicle.Length];
+        using var cursor = await cluster.Client.ListDatabaseNamesAsync();
+        return (await cursor.ToListAsync())
+            .Where(_ => _.StartsWith(prefix, StringComparison.Ordinal) && _.EndsWith("+es", StringComparison.Ordinal))
+            .Select(_ => _[prefix.Length..^3])
+            .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+'))
+            .Select(_ => new EventStoreName(_));
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);

@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.AspNetCore.Auditing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder;
 
@@ -16,7 +18,10 @@ public class CausationStartupFilter : IStartupFilter
     {
         return app =>
         {
-            app.UseMiddleware<CausationMiddleware>();
+            if (app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UseAutomaticMiddleware)
+            {
+                app.UseMiddleware<CausationMiddleware>();
+            }
             next(app);
         };
     }

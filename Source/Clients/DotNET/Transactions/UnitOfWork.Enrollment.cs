@@ -22,7 +22,7 @@ public partial class UnitOfWork
             ThrowIfMutatedDuringEnrollment();
             ThrowIfEnrollmentNotificationFailed();
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing) throw new UnitOfWorkIsCompleting(correlationId);
+            if (_completing) throw new UnitOfWorkIsCompleting(CorrelationId);
             var registration = new EnrollmentRegistration(this, contributor);
             _enrollmentContributors.Add(registration);
             return registration;
@@ -134,7 +134,7 @@ public partial class UnitOfWork
         catch (Exception exception)
         {
             _enrollmentNotificationFailure = exception;
-            _appendManyResult = AppendManyResult.Failed(correlationId, [new AppendError(exception.Message)]);
+            _appendManyResult = AppendManyResult.Failed(CorrelationId, [new AppendError(exception.Message)]);
             throw;
         }
         finally

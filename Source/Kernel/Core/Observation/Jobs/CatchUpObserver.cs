@@ -105,6 +105,12 @@ public class CatchUpObserver(
     /// <inheritdoc/>
     protected override Task<bool> CanResume()
     {
+        // A job without a request was never persisted, or has been removed since it was found; there is nothing to resume.
+        if (State.Request is null)
+        {
+            return Task.FromResult(false);
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         return observer.IsSubscribed();
     }

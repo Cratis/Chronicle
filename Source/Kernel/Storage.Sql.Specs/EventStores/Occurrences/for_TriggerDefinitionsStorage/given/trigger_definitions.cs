@@ -54,7 +54,7 @@ public class trigger_definitions : Specification, IDisposable
             default: builder.UseSqlite(_connectionString); break;
         }
 
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return new(builder.Options);
     }
 }

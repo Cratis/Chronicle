@@ -37,6 +37,16 @@ internal static class WebhookDefinitionConverter
             Headers = target.Headers.ToDictionary(_ => _.Key, _ => _.Value)
         };
 
+        if (target.ManagedIdentity is not null)
+        {
+            contractTarget.ManagedIdentity = new Contracts.Security.ManagedIdentityAuthorization
+            {
+                ClientId = target.ManagedIdentity.ClientId ?? string.Empty,
+                Scope = target.ManagedIdentity.Scope
+            };
+            return contractTarget;
+        }
+
         target.Authorization.Switch(
             basic => contractTarget.Authorization = new(new Contracts.Security.BasicAuthorization
             {
@@ -51,7 +61,8 @@ internal static class WebhookDefinitionConverter
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
             none => { });
 

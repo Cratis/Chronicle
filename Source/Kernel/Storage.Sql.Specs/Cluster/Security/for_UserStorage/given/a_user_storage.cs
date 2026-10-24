@@ -62,7 +62,7 @@ public class a_user_storage : Specification
     {
         var options = new DbContextOptionsBuilder<ClusterDbContext>()
             .UseSqlite(_connection)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ClusterDbContext(options);

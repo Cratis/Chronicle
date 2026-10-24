@@ -7,7 +7,6 @@ using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Cluster.Patching;
 using Cratis.Chronicle.Storage.Sql.Cluster.Security;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -18,6 +17,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 public class SystemStorage(IDatabase database) : ISystemStorage
 {
     const int SystemInformationId = 0;
+    const int PatchingKernelVersionId = 1;
 
     /// <inheritdoc/>
     public IUserStorage Users { get; } = new UserStorage(database);
@@ -51,6 +51,25 @@ public class SystemStorage(IDatabase database) : ISystemStorage
         {
             Id = SystemInformationId,
             Version = systemInformation.Version.ToString(),
+        });
+    }
+
+    /// <inheritdoc/>
+    public async Task<SemanticVersion?> GetPatchingKernelVersion()
+    {
+        await using var scope = await database.Cluster();
+        var entity = await scope.DbContext.SystemInformation.FindAsync(PatchingKernelVersionId);
+        return entity is not null && SemanticVersion.TryParse(entity.Version, out var version) ? version : null;
+    }
+
+    /// <inheritdoc/>
+    public async Task SetPatchingKernelVersion(SemanticVersion version)
+    {
+        await using var scope = await database.Cluster();
+        await scope.DbContext.SystemInformation.Upsert(new SystemInformationEntity
+        {
+            Id = PatchingKernelVersionId,
+            Version = version.ToString(),
         });
         await scope.DbContext.SaveChangesAsync();
     }

@@ -45,7 +45,7 @@ This skill is a method: it names no API of its own. When the Screenplay skills a
 | --- | --- |
 | Where each rule lives (validator, `Provide()`, handler result, constraint, exception) | `rules/vertical-slices.md` "The decision matrix"  |
 | A customization never makes a rejected model renderable; managed output is never hand-edited | Stage (`Customizations/` is the unmanaged seam; managed output is regenerated) |
-| A command `handler` never binds (PLAY0268), so that slice is gap-fill with the model as contract | Screenplay (diagnostic PLAY0268) |
+| Attached file or inline command handlers are refused with PLAY0800, a permanent requirement for a code implementation attachment (Requires Screenplay 4.210.0; older binders report PLAY0268); pending handlers with unconditional productions bind v23 as described commands, but reached bodies are Unsupported ImplementationBody and Stage refuses STAGE-IMPL-002 even in Stub mode | Screenplay and Stage; use the model as the gap-fill contract |
 
 ## Procedure
 

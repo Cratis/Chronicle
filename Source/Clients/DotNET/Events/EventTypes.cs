@@ -88,30 +88,7 @@ public partial class EventTypes : IEventTypes
     /// Thrown when more than one CLR type resolves to the same event type id and generation.
     /// </exception>
     /// <exception cref="ArtifactPreparationReentered">Discovery reenters its own unfinished schema generation.</exception>
-    public Task Discover()
-    {
-        if (_discovering.Value) throw new ArtifactPreparationReentered();
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _schemaVerdict = completion.Task;
-        _payloadFailure = null;
-        _discovering.Value = true;
-        try
-        {
-            DiscoverLocal();
-            completion.SetResult();
-        }
-        catch (Exception exception)
-        {
-            completion.SetException(exception);
-            throw;
-        }
-        finally
-        {
-            _discovering.Value = false;
-        }
-
-        return Task.CompletedTask;
-    }
+    public Task Discover() => RunLocalPreparation(DiscoverLocal);
 
     /// <inheritdoc/>
     /// <exception cref="ArtifactPreparationReentered">Registration reenters unfinished local preparation.</exception>
@@ -180,4 +157,35 @@ public partial class EventTypes : IEventTypes
     /// <exception cref="TypeIsNotAnEventType">The CLR type is not registered.</exception>
     internal EventTypeDescriptor GetDescriptorFor(Type clrType) =>
         _descriptors.TryGetValue(clrType, out var descriptor) ? descriptor : throw new TypeIsNotAnEventType(clrType);
+
+    /// <summary>
+    /// Runs local preparation under the same reentrancy guard and schema verdict as <see cref="Discover"/>.
+    /// </summary>
+    /// <param name="prepare">The local preparation to run.</param>
+    /// <returns>A completed task.</returns>
+    /// <exception cref="ArtifactPreparationReentered">Preparation reenters its own unfinished local preparation.</exception>
+    Task RunLocalPreparation(Action prepare)
+    {
+        if (_discovering.Value) throw new ArtifactPreparationReentered();
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _schemaVerdict = completion.Task;
+        _payloadFailure = null;
+        _discovering.Value = true;
+        try
+        {
+            prepare();
+            completion.SetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.SetException(exception);
+            throw;
+        }
+        finally
+        {
+            _discovering.Value = false;
+        }
+
+        return Task.CompletedTask;
+    }
 }

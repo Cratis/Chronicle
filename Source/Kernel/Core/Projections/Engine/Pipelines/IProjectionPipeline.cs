@@ -46,6 +46,12 @@ public interface IProjectionPipeline
     Task BeginBulk();
 
     /// <summary>
+    /// Join the sink's open bulk window, or begin one when none is open.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeBulk();
+
+    /// <summary>
     /// Drain the sink's buffered writes without closing its bulk window.
     /// </summary>
     /// <returns>The window identity and any buffered write failures.</returns>
@@ -63,6 +69,17 @@ public interface IProjectionPipeline
     /// <param name="cancellationToken">The shared deadline token.</param>
     /// <returns>The failed or unknown partitions.</returns>
     Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
+
+    /// <summary>
+    /// Prepares the pipeline for a page of events that is about to be handled, one partition run at a time.
+    /// </summary>
+    /// <param name="events">The events of the page, in the order they will be handled.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called once per page before any of its events are handled. It is an optimization only: the default does nothing,
+    /// and a failure is logged and ignored, so it must never be required for correct handling.
+    /// </remarks>
+    Task PreparePage(IReadOnlyList<AppendedEvent> events) => Task.CompletedTask;
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

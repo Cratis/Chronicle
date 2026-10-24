@@ -92,6 +92,15 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>> GetInstancesOfAnyInRange(
+        IEnumerable<EventSourceId> eventSourceIds,
+        IEnumerable<EventTypeId> eventTypes,
+        EventSequenceNumber from,
+        EventSequenceNumber upTo,
+        CancellationToken cancellationToken = default) =>
+        inner.GetInstancesOfAnyInRange(eventSourceIds, eventTypes, from, upTo, cancellationToken);
+
+    /// <inheritdoc/>
     public Task EnsureIndexes() => inner.EnsureIndexes();
 
     /// <inheritdoc/>

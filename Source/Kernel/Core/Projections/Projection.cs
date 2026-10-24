@@ -222,6 +222,15 @@ public class Projection(
     static bool CreatesInstance(EngineProjection projection, ProjectionEventContext context) =>
         projection.Accepts(context.Event.Context.EventType) && context.CreatesInstance;
 
+    /// <summary>
+    /// Drops the initialization marker from the changes: it is bookkeeping, and on its own it must not bring an instance into existence.
+    /// </summary>
+    /// <param name="changes">The changes recorded for the event.</param>
+    /// <returns>The changes without any that only record the marker.</returns>
+    static Change[] WithoutInitializationMarker(Change[] changes) =>
+        [.. changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
+            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized))];
+
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
         Key key,
@@ -272,7 +281,7 @@ public class Projection(
         }
     }
 
-    static void SeedSingleReadModelAtCreation(EngineProjection projection, ProjectionEventContext context)
+    static void SeedAtCreation(EngineProjection projection, ProjectionEventContext context)
     {
         if (context.NeedsInitialState && !context.Changeset.HasJoined())
         {
@@ -373,7 +382,7 @@ public class Projection(
             var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false);
             context = await initialize.Perform(projection, context);
             await HandleEventFor(projection, context, NullSink.Instance, eventSequenceStorage);
-            SeedSingleReadModelAtCreation(projection, context);
+            SeedAtCreation(projection, context);
             result = ApplySingleReadModelChanges(projection, context, result);
         }
 
@@ -431,19 +440,20 @@ public class Projection(
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
+        var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         foreach (var @event in events)
         {
             var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
             if (keyResult is ResolvedKey resolvedKey)
             {
-                await ProjectInMemory(projection, eventSequenceStorage, sink, resolvedKey, @event);
+                await ProjectInMemory(projection, eventSequenceStorage, sink, initialize, resolvedKey, @event);
             }
         }
 
         return sink;
     }
 
-    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, ResolvedKey resolvedKey, AppendedEvent @event)
+    async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, SetInitialState initialize, ResolvedKey resolvedKey, AppendedEvent @event)
     {
         var key = resolvedKey.Key;
         var keyValue = key.Value.ToString()!;
@@ -451,7 +461,9 @@ public class Projection(
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
+        context = await initialize.Perform(projection, context);
         await HandleEventFor(projection, context, sink, eventSequenceStorage);
+        SeedAtCreation(projection, context);
 
         if (changeset.HasBeenRemoved())
         {
@@ -463,7 +475,7 @@ public class Projection(
         var appliedJoins = sink.ApplyJoinsOnRoots(originalChanges, @event)
             .Concat(sink.ApplyJoinsOnChildren(originalChanges, @event)).ToArray();
         var hasReadModel = sink.TryGet(keyValue, out var state);
-        if (!ShouldMaterializeReadModel(hasReadModel, key, originalChanges, CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
+        if (!ShouldMaterializeReadModel(hasReadModel, key, WithoutInitializationMarker(originalChanges), CreatesInstance(projection, context)) || SuppressesDirectRootUpdate(originalChanges))
         {
             return;
         }
@@ -596,10 +608,13 @@ public class Projection(
             if (addedEventTypes.Length > 0)
             {
                 var eventSequence = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(currentDefinition.EventSequenceId);
+
+                // Historical writes into the live container can be rejected by its watermark or applied twice.
+                // Definition evolution must rebuild the projection instead of replaying selected mappings in place.
                 plan = await DefinitionEvolutionPlan.ForAddedEventTypes(
                     eventSequence,
                     addedEventTypes,
-                    ProjectionReplayRecommendationEvaluator.CanPartiallyReplay(previousDefinition, currentDefinition, addedEventTypes));
+                    canReplayPerEventSource: false);
             }
             namespacePlans.Add((@namespace, plan));
         }
@@ -612,10 +627,7 @@ public class Projection(
                 case DefinitionEvolutionOperation.NoAction:
                     logger.ProjectionEvolutionNeedsNoAction(key.ProjectionId, @namespace);
                     break;
-                case DefinitionEvolutionOperation.PartialReplay when policy.Allows(plan.Operation):
-                    this.ScheduleInSeparateTurn(() => ReplayProjectionPartitions(key, @namespace, plan.AffectedEventSources, plan.AffectedEventTypes));
-                    break;
-                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation):
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
                     this.ScheduleInSeparateTurn(() => ReplayProjection(key, @namespace));
                     break;
                 default:
@@ -632,21 +644,6 @@ public class Projection(
         await observer.Replay();
     }
 
-    async Task ReplayProjectionPartitions(
-        ProjectionKey key,
-        EventStoreNamespaceName @namespace,
-        IEnumerable<EventSourceId> eventSourceIds,
-        IEnumerable<EventType> eventTypes)
-    {
-        var affectedEventSources = eventSourceIds.ToArray();
-        logger.PartiallyReplayingProjection(key.ProjectionId, @namespace, affectedEventSources.Length);
-        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
-        foreach (var eventSourceId in affectedEventSources)
-        {
-            await observer.ReplayPartition(eventSourceId, eventTypes);
-        }
-    }
-
     async Task AddReplayRecommendation(
         ProjectionKey key,
         EventStoreNamespaceName @namespace,
@@ -658,6 +655,9 @@ public class Projection(
 
         (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
         {
+            _ when currentDefinition.Scope == ProjectionScope.Global => (
+                GlobalProjectionReplay.RefusalReason,
+                new ProjectionDefinitionChangedReplayCandidateReason()),
             ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
                 "Projection definition has changed. Update available.",
                 new ProjectionUpdateAvailableReplayCandidateReason()),

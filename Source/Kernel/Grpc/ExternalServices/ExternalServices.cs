@@ -23,7 +23,7 @@ internal sealed class ExternalServices(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddExternalService(global::Cratis.Chronicle.Contracts.ExternalServices.AddExternalServiceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.ExternalServices.AddExternalService((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.ExternalServices.ExternalServiceId)request.Id, request.Name, request.EndpointType, request.Url, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.Host, request.Port, request.Database, request.Username, request.Password, request.Options));
+            new global::Cratis.Chronicle.ExternalServices.AddExternalService((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.ExternalServices.ExternalServiceId)request.Id, request.Name, request.EndpointType, request.Url, request.AuthorizationType, request.BasicUsername, request.BasicPassword, request.BearerToken, request.OAuthAuthority, request.OAuthClientId, request.OAuthClientSecret, request.Headers, request.Host, request.Port, request.Database, request.Username, request.Password, request.Options) { OAuthScope = request.OAuthScope });
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> AddExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.AddExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

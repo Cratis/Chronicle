@@ -166,10 +166,28 @@ public class AddWebhookRequest
     public bool IsActive { get; set; }
 
     /// <summary>
+    /// Gets or sets the OAuthScope.
+    /// </summary>
+    [ProtoMember(17)]
+    public string OAuthScope { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the GenerationDelivery.
     /// </summary>
     [ProtoMember(16)]
     public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ManagedIdentityClientId.
+    /// </summary>
+    [ProtoMember(18)]
+    public string ManagedIdentityClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ManagedIdentityScope.
+    /// </summary>
+    [ProtoMember(19)]
+    public string ManagedIdentityScope { get; set; } = string.Empty;
 }
 
 /// <summary>

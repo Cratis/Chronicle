@@ -39,7 +39,6 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             PublicKey = key.Public,
             PrivateKey = key.Private
         });
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -47,35 +46,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
-        StoredEncryptionKey key)
-    {
-        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
-        {
-            return existing;
-        }
-
-        await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
-        var revision = (await ErasureIn(scope.DbContext, identifier)).RevisionForNewKey(identifier, key);
-        try
-        {
-            scope.DbContext.EncryptionKeys.Add(new EncryptionKey
-            {
-                Identifier = identifier.Value,
-                Revision = revision.Value,
-                PublicKey = key.Public,
-                PrivateKey = key.Private
-            });
-            await scope.DbContext.SaveChangesAsync();
-            return key;
-        }
-        catch (DbUpdateException)
-        {
-            // Another provisioner inserted the same revision first (primary key violation on
-            // Identifier + Revision). Converge on the persisted key so every writer encrypts under the same one.
-            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-            return winner ?? key;
-        }
-    }
+        StoredEncryptionKey key) =>
+        (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
@@ -110,14 +82,14 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             await scope.DbContext.SaveChangesAsync();
             return new(key, revision);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
-            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-            if (winner is null)
-            {
-                throw;
-            }
-
+            // Another provisioner inserted the same revision first (primary key violation on Identifier + Revision).
+            // Converge on the persisted key so every writer encrypts under the same one. Any other write failure
+            // propagates: nothing was persisted, so the candidate must never be handed back.
+            var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+                ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            SqlStorageTelemetry.RecoveredCollision("encryption-key");
             return new(winner, revision);
         }
     }
@@ -267,6 +239,5 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ErasedKeyFingerprints = string.Join(',', erasure.ErasedKeyFingerprints),
             NewKeyAllowed = erasure.NewKeyAllowed
         });
-        await dbContext.SaveChangesAsync();
     }
 }

@@ -16,6 +16,8 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -24,6 +26,7 @@ using Cratis.Orleans.StateMachines;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation;
@@ -37,11 +40,14 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
+/// <param name="webhookTargetPolicy">Policy for stored webhook targets.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -54,12 +60,16 @@ public partial class Observer(
     IStorage storage,
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
+    IWebhookTargetPolicy webhookTargetPolicy,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory,
-    IEventGenerationRelease? eventGenerationRelease = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IOptionsMonitor<ChronicleOptions> optionsMonitor,
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
     /// <summary>
@@ -172,6 +182,7 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
     }
@@ -187,6 +198,7 @@ public partial class Observer(
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await failures.ReadStateAsync();
+        await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -199,6 +211,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        _webhookProbe = State.WebhookProbe;
         await InitializeAlertState();
     }
 
@@ -213,6 +226,7 @@ public partial class Observer(
                 return;
             }
 
+            await DrainWebhookProbe();
             await FlushDebouncedProgressState();
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
             {
@@ -285,6 +299,7 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         if (IsQuarantined)
         {
             await ReviveFromQuarantine();
@@ -483,6 +498,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
         ForgetSupersededRegistrations();
@@ -536,13 +552,22 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
+        if (reminderName == WebhookProbeReminderName)
+        {
+            await ReceiveWebhookProbeReminder();
+            return;
+        }
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
             return;
         }
 
-        await UnregisterReminderNamed(reminderName);
+        if (!Failures.Partitions.Any(_ => IsRetryReminderFor(_, reminderName) && _.Deferral is not null))
+        {
+            await UnregisterReminderNamed(reminderName);
+        }
+
         if (CannotRecoverFromReminder())
         {
             return;
@@ -663,6 +688,7 @@ public partial class Observer(
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
         KeepWhatWasRecordedDuringTransitionHook();
+        if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
         {
             // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
@@ -705,7 +731,9 @@ public partial class Observer(
                 AlertLifecycleId = _alertLifecycleId,
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId
+                QuarantineEpisodeId = _quarantineEpisodeId,
+                WebhookProbe = _webhookProbe,
+                DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
             await base.WriteStateAsync();
@@ -855,6 +883,7 @@ public partial class Observer(
         var leavesQuarantine = !automatic && !recovering;
         if (leavesQuarantine)
         {
+            await CancelWebhookProbe();
             SupersedeRecoveryAfterQuarantine();
         }
 
@@ -892,6 +921,17 @@ public partial class Observer(
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
             await BeginAlertLifecycle();
+            var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
+            if (webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+                if (!await ValidateStoredWebhookTarget())
+                {
+                    _subscriptionSetupFailed = false;
+                    return;
+                }
+            }
+
             if (recovering)
             {
                 // A failed entry write can strand the machine in CatchingUpInFlight, which cannot enter
@@ -905,7 +945,10 @@ public partial class Observer(
             }
 
             _subscriptionSetupFailed = true;
-            await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            if (!webhookSubscription)
+            {
+                await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+            }
             await RecoverAfterSubscribing(leavesQuarantine);
 
             // CatchingUpInFlight always schedules an onward transition on entry. Remaining there after
@@ -926,6 +969,8 @@ public partial class Observer(
 
     void DiscardQuarantineFromWipedWorld()
     {
+        _webhookProbe = null;
+        _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;
         _isPreparingCatchup = false;
         NotePreparationEnded();
@@ -945,7 +990,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -960,7 +1005,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
@@ -975,7 +1020,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -985,7 +1030,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         _subscription = new(
             _observerId,
             _observerKey,
@@ -1154,6 +1199,12 @@ public partial class Observer(
             // subscription is in place, so recover once the leave has actually entered Disconnected.
             _recoverSubscriptionAfterQuarantine = true;
             _retryRecoveryAfterQuarantine = true;
+            return;
+        }
+
+        if (IsQuarantined)
+        {
+            await ReconcileWebhookProbe();
             return;
         }
 

@@ -49,7 +49,7 @@ public record AdminPasswordStatus(
     /// <param name="storage">The <see cref="IStorage"/> to read users from.</param>
     /// <param name="options">The configured administrator.</param>
     /// <returns>The current <see cref="AdminPasswordStatus"/>.</returns>
-    internal static async Task<AdminPasswordStatus> GetStatus(IStorage storage, IOptions<Configuration.ChronicleOptions> options)
+    public static async Task<AdminPasswordStatus> GetStatus(IStorage storage, IOptions<Configuration.ChronicleOptions> options)
     {
         var adminUser = await storage.System.Users.GetByUsername(options.Value.Authentication.EffectiveAdminUsername);
         var required = adminUser is { HasLoggedIn: false } && string.IsNullOrEmpty(adminUser.PasswordHash?.Value);

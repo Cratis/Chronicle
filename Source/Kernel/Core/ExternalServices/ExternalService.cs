@@ -50,7 +50,7 @@ public record ExternalService(
     /// <param name="eventStore">The event store to get external services for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>A collection of external services.</returns>
-    internal static async Task<IEnumerable<ExternalService>> GetExternalServices(EventStoreName eventStore, IStorage storage)
+    public static async Task<IEnumerable<ExternalService>> GetExternalServices(EventStoreName eventStore, IStorage storage)
     {
         var definitions = await storage.GetEventStore(eventStore).ExternalServices.GetAll();
         return definitions.ToReadModel();
@@ -62,6 +62,6 @@ public record ExternalService(
     /// <param name="eventStore">The event store to observe external services for.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>An observable subject emitting collections of external services.</returns>
-    internal static ISubject<IEnumerable<ExternalService>> ObserveExternalServices(EventStoreName eventStore, IStorage storage) =>
+    public static ISubject<IEnumerable<ExternalService>> ObserveExternalServices(EventStoreName eventStore, IStorage storage) =>
         storage.GetEventStore(eventStore).ExternalServices.ObserveAll().TransformSubject(_ => _.ToReadModel());
 }

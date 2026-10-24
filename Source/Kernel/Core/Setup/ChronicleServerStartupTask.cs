@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Generations.Admission;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -39,6 +40,7 @@ namespace Orleans.Hosting;
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
+/// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -59,7 +61,8 @@ internal sealed class ChronicleServerStartupTask(
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     ILogger<ChronicleServerStartupTask> logger,
-    TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>
+    TimeProvider? timeProvider = null,
+    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -73,6 +76,8 @@ internal sealed class ChronicleServerStartupTask(
     const int MaxAttempts = 5;
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+
+    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromMilliseconds(500);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -98,6 +103,8 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
+
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
 
         // Populate the local CLR map before any grain can deserialize system events.
@@ -105,7 +112,25 @@ internal sealed class ChronicleServerStartupTask(
 
         // Apply patches before other grains start
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), patchManager.ApplyPatches);
+        await Step(nameof(IPatchManager.ApplyPatches), async () =>
+        {
+            for (var attempt = 0; attempt < MaxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed)
+                {
+                    return;
+                }
+
+                // The older activation deactivates once idle; give it time to go before asking again, so the next
+                // call activates the patch manager on a kernel at least as new as this one.
+                if (attempt < MaxAttempts - 1)
+                {
+                    await Task.Delay(_patchManagerRelocationDelay, _timeProvider, cancellationToken);
+                }
+            }
+            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+        });
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
@@ -229,6 +254,11 @@ internal sealed class ChronicleServerStartupTask(
             catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception))
             {
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                throw;
+            }
+            catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+            {
+                logger.StartupStepReachedIncompatibleSilo(exception, step);
                 throw;
             }
         }

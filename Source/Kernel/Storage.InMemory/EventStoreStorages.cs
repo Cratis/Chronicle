@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
+    readonly ConcurrentDictionary<EventStoreName, Generations.GenerationFloorStorage> _generationFloors = new();
     readonly Func<EventStoreName, IEventTypesStorage>? _eventTypesFactory;
 
     readonly Subject<IEnumerable<EventStoreName>> _changes = new();
@@ -108,6 +109,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
         var created = _eventTypesFactory is null
             ? new EventStoreStorage(eventStore, sinks, jobsStorage)
             : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
+        created.GenerationFloor = _generationFloors.GetOrAdd(eventStore, _ => new Generations.GenerationFloorStorage());
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
         if (ReferenceEquals(storage, created))
@@ -119,10 +121,29 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     }
 
     /// <summary>
+    /// Reads the preserved floors without recreating registered stores.
+    /// </summary>
+    /// <returns>The durable floors.</returns>
+    public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
+    {
+        var floors = new Dictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor?>();
+        foreach (var pair in _generationFloors)
+        {
+            floors.Add(pair.Key, await pair.Value.Get());
+        }
+        return floors.Where(_ => _.Value is not null).ToDictionary(_ => _.Key, _ => _.Value!);
+    }
+
+    /// <summary>
     /// Clears all registered event stores.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when an event store has recorded generation initialization.</exception>
     public void Clear()
     {
+        if (_eventStores.Values.Any(store => ((Generations.GenerationInitializationStorage)store.GenerationInitialization).HasReceipts))
+        {
+            throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+        }
         _eventStores.Clear();
         Publish();
     }

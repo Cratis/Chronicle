@@ -24,11 +24,42 @@ public interface ISink
     SinkTypeId TypeId { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this sink supports watermark-conditional whole-instance replacement.
+    /// </summary>
+    bool SupportsIsolatedReplace => false;
+
+    /// <summary>
+    /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.
+    /// </summary>
+    /// <param name="key">The instance to replace.</param>
+    /// <param name="state">The complete replacement state, or null to remove the instance.</param>
+    /// <param name="watermark">The inclusive upper bound of the rebuilt state.</param>
+    /// <returns>The outcome of the conditional replacement or removal.</returns>
+    /// <remarks>
+    /// The comparison and write are atomic against primary state, even during a replay. A stored watermark
+    /// strictly beyond the supplied bound prevents the write; equality permits replacement. Replacement is
+    /// whole-state, not a merge. Buffered writes already accepted for this instance must not overwrite it later.
+    /// Removal leaves no tombstone; preventing an old event from recreating an absent instance requires a
+    /// separately persisted replay floor.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">The sink does not support isolated replacement.</exception>
+    Task<IsolatedReplaceResult> ReplaceIsolated(Key key, ExpandoObject? state, EventSequenceNumber watermark) =>
+        throw new NotSupportedException();
+
+    /// <summary>
     /// Find a read model by key, or return an empty object if not found.
     /// </summary>
     /// <param name="key">Key of the read model to find.</param>
     /// <returns>A read model instance with the data from the source, or an empty object.</returns>
     Task<ExpandoObject?> FindOrDefault(Key key);
+
+    /// <summary>
+    /// Finds a read model by key in the primary container, even while a replay rebuilds another container.
+    /// </summary>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <returns>The primary instance, or null if the key is absent.</returns>
+    /// <remarks>This query-side read does not use the projection's replay state or pending bulk writes.</remarks>
+    Task<ExpandoObject?> FindInPrimaryOrDefault(Key key);
 
     /// <summary>
     /// Find the root key of a read model that contains a child with the specified value at the given property path.
@@ -92,6 +123,16 @@ public interface ISink
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task BeginBulk();
+
+    /// <summary>
+    /// Join the open bulk window, or begin one when none is open.
+    /// </summary>
+    /// <remarks>
+    /// Resuming work whose writers may still be running must not replace their window: replacing it discards the writes
+    /// they queued in it, and a writer that has not confirmed the window yet cannot tell.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeBulk() => BeginBulk();
 
     /// <summary>
     /// Drain buffered writes while keeping the bulk window open.

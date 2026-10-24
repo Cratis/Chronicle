@@ -14,9 +14,14 @@ public class Clustering
     public ClusterRoles Roles { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the single-writer lease for Localhost clustering.
+    /// </summary>
+    public SingleWriterLease SingleWriterLease { get; set; } = new();
+
+    /// <summary>
     /// Gets the type of cluster membership to use. Defaults to single node localhost clustering;
-    /// use <see cref="ClusteringType.MongoDB"/> to let multiple nodes sharing the same MongoDB
-    /// storage and cluster id form one cluster.
+    /// use <see cref="ClusteringType.MongoDB"/> or <see cref="ClusteringType.Sql"/> to let multiple
+    /// nodes sharing the same storage and cluster id form one cluster.
     /// </summary>
     public ClusteringType Type { get; set; } = ClusteringType.Localhost;
 
@@ -51,7 +56,7 @@ public class Clustering
 
     /// <summary>
     /// Gets how often defunct silo entries are swept out of the cluster membership table when
-    /// using <see cref="ClusteringType.MongoDB"/>. Without the sweep, repeated restarts and failed
+    /// using <see cref="ClusteringType.MongoDB"/> or <see cref="ClusteringType.Sql"/>. Without the sweep, repeated restarts and failed
     /// rollouts accumulate dead silo entries forever, and new nodes stall validating against them
     /// when joining. Set to <see cref="TimeSpan.Zero"/> to disable the sweep.
     /// </summary>
@@ -64,6 +69,36 @@ public class Clustering
     /// to join quickly.
     /// </summary>
     public TimeSpan DefunctSiloExpiration { get; set; } = TimeSpan.FromHours(3);
+
+    /// <summary>
+    /// Gets the interval between liveness probes and the timeout for each probe. When unset, keeps the Orleans default.
+    /// </summary>
+    public TimeSpan? ProbeTimeout { get; set; }
+
+    /// <summary>
+    /// Gets the number of missed probes before a silo is suspected to be down. When unset, keeps the Orleans default.
+    /// </summary>
+    public int? NumMissedProbesLimit { get; set; }
+
+    /// <summary>
+    /// Gets the number of non-expired votes required to declare a silo down. When unset, keeps the Orleans default.
+    /// </summary>
+    public int? NumVotesForDeathDeclaration { get; set; }
+
+    /// <summary>
+    /// Gets the interval between fetching membership table updates. When unset, keeps the Orleans default.
+    /// </summary>
+    public TimeSpan? TableRefreshTimeout { get; set; }
+
+    /// <summary>
+    /// Gets the interval between publishing this silo's heartbeat to the membership table. When unset, keeps the Orleans default.
+    /// </summary>
+    public TimeSpan? IAmAliveTablePublishTimeout { get; set; }
+
+    /// <summary>
+    /// Gets the number of other silos each silo probes for liveness. When unset, keeps the Orleans default.
+    /// </summary>
+    public int? NumProbedSilos { get; set; }
 
     /// <summary>
     /// Gets how long a grain call waits for its response before timing out.

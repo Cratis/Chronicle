@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
@@ -27,13 +28,33 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+/// <param name="writes"><see cref="ISinkWrites"/> executing the joined-document writes, fenced or not.</param>
 public class ChangesetConverter(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
     ISinkCollections collections,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ChangesetConverter> logger) : IChangesetConverter
+    ILogger<ChangesetConverter> logger,
+    ISinkWrites writes) : IChangesetConverter
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChangesetConverter"/> class writing without a fence.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> to use.</param>
+    /// <param name="collections"><see cref="ISinkCollections"/> to use.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between documents and <see cref="ExpandoObject"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+    public ChangesetConverter(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IExpandoObjectConverter expandoObjectConverter,
+        ILogger<ChangesetConverter> logger)
+        : this(readModel, converter, collections, expandoObjectConverter, logger, UnfencedSinkWrites.Instance)
+    {
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChangesetConverter"/> class without a logger.
     /// </summary>
@@ -93,7 +114,8 @@ public class ChangesetConverter(
         return new(updateBuilder!, distinctArrayFilters, hasChanges)
         {
             NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray(),
-            NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray()
+            NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray(),
+            RequiredArrayPaths = [.. arrayFiltersForDocument.ArrayPaths]
         };
     }
 
@@ -321,8 +343,6 @@ public class ChangesetConverter(
 
     bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject? initialState, ISet<string> nullParentPaths, IList<NullArrayParent> nullArrayParents)
     {
-        var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
-
         // Sink-owned system properties (e.g. __lastHandledEventSequenceNumber) are written via a
         // dedicated $max operator in BuildLastHandledEventSequenceNumber. Including them in the
         // generic $set path here produces two operators targeting the same field, which MongoDB
@@ -357,7 +377,7 @@ public class ChangesetConverter(
             }
 
             var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
-            allArrayFilters.AddRange(arrayFilters);
+            arrayFiltersForDocument.AddRange(property, arrayFilters);
             var value = converter.ToBsonValue(propertyDifference.Changed, propertyDifference.PropertyPath);
 
             if (updateBuilder != default)
@@ -369,8 +389,6 @@ public class ChangesetConverter(
                 updateBuilder = updateDefinitionBuilder.Set(property, value);
             }
         }
-
-        arrayFiltersForDocument.AddRange(allArrayFilters);
 
         // Report hasChanges based on the original diff set, not the filtered one: a diff that
         // contained only filtered properties (e.g. _id or __lastHandledEventSequenceNumber) is
@@ -397,7 +415,7 @@ public class ChangesetConverter(
         var childrenProperty = childAdded.ChildrenProperty.GetChildrenProperty();
         var arrayIndexers = new ArrayIndexers(childAdded.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
-        arrayFiltersForDocument.AddRange(arrayFilters);
+        arrayFiltersForDocument.AddRange(property, arrayFilters);
 
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Push(property, bsonValue)
@@ -407,7 +425,7 @@ public class ChangesetConverter(
     void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)
     {
         var (property, arrayFilters) = converter.ToMongoDBProperty(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
-        arrayFiltersForDocument.AddRange(arrayFilters);
+        arrayFiltersForDocument.AddRange(property, arrayFilters);
 
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Unset(property)
@@ -419,7 +437,7 @@ public class ChangesetConverter(
         var childrenProperty = childRemoved.ChildrenProperty.GetChildrenProperty();
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
-        arrayFiltersForDocument.AddRange(arrayFilters);
+        arrayFiltersForDocument.AddRange(property, arrayFilters);
 
         var stateType = childRemoved.State.GetType();
         var isPrimitive = stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly);
@@ -494,16 +512,18 @@ public class ChangesetConverter(
                 ? Builders<BsonDocument>.Filter.Type(parent.Path, BsonType.Null)
                 : BuildNullArrayParentFilter(parent.Path, parent.Filters);
             var repairFilter = Builders<BsonDocument>.Filter.And(joinFilter, nullFilter);
-            await collection.UpdateManyAsync(
+            await writes.UpdateMany(
+                collection,
                 repairFilter,
                 updateDefinitionBuilder.Unset(parent.Path),
                 new UpdateOptions { ArrayFilters = parent.Filters });
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
-        var result = await collection.UpdateManyAsync(
+        var result = await writes.UpdateMany(
+            collection,
             joinFilter,
-            joinUpdateBuilder,
+            joinUpdateBuilder!,
             new UpdateOptions
             {
                 IsUpsert = false,

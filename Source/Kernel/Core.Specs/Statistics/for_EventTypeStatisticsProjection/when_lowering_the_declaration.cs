@@ -17,16 +17,14 @@ public class when_lowering_the_declaration : Specification
 {
     IReadOnlyCollection<ProjectionDefinition> _projections;
     ProjectionDefinition _namespaced;
-    ProjectionDefinition _global;
 
     void Because()
     {
         (_, _projections) = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection));
         _namespaced = _projections.Single(_ => _.Scope == ProjectionScope.Namespaced);
-        _global = _projections.Single(_ => _.Scope == ProjectionScope.Global);
     }
 
-    [Fact] void should_lower_to_a_namespaced_and_a_global_half() => _projections.Count.ShouldEqual(2);
+    [Fact] void should_lower_to_one_namespaced_projection() => _projections.Count.ShouldEqual(1);
 
     [Fact] void should_count_every_event_rather_than_named_ones() => _projections.ShouldContainOnly(_projections.Where(_ => _.SubscribesToAllEvents));
 
@@ -40,11 +38,7 @@ public class when_lowering_the_declaration : Specification
     [Fact] void should_key_the_namespaced_half_by_event_type_and_namespace() =>
         _namespaced.FromEvery.Key.Value.ShouldContain(WellKnownExpressions.Composite);
 
-    [Fact] void should_key_the_global_half_the_same_way() =>
-        _global.FromEvery.Key.ShouldEqual(_namespaced.FromEvery.Key);
-
-    [Fact] void should_write_both_halves_to_the_same_read_model() =>
-        _global.ReadModel.ShouldEqual(_namespaced.ReadModel);
+    [Fact] void should_preserve_the_namespaced_identifier() => _namespaced.Identifier.Value.ShouldEqual("$system.statistics.event-types");
 
     [Fact] void should_be_owned_by_the_kernel() => _projections.ShouldContainOnly(_projections.Where(_ => _.IsKernelOwned));
 

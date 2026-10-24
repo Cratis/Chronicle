@@ -29,7 +29,7 @@ In this example, an account can be removed by an `AccountClosed` event or an `Ac
 
 ## RemovedWithJoin
 
-`RemovedWithJoin` on a root class is **not yet supported**. The engine logs a warning and does not subscribe to the removal event. Do not add this attribute to a root read model: it will not delete its instances. Use `RemovedWith` for root deletion, or use `RemovedWithJoin` on a child collection for child-item removal.
+`RemovedWithJoin` on a root class is **not yet supported**. The engine logs a warning and does not subscribe to the removal event. The .NET client also logs a warning at startup when a projection declares it at the root. Do not add this attribute to a root read model: it will not delete its instances. Use `RemovedWith` for root deletion, or use `RemovedWithJoin` on a child collection for child-item removal.
 
 ## Removing Children
 

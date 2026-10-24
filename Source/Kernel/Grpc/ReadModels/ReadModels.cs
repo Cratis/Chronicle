@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
+/// <param name="readBindings">The bindings for resolving materialized read destinations.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
 /// <param name="changesetMediator">The <see cref="IProjectionChangesetMediator"/> for forwarding watched changesets to client streams.</param>
@@ -42,6 +43,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
+    IReadModelReadBindings readBindings,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
     IProjectionChangesetMediator changesetMediator,
@@ -80,9 +82,7 @@ internal sealed class ReadModels(
             throw new InvalidOperationException($"Read model with identifier '{request.ReadModel.Type.Identifier}' not found.");
 
         var schema = await JsonSchema.FromJsonAsync(request.ReadModel.Schema);
-        var indexes = request.ReadModel.Indexes
-            .Select(i => new Concepts.ReadModels.IndexDefinition(i.PropertyPath))
-            .ToArray();
+        var indexes = ReadModelIndexUpdates.Apply(request.ReadModel.Indexes, existingDefinition.Indexes, request.ReplaceIndexes);
 
         var updatedDefinition = new Concepts.ReadModels.ReadModelDefinition(
             existingDefinition.Identifier,
@@ -129,15 +129,11 @@ internal sealed class ReadModels(
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
-        var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-        var sink = await sinks.GetFor(definition);
+        var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
+        var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+        var sink = binding.Sink;
+        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
-
-        ReadModelContainerName? occurrence = null;
-        if (!string.IsNullOrEmpty(request.Occurrence))
-        {
-            occurrence = request.Occurrence;
-        }
 
         var (instances, totalCount) = await sink.GetInstances(
             occurrence,

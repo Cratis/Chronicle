@@ -231,10 +231,20 @@ public class Routing(
         }
     }
 
+    /// <summary>
+    /// Decides whether the observer can move its position past the tail without catching up.
+    /// </summary>
+    /// <remarks>
+    /// Only proven absence of an event of the observer's types at or after its position allows that. The last handled
+    /// event is the furthest event any partition handled, not a position below which everything was handled: a partition
+    /// job, or a catch-up round reporting while a live batch is in progress, moves it ahead of the position while events
+    /// of other partitions in between are still unhandled. Fast-forwarding on it silently skipped those events.
+    /// </remarks>
+    /// <param name="state">The current <see cref="ObserverState"/>.</param>
+    /// <returns>True if nothing is left to handle between the position and the tail, false otherwise.</returns>
     bool CanFastForward(ObserverState state) =>
         IsFallingBehind(state) &&
-        (!_nextUnhandledEventSequenceNumber.IsActualValue ||
-        (_nextUnhandledEventSequenceNumber < state.LastHandledEventSequenceNumber && state.LastHandledEventSequenceNumber.IsActualValue));
+        !_nextUnhandledEventSequenceNumber.IsActualValue;
 
     bool IsFallingBehind(ObserverState state) =>
         state.NextEventSequenceNumber.IsActualValue &&

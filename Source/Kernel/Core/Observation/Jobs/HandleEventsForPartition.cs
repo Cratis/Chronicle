@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -34,6 +35,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
+/// <param name="timeProvider">The delivery fence clock.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
@@ -43,14 +45,22 @@ public class HandleEventsForPartition(
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForPartition> logger,
-    IEventGenerationRelease? eventGenerationRelease = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
+    IEventGenerationRelease? eventGenerationRelease = null,
+    TimeProvider? timeProvider = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
+
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
+    TimeSpan _abandonedDeliveryHold;
+    DeliveryFenceContext? _deliveryFence;
 
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
+    IGrainFactory _grainFactory = null!;
+    ObserverSubscriberTarget _deliveryTarget = null!;
+    ObserverSubscription _deliverySubscription = ObserverSubscription.Unsubscribed;
     Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
     IEventTypesStorage? _eventTypes;
     EventType[] _generationPins = [];
@@ -114,6 +124,8 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
     {
+        State.EpisodeId = request.EpisodeId;
+        State.DeferralId = request.DeferralId;
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
         State.EventTypes = request.EventTypes.ToArray();
@@ -203,14 +215,15 @@ public class HandleEventsForPartition(
                 eventTypesToRead,
                 cancellationToken: cancellationToken);
 
-            var subscriberContext = new ObserverSubscriberContext(
-                subscriberSelector.Select(subscription, currentState.Partition).ConnectedClient ?? subscription.Arguments);
+            var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
+            await DrainAbandonedDeliveryBeforeHandling(subscription, currentState, cancellationToken);
 
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
             var exceptionStackTrace = string.Empty;
             var failureKind = FailureKind.Unknown;
+            var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
 
             var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
             var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
@@ -223,11 +236,24 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TransientTimeouts.RetryOnceOnTimeout(
-                    () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters),
-                    TransientRetryDelay,
-                    timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
-                    cancellationToken);
+                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
+                {
+                    return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
+                }
+
+                var handleEventsResult = _subscriber is IWebhookObserverSubscriber or IAmOwnedByClient
+                    ? await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken)
+                    : await TransientTimeouts.RetryOnceOnTimeout(
+                        () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken),
+                        TransientRetryDelay,
+                        timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
+                        cancellationToken);
+                if (_subscriber is IWebhookObserverSubscriber && cancellationToken.IsCancellationRequested)
+                {
+                    LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
+                }
+
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -263,11 +289,22 @@ public class HandleEventsForPartition(
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
                             await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             break;
+                        case ObserverSubscriberState.Deferred:
+                            if (eventObserverResult.HandledAnyEvents)
+                            {
+                                if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation)) return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
+                                lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                                await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
+                            }
+
+                            await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId);
+                            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with { Deferral = eventObserverResult.Deferral }));
                         case ObserverSubscriberState.Failed:
                             failed = true;
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
                             failureKind = FailureKind.Handling;
+                            failurePolicy = eventObserverResult.FailurePolicy;
                             if (eventObserverResult.HandledAnyEvents)
                             {
                                 var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
@@ -311,13 +348,13 @@ public class HandleEventsForPartition(
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                             CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
                             {
-                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages)
+                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages) { DeliveryFence = _deliveryFence }
                             },
                             exceptionMessages,
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind);
+                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -409,55 +446,6 @@ public class HandleEventsForPartition(
             string.Empty));
     }
 
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
-    {
-        if (eventObservationState != EventObservationState.None)
-        {
-            return events.Current.Select(@event =>
-                @event with
-                {
-                    Context = @event.Context with
-                    {
-                        ObservationState = eventObservationState
-                    }
-                }).ToArray();
-        }
-
-        return events.Current.ToArray();
-    }
-
-    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
-    {
-        if (nonRedactionEventTypeIds.Count == 0)
-        {
-            return events;
-        }
-
-        var filtered = new AppendedEvent[events.Length];
-        var count = 0;
-        foreach (var @event in events)
-        {
-            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
-            {
-                filtered[count++] = @event;
-                continue;
-            }
-
-            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
-            {
-                continue;
-            }
-
-            var originalEventTypeId = originalEventTypeObj?.ToString();
-            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
-            {
-                filtered[count++] = @event;
-            }
-        }
-
-        return count == filtered.Length ? filtered : filtered[..count];
-    }
-
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
@@ -477,7 +465,7 @@ public class HandleEventsForPartition(
     {
         try
         {
-            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind());
+            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
             return true;
         }
         catch (Exception reportError)
@@ -508,23 +496,47 @@ public class HandleEventsForPartition(
     JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
         JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
+    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, Key partition)
+    {
+        var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? _deliveryTarget
+            : subscriberSelector.Select(subscription, partition);
+        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments);
+    }
+
+    async Task DrainAbandonedDeliveryBeforeHandling(ObserverSubscription subscription, HandleEventsForPartitionState state, CancellationToken cancellationToken)
+    {
+        _abandonedDeliveryHold = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
+            ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(state.ObserverKey)
+            : TimeSpan.Zero;
+        if (_abandonedDeliveryHold <= TimeSpan.Zero) return;
+        var drain = new AbandonedDeliveryDrain(_grainFactory, _clock, logger);
+        foreach (var fence in (await _observer.GetDeliveryFences()).Where(fence => fence.Partition == state.Partition))
+        {
+            await drain.Until(fence, cancellationToken);
+            await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
+        }
+    }
+
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
         HashSet<EventTypeId> nonRedactionEventTypeIds,
-        ObserverFilters? filters)
+        ObserverFilters? filters,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
-            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
-            eventsToHandle = filters.Apply(eventsToHandle);
+            var eventsToHandle = ObserverEventPreparation.Prepare(state.EventObservationState, events.Current, nonRedactionEventTypeIds, filters);
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
-                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext);
+                subscriberContext = subscriberContext.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+                _deliveryFence = AbandonedDeliveryDrain.Capture(_deliverySubscription, state.Partition, _deliveryTarget, subscriberContext);
+                var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
+                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
                 return (result, decryptedEvents);
             }
 
@@ -533,6 +545,10 @@ public class HandleEventsForPartition(
         }
         catch (Exception ex)
         {
+            if (TransientTimeouts.IsTimeout(ex) && _deliveryFence?.ReleaseBy is { } releaseBy)
+            {
+                await new AbandonedDeliveryDrain(_grainFactory, _clock, logger).Until(new(state.Partition, releaseBy, _deliveryFence.Targets ?? []), CancellationToken.None);
+            }
             logger.ErrorHandling(ex, state.Partition);
             return ex;
         }
@@ -550,8 +566,18 @@ public class HandleEventsForPartition(
         }
     }
 
-    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition) =>
-        subscription.GetSubscriberKeyFor(partition, subscriberSelector.Select(subscription, partition).SiloAddress);
+    ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
+    {
+        _grainFactory = GrainFactory;
+        _deliverySubscription = subscription;
+        _deliveryTarget = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+            ? new ObserverSubscriberTarget(SiloAddress.Zero)
+            : subscriberSelector.Select(subscription, partition);
+        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+            ? SiloAddress.Zero
+            : _deliveryTarget.SiloAddress;
+        return subscription.GetSubscriberKeyFor(partition, siloAddress);
+    }
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);

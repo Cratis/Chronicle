@@ -26,6 +26,14 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets durable generation initialization evidence.
+    /// </summary>
+    Generations.IGenerationInitializationStorage GenerationInitialization { get; }
+
+    /// <summary>Gets the durable generation compatibility floor.</summary>
+    Generations.IGenerationFloorStorage GenerationFloor { get; }
+
+    /// <summary>
     /// Gets the durable lifecycle fan-out intents for this event store.
     /// </summary>
     /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The provider has not implemented lifecycle intents.</exception>

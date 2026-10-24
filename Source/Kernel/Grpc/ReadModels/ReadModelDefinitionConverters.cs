@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Sinks;
 
@@ -33,7 +32,11 @@ internal static class ReadModelDefinitionConverters
             DisplayName = definition.DisplayName,
             Sink = definition.Sink.ToContract(),
             Schema = latestSchema.ToJson(),
-            Indexes = definition.Indexes.Select(i => new Contracts.ReadModels.IndexDefinition { PropertyPath = i.PropertyPath.Path }).ToList(),
+            Indexes = definition.Indexes.Select(index => new Contracts.ReadModels.IndexDefinition
+            {
+                PropertyPath = index.Properties[0].Path,
+                Properties = [.. index.Properties.Select(property => new Contracts.ReadModels.IndexProperty { Path = property.Path, Descending = property.Descending })]
+            }).ToList(),
             ObserverType = (Contracts.ReadModels.ReadModelObserverType)(int)definition.ObserverType,
             ObserverIdentifier = definition.ObserverIdentifier,
             Owner = (Contracts.ReadModels.ReadModelOwner)(int)definition.Owner,
@@ -52,7 +55,7 @@ internal static class ReadModelDefinitionConverters
     {
         var schema = JsonSchema.FromJson(contract.Schema);
         var indexes = contract.Indexes
-            .Select(i => new IndexDefinition(new PropertyPath(i.PropertyPath)))
+            .Select(ReadModelIndexUpdates.Convert)
             .ToArray();
 
         return new(

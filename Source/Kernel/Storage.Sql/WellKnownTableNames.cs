@@ -9,6 +9,21 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The kernel single-writer lease.
+    /// </summary>
+    public const string SingleWriterLeases = "SingleWriterLeases";
+
+    /// <summary>
+    /// The Orleans membership table versions.
+    /// </summary>
+    public const string MembershipVersions = "MembershipVersions";
+
+    /// <summary>
+    /// The Orleans silo membership entries.
+    /// </summary>
+    public const string MembershipEntries = "MembershipEntries";
+
+    /// <summary>
     /// The table holding retained alert incidents.
     /// </summary>
     public const string AlertIncidents = "AlertIncidents";
@@ -272,6 +287,16 @@ public static class WellKnownTableNames
     /// The table that holds closed event streams per event sequence.
     /// </summary>
     public const string ClosedStreams = "ClosedStreams";
+
+    /// <summary>
+    /// The table that holds in-flight events per observer partition.
+    /// </summary>
+    public const string InFlightEvents = "InFlightEvents";
+
+    /// <summary>
+    /// The table that holds handled-event counts per observer, partition and event type.
+    /// </summary>
+    public const string ObserverHandledCounts = "ObserverHandledCounts";
 
     /// <summary>
     /// The table that holds durable application and schedule occurrences.

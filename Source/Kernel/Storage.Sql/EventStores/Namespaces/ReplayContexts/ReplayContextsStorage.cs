@@ -18,12 +18,18 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayContexts;
 public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IReplayContextsStorage
 {
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<ReplayContext>> GetAll()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        return (await scope.DbContext.ReplayContexts.AsNoTracking().ToArrayAsync()).Select(ReplayContextEntryConverter.ToReplayContext).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task Save(ReplayContext context)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entry = ReplayContextEntryConverter.ToReplayContextEntry(context);
         await scope.DbContext.ReplayContexts.Upsert(entry);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

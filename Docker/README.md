@@ -2,7 +2,7 @@
 
 Chronicle is an event sourcing engine. It stores events as the source of truth and keeps read models — projections and reducers — up to date from them, so your application reads state that is derived rather than mutated in place. It ships as a server you run alongside your application, with client SDKs that connect to it.
 
-- [Documentation](https://cratis.io)
+- [Documentation](https://www.cratis.io)
 - [Source](https://github.com/Cratis/Chronicle)
 
 ## Tags
@@ -42,7 +42,7 @@ docker run -p 35000:35000 \
   cratis/chronicle:latest
 ```
 
-Set the initial administrator's password with `Cratis__Chronicle__Authentication__AdminUser__Password` from your secret store; otherwise the first visitor to the Workbench chooses it. The [production hosting guide](https://cratis.io/chronicle/hosting/production/) covers certificates, backups, and clustering.
+Set the initial administrator's password with `Cratis__Chronicle__Authentication__AdminUser__Password` from your secret store; otherwise the first visitor to the Workbench chooses it. The [production hosting guide](https://www.cratis.io/chronicle/hosting/production/) covers certificates, backups, and clustering.
 
 > MongoDB storage requires a replica set — Chronicle uses transactions and change streams, neither of which a standalone `mongod` supports.
 

@@ -3,7 +3,10 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Namespaces;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
 namespace Cratis.Chronicle.Statistics;
@@ -12,34 +15,59 @@ namespace Cratis.Chronicle.Statistics;
 /// Represents an implementation of <see cref="IStatisticsReader"/>.
 /// </summary>
 /// <param name="readModels"><see cref="IReadModelsService"/> to read materialized instances through.</param>
+/// <param name="grainFactory">The grain factory for discovering contributing namespaces.</param>
+/// <param name="logger">The logger.</param>
 [Singleton]
-public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
+public class StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory, ILogger<StatisticsReader> logger) : IStatisticsReader
 {
     /// <summary>
-    /// The upper bound on rows read in one request.
+    /// The upper bound on rows read per namespace in one request. A full page must prove completeness to contribute totals.
     /// </summary>
-    /// <remarks>
-    /// One row per event type per namespace, so this is exceeded only by a store with tens of thousands of
-    /// distinct event types - far past the point where a key figure is the right thing to be showing. Bounded
-    /// rather than paged because the figures are folds over the whole set: a page of rows sums to a wrong total,
-    /// which is worse than a total that refuses to grow beyond a stated limit.
-    /// </remarks>
     public const int MaximumRows = 10_000;
+
+    /// <summary>
+    /// The maximum number of concurrent namespace reads. Eight keeps store-wide queries from flooding storage.
+    /// </summary>
+    public const int MaximumConcurrentNamespaceReads = 8;
 
     static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
-    /// <inheritdoc/>
-    public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatistics(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatisticsReader"/> class without logging.
+    /// </summary>
+    /// <param name="readModels">The read model service.</param>
+    /// <param name="grainFactory">The grain factory.</param>
+    public StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory)
+        : this(readModels, grainFactory, NullLogger<StatisticsReader>.Instance)
     {
-        var response = await readModels.GetInstances(new()
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatistics(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        GetEventTypeStatistics(eventStore, @namespace, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatistics(EventStoreName eventStore, EventStoreNamespaceName @namespace, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var request = new Contracts.ReadModels.GetInstancesRequest()
         {
             EventStore = eventStore,
             Namespace = @namespace,
             ReadModel = nameof(EventTypeStatistics),
             Page = 0,
             PageSize = MaximumRows
-        });
+        };
+        var response = await readModels.GetInstances(request, cancellationToken).WaitAsync(cancellationToken);
 
+        if (response.TotalCount > response.Instances.Count || response.TotalCount > MaximumRows ||
+            (response.Instances.Count >= MaximumRows && response.TotalCount != response.Instances.Count))
+        {
+            logger.StatisticsReadLimitReached(eventStore, @namespace, MaximumRows, response.Instances.Count, response.TotalCount);
+            throw new InvalidOperationException($"Statistics for event store '{eventStore}', namespace '{@namespace}' reached the {MaximumRows} row limit. Complete totals cannot be returned.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         return response.Instances
             .Select(ToRow)
             .Where(row => row is not null)
@@ -49,10 +77,25 @@ public class StatisticsReader(IReadModelsService readModels) : IStatisticsReader
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore) =>
+        GetEventTypeStatisticsForEventStore(eventStore, CancellationToken.None);
 
-        // The global half of the projection materializes against the event store rather than any one namespace,
-        // which is what makes a store-wide total one read instead of a read per namespace.
-        GetEventTypeStatistics(eventStore, EventStoreNamespaceName.NotSet);
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var namespaces = (await grainFactory.GetGrain<INamespaces>(eventStore).GetAll().WaitAsync(cancellationToken)).ToArray();
+        var rows = new IEnumerable<EventTypeStatistics>[namespaces.Length];
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = MaximumConcurrentNamespaceReads,
+            CancellationToken = cancellationToken
+        };
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, namespaces.Length),
+            options,
+            async (index, token) => rows[index] = await GetEventTypeStatistics(eventStore, namespaces[index], token));
+        return rows.SelectMany(_ => _).ToArray();
+    }
 
     /// <summary>
     /// Read one statistics row from the JSON of a read model instance.

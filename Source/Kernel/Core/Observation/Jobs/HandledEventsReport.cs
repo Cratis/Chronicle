@@ -14,8 +14,9 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="Counts">The number of handled events per event type.</param>
 /// <param name="ReportedBy">The <see cref="JobStepId"/> of the reporting step, which with <paramref name="HandledUpTo"/> identifies the report.</param>
 /// <param name="HandledUpTo">The <see cref="EventSequenceNumber"/> of the last event the counts cover.</param>
-internal sealed record HandledEventsReport(
-    Key Partition,
-    IReadOnlyDictionary<EventTypeId, EventCount> Counts,
-    JobStepId ReportedBy,
-    EventSequenceNumber HandledUpTo);
+[GenerateSerializer]
+public sealed record HandledEventsReport(
+    [property: Id(0)] Key Partition,
+    [property: Id(1)] IReadOnlyDictionary<EventTypeId, EventCount> Counts,
+    [property: Id(2)] JobStepId ReportedBy,
+    [property: Id(3)] EventSequenceNumber HandledUpTo);

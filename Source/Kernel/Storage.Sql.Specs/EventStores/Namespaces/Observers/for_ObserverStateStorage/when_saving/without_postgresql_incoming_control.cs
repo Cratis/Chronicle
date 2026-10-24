@@ -18,9 +18,8 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
         await using var context = CreateContext();
-        await context.Database.MigrateAsync();
         context.Observers.Add(new() { Id = "observer", TypeSetControl = "{}" });
         await context.SaveChangesAsync();
         var database = Substitute.For<IDatabase>();
@@ -44,7 +43,7 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
         return new(builder.Options);
     }
 }

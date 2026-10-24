@@ -90,10 +90,9 @@ Cratis behavior. The `engineering-` prefix identifies the maintainer audience;
 it does not imply confidential package contents or a private registry.
 
 The consuming repository owns its project facts, confidential behavior, local
-skills, and minimal host bootstraps. Use repository-owned documentation as canonical
-project context when that migration is active, `.agents/skills/` for private or
-repository-specific local workflows, and repository-owned documentation only as the
-documented legacy context fallback. Never merge, overwrite, or remove these
+skills, and minimal host bootstraps. Project-specific context is the repository's own
+documentation plus `.cratis/ai/rules/project.md`; `.agents/skills/` holds private or
+repository-specific local workflows. Never merge, overwrite, or remove these
 local files as a side effect of installing, updating, rolling back, or
 uninstalling shared AI capabilities.
 

@@ -24,11 +24,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
-        await using (var context = CreateContext())
-        {
-            await context.Database.MigrateAsync();
-        }
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
         var database = Substitute.For<IDatabase>();
         database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
@@ -75,7 +71,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
     NamespaceDbContext CreateContext()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false);
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
         return new(builder.Options);
     }
 }

@@ -5,7 +5,8 @@
     <PropertyGroup>
         <Version>1.0.0</Version>
         <Copyright>Copyright Cratis</Copyright>
-        <Authors>all contributors</Authors>
+        <Authors>Cratis</Authors>
+        <Company>Cratis</Company>
         <DebugType>portable</DebugType>
         <PackageIcon>logo.png</PackageIcon>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

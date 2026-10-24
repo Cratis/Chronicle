@@ -61,6 +61,7 @@ on:
       - ".github/workflows/**"
       - ".github/scripts/**"
       - ".github/build-affecting-paths.txt"
+      - ".github/legacy-contracts.json"
 
 jobs:
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
@@ -68,8 +69,13 @@ jobs:
   wire-compatibility:
     uses: ./.github/workflows/wire-compatibility.yml
 
+  # Alongside it, the silo-to-silo contract: a change that stops this build's silos from sharing a cluster with the
+  # latest release's breaks every rolling upgrade. See grain-compatibility.yml.
+  grain-compatibility:
+    uses: ./.github/workflows/grain-compatibility.yml
+
   dotnet-build:
-    needs: [wire-compatibility]
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
@@ -208,8 +214,8 @@ jobs:
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
-    needs: [wire-compatibility]
+    if: github.event_name != 'pull_request'
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -251,7 +257,7 @@ jobs:
       - name: Pack DEVELOPMENT build output
         run: |
           set -euo pipefail
-          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
@@ -265,7 +271,67 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-  specs:
+  # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
+  # requested PR path waits for successful specs (implicit success() also blocks cancellation).
+  dotnet-build-development-requested:
+    if: github.event_name == 'pull_request' && inputs.integration_requested
+    needs: [wire-compatibility, grain-compatibility, specs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          path: ./**/obj
+          # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
+          key: dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Build with DEVELOPMENT symbol
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Pack DEVELOPMENT build output
+        run: |
+          set -euo pipefail
+          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
+
+      - name: Upload DEVELOPMENT build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-development
+          path: build-output-development.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  specs-other:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [dotnet-build]
@@ -292,7 +358,9 @@ jobs:
       - name: Run tests with coverage
         # Integration tests are executed by .github/workflows/integration.yml.
         # Keep regular specs focused on non-integration test suites.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        # LogFilePrefix gives every spec project its own TRX file; a fixed LogFileName makes the
+        # projects overwrite one results.trx, and the legacy-contracts gate reads them all.
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql." --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFilePrefix=results"
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -308,14 +376,90 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+  specs-sql:
+    runs-on: ubuntu-latest
+    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
+    timeout-minutes: 45
+    needs: [dotnet-build]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [postgresql, sqlserver, remaining]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      - name: Run SQL collection filter specs
+        run: python3 .github/scripts/test-sql-spec-filter.py
+
+      - name: Run SQL specs with coverage
+        run: |
+          set -euo pipefail
+          filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
+          dotnet test Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --no-build --configuration Release --settings specs.runsettings --filter "$filter" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+
+      - name: Assert SQL specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: The SQL specs ${{ matrix.shard }} shard
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-specs-sql-${{ matrix.shard }}
+          path: ./coverage-results/
+          retention-days: 1
+
+  legacy-contracts:
+    # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
+    if: ${{ !cancelled() }}
+    needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+    uses: ./.github/workflows/legacy-contracts.yml
+    with:
+      jobs: ${{ toJSON(needs) }}
+
+  # Preserve the required check and all existing integration/coverage dependencies.
+  # A failed, skipped or cancelled shard must never turn this aggregate green.
+  specs:
+    if: always()
+    needs: [specs-other, specs-sql]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every spec job to pass
+        env:
+          OTHER_RESULT: ${{ needs.specs-other.result }}
+          SQL_RESULT: ${{ needs.specs-sql.result }}
+        run: test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
+
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
     # On a pull request the matrix fans out only after the ordinary specs passed in this same run
     # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
     # independent of specs, so a failing spec does not hide integration results there.
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && needs.dotnet-build-development.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
-    needs: [dotnet-build, dotnet-build-development, specs]
+    # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
+    needs: [dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -441,9 +585,9 @@ jobs:
           retention-days: 1
 
   coverage-merge-and-cache:
-    # Implicit success() on all dependencies skips this if any integration job fails or
-    # is skipped (ordinary PR pushes). Never cache incomplete results under the SHA key.
-    if: github.event_name != 'pull_request_target'
+    # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
+    # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]

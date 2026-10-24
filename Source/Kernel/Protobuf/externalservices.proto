@@ -22,6 +22,7 @@ message AddExternalServiceRequest {
    string Username = 17;
    string Password = 18;
    map<string,string> Options = 19;
+   string OAuthScope = 20;
 }
 message AddExternalServicesRequest {
    string EventStore = 1;
@@ -32,6 +33,7 @@ enum AuthorizationType {
    Basic = 1;
    Bearer = 2;
    OAuth = 3;
+   ManagedIdentity = 4;
 }
 message BasicAuthorization {
    string Username = 1;
@@ -96,6 +98,7 @@ message OAuthAuthorization {
    string Authority = 1;
    string ClientId = 2;
    string ClientSecret = 3;
+   string Scope = 4;
 }
 message ObserveExternalServicesRequest {
    string EventStore = 1;

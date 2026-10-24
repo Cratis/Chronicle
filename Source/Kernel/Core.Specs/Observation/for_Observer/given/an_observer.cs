@@ -9,10 +9,12 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
@@ -23,6 +25,7 @@ using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
 using Orleans.Streams;
@@ -69,16 +72,24 @@ public class an_observer : Specification
     protected IEventCompliance _eventCompliance;
     protected IEventGenerationRelease _eventGenerationRelease;
     protected Observers _observersConfig;
+    protected IWebhookTargetPolicy _webhookTargetPolicy;
     protected ILogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
+
+    protected virtual Observers CreateWebhookRetryConfig() => _observersConfig;
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
     void AddServices(TestKitSilo silo)
     {
+        var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
+        options.CurrentValue.Returns(new ChronicleOptions { Webhooks = new() { Retry = CreateWebhookRetryConfig() } });
+        silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
+        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
@@ -130,8 +141,17 @@ public class an_observer : Specification
             .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
 
+        _webhookTargetPolicy = Substitute.For<IWebhookTargetPolicy>();
+        _webhookTargetPolicy.EvaluateForDelivery(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventStoreStorage.Webhooks.Has(Arg.Any<WebhookId>()).Returns(true);
+        _eventStoreStorage.Webhooks.Get(Arg.Any<WebhookId>()).Returns(new WebhookDefinition(
+            (WebhookId)_observerId.Value,
+            WebhookOwner.Kernel,
+            EventSequenceId.Log,
+            [],
+            new("https://receiver.example/hook", WebhookAuthorization.None, new Dictionary<string, string>())));
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
@@ -254,7 +274,12 @@ public class an_observer : Specification
                 Partition = partition.Partition,
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
-                Attempts = partition.Attempts.ToArray()
+                Attempts = partition.Attempts.ToArray(),
+                WebhookDisposition = partition.WebhookDisposition,
+                WebhookRecoveryId = partition.WebhookRecoveryId,
+                AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
+                Deferral = partition.Deferral,
+                RecoveryCursor = partition.RecoveryCursor
             }).ToArray()
         };
 

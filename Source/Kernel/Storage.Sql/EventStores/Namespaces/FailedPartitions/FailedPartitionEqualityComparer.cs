@@ -23,16 +23,7 @@ public sealed class FailedPartitionEqualityComparer :
         if (ReferenceEquals(x, y)) return true;
         if (x is null || y is null) return false;
 
-        return x.Id == y.Id &&
-            x.ObserverId == y.ObserverId &&
-            x.Partition == y.Partition &&
-            x.IsResolved == y.IsResolved &&
-            x.IsQuarantined == y.IsQuarantined &&
-            x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset &&
-            x.RecoveryCursor == y.RecoveryCursor &&
-            x.RecoveryOwner == y.RecoveryOwner &&
-            x.Hold == y.Hold &&
-            AttemptsEqual(x.Attempts, y.Attempts);
+        return SameFailure(x, y) && SameRecovery(x, y) && AttemptsEqual(x.Attempts, y.Attempts);
     }
 
     /// <inheritdoc/>
@@ -44,6 +35,24 @@ public sealed class FailedPartitionEqualityComparer :
 
     /// <inheritdoc/>
     int IEqualityComparer.GetHashCode(object obj) => GetHashCode((Concepts.Observation.FailedPartition)obj);
+
+    static bool SameFailure(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        SameIdentity(x, y) && SameStatus(x, y);
+
+    static bool SameIdentity(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        x.Id == y.Id && x.ObserverId == y.ObserverId && x.Partition == y.Partition;
+
+    static bool SameStatus(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        x.IsResolved == y.IsResolved && x.IsQuarantined == y.IsQuarantined && x.WebhookDisposition == y.WebhookDisposition;
+
+    static bool SameRecovery(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        SameRecoveryCursor(x, y) && SameRetryBudget(x, y);
+
+    static bool SameRecoveryCursor(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        x.RecoveryCursor == y.RecoveryCursor && x.RecoveryOwner == y.RecoveryOwner && x.Hold == y.Hold;
+
+    static bool SameRetryBudget(Concepts.Observation.FailedPartition x, Concepts.Observation.FailedPartition y) =>
+        x.WebhookRecoveryId == y.WebhookRecoveryId && x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset && x.Deferral == y.Deferral;
 
     static bool AttemptsEqual(
         IEnumerable<Concepts.Observation.FailedPartitionAttempt> left,

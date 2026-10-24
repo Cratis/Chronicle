@@ -16,8 +16,10 @@ Configure the storage backend for Chronicle Server.
 | `InMemory` | In-memory (ephemeral, non-durable) |
 
 > [!NOTE]
-> Only `MongoDB` storage supports a multi-node cluster. `PostgreSql`, `MsSql` and `Sqlite` register no cluster
-> membership provider, so run a single node on them. See [Clustering](clustering.md).
+> Multi-node clustering is explicit opt-in: select `clustering.type: MongoDB` with MongoDB storage, or
+> `clustering.type: Sql` with `PostgreSql` or `MsSql` storage. All nodes must share one cluster database
+> and cluster identity. `Sqlite` and `InMemory` do not support multi-node clustering. `Localhost` remains
+> the default for every storage type. See [Clustering](clustering.md).
 
 ## MongoDB
 
@@ -71,6 +73,10 @@ For environment-variable configuration, use `Cratis__Chronicle__Storage__Databas
   }
 }
 ```
+
+### Passwordless Azure authentication
+
+On Azure SQL, use a Microsoft Entra ID mode in the connection string instead of a password, for example `Authentication=Active Directory Managed Identity;User Id=<client-id>`. On Azure Database for PostgreSQL, enable `storage.postgreSqlEntra.enabled` to acquire and refresh tokens natively with `DefaultAzureCredential`. Set `storage.postgreSqlEntra.managedIdentityClientId` for a user-assigned managed identity, and keep the PostgreSQL principal in the connection string's `Username`. Omit a password. Native authentication is disabled by default; a [connection resolver](storage-connection-resolution.md) can still return an Entra access token as the identity when it is disabled. The supported modes, and what not to combine with a resolved token, are in [Microsoft Entra ID authentication](storage-connection-resolution.md#microsoft-entra-id-authentication). For an end-to-end setup, see [Run Chronicle on Azure](../azure.md).
 
 ## SQL database names
 
@@ -170,3 +176,16 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
 
+
+## Single-writer lease storage
+
+In `Localhost` clustering mode, persistent storage is protected by one lease per kernel system/cluster
+database. SQL providers create the additive `SingleWriterLeases` table; MongoDB uses the
+`single-writer-leases` collection. Both store the fixed `kernel` key, process owner, cluster and service
+identities, host, version, acquisition time, last renewal and expiry. Cluster and service identities are
+diagnostic metadata, not part of the lease key. Keep all nodes that share kernel data on the same
+system/cluster database; independently resolved system databases cannot protect each other's data.
+
+Released or expired records are retained for diagnostics. MongoDB does not use a TTL index. The lease
+uses the normal cluster database resolution and migration path, including SQL schemas and identities.
+See [Single-writer lease](clustering.md#single-writer-lease) for settings, shutdown and SQLite clock caveats.

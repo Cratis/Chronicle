@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -43,6 +44,8 @@ public class ReplayObserver(
     /// </remarks>
     internal const int ActiveStepWindow = 16;
 
+    bool _refusalNotificationScheduled;
+
     /// <summary>
     /// Gets the notification of the observer that the replay concluded, once the job has concluded.
     /// </summary>
@@ -70,8 +73,33 @@ public class ReplayObserver(
     protected override bool StartStepsInBackground => true;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Recovery of a running job can bypass CanResume and go straight to finalization. Check before the base
+    /// implementation writes progress or dispatches anything; a scope refusal is terminal, not a resumable stop.
+    /// </remarks>
+    public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
+    {
+        if (State.Request is null)
+        {
+            return await base.Resume();
+        }
+
+        try
+        {
+            await EnsureReplaySupported();
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
+        }
+
+        return await base.Resume();
+    }
+
+    /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
+        await EnsureReplaySupported(request);
         var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
         State.ReplayStartedAt = DateTimeOffset.UtcNow;
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
@@ -138,6 +166,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
+        await EnsureReplaySupported();
         await DeleteAllOtherJobsForObserver();
         await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
     }
@@ -152,6 +181,13 @@ public class ReplayObserver(
     /// </remarks>
     protected override async Task<bool> CanResume()
     {
+        // A job without a request was never persisted, or has been removed since it was found; there is nothing to resume.
+        if (State.Request is null)
+        {
+            return false;
+        }
+
+        await EnsureReplaySupported();
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed())
         {
@@ -183,6 +219,7 @@ public class ReplayObserver(
     /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
     protected override async Task OnBeforeResumingJobSteps()
     {
+        await EnsureReplaySupported();
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         var observerState = await observer.GetState();
         if (observerState.RunningState != ObserverRunningState.Replaying)
@@ -239,6 +276,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         try
         {
@@ -258,6 +296,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var finalized = true;
         try
@@ -332,6 +371,7 @@ public class ReplayObserver(
     /// <returns>True if the replay was finalized; false if it was abandoned.</returns>
     async Task<bool> FinalizeOrAbandon(bool promote)
     {
+        await EnsureReplaySupported();
         if (!promote && Request.ObserverType == ObserverType.Reducer)
         {
             logger.AbandoningReplay(Request.ObserverKey.ObserverId);
@@ -343,20 +383,20 @@ public class ReplayObserver(
         return true;
     }
 
-    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
+    Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+
+    Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        NotifyObserverWithRetry(() => canResolve
+            ? observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
+            : observer.Replayed(lastHandledEventSequenceNumber));
+
+    async Task NotifyObserverWithRetry(Func<Task> notify)
     {
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                if (canResolve)
-                {
-                    await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
-                }
-                else
-                {
-                    await observer.Replayed(lastHandledEventSequenceNumber);
-                }
+                await notify();
 
                 return;
             }
@@ -383,5 +423,28 @@ public class ReplayObserver(
 
         var deleteAllOtherJobsForObserver = jobs.Where(job => job.Id != State.Id).Select(job => jobsManager.Delete(job.Id));
         await Task.WhenAll(deleteAllOtherJobsForObserver);
+    }
+
+    async Task EnsureReplaySupported(ReplayObserverRequest? request = null)
+    {
+        request ??= Request;
+        try
+        {
+            await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            if (!_refusalNotificationScheduled)
+            {
+                _refusalNotificationScheduled = true;
+                var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+
+                // Refusal is not completion: it must not replace the observer's retained cursor.
+                // Do not await the observer from Start: its replay turn may still be waiting for this job.
+                CompletionNotification = NotifyObserverOfRefusal(observer);
+            }
+
+            throw;
+        }
     }
 }

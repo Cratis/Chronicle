@@ -6,8 +6,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.given;
@@ -30,8 +32,11 @@ public class a_webhook_registrar : Specification
         _encryption = Substitute.For<IEncryption>();
         _oauthClient = Substitute.For<IOAuthClient>();
         _webhookMediator = Substitute.For<IWebhookMediator>();
-        _registrar = new WebhookRegistrar(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()), _storage);
+        _registrar = CreateRegistrar();
     }
+
+    protected WebhookRegistrar CreateRegistrar(IWebhookTargetPolicy? policy = null) =>
+        new(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()), _storage, NullLogger<WebhookRegistrar>.Instance, policy);
 
     protected static IEventSequence AnEventSequenceThatAppendsSuccessfully()
     {

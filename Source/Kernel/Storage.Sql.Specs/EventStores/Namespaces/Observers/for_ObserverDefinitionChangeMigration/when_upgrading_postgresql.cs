@@ -21,7 +21,7 @@ public class when_upgrading_postgresql(PostgreSqlFixture fixture) : Specificatio
     async Task Establish()
     {
         _connectionString = await fixture.CreateDatabase();
-        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().EnableServiceProviderCaching(false).Options);
+        _context = new(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE \"Observers\" (\"Id\" TEXT NOT NULL PRIMARY KEY)");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO \"Observers\" (\"Id\") VALUES ('legacy-observer')");
     }

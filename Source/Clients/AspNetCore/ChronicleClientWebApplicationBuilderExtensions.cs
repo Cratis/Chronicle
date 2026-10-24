@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
+using Cratis.Chronicle.AspNetCore.Auditing;
+using Cratis.Chronicle.AspNetCore.Transactions;
 using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,12 +85,26 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the usage of Cratis for the app.
+    /// Configures Chronicle startup and, when automatic middleware is disabled, installs its middleware at this position.
     /// </summary>
+    /// <remarks>Call after routing, authentication, and authorization when the namespace depends on the authenticated user.</remarks>
     /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
+        const string middlewareKey = "Cratis.Chronicle.MiddlewareRegistered";
+        if (app.Properties.ContainsKey(middlewareKey))
+        {
+            return app;
+        }
+        app.Properties[middlewareKey] = true;
+
+        if (!app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UseAutomaticMiddleware)
+        {
+            app.UseMiddleware<UnitOfWorkMiddleware>();
+            app.UseMiddleware<CausationMiddleware>();
+        }
+
         GlobalInstances.ServiceProvider = app.ApplicationServices;
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>

@@ -175,6 +175,7 @@ public partial class EventSequence(
     {
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
+        DisposeSpillRetry();
         ConstraintIndexCatchUpSlots.For(storage).Complete(this);
         _catchUpTracking = false;
         _catchUpReplay = null;
@@ -977,18 +978,6 @@ public partial class EventSequence(
         }
     }
 
-    async Task SpillAppendedEventsQueuesToCatchup()
-    {
-        try
-        {
-            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedSpillingAppendedEventsQueuesToCatchup(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
-        }
-    }
-
     async Task<Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -1024,7 +1013,10 @@ public partial class EventSequence(
             // expando from the original content for constraint purposes, while the encrypted expando is what
             // actually gets appended and persisted.
             var plaintextEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+            var personalData = new ConstraintPersonalDataOfEvent(
+                subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
+                ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -1087,7 +1079,8 @@ public partial class EventSequence(
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        ConstraintBatchClaims? batchClaims = default)
+        ConstraintBatchClaims? batchClaims = default,
+        ConstraintPersonalDataOfEvent? personalData = default)
     {
         if (_closedStreamsChanged)
         {
@@ -1101,7 +1094,7 @@ public partial class EventSequence(
             return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
         }
 
-        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
+        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData?.Subject, personalData?.Properties);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)
         {

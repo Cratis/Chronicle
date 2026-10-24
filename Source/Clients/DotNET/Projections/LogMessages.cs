@@ -18,4 +18,7 @@ internal static partial class LogMessages
 
     [LoggerMessage(LogLevel.Warning, "More than one projection maintains read model {ReadModelType}; {ShadowedProjection} is not reachable by that read model because {ReachableProjection} claimed it first. Both are still registered, so both write to it")]
     internal static partial void MoreThanOneProjectionForReadModel(this ILogger<Projections> logger, Type readModelType, string shadowedProjection, string reachableProjection);
+
+    [LoggerMessage(LogLevel.Warning, "Projection {ProjectionId} for read model {ReadModelType} declares remove via join at the root ({EventTypes}); this is not supported and will not remove any read model. Use RemovedWith for root removal, or RemovedWithJoin on a children collection")]
+    internal static partial void RootRemovalViaJoinNotSupported(this ILogger<Projections> logger, string projectionId, Type readModelType, string eventTypes);
 }

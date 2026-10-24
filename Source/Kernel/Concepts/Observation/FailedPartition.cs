@@ -14,6 +14,16 @@ public class FailedPartition
     List<FailedPartitionAttempt> _attempts = [];
 
     /// <summary>
+    /// Gets or sets the explicit webhook receiver policy, absent on legacy failures.
+    /// </summary>
+    public WebhookFailureDisposition? WebhookDisposition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last automatic recovery that reset this episode's budget.
+    /// </summary>
+    public Guid? WebhookRecoveryId { get; set; }
+
+    /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
     public FailedPartitionId Id { get; set; } = FailedPartitionId.New();
@@ -71,6 +81,12 @@ public class FailedPartition
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FailedPartitionHold? Hold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the durable deadline for the next delivery, independently of attempts.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PartitionDeferral? Deferral { get; set; }
 
     /// <summary>
     /// Gets the recovery cursor, interpreting a legacy entry as live from its last attempt without initializing it.
