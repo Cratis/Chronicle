@@ -137,7 +137,6 @@ public class a_performing_job_step : Specification
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
-        _silo.AddService(Options.Create(new ChronicleOptions { ReadModels = CreateReadModelsConfig() }));
         var jobsConfig = CreateJobsConfig();
         var options = Options.Create(new JobsOptions
         {
@@ -145,7 +144,7 @@ public class a_performing_job_step : Specification
             StepCheckpointFlushInterval = jobsConfig.StepCheckpointFlushInterval
         });
         _silo.AddService(options);
-        _silo.AddService(Options.Create(new ChronicleOptions { Jobs = jobsConfig }));
+        _silo.AddService(Options.Create(new ChronicleOptions { Jobs = jobsConfig, ReadModels = CreateReadModelsConfig() }));
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),
