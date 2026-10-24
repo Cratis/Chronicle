@@ -196,10 +196,7 @@ public class ProjectionObserverSubscriber(
             return;
         }
 
-        if (_pipeline is null)
-        {
-            await HandlePipeline();
-        }
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -218,12 +215,10 @@ public class ProjectionObserverSubscriber(
 
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {
-        if (_pipeline is null)
-        {
-            // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
-            // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
-            await HandlePipeline();
-        }
+        // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
+        // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
+        // A definition written after activation is also picked up here.
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -381,6 +376,26 @@ public class ProjectionObserverSubscriber(
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty), null);
         }
+    }
+
+    async Task EnsurePipeline()
+    {
+        if (_pipeline is not null)
+        {
+            return;
+        }
+
+        if (_definition.ReadModel is null)
+        {
+            // SetDefinition awaits subscriber notifications, so read storage rather than calling that grain.
+            var definitions = storage.GetEventStore(_key.EventStore).Projections;
+            if (await definitions.Has(_key.ObserverId))
+            {
+                _definition = await definitions.Get(_key.ObserverId);
+            }
+        }
+
+        await HandlePipeline();
     }
 
     async Task HandlePipeline()

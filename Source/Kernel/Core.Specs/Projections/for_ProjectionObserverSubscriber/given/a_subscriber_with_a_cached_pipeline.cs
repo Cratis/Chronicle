@@ -49,7 +49,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         silo.Options.StorageFactory = _ => _stateStorage;
 
         _projectionGrain = Substitute.For<IProjection>();
-        _projectionGrain.GetDefinition().Returns(_definition);
+        _projectionGrain.GetDefinition().Returns(DefinitionAtActivation());
         silo.AddProbe(_ => _projectionGrain);
         _notifier = Substitute.For<IProjectionChangesetNotifier>();
         silo.AddProbe(_ => _notifier);
@@ -106,6 +106,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _pipelines.ClearReceivedCalls();
         _factory.ClearReceivedCalls();
     }
+
+    protected virtual ProjectionDefinition DefinitionAtActivation() => _definition;
 
     static ProjectionDefinition CreateDefinition() => new(
         ProjectionOwner.Client,

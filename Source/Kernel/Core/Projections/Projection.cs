@@ -99,7 +99,9 @@ public class Projection(
         }
 
         var storageUpgraded = previousDefinition.HasLegacyStorageFields && !definition.HasLegacyStorageFields;
-        if (compareResult == ProjectionDefinitionCompareResult.Different || storageUpgraded)
+
+        // First writes, including re-writes after removal, must also reach subscribers that activated early.
+        if (compareResult != ProjectionDefinitionCompareResult.Same || storageUpgraded)
         {
             _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
