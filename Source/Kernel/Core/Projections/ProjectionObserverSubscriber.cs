@@ -134,62 +134,70 @@ public class ProjectionObserverSubscriber(
         ObserverSubscriberResult? failure = null;
         Key? lastHandledPartition = null;
         await PreparePage(page);
-        var offset = 0;
-        while (offset < page.Length)
+        var preparedPipeline = _pipeline;
+        try
         {
-            var start = offset;
-            var partition = page[start].Context.EventSourceId;
-            while (offset < page.Length && page[offset].Context.EventSourceId == partition)
+            var offset = 0;
+            while (offset < page.Length)
             {
-                offset++;
-            }
-
-            var run = page[start..offset];
-            var (result, notification) = await HandleRun(partition, run);
-            if (result.State != ObserverSubscriberState.Ok)
-            {
-                var failedEvent = result.HandledAnyEvents
-                    ? run.FirstOrDefault(_ => _.Context.SequenceNumber > result.LastSuccessfulObservation) ?? run[^1]
-                    : run[0];
-                failure = result with
+                var start = offset;
+                var partition = page[start].Context.EventSourceId;
+                while (offset < page.Length && page[offset].Context.EventSourceId == partition)
                 {
-                    LastSuccessfulObservation = result.HandledAnyEvents ? result.LastSuccessfulObservation : lastSuccessful,
-                    FailedPartition = partition,
-                    FailedAt = failedEvent.Context.SequenceNumber
-                };
-                break;
+                    offset++;
+                }
+
+                var run = page[start..offset];
+                var (result, notification) = await HandleRun(partition, run);
+                if (result.State != ObserverSubscriberState.Ok)
+                {
+                    var failedEvent = result.HandledAnyEvents
+                        ? run.FirstOrDefault(_ => _.Context.SequenceNumber > result.LastSuccessfulObservation) ?? run[^1]
+                        : run[0];
+                    failure = result with
+                    {
+                        LastSuccessfulObservation = result.HandledAnyEvents ? result.LastSuccessfulObservation : lastSuccessful,
+                        FailedPartition = partition,
+                        FailedAt = failedEvent.Context.SequenceNumber
+                    };
+                    break;
+                }
+
+                if (notification is not null)
+                {
+                    notifications.Add(notification);
+                }
+
+                logger.SuccessfullyHandledAllEvents(_key);
+                lastSuccessful = result.LastSuccessfulObservation;
+                lastHandledPartition = partition;
             }
 
-            if (notification is not null)
+            if (notifications.Count > 0)
             {
-                notifications.Add(notification);
+                try
+                {
+                    await _changesetNotifier!.NotifyMany(_key.Namespace, notifications);
+                }
+                catch (Exception ex)
+                {
+                    // The handled runs are already persisted, so the position stays at the last handled event, as a failed
+                    // Notify did for a single run. A run that failed on its own keeps its own failure.
+                    logger.ErrorHandling(ex, _key, lastSuccessful);
+                    failure ??= new ObserverSubscriberResult(ObserverSubscriberState.Failed, lastSuccessful, ex.GetAllMessages(), ex.StackTrace ?? string.Empty)
+                    {
+                        FailedPartition = lastHandledPartition,
+                        FailedAt = lastSuccessful
+                    };
+                }
             }
 
-            logger.SuccessfullyHandledAllEvents(_key);
-            lastSuccessful = result.LastSuccessfulObservation;
-            lastHandledPartition = partition;
+            return failure ?? ObserverSubscriberResult.Ok(lastSuccessful);
         }
-
-        if (notifications.Count > 0)
+        finally
         {
-            try
-            {
-                await _changesetNotifier!.NotifyMany(_key.Namespace, notifications);
-            }
-            catch (Exception ex)
-            {
-                // The handled runs are already persisted, so the position stays at the last handled event, as a failed
-                // Notify did for a single run. A run that failed on its own keeps its own failure.
-                logger.ErrorHandling(ex, _key, lastSuccessful);
-                failure ??= new ObserverSubscriberResult(ObserverSubscriberState.Failed, lastSuccessful, ex.GetAllMessages(), ex.StackTrace ?? string.Empty)
-                {
-                    FailedPartition = lastHandledPartition,
-                    FailedAt = lastSuccessful
-                };
-            }
+            preparedPipeline?.ClearPreparedPage();
         }
-
-        return failure ?? ObserverSubscriberResult.Ok(lastSuccessful);
     }
 
     async Task PreparePage(AppendedEvent[] page)
@@ -436,6 +444,7 @@ public class ProjectionObserverSubscriber(
         // itself and every partition would report the activation error over and over. Containing the failure
         // here keeps the grain alive, lets OnNext report the actual cause on the failed partition, and lets a
         // later definition change (or the retry in OnNext) rebuild the pipeline without a reactivation.
+        _pipeline?.ClearPreparedPage();
         try
         {
             var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(_definition.ReadModel, _key.EventStore)).GetDefinition();

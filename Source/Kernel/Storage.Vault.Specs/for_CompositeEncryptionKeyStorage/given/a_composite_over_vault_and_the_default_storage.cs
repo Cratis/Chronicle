@@ -23,7 +23,7 @@ public class a_composite_over_vault_and_the_default_storage(VaultFixture fixture
     protected EncryptionKeyIdentifier _identifier = default!;
 
     /// <inheritdoc/>
-    public virtual Task InitializeAsync()
+    public virtual ValueTask InitializeAsync()
     {
         _eventStore = $"test-store-{Guid.NewGuid():N}";
         _namespace = "default";
@@ -31,9 +31,9 @@ public class a_composite_over_vault_and_the_default_storage(VaultFixture fixture
         _vault = new VaultEncryptionKeyStorage(fixture.VaultAddress);
         _defaultStorage = new InMemoryEncryptionKeyStorage();
         _composite = new CompositeEncryptionKeyStorage(_vault, _defaultStorage);
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public virtual Task DisposeAsync() => Task.CompletedTask;
+    public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
