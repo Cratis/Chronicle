@@ -68,7 +68,10 @@ function packageChecker(projectPath, resolved, runtime) {
 }
 function validateRunnerPackages(projectPath, { ids, resolved, check }) {
     const needsSpecs = projectPath !== shippingProjects[0];
-    check('xunit.v3.extensibility.core', true);
+    // Every spec project runs on xunit v3. A shipping package may or may not reference xunit
+    // (Cratis.Chronicle.Testing does not); when it does, assets and runtime must still agree.
+    const testProject = !shippingProjects.includes(projectPath);
+    check('xunit.v3.extensibility.core', testProject || resolved.has('xunit.v3.extensibility.core'));
     check('xunit.extensibility.core', false);
     check('cratis.specifications.xunit.v3', needsSpecs);
     check('cratis.specifications.xunit', false);
