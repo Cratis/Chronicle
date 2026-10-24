@@ -30,4 +30,10 @@ public record ReadModel(
     ReadModelObserverIdentifier ObserverIdentifier,
     SinkDefinition Sink,
     IDictionary<string, BsonDocument> Schemas,
-    IEnumerable<string> Indexes);
+    IEnumerable<string> Indexes)
+{
+    /// <summary>
+    /// Gets the ordered index definitions, absent on definitions written by older kernels.
+    /// </summary>
+    public BsonArray IndexDefinitions { get; init; } = [];
+}

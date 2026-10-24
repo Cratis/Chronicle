@@ -70,7 +70,7 @@ internal sealed class Projections(
             try
             {
                 // Connection lookup must not occupy the non-reentrant manager's registration turn.
-                await ProjectionDeclarations.Record(grainFactory, localSiloDetails.SiloAddress, new(request.ConnectionId), request.EventStore, projections.Select(projection => projection.Identifier));
+                await ProjectionDeclarations.Record(grainFactory, localSiloDetails.SiloAddress, new(request.ConnectionId), request.EventStore, projections.Select(projection => projection.Identifier), request.Version);
             }
             catch (Exception exception)
             {

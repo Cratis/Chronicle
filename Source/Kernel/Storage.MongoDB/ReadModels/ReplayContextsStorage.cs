@@ -17,6 +17,9 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     readonly IMongoCollection<ReplayContext> _collection = database.GetCollection<ReplayContext>(WellKnownCollectionNames.ReplayContexts);
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Chronicle.Storage.ReadModels.ReplayContext>> GetAll() => (await _collection.Find(_ => true).ToListAsync()).Select(_ => _.ToChronicle()).ToArray();
+
+    /// <inheritdoc/>
     public async Task Save(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         var storageContext = context.ToMongoDB();

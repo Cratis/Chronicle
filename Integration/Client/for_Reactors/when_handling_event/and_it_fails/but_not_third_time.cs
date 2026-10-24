@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.for_Reactors.when_handling_event.and_it_fails.but_not_third_time.context;
@@ -17,7 +16,7 @@ public class but_not_third_time(context context) : Given<context>(context)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;
-        public IEnumerable<Job> Jobs;
+        public int HandlerAttempts;
         public SomeEvent Event;
         public EventSourceId EventSourceId;
         public ReactorState ReactorState;
@@ -30,10 +29,6 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
-            // The retry backoff uses exponential delay: 2s for the first retry, 4s for the second.
-            // The default 5s timeout is too tight for the second cycle, so use a longer timeout.
-            var retryTimeout = TimeSpan.FromSeconds(10);
-
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
             await reactor.WaitTillSubscribed();
             Observers[0].ShouldFail = true;
@@ -42,21 +37,21 @@ public class but_not_third_time(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, Event);
 
             // Wait for the first event to have been handled
-            await Tcs[0].Task.WaitAsync(retryTimeout);
+            await Tcs[0].Task.WaitAsync(RetryWaits.Timeout);
 
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions(RetryWaits.Timeout);
 
             // Wait for the second event to have been handled
-            await Tcs[1].Task.WaitAsync(retryTimeout);
-
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
+            await Tcs[1].Task.WaitAsync(RetryWaits.Timeout);
 
             // Wait for the third event to have been handled
-            await Tcs[2].Task.WaitAsync(retryTimeout);
-            await EventStore.Jobs.WaitForThereToBeNoJobs(retryTimeout, JobStatus.CompletedWithFailures);
-            await Observers[2].WaitTillHandledEventReaches(1);
+            await Tcs[2].Task.WaitAsync(RetryWaits.Timeout);
+            HandlerAttempts = Tcs.Count(_ => _.Task.IsCompleted);
+            await Observers[2].WaitTillHandledEventReaches(1, RetryWaits.Timeout);
+
+            // The handler succeeding is seen by the client before the kernel records the recovery, so wait for the kernel.
+            await reactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First, RetryWaits.Timeout);
+            await RetryWaits.Until(async () => !(await GetFailedPartitions()).Any());
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ReactorState = await reactor.GetState();
@@ -64,7 +59,7 @@ public class but_not_third_time(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain("RetryFailedPartition");
+    [Fact] void should_retry_the_failed_partition() => Context.HandlerAttempts.ShouldEqual(3);
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);

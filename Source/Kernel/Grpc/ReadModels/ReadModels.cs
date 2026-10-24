@@ -82,9 +82,7 @@ internal sealed class ReadModels(
             throw new InvalidOperationException($"Read model with identifier '{request.ReadModel.Type.Identifier}' not found.");
 
         var schema = await JsonSchema.FromJsonAsync(request.ReadModel.Schema);
-        var indexes = request.ReadModel.Indexes
-            .Select(i => new Concepts.ReadModels.IndexDefinition(i.PropertyPath))
-            .ToArray();
+        var indexes = ReadModelIndexUpdates.Apply(request.ReadModel.Indexes, existingDefinition.Indexes, request.ReplaceIndexes);
 
         var updatedDefinition = new Concepts.ReadModels.ReadModelDefinition(
             existingDefinition.Identifier,

@@ -275,6 +275,9 @@ public class an_observer : Specification
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
                 Attempts = partition.Attempts.ToArray(),
+                WebhookDisposition = partition.WebhookDisposition,
+                WebhookRecoveryId = partition.WebhookRecoveryId,
+                AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
                 Deferral = partition.Deferral,
                 RecoveryCursor = partition.RecoveryCursor
             }).ToArray()

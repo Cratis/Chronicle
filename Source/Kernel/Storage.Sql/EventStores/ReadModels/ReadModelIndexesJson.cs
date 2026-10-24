@@ -3,58 +3,63 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.ReadModels;
 
 /// <summary>
-/// Stores read-model index declarations as an array of objects, each holding a properties array of paths, so composite and ordered indexes
-/// can be added later without another migration. Arrays of plain path strings are accepted when reading.
+/// Stores ordered index declarations, accepting legacy path strings and property objects without directions.
 /// </summary>
 internal static class ReadModelIndexesJson
 {
-    const string PropertiesKey = "properties";
-    const string PathKey = "path";
+    static readonly JsonSerializerOptions _options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     /// <summary>
-    /// Serialize index declarations.
+    /// Serializes all ordered index properties.
     /// </summary>
-    /// <param name="indexes">The indexes to serialize.</param>
-    /// <returns>The JSON representation.</returns>
-    internal static string Serialize(IEnumerable<IndexDefinition> indexes)
-    {
-        var array = new JsonArray();
-        foreach (var index in indexes)
-        {
-            array.Add(new JsonObject
-            {
-                [PropertiesKey] = new JsonArray(new JsonObject { [PathKey] = index.PropertyPath.Path })
-            });
-        }
-
-        return array.ToJsonString();
-    }
+    /// <param name="indexes">The index definitions.</param>
+    /// <returns>The storage JSON.</returns>
+    internal static string Serialize(IEnumerable<IndexDefinition> indexes) =>
+        JsonSerializer.Serialize(indexes.Select(index => new { properties = index.Properties.Select(property => new { path = property.Path.Path, descending = property.Descending ? true : (bool?)null }) }), _options);
 
     /// <summary>
-    /// Deserialize index declarations, accepting the object form and plain path strings.
+    /// Reads ordered or legacy index declarations.
     /// </summary>
-    /// <param name="json">The stored JSON, or <see langword="null"/> for definitions stored before indexes existed.</param>
-    /// <returns>The index declarations.</returns>
+    /// <param name="json">The stored JSON, or null.</param>
+    /// <returns>The supported index definitions.</returns>
     internal static IndexDefinition[] Deserialize(string? json)
     {
         if (string.IsNullOrWhiteSpace(json) || JsonNode.Parse(json) is not JsonArray array)
         {
             return [];
         }
-
-        return array.Select(PathOf).OfType<string>().Select(path => new IndexDefinition(new PropertyPath(path))).ToArray();
+        return array.Select(ReadIndex).OfType<IndexDefinition>().ToArray();
     }
 
-    static string? PathOf(JsonNode? node) => node switch
+    static IndexDefinition? ReadIndex(JsonNode? node)
     {
-        JsonValue value when value.GetValueKind() == JsonValueKind.String => value.GetValue<string>(),
-        JsonObject index when index[PropertiesKey] is JsonArray { Count: > 0 } properties => properties[0]?[PathKey]?.GetValue<string>(),
-        _ => null
-    };
+        if (node is JsonValue value && value.GetValueKind() == JsonValueKind.String)
+        {
+            return new(value.GetValue<string>());
+        }
+        if (node is not JsonObject index || index["properties"] is not JsonArray { Count: > 0 } properties)
+        {
+            return null;
+        }
+        var indexedProperties = new List<IndexedProperty>();
+        foreach (var property in properties)
+        {
+            if (property is not JsonObject entry || entry["path"] is not JsonValue path || !path.TryGetValue<string>(out var text) || string.IsNullOrEmpty(text))
+            {
+                return null;
+            }
+            if (entry["descending"] is not null && (entry["descending"] is not JsonValue direction || !direction.TryGetValue<bool>(out _)))
+            {
+                return null;
+            }
+            indexedProperties.Add(new(text, entry["descending"]?.GetValue<bool>() ?? false));
+        }
+        return new(indexedProperties[0].Path) { Properties = indexedProperties };
+    }
 }

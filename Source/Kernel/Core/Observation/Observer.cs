@@ -211,6 +211,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        _webhookProbe = State.WebhookProbe;
         await InitializeAlertState();
     }
 
@@ -225,6 +226,7 @@ public partial class Observer(
                 return;
             }
 
+            await DrainWebhookProbe();
             await FlushDebouncedProgressState();
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
             {
@@ -297,6 +299,7 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         if (IsQuarantined)
         {
             await ReviveFromQuarantine();
@@ -495,6 +498,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
         ForgetSupersededRegistrations();
@@ -548,6 +552,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
+        if (reminderName == WebhookProbeReminderName)
+        {
+            await ReceiveWebhookProbeReminder();
+            return;
+        }
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
@@ -679,6 +688,7 @@ public partial class Observer(
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
         KeepWhatWasRecordedDuringTransitionHook();
+        if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
         {
             // Settled: the observer is driven forward again, or routing legitimately disconnected an empty
@@ -722,6 +732,7 @@ public partial class Observer(
                 AlertRevision = _alertRevision,
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
+                WebhookProbe = _webhookProbe,
                 DeliveryFences = DeliveryFenceSnapshot()
             };
             var revision = _alertRevision;
@@ -872,6 +883,7 @@ public partial class Observer(
         var leavesQuarantine = !automatic && !recovering;
         if (leavesQuarantine)
         {
+            await CancelWebhookProbe();
             SupersedeRecoveryAfterQuarantine();
         }
 
@@ -957,6 +969,8 @@ public partial class Observer(
 
     void DiscardQuarantineFromWipedWorld()
     {
+        _webhookProbe = null;
+        _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;
         _isPreparingCatchup = false;
         NotePreparationEnded();
@@ -976,7 +990,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -991,7 +1005,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
@@ -1006,7 +1020,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -1016,7 +1030,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription()) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         _subscription = new(
             _observerId,
             _observerKey,
@@ -1185,6 +1199,12 @@ public partial class Observer(
             // subscription is in place, so recover once the leave has actually entered Disconnected.
             _recoverSubscriptionAfterQuarantine = true;
             _retryRecoveryAfterQuarantine = true;
+            return;
+        }
+
+        if (IsQuarantined)
+        {
+            await ReconcileWebhookProbe();
             return;
         }
 

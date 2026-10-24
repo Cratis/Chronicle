@@ -128,6 +128,9 @@ public class ProjectionPipeline(
     public Task BeginBulk() => sink.BeginBulk();
 
     /// <inheritdoc/>
+    public Task ResumeBulk() => sink.ResumeBulk();
+
+    /// <inheritdoc/>
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
 
     /// <inheritdoc/>

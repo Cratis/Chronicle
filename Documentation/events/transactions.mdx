@@ -73,8 +73,28 @@ While a commit is in flight, disposing the unit does nothing in either mode: it 
 `AddCratisChronicle` registers middleware that begins a unit of work for every request and commits it after the endpoint returns. Three things follow:
 
 - **Stage with `Transactional.Append`.** A plain `eventLog.Append` is written immediately and takes no part in the unit of work. It is not covered by decision reads enrolled in the unit.
-- **Commit early to report the outcome.** The middleware commits after the response is written, so a constraint or concurrency rejection cannot change that response, and nothing tells the caller. Call `IUnitOfWorkCompletionFeature.CommitAsync()` before you respond and check `IsSuccess` and `GetDecisionConflicts()`. The middleware does not commit a completed unit again.
+- **Commit early to report the outcome.** The middleware commits after the response is written, so a constraint or concurrency rejection cannot change that response, and nothing tells the caller. Call `IUnitOfWorkCompletionFeature.CommitAsync()` before you respond and check `IsSuccess` and `GetDecisionConflicts()`. The middleware does not commit a completed unit again, and a second `CommitAsync()` returns quietly without committing again.
 - **Check the result.** A failed commit does not throw.
+
+### Claim completion of the request unit
+
+A caller that owns the request, such as a command pipeline, can take over completion instead of the middleware. Read `IUnitOfWorkCompletionOwnershipFeature` from `HttpContext.Features` and call `Claim()` (or `TryClaim(out var claim)`, which returns `false` when the unit is already claimed). Only one caller can claim a unit; a second `Claim()` throws `UnitOfWorkCompletionAlreadyClaimed`, and a claimed unit refuses `IUnitOfWorkCompletionFeature.CommitAsync()`.
+
+The `IUnitOfWorkCompletionClaim` exposes `Commit()` and `Rollback()`. Both return a `UnitOfWorkCompletionResult` and are idempotent: once the unit is completed, they return the same `Result`. Append outcomes and technical failures are reported in the result rather than thrown:
+
+- `Outcome` is `Committed`, `Failed` (constraint violations, concurrency violations or append errors), `RolledBack` or `Unknown`. `Failed` means Chronicle refused the commit and reported why in the violations and errors. `Unknown` means the commit failed technically and `Exception` holds the cause: the events may or may not have been appended, so never report an `Unknown` result as rolled back.
+- `ConcurrencyViolations`, `DecisionConflicts`, `ConstraintViolations` and `Errors` list what went wrong. A decision conflict is derived from a concurrency violation, so the violation appears in both lists.
+- `IsSuccess`, `HasConflicts` and `HasConstraintViolations` summarize the result.
+
+If the owner completes the unit directly instead of through the claim, `Commit()` and `Rollback()` return the recorded outcome rather than throwing. The middleware never commits behind a claim's back. If the action ends without the claim completing the unit, the middleware rolls it back and logs an error.
+
+### Report a failed commit before the response starts
+
+By default the middleware commits after the response and a failed commit cannot change it; the failure is logged. Set `ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts` to `true` to have the middleware return problem details when nobody claimed the unit and the response has not started yet: 409 for conflicts, 400 for constraint violations and 500 otherwise. It is off by default so existing endpoints keep their current responses.
+
+### Nested units of work
+
+Beginning a unit while another is current makes the new unit current. When it completes, the unit that was current when it began becomes current again, provided it is still open, so a command that runs its own unit inside a request still leaves the request unit available to claim afterwards.
 
 [Scenarios](../dynamic-consistency-boundary/scenarios.mdx#in-an-aspnet-core-endpoint) shows an endpoint with decision reads, and [Decision reads](../read-models/decision-reads.mdx) lists the ownership rules.
 
