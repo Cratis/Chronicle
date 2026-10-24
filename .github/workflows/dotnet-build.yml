@@ -99,6 +99,9 @@ jobs:
       - name: Assert every spec project is in the solution
         run: python3 .github/scripts/assert-solution-membership.py
 
+      - name: Spec executable runner contracts and forbid test-host dispatch
+        run: node --test .github/scripts/test-mixed-spec-runners.mjs
+
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier
@@ -355,12 +358,48 @@ jobs:
       - name: Extract Release build output
         run: tar -I zstd -xf build-output-release.tar.zst
 
+      # Release artifacts contain bin, not obj. Restore current evaluated package inputs
+      # before comparing all 31 test + 2 shipping selections with the built runtime graph.
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Restore mixed runner evaluation inputs
+        run: dotnet restore -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Keep Azure Key Vault with Vault in this Docker-capable specs job, including
+      # before its solution-membership change lands. No rebuild once it is listed.
+      - name: Build Azure Key Vault specs when absent from solution
+        run: |
+          set -euo pipefail
+          listed=$(node --input-type=module -e "
+            import { readFile } from 'node:fs/promises';
+            import { validateSolutionProjects } from './.github/scripts/mixed-specs-selection.mjs';
+            const projects = validateSolutionProjects(await readFile('Chronicle.slnx', 'utf8'));
+            console.log(projects.includes('Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj'));
+          ")
+          if [ "$listed" = false ]; then
+            dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          fi
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      # Mandatory real-collector proof on Linux before native-v3 coverage is accepted: exact
+      # child exit 37 and external deadline 124 with no probe-owned orphans. Failure or an
+      # incomplete run fails this gate; production hits still come only from the real specs.
+      # The profiler attaches only to .NET; this non-.NET child's launcher equivalence
+      # remains unproven until Linux CI runs this mandatory acceptance.
+      - name: Verify real collector exit and deadline cleanup
+        run: node .github/scripts/verify-mixed-specs-collector.mjs
+
       - name: Run tests with coverage
-        # Integration tests are executed by .github/workflows/integration.yml.
-        # Keep regular specs focused on non-integration test suites.
-        # LogFilePrefix gives every spec project its own TRX file; a fixed LogFileName makes the
-        # projects overwrite one results.trx, and the legacy-contracts gate reads them all.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql." --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFilePrefix=results"
+        # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes
+        # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
+        # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
+        # Actual production hits come only from these real library specs.
+        run: node .github/scripts/run-mixed-specs.mjs
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -378,7 +417,8 @@ jobs:
 
   specs-sql:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
+    timeout-minutes: 45
     needs: [dotnet-build]
     strategy:
       fail-fast: false
@@ -401,6 +441,12 @@ jobs:
       - name: Extract Release build output
         run: tar -I zstd -xf build-output-release.tar.zst
 
+      - name: Restore SQL runner evaluation inputs
+        run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run SQL collection filter specs
         run: python3 .github/scripts/test-sql-spec-filter.py
 
@@ -408,7 +454,7 @@ jobs:
         run: |
           set -euo pipefail
           filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
-          dotnet test Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --no-build --configuration Release --settings specs.runsettings --filter "$filter" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+          node .github/scripts/run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --settings specs.runsettings --filter "$filter" --coverage --results-directory ./coverage-results
 
       - name: Assert SQL specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -512,11 +558,14 @@ jobs:
           cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
+      - name: Restore API runner evaluation inputs
+        run: dotnet restore Integration/Api/Api.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run API integration tests with coverage
-        working-directory: ./Integration/Api
-        # Keep build enabled for .NET 10 test projects. `--no-build` causes an
-        # invalid test assembly argument failure in this workflow context.
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
 
       - name: Assert API integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -565,9 +614,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore MongoDB runner evaluation inputs
+        run: dotnet restore Integration/MongoDB/MongoDB.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run MongoDB integration tests with coverage
-        working-directory: ./Integration/MongoDB
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
       - name: Assert MongoDB integration tests ran
         uses: ./.github/actions/assert-tests-ran

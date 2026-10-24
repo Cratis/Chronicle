@@ -25,6 +25,7 @@ public partial class Database
             directory = ".";
         }
 
+        var clusterFile = Path.GetFullPath(clusterPath);
         var baseName = Path.GetFileNameWithoutExtension(clusterPath);
         var extension = Path.GetExtension(clusterPath);
 
@@ -46,7 +47,7 @@ public partial class Database
             {
                 // Invalidate lock-free readers before changing the schema, not after the drop.
                 migrationLock.Generation++;
-                await DropAllSqliteTables(file);
+                await DropAllSqliteTables(file, string.Equals(Path.GetFullPath(file), clusterFile, StringComparison.Ordinal));
                 ClearTableMigrationCache(string.Empty);
                 _migrationGenerations[migrationLock] = migrationLock.Generation;
             }

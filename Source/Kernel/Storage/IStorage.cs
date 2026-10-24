@@ -17,6 +17,13 @@ public interface IStorage
     ISystemStorage System { get; }
 
     /// <summary>
+    /// Reads floor-bearing stores independently of the resettable registry, without provisioning storage.
+    /// </summary>
+    /// <returns>The durable floors by store.</returns>
+    /// <exception cref="NotSupportedException">The provider has not implemented this optional capability.</exception>
+    Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => throw new NotSupportedException("The provider does not support read-only generation floor discovery.");
+
+    /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>

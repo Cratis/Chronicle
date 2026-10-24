@@ -6,7 +6,6 @@ using System.Dynamic;
 using System.Globalization;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -32,9 +31,9 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// </remarks>
 /// <param name="readModel">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-public class InMemorySink(
+public partial class InMemorySink(
     ReadModelDefinition readModel,
-    ITypeFormats typeFormats) : ISink, IDisposable
+    ITypeFormats typeFormats) : ISink, ISinkCompositeKeyLookup, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
@@ -78,22 +77,7 @@ public class InMemorySink(
     {
         if (key.Value is ExpandoObject expandoKey)
         {
-            // Each part is length-prefixed so that a separator inside a value cannot make two
-            // different composite keys produce the same storage key.
-            var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key, StringComparer.Ordinal))
-            {
-                if (value is null)
-                {
-                    stringBuilder.Append('~');
-                    continue;
-                }
-
-                var part = value.ToString() ?? string.Empty;
-                stringBuilder.Append(part.Length).Append(':').Append(part);
-            }
-
-            return stringBuilder.ToString();
+            return CompositeKeyEncoding.Encode(expandoKey);
         }
 
         if (_keyTargetType is not null)
@@ -148,6 +132,13 @@ public class InMemorySink(
         {
             return Task.FromResult(_collection.GetValueOrDefault(keyValue));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(Key key)
+    {
+        var instance = await FindInPrimaryOrDefault(key);
+        return instance is null ? CompositeKeyLookupResult.NotFound : CompositeKeyLookupResult.Found(instance);
     }
 
     /// <inheritdoc/>
@@ -207,16 +198,7 @@ public class InMemorySink(
 
         if (changeset.HasBeenRemoved())
         {
-            bool removedFromPrimary;
-            lock (_collectionLock)
-            {
-                Collection.Remove(keyValue);
-                LastHandledEventSequenceNumbers.Remove(keyValue);
-                removedFromPrimary = !_isReplaying;
-            }
-
-            NotifyChanged(keyValue, removedFromPrimary);
-            return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            return ApplyRemoval(keyValue, eventSequenceNumber, mode);
         }
 
         var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
@@ -258,9 +240,7 @@ public class InMemorySink(
         bool wroteToPrimary;
         lock (_collectionLock)
         {
-            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
-                eventSequenceNumber.IsActualValue &&
-                !AdvancesWatermark(keyValue, eventSequenceNumber))
+            if (IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode))
             {
                 return Task.FromResult<IEnumerable<FailedPartition>>([]);
             }

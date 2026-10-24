@@ -32,6 +32,9 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => database.ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
         await using var scope = await database.Cluster();

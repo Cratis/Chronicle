@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(2)]
+[Version(3)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -394,6 +394,22 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="lastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> it has been replayed to.</param>
     /// <returns>Awaitable task.</returns>
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
+
+    /// <summary>
+    /// Releases a refused full replay without changing progress or resolving failed partitions.
+    /// </summary>
+    /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedReplay();
+
+    /// <summary>
+    /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
+    /// </summary>
+    /// <param name="partition">The partition whose replay was refused.</param>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <remarks>Does not advance progress or resolve failed partitions. Unknown bounds quarantine the partition; retired, removed and non-replaying partitions are unchanged.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
 
     /// <summary>
     /// Complete a replay, resolving only failures already present when it began.

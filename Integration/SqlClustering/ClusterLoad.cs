@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Grpc.Core;
 
@@ -137,6 +138,18 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         observedEvents.All(storedEvents.Contains).ShouldBeTrue();
     }
 
+    void RecordFailedAppend(Guid id, AppendResult result)
+    {
+        if (IsUncertainAppend(result))
+        {
+            _unknown.Enqueue(id);
+        }
+        Failed($"{id}: {string.Join(';', result.Errors)}");
+    }
+
+    internal static bool IsUncertainAppend(AppendResult result) =>
+        !result.IsSuccess && result.Errors.Contains(AppendError.AppendOutcomeUnknown);
+
     internal static bool IsUncertainAppend(Exception exception) =>
         exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
         IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message);
@@ -190,7 +203,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
                 }
                 else
                 {
-                    Failed($"{id}: {string.Join(';', result.Errors)}");
+                    RecordFailedAppend(id, result);
                 }
             }
             catch (Exception exception) when (IsUncertainAppend(exception) || IsAppendToDepartedSilo(exception.GetType().FullName, exception.Message, _departedSilos.Keys))

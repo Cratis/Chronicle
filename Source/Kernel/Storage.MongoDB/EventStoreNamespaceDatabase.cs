@@ -153,6 +153,8 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                 Builders<Event>.IndexKeys.Ascending(_ => _.Type)),
             new CreateIndexOptions { Name = "eventSourceId_eventTypeId", Background = true });
 
+        yield return ParentHistoryIndex();
+
         yield return new(
             Builders<Event>.IndexKeys.Combine(
                 Builders<Event>.IndexKeys.Ascending(_ => _.EventStreamType),
@@ -208,6 +210,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                 Builders<Event>.IndexKeys.Ascending("NamedTags.Value")),
             new CreateIndexOptions { Name = "namedTags_name_value" });
     }
+
+    static CreateIndexModel<Event> ParentHistoryIndex() => new(
+        Builders<Event>.IndexKeys.Combine(
+            Builders<Event>.IndexKeys.Ascending(_ => _.EventSourceId),
+            Builders<Event>.IndexKeys.Ascending(_ => _.Type),
+            Builders<Event>.IndexKeys.Descending(_ => _.SequenceNumber)),
+        new CreateIndexOptions { Name = "eventSourceId_eventTypeId_sequenceNumber", Background = true });
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;
 }

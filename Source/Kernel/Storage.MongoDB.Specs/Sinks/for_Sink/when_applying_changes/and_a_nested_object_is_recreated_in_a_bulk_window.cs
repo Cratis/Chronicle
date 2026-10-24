@@ -32,7 +32,7 @@ public class and_a_nested_object_is_recreated_in_a_bulk_window(context ctx) : IC
         public BsonDocument PartlyChanged = default!;
         public bool CachedStateWasCleared = true;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _client = new MongoClient(fixture.ConnectionString);
             var database = _client.GetDatabase(_databaseName);
@@ -55,7 +55,18 @@ public class and_a_nested_object_is_recreated_in_a_bulk_window(context ctx) : IC
             PartlyChanged = await _collection.Find(Builders<BsonDocument>.Filter.Eq("_id", "partly-changed")).SingleAsync();
         }
 
-        public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await _client.DropDatabaseAsync(_databaseName);
+            }
+            finally
+            {
+                _sink.Dispose();
+                _client.Dispose();
+            }
+        }
 
         async Task Recreate(string id, string recreatedName)
         {

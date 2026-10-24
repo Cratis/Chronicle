@@ -16,6 +16,7 @@ public class a_registration_with_a_connection : all_dependencies
     protected IConnectedClients _remoteClients;
     protected IManagementGrain _management;
     protected Chronicle.Projections.IProjectionsManager _manager;
+    protected const string RegisteredVersion = "1.2.3";
     protected RegisterRequest _request;
 
     void Establish()
@@ -35,6 +36,7 @@ public class a_registration_with_a_connection : all_dependencies
         {
             EventStore = EventStore.Value,
             ConnectionId = _connection.Value,
+            Version = RegisteredVersion,
             Owner = Contracts.Projections.ProjectionOwner.Client,
             Projections = [_projectionDefinition.ToContract()]
         };

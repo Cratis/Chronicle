@@ -4,12 +4,14 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Configuration;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 #pragma warning disable SA1204 // Static helpers placed after the public methods that drive them.
@@ -25,9 +27,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{ReadModelMigrator}"/> for logging.</param>
+/// <param name="options">The kernel configuration, including the shadow-index DDL timeout.</param>
+/// <param name="timeProvider">The clock used for shadow-index DDL deadlines, or the system clock.</param>
 public class ReadModelMigrator(
     ITableMigrator<ReadModelDbContext> tableMigrator,
-    ILogger<ReadModelMigrator> logger) : IReadModelMigrator
+    ILogger<ReadModelMigrator> logger,
+    IOptions<ChronicleOptions>? options = null,
+    TimeProvider? timeProvider = null) : IReadModelMigrator
 {
     static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
 
@@ -84,7 +90,8 @@ public class ReadModelMigrator(
         // Build a cache key that covers this connection string, table, and exact column set.
         // When the schema changes the key changes and we re-check the database.
         var connectionString = context.Database.GetConnectionString() ?? string.Empty;
-        var columnsKey = string.Join('|', context.Columns.Select(c => c.Name));
+        var columns = BuildColumnOperations(context, tableName).ToArray();
+        var columnsKey = string.Join('|', columns.Select(c => c.Name)) + string.Join('|', ShadowColumns.IndexedFor(context));
         var cacheKey = $"{connectionString}:{tableName}:{columnsKey}";
 
         if (_columnMigrations.ContainsKey(cacheKey))
@@ -93,7 +100,7 @@ public class ReadModelMigrator(
         }
 
         var existingColumns = await GetExistingColumnNames(context, tableName);
-        var missingColumns = context.Columns
+        var missingColumns = columns
             .Where(col => !existingColumns.Contains(col.Name))
             .ToList();
 
@@ -103,16 +110,18 @@ public class ReadModelMigrator(
             await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
+        var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
+        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
         _columnMigrations.TryAdd(cacheKey, true);
     }
 
-    async Task AddMissingColumns(string tableName, ReadModelDbContext context, IEnumerable<ProjectedColumn> missingColumns)
+    async Task AddMissingColumns(string tableName, ReadModelDbContext context, IEnumerable<AddColumnOperation> missingColumns)
     {
         foreach (var column in missingColumns)
         {
             // Each addition has its own transaction so a duplicate cannot roll back or skip other columns.
             var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-            var op = BuildAddColumnOperation(column, migrationBuilder.GetDatabaseType(), tableName);
+            var op = column;
             if (column.Name != WellKnownProperties.ReadModelInstanceInitialized)
             {
                 op.IsNullable = true;
@@ -171,8 +180,8 @@ public class ReadModelMigrator(
             }
             else
             {
-                // SQLite PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
-                command.CommandText = $"PRAGMA table_info(\"{tableName}\")";
+                // table_xinfo includes VIRTUAL generated columns (hidden=2).
+                command.CommandText = $"PRAGMA table_xinfo(\"{tableName}\")";
                 nameOrdinal = 1;
             }
 
@@ -203,15 +212,8 @@ public class ReadModelMigrator(
             Name = tableName
         };
 
-        ProjectedColumn? key = null;
-        foreach (var column in context.Columns)
-        {
-            createTable.Columns.Add(BuildAddColumnOperation(column, databaseType, tableName));
-            if (column.IsKey)
-            {
-                key = column;
-            }
-        }
+        createTable.Columns.AddRange(BuildColumnOperations(context, tableName));
+        var key = context.Columns.FirstOrDefault(column => column.IsKey);
 
         if (key is not null)
         {
@@ -227,6 +229,10 @@ public class ReadModelMigrator(
 
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
+
+    IEnumerable<AddColumnOperation> BuildColumnOperations(ReadModelDbContext context, string tableName) =>
+        context.Columns.Select(column => BuildAddColumnOperation(column, context.Database.GetDatabaseType(), tableName))
+            .Concat(ShadowColumns.For(context, name => ShadowColumns.Collision(logger, tableName, name)));
 
     static AddColumnOperation BuildAddColumnOperation(ProjectedColumn column, DatabaseType databaseType, string tableName)
     {

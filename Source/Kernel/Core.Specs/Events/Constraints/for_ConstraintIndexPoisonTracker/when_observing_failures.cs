@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.InMemory;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintIndexPoisonTracker;
 
+[PerFactSpecificationLifecycle]
 public class when_observing_failures : Specification
 {
     readonly ConstraintIndexPoisonTracker _tracker = new(new InMemoryStorageErrorClassifier());

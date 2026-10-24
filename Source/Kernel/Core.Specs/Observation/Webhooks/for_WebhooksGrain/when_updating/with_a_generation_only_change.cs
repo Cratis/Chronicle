@@ -25,7 +25,7 @@ public class with_a_generation_only_change : given.a_webhooks_manager_grain
     }
 
     async Task Because() => await _grain.Update(_definition with { EventTypes = [new EventType("customer", 3)] });
-    [Fact] async Task should_rebind_the_changed_pin() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Is<IEnumerable<EventType>>(_ => _.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned);
+    [Fact] async Task should_rebind_the_changed_pin() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Is<IEnumerable<EventType>>(_ => _.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, reactivateRetired: true, automatic: false);
     [Fact] async Task should_not_unsubscribe() => await _observer.DidNotReceive().Unsubscribe();
     [Fact] void should_persist_the_changed_pin() => _stateStorage.State.Webhooks.Single().EventTypes.Single().Generation.Value.ShouldEqual(3u);
 }

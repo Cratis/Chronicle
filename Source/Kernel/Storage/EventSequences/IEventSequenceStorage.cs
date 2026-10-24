@@ -293,6 +293,35 @@ public interface IEventSequenceStorage
     Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
 
     /// <summary>
+    /// Gets a bounded history window for each source, including its latest matching predecessor.
+    /// </summary>
+    /// <param name="eventSourceIds">The sources to read. Duplicate sources are ignored.</param>
+    /// <param name="eventTypes">The eligible event type ids, across generations.</param>
+    /// <param name="from">The inclusive lower boundary of the window.</param>
+    /// <param name="upTo">The inclusive upper boundary, also applied to the predecessor.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// Events ordered by sequence number per source: the latest matching event before <paramref name="from"/>,
+    /// followed by all matching events in [from, upTo]. Sources without matches are omitted. Empty source or type
+    /// sets return no matches. When from exceeds upTo, only the latest event at or before upTo is returned.
+    /// Older predecessors can be requested on demand by reducing upTo if a candidate cannot be resolved.
+    /// </returns>
+    Task<IReadOnlyDictionary<EventSourceId, IReadOnlyList<AppendedEvent>>> GetInstancesOfAnyInRange(
+        IEnumerable<EventSourceId> eventSourceIds,
+        IEnumerable<EventTypeId> eventTypes,
+        EventSequenceNumber from,
+        EventSequenceNumber upTo,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the latest instance of any supplied type for each source in the whole event sequence, without an upper sequence bound.
+    /// </summary>
+    /// <param name="eventSourceIds">The sources to look up. Duplicate sources are read once.</param>
+    /// <param name="eventTypes">The event types to match. An empty collection matches no events.</param>
+    /// <returns>One entry per distinct source, including <see cref="Option{T}"/> values for missing sources.</returns>
+    Task<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>> GetLastInstancesOfAny(IEnumerable<EventSourceId> eventSourceIds, IEnumerable<EventTypeId> eventTypes);
+
+    /// <summary>
     /// Get events using a specific sequence number as starting point within the event sequence.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>

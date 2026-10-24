@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Projections.Generations.Deployment;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -15,6 +17,7 @@ namespace Cratis.Chronicle.Clients;
 /// that silo, making the tracking local per silo. Use
 /// <see cref="ConnectedClientsGrainFactoryExtensions.GetConnectedClients"/> to get the grain for a silo.
 /// </remarks>
+[Version(1)]
 public interface IConnectedClients : IGrainWithStringKey
 {
     /// <summary>
@@ -77,6 +80,24 @@ public interface IConnectedClients : IGrainWithStringKey
     /// <param name="projections">The declared projection identifiers.</param>
     /// <returns>Awaitable task.</returns>
     Task RecordDeclaredProjections(ConnectionId connectionId, EventStoreName eventStore, IEnumerable<ProjectionId> projections);
+
+    /// <summary>
+    /// Records definition registration versions for projections declared by an existing connection.
+    /// </summary>
+    /// <param name="connectionId">The declaring connection.</param>
+    /// <param name="eventStore">The event store containing the projections.</param>
+    /// <param name="projections">The declared projection identifiers.</param>
+    /// <param name="registeredVersion">The definition registration version, not the connected client's version.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecordDeclaredProjectionVersions(ConnectionId connectionId, EventStoreName eventStore, IEnumerable<ProjectionId> projections, string? registeredVersion);
+
+    /// <summary>
+    /// Gets registration evidence for every connected client declaring a projection, including legacy declarations without a version.
+    /// </summary>
+    /// <param name="eventStore">The projection's event store.</param>
+    /// <param name="projection">The projection identifier.</param>
+    /// <returns>A snapshot of declaring connections and their registration versions.</returns>
+    Task<IEnumerable<ProjectionRegistration>> GetProjectionRegistrations(EventStoreName eventStore, ProjectionId projection);
 
     /// <summary>
     /// Checks whether a currently connected client declares a projection.
