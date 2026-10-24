@@ -82,6 +82,17 @@ test('spec projects need xunit v3 and each shipping package resolves exactly its
     assert.throws(() => validateSelection(v3Projects[0], missingRunner.evaluated, missingRunner.assets, missingRunner.deps), /resolved\/runtime mismatch for xunit.v3.extensibility.core/);
 });
 
+test('declared shipping generations match the package references in the real csproj files', async () => {
+    for (const [projectPath, declared] of Object.entries(shippingRunners)) {
+        const xml = await readFile(path.resolve(projectPath), 'utf8');
+        const ids = [...xml.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<PackageReference\s+Include="([^"]+)"/g)].map(match => match[1].toLowerCase());
+        const v3 = ids.some(id => id === 'cratis.specifications.xunit.v3' || id.startsWith('xunit.v3'));
+        const v2 = ids.some(id => id === 'cratis.specifications.xunit' || id === 'xunit' || id === 'xunit.extensibility.core');
+        assert.ok(!(v2 && v3), `${projectPath} references both xunit generations`);
+        assert.equal(v3 ? 'v3' : v2 ? 'v2' : 'none', declared, `${projectPath} csproj does not match its declared generation`);
+    }
+});
+
 test('solution completeness rejects an unclassified spec before any evaluation', async () => {
     const { root } = await fixture();
     for (const project of ['Future/Unclassified.Specs/Unclassified.Specs.csproj', 'Integration/Unclassified/Unclassified.csproj']) {
