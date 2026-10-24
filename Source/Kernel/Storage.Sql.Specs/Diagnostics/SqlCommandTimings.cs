@@ -8,7 +8,11 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.Diagnostics;
 
-// IDs and numeric totals only: never retain a context, connection, command, SQL text or parameters.
+/// <summary>
+/// Aggregates EF Core command timings. IDs and numeric totals only: never retain a context, connection, command, SQL text or parameters.
+/// </summary>
+/// <param name="timings">The timings receiving the aggregate.</param>
+/// <param name="enabled">Overrides whether timings are enabled; defaults to the environment switch.</param>
 internal sealed class SqlCommandTimings(IntegrationTimings timings, bool? enabled = null) : IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>, IDisposable
 {
     const int MaximumPending = 4096;
@@ -28,7 +32,8 @@ internal sealed class SqlCommandTimings(IntegrationTimings timings, bool? enable
         if (_enabled && _subscription is null) _subscription = DiagnosticListener.AllListeners.Subscribe(this);
     }
 
-    internal T Track<T>(T context) where T : DbContext
+    internal T Track<T>(T context)
+        where T : DbContext
     {
         if (!_enabled) return context;
         lock (_pending)
@@ -39,13 +44,13 @@ internal sealed class SqlCommandTimings(IntegrationTimings timings, bool? enable
         return context;
     }
 
-    public void OnNext(DiagnosticListener listener)
+    public void OnNext(DiagnosticListener value)
     {
-        if (listener.Name != "Microsoft.EntityFrameworkCore") return;
+        if (value.Name != "Microsoft.EntityFrameworkCore") return;
         lock (_pending)
         {
             if (_disposed) return;
-            if (_listeners.Count < 8) _listeners.Add(listener.Subscribe(this, IsCommandEvent));
+            if (_listeners.Count < 8) _listeners.Add(value.Subscribe(this, IsCommandEvent));
             else _incomplete = true;
         }
     }

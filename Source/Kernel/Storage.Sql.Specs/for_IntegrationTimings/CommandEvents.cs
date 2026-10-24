@@ -8,7 +8,9 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.for_IntegrationTimings;
 
-// Synthetic EF diagnostic payloads: no connection, command or database is ever created or opened.
+/// <summary>
+/// Synthetic EF diagnostic payloads: no connection, command or database is ever created or opened.
+/// </summary>
 static class CommandEvents
 {
     public const string PrivateSql = "SELECT private_query_field";

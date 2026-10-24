@@ -27,5 +27,5 @@ public class when_observing_a_failed_command : Specification
     [Fact] void should_pair_the_failed_command() => _record.GetProperty("count").GetInt32().ShouldEqual(1);
     [Fact] void should_count_failure_once() => _record.GetProperty("failures").GetInt32().ShouldEqual(1);
     [Fact] void should_label_command_time_as_an_aggregate() => _record.GetProperty("accounting").GetString().ShouldEqual("aggregate-command-duration");
-    [Fact] void should_not_output_sql() => _lines.Any(line => line.Contains(CommandEvents.PrivateSql, StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_not_output_sql() => _lines.Exists(line => line.Contains(CommandEvents.PrivateSql, StringComparison.Ordinal)).ShouldBeFalse();
 }
