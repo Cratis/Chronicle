@@ -9,6 +9,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -133,6 +134,7 @@ public partial class Observer
             _alertMutationLock.Release();
         }
 
+        ForgetRecoveryStart(partition);
         await StartRecoverJobForFailedPartition(failure);
         return PartitionRecoveryOutcome.Started;
     }
@@ -528,13 +530,30 @@ public partial class Observer
             return;
         }
 
-        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        if (usesDeferrals && RecoveryAlreadyStarted(failedPartition, await GetRecoveryStartWindow()))
+        {
+            logger.RecoveryAlreadyStarted(failedPartition.Partition);
+            return;
+        }
+
+        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
-        await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
-            logger,
-            request,
-            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
+
+        // A listing that fails comes back empty and would start a duplicate, so a webhook records its own start up front.
+        if (usesDeferrals) RecordRecoveryStart(failedPartition);
+        var jobId = JobId.NotSet;
+        try
+        {
+            jobId = await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
+                logger,
+                request,
+                requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
+        }
+        finally
+        {
+            if (usesDeferrals && jobId == JobId.NotSet) ForgetRecoveryStart(failedPartition.Partition);
+        }
     }
 
     /// <summary>

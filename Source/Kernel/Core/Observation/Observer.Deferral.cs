@@ -65,8 +65,9 @@ public partial class Observer
     async Task<bool> IsDeferralDue(FailedPartition failure)
     {
         if (failure.Deferral is not { } deferral) return true;
+        if (deferral.Until <= DateTimeOffset.UtcNow) return true;
         await RegisterDeferralReminder(failure, deferral);
-        return deferral.Until <= DateTimeOffset.UtcNow;
+        return false;
     }
 
     Task<IGrainReminder> RegisterDeferralReminder(FailedPartition failure, PartitionDeferral deferral)
