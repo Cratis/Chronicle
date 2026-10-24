@@ -3,7 +3,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { assertExecutableSpecRunners } from './assert-executable-spec-runners.mjs';
 import { main } from './run-spec-project.mjs';
@@ -56,6 +56,25 @@ test('CI workflows, scripts and actions forbid test-host dispatch without spec-n
     await assert.rejects(assertExecutableSpecRunners(directory), /actions\/nested\/runner.py:3/);
     await writeFile(actionScript, `"""Mentions the command ${command} as documentation."""\nprint('valid')`);
     await assertExecutableSpecRunners(directory);
+});
+
+test('Azure Key Vault workflow builds only when absent from the solution, using a mock builder', async () => {
+    const workflow = await readFile(path.join(root, '.github/workflows/dotnet-build.yml'), 'utf8');
+    const script = workflow.match(/- name: Build Azure Key Vault specs when absent from solution\n        run: \|\n([\s\S]*?)(?=\n      - name:)/)[1].replace(/^          /gm, '');
+    const directory = await fixture();
+    await mkdir(path.join(directory, '.github'));
+    await symlink(path.join(root, '.github/scripts'), path.join(directory, '.github/scripts'), 'dir');
+    const bin = path.join(directory, 'bin');
+    await mkdir(bin);
+    await writeFile(path.join(bin, 'dotnet'), '#!/bin/bash\nprintf "%s\\n" "$*"\n', { mode: 0o755 });
+    const vault = 'Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj';
+    const azure = 'Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj';
+    for (const listed of [false, true]) {
+        await writeFile(path.join(directory, 'Chronicle.slnx'), `<Solution><Project Path="${vault}" />${listed ? `<Project Path="${azure}" />` : ''}</Solution>`);
+        const result = await runProcess('env', [`PATH=${bin}:${process.env.PATH}`, 'bash', '-c', script], { cwd: directory, capture: true, timeout: 10000 });
+        assert.equal(result.code, 0, result.stderr);
+        assert.equal(result.stdout.includes(`build ${azure} --configuration Release`), !listed);
+    }
 });
 
 test('single project runner preserves filter composition, deadline, coverage and Release evaluation', async () => {

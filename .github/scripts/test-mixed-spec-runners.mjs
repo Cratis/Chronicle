@@ -10,6 +10,7 @@ import { v3Projects, shippingProjects, ordinaryFilter, childCommand, invocation,
     validateTrx, validateCoverage, validateSelection, parseXml, runProcess, runProject, main } from './run-mixed-specs.mjs';
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
+import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -35,10 +36,11 @@ function graph(projectPath = v3Projects[0]) {
     };
 }
 
-test('exact 29 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
-    assert.equal(v3Projects.length, 29);
+test('exact 30 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
+    assert.equal(v3Projects.length, 30);
     assert.equal(shippingProjects.length, 2);
-    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 31);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 32);
+    assert.ok(v3Projects.includes(benchmarkProject));
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
     assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 6);
     for (const p of [...v3Projects, ...shippingProjects]) {
@@ -48,6 +50,28 @@ test('exact 29 executable v3 + 2 shipping boundary, not a Storage prefix heurist
         assert.equal(selected.assemblyName, 'Actual.Output');
         assert.equal(selected.dll, '/built/Actual.Output.dll');
         assert.equal(selected.tfm, 'net10.0');
+        assert.deepEqual(selected.coverageRoots, p === benchmarkProject ? ['Source', 'Benchmarks/Chronicle.Benchmarks.Clustering'] : ['Source']);
+    }
+});
+
+test('solution completeness rejects an unclassified spec before any evaluation', async () => {
+    const { root } = await fixture();
+    for (const project of ['Future/Unclassified.Specs/Unclassified.Specs.csproj', 'Integration/Unclassified/Unclassified.csproj']) {
+        await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution><Folder Name="/Future/"><Project Path="${project}" /></Folder></Solution>`);
+        await assert.rejects(inventory(root, () => assert.fail('must reject before evaluation')), error => error.message === `Unclassified test project ${project}`);
+    }
+    assert.throws(() => validateSolutionProjects('<Solution/>'), /no spec projects/);
+});
+
+test('classified Azure Key Vault and Vault stay ordinary with or without solution membership', async () => {
+    const xml = await readFile(path.resolve('Chronicle.slnx'), 'utf8');
+    const azure = 'Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj';
+    const withoutAzure = xml.replace(new RegExp(`<Project Path="${azure.replaceAll('.', '\\.')}"\\s*/>`), '');
+    for (const solution of [withoutAzure, withoutAzure.replace('</Solution>', `<Project Path="${azure}" /></Solution>`)]) {
+        validateSolutionProjects(solution);
+        const selected = ordinaryProjects(v3Projects.map(project => ({ project })));
+        assert.ok(selected.some(info => info.project === azure));
+        assert.ok(selected.some(info => info.project === 'Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj'));
     }
 });
 
@@ -109,6 +133,23 @@ test('coverage fails closed for empty/malformed/missing/fixture-only/zero-hit re
     for (const bad of ['', '<coverage><packages /></coverage>', '<coverage>', coverage('Source/Library.Specs/Test.cs'), coverage('Integration/Api/Test.cs'), coverage('Source/Library/given/Test.cs'), coverage('Source/Library/Decision.cs', '0'), coverage('Source/../outside.cs'), coverage('Source/Library/Missing.cs'), coverage('Source/Library/obj/Release/net10.0/Generated.cs'), coverage('/agent/repo/Source/Library/bin/Release/net10.0/Generated.cs'), coverage('Source\\Library\\obj\\Release\\net10.0\\Generated.cs')]) await assert.rejects(validateCoverage(bad, root));
 });
 
+test('benchmark production hits are allowed only for the benchmark selection, never generated/spec hits', async () => {
+    const { root } = await fixture();
+    const directory = 'Benchmarks/Chronicle.Benchmarks.Clustering';
+    const roots = ['Source', directory];
+    for (const source of [`${directory}/RebuildBaselineMath.cs`, `${directory}/obj/Generated.cs`, `${directory}/bin/Generated.cs`, `${directory}.Specs/Spec.cs`, 'Benchmarks/Other/Program.cs']) {
+        await mkdir(path.dirname(path.join(root, source)), { recursive: true });
+        await writeFile(path.join(root, source), '// mock source');
+    }
+    const source = `${directory}/RebuildBaselineMath.cs`;
+    assert.equal(await validateCoverage(coverage(source), root, roots), source);
+    assert.equal(await validateCoverage(coverage(`/agent/repo/${source}`), root, roots), source);
+    await assert.rejects(validateCoverage(coverage(source), root), /no actual production-source hits/);
+    for (const rejected of [`${directory}/obj/Generated.cs`, `${directory}/bin/Generated.cs`, `${directory}.Specs/Spec.cs`, 'Benchmarks/Other/Program.cs']) {
+        await assert.rejects(validateCoverage(coverage(rejected), root, roots), /no actual production-source hits/);
+    }
+});
+
 test('MOCK collector nonzero 37 is exact; missing output cannot rescue or replace it', async () => {
     const options = await fixture();
     const info = { project: v3Projects[0], runner: 'v3', dll: options.dll };
@@ -138,11 +179,15 @@ test('MOCK stale results are rejected before launch', async () => {
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
 });
 
-test('MOCK whole ordinary dispatch validates all 31, launches 22 once, keeps SQL/integration separate', async () => {
+test('MOCK whole ordinary dispatch validates all 32, launches 23 once, keeps SQL/integration separate', async () => {
     const { root } = await fixture();
+    await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
+    await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
+    await writeFile(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs'), '// mock benchmark production source');
     await mkdir(path.join(root, 'Integration'));
     await writeFile(path.join(root, 'specs.runsettings'), '<RunSettings><TestSessionTimeout>1234</TestSessionTimeout><TestCaseFilter>Name!~excluded&amp;Name!~also</TestCaseFilter></RunSettings>');
     const queried = [], launched = [];
+    let benchmarkDll;
     const execute = async (_, args, options) => {
         if (args[0] === 'msbuild') {
             queried.push(args[1]);
@@ -150,12 +195,13 @@ test('MOCK whole ordinary dispatch validates all 31, launches 22 once, keeps SQL
             const dll = path.join(root, `Assembly${id}.dll`);
             const assets = path.join(root, `assets${id}.json`);
             Object.assign(g.evaluated.Properties, { AssemblyName: `Assembly${id}`, TargetPath: dll, ProjectAssetsFile: assets });
+            if (args[1] === benchmarkProject) benchmarkDll = dll;
             await writeFile(dll, 'mock');
             await writeFile(dll.replace('.dll', '.deps.json'), JSON.stringify(g.deps));
             await writeFile(assets, JSON.stringify(g.assets));
             return { code: 0, stdout: JSON.stringify(g.evaluated) };
         }
-        assert.equal(queried.length, 31, 'validate every selection before any child');
+        assert.equal(queried.length, 32, 'validate every selection before any child');
         launched.push(args);
         assert.equal(options.timeout, 1234);
         const directory = path.dirname(args[8]);
@@ -163,14 +209,16 @@ test('MOCK whole ordinary dispatch validates all 31, launches 22 once, keeps SQL
         assert.ok(filter.includes(ordinaryFilter));
         assert.ok(filter.includes('Name!~excluded&Name!~also'));
         await writeFile(path.join(directory, 'results.trx'), trx());
-        await writeFile(path.join(directory, 'coverage.cobertura.xml'), coverage());
+        const source = args[9].includes(benchmarkDll) ? 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs' : 'Source/Library/Decision.cs';
+        await writeFile(path.join(directory, 'coverage.cobertura.xml'), coverage(source));
         return { code: 0 };
     };
     await main([], { root, execute });
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
-    assert.equal(launched.length, 22);
-    assert.equal(launched.filter(args => args[0] === 'tool').length, 22);
-    assert.equal(new Set(launched.map(args => args[8])).size, 22);
+    assert.equal(launched.length, 23);
+    assert.equal(launched.filter(args => args[0] === 'tool').length, 23);
+    assert.equal(new Set(launched.map(args => args[8])).size, 23);
+    assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
 });
 
 test('MOCK missing executable and missing DLL never succeed', async () => {

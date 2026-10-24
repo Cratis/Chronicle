@@ -44,7 +44,7 @@ export async function runProject(info, options, execute = runProcess) {
     }
     const files = await coverageFiles(options.directory);
     if (files.length !== 1) fail(`${info.project}: expected one fresh Cobertura file`);
-    const production = await validateCoverage(await readFile(files[0], 'utf8'), options.root);
+    const production = await validateCoverage(await readFile(files[0], 'utf8'), options.root, info.coverageRoots);
     console.log(`${info.project}: ${identities.length} results; production hit ${production}`);
 }
 export async function main(args = process.argv.slice(2), { root = process.cwd(), execute = runProcess } = {}) {
@@ -54,7 +54,7 @@ export async function main(args = process.argv.slice(2), { root = process.cwd(),
     const filters = [...settings.matchAll(/<TestCaseFilter>([^<]+)<\/TestCaseFilter>/g)];
     if (timeouts.length !== 1 || filters.length !== 1 || Number(timeouts[0][1]) <= 0) fail('Unsupported runsettings: expected one deadline and filter');
     const filter = `(${ordinaryFilter})&(${decode(filters[0][1])})`;
-    const infos = await inventory(root, execute); // All 29 tests + 2 shipping consumers, before launching any test.
+    const infos = await inventory(root, execute); // All 30 tests + 2 shipping consumers, before launching any test.
     await mkdir(path.join(root, 'coverage-results'), { recursive: true });
     const output = await mkdtemp(path.join(root, 'coverage-results', 'mixed-'));
     for (const info of ordinaryProjects(infos)) {

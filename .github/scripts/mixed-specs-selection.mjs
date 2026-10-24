@@ -3,9 +3,13 @@
 
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { parseXml, nodes } from './mixed-specs-results.mjs';
 
 const project = directory => `${directory}/${directory.split('/').at(-1)}.csproj`;
+const benchmarkDirectory = 'Benchmarks/Chronicle.Benchmarks.Clustering';
+export const benchmarkProject = project(`${benchmarkDirectory}.Specs`);
 export const v3Projects = [
+    `${benchmarkDirectory}.Specs`,
     'Source/Infrastructure.Specs',
     ...['AspNetCore', 'Aspire', 'Connections', 'DotNET.CodeAnalysis', 'DotNET', 'Testing'].map(x => `Source/Clients/${x}.Specs`),
     ...['Compatibility', 'Concepts', 'Core', 'Server', 'Storage.AzureKeyVault', 'Storage.Vault'].map(x => `Source/Kernel/${x}.Specs`),
@@ -83,12 +87,24 @@ export function validateSelection(projectPath, evaluated, assets, deps) {
         ids: evaluated.Items.PackageReference.map(x => x.Identity.toLowerCase()),
         resolved, check: packageChecker(projectPath, resolved, runtime)
     });
-    return { project: projectPath, runner: 'v3', tfm: properties.TargetFramework, dll: properties.TargetPath, assemblyName: properties.AssemblyName };
+    return { project: projectPath, runner: 'v3', tfm: properties.TargetFramework, dll: properties.TargetPath, assemblyName: properties.AssemblyName,
+        coverageRoots: projectPath === benchmarkProject ? ['Source', benchmarkDirectory] : ['Source'] };
 }
 function checkProjectBoundary(relative) {
     const candidate = relative.endsWith('.Specs.csproj') || (relative.startsWith('Integration/') && relative.endsWith('.csproj'));
     if (!candidate) return;
-    if (!v3Projects.includes(relative)) fail(`Unclassified test project ${relative}`);
+    if (![...v3Projects, ...shippingProjects].includes(relative)) fail(`Unclassified test project ${relative}`);
+}
+export function validateSolutionProjects(xml) {
+    const solution = parseXml(xml);
+    if (solution.name !== 'Solution') fail('Expected Chronicle.slnx Solution root');
+    const projects = nodes(solution, 'Project').map(item => {
+        if (!item.attrs.Path) fail('Chronicle.slnx project missing Path');
+        return item.attrs.Path.replaceAll('\\', '/');
+    });
+    for (const projectPath of projects) checkProjectBoundary(projectPath);
+    if (!projects.some(item => item.endsWith('.Specs.csproj'))) fail('Chronicle.slnx contains no spec projects');
+    return projects;
 }
 async function discoverProjects(root, directory) {
     for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
@@ -109,6 +125,7 @@ export async function evaluateProject(root, projectPath, execute) {
 }
 export async function inventory(root, execute) {
     const result = [];
+    validateSolutionProjects(await readFile(path.join(root, 'Chronicle.slnx'), 'utf8'));
     await discoverProjects(root, 'Source');
     await discoverProjects(root, 'Integration');
     for (const projectPath of [...v3Projects, ...shippingProjects]) result.push(await evaluateProject(root, projectPath, execute));

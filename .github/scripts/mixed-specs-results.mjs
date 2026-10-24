@@ -65,7 +65,7 @@ export function parseXml(xml) {
     }
     return xmlRoot(root, stack, content);
 }
-const nodes = (node, name) => [...(node.name === name ? [node] : []), ...node.children.flatMap(child => nodes(child, name))];
+export const nodes = (node, name) => [...(node.name === name ? [node] : []), ...node.children.flatMap(child => nodes(child, name))];
 const number = value => /^\d+$/.test(value ?? '') ? Number(value) : fail('Missing/invalid XML counter');
 function validateExecution(c, results) {
     if (number(c.executed) > number(c.total) || number(c.executed) < number(c.passed)) fail('Inconsistent TRX execution counters');
@@ -104,19 +104,20 @@ export function validateTrx(xml) {
     results.forEach(result => validateIdentity(result, definitions, seen));
     return results.map(x => x.attrs.testName);
 }
-function productionFile(filename) {
-    const normalized = filename.replaceAll('\\', '/');
-    const relative = normalized.startsWith('Source/') ? normalized : normalized.match(/(?:^|\/)Source\/(.+)$/)?.[0].replace(/^\//, '');
+function productionFile(filename, roots) {
+    const normalized = `/${filename.replaceAll('\\', '/')}`;
+    const prefix = roots.find(root => normalized.includes(`/${root}/`));
+    const relative = prefix && normalized.slice(normalized.indexOf(`/${prefix}/`) + 1);
     if (!relative) return;
     if (!relative.endsWith('.cs')) return;
     const excluded = part => ['..', 'obj', 'bin'].includes(part) || /(?:\.Specs$|^Integration$|^given$|^when_|^for_)/.test(part);
     if (!relative.split('/').some(excluded)) return relative;
 }
-export async function validateCoverage(xml, root) {
+export async function validateCoverage(xml, root, roots = ['Source']) {
     const coverage = parseXml(xml);
     if (coverage.name !== 'coverage' || !nodes(coverage, 'package').length) fail('Empty/missing Cobertura packages');
     for (const item of nodes(coverage, 'package').flatMap(item => nodes(item, 'class'))) {
-        const relative = productionFile(item.attrs.filename ?? '');
+        const relative = productionFile(item.attrs.filename ?? '', roots);
         if (!relative) continue;
         if (!nodes(item, 'line').some(x => number(x.attrs.hits) > 0)) continue;
         await access(path.join(root, relative));
