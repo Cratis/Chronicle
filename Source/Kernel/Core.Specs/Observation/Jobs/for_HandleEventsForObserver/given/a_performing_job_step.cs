@@ -53,6 +53,11 @@ public class a_performing_job_step : Specification
 
     protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
 
+    protected virtual IPersistentState<HandleEventsForObserverState> CreateStateStorage() =>
+        _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
+            nameof(JobStepState),
+            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+
     protected static AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId) =>
         AppendedEvent.EmptyWithEventSequenceNumber(sequenceNumber) with
         {
@@ -152,9 +157,7 @@ public class a_performing_job_step : Specification
         });
         _silo.AddService(options);
 
-        _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
-            nameof(JobStepState),
-            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+        _stateStorage = CreateStateStorage();
 
         _performState = new HandleEventsForObserverState
         {
