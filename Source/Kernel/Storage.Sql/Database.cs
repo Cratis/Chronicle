@@ -272,11 +272,24 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         _jobsOptions.Clear();
     }
 
+    /// <summary>
+    /// Binds a namespace before it is published to consumers, without changing IDatabase.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <returns>The binding operation.</returns>
+    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var target = await Target(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value), ConnectionPurpose.Schema);
+        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(target));
+        await EnsureDatabaseExists(context, target);
+    }
+
 #if DEVELOPMENT
     /// <inheritdoc/>
     public async Task Wipe()
     {
-        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type.ToString());
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type);
         try
         {
             await timings.Run("sql-wipe-total", WipeCore);
@@ -355,19 +368,6 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }
 
 #endif
-
-    /// <summary>
-    /// Binds a namespace before it is published to consumers, without changing IDatabase.
-    /// </summary>
-    /// <param name="eventStore">The event store.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <returns>The binding operation.</returns>
-    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
-    {
-        var target = await Target(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value), ConnectionPurpose.Schema);
-        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(target));
-        await EnsureDatabaseExists(context, target);
-    }
 
 #if DEVELOPMENT
     static string ExtractSqliteDataSource(string connectionString)
