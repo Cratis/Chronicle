@@ -453,6 +453,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertFalse(condition_allows(coverage, context))
 
 
+VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+
+
 class IntegrationSingleBuildContracts(unittest.TestCase):
     def test_every_lane_consumes_current_run_outputs_without_a_fallback_build(self):
         jobs = workflow("integration.yml")["jobs"]
@@ -468,6 +471,13 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
                 for step in steps:
                     command = step.get("run", "")
+                    if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
+                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # previous release so the compatibility check orders the two sides correctly (#5353).
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
+                        self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
+                        continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
         producers = workflow("dotnet-build.yml")["jobs"]
