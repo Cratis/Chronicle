@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -13,13 +15,91 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 /// Represents the in memory materialization binding storage.
 /// </summary>
 /// <param name="timeProvider">The clock used for lifecycle stamps.</param>
-public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage
+public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage
 {
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly object _lock = new();
     readonly Dictionary<(EventStoreName Store, string Key), MaterializationBinding> _bindings = [];
     readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, PublicationReceiptId Receipt), (MaterializationPublicationRequest Request, MaterializationPublication Outcome)> _receipts = [];
     readonly Dictionary<(EventStoreName Store, string Gate), long> _gates = [];
+    readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), MaterializationExecutionSpecification> _executions = [];
+    readonly Dictionary<(EventStoreName Store, string Scope, GenerationBuildOperationId Operation), (GenerationBuildRequest Request, GenerationReservation Reservation)> _operations = [];
+    readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), GenerationObserverBinding> _observers = [];
+
+    /// <inheritdoc/>
+    /// <exception cref="GenerationBuildConflict">An immutable reservation claim conflicts.</exception>
+    /// <exception cref="InvalidMaterializationExecution">The adopted execution is missing.</exception>
+    public Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
+    {
+        execution.EnsureValid();
+        lock (_lock)
+        {
+            var request = new GenerationBuildRequest(key, execution, operationId, at);
+            var operationKey = (store, $"{key.Incarnation.Value:N}/{Uri.EscapeDataString(key.Namespace.Value)}", operationId);
+            if (_operations.TryGetValue(operationKey, out var previous))
+            {
+                if (previous.Request != request) throw new GenerationBuildConflict();
+                if (!previous.Request.At.EqualsExact(request.At)) throw new GenerationBuildConflict();
+                return Task.FromResult(previous.Reservation);
+            }
+            if (!_bindings.TryGetValue((store, key.Value), out var binding)) return Task.FromResult(new GenerationReservation(GenerationReservationResult.UnknownMaterialization));
+            if (binding.Epoch == ServingEpoch.Unset) return Task.FromResult(new GenerationReservation(GenerationReservationResult.NotBound));
+            if (!_executions.ContainsKey((store, key.Value, MaterializationGeneration.First))) throw new InvalidMaterializationExecution();
+            var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
+            if (candidate is not null) return Task.FromResult(new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate));
+            var identity = MaterializationGenerationIdentity.For(key.Projection, binding.Next.Next(), binding.Container);
+            EnsureUnclaimed(store, key, identity);
+            var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
+            var reservation = new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
+            _bindings[(store, key.Value)] = binding with { Next = identity.Generation, Generations = Array.AsReadOnly(binding.Generations.Append(record).ToArray()) };
+            _executions.Add((store, key.Value, identity.Generation), execution);
+            _observers.Add((store, key.Value, identity.Generation), new(key, identity, execution.EventSequence, execution.Revision));
+            _operations.Add(operationKey, (request, reservation));
+            return Task.FromResult(reservation);
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="GenerationBuildConflict">The first generation already has different execution inputs.</exception>
+    public Task<bool> TryAdoptExecution(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution)
+    {
+        execution.EnsureValid();
+        lock (_lock)
+        {
+            var first = _bindings.GetValueOrDefault((store, key.Value))?.Generations.SingleOrDefault(_ => _.Identity.Generation.IsFirst);
+            if (first is null) return Task.FromResult(false);
+            var snapshot = execution with { HasKnownHistoricalProvenance = false };
+            var id = (store, key.Value, MaterializationGeneration.First);
+            if (_executions.TryGetValue(id, out var previous))
+            {
+                if (snapshot != previous) throw new GenerationBuildConflict();
+                return Task.FromResult(true);
+            }
+            EnsureUnclaimed(store, key, first.Identity);
+            _executions.Add(id, snapshot);
+            _observers.Add(id, new(key, first.Identity, snapshot.EventSequence, snapshot.Revision));
+            return Task.FromResult(true);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<MaterializationExecutionSpecification?> GetExecution(EventStoreName store, MaterializationKey key, MaterializationGeneration generation)
+    {
+        lock (_lock) return Task.FromResult(_executions.GetValueOrDefault((store, key.Value, generation)));
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidMaterializationExecution">The observer has ambiguous incarnation claims.</exception>
+    public Task<GenerationObserverBinding?> ResolveObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId)
+    {
+        lock (_lock)
+        {
+            var matches = _observers.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == ns && _.Value.EventSequence == eventSequence && _.Value.Identity.ObserverId == observerId).Select(_ => _.Value).ToArray();
+            if (matches.Length > 1) throw new InvalidMaterializationExecution();
+            if (matches.Length == 0) EnsureUnbound(store, ns, eventSequence, observerId);
+            return Task.FromResult(matches.SingleOrDefault());
+        }
+    }
 
     /// <inheritdoc/>
     public Task<MaterializationBinding?> Get(EventStoreName store, MaterializationKey key)
@@ -114,6 +194,34 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
         lock (_lock)
         {
             return Task.FromResult<IReadOnlyCollection<GenerationContainerClaim>>(_bindings.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == ns).SelectMany(_ => _.Value.Generations).Where(_ => _.Identity.Destination == container).Select(_ => new GenerationContainerClaim(_.Identity.Destination, _.Identity.Generation, _.State)).ToArray());
+        }
+    }
+
+    static void EnsureGenerationUnclaimed(MaterializationBinding binding, MaterializationKey key, MaterializationGenerationIdentity identity)
+    {
+        if (binding.Generations.Any(record => record.Identity.Destination == identity.Destination)) throw new GenerationBuildConflict();
+        if (binding.Key.Incarnation != key.Incarnation) return;
+        if (binding.Generations.Any(record => record.Identity.ObserverId == identity.ObserverId)) throw new GenerationBuildConflict();
+    }
+
+    void EnsureUnbound(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId)
+    {
+        foreach (var binding in _bindings.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == ns).Select(_ => _.Value))
+        {
+            foreach (var generation in binding.Generations.Where(_ => _.Identity.ObserverId == observerId))
+            {
+                if (!_executions.TryGetValue((store, binding.Key.Value, generation.Identity.Generation), out var execution)) throw new InvalidMaterializationExecution();
+                if (execution.EventSequence == eventSequence) throw new InvalidMaterializationExecution();
+            }
+        }
+    }
+
+    void EnsureUnclaimed(EventStoreName store, MaterializationKey key, MaterializationGenerationIdentity identity)
+    {
+        foreach (var binding in _bindings.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == key.Namespace).Select(_ => _.Value))
+        {
+            if (binding.Key == key) continue;
+            EnsureGenerationUnclaimed(binding, key, identity);
         }
     }
 

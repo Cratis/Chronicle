@@ -118,6 +118,53 @@ internal static class MaterializationBindingDocuments
         new(checked((uint)receipt["active"].AsInt32)),
         new(checked((uint)receipt["epoch"].AsInt64)));
 
+    /// <summary>Encodes immutable execution without mutable definitions.</summary>
+    /// <param name="execution">The execution specification.</param>
+    /// <returns>The execution document.</returns>
+    internal static BsonDocument Execution(MaterializationExecutionSpecification execution) => new()
+    {
+        { "eventSequence", execution.EventSequence.Value }, { "content", execution.CanonicalContent }, { "revision", execution.Revision.Value },
+        { "canonicalization", execution.CanonicalizationVersion }, { "interpretation", execution.InterpretationVersion },
+        { "registeringVersion", execution.RegisteringVersion is null ? BsonNull.Value : new BsonString(execution.RegisteringVersion) },
+        { "historicalProvenance", execution.HasKnownHistoricalProvenance }
+    };
+
+    /// <summary>Decodes a captured execution specification.</summary>
+    /// <param name="document">The stored execution.</param>
+    /// <returns>The immutable specification.</returns>
+    internal static MaterializationExecutionSpecification Execution(BsonDocument document) => new(
+        new(document["eventSequence"].AsString),
+        document["content"].AsString,
+        new(document["revision"].AsString),
+        document["canonicalization"].AsInt32,
+        document["interpretation"].AsInt32,
+        document["registeringVersion"].IsBsonNull ? null : document["registeringVersion"].AsString,
+        document["historicalProvenance"].AsBoolean);
+
+    /// <summary>Encodes an explicit observer claim.</summary>
+    /// <param name="key">The materialization.</param>
+    /// <param name="identity">The reserved generation identity.</param>
+    /// <param name="execution">The captured inputs.</param>
+    /// <returns>The observer binding document.</returns>
+    internal static BsonDocument Observer(MaterializationKey key, MaterializationGenerationIdentity identity, MaterializationExecutionSpecification execution) => new()
+    {
+        { "_id", string.Join('/', key.Incarnation.Value.ToString("N"), Uri.EscapeDataString(execution.EventSequence.Value), Uri.EscapeDataString(identity.ObserverId.Value)) },
+        { "key", key.Value }, { "incarnation", new BsonBinaryData(key.Incarnation.Value, GuidRepresentation.Standard) },
+        { "namespace", key.Namespace.Value }, { "projection", key.Projection.Value }, { "sinkType", key.SinkType.Value },
+        { "sinkConfiguration", new BsonBinaryData(key.SinkConfiguration.Value, GuidRepresentation.Standard) },
+        { "generation", checked((int)identity.Generation.Value) }, { "destination", identity.Destination.Value },
+        { "observer", identity.ObserverId.Value }, { "eventSequence", execution.EventSequence.Value }, { "revision", execution.Revision.Value }
+    };
+
+    /// <summary>Decodes an explicit observer claim.</summary>
+    /// <param name="document">The binding document.</param>
+    /// <returns>The observer binding.</returns>
+    internal static GenerationObserverBinding Observer(BsonDocument document)
+    {
+        var key = new MaterializationKey(new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)), new(document["namespace"].AsString), new(document["projection"].AsString), new(document["sinkType"].AsString), new(document["sinkConfiguration"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)));
+        return new(key, new(key.Projection, new(checked((uint)document["generation"].AsInt32)), new(document["observer"].AsString), new(document["destination"].AsString)), new(document["eventSequence"].AsString), new(document["revision"].AsString));
+    }
+
     /// <summary>
     /// Encodes a lifecycle timestamp without losing precision.
     /// </summary>

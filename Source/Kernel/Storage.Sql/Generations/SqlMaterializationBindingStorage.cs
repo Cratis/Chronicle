@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -12,8 +14,20 @@ namespace Cratis.Chronicle.Storage.Sql.Generations;
 /// <summary>
 /// Represents the sql materialization binding storage.
 /// </summary>
-public sealed class SqlMaterializationBindingStorage : IMaterializationBindingStorage
+public sealed class SqlMaterializationBindingStorage : IMaterializationBindingStorage, IGenerationBuildStorage
 {
+    /// <inheritdoc/>
+    public Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at) => throw new MaterializationBindingsNotSupported();
+
+    /// <inheritdoc/>
+    public Task<bool> TryAdoptExecution(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution) => throw new MaterializationBindingsNotSupported();
+
+    /// <inheritdoc/>
+    public Task<GenerationObserverBinding?> ResolveObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId) => throw new MaterializationBindingsNotSupported();
+
+    /// <inheritdoc/>
+    public Task<MaterializationExecutionSpecification?> GetExecution(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => throw new MaterializationBindingsNotSupported();
+
     /// <inheritdoc/>
     public Task<MaterializationBinding?> Get(EventStoreName store, MaterializationKey key) => throw new MaterializationBindingsNotSupported();
 

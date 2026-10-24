@@ -16,19 +16,29 @@ public sealed class MongoMaterializationBindingStorageHarness : IMaterialization
     public IGenerationGateWrites GateWrites { get; init; } = new MongoDBGenerationGateWrites();
     public IMaterializationBindingStorage Create(TimeProvider? timeProvider = null)
     {
-        _client = new(ConnectionString);
+        _client ??= new(ConnectionString);
         var database = Substitute.For<IDatabase>();
         database.GetReadModelDatabase(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>()).Returns(call => Database(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1)));
+        database.GetEventStoreDatabase(Arg.Any<EventStoreName>()).Returns(call =>
+        {
+            var store = call.Arg<EventStoreName>();
+            var eventStore = Substitute.For<IEventStoreDatabase>();
+            eventStore.GetCollection<Observation.ObserverDefinition>(WellKnownCollectionNames.Observers).Returns(Database(store, "definitions").GetCollection<Observation.ObserverDefinition>(WellKnownCollectionNames.Observers));
+            return eventStore;
+        });
         return new MongoDBMaterializationBindingStorage(database, GateWrites, timeProvider);
     }
     public IMongoDatabase Database(EventStoreName store, EventStoreNamespaceName ns)
     {
-        if (!_databases.TryGetValue((store, ns), out var db))
+        lock (_databases)
         {
-            db = _client.GetDatabase(MongoDBSpecDatabaseNames.New());
-            _databases.Add((store, ns), db);
+            if (!_databases.TryGetValue((store, ns), out var db))
+            {
+                db = _client.GetDatabase(MongoDBSpecDatabaseNames.New());
+                _databases.Add((store, ns), db);
+            }
+            return db;
         }
-        return db;
     }
     public void Dispose()
     {
