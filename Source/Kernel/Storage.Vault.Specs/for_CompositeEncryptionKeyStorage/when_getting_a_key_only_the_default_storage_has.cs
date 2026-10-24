@@ -19,7 +19,7 @@ public class when_getting_a_key_only_the_default_storage_has(context ctx) : ICla
         public bool VaultHasASecondRevision;
         public bool DefaultStorageHasASecondRevision;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Key = new EncryptionKey([1, 2, 3], [4, 5, 6]);

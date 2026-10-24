@@ -20,6 +20,8 @@
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
         <Project Path="Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/Kernel/">
         <Project Path="Source/Kernel/Concepts/Concepts.csproj" />

@@ -141,7 +141,7 @@ public class ClusteringFixture : IAsyncLifetime
     public Task CrashSecondSilo() => _cluster!.KillSiloAsync(ObserversSilo);
 
     /// <inheritdoc/>
-    public virtual async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
         _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions
         {
@@ -175,7 +175,7 @@ public class ClusteringFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         await TearDownClusterAsync();
         _mongoRunner?.Dispose();

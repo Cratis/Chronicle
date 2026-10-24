@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Integration.Api;
 
 public class ApiWebApplicationFactory(IChronicleSetupFixture fixture, ContentRoot contentRoot) : ChronicleWebApplicationFactory<Program>(fixture, contentRoot)
 {
+    protected override IHostBuilder CreateHostBuilder() => Program.CreateHostBuilder([]);
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
