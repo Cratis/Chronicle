@@ -449,9 +449,8 @@ public partial class Observer
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
-        if (await ExceedsLiveBudget(eventsToHandle.Length))
+        if (await ExceedsLiveBudget(eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
-            await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle);
             return;
         }
 
