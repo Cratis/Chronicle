@@ -166,6 +166,7 @@ internal static class ReadModelSnapshotReader
         var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
         var schemas = eventTypeSchemas.ToDictionary(_ => _.Type);
         var usesPinnedDelivery = !definition.SubscribesToAllEvents && definition.GenerationDelivery == EventGenerationDelivery.Pinned;
+
         // Pinned projection inputs stay protected: generation release selects or re-derives content before
         // decrypting it. Decrypt their stored-history display separately, never feeding it back to the projection.
         var projectionEvents = usesPinnedDelivery ? allEvents.ToArray() : await eventCompliance.Release(allEvents, schemas);
