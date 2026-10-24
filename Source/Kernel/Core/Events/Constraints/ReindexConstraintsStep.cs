@@ -32,7 +32,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// existing snapshot, that entire owner's rows stay untouched and a structured warning identifies the
 /// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
 /// </remarks>
-public class ReindexConstraintsStep(
+public partial class ReindexConstraintsStep(
     [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
@@ -161,6 +161,10 @@ public class ReindexConstraintsStep(
                 var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter);
                 await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, tracking, cancellationToken);
                 await closingReindexer.Commit(cancellationToken, () => progress.WroteAnything = true);
+                if (!await ReportCollisions(progress.CollisionCounts, cancellationToken))
+                {
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
+                }
 
                 return JobStepResult.Succeeded(null);
             }
@@ -246,6 +250,8 @@ public class ReindexConstraintsStep(
             }
             catch (DuplicateUniqueConstraintValue error)
             {
+                tracking.Progress.CollisionCounts.TryGetValue(definition.Name, out var count);
+                tracking.Progress.CollisionCounts[definition.Name] = count + 1;
                 logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
             }
         }
@@ -277,6 +283,8 @@ public class ReindexConstraintsStep(
         public bool WroteAnything { get; set; }
 
         public EventSequenceNumber? ProcessedThrough { get; set; }
+
+        public Dictionary<ConstraintName, long> CollisionCounts { get; } = [];
     }
 
     sealed record RebuildTracking(

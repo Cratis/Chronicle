@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Orleans.Storage.Jobs;
 
@@ -20,4 +21,9 @@ public class ReindexConstraintsStepState : JobStepState
     /// Gets or sets the changed constraints.
     /// </summary>
     public IList<ConstraintDefinitionChange> Changes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the number of skipped duplicate claims per constraint, without claim contents or identities.
+    /// </summary>
+    public IDictionary<ConstraintName, long> CollisionCounts { get; set; } = new Dictionary<ConstraintName, long>();
 }

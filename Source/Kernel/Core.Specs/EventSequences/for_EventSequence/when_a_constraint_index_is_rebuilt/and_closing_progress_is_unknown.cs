@@ -15,7 +15,11 @@ public class and_closing_progress_is_unknown : given.a_catching_up_sequence
     async Task Establish()
     {
         await _eventSequence.ConstraintIndexRebuildStarting(_run, [_closingDefinition.Name]);
-        await AppendAnEvent();
+
+        // Seed a committed close at the run boundary independently of rebuild-time append refusal.
+        await Seed(0);
+        _stateStorage.State.SequenceNumber = 1;
+        await _closures.Close(new(new(EventSourceId: _eventSourceId), _closingDefinition.Name.Value, EventSequenceNumber.First, null));
 
         // An empty-cursor rebuild can reopen a snapshot scope after a live close.
         await _closures.Reopen(_closingDefinition.Name.Value, new(EventSourceId: _eventSourceId));
