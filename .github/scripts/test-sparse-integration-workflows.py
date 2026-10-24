@@ -477,6 +477,9 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
                         self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
                         self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
+                        self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
+                        self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
+                        self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
                         continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
