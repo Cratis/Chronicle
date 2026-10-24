@@ -51,6 +51,12 @@ public class TestableHandleEventsForObserver(
     static readonly AsyncLocal<bool> _guardStateAccess = new();
     static readonly AsyncLocal<StepRunForTesting?> _stepRun = new();
     static readonly AsyncLocal<List<EventSequenceNumber>?> _persistedPositions = new();
+    static readonly AsyncLocal<Action<HandleEventsForObserverState>?> _snapshotState = new();
+
+    /// <summary>
+    /// Gets or sets the snapshot callback invoked only after a successful persistent write.
+    /// </summary>
+    public Action<HandleEventsForObserverState>? SnapshotState { get; set; }
 
     /// <summary>
     /// Gets snapshots of the durable position after successful state writes during this step's runs.
@@ -93,6 +99,7 @@ public class TestableHandleEventsForObserver(
         Run = StepRunForTesting.Begin(this);
         _stepRun.Value = Run;
         _persistedPositions.Value = PersistedPositions;
+        _snapshotState.Value = SnapshotState;
         return await PerformStep(currentState, cancellationToken);
     }
 
@@ -107,6 +114,7 @@ public class TestableHandleEventsForObserver(
         guarded.WriteStateAsync().Returns(async _ =>
         {
             await inner.WriteStateAsync();
+            _snapshotState.Value?.Invoke(inner.State);
             _persistedPositions.Value?.Add(inner.State.LastSuccessfullyHandledEventSequenceNumber);
         });
         guarded.ReadStateAsync().Returns(_ => inner.ReadStateAsync());
