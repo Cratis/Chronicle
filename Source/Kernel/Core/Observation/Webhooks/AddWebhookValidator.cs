@@ -90,8 +90,6 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             .WithMessage("A webhook with the same name already exists.");
     }
 
-    static bool ShouldRejectRegistration(WebhookTargetValidation result) => result.IsIndeterminate || !result.IsAllowed;
-
     WebhookTargetValidation CheckManagedIdentity(AddWebhook command) => command.AuthorizationType == AuthorizationType.ManagedIdentity
         ? _policy.CheckManagedIdentity(new(command.ManagedIdentityClientId, command.ManagedIdentityScope), command.Url, command.EventStore)
         : WebhookTargetValidation.Allowed;
@@ -108,13 +106,13 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
         if (!string.IsNullOrEmpty(command.Url))
         {
             var target = await _policy.Evaluate(command.Url, command.EventStore, cancellationToken);
-            if (ShouldRejectRegistration(target)) context.AddFailure(nameof(command.Url), target.Reason);
+            if (!target.IsAllowed) context.AddFailure(nameof(command.Url), target.Reason);
         }
 
         if (command.AuthorizationType == AuthorizationType.OAuth && !string.IsNullOrEmpty(command.OAuthAuthority))
         {
             var authority = await _policy.Evaluate(command.OAuthAuthority, command.EventStore, cancellationToken);
-            if (ShouldRejectRegistration(authority)) context.AddFailure(nameof(command.OAuthAuthority), authority.Reason);
+            if (!authority.IsAllowed) context.AddFailure(nameof(command.OAuthAuthority), authority.Reason);
         }
     }
 

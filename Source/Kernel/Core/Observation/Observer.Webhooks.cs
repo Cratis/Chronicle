@@ -55,6 +55,7 @@ public partial class Observer
     {
         if (validation.IsIndeterminate)
         {
+            if (IsQuarantined) return false;
             await Unsubscribe();
             _subscriptionSetupFailed = true;
             return false;
