@@ -13,7 +13,7 @@ public class with_webhook_probe : given.an_observer_state_storage
 
     async Task Establish()
     {
-        await _storage.Save(new() { Identifier = "legacy" });
+        await _storage.Save(new() { Identifier = "legacy" }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
@@ -34,7 +34,7 @@ public class with_webhook_probe : given.an_observer_state_storage
                 PartitionCounts = [new("event-a", 7UL)]
             }
         };
-        await _storage.Save(_expected);
+        await _storage.Save(_expected, Concepts.EventSequences.EventSequenceId.Log);
         _restored = await _storage.Get("observer");
         _legacy = await _storage.Get("legacy");
     }
