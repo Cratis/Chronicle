@@ -19,17 +19,20 @@ const fail = message => { throw new Error(message); };
 
 // dotnet-coverage documents ONE child command string. Quote each argument for
 // .NET command-line parsing, never for a shell; reject control characters.
-export function childCommand(args) {
-    return args.map(value => {
+// dotnet-coverage takes the first token of the child command literally, quotes included, so the
+// executable stays unquoted and must be a plain path. Every argument is quoted.
+export function childCommand(executable, args) {
+    if (!/^[\w./+-]+$/.test(executable)) fail(`Child executable must be a plain path without spaces or quotes: ${executable}`);
+    return [executable, ...args.map(value => {
         if (/[\x00-\x1f\x7f]/.test(value)) fail('Control character in child argument');
         return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
-    }).join(' ');
+    })].join(' ');
 }
 export function invocation(info, { directory, filter, timeout, coverage = true }) {
     if (info.runner !== 'v3') fail(`${info.project}: executable v3 runner required`);
     const args = [info.dll, ...(filter ? ['-filterVSTest', filter] : []), '-result-trx', path.join(directory, 'results.trx')];
     if (!coverage) return { command: 'dotnet', args, timeout };
-    return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand(['dotnet', ...args])], timeout };
+    return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand('dotnet', args)], timeout };
 }
 export async function runProject(info, options, execute = runProcess) {
     const call = invocation(info, options);
