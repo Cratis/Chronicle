@@ -18,7 +18,8 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// </summary>
 /// <param name="observer">The kernel observer.</param>
 /// <param name="subscription">The original subscription.</param>
-internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer, KernelObservation.ObserverSubscription subscription)
+/// <param name="subscriptionControl">The benchmark reactor's subscription control.</param>
+internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer, KernelObservation.ObserverSubscription subscription, CatchUpShapeSubscriptionControl subscriptionControl)
 {
     /// <summary>
     /// Registers the observer and resolves its grain.
@@ -26,8 +27,9 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
     /// <param name="fixture">The cluster fixture.</param>
     /// <param name="counters">The counters.</param>
     /// <param name="settings">The benchmark settings.</param>
+    /// <param name="subscriptionControl">The benchmark reactor's subscription control.</param>
     /// <returns>The observer wrapper.</returns>
-    public static async Task<CatchUpShapeObserver> Register(ClusterBenchmarkFixture fixture, CatchUpShapeCounters counters, CatchUpShapeSettings settings)
+    public static async Task<CatchUpShapeObserver> Register(ClusterBenchmarkFixture fixture, CatchUpShapeCounters counters, CatchUpShapeSettings settings, CatchUpShapeSubscriptionControl subscriptionControl)
     {
         string id;
         if (settings.ObserverType == "projection")
@@ -37,21 +39,25 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
         }
         else
         {
-            var handler = await fixture.EventStore1.Reactors.Register("catchup-shape-reactor", builder => builder.On<CatchUpShapeValueSet>(_ => { }));
+            var handler = await fixture.EventStore1.Reactors.Register(CatchUpShapeSubscriptionControl.ReactorId, builder => builder.On<CatchUpShapeValueSet>(_ => { }));
             id = handler.Id.Value;
         }
 
         await fixture.Readiness.WaitForSubscribedObserver(id, TimeSpan.FromSeconds(settings.TimeoutSeconds));
         counters.ExpectObserver(id);
         var observer = counters.Grains.GetGrain<KernelObservation.IObserver>(new KernelObserverConcepts.ObserverKey(id, ClusterBenchmarkFixture.EventStore, KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default, "event-log"));
-        return new(observer, await observer.GetSubscription());
+        return new(observer, await observer.GetSubscription(), subscriptionControl);
     }
 
     /// <summary>
     /// Unsubscribes the observer.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task Disconnect() => observer.Unsubscribe();
+    public async Task Disconnect()
+    {
+        await subscriptionControl.Pause();
+        await observer.Unsubscribe();
+    }
 
     /// <summary>
     /// Verifies the observer is disconnected at the marker.
@@ -73,7 +79,13 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
     /// </summary>
     /// <param name="observerType">The observer type, projection or reactor.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public Task Reconnect(string observerType)
+    public async Task Reconnect(string observerType)
+    {
+        await Resubscribe(observerType);
+        subscriptionControl.Resume();
+    }
+
+    Task Resubscribe(string observerType)
     {
         if (observerType != "projection")
         {

@@ -16,6 +16,11 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 internal sealed record CatchUpShapeSettings(int Sources, int Events, int BatchSize, int TimeoutSeconds, string ObserverType)
 {
     /// <summary>
+    /// Gets the maximum post-timing patterns settlement wait in seconds.
+    /// </summary>
+    public int PatternsWaitSeconds { get; init; } = 900;
+
+    /// <summary>
     /// Reads the settings from environment variables.
     /// </summary>
     /// <returns>The settings.</returns>
@@ -33,7 +38,10 @@ internal sealed record CatchUpShapeSettings(int Sources, int Events, int BatchSi
             ReadPositive("CATCHUP_EVENTS", 10000),
             ReadPositive("CATCHUP_BATCH_SIZE", 100),
             ReadPositive("CATCHUP_TIMEOUT_SECONDS", 180),
-            observerType);
+            observerType)
+        {
+            PatternsWaitSeconds = ReadPositive("CATCHUP_PATTERNS_WAIT_SECONDS", 900)
+        };
     }
 
     static int ReadPositive(string name, int fallback)

@@ -290,12 +290,16 @@ dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --
 | `CATCHUP_OBSERVER` | `projection` | `projection` or `reactor`; run separately to compare their job shapes. |
 | `CATCHUP_BATCH_SIZE` | `100` | Events per append during backlog seeding. |
 | `CATCHUP_TIMEOUT_SECONDS` | `180` | Bound for seeding, registration, database reads and catch-up waits. |
+| `CATCHUP_PATTERNS_WAIT_SECONDS` | `900` | Maximum post-timing patterns settlement wait, sampled every 30 seconds. |
 
 The scenario handles a marker, unsubscribes the observer, appends the backlog, verifies it is still
 disconnected at the marker, and resubscribes the **same** definition and event types. It never requests
 replay or a rebuild. Timing and counters start just before resubscription and stop after reaching the
 backlog tail with no failed partitions, quarantine or unfinished jobs. The marker, backlog seeding,
 final projection snapshot check and post-catch-up observer-state sampling are outside that window.
+For the reactor, a benchmark-only grain filter pauses `KeepSubscription` restoration while disconnected,
+waiting for any in-progress restoration before unsubscribing. The delivery stream stays open;
+restoration resumes after explicitly resubscribing the original subscriber. Kernel behavior is unchanged.
 
 One JSON result line (`Scenario = "interleaved-catch-up"`) reports events/s, duration, settings, marker
 and tail positions, managed allocations/GC deltas, grain-call counts, and Mongo command counts and
@@ -313,12 +317,17 @@ does no handler work; its durable position and finished job prove completion. Ex
 output remains unchanged.
 
 After catch-up, the scenario reads the `$system.patterns` document directly from the event-store
-namespace's `observers` collection twice, at least 60 seconds apart. Each timestamped sample reports
-whether the document exists, `nextEventSequenceNumber`, `lastHandledEventSequenceNumber`, the count
-of `inFlightPartitions`, and `handledEventCount`. Samples are printed individually with
-`Scenario = "catch-up-patterns-state"` and included in the final result. The expected handled count
-includes the marker: `CATCHUP_EVENTS + 1`. These samples report state without requiring it to settle,
-so a stuck system observer remains visible in the measurement.
+namespace's `observers` collection every 30 seconds. Sampling stops when `NextEventSequenceNumber >= tail + 1`,
+`InFlightPartitions == 0`, and two consecutive samples have identical state values, or when
+`CATCHUP_PATTERNS_WAIT_SECONDS` expires. Each timestamped sample reports whether the document exists,
+`nextEventSequenceNumber`, `lastHandledEventSequenceNumber`, the count of `inFlightPartitions`, and
+`handledEventCount`. Timestamps are excluded from the stability comparison. Samples are printed individually
+with `Scenario = "catch-up-patterns-state"` and included in the final result. The expected handled count
+includes the marker: `CATCHUP_EVENTS + 1`. The result also reports `PatternsSettled` and
+`PatternsHandledShortfall` (expected minus the latest handled count, treating a missing count as zero).
+Expiry produces `PatternsSettled: false`. Reads and waits remain outside timing, allocation deltas and
+counters. The handled count is diagnostic, not a correctness assertion: a settled observer can still
+have a handled-count shortfall.
 
 ## Results
 

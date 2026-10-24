@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
@@ -22,14 +23,11 @@ internal static class CatchUpShapeScenario
         var timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
         var counters = new CatchUpShapeCounters();
         var dataset = new CatchUpShapeDataset(settings);
-        await using var fixture = new ClusterBenchmarkFixture(ClusterTopology.SingleSilo, counters.Configure);
+        using var subscriptionControl = new CatchUpShapeSubscriptionControl();
+        await using var fixture = CreateFixture(counters, subscriptionControl);
         await fixture.Start().WaitAsync(timeout);
-        var observer = await CatchUpShapeObserver.Register(fixture, counters, settings).WaitAsync(timeout);
-        if (!(await fixture.EventStore1.EventLog.Append(CatchUpShapeDataset.Source(0), new CatchUpShapeValueSet(0)).WaitAsync(timeout)).IsSuccess)
-        {
-            throw new InvalidOperationException("The catch-up marker was not acknowledged successfully.");
-        }
-        var marker = (await fixture.EventStore1.EventLog.GetTailSequenceNumber().WaitAsync(timeout)).Value;
+        var observer = await CatchUpShapeObserver.Register(fixture, counters, settings, subscriptionControl).WaitAsync(timeout);
+        var marker = await AppendMarker(fixture, timeout);
         await observer.WaitUntilCaughtUp(fixture, marker, timeout);
         await observer.Disconnect().WaitAsync(timeout);
         await dataset.SeedBacklog(fixture).WaitAsync(timeout);
@@ -57,7 +55,8 @@ internal static class CatchUpShapeScenario
         var gcCollections = new[] { GC.CollectionCount(0) - collectionsBefore[0], GC.CollectionCount(1) - collectionsBefore[1], GC.CollectionCount(2) - collectionsBefore[2] };
         counters.VerifyJobShape();
         var fingerprint = await dataset.Verify(fixture).WaitAsync(timeout);
-        var patternSamples = await new CatchUpShapePatternSamples(counters.NamespaceDatabase).Read(timeout);
+        var patterns = await new CatchUpShapePatternSamples(counters.NamespaceDatabase).Read(
+            timeout, TimeSpan.FromSeconds(settings.PatternsWaitSeconds), tail, settings.Events + 1L);
         Console.WriteLine(JsonSerializer.Serialize(new
         {
             Scenario = "interleaved-catch-up",
@@ -67,6 +66,7 @@ internal static class CatchUpShapeScenario
             settings.Events,
             settings.BatchSize,
             settings.TimeoutSeconds,
+            settings.PatternsWaitSeconds,
             MarkerSequenceNumber = marker,
             TailSequenceNumber = tail,
             ElapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
@@ -77,10 +77,28 @@ internal static class CatchUpShapeScenario
             Gen2Collections = gcCollections[2],
             SnapshotFingerprint = fingerprint,
             PatternsExpectedHandledEventCount = (long)settings.Events + 1,
-            PatternsObserverSamples = patternSamples,
+            PatternsObserverSamples = patterns.Samples,
+            patterns.PatternsSettled,
+            patterns.PatternsHandledShortfall,
             Counters = counters.Snapshot(settings.Events),
             MongoBoundary = "Chronicle IMongoDBClientManager clients; excludes Orleans persistence/membership and Arc clients; includes readiness probes and background work",
             GrainBoundary = "All incoming and outgoing silo grain calls, including readiness probes and background work; excludes calls bypassing Orleans dispatch"
         }));
     }
+
+    static async Task<ulong> AppendMarker(ClusterBenchmarkFixture fixture, TimeSpan timeout)
+    {
+        if (!(await fixture.EventStore1.EventLog.Append(CatchUpShapeDataset.Source(0), new CatchUpShapeValueSet(0)).WaitAsync(timeout)).IsSuccess)
+        {
+            throw new InvalidOperationException("The catch-up marker was not acknowledged successfully.");
+        }
+        return (await fixture.EventStore1.EventLog.GetTailSequenceNumber().WaitAsync(timeout)).Value;
+    }
+
+    static ClusterBenchmarkFixture CreateFixture(CatchUpShapeCounters counters, CatchUpShapeSubscriptionControl subscriptionControl) =>
+        new(ClusterTopology.SingleSilo, services =>
+        {
+            counters.Configure(services);
+            services.AddSingleton<IIncomingGrainCallFilter>(subscriptionControl);
+        });
 }
