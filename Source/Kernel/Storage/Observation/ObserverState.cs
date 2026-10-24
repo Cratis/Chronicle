@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -59,6 +60,11 @@ public record ObserverState(
     /// stored state.
     /// </remarks>
     public static ObserverState Empty => new();
+
+    /// <summary>
+    /// Gets the owning event sequence, or null for legacy, unowned state.
+    /// </summary>
+    public EventSequenceId? Owner { get; init; }
 
     /// <summary>
     /// Gets the namespace observer's type-set control, or null before initialization.
