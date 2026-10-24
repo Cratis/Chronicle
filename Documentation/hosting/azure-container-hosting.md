@@ -51,12 +51,13 @@ If the kernel terminates TLS, supply the certificate as a file or from a secret 
 
 ## Storage
 
-Use a managed database. For MongoDB, the kernel needs a replica set. Atlas is the only managed MongoDB service this documentation covers; check others for replica set support before using them. SQL options are in [Run Chronicle on Azure](azure.md).
+Use a managed database. For MongoDB, the kernel needs a replica set: whichever MongoDB service you choose must run as a replica set and support change streams. SQL options are in [Run Chronicle on Azure](azure.md).
 
 ## App Service sidecar
 
-- App Service forwards external traffic only to the port it is configured to send requests to, not to every port the kernel listens on. Check Microsoft's sidecar documentation for which ports can be exposed; whether port 35000 can be fronted directly is not verified here.
-- For gRPC, set the HTTP version to 2.0, enable the HTTP 2.0 Proxy option "gRPC only", and set the `HTTP20_ONLY_PORT` app setting to the port the kernel listens on. How this interacts with port 35000 is not verified here.
+- App Service forwards external traffic only to the port it is configured to send requests to, not to every port the kernel listens on.
+- For gRPC, [configure gRPC on App Service](https://learn.microsoft.com/en-us/azure/app-service/configure-grpc): set the HTTP version to 2.0, set the HTTP 2.0 Proxy option to "gRPC only", and set the `HTTP20_ONLY_PORT` app setting. That setting names a port on which the app listens for HTTP/2 requests only, in addition to its HTTP/1.1 port, so the kernel must answer gRPC on the `HTTP20_ONLY_PORT` port and HTTP/1.1 (Workbench, API, health) on the port App Service forwards to. Configure the kernel's listening ports to match.
+- App Service gRPC requires Linux (or App Service Environment v3), accepts only secure calls from clients, does not support client certificates, and times out a gRPC request after 20 minutes of inactivity. Clients connected to the kernel through App Service must tolerate that limit.
 - The production image is based on a chiseled Ubuntu base. It has no shell, so you cannot open a console in the container.
 
 ## See also
