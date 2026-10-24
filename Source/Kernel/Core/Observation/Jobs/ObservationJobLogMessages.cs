@@ -32,6 +32,9 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Error, "Could not notify observer that replay completed; replay or recovery must be retried")]
     internal static partial void ReplayCompletionNotificationFailed(this ILogger<ReplayObserver> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Information, "CatchUpObserver prepared no job steps: {KeysEnumerated} keys enumerated, {FailedKeysSkipped} skipped as failed, {EventTypeCount} reader-scope event types")]
+    internal static partial void CatchUpPreparedNoSteps(this ILogger<IJob> logger, int keysEnumerated, int failedKeysSkipped, int eventTypeCount);
+
     [LoggerMessage(LogLevel.Warning, "{JobName} prepared no job steps, so the job concludes without doing any work")]
     internal static partial void NoJobStepsPrepared(this ILogger<IJob> logger, string jobName);
 
