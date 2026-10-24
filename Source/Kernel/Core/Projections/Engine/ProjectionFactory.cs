@@ -1183,7 +1183,8 @@ public class ProjectionFactory(
             return keyResolvers.FromEventSourceId;
         }
 
-        return keyResolvers.FromEventValueProvider(new EventContentExpressionResolver().Resolve(key));
+        // A missing property falls back to the event source id, as a root join did before it honored its key.
+        return keyResolvers.FromEventValueProviderWithFallbackToEventSourceId(new EventContentExpressionResolver().Resolve(key));
     }
 
     void WarnUnsupportedRootJoinKey(Projection projection, ProjectionDefinition definition)
