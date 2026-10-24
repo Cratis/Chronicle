@@ -21,6 +21,7 @@ using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
+using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -312,15 +313,10 @@ public class ProjectionObserverSubscriber(
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
                 {
-                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    var failure = await HandleBulkFailures(partition, events, pipelineContext.FailedPartitions);
+                    if (failure is not null)
                     {
-                        await observer.PartitionFailed(
-                            failedPartition.EventSourceId,
-                            failedPartition.EventSequenceNumber,
-                            [ProjectionBulkFailures.MessageFor(failedPartition)],
-                            string.Empty,
-                            FailureKind.Handling);
+                        return (failure, null);
                     }
                 }
 
@@ -376,6 +372,30 @@ public class ProjectionObserverSubscriber(
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty), null);
         }
+    }
+
+    async Task<ObserverSubscriberResult?> HandleBulkFailures(Key partition, IEnumerable<AppendedEvent> events, IEnumerable<SinkFailedPartition> failedPartitions)
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failedPartition in failedPartitions.Where(_ => _.EventSourceId != partition))
+        {
+            await observer.PartitionFailed(
+                failedPartition.EventSourceId,
+                failedPartition.EventSequenceNumber,
+                [ProjectionBulkFailures.MessageFor(failedPartition)],
+                string.Empty,
+                FailureKind.Handling);
+        }
+
+        var deliveryFailure = failedPartitions.FirstOrDefault(_ => _.EventSourceId == partition);
+        if (deliveryFailure is null)
+        {
+            return null;
+        }
+
+        var lastHandled = events.TakeWhile(_ => _.Context.SequenceNumber < deliveryFailure.EventSequenceNumber)
+            .LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        return ObserverSubscriberResult.Failed(lastHandled, ProjectionBulkFailures.MessageFor(deliveryFailure));
     }
 
     async Task EnsurePipeline()

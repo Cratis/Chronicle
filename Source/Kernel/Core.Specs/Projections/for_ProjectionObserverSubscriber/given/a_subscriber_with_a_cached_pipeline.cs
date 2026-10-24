@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Properties;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
     protected ProjectionObserverSubscriber _subscriber;
+    protected IObserver _observer;
     protected IProjectionChangesetNotifier _notifier;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ProjectionDefinition _definition;
@@ -51,6 +53,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _projectionGrain = Substitute.For<IProjection>();
         _projectionGrain.GetDefinition().Returns(DefinitionAtActivation());
         silo.AddProbe(_ => _projectionGrain);
+        _observer = Substitute.For<IObserver>();
+        silo.AddProbe(_ => _observer);
         _notifier = Substitute.For<IProjectionChangesetNotifier>();
         silo.AddProbe(_ => _notifier);
 
