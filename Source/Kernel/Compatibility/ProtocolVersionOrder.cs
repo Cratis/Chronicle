@@ -12,16 +12,26 @@ namespace Cratis.Chronicle.Compatibility;
 static class ProtocolVersionOrder
 {
     /// <summary>
+    /// Determines whether a protocol version identifies a stamped build with a parseable numeric core.
+    /// </summary>
+    /// <param name="version">The protocol version.</param>
+    /// <returns>Whether the version can be used to establish ordering on connect.</returns>
+    public static bool IsKnown(string version) =>
+        !string.IsNullOrWhiteSpace(version) &&
+        version is not ("1.0.0" or "1.0.0.0") &&
+        Version.TryParse(Core(version), out var parsed) && parsed.Build >= 0;
+
+    /// <summary>
     /// Compares two protocol versions.
     /// </summary>
     /// <param name="left">The first version.</param>
     /// <param name="right">The second version.</param>
     /// <returns>A negative number when <paramref name="left"/> is older, zero when they are the same, a positive number when it is newer.</returns>
     /// <remarks>
-    /// An unparsable or missing component reads as zero rather than throwing - a side that cannot say its own
-    /// version is treated as the oldest possible one. That degrades to the direction Chronicle has always
-    /// checked (the caller treated as the older side) rather than failing a connection over a version string
-    /// it cannot make sense of.
+    /// Numeric components determine ordering, ignoring build metadata. For equal cores, a prerelease sorts
+    /// below a release; two prereleases compare as equal without comparing their identifiers.
+    /// An unparseable or missing component still reads as zero rather than throwing, but callers must use
+    /// <see cref="IsKnown"/> before relying on the ordering to choose a compatibility direction.
     /// </remarks>
     public static int Compare(string left, string right)
     {
@@ -37,11 +47,15 @@ static class ProtocolVersionOrder
             }
         }
 
-        return 0;
+        return IsPrerelease(right).CompareTo(IsPrerelease(left));
     }
 
+    static string Core(string version) => version.Split(['-', '+'], 2)[0];
+
+    static bool IsPrerelease(string version) => version.Split('+', 2)[0].Contains('-');
+
     static int[] Components(string version) =>
-        [.. version.Split('.').Select(part => int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)];
+        [.. Core(version).Split('.').Select(part => int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0)];
 
     static int At(int[] components, int index) => index < components.Length ? components[index] : 0;
 }
