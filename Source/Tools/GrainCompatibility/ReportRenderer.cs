@@ -70,7 +70,12 @@ public static class ReportRenderer
     /// <returns>The workflow commands, one per line.</returns>
     public static string ToWorkflowCommands(string baselineName, IReadOnlyList<ContractBreak> breaks) =>
         string.Concat(breaks.Select(_ =>
-            $"::error file=Source/Kernel/Core/OrleansContracts.txt,title=Grain contract break against {Escape(baselineName)}::{Escape($"{_.Kind} in {_.Subject}: {_.Description}")}{Environment.NewLine}"));
+        {
+            var payload = _.Kind >= ContractBreakKind.PayloadTypeRemoved;
+            var file = payload ? "GrainPayloadContracts.txt" : "OrleansContracts.txt";
+            var title = payload ? "Payload contract break" : "Grain contract break";
+            return $"::error file=Source/Kernel/Core/{file},title={title} against {Escape(baselineName)}::{Escape($"{_.Kind} in {_.Subject}: {_.Description}")}{Environment.NewLine}";
+        }));
 
     static string Counts(ContractManifest manifest) =>
         $"{manifest.ActiveInterfaces.Count()} grain interfaces, {manifest.ActiveInterfaces.Sum(_ => _.Methods.Count)} methods, {manifest.ActiveClasses.Count()} grain classes";

@@ -129,6 +129,23 @@ jobs:
         if: steps.baseline.outputs.skip == 'false'
         run: dotnet build Source/Tools/GrainCompatibility/GrainCompatibility.csproj -c Release
 
+      # A gate that stopped detecting breaks would pass every change. This plants each kind of break and fails
+      # unless every one is still found.
+      - name: Prove the comparison still detects breaks
+        if: steps.baseline.outputs.skip == 'false'
+        run: dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release -- --self-test
+
+      - name: Compare grain contracts with ${{ steps.baseline.outputs.tag }}
+        if: steps.baseline.outputs.skip == 'false'
+        env:
+          TAG: ${{ steps.baseline.outputs.tag }}
+        run: >-
+          dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release --
+          --baseline "$baseline"
+          --current "$CONTRACTS_PATH"
+          --baseline-name "$TAG"
+          --github
+
       - name: Build the payload inventory specs
         if: steps.baseline.outputs.skip == 'false'
         run: dotnet build Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release -p:CratisProxiesOutputPath=
@@ -153,20 +170,3 @@ jobs:
           dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release -- \
             --payload-baseline "$PAYLOAD_BASELINE" --payload-current "$PAYLOAD_CONTRACTS_PATH" \
             --baseline-name "$TAG" --github
-
-      # A gate that stopped detecting breaks would pass every change. This plants each kind of break and fails
-      # unless every one is still found.
-      - name: Prove the comparison still detects breaks
-        if: steps.baseline.outputs.skip == 'false'
-        run: dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release -- --self-test
-
-      - name: Compare grain contracts with ${{ steps.baseline.outputs.tag }}
-        if: steps.baseline.outputs.skip == 'false'
-        env:
-          TAG: ${{ steps.baseline.outputs.tag }}
-        run: >-
-          dotnet run --no-build --project Source/Tools/GrainCompatibility -c Release --
-          --baseline "$baseline"
-          --current "$CONTRACTS_PATH"
-          --baseline-name "$TAG"
-          --github
