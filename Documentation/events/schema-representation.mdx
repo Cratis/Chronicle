@@ -108,7 +108,7 @@ SQL read models before relying on exact decimal writes. Replay creates a fresh t
 mapping and replaces the old table when the replay succeeds. This is required for SQLite's former
 REAL columns and SQL Server's former DECIMAL(18,2) columns.
 
-#### Kernel shadow columns
+### Kernel shadow columns
 
 SQL shadow columns are registered centrally, outside the projected columns and the EF model. They
 are nullable without a default, are never materialized or released, and do not change the original
