@@ -7,13 +7,15 @@ namespace Cratis.Chronicle.Projections.for_Projection.when_reading_with_pinned_d
 
 public class and_a_revised_event_has_the_pinned_context_generation : given.a_pinned_projection_grain
 {
+    protected override EventTypeGeneration PinGeneration => new(2);
+
     void Establish() => _stored = AppendedEvent.EmptyWithEventType(_pin) with
     {
-        RevisedGeneration = new EventTypeGeneration(2),
+        RevisedGeneration = EventTypeGeneration.First,
         GenerationalContent = new Dictionary<int, string>
         {
-            [1] = "{\"name\":\"pre-revision\"}",
-            [2] = "{\"fullName\":\"revised\"}"
+            [1] = "{\"name\":\"revised\"}",
+            [2] = "{\"fullName\":\"pre-revision\"}"
         }
     };
 

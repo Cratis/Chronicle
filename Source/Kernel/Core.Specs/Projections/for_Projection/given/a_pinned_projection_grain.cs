@@ -39,11 +39,12 @@ public class a_pinned_projection_grain : Specification
     protected ProjectionDefinition _engineDefinition;
 
     protected virtual EventGenerationDelivery Delivery => EventGenerationDelivery.Pinned;
+    protected virtual EventTypeGeneration PinGeneration => EventTypeGeneration.First;
 
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        _pin = new EventType("TheEvent", EventTypeGeneration.First);
+        _pin = new EventType("TheEvent", PinGeneration);
         _stored = AppendedEvent.EmptyWithEventType(_pin with { Generation = new EventTypeGeneration(2) });
         dynamic content = new ExpandoObject();
         content.name = "released";

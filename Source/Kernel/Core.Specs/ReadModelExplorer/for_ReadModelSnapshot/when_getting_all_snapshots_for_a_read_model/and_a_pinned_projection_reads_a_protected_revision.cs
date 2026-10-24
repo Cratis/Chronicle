@@ -32,8 +32,8 @@ public class and_a_pinned_projection_reads_a_protected_revision : given.a_projec
             CorrelationId = FirstCorrelation
         }, (ExpandoObject)content)
         {
-            RevisedGeneration = 2,
-            GenerationalContent = new Dictionary<int, string> { [2] = "{\"fullName\":\"protected-revision\"}" }
+            RevisedGeneration = 1,
+            GenerationalContent = new Dictionary<int, string> { [1] = "{\"name\":\"protected-revision\"}" }
         };
         var cursor = Substitute.For<IEventCursor>();
         cursor.MoveNext().Returns(true, false);
