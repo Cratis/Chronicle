@@ -41,7 +41,7 @@ public class and_the_connection_disconnects_while_retrying_in_the_background : g
     async Task Because()
     {
         await _projections.Discover();
-        _thrownByFirstCall = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrownByFirstCall = await Catch.Exception(_eventStore.RegisterAll);
         await _eventStore.PendingBackgroundRegistrationRetry!;
     }
 

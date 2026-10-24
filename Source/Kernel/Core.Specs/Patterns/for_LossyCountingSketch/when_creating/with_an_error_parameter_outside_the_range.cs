@@ -11,7 +11,7 @@ public class with_an_error_parameter_outside_the_range : Specification
 {
     static LossyCountingSketch _created;
 
-    static Exception CreatingWith(double error) => Catch.Exception(() => _created = new LossyCountingSketch(error, 1d));
+    static Exception CreatingWith(double error) => Catch.Exception(() => _created = new LossyCountingSketch(error, 1d))!;
 
     [Fact] void should_reject_zero() => CreatingWith(0d).ShouldNotBeNull();
     [Fact] void should_reject_a_negative_value() => CreatingWith(-0.1d).ShouldNotBeNull();
