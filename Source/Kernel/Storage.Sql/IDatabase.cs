@@ -23,6 +23,13 @@ public interface IDatabase
     TimeSpan LiveQueryPollingInterval { get; }
 
     /// <summary>
+    /// Reads generation floors without provisioning or migration.
+    /// </summary>
+    /// <returns>The floors by store.</returns>
+    /// <exception cref="NotSupportedException">The provider has not implemented this optional capability.</exception>
+    Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => throw new NotSupportedException("The database does not support read-only generation floor discovery.");
+
+    /// <summary>
     /// Gets a database context scope for the cluster.
     /// </summary>
     /// <returns>A <see cref="DbContextScope{ClusterDbContext}"/> for the cluster.</returns>

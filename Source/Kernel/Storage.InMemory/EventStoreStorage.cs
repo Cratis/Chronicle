@@ -71,6 +71,9 @@ public sealed class EventStoreStorage(
     }
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; internal set; } = new Generations.GenerationInitializationStorage();
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage();
 
     /// <inheritdoc/>

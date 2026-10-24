@@ -46,6 +46,31 @@ public class WebhookTargetPolicy(
         EvaluateTarget(url, eventStore, cancellationToken);
 
     /// <inheritdoc/>
+    public WebhookTargetValidation CheckManagedIdentity(Concepts.Security.ManagedIdentityAuthorization authorization, string url, EventStoreName? eventStore = null)
+    {
+        var identity = _options.ManagedIdentity;
+        if (string.IsNullOrWhiteSpace(authorization.Scope.Value) || !identity.AllowedScopes.Contains(authorization.Scope.Value, StringComparer.OrdinalIgnoreCase))
+        {
+            return new(false, "Managed identity scope is not in Webhooks:ManagedIdentity:AllowedScopes.");
+        }
+
+        var clientAllowed = string.IsNullOrEmpty(authorization.ClientId.Value)
+            ? identity.AllowSystemAssigned
+            : identity.AllowedClientIds.Contains(authorization.ClientId.Value, StringComparer.Ordinal);
+        if (!clientAllowed)
+        {
+            return new(false, "Managed identity client id is not approved by Webhooks:ManagedIdentity.");
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var target) || !IsExplicitlyAllowed(target, eventStore))
+        {
+            return new(false, "Managed identity webhook target host must be in the host allow-list in every validation mode.");
+        }
+
+        return WebhookTargetValidation.Allowed;
+    }
+
+    /// <inheritdoc/>
     public WebhookTargetValidation CheckAuthority(Uri target, EventStoreName? eventStore)
     {
         if (target.Scheme != Uri.UriSchemeHttp && target.Scheme != Uri.UriSchemeHttps)

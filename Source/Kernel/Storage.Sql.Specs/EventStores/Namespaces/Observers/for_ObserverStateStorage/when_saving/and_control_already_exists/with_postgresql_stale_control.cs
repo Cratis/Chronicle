@@ -27,11 +27,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
-        await using (var context = CreateContext())
-        {
-            await context.Database.MigrateAsync();
-        }
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
         _storage = CreateStorage();
         _control = new(

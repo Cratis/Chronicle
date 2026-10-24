@@ -74,6 +74,7 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     {
         base.OnModelCreating(modelBuilder);
         MembershipModel.Configure(modelBuilder, Database.ProviderName);
+        SingleWriterLeaseModel.Configure(modelBuilder, Database.ProviderName);
         modelBuilder.Entity<DatabaseNameBinding>(entity =>
         {
             entity.ToTable("DatabaseNames");

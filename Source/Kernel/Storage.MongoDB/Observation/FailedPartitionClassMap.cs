@@ -16,6 +16,8 @@ public class FailedPartitionClassMap : IBsonClassMapFor<FailedPartition>
     public void Configure(BsonClassMap<FailedPartition> classMap)
     {
         classMap.AutoMap();
+        classMap.MapMember(_ => _.WebhookDisposition).SetIsRequired(false).SetIgnoreIfNull(true);
+        classMap.MapMember(_ => _.WebhookRecoveryId).SetIsRequired(false).SetIgnoreIfNull(true);
         classMap.MapIdProperty(_ => _.Id);
         classMap.UnmapField(_ => _.LastAttempt);
         classMap.MapMember(_ => _.RecoveryCursor).SetIgnoreIfNull(true);

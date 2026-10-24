@@ -12,7 +12,11 @@ public class and_a_generation_floor_is_too_high : given.a_startup_task
     Exception _error;
     void Establish()
     {
-        _eventStoreStorage.GenerationFloor.Get().Returns(new GenerationFloor(new(2), new(1), [], new(Guid.NewGuid()), 1, DateTimeOffset.UtcNow, "spec", "test"));
+        _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(
+            new Dictionary<EventStoreName, GenerationFloor>
+            {
+                [_eventStore] = new(new(2), new(1), [], new(Guid.NewGuid()), 1, DateTimeOffset.UtcNow, "spec", "test")
+            }));
     }
     async Task Because() => _error = await Catch.Exception(Execute);
     [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<KernelBelowGenerationFloor>();

@@ -33,6 +33,14 @@ public class an_admission : Specification
         _first.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(Floor(1)));
         _second.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(Floor(1)));
         _system.GenerationFloor.Get().Returns(Task.FromResult<GenerationFloor?>(Floor(1)));
+        _storage.ReadGenerationFloors().Returns(_ => ReadFloors());
         _admission = new(_storage);
     }
+
+    async Task<IReadOnlyDictionary<EventStoreName, GenerationFloor>> ReadFloors() => new Dictionary<EventStoreName, GenerationFloor>
+    {
+        [_first.EventStore] = (await _first.GenerationFloor.Get())!,
+        [_second.EventStore] = (await _second.GenerationFloor.Get())!,
+        [_system.EventStore] = (await _system.GenerationFloor.Get())!
+    };
 }

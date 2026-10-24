@@ -70,6 +70,9 @@ public class EventStoreStorage(
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-initialization"));
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
 
     /// <inheritdoc/>

@@ -67,6 +67,10 @@ public class ObserverState
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
 
+    /// <summary>Gets or sets the optional durable webhook probe control.</summary>
+    [BsonIgnoreIfNull]
+    public WebhookProbeState? WebhookProbe { get; set; }
+
     /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>

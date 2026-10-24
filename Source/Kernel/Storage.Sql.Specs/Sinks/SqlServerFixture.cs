@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public sealed class SqlServerFixture : IAsyncLifetime
 {
     const int Port = 1433;
+    const int DatabaseInUse = 3702;
     const string Password = "Chronicle4476!Test";
     IContainer _container;
 
@@ -30,19 +31,25 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Drops a specification's database after closing its pooled connections.
+    /// Drops a specification's database after closing its pooled connections, falling back to evicting open connections.
     /// </summary>
     /// <param name="connectionString">The connection string returned by <see cref="CreateDatabase"/>.</param>
     /// <returns>Awaitable task.</returns>
     public async Task DropDatabase(string connectionString)
     {
-        await using (var connection = new SqlConnection(connectionString))
-        {
-            SqlConnection.ClearPool(connection);
-        }
+        // Specs open the database through differently configured connection strings, so clearing one pool is not enough.
+        SqlConnection.ClearAllPools();
 
         var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog.Replace("]", "]]", StringComparison.Ordinal);
-        await Execute($"ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}]");
+        try
+        {
+            await Execute($"DROP DATABASE [{name}]");
+        }
+        catch (SqlException ex) when (ex.Number == DatabaseInUse)
+        {
+            // A connection outside the pool is still open; SINGLE_USER ... ROLLBACK IMMEDIATE evicts it, at a cost of seconds.
+            await Execute($"ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}]");
+        }
     }
 
     /// <inheritdoc/>

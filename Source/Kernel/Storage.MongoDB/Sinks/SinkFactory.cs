@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,7 +57,8 @@ public class SinkFactory(
             readModel,
             readModelDatabase,
             serviceProvider.GetRequiredService<ILogger<SinkCollections>>(),
-            writes);
+            writes,
+            new MongoDBGenerationContainerClaims(readModelDatabase));
         var mongoDBChangesetConverter = new ChangesetConverter(
             readModel,
             mongoDBConverter,
