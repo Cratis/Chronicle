@@ -19,6 +19,7 @@ public class a_declarative_projection_while_disconnected : given.projections_for
     [Fact] void should_know_the_read_model() => _projections.HasFor<Inventory>().ShouldBeTrue();
     [Fact] void should_identify_the_projection_by_the_read_model_name() => _handler.Id.Value.ShouldEqual(typeof(Inventory).FullName);
     [Fact] void should_resolve_the_projection_by_read_model() => _projections.GetProjectionIdForModel<Inventory>().ShouldEqual(_handler.Id);
+    [Fact] void should_use_the_default_container_name() => _handler.ContainerName.Value.ShouldEqual(_namingPolicy.GetReadModelName(typeof(Inventory)));
     [Fact] void should_hand_out_the_handler_for_the_read_model() => _handler.ReadModelType.ShouldEqual(typeof(Inventory));
     [Fact] void should_include_the_handler_among_all_handlers() => _projections.GetAllHandlers().ShouldContain(_handler);
     [Fact] void should_build_the_definition_from_the_callback() => _definition.From.Keys.Single().Id.ShouldEqual(nameof(ItemAdded));
