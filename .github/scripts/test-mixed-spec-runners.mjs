@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// MOCK contracts only: these do not prove the real Linux collector/child contract.
+// Mock collector contracts plus real local Node probe plumbing, NOT Linux collector proof.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile } from 'node:fs/promises';
@@ -190,19 +190,26 @@ test('MOCK external deadline kills collector/child group and rejects incomplete 
     await assert.rejects(readFile(path.join(options.directory, 'coverage.cobertura.xml')));
 });
 
+const probeScript = path.resolve('.github/scripts/verify-mixed-specs-collector.mjs');
 test('MOCK collector acceptance: exact 37 over the documented single-child grammar, wrong/zero exit rejected', async () => {
-    const args = collectorArgs('/p/Probe.dll', '/out', ['exit', '37']);
-    assert.deepEqual(args.slice(0, 5), ['tool', 'run', 'dotnet-coverage', '--', 'collect']);
-    assert.equal(args.at(-1), '"dotnet" "/p/Probe.dll" "exit" "37"');
-    await verifyExit('/p/Probe.dll', '/out', async () => ({ code: 37 }));
-    for (const code of [0, 1, 36]) await assert.rejects(verifyExit('/p/Probe.dll', '/out', async () => ({ code })), /exact child exit 37/);
+    const args = collectorArgs('/out', ['exit', '37']);
+    assert.deepEqual(args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/out/probe.cobertura.xml']);
+    assert.equal(args.length, 10);
+    assert.equal(args.at(-1), childCommand([process.execPath, probeScript, '--probe-child', 'exit', '37']));
+    await verifyExit('/out', async (command, actual, options) => {
+        assert.equal(command, 'dotnet');
+        assert.deepEqual(actual, args);
+        assert.deepEqual(options, { timeout: 60000, capture: true });
+        return { code: 37 };
+    });
+    for (const code of [0, 1, 36]) await assert.rejects(verifyExit('/out', async () => ({ code })), /exact child exit 37/);
 });
 
 const deadlineExecute = exitCode => async () => { throw Object.assign(new Error('deadline'), { exitCode }); };
 async function attemptDeadline(pids, { alive = () => false, exitCode = 124 } = {}) {
     const { directory } = await fixture();
     await writeFile(path.join(directory, 'owned.pids'), pids);
-    return verifyDeadline('/p/Probe.dll', directory, { execute: deadlineExecute(exitCode), alive, grace: 200 });
+    return verifyDeadline(directory, { execute: deadlineExecute(exitCode), alive, grace: 200 });
 }
 
 test('MOCK collector acceptance: deadline needs 124, both owned PIDs recorded and none alive', async () => {
@@ -212,6 +219,30 @@ test('MOCK collector acceptance: deadline needs 124, both owned PIDs recorded an
     await assert.rejects(attemptDeadline(''), /both owned PIDs/);
     await assert.rejects(attemptDeadline('999999991\n999999992\n', { alive: pid => pid === 999999992 }), /alive: 999999992/);
     const { directory } = await fixture();
-    await assert.rejects(verifyDeadline('/p/Probe.dll', directory, { execute: async () => ({ code: 0 }) }), /got completed/);
-    await assert.rejects(verifyCollector([], async () => ({ code: 37 })), /Usage/);
+    await assert.rejects(verifyDeadline(directory, { execute: async () => ({ code: 0 }) }), /got completed/);
+    await assert.rejects(verifyDeadline(directory, { execute: deadlineExecute(124) }), /both owned PIDs.*incomplete/);
+    await assert.rejects(verifyCollector(['--probe-dll', '/old.dll']), /Usage/);
+});
+
+test('LOCAL probe child returns exact exit 37 without a collector', async () => {
+    const result = await runProcess(process.execPath, [probeScript, '--probe-child', 'exit', '37'], { timeout: 2000, capture: true });
+    assert.equal(result.code, 37);
+});
+
+test('LOCAL probe child records both owned PIDs and the external deadline cleans them up without a collector', async () => {
+    const { directory } = await fixture();
+    const pidFile = path.join(directory, 'owned.pids');
+    await verifyDeadline(directory, {
+        deadline: 1000,
+        grace: 2000,
+        execute: (command, args, options) => {
+            assert.equal(command, 'dotnet');
+            assert.deepEqual(args, collectorArgs(directory, ['hang', pidFile]));
+            return runProcess(process.execPath, [probeScript, '--probe-child', 'hang', pidFile], options);
+        }
+    });
+    const pids = (await readFile(pidFile, 'utf8')).trim().split('\n').map(Number);
+    assert.equal(pids.length, 2);
+    assert.ok(pids.every(pid => Number.isSafeInteger(pid) && pid > 0 && pid !== process.pid));
+    assert.notEqual(pids[0], pids[1]);
 });

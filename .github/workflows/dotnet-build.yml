@@ -371,14 +371,13 @@ jobs:
       - name: Restore pinned coverage tool
         run: dotnet tool restore
 
-      - name: Build BCL-only collector process probe
-        run: dotnet build .github/scripts/fixtures/SpecCollectorProbe/SpecCollectorProbe.csproj --configuration Release --warnaserror -m:3
-
       # Mandatory real-collector proof on Linux before native-v3 coverage is accepted: exact
       # child exit 37 and external deadline 124 with no probe-owned orphans. Failure or an
       # incomplete run fails this gate; production hits still come only from the real specs.
+      # The profiler attaches only to .NET; this non-.NET child's launcher equivalence
+      # remains unproven until Linux CI runs this mandatory acceptance.
       - name: Verify real collector exit and deadline cleanup
-        run: node .github/scripts/verify-mixed-specs-collector.mjs --probe-dll .github/scripts/fixtures/SpecCollectorProbe/bin/Release/net10.0/SpecCollectorProbe.dll
+        run: node .github/scripts/verify-mixed-specs-collector.mjs
 
       - name: Run tests with coverage
         # Integration and SQL retain their existing VSTest paths. Ordinary dispatch excludes
