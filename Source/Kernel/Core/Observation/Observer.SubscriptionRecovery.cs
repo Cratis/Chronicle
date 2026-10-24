@@ -133,17 +133,8 @@ public partial class Observer
         _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
     }
 
-    /// <summary>
-    /// Gets whether kernel-initiated reconciliation must leave the subscription alone.
-    /// </summary>
-    /// <param name="allowQuarantinedWebhook">Whether a quarantined webhook observer may still be reconciled.</param>
-    /// <returns>True when reconciliation must not run.</returns>
-    /// <remarks>
-    /// Reconciling sets the definition's event sequence to this key's, so an activation whose definition lives on
-    /// another event sequence would otherwise move the definition back to itself.
-    /// </remarks>
     bool CannotReconcileSubscription(bool allowQuarantinedWebhook = false) =>
-        _removed || IsRetired || !KeyOwnsDefinition || State.AlertDisposition == AlertDisposition.Retired ||
+        _removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired ||
         (!allowQuarantinedWebhook && (IsQuarantined || State.RunningState == ObserverRunningState.Quarantined)) ||
         _recoverSubscriptionAfterQuarantine || _retryRecoveryAfterQuarantine;
 

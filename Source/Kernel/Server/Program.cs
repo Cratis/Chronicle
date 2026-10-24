@@ -8,8 +8,10 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
+using Cratis.Chronicle.Server.Observation.Webhooks;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
@@ -277,6 +279,9 @@ hostBuilder
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
+
+       // Override Core's unavailable-provider fallback after convention binding.
+       services.AddSingleton<IManagedIdentityTokens, AzureIdentityManagedIdentityTokens>();
 
        // Lets an HTTP storage connection resolver authenticate with Microsoft Entra ID (AzureCredential).
        // Inert unless storage.connectionResolution configures that authentication type.

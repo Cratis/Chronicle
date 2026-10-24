@@ -279,3 +279,99 @@ https://cratis.github.io/Chronicle/benchmarks/
 ## CI/CD
 
 Benchmarks run nightly and on manual dispatch via `.github/workflows/benchmarks.yml`, not on every push to `main`.
+
+## Rebuild baseline (S1–S4)
+
+Run the clustering executable directly (not BenchmarkDotNet):
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release
+REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
+```
+
+The existing `--rebuild-live` and `--replay-shape` diagnostics remain separate and unchanged.
+S1 updates one source; S2 distributes updates over N/10 sources (at least one).
+S3 creates parents and separately sourced children, with a shared catalog join.
+S4 cycles root updates, removals and re-creations. Source identities and values are
+repeatable from the seed. Baseline root, catalog and child events are separate
+from the older live-rebuild and replay-shape diagnostics, so those projections
+do not process the baseline corpus. Each corpus contains exactly N workload events plus a
+marker initialization and a catalog fact. Live runs continue the same event shapes
+with acknowledged, rate-limited appends and an independent marker every 100 ms.
+Slow appends coalesce timer ticks rather than producing a catch-up burst.
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `REBUILD_MODE` | `live` | `cold` (no concurrent appends) or `live` |
+| `REBUILD_SIZE` | `small` | `small` = 10,000; `medium` = 1,000,000; `large` = 10,000,000; or a positive event count |
+| `REBUILD_SEED` | `5156` | Positive deterministic corpus seed |
+| `REBUILD_TOPOLOGY` | `single` | `single` (one silo), `two` (two silos), `three` (three silos), all roles on each; or `split-jobs` (two silos, roles split as below) |
+| `REBUILD_LIVE_RATE` | `200` | Target workload events/s, excluding the 10 markers/s |
+| `REBUILD_TIMEOUT_SECONDS` | `1200` | Whole-run deadline, including cluster startup and seeding |
+
+With `split-jobs`, silo 0 hosts EventSequences and Observers with Jobs disabled;
+silo 1 hosts only Jobs. This topology requires the cluster Jobs role from
+Chronicle#5167; kernels without it fail before cluster startup with
+`split-jobs needs the cluster Jobs role (Chronicle#5167)` and exit 1.
+Unknown topology names also fail with an explicit error and exit 1.
+The JSON `Environment` block records the topology name and each silo's role
+assignment (`Jobs` is null when the kernel has no separate Jobs role).
+
+One JSON record reports the commit (`GITHUB_SHA`, `COMMIT_SHA`, or Git; otherwise
+`unknown`), kernel and Cratis.Orleans informational versions, OS, CPU count and
+memory available to the process (subject to container limits), and the exact settings.
+`StartupFence` is the acknowledged tail before requesting rebuild; `F` is the tail
+after stopping producers and awaiting their in-flight acknowledgements.
+`SubscribedEventsThroughStartupFence` is the exact seeded subscribed-event count,
+not a subtraction of global sequence numbers. `RebuildEventsPerSecond` divides that
+count by request-to-observed-startup-fence-coverage time, after served promotion.
+`RequestToServedSwapSeconds` detects promotion by a changed Mongo collection UUID;
+`PostSwapCatchUpSeconds` ends when both projections cover F. Polling granularity
+and coverage checks contribute to these raw timings.
+
+`ServedList` reads only the marker by its indexed key from the served Mongo collection,
+not an unfiltered list. `KernelFindByKey` uses the kernel key-lookup API. Both probes
+sample continuously from request through F coverage, including the post-swap catch-up.
+A final sample is taken after stopping that loop; markers first seen only in this
+final sample remain censored rather than contributing an artificially late latency.
+Both reports include submitted/observed/pending/timed-out marker
+counts and nearest-rank p50/p99/max milliseconds of **observed** markers. Unobserved
+markers are right-censored, with elapsed lower bounds in `Censored`; they never
+contribute artificial zero latencies. An empty observed sample has null percentiles.
+Marker latency begins at append acknowledgement and ends at the first sampled
+visibility. Markers are cumulative revisions, so observing a revision covers all
+prior acknowledged revisions. Cold runs have no markers.
+
+`PeakWorkingSetBytes` is sampled and `AllocatedBytes` is the allocation delta; both
+are **process-wide**, including all in-process silos, clients, probes and the twin.
+Per-silo memory is not measurable in this in-process cluster; per-silo grain
+activations are the proxy. After both projections cover F and before teardown,
+`GrainActivations` queries Orleans' `IManagementGrain.GetSimpleGrainStatistics`
+and reports each silo's name and address, `TotalActivations` across all grain
+types, and `ActivationsByGrainType` for the top 15 types by count (ties ordered by
+type name). The total is not truncated to those 15 types.
+Mongo commands and incoming grain calls are counted from request through observed
+startup-fence coverage. They include twin projection work, concurrent live appends,
+probes and background work; Mongo counts exclude Orleans persistence/membership and
+Arc clients. Direct served-collection marker reads use the fixture client and
+are outside the Mongo counter boundary. The per-event ratios divide these totals
+by subscribed seed events.
+`Series` gives metric names `Rebuild/<S>/mongodb/<topology>/<mode>/<metric>` labelled
+`raw`; these are not BenchmarkDotNet samples.
+
+The correctness reference is a separately materialized twin with identical event
+mappings, joins and children, under a different projection/read-model identity. Only
+the measured projection is rebuilt. After both cover F, compare exact document key
+sets and canonical full values, excluding only `__lastHandledEventSequenceNumber`.
+Only the declared unordered `children`/`leaves` collections are sorted by identity;
+other array order remains semantic. `DocumentsCompared`, first `Differences` and
+`Verdict` describe that comparison. Empty comparisons, no observed promotion,
+failed partitions or no acknowledged live append between the rebuild request and
+the observed served swap fail the run
+with a nonzero exit. The live-overlap check does not count appends acknowledged
+during post-swap catch-up. A twin catches rebuild divergence, not a bug common to the
+same definition on both projections; it is not an independent semantic oracle.
+
+Deferred: S5 reducers, S6 statistics union, non-Mongo storage, changed-definition
+rebuilds with a single-threaded reference, scheduled CI, BenchmarkDotNet series,
+S7–S10, failure injection, and the full Small/Medium one/three-silo baseline matrix.

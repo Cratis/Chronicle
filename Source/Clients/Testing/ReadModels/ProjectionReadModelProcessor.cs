@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <summary>
 /// Processes events through a projection engine to produce a read model instance for testing.
 /// </summary>
-internal static class ProjectionReadModelProcessor
+internal static partial class ProjectionReadModelProcessor
 {
     /// <summary>
     /// The options a materialized read model is deserialized with.
@@ -189,7 +189,7 @@ internal static class ProjectionReadModelProcessor
             seededKeys.Add(stateKey);
         }
 
-        // Process events, retrying deferred root and child keys after all seeded events have been processed.
+        // Retry deferred keys at each releasing event, before later seeded key changes can participate.
         var deferredEvents = new Queue<KernelAppendedEvent>();
         var deferredChildren = new List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)>();
         foreach (var @event in appendedEvents)
@@ -201,60 +201,33 @@ internal static class ProjectionReadModelProcessor
             {
                 explicitInitialStateIsPresent = false;
             }
-        }
 
-        // Retry deferred events once; if still deferred, throw a descriptive exception.
-        foreach (var @event in new List<KernelAppendedEvent>(deferredEvents))
-        {
-            var keyResolver = engineProjection.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(inMemoryEventSequenceStorage, inMemorySink, @event);
-
-            if (keyResult is KernelProjectionEngine::DeferredKey)
+            if (eventKey is not null)
             {
-                throw new InvalidOperationException(
-                    $"Could not resolve parent key for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
-                    "Ensure the parent event is included in the scenario and appended before the child event.");
-            }
-
-            var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
-            rootKey ??= key;
-
-            if (await ApplyResolvedEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, key, statesByKey, CreateSeedState, deferredChildren))
-            {
-                explicitInitialStateIsPresent = false;
-            }
-
-            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
-        }
-
-        // Retry only the deferred child branches. A resolved child can materialize the parent of another
-        // deferred child, so keep going until a pass makes no progress. Never replay the root mappings.
-        var resolvedAny = true;
-        while (resolvedAny && deferredChildren.Count > 0)
-        {
-            resolvedAny = false;
-            foreach (var (child, @event) in deferredChildren.ToArray())
-            {
-                var keyResult = await child.GetKeyResolverFor(@event.Context.EventType)(inMemoryEventSequenceStorage, inMemorySink, @event);
-                if (keyResult is KernelProjectionEngine::DeferredKey)
-                {
-                    continue;
-                }
-
-                deferredChildren.Remove((child, @event));
-                if (keyResult is not KernelProjectionEngine::ResolvedKey resolvedKey)
-                {
-                    continue;
-                }
-
-                resolvedAny = true;
-                if (await ApplyResolvedEvent(child, inMemoryEventSequenceStorage, inMemorySink, @event, resolvedKey.Key, statesByKey, CreateSeedState, deferredChildren))
+                var (releasedKey, removed) = await ReleaseDeferredEvents(
+                    engineProjection,
+                    inMemoryEventSequenceStorage,
+                    inMemorySink,
+                    @event,
+                    statesByKey,
+                    CreateSeedState,
+                    deferredEvents,
+                    deferredChildren,
+                    () => PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType));
+                rootKey ??= releasedKey;
+                if (removed)
                 {
                     explicitInitialStateIsPresent = false;
                 }
-
-                PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             }
+        }
+
+        if (deferredEvents.Count > 0)
+        {
+            var @event = deferredEvents.Peek();
+            throw new InvalidOperationException(
+                $"Could not resolve parent key for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
+                "Ensure the parent event is included in the scenario and appended before the child event.");
         }
 
         if (deferredChildren.Count > 0)
