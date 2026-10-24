@@ -115,16 +115,18 @@ internal sealed class ReplayShapeCounters : IIncomingGrainCallFilter
 
     static long SinkOperations(CommandStartedEvent started)
     {
-        var arrayName = started.CommandName switch
-        {
-            "insert" => "documents",
-            "update" => "updates",
-            "delete" => "deletes",
-            _ => null
-        };
+        var arrayName = OperationsArrayName(started.CommandName);
         if (arrayName is null) return 0;
         if (!started.Command.TryGetValue(started.CommandName, out var target) || !target.IsString) return 0;
         if (!target.AsString.Contains(nameof(ReplayShapeReadModel), StringComparison.OrdinalIgnoreCase)) return 0;
         return started.Command.TryGetValue(arrayName, out var operations) && operations.IsBsonArray ? operations.AsBsonArray.Count : 0;
     }
+
+    static string? OperationsArrayName(string commandName) => commandName switch
+    {
+        "insert" => "documents",
+        "update" => "updates",
+        "delete" => "deletes",
+        _ => null
+    };
 }
