@@ -107,6 +107,9 @@ jobs:
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
 
+      - name: Spec the build version derivation
+        run: python3 .github/scripts/test-derive-build-version.py
+
       - name: Spec prerelease artifact handoff without caches
         run: |
           python3 -m pip install PyYAML==6.0.3
@@ -150,8 +153,18 @@ jobs:
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Assert the build carries the stamped version
+        run: |
+          set -euo pipefail
+          for dll in Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll Source/Kernel/Server/bin/Release/net10.0/Cratis.Chronicle.Server.dll; do
+            grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$dll" || { echo "::error::$dll does not carry $CRATIS_CHRONICLE_BUILD_VERSION"; exit 1; }
+          done
 
       # The build above is net10.0 only. The client packages ship net8.0 and net9.0 as well, and that multi-target
       # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
@@ -254,6 +267,9 @@ jobs:
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
@@ -313,6 +329,9 @@ jobs:
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
