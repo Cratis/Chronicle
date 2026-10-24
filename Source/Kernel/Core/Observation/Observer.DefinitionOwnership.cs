@@ -80,6 +80,7 @@ public partial class Observer
         await TransitionTo<Disconnected>();
         await RemoveFailedPartitionReminders();
         await UnregisterReminderNamed(AlertReminderName);
+        await UnregisterReminderNamed(WebhookProbeReminderName);
         logger.LostOwnershipToAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
         DeactivateOnIdle();
         return true;
