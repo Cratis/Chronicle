@@ -355,12 +355,29 @@ jobs:
       - name: Extract Release build output
         run: tar -I zstd -xf build-output-release.tar.zst
 
+      - name: Spec mixed runner contracts (mock processes, not collector acceptance)
+        run: node --test .github/scripts/test-mixed-spec-runners.mjs
+
+      # Release artifacts contain bin, not obj. Restore current evaluated package inputs
+      # before comparing all 29 test + 2 shipping selections with the built runtime graph.
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Restore mixed runner evaluation inputs
+        run: dotnet restore -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run tests with coverage
-        # Integration tests are executed by .github/workflows/integration.yml.
-        # Keep regular specs focused on non-integration test suites.
-        # LogFilePrefix gives every spec project its own TRX file; a fixed LogFileName makes the
-        # projects overwrite one results.trx, and the legacy-contracts gate reads them all.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql." --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFilePrefix=results"
+        # Integration and SQL retain their existing VSTest paths. Ordinary dispatch excludes
+        # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
+        # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
+        # Linux real collector production-hit/negative/deadline/tree-cleanup acceptance
+        # is mandatory in the next coherent owner candidate, not proved by mock contracts.
+        run: node .github/scripts/run-mixed-specs.mjs
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran

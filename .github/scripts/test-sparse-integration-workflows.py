@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 from itertools import product
 import importlib.util
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -318,7 +319,20 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertIn("&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        selection = subprocess.run(
+            ["node", "--input-type=module", "-e", """
+                import { ordinaryProjects, v3Projects, v2Projects, shippingProjects }
+                    from './.github/scripts/mixed-specs-selection.mjs';
+                const infos = [...v3Projects, ...v2Projects, ...shippingProjects].map(project => ({ project }));
+                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+            """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
+        projects = json.loads(selection.stdout)
+        self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
+        self.assertEqual(22, len(set(projects)))
+        self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
+        self.assertFalse(any(project.startswith("Integration/") for project in projects))
+        self.assertIn('--collect:"XPlat Code Coverage"', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
