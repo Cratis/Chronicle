@@ -110,7 +110,8 @@ public class ReplayObserverPartition(
 
         // A selected-type replay cannot prove that it handled the event which failed for this partition.
         var replayedEventTypes = State.HandledAllEvents && Request.ReplaysAllEventTypes ? Request.EventTypes.ToArray() : [];
-        await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber, lastScanned, replayedEventTypes);
+        var (handled, scanned) = await CoverageHeldBelowLiveDelivery(observer, State.LastHandledEventSequenceNumber, lastScanned);
+        await observer.PartitionReplayed(Request.Key, handled, scanned, replayedEventTypes);
     }
 
     /// <inheritdoc/>
@@ -147,6 +148,59 @@ public class ReplayObserverPartition(
                     ReaderScope = request.ReaderScope
                 })
         }.ToImmutableList();
+    }
+
+    static EventSequenceNumber FurthestOf(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        if (!lastScanned.IsActualValue)
+        {
+            return lastHandled;
+        }
+
+        return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
+    }
+
+    async Task<(EventSequenceNumber Handled, EventSequenceNumber Scanned)> CoverageHeldBelowLiveDelivery(IObserver observer, EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        if (Request.ReplaysAllEventTypes)
+        {
+            return (lastHandled, lastScanned);
+        }
+
+        if (!Request.HeldBackFrom.IsActualValue)
+        {
+            return await CoverageForLegacyReplay(observer, lastHandled, lastScanned);
+        }
+
+        var reach = FurthestOf(lastHandled, lastScanned);
+        if (!reach.IsActualValue || reach < Request.HeldBackFrom)
+        {
+            return (lastHandled, lastScanned);
+        }
+
+        if (Request.HeldBackFrom == EventSequenceNumber.First)
+        {
+            return (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
+
+        var below = Request.HeldBackFrom - 1UL;
+        return (lastHandled.IsActualValue && lastHandled < Request.HeldBackFrom ? lastHandled : below, below);
+    }
+
+    async Task<(EventSequenceNumber Handled, EventSequenceNumber Scanned)> CoverageForLegacyReplay(IObserver observer, EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        try
+        {
+            var observedEventTypes = await observer.GetEventTypes();
+            return observedEventTypes.All(observed => Request.EventTypes.Any(selected => selected.Id == observed.Id))
+                ? (lastHandled, lastScanned)
+                : (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
+        catch (Exception)
+        {
+            // Without a known held-back position or proof of full coverage, catch-up must start at First.
+            return (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
     }
 
     async Task EnsureReplaySupported(ReplayObserverPartitionRequest? request = null)
