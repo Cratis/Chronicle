@@ -75,7 +75,8 @@ public class HandleEventsForObserver(
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
     int _replayCheckpointEventInterval;
-    int _replayEventsSinceReport;
+    int _replayEventsSinceCheckpoint;
+    EventSequenceNumber _replayHandledUpTo = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -196,7 +197,8 @@ public class HandleEventsForObserver(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
         _replayReports = DeliversPages ? new() : null;
-        _replayEventsSinceReport = 0;
+        _replayEventsSinceCheckpoint = 0;
+        _replayHandledUpTo = currentState.LastSuccessfullyHandledEventSequenceNumber;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
         _lastDurableCheckpoint = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -274,7 +276,7 @@ public class HandleEventsForObserver(
                     eventsToHandle = eventsToHandle.Where(_ => !failedPartitions.Contains(_.Context.EventSourceId)).ToArray();
                 }
 
-                foreach (var unit in usePages ? eventsToHandle.Chunk(_options.Value.ReadModels.MaxBatchSize) : Enumerable.Repeat(eventsToHandle, 1))
+                foreach (var unit in GetDispatchUnits(eventsToHandle, usePages))
                 {
                     if (usePages && cancellationToken.IsCancellationRequested)
                     {
@@ -526,6 +528,9 @@ public class HandleEventsForObserver(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
+    static bool AdvancesPosition(EventSequenceNumber current, EventSequenceNumber candidate) =>
+        candidate.IsActualValue && (!current.IsActualValue || candidate > current);
+
     /// <summary>
     /// Records the handled position. Must run on the activation.
     /// </summary>
@@ -535,7 +540,7 @@ public class HandleEventsForObserver(
     /// <exception cref="ObserverFlushFailed">A previous flush failed and the failure is still retained.</exception>
     bool RecordHandled(EventSequenceNumber lastHandled, bool forceCheckpoint = false)
     {
-        _lastHandled = lastHandled;
+        if (AdvancesPosition(_lastHandled, lastHandled)) _lastHandled = lastHandled;
         if (_durableCheckpoints.Report(CheckpointAfterEveryBatch || forceCheckpoint))
         {
             return true;
@@ -615,7 +620,7 @@ public class HandleEventsForObserver(
 
             _windows = windows;
             var handled = capture.Handled;
-            if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
+            if (AdvancesPosition(State.LastSuccessfullyHandledEventSequenceNumber, handled))
             {
                 // Base timer, status and cancellation writes now see only confirmed durable progress.
                 State.LastSuccessfullyHandledEventSequenceNumber = handled;
@@ -832,8 +837,7 @@ public class HandleEventsForObserver(
         if (_replayReports is not null)
         {
             _replayReports.Add(report);
-            _replayEventsSinceReport += counts.Values.Aggregate(0, (total, count) => total + (int)count.Value);
-            return _replayCheckpointEventInterval <= 0 || _replayEventsSinceReport < _replayCheckpointEventInterval || await FlushReplayReports(forceCheckpoint: true);
+            return true;
         }
 
         if (!Advanced(await ReportFromWork(handledUpTo))) return false;
@@ -857,11 +861,11 @@ public class HandleEventsForObserver(
     async Task<bool> FlushReplayReports(bool forceCheckpoint = false)
     {
         if (_replayReports?.LastHandled.IsActualValue != true) return true;
-        var lastHandled = _replayReports.LastHandled;
+        var lastHandled = _replayHandledUpTo;
         var reports = _replayReports.Reports;
         _replayReports.Clear();
-        _replayEventsSinceReport = 0;
         if (!Advanced(await ReportFromWork(lastHandled, forceCheckpoint))) return false;
+        if (forceCheckpoint) _replayEventsSinceCheckpoint = 0;
 
         // Events already handled before a stop still need their counts reported; cancellation only stops dispatch.
         await TransientTimeouts.ReportHandledEventsBatchWithoutFailing(
@@ -1009,18 +1013,46 @@ public class HandleEventsForObserver(
         bool page,
         CancellationToken cancellationToken)
     {
-        if (!page)
-        {
-            return await RecordAndReportHandledEvents(partition, events, handledUpTo, cancellationToken);
-        }
+        var handledEvents = events.Where(_ => _.Context.SequenceNumber <= handledUpTo).ToArray();
+        RecordReplayFrontier(handledEvents);
+        var reported = page
+            ? await RecordPagePartitionReports(handledEvents, cancellationToken)
+            : await RecordAndReportHandledEvents(partition, events, handledUpTo, cancellationToken);
+        if (!reported) return false;
 
-        foreach (var group in events.Where(_ => _.Context.SequenceNumber <= handledUpTo).GroupBy(_ => _.Context.EventSourceId))
+        return _replayCheckpointEventInterval <= 0 || _replayEventsSinceCheckpoint < _replayCheckpointEventInterval || await FlushReplayReports(forceCheckpoint: true);
+    }
+
+    void RecordReplayFrontier(AppendedEvent[] handledEvents)
+    {
+        if (_replayReports is null || handledEvents.Length == 0) return;
+        _replayEventsSinceCheckpoint += handledEvents.Length;
+        var frontier = handledEvents[^1].Context.SequenceNumber;
+        if (AdvancesPosition(_replayHandledUpTo, frontier)) _replayHandledUpTo = frontier;
+    }
+
+    async Task<bool> RecordPagePartitionReports(AppendedEvent[] handledEvents, CancellationToken cancellationToken)
+    {
+        foreach (var group in handledEvents.GroupBy(_ => _.Context.EventSourceId))
         {
             var handled = group.ToArray();
             if (!await RecordAndReportHandledEvents(group.Key, handled, handled[^1].Context.SequenceNumber, cancellationToken)) return false;
         }
-
         return true;
+    }
+
+    IEnumerable<AppendedEvent[]> GetDispatchUnits(AppendedEvent[] events, bool page)
+    {
+        for (var offset = 0; offset < events.Length;)
+        {
+            var remaining = DeliversPages && _replayCheckpointEventInterval > 0
+                ? _replayCheckpointEventInterval - _replayEventsSinceCheckpoint
+                : int.MaxValue;
+            var cap = page ? _options.Value.ReadModels.MaxBatchSize : int.MaxValue;
+            var count = Math.Min(events.Length - offset, Math.Min(cap, remaining));
+            yield return events[offset..(offset + count)];
+            offset += count;
+        }
     }
 
     void LogCancelled(EventSequenceNumber lastHandledSequenceNumber)

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
@@ -49,6 +50,12 @@ public class TestableHandleEventsForObserver(
     static readonly FieldInfo _subscriptionField = typeof(HandleEventsForObserver).GetField("_subscription", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly AsyncLocal<bool> _guardStateAccess = new();
     static readonly AsyncLocal<StepRunForTesting?> _stepRun = new();
+    static readonly AsyncLocal<List<EventSequenceNumber>?> _persistedPositions = new();
+
+    /// <summary>
+    /// Gets snapshots of the durable position after successful state writes during this step's runs.
+    /// </summary>
+    public List<EventSequenceNumber> PersistedPositions { get; } = [];
 
     /// <summary>
     /// Gets or sets whether persistent state access outside the step's activation callbacks is rejected.
@@ -85,6 +92,7 @@ public class TestableHandleEventsForObserver(
         _guardStateAccess.Value = GuardStateAccess;
         Run = StepRunForTesting.Begin(this);
         _stepRun.Value = Run;
+        _persistedPositions.Value = PersistedPositions;
         return await PerformStep(currentState, cancellationToken);
     }
 
@@ -96,7 +104,11 @@ public class TestableHandleEventsForObserver(
             : throw new given.StateAccessOutsideActivation());
         guarded.Etag.Returns(_ => inner.Etag);
         guarded.RecordExists.Returns(_ => inner.RecordExists);
-        guarded.WriteStateAsync().Returns(_ => inner.WriteStateAsync());
+        guarded.WriteStateAsync().Returns(async _ =>
+        {
+            await inner.WriteStateAsync();
+            _persistedPositions.Value?.Add(inner.State.LastSuccessfullyHandledEventSequenceNumber);
+        });
         guarded.ReadStateAsync().Returns(_ => inner.ReadStateAsync());
         guarded.ClearStateAsync().Returns(_ => inner.ClearStateAsync());
         return guarded;
