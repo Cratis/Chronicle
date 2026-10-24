@@ -4,9 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 
-namespace Cratis.Chronicle.Observation.for_Observer.when_handling.given;
+namespace Cratis.Chronicle.Observation.for_Observer.given;
 
-public class an_observer_with_a_live_delivery_batch : for_Observer.given.an_observer_with_subscription_for_specific_event_type
+public class an_observer_with_a_live_delivery_batch : an_observer_with_subscription_for_specific_event_type
 {
     protected const int BatchSize = 101;
     protected static readonly Key Partition = "live-budget";
