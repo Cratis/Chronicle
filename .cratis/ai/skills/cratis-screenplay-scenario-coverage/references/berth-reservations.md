@@ -1,6 +1,12 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-scenario-coverage/references/berth-reservations.md -->
 # Berth reservations: worked example
 
+This is a legacy control without `command reads protected`; the unprotected-read
+markers below describe that control, not all command reads. Eligible views can opt
+into v25; the date-rule blocker still remains. Read
+[protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md)
+for admission and protected-read rendering (Stage 4.138.0; STAGE-ESM-044 otherwise).
+
 Complete, compiled design-mode model (marina guest berths) showing a coverage matrix turned into specifications: happy path, one rejection per rule, authorization denial, duplicate and retry, competing claim, state violation, alternative branches, compensation and a view lifecycle family. The matrix for it is in `coverage-matrix.md`; the catalogue (`scenario-catalogue.md`) names its specifications.
 
 ```screenplay test=unbound
@@ -13,8 +19,8 @@ Complete, compiled design-mode model (marina guest berths) showing a coverage ma
 // + `require ... message` and marked NOT enforced in the slice descriptions, with their target
 // named. Binding reports PLAY0271/PLAY0268 for them (expected; Screenplay#129): such a model
 // is design-complete but not binding-ready, and that is reported, never "fixed" by deleting the
-// rules. The past-date rule (`night >= today`) is declarative too: ESM v1 has no runtime date,
-// so binding reports PLAY0268 on it (recorded as blocked, not moved into prose); the rule and its rejection
+// rules. The past-date rule (`night >= today`) is declarative too: `today` has no runtime date
+// value, so binding reports PLAY0268 on it (recorded as blocked, not moved into prose); the rule and its rejection
 // specification stay so the intent executes once a date value exists.
 // Verified: V1 (warnings as errors). V3 binding is blocked by the stored-state and date rules.
 
@@ -31,7 +37,7 @@ module Berths
     authorize IsHarbourOffice
 
     slice StateChange ReserveBerth
-      description "One guest boat per berth per night. OneBoatPerBerthNight declares that two event sources cannot hold the same berth-night; the competing-claim specification pins the loser's rejection after an earlier holder. It neither runs two commands at once nor proves the runtime's index-and-append behaviour under failure: that needs target-level verification. A retried ReserveBerth with the same reservation id is refused by ReserveOnce: the fact occurs once, but the retry is NOT answered with success, so a client that lost the first acknowledgement must treat this rejection as 'already reserved' (idempotent handling is a target decision, recorded as an open question). The night must not be in the past: declared in `validate` (`night >= today`) with its rejection specification. Binding reports PLAY0268 for date comparisons today (ESM v1 has no runtime date value), so this rule is design-complete but blocks V3 until Screenplay supports it."
+      description "One guest boat per berth per night. OneBoatPerBerthNight declares that two event sources cannot hold the same berth-night; the competing-claim specification pins the loser's rejection after an earlier holder. It neither runs two commands at once nor proves the runtime's index-and-append behaviour under failure: that needs target-level verification. A retried ReserveBerth with the same reservation id is refused by ReserveOnce: the fact occurs once, but the retry is NOT answered with success, so a client that lost the first acknowledgement must treat this rejection as 'already reserved' (idempotent handling is a target decision, recorded as an open question). The night must not be in the past: declared in `validate` (`night >= today`) with its rejection specification. Binding reports PLAY0268 for the `today` operand, which has no runtime date value (comparisons between Date or DateTime command properties, or against literals, bind), so this rule is design-complete but blocks V3 until Screenplay supports `today`."
       command ReserveBerth
         reservationId ReservationId identifier
         berth         BerthCode
@@ -94,7 +100,7 @@ module Berths
           boatLength    = 31
         then error "Guest berths take boats up to 24 metres"
 
-      // Declarative past-date rule; binding is blocked for date comparisons (see header).
+      // Declarative past-date rule; binding is blocked for the `today` operand (see header).
       specification RejectingANightInThePast
         given caller
           authenticated

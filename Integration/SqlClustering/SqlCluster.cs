@@ -21,6 +21,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly List<IContainer> _nodes = [];
     readonly List<int> _ports = [];
+    readonly SqlClusterLogs _logs = new();
     readonly string _id = $"sql-clustering-{Guid.NewGuid():N}";
     SqlClusterDatabase _database = null!;
 
@@ -53,6 +54,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
     {
         var previous = _nodes[index];
         await previous.StopAsync().WaitAsync(TimeSpan.FromSeconds(90));
+        await _logs.CaptureReplaced(previous);
         await previous.DisposeAsync();
 
         var replacement = BuildNode(index, replacementImage);
@@ -79,14 +81,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         throw new TimeoutException("SQL membership did not converge.");
     }
 
-    public async Task DumpLogs()
-    {
-        foreach (var node in _nodes)
-        {
-            var logs = await node.GetLogsAsync();
-            Console.WriteLine($"{node.Name} STDOUT:\n{logs.Stdout}\nSTDERR:\n{logs.Stderr}");
-        }
-    }
+    public Task DumpLogs() => _logs.Dump(_nodes, Console.Out);
 
     public async ValueTask DisposeAsync()
     {

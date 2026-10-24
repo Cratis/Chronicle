@@ -347,6 +347,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ matrix.provider == 'RollingUpgrade' && '0' || '1' }}
+
+      - name: Resolve previous release image
+        if: matrix.provider == 'RollingUpgrade'
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1) || {
+            echo "::error::No release tag is an ancestor of $(git rev-parse HEAD)."
+            exit 1
+          }
+          image_tag="${release_tag#v}-development-slim"
+          metadata=$(curl --fail --silent --show-error --location --max-time 60 \
+            "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {
+            echo "::error::Previous release image cratis/chronicle:${image_tag} could not be resolved on Docker Hub."
+            exit 1
+          }
+          if ! jq -e --arg tag "$image_tag" '.name == $tag and (.images | length > 0)' <<< "$metadata"; then
+            echo "::error::Docker Hub returned no image for cratis/chronicle:${image_tag}."
+            exit 1
+          fi
+          echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
+          echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
@@ -383,7 +407,7 @@ jobs:
           command: |
             docker pull "${{ inputs.chronicle-image }}"
             if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
-              docker pull cratis/chronicle:latest-development-slim
+              docker pull "$CRATIS_CHRONICLE_PREVIOUS_IMAGE"
             fi
             if [ "${{ matrix.provider }}" != "SqlServer" ]; then
               docker pull postgres:16
@@ -396,7 +420,6 @@ jobs:
       - name: Run SQL clustering specifications (${{ matrix.provider }})
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
-          CRATIS_CHRONICLE_PREVIOUS_IMAGE: cratis/chronicle:latest-development-slim
           TESTCONTAINERS_RYUK_DISABLED: true
         run: >-
           dotnet test Integration/SqlClustering/SqlClustering.csproj --no-build -c Release

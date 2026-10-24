@@ -155,9 +155,15 @@ of tags, and export only the fields consumers need. Read
 ## Versioning contracts
 
 A public event type follows the same generation and migration rules as a private
-one (`cratis-chronicle-event-type-migration`). Kernel subscriptions name event
-types by id and register them as generation 1, and the CLI's `subscriptions add`
-takes ids only. Prefer additive, optional changes to a contract; publish a new
+one (`cratis-chronicle-event-type-migration`). Requires Chronicle 19.66.0 for
+subscription-builder `WithGenerationDelivery(EventGenerationDelivery.Pinned)`
+with typed `WithEventType<TEvent>()` or `WithEventType(id, generation)` to pin
+forwarding into the target inbox. Both stores must register that generation;
+Compatibility remains the default. Read
+../cratis-chronicle-client-dotnet/references/pinned-generation-delivery.md when
+configuring subscription pins and failure behavior. The CLI's `subscriptions add`
+takes ids only; do not invent a generation flag. Prefer additive, optional changes
+to a contract; publish a new
 event type for a breaking change and keep publishing the old one until every
 consumer has moved, rather than adding a generation consumers may not handle.
 Version the contracts package with the contract, and never move a type between

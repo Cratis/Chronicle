@@ -34,7 +34,6 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entity = _converter.ToEntity(recommendationId, recommendationState);
         await scope.DbContext.Recommendations.Upsert(entity);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

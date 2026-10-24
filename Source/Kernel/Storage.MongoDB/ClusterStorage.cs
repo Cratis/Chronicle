@@ -61,7 +61,7 @@ public class ClusterStorage(
     public async Task SaveEventStore(EventStoreName eventStore)
     {
         var collection = GetCollection();
-        await collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true });
+        await DuplicateKeyConvergence.UpsertWithRetry(() => collection.ReplaceOneAsync(_ => _.Name == eventStore, new EventStore(eventStore), new ReplaceOptions { IsUpsert = true }));
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);

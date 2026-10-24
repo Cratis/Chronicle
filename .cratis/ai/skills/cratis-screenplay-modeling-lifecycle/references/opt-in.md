@@ -29,5 +29,8 @@ Run `cratis-screenplay-modeling-lifecycle`'s `scripts/model-first-status.mjs` fo
 - Declined proposals: a team that wants a lasting "no model" answer writes it in its own
   repository instructions, never in managed corpus files.
 
+## Frozen committed model
+A project can mark a committed model as generated evidence with `modelFirst.frozen` (optional `reason`) in `.cratis/ai.json`. The script then reports reason `frozen-model`, `frozen` and `frozenReason`, `contract` null, and still lists the committed files so the evidence stays visible. A non-boolean value exits 2. The marker lives in the project configuration, not in the model root, so it does not travel with a model that moves. The `cratis screenplay mcp` server does not read it: it still resolves the same model root. Regeneration and edits follow `SKILL.md` step 1.
+
 ## Acceptance test cases
 Run `scripts/model-first-status.mjs --self-test` for the executable verdict fixtures.

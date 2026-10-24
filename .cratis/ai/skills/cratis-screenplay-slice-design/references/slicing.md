@@ -98,14 +98,15 @@ module Moorings
 Record, per slice, the events it consumes and which slice produces each. This is for
 orientation, not a build order: view specifications use synthetic `given` events, so slices
 are built and checked independently. A command or reaction may consult another slice's view
-(`reads`; unprotected in `.play`, see `rule-layers.md`). A slice never calls another slice's
+(`reads`; eligible command reads can opt into v25 protection, trigger reads cannot;
+see `rule-layers.md` for target gaps). A slice never calls another slice's
 command except through `invokes`. Dependencies run in one direction; a cycle through events
 means the story is a feedback loop that belongs in an `Automation` slice.
 
 The contract between slices is events: slice B depends on slice A because B's command, rule
 or view needs an event A produces. Two other edges are supported and recorded explicitly, never
-implied: `reads <View>` from another slice (unprotected, so a stored-state rule over it stays
-NOT enforced, `rule-layers.md`) and `invokes <Command>` from a reaction. No shared state or
+implied: `reads <View>` from another slice (declare protected-command opt-in and
+admission, or mark the legacy/refused shape and target gap, `rule-layers.md`) and `invokes <Command>` from a reaction. No shared state or
 other direct call. Name each
 slice after its element (the command, the view, the automation, the translation (capture or translator reaction)), not a broader feature name
 that spans several. Per slice, record:

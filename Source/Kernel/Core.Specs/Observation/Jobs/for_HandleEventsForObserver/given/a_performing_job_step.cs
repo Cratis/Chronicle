@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
+using ReadModelsConfiguration = Cratis.Chronicle.Configuration.ReadModels;
+
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
 
 public class a_performing_job_step : Specification
@@ -40,6 +42,8 @@ public class a_performing_job_step : Specification
     protected EventSourceId? _eventSourceIdFilter;
     protected EventSequenceNumber _startSequenceNumber = EventSequenceNumber.Unavailable;
     protected readonly List<HandledBatch> _handledBatches = [];
+
+    protected virtual ReadModelsConfiguration CreateReadModelsConfig() => new();
 
     protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
 
@@ -107,6 +111,7 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
+        _silo.AddService<TimeProvider>(TimeProvider.System);
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
         _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())
             .Returns(Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] }));
@@ -132,6 +137,7 @@ public class a_performing_job_step : Specification
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
+        _silo.AddService(Options.Create(new ChronicleOptions { ReadModels = CreateReadModelsConfig() }));
         var jobsConfig = CreateJobsConfig();
         var options = Options.Create(new JobsOptions
         {

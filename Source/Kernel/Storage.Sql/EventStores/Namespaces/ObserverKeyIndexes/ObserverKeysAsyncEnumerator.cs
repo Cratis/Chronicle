@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Properties;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverKeyIndexes
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="eventSequenceId">The event sequence identifier.</param>
 /// <param name="fromEventSequenceNumber">The <see cref="EventSequenceNumber"/> to start from.</param>
-/// <param name="eventTypes">Collection of <see cref="EventTypeId"/> the index is for.</param>
+/// <param name="scope">The <see cref="ObserverReaderScope"/> the index is for.</param>
 /// <param name="cancellationToken">The cancellation token.</param>
 public class ObserverKeysAsyncEnumerator(
     EventStoreName eventStore,
@@ -26,10 +27,10 @@ public class ObserverKeysAsyncEnumerator(
     IDatabase database,
     EventSequenceId eventSequenceId,
     EventSequenceNumber fromEventSequenceNumber,
-    IEnumerable<EventTypeId> eventTypes,
+    ObserverReaderScope scope,
     CancellationToken cancellationToken) : IAsyncEnumerator<Key>
 {
-    readonly string[] _eventTypeStringIds = eventTypes.Select(et => et.Value).ToArray();
+    readonly string[] _eventTypeStringIds = scope.EventTypes.Select(et => et.Id.Value).ToArray();
     List<EventSourceId>? _results;
     int _currentIndex = -1;
     DbContextScope<EventSequences.EventSequenceDbContext>? _scope;
@@ -52,7 +53,7 @@ public class ObserverKeysAsyncEnumerator(
     {
         if (_results is null)
         {
-            if (_eventTypeStringIds.Length == 0)
+            if (!scope.IsWildcard && _eventTypeStringIds.Length == 0)
             {
                 _results = [];
                 _current = null;
@@ -72,7 +73,7 @@ public class ObserverKeysAsyncEnumerator(
                 .ToListAsync(cancellationToken);
 
             _results = entries
-                .Where(e => _eventTypeStringIds.Contains(e.Type.Value))
+                .Where(e => scope.IsWildcard || _eventTypeStringIds.Contains(e.Type.Value))
                 .Select(e => e.EventSourceId)
                 .Distinct()
                 .ToList();

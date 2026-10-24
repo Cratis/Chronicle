@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.InMemory.Patching;
 using Cratis.Chronicle.Storage.InMemory.Security;
 using Cratis.Chronicle.Storage.Patching;
@@ -14,6 +15,7 @@ namespace Cratis.Chronicle.Storage.InMemory;
 public sealed class SystemStorage : ISystemStorage
 {
     SystemInformation? _systemInformation;
+    SemanticVersion? _patchingKernelVersion;
 
     /// <inheritdoc/>
     public IUserStorage Users { get; } = new UserStorage();
@@ -34,6 +36,16 @@ public sealed class SystemStorage : ISystemStorage
     public Task SetSystemInformation(SystemInformation systemInformation)
     {
         _systemInformation = systemInformation;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<SemanticVersion?> GetPatchingKernelVersion() => Task.FromResult(_patchingKernelVersion);
+
+    /// <inheritdoc/>
+    public Task SetPatchingKernelVersion(SemanticVersion version)
+    {
+        _patchingKernelVersion = version;
         return Task.CompletedTask;
     }
 }
