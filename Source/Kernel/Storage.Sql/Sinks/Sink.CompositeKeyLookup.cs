@@ -44,7 +44,9 @@ public partial class Sink
         var decision = SqlCompositeKeyLookup.Decide(candidates, encoding, legacyId, CompositeKeyEncoding.IsLegacyIdAmbiguous(parts));
         if (decision.Outcome != CompositeKeyLookupOutcome.Found) return new(decision.Outcome, null);
         var entity = await context.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(decision.IdToLoad!));
-        return entity is null ? CompositeKeyLookupResult.NotFound : CompositeKeyLookupResult.Found(MaterializeExpando(entity));
+        // The row's key column holds the flattened or encoded id. The requested parts are the key that was
+        // matched, so restore them as the key property instead of splitting the stored string.
+        return entity is null ? CompositeKeyLookupResult.NotFound : CompositeKeyLookupResult.Found(Materialize(entity, rebuildCompositeKey: false, knownKey: parts));
     }
 
     static bool CanQueryCompositeKeyStamp(ReadModelDbContext context, string encoding) =>
