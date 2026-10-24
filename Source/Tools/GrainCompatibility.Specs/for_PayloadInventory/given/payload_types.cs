@@ -8,10 +8,14 @@ namespace Cratis.Chronicle.Tools.GrainCompatibility.for_PayloadInventory.given;
 
 public static class payload_types
 {
-    public interface IFixtureGrain : IGrainWithStringKey
+    public interface IFixtureGrain : IBaseFixtureGrain<InheritedRequest>
     {
         Task<Payload> Read(Generated value);
         Task<Child[]> Children(Child[] children);
+        Task<Positional> PositionalResult();
+        Task<AutoFields> AutoFieldsResult();
+        Task<GeneratedBase> PolymorphicResult();
+        Task<GeneratedDerived> DerivedResult();
     }
 
     public record Payload
@@ -39,6 +43,37 @@ public static class payload_types
         [Id(1)] public string Name { get; set; } = string.Empty;
         public int Count => _count;
     }
+
+    public interface IBaseFixtureGrain<T> : IGrainWithStringKey
+    {
+        Task Prepare(T request);
+    }
+
+    public record InheritedRequest(string Value);
+
+    [GenerateSerializer]
+    public record Positional(string Name, int Count);
+
+    [GenerateSerializer(GenerateFieldIds = GenerateFieldIds.PublicProperties)]
+    public class AutoFields
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public Status Status { get; set; }
+        public int? Optional { get; set; }
+        public IReadOnlyList<string> Labels { get; set; } = [];
+        public List<int> Values { get; set; } = [];
+        public int Twice => Count * 2;
+    }
+
+    [GenerateSerializer]
+    public abstract record GeneratedBase([property: Id(0)] string BaseValue);
+
+    [GenerateSerializer]
+    public record GeneratedSubtype(string BaseValue, Child Detail) : GeneratedBase(BaseValue);
+
+    [GenerateSerializer]
+    public record GeneratedDerived(string BaseValue, [property: Id(0)] string DerivedValue) : GeneratedBase(BaseValue);
 
     public record Id(string Value) : ConceptAs<string>(Value);
     public enum Status

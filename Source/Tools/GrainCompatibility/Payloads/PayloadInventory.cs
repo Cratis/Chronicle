@@ -21,7 +21,9 @@ public static class PayloadInventory
     public static PayloadContractManifest From(IEnumerable<Type> grainInterfaces, Func<Type, bool> hasCustomConverter)
     {
         var builder = new Builder(hasCustomConverter);
-        foreach (var method in grainInterfaces.SelectMany(_ => _.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)))
+        foreach (var method in grainInterfaces.SelectMany(_ => _.GetInterfaces().Append(_)).Distinct()
+            .Where(_ => _.Namespace?.StartsWith("Orleans", StringComparison.Ordinal) != true)
+            .SelectMany(_ => _.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)))
         {
             builder.Walk(method.ReturnType);
             foreach (var parameter in method.GetParameters())
@@ -108,7 +110,7 @@ public static class PayloadInventory
 
         void WalkSubtypes(Type type, PayloadKind kind)
         {
-            if (kind != PayloadKind.Json)
+            if (kind is not (PayloadKind.Json or PayloadKind.Orleans))
             {
                 return;
             }
@@ -154,7 +156,7 @@ public static class PayloadInventory
         {
             var kind = PayloadAttributes.Find(type, "Orleans.GenerateSerializerAttribute") is null ? PayloadKind.Json : PayloadKind.Orleans;
             var alias = kind == PayloadKind.Orleans ? PayloadAttributes.Alias(type) : null;
-            var properties = PayloadMembers.Read(type, kind).Select(_ => Member(_.Name, _.Type, _.Id)).ToArray();
+            var properties = PayloadMembers.Read(type, kind).Select(Member).ToArray();
             return new(alias ?? name, name, kind, alias, null, properties);
         }
 
@@ -164,7 +166,10 @@ public static class PayloadInventory
             return new(name, name, PayloadKind.OneOf, null, null, cases);
         }
 
-        PayloadMemberContract Member(string name, Type type, int? id)
+        PayloadMemberContract Member((string Name, Type Type, uint? Id, int Level, bool Constructor) member) =>
+            Member(member.Name, member.Type, member.Id) with { Level = member.Level, Constructor = member.Constructor };
+
+        PayloadMemberContract Member(string name, Type type, uint? id)
         {
             Walk(type);
             return new(name, PayloadTypeName.Of(type), id);

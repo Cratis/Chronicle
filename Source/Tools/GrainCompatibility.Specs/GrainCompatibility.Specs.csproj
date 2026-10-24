@@ -8,6 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../GrainCompatibility/GrainCompatibility.csproj" />
         <ProjectReference Include="../../Kernel/Core/Core.csproj" />
     </ItemGroup>

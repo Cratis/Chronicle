@@ -12,7 +12,10 @@ namespace Cratis.Chronicle.Tools.GrainCompatibility.Payloads;
 /// </summary>
 internal static class PayloadMembers
 {
-    internal static IEnumerable<(string Name, Type Type, int? Id)> Read(Type type, PayloadKind kind)
+    internal static IEnumerable<(string Name, Type Type, uint? Id, int Level, bool Constructor)> Read(Type type, PayloadKind kind) =>
+        kind == PayloadKind.Orleans ? OrleansPayloadMembers.Read(type) : ReadJson(type);
+
+    static IEnumerable<(string Name, Type Type, uint? Id, int Level, bool Constructor)> ReadJson(Type type)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var current = type; current is not null; current = current.BaseType)
@@ -20,22 +23,22 @@ internal static class PayloadMembers
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
             foreach (var member in current.GetMembers(Flags))
             {
-                if (!IsIncluded(member, kind))
+                if (!IsIncluded(member))
                 {
                     continue;
                 }
 
-                var name = kind == PayloadKind.Orleans ? member.Name : JsonName(member);
+                var name = JsonName(member);
                 if (seen.Add(name))
                 {
                     var memberType = member is PropertyInfo property ? property.PropertyType : ((FieldInfo)member).FieldType;
-                    yield return (name, memberType, PayloadAttributes.Id(member));
+                    yield return (name, memberType, null, 0, false);
                 }
             }
         }
     }
 
-    static bool IsIncluded(MemberInfo member, PayloadKind kind)
+    static bool IsIncluded(MemberInfo member)
     {
         if (member is not (PropertyInfo or FieldInfo))
         {
@@ -45,11 +48,6 @@ internal static class PayloadMembers
         if (member is PropertyInfo property && property.GetIndexParameters().Length > 0)
         {
             return false;
-        }
-
-        if (kind == PayloadKind.Orleans)
-        {
-            return PayloadAttributes.Id(member) is not null;
         }
 
         if (member.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition == JsonIgnoreCondition.Always)

@@ -18,7 +18,7 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
     [GeneratedRegex("""^(?<kind>json|orleans|concept|enum|oneof|custom) (?:\[Alias\((?<alias>"(?:[^"\\]|\\.)*")\)\] )?(?<name>\S+)(?: : (?<underlying>\S+))?$""", RegexOptions.None, MatchTimeoutMilliseconds)]
     static partial Regex TypeLine { get; }
 
-    [GeneratedRegex(@"^(?:\[Id\((?<id>\d+)\)\] )?(?<name>\S+): (?<type>\S+)$", RegexOptions.None, MatchTimeoutMilliseconds)]
+    [GeneratedRegex(@"^(?:\[Id\((?<id>\d+)(?:,Level=(?<level>\d+),Constructor=(?<constructor>true|false))?\)\] )?(?<name>\S+): (?<type>\S+)$", RegexOptions.None, MatchTimeoutMilliseconds)]
     static partial Regex MemberLine { get; }
 
     [GeneratedRegex(@"^(?<name>\S+) = (?<value>-?\d+)$", RegexOptions.None, MatchTimeoutMilliseconds)]
@@ -82,7 +82,7 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
             var alias = type.Alias is null ? string.Empty : $"[Alias({JsonSerializer.Serialize(type.Alias)})] ";
             var underlying = type.Underlying is null ? string.Empty : $" : {type.Underlying}";
             lines.Add($"{type.Kind.ToString().ToLowerInvariant()} {alias}{type.ClrName}{underlying}");
-            lines.AddRange(type.Members.OrderBy(_ => _.Id).ThenBy(_ => _.Name, StringComparer.Ordinal).Select(_ => MemberText(type.Kind, _)));
+            lines.AddRange(type.Members.OrderBy(_ => _.Level).ThenBy(_ => _.Constructor).ThenBy(_ => _.Id).ThenBy(_ => _.Name, StringComparer.Ordinal).Select(_ => MemberText(type.Kind, _)));
         }
 
         return string.Join('\n', lines) + "\n";
@@ -132,8 +132,9 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
         }
 
         var member = ParseMember(current.Kind, line, lineNumber);
-        var duplicateName = members.Exists(_ => _.Name == member.Name);
-        var duplicateId = member.Id is not null && members.Exists(_ => _.Id == member.Id);
+        var sameSegment = members.Where(_ => _.Level == member.Level && _.Constructor == member.Constructor).ToArray();
+        var duplicateName = sameSegment.Any(_ => _.Name == member.Name);
+        var duplicateId = member.Id is not null && sameSegment.Any(_ => _.Id == member.Id);
         if (duplicateName || duplicateId)
         {
             throw new InvalidPayloadContractManifest(lineNumber, $"Member '{member.Name}' or its ID appears twice on {current.ClrName}.");
@@ -158,10 +159,17 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
             throw new InvalidPayloadContractManifest(lineNumber, $"Invalid {kind} member: '{line}'.");
         }
 
-        int? id = null;
-        if (hasId)
+        var address = ParseAddress((match, lineNumber));
+        return new(match.Groups["name"].Value, match.Groups["type"].Value, address.Id, address.Level, match.Groups["constructor"].Value == "true");
+    }
+
+    static (uint? Id, int Level) ParseAddress((Match Match, int LineNumber) context)
+    {
+        var (match, lineNumber) = context;
+        uint? id = null;
+        if (match.Groups["id"].Success)
         {
-            if (!int.TryParse(match.Groups["id"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value))
+            if (!uint.TryParse(match.Groups["id"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var value))
             {
                 throw new InvalidPayloadContractManifest(lineNumber, "Serializer ID is outside the supported range.");
             }
@@ -169,7 +177,13 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
             id = value;
         }
 
-        return new(match.Groups["name"].Value, match.Groups["type"].Value, id);
+        var level = 0;
+        if (match.Groups["level"].Success && !int.TryParse(match.Groups["level"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out level))
+        {
+            throw new InvalidPayloadContractManifest(lineNumber, "Inheritance level is outside the supported range.");
+        }
+
+        return (id, level);
     }
 
     static string MemberText(PayloadKind kind, PayloadMemberContract member)
@@ -179,7 +193,8 @@ public partial record PayloadContractManifest(IReadOnlyDictionary<string, Payloa
             return $"  {member.Name} = {member.Type}";
         }
 
-        var id = member.Id is null ? string.Empty : $"[Id({member.Id.Value.ToString(CultureInfo.InvariantCulture)})] ";
+        var segment = member.Level == 0 && !member.Constructor ? string.Empty : $",Level={member.Level.ToString(CultureInfo.InvariantCulture)},Constructor={member.Constructor.ToString().ToLowerInvariant()}";
+        var id = member.Id is null ? string.Empty : $"[Id({member.Id.Value.ToString(CultureInfo.InvariantCulture)}{segment})] ";
         return $"  {id}{member.Name}: {member.Type}";
     }
 }

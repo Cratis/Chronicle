@@ -13,10 +13,10 @@ internal static class PayloadAttributes
     internal static CustomAttributeData? Find(MemberInfo member, string fullName) =>
         CustomAttributeData.GetCustomAttributes(member).FirstOrDefault(_ => _.AttributeType.FullName == fullName);
 
-    internal static int? Id(MemberInfo member)
+    internal static uint? Id(MemberInfo member)
     {
         var attribute = Find(member, "Orleans.IdAttribute");
-        return attribute is null ? null : Convert.ToInt32(attribute.ConstructorArguments[0].Value, System.Globalization.CultureInfo.InvariantCulture);
+        return attribute is null ? null : Convert.ToUInt32(attribute.ConstructorArguments[0].Value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     internal static string? Alias(Type type) =>

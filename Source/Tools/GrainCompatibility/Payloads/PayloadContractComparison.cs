@@ -41,8 +41,8 @@ public static class PayloadContractComparison
     {
         foreach (var member in previous.Members.OrderBy(_ => _.Id).ThenBy(_ => _.Name, StringComparer.Ordinal))
         {
-            var current = today.Members.FirstOrDefault(_ => previous.Kind == PayloadKind.Orleans ? _.Id == member.Id : _.Name == member.Name);
-            var identity = previous.Kind == PayloadKind.Orleans ? $"[Id({member.Id})]" : member.Name;
+            var current = today.Members.FirstOrDefault(_ => previous.Kind == PayloadKind.Orleans ? (_.Id, _.Level, _.Constructor) == (member.Id, member.Level, member.Constructor) : _.Name == member.Name);
+            var identity = previous.Kind == PayloadKind.Orleans ? $"[Id({member.Id}), Level={member.Level}, Constructor={member.Constructor}]" : member.Name;
             if (current is null || (previous.Kind == PayloadKind.Orleans && current.Name != member.Name))
             {
                 var kind = previous.Kind == PayloadKind.Enum ? ContractBreakKind.EnumMemberRemoved : ContractBreakKind.PayloadPropertyRemoved;
