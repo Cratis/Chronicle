@@ -15,7 +15,7 @@ public class without_type_set_control : Specification
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "legacy-observer" });
+        await _storage.Save(new() { Identifier = "legacy-observer" }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("legacy-observer");
         _missing = await _storage.Get("missing-observer");
     }

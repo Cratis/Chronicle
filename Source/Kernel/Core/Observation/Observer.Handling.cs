@@ -238,6 +238,8 @@ public partial class Observer
                 return;
             }
 
+            if (await RelinquishOwnershipIfMoved()) return;
+
             _handledEventsReports.ForgetQuietSteps();
             var pending = _pendingHandledCounts;
             _pendingHandledCounts = [];
@@ -313,6 +315,8 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
+            if (await RelinquishOwnershipIfMoved()) return;
+
             var reminders = _pendingRetryReminders;
             _pendingRetryReminders = [];
             _failureStateWritePending = false;
@@ -462,6 +466,7 @@ public partial class Observer
             State = State with { InFlightPartitions = inFlightPartitions };
             RecordedHandlingState();
             await WriteStateAsync();
+            if (!_observerExists) return;
 
             using (new WriteSuspension(this))
             {
@@ -592,7 +597,7 @@ public partial class Observer
                     await WriteStateAsync();
                 }
 
-                if (handledCountsPerEventType.Count > 0)
+                if (_observerExists && handledCountsPerEventType.Count > 0)
                 {
                     await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
                 }

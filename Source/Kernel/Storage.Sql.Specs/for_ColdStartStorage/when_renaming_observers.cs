@@ -15,7 +15,7 @@ public class when_renaming_observers : given.a_cold_start_database
     async Task Establish()
     {
         _storage = new(Store, Namespace, _database);
-        await _storage.Save(new() { Identifier = "original", NextEventSequenceNumber = new(42) });
+        await _storage.Save(new() { Identifier = "original", NextEventSequenceNumber = new(42) }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
