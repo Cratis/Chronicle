@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 
@@ -19,6 +20,8 @@ public sealed class HttpsHealthWait(ushort containerPort, string path = "/health
     /// <inheritdoc/>
     public async Task<bool> UntilAsync(IContainer container)
     {
+        using var timing = IntegrationTimings.BeginCurrent("https-readiness-probe");
+        timing?.Poll();
         var httpsPortOnHost = container.GetMappedPublicPort(_containerPort);
 
         var uri = new UriBuilder(Uri.UriSchemeHttps, container.Hostname, httpsPortOnHost, _path).Uri;
@@ -42,10 +45,13 @@ public sealed class HttpsHealthWait(ushort containerPort, string path = "/health
         try
         {
             using var resp = await client.GetAsync(uri);
+            if (resp.IsSuccessStatusCode) timing?.Success();
+            else timing?.Failure();
             return resp.IsSuccessStatusCode;
         }
         catch
         {
+            timing?.Failure();
             return false;
         }
     }

@@ -17,7 +17,18 @@ internal static class ClusterLoadDiagnostics
         IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed,
         TextWriter output)
     {
-        await output.WriteLineAsync($"Observer {reactor.Id}: {DescribeMissingSequences(stored, observed)}");
+        var storedEvents = stored.ToArray();
+        var observedEvents = observed.ToHashSet();
+        await output.WriteLineAsync($"Observer {reactor.Id}: {DescribeMissingSequences(storedEvents, observedEvents)}");
+
+        // This surface has no Occurred or acknowledgment timestamps. Preserve the stored input's order as a
+        // correlation aid without pretending it is the order in which concurrent append responses arrived.
+        var missingPositions = storedEvents.Select((@event, index) => (@event, index))
+            .Where(item => !observedEvents.Contains(item.@event))
+            .OrderBy(item => item.@event.Sequence.Value)
+            .Take(SequenceLimit)
+            .Select(item => $"{item.@event.Sequence.Value}@{item.index}");
+        await output.WriteLineAsync($"Observer {reactor.Id}: missing sequence@stored-order-index (zero-based, first {SequenceLimit}): {string.Join(", ", missingPositions)}");
         await DumpState(reactor, output);
         await DumpFailedPartitions(reactor, output);
     }

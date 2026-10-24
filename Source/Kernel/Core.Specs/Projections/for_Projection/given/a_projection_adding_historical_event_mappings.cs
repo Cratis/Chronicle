@@ -6,20 +6,24 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Projections.for_Projection.given;
 
 public class a_projection_adding_historical_event_mappings : a_projection_grain_with_a_versioned_definition
 {
-    readonly EventType _existingEventType = new("ExistingEvent", 1);
-    readonly EventType _addedEventType = new("NewlyMappedEvent", 1);
+    protected readonly EventType _existingEventType = new("ExistingEvent", 1);
+    protected readonly EventType _addedEventType = new("NewlyMappedEvent", 1);
     protected ProjectionDefinition _candidate;
     protected INotifyProjectionDefinitionsChanged _subscriber;
     protected IEventSequenceStorage _eventSequence;
@@ -65,8 +69,22 @@ public class a_projection_adding_historical_event_mappings : a_projection_grain_
         _storage.GetEventStore(Arg.Any<EventStoreName>()).GetNamespace(Arg.Any<EventStoreNamespaceName>())
             .GetEventSequence(Arg.Any<EventSequenceId>()).Returns(_eventSequence);
         _observer = Substitute.For<Observation.IObserver>();
+        SetProjectedEventTypes([_existingEventType, _addedEventType]);
+        SetObserverEventTypes([_existingEventType, _addedEventType]);
         _silo.AddProbe(_ => _observer);
         _subscriber = Substitute.For<INotifyProjectionDefinitionsChanged>();
         await _grain.SubscribeDefinitionsChanged(_subscriber);
     }
+
+    protected void SetProjectedEventTypes(IEnumerable<EventType> eventTypes)
+    {
+        var projection = Substitute.For<Engine.IProjection>();
+        projection.EventTypes.Returns(eventTypes);
+        _silo.ServiceProvider.GetRequiredService<IProjectionFactory>()
+            .Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>())
+            .Returns(projection);
+    }
+
+    protected void SetObserverEventTypes(IEnumerable<EventType> eventTypes) =>
+        _observer.GetDefinition().Returns(ObserverDefinition.Empty with { EventTypes = eventTypes });
 }
