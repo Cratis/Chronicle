@@ -6,9 +6,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { v3Projects, v2Projects, shippingProjects, ordinaryFilter, childCommand, invocation,
+import { v3Projects, shippingProjects, ordinaryFilter, childCommand, invocation,
     validateTrx, validateCoverage, validateSelection, parseXml, runProcess, runProject, main } from './run-mixed-specs.mjs';
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
+import './spec-project-contracts.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -26,26 +27,24 @@ const trx = (outcome = 'Passed', name = 'Specs.theory(value: &quot;a&amp;b&quot;
 const coverage = (filename = 'Source/Library/Decision.cs', hits = '1') => `<coverage><packages><package><classes><class filename="${filename}"><lines><line number="1" hits="${hits}" /></lines></class></classes></package></packages></coverage>`;
 function graph(projectPath = v3Projects[0]) {
     const shipping = shippingProjects.includes(projectPath);
-    const v3 = v3Projects.includes(projectPath);
-    const packages = v3 ? ['xunit.v3.extensibility.core', 'xunit.v3.mtp-off', 'cratis.specifications.xunit.v3'] : ['xunit.extensibility.core', ...(projectPath === shippingProjects[0] ? [] : ['cratis.specifications.xunit'])];
+    const packages = ['xunit.v3.extensibility.core', ...(!shipping ? ['xunit.v3.mtp-off'] : []), ...(projectPath === shippingProjects[0] ? [] : ['cratis.specifications.xunit.v3'])];
     const libraries = Object.fromEntries(packages.map(id => [`${id}/1.2.3`, { type: 'package' }]));
     return {
-        evaluated: { Properties: { IsTestProject: String(!shipping), TargetFramework: 'net10.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
+        evaluated: { Properties: { IsTestProject: String(!shipping), OutputType: shipping ? 'Library' : 'Exe', TargetFramework: 'net10.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
         assets: { libraries }, deps: { libraries: structuredClone(libraries) }
     };
 }
 
-test('exact 18 v3 + 11 v2 + 2 shipping boundary, not a Storage prefix heuristic', () => {
-    assert.equal(v3Projects.length, 18);
-    assert.equal(v2Projects.length, 11);
+test('exact 29 executable v3 + 2 shipping boundary, not a Storage prefix heuristic', () => {
+    assert.equal(v3Projects.length, 29);
     assert.equal(shippingProjects.length, 2);
-    assert.equal(new Set([...v3Projects, ...v2Projects, ...shippingProjects]).size, 31);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 31);
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
-    assert.equal(v2Projects.filter(x => x.startsWith('Integration/')).length, 6);
-    for (const p of [...v3Projects, ...v2Projects, ...shippingProjects]) {
+    assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 6);
+    for (const p of [...v3Projects, ...shippingProjects]) {
         const g = graph(p);
         const selected = validateSelection(p, g.evaluated, g.assets, g.deps);
-        assert.equal(selected.runner, v3Projects.includes(p) ? 'v3' : 'v2');
+        assert.equal(selected.runner, 'v3');
         assert.equal(selected.assemblyName, 'Actual.Output');
         assert.equal(selected.dll, '/built/Actual.Output.dll');
         assert.equal(selected.tfm, 'net10.0');
@@ -60,7 +59,9 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
         g => { g.evaluated.Items.PackageVersion[0].Version = '9.0.0'; },
         g => { g.evaluated.Properties.IsTestProject = 'false'; },
         g => { g.evaluated.Properties.TargetFrameworks = 'net8.0;net10.0'; },
-        g => { g.evaluated.Properties.TargetPath = ''; }
+        g => { g.evaluated.Properties.TargetPath = ''; },
+        g => { g.evaluated.Properties.OutputType = 'Library'; },
+        g => { delete g.evaluated.Properties.OutputType; }
     ]) {
         const g = graph(); mutate(g);
         assert.throws(() => validateSelection(v3Projects[0], g.evaluated, g.assets, g.deps));
@@ -82,10 +83,10 @@ test('documented collector grammar has one safely quoted literal child argument'
     assert.ok(!call.args.includes('--timeout'));
 });
 
-test('retained v2 preserves settings, collector, exact filter, evaluated TFM and no retry', () => {
-    const filter = '(Name=a|Name=b)&Name!~c';
-    const call = invocation({ runner: 'v2', project: v2Projects[1], tfm: 'net10.0' }, { root: '/repo', directory: '/unique', filter });
-    assert.deepEqual(call.args, ['test', v2Projects[1], '--no-build', '--no-restore', '--configuration', 'Release', '--framework', 'net10.0', '--settings', '/repo/specs.runsettings', '--filter', filter, '--collect:XPlat Code Coverage', '--results-directory', '/unique', '--logger', 'trx;LogFileName=results.trx']);
+test('dispatch rejects any non-v3 runner and can run without a collector', () => {
+    assert.throws(() => invocation({ runner: 'v2' }, {}), /executable v3/);
+    const call = invocation({ runner: 'v3', dll: '/built/SqlClustering.dll' }, { directory: '/unique', filter: 'Name=a', coverage: false });
+    assert.deepEqual(call.args, ['/built/SqlClustering.dll', '-filterVSTest', 'Name=a', '-result-trx', '/unique/results.trx']);
 });
 
 test('TRX preserves escaped theory/display identities and definition linkage', () => {
@@ -153,8 +154,8 @@ test('MOCK whole ordinary dispatch validates all 31, launches 22 once, keeps SQL
         assert.equal(queried.length, 31, 'validate every selection before any child');
         launched.push(args);
         assert.equal(options.timeout, 1234);
-        const directory = args[0] === 'tool' ? path.dirname(args[8]) : args[args.indexOf('--results-directory') + 1];
-        const filter = args[0] === 'tool' ? args[9] : args[args.indexOf('--filter') + 1];
+        const directory = path.dirname(args[8]);
+        const filter = args[9];
         assert.ok(filter.includes(ordinaryFilter));
         assert.ok(filter.includes('Name!~excluded&Name!~also'));
         await writeFile(path.join(directory, 'results.trx'), trx());
@@ -162,11 +163,10 @@ test('MOCK whole ordinary dispatch validates all 31, launches 22 once, keeps SQL
         return { code: 0 };
     };
     await main([], { root, execute });
-    assert.deepEqual(queried, [...v3Projects, ...v2Projects, ...shippingProjects]);
+    assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
     assert.equal(launched.length, 22);
-    assert.equal(launched.filter(args => args[0] === 'tool').length, 18);
-    assert.equal(launched.filter(args => args[0] === 'test').length, 4);
-    assert.equal(new Set(launched.map(args => args[0] === 'tool' ? args[8] : args[args.indexOf('--results-directory') + 1])).size, 22);
+    assert.equal(launched.filter(args => args[0] === 'tool').length, 22);
+    assert.equal(new Set(launched.map(args => args[8])).size, 22);
 });
 
 test('MOCK missing executable and missing DLL never succeed', async () => {

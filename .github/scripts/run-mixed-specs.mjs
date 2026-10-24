@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Ordinary specs only. SQL/integration keep their existing VSTest/shard/retry entry points.
+// Ordinary dispatch and the shared executable invocation used by SQL/integration shards.
 // Source contracts are mocks, NOT collector acceptance: Linux production hits and real
 // negative/deadline/process-tree proof remain required in the coherent owner candidate.
 import { readFile, readdir, mkdir, mkdtemp, access } from 'node:fs/promises';
@@ -14,7 +14,7 @@ import { ordinaryProjects, ordinaryFilter, inventory } from './mixed-specs-selec
 // Preserve the existing import surface for contract consumers.
 export { runProcess } from './mixed-specs-process.mjs';
 export { parseXml, validateTrx, validateCoverage } from './mixed-specs-results.mjs';
-export { v3Projects, v2Projects, shippingProjects, ordinaryFilter, validateSelection, inventory } from './mixed-specs-selection.mjs';
+export { v3Projects, shippingProjects, ordinaryFilter, validateSelection, inventory } from './mixed-specs-selection.mjs';
 const fail = message => { throw new Error(message); };
 
 // dotnet-coverage documents ONE child command string. Quote each argument for
@@ -25,10 +25,11 @@ export function childCommand(args) {
         return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
     }).join(' ');
 }
-export function invocation(info, { root, directory, filter, timeout }) {
-    const trx = path.join(directory, 'results.trx');
-    if (info.runner === 'v2') return { command: 'dotnet', args: ['test', info.project, '--no-build', '--no-restore', '--configuration', 'Release', '--framework', info.tfm, '--settings', path.join(root, 'specs.runsettings'), '--filter', filter, '--collect:XPlat Code Coverage', '--results-directory', directory, '--logger', 'trx;LogFileName=results.trx'], timeout };
-    return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand(['dotnet', info.dll, '-filterVSTest', filter, '-result-trx', trx])], timeout };
+export function invocation(info, { directory, filter, timeout, coverage = true }) {
+    if (info.runner !== 'v3') fail(`${info.project}: executable v3 runner required`);
+    const args = [info.dll, ...(filter ? ['-filterVSTest', filter] : []), '-result-trx', path.join(directory, 'results.trx')];
+    if (!coverage) return { command: 'dotnet', args, timeout };
+    return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand(['dotnet', ...args])], timeout };
 }
 export async function runProject(info, options, execute = runProcess) {
     const call = invocation(info, options);
@@ -37,6 +38,10 @@ export async function runProject(info, options, execute = runProcess) {
     const child = await execute(call.command, call.args, { cwd: options.root, timeout: call.timeout });
     if (child.code !== 0) throw Object.assign(new Error(`${info.project}: child exited ${child.code}`), { exitCode: child.code });
     const identities = validateTrx(await readFile(path.join(options.directory, 'results.trx'), 'utf8'));
+    if (options.coverage === false) {
+        console.log(`${info.project}: ${identities.length} results`);
+        return;
+    }
     const files = await coverageFiles(options.directory);
     if (files.length !== 1) fail(`${info.project}: expected one fresh Cobertura file`);
     const production = await validateCoverage(await readFile(files[0], 'utf8'), options.root);

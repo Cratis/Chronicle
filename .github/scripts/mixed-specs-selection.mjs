@@ -9,9 +9,7 @@ export const v3Projects = [
     'Source/Infrastructure.Specs',
     ...['AspNetCore', 'Aspire', 'Connections', 'DotNET.CodeAnalysis', 'DotNET', 'Testing'].map(x => `Source/Clients/${x}.Specs`),
     ...['Compatibility', 'Concepts', 'Core', 'Server', 'Storage.AzureKeyVault', 'Storage.Vault'].map(x => `Source/Kernel/${x}.Specs`),
-    ...['GrainCompatibility', 'GrpcCodeGenerator', 'LegacyContracts', 'ProtoGenerator', 'WireCompatibility'].map(x => `Source/Tools/${x}.Specs`)
-].map(project);
-export const v2Projects = [
+    ...['GrainCompatibility', 'GrpcCodeGenerator', 'LegacyContracts', 'ProtoGenerator', 'WireCompatibility'].map(x => `Source/Tools/${x}.Specs`),
     'Source/Clients/XUnit.Integration.Specs',
     ...['Storage', 'Storage.InMemory', 'Storage.MongoDB', 'Storage.Sql'].map(x => `Source/Kernel/${x}.Specs`),
     ...['Api', 'Client', 'Clustering', 'Kernel', 'MongoDB', 'SqlClustering'].map(x => `Integration/${x}`)
@@ -28,9 +26,10 @@ function packageMap(libraries) {
     return new Map(Object.keys(libraries).map(key => { const slash = key.lastIndexOf('/'); return [key.slice(0, slash).toLowerCase(), key.slice(slash + 1)]; }));
 }
 function validateProperties(projectPath, properties) {
-    if (![...v3Projects, ...v2Projects, ...shippingProjects].includes(projectPath)) fail(`Unknown project ${projectPath}`);
+    if (![...v3Projects, ...shippingProjects].includes(projectPath)) fail(`Unknown project ${projectPath}`);
     const shipping = shippingProjects.includes(projectPath);
     if ((String(properties.IsTestProject).toLowerCase() === 'true') === shipping) fail(`${projectPath}: ambiguous test/shipping selection`);
+    if (!shipping && properties.OutputType !== 'Exe') fail(`${projectPath}: test project must be an executable`);
     validateOutput(projectPath, properties);
 }
 function validateOutput(projectPath, properties) {
@@ -62,36 +61,34 @@ function packageChecker(projectPath, resolved, runtime) {
         if (resolved.get(name) !== runtime.get(name)) fail(`${projectPath}: stale runtime version for ${name}`);
     };
 }
-function validateRunnerPackages(projectPath, runner, { ids, resolved, check }) {
-    const v3 = runner === 'v3';
-    check('xunit.v3.extensibility.core', v3);
-    check('xunit.extensibility.core', !v3);
-    check('cratis.specifications.xunit.v3', v3);
-    const needsV2Specs = !v3 && projectPath !== shippingProjects[0];
-    check('cratis.specifications.xunit', needsV2Specs);
-    if (ids.includes('cratis.specifications.xunit.v3') !== v3) fail(`${projectPath}: ambiguous evaluated v3 reference`);
-    if (ids.includes('cratis.specifications.xunit') !== needsV2Specs) fail(`${projectPath}: ambiguous evaluated v2 reference`);
-    if (v3 && !resolved.has('xunit.v3.mtp-off')) fail(`${projectPath}: MTP-off selection missing`);
+function validateRunnerPackages(projectPath, { ids, resolved, check }) {
+    const needsSpecs = projectPath !== shippingProjects[0];
+    check('xunit.v3.extensibility.core', true);
+    check('xunit.extensibility.core', false);
+    check('cratis.specifications.xunit.v3', needsSpecs);
+    check('cratis.specifications.xunit', false);
+    if (ids.includes('cratis.specifications.xunit.v3') !== needsSpecs) fail(`${projectPath}: ambiguous evaluated v3 reference`);
+    if (ids.includes('cratis.specifications.xunit')) fail(`${projectPath}: v2 specifications reference`);
+    if (!shippingProjects.includes(projectPath) && !resolved.has('xunit.v3.mtp-off')) fail(`${projectPath}: MTP-off selection missing`);
 }
 export function validateSelection(projectPath, evaluated, assets, deps) {
     if (!evaluated.Properties) fail(`${projectPath}: missing evaluated properties`);
     if (!Array.isArray(evaluated.Items?.PackageReference)) fail(`${projectPath}: missing evaluated references`);
     const properties = evaluated.Properties;
     validateProperties(projectPath, properties);
-    const runner = v3Projects.includes(projectPath) ? 'v3' : 'v2';
     const resolved = packageMap(assets.libraries ?? {}), runtime = packageMap(deps.libraries ?? {});
     validateEvaluatedPackages(projectPath, evaluated.Items, resolved);
     validateRuntimePackages(projectPath, deps, resolved);
-    validateRunnerPackages(projectPath, runner, {
+    validateRunnerPackages(projectPath, {
         ids: evaluated.Items.PackageReference.map(x => x.Identity.toLowerCase()),
         resolved, check: packageChecker(projectPath, resolved, runtime)
     });
-    return { project: projectPath, runner, tfm: properties.TargetFramework, dll: properties.TargetPath, assemblyName: properties.AssemblyName };
+    return { project: projectPath, runner: 'v3', tfm: properties.TargetFramework, dll: properties.TargetPath, assemblyName: properties.AssemblyName };
 }
 function checkProjectBoundary(relative) {
     const candidate = relative.endsWith('.Specs.csproj') || (relative.startsWith('Integration/') && relative.endsWith('.csproj'));
     if (!candidate) return;
-    if (![...v3Projects, ...v2Projects].includes(relative)) fail(`Unclassified test project ${relative}`);
+    if (!v3Projects.includes(relative)) fail(`Unclassified test project ${relative}`);
 }
 async function discoverProjects(root, directory) {
     for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
@@ -101,8 +98,8 @@ async function discoverProjects(root, directory) {
         else checkProjectBoundary(relative);
     }
 }
-async function evaluateProject(root, projectPath, execute) {
-    const query = await execute('dotnet', ['msbuild', projectPath, '-nologo', '-p:Configuration=Release', '-getProperty:IsTestProject,TargetFramework,TargetFrameworks,AssemblyName,TargetPath,ProjectAssetsFile', '-getItem:PackageReference,PackageVersion'], { cwd: root, capture: true, timeout: 120000 });
+export async function evaluateProject(root, projectPath, execute) {
+    const query = await execute('dotnet', ['msbuild', projectPath, '-nologo', '-p:Configuration=Release', '-p:DisableDockerBuild=true', '-getProperty:IsTestProject,OutputType,TargetFramework,TargetFrameworks,AssemblyName,TargetPath,ProjectAssetsFile', '-getItem:PackageReference,PackageVersion'], { cwd: root, capture: true, timeout: 120000 });
     if (query.code !== 0) throw Object.assign(new Error(`${projectPath}: evaluation failed\n${query.stderr}`), { exitCode: query.code });
     const evaluated = JSON.parse(query.stdout);
     const readJson = async file => JSON.parse(await readFile(path.resolve(root, file), 'utf8'));
@@ -114,6 +111,6 @@ export async function inventory(root, execute) {
     const result = [];
     await discoverProjects(root, 'Source');
     await discoverProjects(root, 'Integration');
-    for (const projectPath of [...v3Projects, ...v2Projects, ...shippingProjects]) result.push(await evaluateProject(root, projectPath, execute));
+    for (const projectPath of [...v3Projects, ...shippingProjects]) result.push(await evaluateProject(root, projectPath, execute));
     return result;
 }

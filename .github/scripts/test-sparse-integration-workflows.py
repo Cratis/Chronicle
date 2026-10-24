@@ -316,7 +316,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
         self.assertIn("set -euo pipefail", run)
         self.assertIn("sql-spec-filter.py '${{ matrix.shard }}'", run)
-        self.assertIn('Storage.Sql.Specs.csproj --no-build', run)
+        self.assertIn('run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj', run)
+        self.assertIn('--coverage', run)
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
@@ -325,9 +326,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
         selection = subprocess.run(
             ["node", "--input-type=module", "-e", """
-                import { ordinaryProjects, v3Projects, v2Projects, shippingProjects }
+                import { ordinaryProjects, v3Projects, shippingProjects }
                     from './.github/scripts/mixed-specs-selection.mjs';
-                const infos = [...v3Projects, ...v2Projects, ...shippingProjects].map(project => ({ project }));
+                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
                 console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
             """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
         projects = json.loads(selection.stdout)
@@ -335,7 +336,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(22, len(set(projects)))
         self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
         self.assertFalse(any(project.startswith("Integration/") for project in projects))
-        self.assertIn('--collect:"XPlat Code Coverage"', run)
+        self.assertIn('--coverage', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
@@ -523,7 +524,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
-                    fake = path / "dotnet"
+                    fake = path / "node"
                     fake.write_text("""#!/usr/bin/env python3
 import json, os, pathlib, sys
 args = sys.argv[1:]
@@ -533,11 +534,10 @@ calls.append(args)
 log.write_text(json.dumps(calls))
 if os.environ['MISSING'] == '1':
     sys.exit(1)
-logger = next(arg for arg in args if arg.startswith('trx;LogFileName='))
 results = pathlib.Path(args[args.index('--results-directory') + 1])
 results.mkdir(parents=True, exist_ok=True)
 failed = len(calls) < 3
-(results / logger.split('=', 1)[1]).write_text(
+(results / 'results.trx').write_text(
     '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
     '<UnitTestResult testName="Example.A.should_work" outcome="' +
     ('Failed' if failed else 'Passed') + '" /></TestRun>')
@@ -564,15 +564,9 @@ sys.exit(1 if failed else 0)
     def assert_test_arguments(self, lane, calls, expected_filter):
         project = "SqlClustering" if lane == "sql-clustering" else lane.title()
         for index, args in enumerate(calls):
-            self.assertEqual(["test", f"Integration/{project}/{project}.csproj"], args[:2])
-            self.assertIn("--no-build", args)
-            # --no-build implies --no-restore; the wrapper is explicit as well.
-            if lane != "sql-clustering":
-                self.assertIn("--no-restore", args)
-            configuration = "--configuration" if "--configuration" in args else "-c"
-            self.assertEqual("Release", args[args.index(configuration) + 1])
-            if lane in ("client", "sql-clustering"):
-                self.assertIn("-p:DisableDockerBuild=true", args)
+            self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
+            self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertIn("--results-directory", args)
             self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
                              args[args.index("--filter") + 1])
 
