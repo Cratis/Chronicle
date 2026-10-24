@@ -175,11 +175,14 @@ public class Projection(
             .GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
 
+        var stored = events.ToArray();
+        var released = await projection.ReleaseToPins(stored);
         var wanted = key.Value;
         var result = new List<AppendedEvent>();
 
-        foreach (var @event in events)
+        for (var index = 0; index < released.Length; index++)
         {
+            var @event = released[index];
             var keyResolver = projection.GetKeyResolverFor(@event.Context.EventType);
             var keyResult = await keyResolver(eventSequenceStorage, NullSink.Instance, @event);
 
@@ -192,7 +195,7 @@ public class Projection(
 
             if (string.Equals(resolved.Key.Value.ToString(), wanted, StringComparison.Ordinal))
             {
-                result.Add(@event);
+                result.Add(stored[index]);
             }
         }
 
@@ -301,6 +304,7 @@ public class Projection(
         var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+        events = await projection.ReleaseToPins(events);
         var state = initialState;
         Key? lastKey = null;
         var hasReadModel = ((IDictionary<string, object?>)state).Count > 0;
@@ -363,6 +367,7 @@ public class Projection(
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
+        events = await projection.ReleaseToPins(events);
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var result = initialState.Exists ? initialState with { Model = initialState.Model.Clone() } : SingleReadModelProjectionState.Empty;
@@ -439,6 +444,7 @@ public class Projection(
     /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
+        events = await projection.ReleaseToPins(events);
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         foreach (var @event in events)
@@ -572,8 +578,8 @@ public class Projection(
             var eventStoreStorage = storage.GetEventStore(key.EventStore);
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            // Direct computation belongs to the immediate/read lane, not materialized observer delivery.
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
+            // Reads use the projection's own generation delivery, just like its observer.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -587,8 +593,12 @@ public class Projection(
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State with { GenerationDelivery = EventGenerationDelivery.Compatibility }, readModelDefinition, eventTypeSchemas);
+        return await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
     }
+
+    ProjectionDefinition DefinitionForReads() => State.SubscribesToAllEvents
+        ? State with { GenerationDelivery = EventGenerationDelivery.Compatibility }
+        : State;
 
     async Task EvolveForAllNamespaces(
         ProjectionKey key,
