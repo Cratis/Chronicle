@@ -25,7 +25,7 @@ public class and_a_failure_is_traced : given.a_reducer_dispatcher
             }
         };
         ActivitySource.AddActivityListener(_listener);
-        _handler.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<object?>(), Arg.Any<IServiceProvider>()).Returns(new ReduceResult(null, EventSequenceNumber.Unavailable, ["private message"], string.Empty) { ErrorType = typeof(InvalidOperationException).FullName });
+        _handler.OnNext(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<object?>(), Arg.Any<IServiceProvider>()).Returns(new ReduceResult(null, EventSequenceNumber.Unavailable, ["private message"], string.Empty) { ExceptionType = typeof(InvalidOperationException).FullName });
     }
 
     async Task Because()

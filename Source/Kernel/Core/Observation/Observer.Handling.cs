@@ -595,16 +595,7 @@ public partial class Observer
                 State = State with { InFlightPartitions = remainingInFlight };
                 RecordedHandlingState();
 
-                if (failed)
-                {
-                    if (failureException is not null) activity?.RecordFailure(failureException);
-                    else activity?.RecordFailure(FailureKindCode(failureKind));
-                    await RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
-                }
-                else
-                {
-                    _metrics?.SuccessfulObservation();
-                }
+                await RecordHandlingOutcome();
 
                 if (stateChanged)
                 {
@@ -620,6 +611,19 @@ public partial class Observer
             {
                 activity?.RecordFailure(ex);
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
+            }
+
+            Task RecordHandlingOutcome()
+            {
+                if (!failed)
+                {
+                    _metrics?.SuccessfulObservation();
+                    return Task.CompletedTask;
+                }
+
+                if (failureException is not null) activity?.RecordFailure(failureException);
+                else activity?.RecordFailure(FailureKindCode(failureKind));
+                return RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
             }
         }
     }

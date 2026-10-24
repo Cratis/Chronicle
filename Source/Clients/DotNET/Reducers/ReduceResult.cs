@@ -24,7 +24,7 @@ public record ReduceResult(
     public bool IsSuccess => !ErrorMessages.Any();
 
     /// <summary>Gets the internal exception type for failure tracing, without its message.</summary>
-    internal string? ErrorType { get; init; }
+    internal string? ExceptionType { get; init; }
 
     /// <summary>Gets the number of successfully dispatched events, including handlers returning null.</summary>
     internal int DispatchedEvents { get; init; }

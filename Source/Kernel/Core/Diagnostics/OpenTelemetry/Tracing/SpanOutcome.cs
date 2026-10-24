@@ -40,13 +40,7 @@ public static class SpanOutcome
 
     static Activity RecordAppendOutcome(Activity activity, bool hasErrors, bool hasConcurrencyViolations, bool hasConstraintViolations)
     {
-        var outcome = (hasErrors, hasConcurrencyViolations, hasConstraintViolations) switch
-        {
-            (true, _, _) => "error",
-            (_, true, _) => "concurrency_violation",
-            (_, _, true) => "constraint_violation",
-            _ => "success"
-        };
+        var outcome = GetAppendOutcome(hasErrors, hasConcurrencyViolations, hasConstraintViolations);
         activity.SetTag(AppendOutcome, outcome);
         if (outcome != "success")
         {
@@ -58,4 +52,13 @@ public static class SpanOutcome
         }
         return activity;
     }
+
+    static string GetAppendOutcome(bool hasErrors, bool hasConcurrencyViolations, bool hasConstraintViolations) =>
+        (hasErrors, hasConcurrencyViolations, hasConstraintViolations) switch
+        {
+            (true, _, _) => "error",
+            (_, true, _) => "concurrency_violation",
+            (_, _, true) => "constraint_violation",
+            _ => "success"
+        };
 }

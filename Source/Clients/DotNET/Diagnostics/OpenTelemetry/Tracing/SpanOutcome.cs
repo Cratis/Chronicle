@@ -30,13 +30,7 @@ internal static class SpanOutcome
     /// <returns>The activity with the append outcome recorded.</returns>
     internal static Activity RecordAppendOutcome(this Activity activity, IAppendResult result)
     {
-        var outcome = (result.HasErrors, result.HasConcurrencyViolations, result.HasConstraintViolations) switch
-        {
-            (true, _, _) => "error",
-            (_, true, _) => "concurrency_violation",
-            (_, _, true) => "constraint_violation",
-            _ => "success"
-        };
+        var outcome = GetAppendOutcome(result);
         activity.SetTag(AppendOutcome, outcome);
         if (outcome != "success")
         {
@@ -48,4 +42,13 @@ internal static class SpanOutcome
         }
         return activity;
     }
+
+    static string GetAppendOutcome(IAppendResult result) =>
+        (result.HasErrors, result.HasConcurrencyViolations, result.HasConstraintViolations) switch
+        {
+            (true, _, _) => "error",
+            (_, true, _) => "concurrency_violation",
+            (_, _, true) => "constraint_violation",
+            _ => "success"
+        };
 }

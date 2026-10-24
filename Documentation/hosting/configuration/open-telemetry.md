@@ -192,6 +192,8 @@ To be alerted when an observer's partitions keep failing or run out of retries, 
 
 These are the server's sources. The Chronicle client in your application emits its own spans on the `Cratis.Chronicle.Client` source, which you register yourself; see [Trace Chronicle client operations with OpenTelemetry](../client-tracing).
 
+Failed append and observer handle operations set Error status and `error.type` to an exception type or a low-cardinality failure code, without recording exception messages. Append spans also carry `cratis.chronicle.append.outcome`: `success`, `error`, `concurrency_violation`, or `constraint_violation`.
+
 Chronicle traces the following activity sources:
 
 | Source | Description |

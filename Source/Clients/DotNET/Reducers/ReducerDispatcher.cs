@@ -109,7 +109,7 @@ internal sealed class ReducerDispatcher(
             }
             else
             {
-                span?.Activity?.RecordFailure(reduceResult.ErrorType ?? "reducer_handler_failure");
+                span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
                 exceptionMessages = reduceResult.ErrorMessages;
                 exceptionStackTrace = reduceResult.StackTrace;
                 state = ObservationState.Failed;

@@ -36,6 +36,8 @@ Every span name starts with `client.`. The tags below hold identifiers, not even
 
 A reactor or reducer span covers one delivery of events to that observer. Replay notifications do not produce one.
 
+Failed append and handle operations set Error status and `error.type` to an exception type or a low-cardinality failure code, without recording exception messages. Append spans also carry `cratis.chronicle.append.outcome`: `success`, `error`, `concurrency_violation`, or `constraint_violation`.
+
 ## Send the spans to a backend
 
 `AddOtlpExporter()` follows the standard OpenTelemetry environment variables, so the same code works against any backend that accepts [OTLP](https://opentelemetry.io/docs/specs/otlp/). Set the endpoint, and the headers when your backend needs them, in the environment of the application:
