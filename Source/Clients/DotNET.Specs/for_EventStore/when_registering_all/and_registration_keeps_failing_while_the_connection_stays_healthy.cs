@@ -32,7 +32,7 @@ public class and_registration_keeps_failing_while_the_connection_stays_healthy :
     async Task Because()
     {
         await _projections.Discover();
-        _thrownByFirstCall = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrownByFirstCall = await Catch.Exception(_eventStore.RegisterAll);
 
         // The caller already has its answer (the throw above) - nobody calls RegisterAll() again from here on.
         // Only the background loop the failure started keeps the kernel calls going.

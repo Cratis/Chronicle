@@ -20,6 +20,7 @@
              already had this access via Core.csproj's InternalsVisibleTo before the classes moved here. -->
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3" />
     </ItemGroup>
 
     <ItemGroup>

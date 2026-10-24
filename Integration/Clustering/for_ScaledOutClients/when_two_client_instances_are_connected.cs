@@ -24,7 +24,7 @@ public class when_two_client_instances_are_connected(context _context)
         public string FirstInstance { get; private set; } = string.Empty;
         public string SecondInstance { get; private set; } = string.Empty;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             FirstInstance = fixture.EventSequencesSiloAddress.ToParsableString();
             SecondInstance = fixture.ObserversSiloAddress.ToParsableString();
@@ -71,7 +71,7 @@ public class when_two_client_instances_are_connected(context _context)
             ConnectedClients = await fixture.SiloServices.GetRequiredService<IServices>().Connections.GetConnectedClients();
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_have_two_connected_clients() => _context.ConnectedClients.Count().ShouldEqual(2);
