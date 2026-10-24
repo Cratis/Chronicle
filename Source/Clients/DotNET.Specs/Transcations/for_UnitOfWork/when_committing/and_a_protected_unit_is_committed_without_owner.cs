@@ -23,7 +23,7 @@ public class and_a_protected_unit_is_committed_without_owner : given.a_unit_of_w
             [new EventType("created", EventTypeGeneration.First)]));
     }
 
-    async Task Because() => _exception = await Record.ExceptionAsync(() => _unitOfWork.Commit());
+    async Task Because() => _exception = await Record.ExceptionAsync(_unitOfWork.Commit);
 
     [Fact] void should_reject_early_commit() => _exception.ShouldBeOfExactType<ProtectedUnitOfWorkRequiresOwner>();
     [Fact] void should_leave_the_unit_open() => _unitOfWork.IsCompleted.ShouldBeFalse();

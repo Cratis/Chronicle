@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Connections.for_ConnectionLifecycle;
 /// fixture does exactly that, with a comment explaining that without the removal the handler count grows by one per
 /// test class. Subscribing is idempotent now, so being unsure is no longer a hazard.
 /// </remarks>
+[PerFactSpecificationLifecycle]
 public class when_the_same_handler_subscribes_twice : Specification
 {
     ConnectionLifecycle _lifecycle;

@@ -26,7 +26,7 @@ public sealed class DnsServerFixture : IAsyncLifetime
     public string SrvNameServer => $"127.0.0.1:{_container!.GetMappedPublicPort($"{DnsPort}/udp")}";
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder(Image)
             .WithResourceMapping(ReadDnsConfig("Corefile"), "/config/Corefile")
@@ -40,7 +40,7 @@ public sealed class DnsServerFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {
