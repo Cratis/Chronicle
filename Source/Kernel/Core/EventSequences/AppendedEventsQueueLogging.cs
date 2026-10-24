@@ -32,11 +32,14 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Debug, "Appended-events queue is full; spilling {NumberOfObservers} observer(s) to catch-up recovery")]
     internal static partial void SpillingToCatchup(this ILogger<AppendedEventsQueue> logger, int numberOfObservers);
 
-    [LoggerMessage(LogLevel.Warning, "Failed to start catch-up for spilled observer {ObserverKey} (attempt {Attempt} of {MaxAttempts})")]
-    internal static partial void SpillCatchupTriggerFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int attempt, int maxAttempts, Exception exception);
+    [LoggerMessage(LogLevel.Warning, "Dispatch to observer {ObserverKey} failed for sequence range {FirstEventSequenceNumber}-{LastEventSequenceNumber}; spilling it to catch-up")]
+    internal static partial void DispatchFailedSpillingToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Error, "Gave up starting catch-up for spilled observer {ObserverKey}; it may stay behind until it re-subscribes or reactivates")]
-    internal static partial void SpillCatchupTriggerAbandoned(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+    [LoggerMessage(LogLevel.Warning, "Failed to start catch-up for spilled observer {ObserverKey} (attempt {Attempt}); will retry")]
+    internal static partial void SpillCatchupTriggerFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int attempt, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Catch-up trigger budget exceeded for spilled observer {ObserverKey}; continuing retries at the capped interval until it starts or the queue is disposed/reset")]
+    internal static partial void SpillCatchupTriggerBudgetExceeded(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
 
     [LoggerMessage(LogLevel.Warning, "Queue was disposed before catch-up could be started for spilled observer {ObserverKey}; it stays behind until it re-subscribes or reactivates")]
     internal static partial void SpillCatchupTriggerAbandonedOnDispose(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
