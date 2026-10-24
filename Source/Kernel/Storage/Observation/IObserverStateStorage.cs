@@ -46,8 +46,7 @@ public interface IObserverStateStorage
     /// <returns>Whether the state was saved. False means another sequence owns the record.</returns>
     /// <remarks>
     /// A missing owner on legacy state counts as unowned; the next successful save stamps it.
-    /// During a rolling upgrade an old kernel can replace a record without its owner, temporarily disabling
-    /// this guard until a new kernel writes it again. Full protection requires all kernels to be upgraded.
+    /// During a rolling upgrade older kernels preserve but ignore Owner, so their writes bypass the owner guard until the next newer write.
     /// </remarks>
     Task<bool> Save(ObserverState state, EventSequenceId owner);
 
