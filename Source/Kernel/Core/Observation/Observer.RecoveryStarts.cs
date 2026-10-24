@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -31,6 +33,28 @@ public partial class Observer
 
         ForgetRecoveryStart(failure.Partition);
         return false;
+    }
+
+    async Task<bool> RecoveryInFlight(FailedPartition failure)
+    {
+        if (!RecoveryAlreadyStarted(failure, await GetRecoveryStartWindow())) return false;
+        logger.RecoveryAlreadyStarted(failure.Partition);
+        return true;
+    }
+
+    async Task StartTrackedRecoveryJob(FailedPartition failure, RetryFailedPartitionRequest request)
+    {
+        // A listing that fails comes back empty and would start a duplicate, so a webhook records its own start up front.
+        RecordRecoveryStart(failure);
+        var jobId = JobId.NotSet;
+        try
+        {
+            jobId = await StartRecoveryJob(request);
+        }
+        finally
+        {
+            if (jobId == JobId.NotSet) ForgetRecoveryStart(failure.Partition);
+        }
     }
 
     void RecordRecoveryStart(FailedPartition failure) =>

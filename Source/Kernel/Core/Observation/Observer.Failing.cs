@@ -535,30 +535,32 @@ public partial class Observer
         }
 
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-        if (usesDeferrals && RecoveryAlreadyStarted(failedPartition, await GetRecoveryStartWindow()))
+        if (usesDeferrals && await RecoveryInFlight(failedPartition)) return;
+
+        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
+        var request = CreateRetryFailedPartitionRequest(failedPartition, usesDeferrals);
+        if (usesDeferrals)
         {
-            logger.RecoveryAlreadyStarted(failedPartition.Partition);
+            await StartTrackedRecoveryJob(failedPartition, request);
             return;
         }
 
-        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
-
-        // A listing that fails comes back empty and would start a duplicate, so a webhook records its own start up front.
-        if (usesDeferrals) RecordRecoveryStart(failedPartition);
-        var jobId = JobId.NotSet;
-        try
-        {
-            jobId = await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
-                logger,
-                request,
-                requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
-        }
-        finally
-        {
-            if (usesDeferrals && jobId == JobId.NotSet) ForgetRecoveryStart(failedPartition.Partition);
-        }
+        await StartRecoveryJob(request);
     }
+
+    RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
+        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes)
+        {
+            ReaderScope = ReaderScope,
+            EpisodeId = usesDeferrals ? failedPartition.Id : null,
+            DeferralId = failedPartition.Deferral?.Id
+        };
+
+    Task<JobId> StartRecoveryJob(RetryFailedPartitionRequest request) =>
+        _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
+            logger,
+            request,
+            requestPredicate: r => r.Key == request.Key && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
 
     /// <summary>
     /// Check whether the observer's failures have reached a threshold that takes it out of service.
