@@ -55,7 +55,7 @@ Use a managed database. For MongoDB, the kernel needs a replica set. Atlas is th
 
 ## App Service sidecar
 
-- Only ports 80 and 8080 are reachable from outside. Route the kernel through one of them; whether port 35000 can be fronted directly is not verified here.
+- App Service forwards external traffic only to the port it is configured to send requests to, not to every port the kernel listens on. Check Microsoft's sidecar documentation for which ports can be exposed; whether port 35000 can be fronted directly is not verified here.
 - For gRPC, set the HTTP version to 2.0, enable the HTTP 2.0 Proxy option "gRPC only", and set the `HTTP20_ONLY_PORT` app setting to the port the kernel listens on. How this interacts with port 35000 is not verified here.
 - The production image is based on a chiseled Ubuntu base. It has no shell, so you cannot open a console in the container.
 

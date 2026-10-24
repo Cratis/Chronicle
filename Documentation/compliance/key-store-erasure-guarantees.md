@@ -9,7 +9,7 @@ This page states the guarantee for each store, what Chronicle cannot promise, an
 
 ## What Chronicle does the same everywhere
 
-An erasure records the [erasure fence](key-lifecycle.mdx#the-erasure-fence) first and then deletes every revision of the subject's key. The key store is wrapped in an in-process key cache; the cache is invalidated before and after the delete, and the erasure evicts the key from every silo's cache. After the erasure returns, Chronicle itself no longer serves the key, and it refuses to provision or accept a key for that subject until you authorize a new one.
+An erasure records the [erasure fence](key-lifecycle.mdx#the-erasure-fence) first and then deletes every revision of the subject's key. The key store is wrapped in an in-process key cache; the cache is invalidated before and after the delete, and the erasure evicts the key from every silo's cache. After the erasure returns, Chronicle refuses to provision or accept a key for that subject until you authorize a new one. Reads are not checked against the fence: if the store still returns key material for the subject (a replica that has not caught up, a recovered or restored secret), Chronicle decrypts with it. The erasure is only as complete as the store's own delete, which is what the sections below describe.
 
 Those guarantees are about Chronicle. They do not reach:
 
@@ -77,7 +77,7 @@ The vault answers the purge with HTTP 403. The erasure fails with `EncryptionKey
 - The erasure is not complete, and Chronicle does not report it as complete.
 - Repeating the erasure after you grant the permission completes it. Revisions that the failed attempt soft-deleted are found again through the deleted-secrets list.
 
-Recoverability of the material does not by itself make it readable through Chronicle, because the fence rejects provisioning and saves for an erased subject. Treat that as a second line of defense rather than the erasure: a recovered secret is still a key that Azure was asked to destroy. The read-side validation that would make this airtight on every path is tracked as [Chronicle issue 4978](https://github.com/Cratis/Chronicle/issues/4978); until it is in the version you run, do not rely on the fence alone.
+The fence rejects provisioning and saves for an erased subject, but it does not stop reads: if someone recovers the soft-deleted secret, Chronicle can read and decrypt with it again. A recovered secret is a key that Azure was asked to destroy, so keep recovery rights narrow and purge when you need the erasure to be final. The read-side validation that would make this airtight on every path is tracked as [Chronicle issue 4978](https://github.com/Cratis/Chronicle/issues/4978); until it is in the version you run, do not rely on the fence alone.
 
 ### Failover and replication
 
