@@ -27,6 +27,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <!-- Cratis.Chronicle.Server used to need this only because the generated gRPC service
              implementations lived here and were internal. They now live in Cratis.Chronicle.Grpc,

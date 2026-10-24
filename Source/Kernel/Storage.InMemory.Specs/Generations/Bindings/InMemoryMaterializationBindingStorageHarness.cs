@@ -7,6 +7,6 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 
 public sealed class InMemoryMaterializationBindingStorageHarness : IMaterializationBindingStorageHarness
 {
-    public IMaterializationBindingStorage Create() => new InMemoryMaterializationBindingStorage();
+    public IMaterializationBindingStorage Create(TimeProvider? timeProvider = null) => new InMemoryMaterializationBindingStorage(timeProvider);
     public void Dispose() { }
 }

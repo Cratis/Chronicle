@@ -5,6 +5,7 @@
         <Description>.NET Aspire hosting integration for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Run the Chronicle kernel as an Aspire resource in your distributed application.</Description>
         <PackageTags>event-sourcing;event-store;cqrs;aspire;dotnet;chronicle</PackageTags>
         <NoWarn>$(NoWarn);ASPIREPROBES001;NU1903</NoWarn>
+        <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,5 +15,15 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="OpenTelemetry" />
+    </ItemGroup>
+
+    <!-- Aspire.Hosting requires these at 10.0.12 or later on every target framework. The net8.0 and net9.0 central
+         pins are lower, and a lower direct dependency wins over Aspire.Hosting's in a consumer's restore, which then
+         fails with NU1605. Keep them at the net10.0 line here. -->
+    <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net9.0' ">
+        <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="10.0.13" />
+        <PackageReference Update="Microsoft.Extensions.Hosting" VersionOverride="10.0.13" />
+        <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" VersionOverride="10.0.13" />
+        <PackageReference Update="System.Text.Json" VersionOverride="10.0.13" />
     </ItemGroup>
 </Project>

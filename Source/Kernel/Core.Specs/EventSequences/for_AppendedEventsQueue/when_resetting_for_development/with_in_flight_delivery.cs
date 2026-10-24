@@ -39,7 +39,7 @@ public class with_in_flight_delivery : Specification
         var eventType = new EventType("reset-event", 1);
         await _queue.Subscribe(observerKey, [eventType]);
         await _queue.Enqueue([AppendedEvent.Empty() with { Context = EventContext.Empty with { EventType = eventType } }]);
-        await _entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _queue.Enqueue([AppendedEvent.Empty() with { Context = EventContext.Empty with { EventType = eventType, SequenceNumber = 1 } }]);
     }
 
@@ -48,7 +48,7 @@ public class with_in_flight_delivery : Specification
         var reset = _queue.ResetForDevelopment();
         _resetCompletedBeforeDelivery = reset.IsCompleted;
         _release.SetResult();
-        await reset.WaitAsync(TimeSpan.FromSeconds(5));
+        await reset.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     void Destroy()
