@@ -109,10 +109,10 @@ public static class LiveQuery
             var failures = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
-                IEnumerable<TResult> result;
+                TResult[] current;
                 try
                 {
-                    result = await query();
+                    current = (await query()).ToArray();
                 }
                 catch (Exception) when (cancellationToken.IsCancellationRequested)
                 {
@@ -138,7 +138,6 @@ public static class LiveQuery
                     failures = 0;
                 }
 
-                var current = result.ToArray();
                 if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
                     observer.OnNext(current);
