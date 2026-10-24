@@ -19,5 +19,5 @@ public class with_tags : Specification
     void Because() => _contract = _definition.ToContract();
 
     [Fact] void should_preserve_the_tags() => _contract.Tags.ShouldContainOnly("Orders", "Analytics");
-    [Fact] void should_round_trip_the_tags() => _contract.ToChronicle(ProjectionOwner.Client).Tags!.ShouldContainOnly("Orders", "Analytics");
+    [Fact] void should_round_trip_the_tags() => _contract.ToChronicle(ProjectionOwner.Client).Tags.ShouldContainOnly("Orders", "Analytics");
 }

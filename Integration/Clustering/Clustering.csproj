@@ -8,7 +8,7 @@
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
-        <ProjectReference Include="../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <ProjectReference Include="../../Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj">
             <Aliases>KernelConcepts</Aliases>

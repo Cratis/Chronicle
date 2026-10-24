@@ -146,7 +146,7 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
             }
             else
             {
-                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name = '{columnName}'";
+                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_xinfo('{tableName}') WHERE name = '{columnName}'";
             }
 
             var result = await command.ExecuteScalarAsync();
