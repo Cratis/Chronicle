@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -24,13 +23,14 @@ public class and_a_pinned_projection_reads_a_protected_revision : given.a_projec
         _projection.GetDefinition().Returns(definition with { GenerationDelivery = EventGenerationDelivery.Pinned });
         dynamic content = new ExpandoObject();
         content.name = "protected-content";
-        _stored = new AppendedEvent(Concepts.Events.EventContext.EmptyWithEventSourceId("my-instance") with
+        var context = Concepts.Events.EventContext.EmptyWithEventSourceId("my-instance") with
         {
             EventType = new("my-event", 1),
             SequenceNumber = 1,
             Occurred = DateTimeOffset.UnixEpoch,
             CorrelationId = FirstCorrelation
-        }, (ExpandoObject)content)
+        };
+        _stored = new AppendedEvent(context, (ExpandoObject)content)
         {
             RevisedGeneration = 1,
             GenerationalContent = new Dictionary<int, string> { [1] = "{\"name\":\"protected-revision\"}" }

@@ -99,11 +99,20 @@ public class a_pinned_projection_grain : Specification
         silo.AddProbe(_ => readModel);
 
         _definition = new ProjectionDefinition(
-            ProjectionOwner.Client, EventSequenceId.Log, "the-projection", "the-read-model", true, true,
-            new JsonObject(), new Dictionary<EventType, FromDefinition> { [_pin] = new(new Dictionary<PropertyPath, string>(), "$eventSourceId", null) },
-            new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), [],
+            ProjectionOwner.Client,
+            EventSequenceId.Log,
+            "the-projection",
+            "the-read-model",
+            true,
+            true,
+            new JsonObject(),
+            new Dictionary<EventType, FromDefinition> { [_pin] = new(new Dictionary<PropertyPath, string>(), "$eventSourceId", null) },
+            new Dictionary<EventType, JoinDefinition>(),
+            new Dictionary<PropertyPath, ChildrenDefinition>(),
+            [],
             new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-            new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>())
+            new Dictionary<EventType, RemovedWithDefinition>(),
+            new Dictionary<EventType, RemovedWithJoinDefinition>())
         {
             GenerationDelivery = Delivery
         };
