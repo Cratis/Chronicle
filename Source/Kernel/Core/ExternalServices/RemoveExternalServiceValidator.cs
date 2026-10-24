@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
 using FluentValidation;
 
@@ -19,6 +20,7 @@ internal class RemoveExternalServiceValidator : CommandValidator<RemoveExternalS
     public RemoveExternalServiceValidator(IStorage storage)
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.ExternalServiceId).NotEmpty().WithMessage("External service identifier is required.");
 
         // EventStore and ExternalServiceId are checked together here, rather than through a cross-cutting

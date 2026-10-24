@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.ReadModelDefinitions;
@@ -17,6 +18,7 @@ internal class CreateReadModelValidator : CommandValidator<CreateReadModel>
     public CreateReadModelValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Identifier).NotEmpty().WithMessage("Identifier is required.");
         RuleFor(_ => _.DisplayName).NotEmpty().WithMessage("Display name is required.");
         RuleFor(_ => _.ContainerName).NotEmpty().WithMessage("Container name is required.");
