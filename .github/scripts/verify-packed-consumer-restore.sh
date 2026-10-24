@@ -5,6 +5,8 @@
 # Proves every Chronicle package about to ship restores for a consumer on each framework it ships.
 # A pin below a transitive dependency's requirement (NU1605) must fail the pull request, not the release.
 # CI uses a non-publishable 0.0.0-pr.N version; these packed packages are never pushed.
+# PACKED_RESTORE_ERRORS defaults to "NU1605;NU1608". Setting it explicitly selects which warnings
+# become errors instead of treating all warnings as errors (for example, PACKED_RESTORE_ERRORS=NU1605).
 # Usage: verify-packed-consumer-restore.sh <version> <feed-dir>
 #        verify-packed-consumer-restore.sh --self-test
 
@@ -26,6 +28,10 @@ NUSPEC
 set -euo pipefail
 [ "$1" = restore ]
 [ "$(grep -c '<PackageReference ' "$2")" -eq 1 ]
+grep -Fq "<WarningsAsErrors>${PACKED_RESTORE_ERRORS:-NU1605;NU1608}</WarningsAsErrors>" "$2"
+strict=true
+[ -z "${PACKED_RESTORE_ERRORS+x}" ] || strict=false
+grep -Fq "<TreatWarningsAsErrors>$strict</TreatWarningsAsErrors>" "$2"
 case "$2" in
     */net8.0/*) echo 'error NU1605: planted downgrade'; exit 1 ;;
 esac
@@ -51,6 +57,9 @@ fi
 
 [ "$#" -eq 2 ] || fail 'Usage: verify-packed-consumer-restore.sh <version> <feed-dir>'
 VERSION="$1"
+RESTORE_ERRORS="${PACKED_RESTORE_ERRORS:-NU1605;NU1608}"
+TREAT_WARNINGS_AS_ERRORS=true
+[ -z "${PACKED_RESTORE_ERRORS+x}" ] || TREAT_WARNINGS_AS_ERRORS=false
 case "$VERSION" in ''|*[!0-9A-Za-z.+-]*) fail "Invalid package version: $VERSION" ;; esac
 [ -d "$2" ] || fail "Package feed directory does not exist: $2"
 LOCAL_FEED="$(cd "$2" && pwd)"
@@ -134,8 +143,8 @@ for tfm in net8.0 net9.0 net10.0; do
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>$tfm</TargetFramework>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors>NU1605;NU1608</WarningsAsErrors>
+    <TreatWarningsAsErrors>$TREAT_WARNINGS_AS_ERRORS</TreatWarningsAsErrors>
+    <WarningsAsErrors>$RESTORE_ERRORS</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
 $(cat "$references")
