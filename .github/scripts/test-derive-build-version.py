@@ -37,11 +37,11 @@ def ref(tag):
 class for_next_version(unittest.TestCase):
     def test_highest_stable_tag_wins_numerically(self):
         refs = [ref("v19.9.0"), ref("v19.110.1"), ref("v19.108.1")]
-        self.assertEqual(("19.111.0-ci.42", "v19.110.1"), derive.next_version(refs, "42"))
+        self.assertEqual(("19.111.0-ci-42", "v19.110.1"), derive.next_version(refs, "42"))
 
     def test_prerelease_and_odd_tags_are_ignored(self):
         refs = [ref("v19.110.1"), ref("v20.0.0-alpha.1"), ref("preserve/pr-4438"), ref("review-base-5184")]
-        self.assertEqual("19.111.0-ci.7", derive.next_version(refs, "7")[0])
+        self.assertEqual("19.111.0-ci-7", derive.next_version(refs, "7")[0])
 
     def test_no_stable_tag_fails(self):
         with self.assertRaises(derive.DeriveError):
@@ -62,7 +62,7 @@ class for_main(unittest.TestCase):
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = derive.main()
         self.assertEqual(0, code)
-        self.assertEqual("CRATIS_CHRONICLE_BUILD_VERSION=19.111.0-ci.42\n", out.getvalue())
+        self.assertEqual("CRATIS_CHRONICLE_BUILD_VERSION=19.111.0-ci-42\n", out.getvalue())
 
     def test_failure_exits_non_zero_with_error_annotation(self):
         out, err = io.StringIO(), io.StringIO()

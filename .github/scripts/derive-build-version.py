@@ -4,8 +4,12 @@
 
 """Derive the version CI stamps into every assembly it builds (#5353).
 
-Prints ``CRATIS_CHRONICLE_BUILD_VERSION=<major>.<minor + 1>.0-ci.<run number>`` on stdout so the
+Prints ``CRATIS_CHRONICLE_BUILD_VERSION=<major>.<minor + 1>.0-ci-<run number>`` on stdout so the
 output can be appended to ``$GITHUB_ENV``. The base is the highest stable ``vX.Y.Z`` release tag.
+
+The run number is joined with a hyphen, not a dot: released kernels split protocol versions on '.'
+(ProtocolVersionOrder), so ``-ci.42`` would read as a fourth component and rank a CI build above the
+stable release of the same minor. ``-ci-42`` reads as exactly that release.
 """
 
 import os
@@ -43,7 +47,7 @@ def next_version(tag_refs, run_number):
         raise DeriveError("No stable vX.Y.Z release tag found on origin")
 
     (major, minor, _), tag = best
-    return f"{major}.{minor + 1}.0-ci.{int(run_number)}", tag
+    return f"{major}.{minor + 1}.0-ci-{int(run_number)}", tag
 
 
 def main():
