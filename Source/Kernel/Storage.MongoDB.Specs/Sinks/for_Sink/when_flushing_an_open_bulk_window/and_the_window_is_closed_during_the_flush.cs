@@ -25,7 +25,7 @@ public class and_the_window_is_closed_during_the_flush : given.a_sink_with_gated
         var closing = _sink.EndBulk(cancellation.Token);
 
         // Close on the shutdown deadline while the substituted driver still holds the original flush.
-        cancellation.Cancel();
+        await cancellation.CancelAsync();
         await closing.WaitAsync(TimeSpan.FromSeconds(5));
         _releaseFirstFlush.SetResult();
         _error = await Catch.Exception(async () => await flushing.WaitAsync(TimeSpan.FromSeconds(5)));

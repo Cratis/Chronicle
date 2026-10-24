@@ -26,11 +26,11 @@ public class and_writes_are_queued : given.a_sink_with_gated_bulk_writes
     }
 
     [Fact] void should_warn_that_the_open_window_was_replaced() => _logger.Entries.Count(_ => _.Level == LogLevel.Warning).ShouldEqual(1);
-    [Fact] void should_log_the_discarded_write_count() => _logger.Entries.Single().Values["QueuedOperationCount"].ShouldEqual(1);
-    [Fact] void should_log_the_previous_window() => _logger.Entries.Single().Values["PreviousWindow"].ShouldEqual(_opened.WindowId!.Value);
-    [Fact] void should_log_the_new_window() => _logger.Entries.Single().Values["Window"].ShouldEqual(_afterBeginning.WindowId!.Value);
-    [Fact] void should_log_the_mode() => _logger.Entries.Single().Values["Mode"].ShouldEqual("catch-up");
-    [Fact] void should_log_no_in_flight_batches() => _logger.Entries.Single().Values["InFlightBatchCount"].ShouldEqual(0);
+    [Fact] void should_log_the_discarded_write_count() => _logger.Warnings.Single().Values["QueuedOperationCount"].ShouldEqual(1);
+    [Fact] void should_log_the_previous_window() => _logger.Warnings.Single().Values["PreviousWindow"].ShouldEqual(_opened.WindowId!.Value);
+    [Fact] void should_log_the_new_window() => _logger.Warnings.Single().Values["Window"].ShouldEqual(_afterBeginning.WindowId!.Value);
+    [Fact] void should_log_the_mode() => _logger.Warnings.Single().Values["Mode"].ShouldEqual("catch-up");
+    [Fact] void should_log_no_in_flight_batches() => _logger.Warnings.Single().Values["InFlightBatchCount"].ShouldEqual(0);
     [Fact] void should_not_log_document_keys() => _logger.Entries.Any(_ => _.Message.Contains(_firstKey.Value.ToString()!)).ShouldBeFalse();
     [Fact] void should_discard_the_queued_writes() => WrittenValuesFor(_firstKey).ShouldBeEmpty();
     [Fact] void should_open_a_new_window() => _afterBeginning.WindowId.ShouldNotEqual(_opened.WindowId);
