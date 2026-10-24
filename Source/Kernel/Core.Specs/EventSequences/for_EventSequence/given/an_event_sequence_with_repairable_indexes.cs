@@ -32,6 +32,8 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
     protected virtual EventSequenceNumber InitialNext => EventSequenceNumber.First;
     protected virtual bool Closing => false;
     protected virtual bool IncludeUniqueWithClosing => false;
+    protected virtual ClosedStreamDimensions ClosingDimensions => ClosedStreamDimensions.EventSourceId;
+    protected virtual string? ClosingEventStreamIdFrom => null;
     protected virtual UniqueConstraintMode UniqueMode => UniqueConstraintMode.PerEventSource;
 
     protected override async Task<EventSequence> CreateEventSequence()
@@ -47,7 +49,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _closures = new();
         _log = new(EventStore, EventStoreNamespace, SequenceId, _identityStorage);
         _uniqueDefinition = new("unique", [new(_eventType.Id, ["email"])], ["Removed"]) { Mode = UniqueMode };
-        _closingDefinition = new("closing", [_eventType.Id], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
+        _closingDefinition = new("closing", [_eventType.Id], ClosingDimensions, ["Reopened"], ClosingEventStreamIdFrom);
         var unique = _unique = Substitute.For<IUniqueConstraintsStorage>();
         unique.Save(Arg.Any<EventSourceId>(), Arg.Any<UniqueConstraintDefinition>(), Arg.Any<EventSequenceNumber>(), Arg.Any<UniqueConstraintValue>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call =>
@@ -70,6 +72,8 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
             .Returns(call => _failWrites ? Task.FromException(new SimulatedStateWriteError()) : _closures.Reopen(call.ArgAt<ClosedStreamOwner>(0), call.ArgAt<ClosedStreamScope>(1), call.ArgAt<CancellationToken>(2)));
         closed.Close(Arg.Any<ClosedStream>(), Arg.Any<CancellationToken>())
             .Returns(call => _failWrites ? Task.FromException(new SimulatedStateWriteError()) : _closures.Close(call.ArgAt<ClosedStream>(0), call.ArgAt<CancellationToken>(1)));
+        closed.GetForEvent(Arg.Any<ClosedStreamOwner>(), Arg.Any<EventSequenceNumber>(), Arg.Any<CancellationToken>())
+            .Returns(call => _closures.GetForEvent(call.ArgAt<ClosedStreamOwner>(0), call.ArgAt<EventSequenceNumber>(1), call.ArgAt<CancellationToken>(2)));
         closed.GetFor(Arg.Any<ClosedStreamOwner>(), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>())
             .Returns(call => _closures.GetFor(call.ArgAt<ClosedStreamOwner>(0), call.ArgAt<ClosedStreamScope>(1), call.ArgAt<CancellationToken>(2)));
         closed.GetCovering(Arg.Any<ClosedStreamScope>(), Arg.Any<IEnumerable<ClosedStreamDimensions>>())

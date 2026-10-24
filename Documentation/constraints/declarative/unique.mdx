@@ -86,3 +86,5 @@ When a constraint is registered, the Chronicle Kernel creates the indexes requir
 When a constraint changes, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
 
 If the store rejects a duplicate claim during the rebuild, Chronicle logs a warning, skips that claim, and continues. The first historical claimant keeps the value until an event releases or replaces it. A live append during the rebuild can claim a value before its historical claimant is replayed; the log-order rule applies to history, not to concurrent live appends.
+
+Revising an event moves the claims it made: Chronicle releases the value the old content held and refolds the index from the revised position before the next governed append. Revisions made before this behavior shipped left stale claims behind. If you revised events of a constrained type before upgrading, rebuild that constraint's index once so the stale claims are released.
