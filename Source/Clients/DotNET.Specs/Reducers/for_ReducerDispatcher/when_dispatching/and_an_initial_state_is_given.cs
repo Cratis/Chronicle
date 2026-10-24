@@ -26,7 +26,7 @@ public class and_an_initial_state_is_given : given.a_reducer_dispatcher
 
     [Fact] void should_pass_the_deserialized_initial_state() => _initial.ShouldEqual(new State("before"));
     [Fact] void should_publish_one_result() => _published.Count.ShouldEqual(1);
-    [Fact] void should_publish_the_serialized_read_model() => _published[0].ReadModelState!.ShouldContain("after");
+    [Fact] void should_publish_the_serialized_read_model() => _published[0].ReadModelState.ShouldContain("after");
     [Fact] void should_succeed() => _published[0].State.ShouldEqual(ObservationState.Success);
     [Fact] void should_report_the_last_successful_event() => _published[0].LastSuccessfulObservation.ShouldEqual(7UL);
     [Fact] void should_echo_the_partition() => _published[0].Partition.ShouldEqual("partition");
