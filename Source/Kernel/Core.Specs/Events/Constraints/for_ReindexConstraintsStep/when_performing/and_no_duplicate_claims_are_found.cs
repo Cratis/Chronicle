@@ -24,5 +24,7 @@ public class and_no_duplicate_claims_are_found : for_ReindexConstraintsStep.give
         result.TryGetError(out _).ShouldBeFalse();
     }
     [Fact] void should_not_report_any_collisions() => _reported.CollisionCounts.ShouldBeEmpty();
+    [Fact] void should_not_report_any_samples() => _reported.CollisionSamples.ShouldBeEmpty();
+    [Fact] void should_not_report_any_sample_overflow() => _reported.CollisionSampleOverflowCounts.ShouldBeEmpty();
     [Fact] void should_leave_the_message_unchanged() => _reported.Progress.Message.ShouldEqual(_previousMessage);
 }
