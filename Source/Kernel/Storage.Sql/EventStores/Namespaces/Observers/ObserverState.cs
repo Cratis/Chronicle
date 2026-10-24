@@ -35,6 +35,11 @@ public class ObserverState
     public string? DeliveryFences { get; set; }
 
     /// <summary>
+    /// Gets or sets durable partition replay completions, absent on legacy rows.
+    /// </summary>
+    public string? PartitionReplayCompletions { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

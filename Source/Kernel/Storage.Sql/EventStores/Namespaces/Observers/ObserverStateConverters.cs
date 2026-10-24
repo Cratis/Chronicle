@@ -22,6 +22,7 @@ public static class ObserverStateConverters
             Id = definition.Identifier,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
             DeliveryFences = definition.DeliveryFences is null ? null : JsonSerializer.Serialize(definition.DeliveryFences, ObserverStateJson.Options),
+            PartitionReplayCompletions = definition.PartitionReplayCompletions is null ? null : JsonSerializer.Serialize(definition.PartitionReplayCompletions, ObserverStateJson.Options),
             Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = definition.AlertLifecycleId,
             AlertRevision = definition.AlertRevision,
@@ -98,6 +99,7 @@ public static class ObserverStateConverters
         {
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
             DeliveryFences = state.DeliveryFences is null ? null : JsonSerializer.Deserialize<Observation.DeliveryFenceState[]>(state.DeliveryFences, ObserverStateJson.Options),
+            PartitionReplayCompletions = state.PartitionReplayCompletions is null ? [] : JsonSerializer.Deserialize<Observation.PartitionReplayCompletionState[]>(state.PartitionReplayCompletions, ObserverStateJson.Options) ?? [],
             Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,

@@ -83,6 +83,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.AlertLifecycleId, document.AlertLifecycleId)
             .Set(_ => _.AlertRevision, document.AlertRevision)
             .Set(_ => _.DeliveryFences, document.DeliveryFences)
+            .Set(_ => _.PartitionReplayCompletions, document.PartitionReplayCompletions)
             .Set(_ => _.AlertDisposition, document.AlertDisposition)
             .Set(_ => _.QuarantineEpisodeId, document.QuarantineEpisodeId)
             .Set(_ => _.LastHandledEventSequenceNumber, document.LastHandledEventSequenceNumber)

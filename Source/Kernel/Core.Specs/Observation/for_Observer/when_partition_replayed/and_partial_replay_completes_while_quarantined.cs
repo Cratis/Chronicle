@@ -33,5 +33,5 @@ public class and_partial_replay_completes_while_quarantined : given.an_observer_
     [Fact] void should_preserve_the_higher_cursor() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)45UL);
     [Fact] void should_retain_required_partition_continuation() => CheckStartedCatchupJob(42UL);
     [Fact] void should_record_the_continuation_marker() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
-    [Fact] void should_persist_completion_and_continuation() => _storageStats.Writes.ShouldEqual(2);
+    [Fact] void should_persist_completion_before_lifting_the_fence() => ReplayCompletionWasPersisted.ShouldBeTrue();
 }

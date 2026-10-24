@@ -54,6 +54,7 @@ public partial class Observer
         await RecoverIfStuck();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();
+        await ReconcilePartitionReplayFences();
     }
 
     /// <summary>

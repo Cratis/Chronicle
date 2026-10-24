@@ -11,7 +11,13 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
 {
     void Establish()
     {
-        _stateStorage.State = _stateStorage.State with { IsReplaying = true, LastHandledEventSequenceNumber = 100UL, NextEventSequenceNumber = 101UL };
+        _stateStorage.State = _stateStorage.State with
+        {
+            IsReplaying = true,
+            LastHandledEventSequenceNumber = 100UL,
+            NextEventSequenceNumber = 101UL,
+            PartitionReplayCompletions = [new("replaying", null)]
+        };
         _stateStorage.State.CatchingUpPartitions.Add("catching-up");
         _stateStorage.State.ReplayingPartitions.Add("replaying");
     }
@@ -29,6 +35,7 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
     [Fact] void should_finish_replaying() => _stateStorage.State.IsReplaying.ShouldBeFalse();
     [Fact] void should_clear_replaying_partitions() => _stateStorage.State.ReplayingPartitions.ShouldBeEmpty();
     [Fact] void should_clear_catching_up_partitions() => _stateStorage.State.CatchingUpPartitions.ShouldBeEmpty();
+    [Fact] void should_clear_superseded_partition_completions() => _stateStorage.State.PartitionReplayCompletions!.ShouldBeEmpty();
     [Fact] void should_persist_completion() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_not_restart_replay() => ShouldNotHaveStartedReplay();
     [Fact] void should_not_resubscribe() => ShouldNotHaveResubscribed();

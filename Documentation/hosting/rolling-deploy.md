@@ -105,6 +105,7 @@ Each new event store and each new namespace needs a database or schema provision
 - **No zero-downtime guarantee.** Orleans reactivates the grains of a stopped node on the remaining nodes, but Chronicle does not state how long that takes or what clients see meanwhile. Test a rollout against a copy of your data before relying on it.
 - **No mixed versions across a major, or from before 19.106.** Grain calls are kept compatible within a major from 19.106 onwards. Other upgrades need every node stopped first.
 - **No rollback while mixed.** A grain that moved to a new node cannot move back to an old node that lacks what the new version added. Roll back by stopping every node and starting the previous version.
+- **Partition replay fencing is not fully protected during a rolling upgrade.** Older silos can clear a partition's replay fence before durable completion reconciliation runs, and older catch-up workers do not check the fence per batch. Do not rely on full partition replay fencing until every silo has been upgraded.
 - **No migration job and no migrate-only mode.** The nodes migrate.
 - **No schema version gate.** Chronicle does not enforce expand-then-contract database migrations, or limit migrations to the newest node. A change that removes or renames a column breaks nodes still running the old version. Plan those releases as a cluster stop and start, or keep each release additive.
 - **No readiness check for membership or startup.** See step 5.

@@ -19,7 +19,8 @@ public class and_observer_is_replaying : given.an_observer_with_replaying_partit
     async Task Because() => await _observer.PartitionReplayed(_partition, _newSequenceNumber);
 
     [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
-    [Fact] void should_remove_partition_from_replaying_partitions() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);
-    [Fact] void should_update_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_newSequenceNumber);
+    [Fact] void should_retain_the_partition_fence_until_full_replay_finishes() => _stateStorage.State.ReplayingPartitions.ShouldContain(_partition);
+    [Fact] void should_not_replace_the_full_replay_position_with_partial_progress() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_lastHandledEventSequenceNumber);
+    [Fact] void should_record_partial_progress_for_later_reconciliation() => _stateStorage.State.PartitionReplayCompletions!.Single().LastHandledEventSequenceNumber.ShouldEqual(_newSequenceNumber);
     [Fact] void should_not_start_catchup_job() => CheckDidNotStartCatchupJob();
 }

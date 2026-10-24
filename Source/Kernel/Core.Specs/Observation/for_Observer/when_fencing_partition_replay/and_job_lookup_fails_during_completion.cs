@@ -23,6 +23,6 @@ public class and_job_lookup_fails_during_completion : given.an_observer_with_par
 
     [Fact] void should_keep_the_replay_fence() => _stateStorage.State.ReplayingPartitions.ShouldContain(_partition);
     [Fact] void should_keep_replay_ownership_of_catchup() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
-    [Fact] void should_not_persist_a_lifted_fence() => _storageStats.Writes.ShouldEqual(0);
+    [Fact] void should_persist_the_completion_before_the_failing_lookup() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_not_start_catchup() => CheckDidNotStartCatchupJob();
 }

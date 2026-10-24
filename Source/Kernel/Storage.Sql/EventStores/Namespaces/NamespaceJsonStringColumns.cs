@@ -22,6 +22,7 @@ internal static class NamespaceJsonStringColumns
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.TypeSetControl)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.Initialization)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.DeliveryFences)),
+        (typeof(Observers.ObserverState), nameof(Observers.ObserverState.PartitionReplayCompletions)),
         (typeof(FailedPartitions.FailedPartition), "StateJson"),
         (typeof(Recommendations.Recommendation), "RequestJson"),
         (typeof(Patterns.BehaviorPattern), "FacetsJson"),

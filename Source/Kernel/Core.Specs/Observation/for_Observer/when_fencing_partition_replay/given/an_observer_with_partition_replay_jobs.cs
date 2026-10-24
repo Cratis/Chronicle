@@ -21,8 +21,23 @@ public class an_observer_with_partition_replay_jobs : for_Observer.given.an_obse
     protected readonly JobId _secondJob = JobId.New();
     protected IImmutableList<JobState> _jobs = ImmutableList<JobState>.Empty;
 
-    void Establish() => _jobStorage.GetJobs<IReplayObserverPartition, JobState>()
-        .Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>, JobError>.Success(_jobs)));
+    void Establish() => SetReplayJobs();
+
+    protected int RetryTimerIndex => _silo.TimerRegistry.Mock.Invocations
+        .Where(call => call.Method.Name == "RegisterGrainTimer")
+        .Select((call, index) => (Options: (GrainTimerCreationOptions)call.Arguments[^1], Index: index))
+        .Last(timer => timer.Options.DueTime == TimeSpan.FromSeconds(5) && timer.Options.Period == Timeout.InfiniteTimeSpan).Index;
+
+    protected Task RunRetryTimer() => _silo.TimerRegistry.FireAsync(RetryTimerIndex);
+
+    protected void SetReplayJobs(params JobState[] jobs)
+    {
+        _jobs = jobs.ToImmutableList();
+        _jobStorage.GetJobs<IReplayObserverPartition, JobState>()
+            .Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>, JobError>.Success(_jobs)));
+    }
+
+    protected JobState ReplayJob(JobId id) => ReplayJob(id, _partition);
 
     protected JobState ReplayJob(JobId id, Key partition, JobStatus? status = null, ObserverKey? observerKey = null) => new()
     {

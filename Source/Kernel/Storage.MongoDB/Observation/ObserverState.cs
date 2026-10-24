@@ -41,6 +41,12 @@ public class ObserverState
     public IEnumerable<DeliveryFenceState>? DeliveryFences { get; set; }
 
     /// <summary>
+    /// Gets or sets durable partition replay completions, absent on legacy documents.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletions { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }

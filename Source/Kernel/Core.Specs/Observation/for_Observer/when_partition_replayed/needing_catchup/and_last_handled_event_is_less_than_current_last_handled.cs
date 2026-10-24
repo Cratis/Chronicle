@@ -17,7 +17,7 @@ public class and_last_handled_event_is_less_than_current_last_handled : given.an
 
     async Task Because() => await _observer.PartitionReplayed(_partition, _newSequenceNumber);
 
-    [Fact] void should_write_state_twice() => _storageStats.Writes.ShouldEqual(2);
+    [Fact] void should_persist_completion_before_lifting_the_fence() => ReplayCompletionWasPersisted.ShouldBeTrue();
     [Fact] void should_remove_partition_from_replaying_partitions() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);
     [Fact] void should_contain_partition_in_catching_up_partition() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_not_update_last_handled_event_sequence_number() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_lastHandledEventSequenceNumber);

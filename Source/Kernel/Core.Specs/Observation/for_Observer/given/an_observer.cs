@@ -86,6 +86,8 @@ public class an_observer : Specification
         var jobsManager = Substitute.For<IJobsManager>();
         jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<ReplayObserverPartitionRequest>())
             .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
+        jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
+            .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
         return jobsManager;
     }
 
@@ -93,6 +95,8 @@ public class an_observer : Specification
     {
         var jobStorage = Substitute.For<IJobStorage>();
         jobStorage.GetJobs<IReplayObserverPartition, JobState>()
+            .Returns(Task.FromResult<Catch<IImmutableList<JobState>, Cratis.Orleans.Storage.Jobs.JobError>>(ImmutableList<JobState>.Empty));
+        jobStorage.GetJobs<ICatchUpObserverPartition, JobState>()
             .Returns(Task.FromResult<Catch<IImmutableList<JobState>, Cratis.Orleans.Storage.Jobs.JobError>>(ImmutableList<JobState>.Empty));
 
         // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
@@ -277,6 +281,7 @@ public class an_observer : Specification
     {
         var persistedState = _stateStorage.State with
         {
+            PartitionReplayCompletions = _stateStorage.State.PartitionReplayCompletions?.Select(record => record with { ReplayedEventTypes = record.ReplayedEventTypes.ToArray() }).ToArray(),
             ReplayingPartitions = _stateStorage.State.ReplayingPartitions.ToHashSet(),
             CatchingUpPartitions = _stateStorage.State.CatchingUpPartitions.ToHashSet(),
             InFlightPartitions = _stateStorage.State.InFlightPartitions.ToHashSet()

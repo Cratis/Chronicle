@@ -148,6 +148,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
             DeliveryFences = existing.DeliveryFences,
+            PartitionReplayCompletions = existing.PartitionReplayCompletions,
             AlertLifecycleId = existing.AlertLifecycleId,
             AlertRevision = existing.AlertRevision,
             AlertDisposition = existing.AlertDisposition,

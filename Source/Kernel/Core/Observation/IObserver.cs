@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(2)]
+[Version(4)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>

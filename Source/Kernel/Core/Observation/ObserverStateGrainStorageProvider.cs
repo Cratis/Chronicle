@@ -88,8 +88,12 @@ public class ObserverStateGrainStorageProvider(IStorage storage, ILogger<Observe
         || state.FailedPartitionCount != FailedPartitionCount.Zero
         || state.IsReplaying
         || state.SubscribesToAllEvents
-        || state.ReplayingPartitions.Count > 0
+        || HasStoredPartitionState(state);
+
+    static bool HasStoredPartitionState(ObserverState state) =>
+        state.ReplayingPartitions.Count > 0
         || state.CatchingUpPartitions.Count > 0
         || state.InFlightPartitions.Count > 0
-        || state.FailedPartitions.Any();
+        || state.FailedPartitions.Any()
+        || (state.PartitionReplayCompletions?.Any() ?? false);
 }

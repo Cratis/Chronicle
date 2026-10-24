@@ -321,13 +321,13 @@ public partial class Observer
             concludedJobs: _concludedCatchUpJobs);
     }
 
-    async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
+    async Task<bool> StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
     {
         // The completed job's partition stays owned until the decision about a successor is made.
         var ownership = Skips.OwnershipTicket(partition);
         try
         {
-            await ProbeAndStartCatchupJob(partition, lastHandledEventSequenceNumber, fromStartWhenNothingRead);
+            return await ProbeAndStartCatchupJob(partition, lastHandledEventSequenceNumber, fromStartWhenNothingRead);
         }
         finally
         {
@@ -335,53 +335,55 @@ public partial class Observer
         }
     }
 
-    async Task ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
+    async Task<bool> ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
     {
         if (State.RunningState == ObserverRunningState.Replaying)
         {
             logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
-            return;
+            return false;
         }
         if (failures.State.IsFailed(partition))
         {
             logger.PartitionToCatchUpIsFailing(partition);
-            return;
+            return true;
         }
         if (!lastHandledEventSequenceNumber.IsActualValue && !fromStartWhenNothingRead)
         {
             logger.LastHandledEventIsNotActualValue();
-            return;
+            return false;
         }
 
         // With no read position the partition has no known position beyond its start, so catch-up begins there.
         var fromSequenceNumber = lastHandledEventSequenceNumber.IsActualValue ? lastHandledEventSequenceNumber.Next() : EventSequenceNumber.First;
         Skips.ProbedFrom(partition, fromSequenceNumber);
         var needCatchupResult = await NeedsCatchup(partition, fromSequenceNumber);
+        var completed = false;
         await needCatchupResult.Match(
-            needCatchup => needCatchup
-                ? StartCatchupJob(partition, fromSequenceNumber)
-                : Task.CompletedTask,
+            async needCatchup => completed = !needCatchup || await StartCatchupJob(partition, fromSequenceNumber),
             error =>
             {
                 switch (error)
                 {
                     case GetSequenceNumberError.NotFound:
                         logger.LastHandledEventForPartitionUnavailable(partition);
+                        completed = true;
                         return Task.CompletedTask;
                     default:
                         return PartitionFailed(partition, fromSequenceNumber, ["Event Sequence storage error caused partition to try recover"], string.Empty);
                 }
             });
+        return completed;
     }
 
-    async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
+    async Task<bool> StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
     {
-        if (IsRetired || _removed) return;
+        if (IsRetired || _removed) return false;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
         Skips.JobStarted(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+        var started = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();
+        return started.IsSuccess;
     }
 
     /// <summary>

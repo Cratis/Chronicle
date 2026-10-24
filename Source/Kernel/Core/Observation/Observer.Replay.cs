@@ -84,18 +84,25 @@ public partial class Observer
         CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, []);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        RecordPartitionReplayCompletion(new(partition, null) { LastHandledEventSequenceNumber = lastHandledEventSequenceNumber });
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, replayedEventTypes);
+        RecordPartitionReplayCompletion(new(partition, null) { LastHandledEventSequenceNumber = lastHandledEventSequenceNumber, ReplayedEventTypes = replayedEventTypes });
 
     /// <inheritdoc/>
-    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, []);
+    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        RecordPartitionReplayCompletion(new(partition, null) { LastHandledEventSequenceNumber = lastHandledEventSequenceNumber });
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompleteUnfencedPartitionReplay(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, replayedEventTypes);
+        RecordPartitionReplayCompletion(new(partition, null)
+        {
+            LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
+            LastScannedEventSequenceNumber = lastScannedEventSequenceNumber,
+            ReplayedEventTypes = replayedEventTypes
+        });
 
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
@@ -153,6 +160,7 @@ public partial class Observer
         State = State with
         {
             IsReplaying = false,
+            PartitionReplayCompletions = [],
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber,
             NextEventSequenceNumber = lastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ? EventSequenceNumber.First : lastHandledEventSequenceNumber.Next()
         };
@@ -178,14 +186,14 @@ public partial class Observer
     /// replay ended - including a replay that read only events the observer's filters exclude and so handled nothing.
     /// Events held back while it replayed are handed to catch-up from the furthest event the replay read.
     /// </remarks>
-    async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
+    async Task PreparePartitionReplayCompletion(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
+        State.CatchingUpPartitions.Add(partition);
         State.ReplayingPartitions.Remove(partition);
-        State.CatchingUpPartitions.Remove(partition);
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -208,9 +216,6 @@ public partial class Observer
         }
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
-        await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
-        EvaluateSuspectedSkips();
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)

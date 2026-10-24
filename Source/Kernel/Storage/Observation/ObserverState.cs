@@ -72,6 +72,11 @@ public record ObserverState(
     public IEnumerable<DeliveryFenceState>? DeliveryFences { get; init; }
 
     /// <summary>
+    /// Gets durable partition replay completions. Null is accepted for legacy state.
+    /// </summary>
+    public IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletions { get; init; } = [];
+
+    /// <summary>
     /// Gets the observer's initialization state and latest refusal reasons, or null for legacy state.
     /// </summary>
     public ObserverInitialization? Initialization { get; init; }

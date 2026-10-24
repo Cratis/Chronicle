@@ -38,6 +38,8 @@ public partial class Observer
     {
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
+        _partitionReplayReconciliationStopped = true;
+        CancelPartitionReplayRetry();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);

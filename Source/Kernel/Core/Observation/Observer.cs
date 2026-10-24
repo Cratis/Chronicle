@@ -218,6 +218,8 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        _partitionReplayRetryTimer?.Dispose();
+        _partitionReplayRetryTimer = null;
         try
         {
             if (_removed || !_observerExists)
