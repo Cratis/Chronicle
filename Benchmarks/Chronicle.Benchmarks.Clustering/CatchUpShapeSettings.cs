@@ -21,6 +21,11 @@ internal sealed record CatchUpShapeSettings(int Sources, int Events, int BatchSi
     public int PatternsWaitSeconds { get; init; } = 900;
 
     /// <summary>
+    /// Gets the delay between live-interleave append batches in milliseconds.
+    /// </summary>
+    public int AppendIntervalMs { get; init; }
+
+    /// <summary>
     /// Reads the settings from environment variables.
     /// </summary>
     /// <returns>The settings.</returns>
@@ -42,6 +47,24 @@ internal sealed record CatchUpShapeSettings(int Sources, int Events, int BatchSi
         {
             PatternsWaitSeconds = ReadPositive("CATCHUP_PATTERNS_WAIT_SECONDS", 900)
         };
+    }
+
+    /// <summary>
+    /// Reads the live-interleave settings from environment variables.
+    /// </summary>
+    /// <returns>The settings, including the append interval.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the append interval is not a non-negative integer.</exception>
+    public static CatchUpShapeSettings FromLiveEnvironment()
+    {
+        var settings = FromEnvironment();
+        var text = Environment.GetEnvironmentVariable("CATCHUP_APPEND_INTERVAL_MS");
+        if (text is null) return settings;
+        if (int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var interval) && interval >= 0)
+        {
+            return settings with { AppendIntervalMs = interval };
+        }
+
+        throw new InvalidOperationException("CATCHUP_APPEND_INTERVAL_MS must be a non-negative integer.");
     }
 
     static int ReadPositive(string name, int fallback)

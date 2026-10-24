@@ -329,6 +329,33 @@ Expiry produces `PatternsSettled: false`. Reads and waits remain outside timing,
 counters. The handled count is diagnostic, not a correctness assertion: a settled observer can still
 have a handled-count shortfall.
 
+## Live interleaved appends (MongoDB)
+
+`--live-interleave` reuses the catch-up-shape fixture, observer and round-robin dataset, but keeps the
+observer subscribed after handling the marker. It measures how quickly the selected projection or
+reactor and `$system.patterns` reach the tail during bulk or sustained appends. No disconnect, replay
+or rebuild is requested. Zero catch-up jobs is valid; `CatchUpObserverStarts` counts starts for the
+selected observer during the window, revealing spill/resubscribe cycling.
+
+Use the `CATCHUP_*` settings in the table above. This mode additionally accepts
+`CATCHUP_APPEND_INTERVAL_MS` (default `0`, a non-negative integer): the delay **between** seed batches.
+For example, 100 batches separated by 200 ms approximate 20 seconds of sustained load:
+
+```sh
+CATCHUP_SOURCES=100 CATCHUP_EVENTS=10000 CATCHUP_BATCH_SIZE=100 \
+CATCHUP_OBSERVER=projection CATCHUP_APPEND_INTERVAL_MS=200 \
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --live-interleave
+```
+
+The `Scenario = "live-interleave"` JSON result includes seed, observer and patterns elapsed milliseconds
+from seed start, observer and patterns events/s, marker/tail positions, append settings, pattern samples,
+the snapshot fingerprint and the same counters as catch-up-shape. Counters start before seeding and
+stop after patterns settlement, before snapshot verification. Patterns are sampled every 5 seconds
+after the user observer reaches the tail, using the same two-consecutive-stable-states rule described
+above and the `CATCHUP_PATTERNS_WAIT_SECONDS` bound. `PatternsElapsedMilliseconds` includes the sampling
+confirmation delay. Unacknowledged appends, observer or patterns timeouts, and snapshot mismatches fail
+the run with a non-zero exit.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.

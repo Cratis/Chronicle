@@ -45,6 +45,10 @@ internal sealed class CatchUpShapeDataset(CatchUpShapeSettings settings)
                     throw new InvalidOperationException("A catch-up seed batch was not acknowledged successfully.");
                 }
                 batch.Clear();
+                if (settings.AppendIntervalMs > 0 && index + 1 < settings.Events)
+                {
+                    await Task.Delay(settings.AppendIntervalMs);
+                }
             }
         }
 

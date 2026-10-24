@@ -86,7 +86,14 @@ internal static class CatchUpShapeScenario
         }));
     }
 
-    static async Task<ulong> AppendMarker(ClusterBenchmarkFixture fixture, TimeSpan timeout)
+    /// <summary>
+    /// Appends the marker used to establish a live observer.
+    /// </summary>
+    /// <param name="fixture">The cluster fixture.</param>
+    /// <param name="timeout">The append and tail-read timeout.</param>
+    /// <returns>The marker sequence number.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the marker is not acknowledged successfully.</exception>
+    public static async Task<ulong> AppendMarker(ClusterBenchmarkFixture fixture, TimeSpan timeout)
     {
         if (!(await fixture.EventStore1.EventLog.Append(CatchUpShapeDataset.Source(0), new CatchUpShapeValueSet(0)).WaitAsync(timeout)).IsSuccess)
         {
@@ -95,7 +102,13 @@ internal static class CatchUpShapeScenario
         return (await fixture.EventStore1.EventLog.GetTailSequenceNumber().WaitAsync(timeout)).Value;
     }
 
-    static ClusterBenchmarkFixture CreateFixture(CatchUpShapeCounters counters, CatchUpShapeSubscriptionControl subscriptionControl) =>
+    /// <summary>
+    /// Creates the single-silo fixture with counting and subscription filters.
+    /// </summary>
+    /// <param name="counters">The benchmark counters.</param>
+    /// <param name="subscriptionControl">The subscription control.</param>
+    /// <returns>The cluster fixture.</returns>
+    public static ClusterBenchmarkFixture CreateFixture(CatchUpShapeCounters counters, CatchUpShapeSubscriptionControl subscriptionControl) =>
         new(ClusterTopology.SingleSilo, services =>
         {
             counters.Configure(services);

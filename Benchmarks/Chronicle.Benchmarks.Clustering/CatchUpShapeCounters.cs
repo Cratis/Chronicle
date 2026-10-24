@@ -37,6 +37,11 @@ internal sealed class CatchUpShapeCounters : IIncomingGrainCallFilter, IOutgoing
     public Storage.MongoDB.IEventStoreNamespaceDatabase NamespaceDatabase { get; private set; } = null!;
 
     /// <summary>
+    /// Gets the number of catch-up job starts for the selected observer in the measured window.
+    /// </summary>
+    public long CatchUpObserverStarts => Interlocked.Read(ref _catchUpStarts);
+
+    /// <summary>
     /// Registers the counting filters and the monitored MongoDB client manager.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>

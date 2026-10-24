@@ -53,6 +53,12 @@ if (args.Contains("--catch-up-shape", StringComparer.Ordinal))
     return;
 }
 
+if (args.Contains("--live-interleave", StringComparer.Ordinal))
+{
+    await Cratis.Chronicle.Benchmarks.Clustering.LiveInterleaveScenario.Run();
+    return;
+}
+
 var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
 BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.Clustering.ClusteredAppendBenchmark).Assembly).Run(benchmarkArguments);
 
