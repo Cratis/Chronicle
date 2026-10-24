@@ -387,6 +387,7 @@ public partial class EventSequence(
         var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
+        await PrepareConstraintIndexesForRevision(@event);
         await EventSequenceStorage.Revise(
             sequenceNumber,
             eventType,
