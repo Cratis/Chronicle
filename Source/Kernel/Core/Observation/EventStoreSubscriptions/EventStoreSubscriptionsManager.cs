@@ -28,7 +28,6 @@ public class EventStoreSubscriptionsManager(
     static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
-    readonly Guid _activationDiagnosticId = Guid.NewGuid();
     EventStoreName _targetEventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
@@ -38,7 +37,6 @@ public class EventStoreSubscriptionsManager(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _targetEventStoreName = this.GetPrimaryKeyString();
-        logger.ManagerActivated(_targetEventStoreName, _activationDiagnosticId, State.Subscriptions.TryGetNonEnumeratedCount(out var definitionCount) ? definitionCount : -1);
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivation(definition, namespaces));
         await Task.WhenAll(tasks);
@@ -48,12 +46,10 @@ public class EventStoreSubscriptionsManager(
     public async Task Add(EventStoreSubscriptionDefinition definition)
     {
         var subscriptions = State.Subscriptions.ToList();
-        logger.DefinitionWriteStarting(_targetEventStoreName, _activationDiagnosticId, definition.Identifier, subscriptions.Count);
         subscriptions.RemoveAll(s => s.Identifier == definition.Identifier);
         subscriptions.Add(definition);
         State.Subscriptions = subscriptions;
         await WriteStateAsync();
-        logger.DefinitionWriteCompleted(_targetEventStoreName, _activationDiagnosticId, definition.Identifier, subscriptions.Count);
 
         await ScheduleSubscriptionReminder(definition.Identifier);
     }
@@ -150,11 +146,8 @@ public class EventStoreSubscriptionsManager(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptionDefinitions()
-    {
-        logger.ManagerDefinitionsRead(_targetEventStoreName, _activationDiagnosticId, State.Subscriptions.TryGetNonEnumeratedCount(out var definitionCount) ? definitionCount : -1);
-        return Task.FromResult(State.Subscriptions);
-    }
+    public Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptionDefinitions() =>
+        Task.FromResult(State.Subscriptions);
 
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)

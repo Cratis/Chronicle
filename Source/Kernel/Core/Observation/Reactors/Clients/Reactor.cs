@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -37,7 +36,6 @@ public class Reactor(
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     bool _subscribed;
-    string? _lastRegistryDiagnosticOutcome;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -45,7 +43,6 @@ public class Reactor(
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
-        logger.ActivationRegistry(this.GetPrimaryKeyString(), _observerKey.ConnectionId, localSiloDetails.SiloAddress.ToParsableString());
 
         return Task.CompletedTask;
     }
@@ -85,7 +82,6 @@ public class Reactor(
         {
             _observer = GrainFactory.GetGrain<IObserver>(key);
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId!);
-            LogRegistryClientResolved(connectedClient.ConnectionId);
             var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
             if (definition.StartAtTail)
             {
@@ -149,17 +145,11 @@ public class Reactor(
         {
             if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
             {
-                if (_lastRegistryDiagnosticOutcome != "Missing")
-                {
-                    _lastRegistryDiagnosticOutcome = "Missing";
-                    logger.RegistryClientMissing(this.GetPrimaryKeyString(), _observerKey.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), _subscribed);
-                }
                 return;
             }
 
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
-            LogRegistryClientResolved(connectedClient.ConnectionId);
             await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
                 ObserverType.Reactor,
                 definition.EventTypes.Select(e => e.EventType).ToArray(),
@@ -169,19 +159,8 @@ public class Reactor(
                 definition.Filters,
                 definition.GenerationDelivery);
         }
-        else
-        {
-            _lastRegistryDiagnosticOutcome = "Known";
-        }
 
         _subscribed = true;
-    }
-
-    void LogRegistryClientResolved(ConnectionId resolvedConnectionId)
-    {
-        if (_lastRegistryDiagnosticOutcome == "Resolved") return;
-        _lastRegistryDiagnosticOutcome = "Resolved";
-        logger.RegistryClientResolved(this.GetPrimaryKeyString(), _observerKey!.ConnectionId, resolvedConnectionId, localSiloDetails.SiloAddress.ToParsableString());
     }
 
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)

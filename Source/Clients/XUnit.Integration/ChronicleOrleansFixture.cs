@@ -11,8 +11,6 @@ using KernelCore::Cratis.Chronicle.Namespaces;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -96,11 +94,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
-        var resetDiagnosticId = Guid.NewGuid();
-        var invocationDiagnosticId = Environment.GetEnvironmentVariable("CHRONICLE_SUBSCRIPTION_DIAGNOSTICS_INVOCATION") ?? "not-runner-correlated";
-        var logger = Services.GetService<ILogger<ChronicleOrleansFixture<TChronicleFixture>>>() ?? NullLogger<ChronicleOrleansFixture<TChronicleFixture>>.Instance;
-        ChronicleOrleansFixtureLogging<TChronicleFixture>.ResetStarting(logger, resetDiagnosticId, invocationDiagnosticId, sharedEventStore.Name.Value, sharedEventStore.Namespace.Value);
-
         // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
         // their background queues must settle before either storage or projection pipelines can be reset.
         await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
@@ -163,7 +156,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         // The startup task is removed from the test silo. Restore its System event schemas and
         // kernel reactors after the wipe, before any client can create namespaces again.
         await BootstrapKernel();
-        ChronicleOrleansFixtureLogging<TChronicleFixture>.ResetCompleted(logger, resetDiagnosticId, invocationDiagnosticId, sharedEventStore.Name.Value, sharedEventStore.Namespace.Value);
 
         // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).

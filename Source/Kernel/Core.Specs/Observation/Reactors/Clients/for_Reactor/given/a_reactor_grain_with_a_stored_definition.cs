@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -21,7 +20,6 @@ public class a_reactor_grain_with_a_stored_definition : Specification
 {
     protected const string TheConnection = "the-connection";
     protected Reactor _grain;
-    protected RecordingLogger<Reactor> _logger;
     protected TestKitSilo _silo;
     protected IObserver _observer;
     protected IConnectedClients _connectedClients;
@@ -33,8 +31,6 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _logger = new RecordingLogger<Reactor>();
-        _silo.AddService<ILogger<Reactor>>(_logger);
 
         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
         definitionComparer

@@ -177,7 +177,6 @@ internal sealed class TestingServices : IServices
         _reactors = new(() =>
             new KernelReactorsService(
                 grainFactory,
-                null,
                 new KernelReactorMediator(),
                 storage,
                 jsonSerializerOptions,
@@ -225,7 +224,7 @@ internal sealed class TestingServices : IServices
             new Occurrences.OccurrenceReplies(new KernelOccurrencesService(commandPipeline.Value, storage, NullLogger<KernelOccurrencesService>.Instance), replies ?? new()));
 
         _eventStoreSubscriptions = new(() =>
-            new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()), NullLogger<KernelSubscriptionsService>.Instance));
+            new KernelSubscriptionsService(grainFactory, storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions())));
 
         _jobs = new(() =>
             new KernelJobsService(commandPipeline.Value, storage, grainFactory, NullLogger<KernelJobsService>.Instance));

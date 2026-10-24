@@ -11,9 +11,6 @@ namespace Cratis.Chronicle.Services.Clients;
 
 internal static partial class ConnectionServiceLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Control stream for connection {ConnectionId} registers on silo {ControlHost} using the same address as its connected-client registry key")]
-    internal static partial void ControlStreamHost(this ILogger<ConnectionService> logger, string connectionId, string controlHost);
-
     [LoggerMessage(LogLevel.Error, "Failure during keep alive for connection {ConnectionId}")]
     internal static partial void FailureDuringKeepAlive(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 

@@ -183,7 +183,6 @@ public static class ChronicleServerSiloBuilderExtensions
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
                     grainFactory,
-                    sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(),
                     sp.GetRequiredService<IReactorMediator>(),
                     sp.GetRequiredService<IStorage>(),
                     jsonSerializerOptions,
@@ -195,7 +194,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Captures.Captures>(sp),
-                new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>>()),
+                new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelReadBindings>(), expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<Cratis.Chronicle.Projections.IProjectionChangesetMediator>(), sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IMaterializedReadModelStore>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, sp.GetRequiredService<IReadModelReadBindings>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.ReadModels.MaterializedReadModels>>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ReadModelExplorer.ReadModelExplorer>(sp),

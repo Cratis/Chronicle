@@ -100,7 +100,6 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
             Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
-            Console.WriteLine(DescribePayloadIds(storedIds, allowed, acknowledged.Select(append => append.Id)));
             storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
             storedIds.All(allowed.Contains).ShouldBeTrue();
             acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
@@ -137,14 +136,6 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         var observedEvents = observed.ToHashSet();
         storedEvents.All(observedEvents.Contains).ShouldBeTrue();
         observedEvents.All(storedEvents.Contains).ShouldBeTrue();
-    }
-
-    internal static string DescribePayloadIds(IEnumerable<Guid> stored, IEnumerable<Guid> allowed, IEnumerable<Guid> acknowledged)
-    {
-        var storedIds = stored.ToHashSet();
-        var unexpected = storedIds.Except(allowed).Order().ToArray();
-        var missing = acknowledged.Except(storedIds).Order().ToArray();
-        return $"Unexpected stored payload IDs ({unexpected.Length}): {string.Join(", ", unexpected)}; missing acknowledged payload IDs ({missing.Length}): {string.Join(", ", missing)}";
     }
 
     void RecordFailedAppend(Guid id, AppendResult result)
