@@ -398,7 +398,7 @@ public partial class EventSequence(
             contentAsExpandoObject,
             hash);
 
-        await RewindPartitionForAffectedObservers(@event.Context.EventSourceId, [@event.Context.EventType]);
+        await ReplayForContentMutation(@event.Context.EventSourceId, [@event.Context.EventType]);
     }
 
     /// <inheritdoc/>
@@ -435,7 +435,7 @@ public partial class EventSequence(
             return;
         }
 
-        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
+        await ReplayForContentMutation(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 
     /// <inheritdoc/>
@@ -462,7 +462,7 @@ public partial class EventSequence(
             CausationForStorage(causation),
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
-        await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+        await ReplayForContentMutation(eventSourceId, affectedEventTypes);
     }
 
     /// <inheritdoc/>
@@ -1361,18 +1361,6 @@ public partial class EventSequence(
         catch (Exception exception)
         {
             logger.FailedReconcilingNamespaceSubscriptions(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        }
-    }
-
-    async Task RewindPartitionForAffectedObservers(
-        EventSourceId eventSourceId,
-        IEnumerable<EventType> affectedEventTypes)
-    {
-        var observers = await ObserverStorage.GetReplayableObserversForEventTypes(affectedEventTypes);
-        foreach (var observer in observers)
-        {
-            var key = new ObserverKey(observer.Identifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
-            await GrainFactory.GetGrain<IObserver>(key).ReplayPartition(eventSourceId);
         }
     }
 }
