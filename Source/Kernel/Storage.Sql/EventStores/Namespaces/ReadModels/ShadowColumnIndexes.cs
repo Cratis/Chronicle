@@ -29,14 +29,23 @@ internal static class ShadowColumnIndexes
     /// <param name="logger">The migration logger for visible DDL failures.</param>
     /// <param name="cancellationToken">An available caller token, linked with the configured reconciliation deadline.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, Configuration.Sql? configuration = null, ILogger<ReadModelMigrator>? logger = null, CancellationToken cancellationToken = default)
+    internal static Task Ensure(ReadModelDbContext context, Configuration.Sql? configuration = null, ILogger<ReadModelMigrator>? logger = null, CancellationToken cancellationToken = default) =>
+        Ensure(context, new ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (configuration ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger, CancellationToken: cancellationToken), TimeProvider.System);
+
+    /// <summary>
+    /// Ensures shadow indexes with a deadline driven by the supplied clock.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="execution">The DDL settings, including the timeout and caller token.</param>
+    /// <param name="timeProvider">The clock used for the reconciliation deadline.</param>
+    /// <returns>An awaitable task.</returns>
+    internal static async Task Ensure(ReadModelDbContext context, ReadModelIndexOperations.Execution execution, TimeProvider timeProvider)
     {
-        configuration ??= new();
-        var timeout = configuration.ShadowIndexDdlTimeoutSeconds;
+        var timeout = execution.CommandTimeout.GetValueOrDefault();
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeout);
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(timeout));
-        var execution = new ReadModelIndexOperations.Execution(Online: true, CommandTimeout: timeout, Logger: logger, CancellationToken: deadline.Token);
+        using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeout), timeProvider);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(execution.CancellationToken, timeoutSource.Token);
+        execution = execution with { CancellationToken = deadline.Token };
         var key = $"{context.Database.GetConnectionString()}:{context.TableName}";
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(deadline.Token);
