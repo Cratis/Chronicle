@@ -29,5 +29,6 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
 
     Task Destroy() => fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
+    NamespaceDbContext CreateContext() =>
+        fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new NamespaceDbContext(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString))));
 }

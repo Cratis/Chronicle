@@ -101,10 +101,11 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString))
             .AddInterceptors(Interceptors).Options;
 
+        var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, _migrator)));
 #pragma warning restore CA2000
-        await context.EnsureTableExists();
+        await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, () => { });
     }
 }
