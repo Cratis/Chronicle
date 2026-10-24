@@ -33,7 +33,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         ?? $"mongodb://localhost:{_container!.GetMappedPublicPort(MongoDBPort)}/?directConnection=true";
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         if (MongoDBSpecDatabaseNames.ExternalConnectionString is not null)
         {
@@ -209,7 +209,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {

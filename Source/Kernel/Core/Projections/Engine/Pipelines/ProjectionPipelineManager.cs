@@ -68,6 +68,7 @@ public class ProjectionPipelineManager(
             return pipeline.Pipeline;
         }
 
+        pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
         // A projection is observed per namespace whatever its scope - the events it reacts to only exist there.
@@ -102,6 +103,7 @@ public class ProjectionPipelineManager(
             return pipeline.Pipeline;
         }
 
+        pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
         // The generation addresses its destination explicitly; it never goes through the read model's own container
@@ -122,7 +124,7 @@ public class ProjectionPipelineManager(
 
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, MaterializationGenerationIdentity generation) =>
-        _pipelines.TryRemove(GenerationKey(eventStore, @namespace, generation), out _);
+        Evict(GenerationKey(eventStore, @namespace, generation));
 
     /// <inheritdoc/>
     public void Clear() => _pipelines.Clear();
@@ -144,6 +146,11 @@ public class ProjectionPipelineManager(
             ? KeyHelper.Combine(eventStore, @namespace, generation.ProjectionId)
             : KeyHelper.Combine(eventStore, @namespace, generation.ProjectionId, generation.Generation);
 
+    void Evict(string key)
+    {
+        if (_pipelines.TryRemove(key, out var pipeline)) pipeline.Pipeline.ClearPreparedPage();
+    }
+
     ProjectionPipeline Build(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
@@ -156,7 +163,7 @@ public class ProjectionPipelineManager(
     {
         var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var futuresTracker = new ProjectionFuturesTracker();
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, futuresTracker, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, futuresTracker, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [

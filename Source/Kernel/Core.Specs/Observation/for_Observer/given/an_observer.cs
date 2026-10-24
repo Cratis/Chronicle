@@ -213,6 +213,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns(EventSequenceNumber.Unavailable);
 
@@ -252,35 +253,17 @@ public class an_observer : Specification
     protected Task<bool> ReportAlerts() => _observer.ReportAlertState();
 
     /// <summary>
-    /// Gets the observer state as it was last persisted, which a crash carries over to the fresh activation.
-    /// </summary>
-    /// <remarks>
-    /// The default storage shares its state with the activation, so it is also the activation's state.
-    /// </remarks>
-    protected virtual ObserverState PersistedObserverState => _stateStorage.State;
-
-    /// <summary>
-    /// Configures the storage of the fresh silo a crash activates the observer in.
-    /// </summary>
-    /// <param name="silo">The fresh <see cref="TestKitSilo"/>.</param>
-    /// <param name="persistedState">The observer state carried over.</param>
-    protected virtual void ConfigureStorage(TestKitSilo silo, ObserverState persistedState)
-    {
-    }
-
-    /// <summary>
     /// Discards activation memory without running OnDeactivateAsync or its flushes.
     /// </summary>
     /// <param name="resetStorageStatistics">Whether to reset the write counts after activation.</param>
     /// <returns>The fresh activation backed by copies of the stored records.</returns>
     protected async Task<Observer> Crash(bool resetStorageStatistics = true)
     {
-        var stored = PersistedObserverState;
-        var persistedState = stored with
+        var persistedState = _stateStorage.State with
         {
-            ReplayingPartitions = stored.ReplayingPartitions.ToHashSet(),
-            CatchingUpPartitions = stored.CatchingUpPartitions.ToHashSet(),
-            InFlightPartitions = stored.InFlightPartitions.ToHashSet()
+            ReplayingPartitions = _stateStorage.State.ReplayingPartitions.ToHashSet(),
+            CatchingUpPartitions = _stateStorage.State.CatchingUpPartitions.ToHashSet(),
+            InFlightPartitions = _stateStorage.State.InFlightPartitions.ToHashSet()
         };
         var persistedDefinition = _definitionStorage.State with { EventTypes = _definitionStorage.State.EventTypes.ToArray() };
         var persistedFailures = new FailedPartitions
@@ -303,7 +286,6 @@ public class an_observer : Specification
 
         _silo = new();
         AddServices(_silo);
-        ConfigureStorage(_silo, persistedState);
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
         _stateStorage.State = persistedState;
         _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));

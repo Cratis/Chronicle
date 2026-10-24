@@ -53,6 +53,11 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
+    /// <summary>
+    /// Gets the logger for index diagnostics.
+    /// </summary>
+    public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
@@ -73,7 +78,8 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()),
-            new ReplayingTables());
+            new ReplayingTables(),
+            Logger);
     }
 
     /// <inheritdoc/>

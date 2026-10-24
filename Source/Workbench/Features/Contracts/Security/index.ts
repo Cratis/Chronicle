@@ -3,4 +3,5 @@
 export * from './AuthorizationType';
 export * from './BasicAuthorization';
 export * from './BearerTokenAuthorization';
+export * from './ManagedIdentityAuthorization';
 export * from './OAuthAuthorization';

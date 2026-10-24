@@ -19,7 +19,9 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 {
     const int Port = 5432;
     readonly ConcurrentDictionary<Type, Lazy<Task<string>>> _templates = new();
+#pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
+#pragma warning restore CA2213
     SqlCommandTimings? _commandTimings;
 
     internal IntegrationTimings Timings { get; } = new(nameof(PostgreSqlFixture), "sql-specs", "postgresql");
@@ -83,7 +85,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder("postgres:16-alpine")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
@@ -95,7 +97,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {

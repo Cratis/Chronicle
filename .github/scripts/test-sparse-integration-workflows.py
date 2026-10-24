@@ -316,13 +316,36 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
         self.assertIn("set -euo pipefail", run)
         self.assertIn("sql-spec-filter.py '${{ matrix.shard }}'", run)
-        self.assertIn('Storage.Sql.Specs.csproj --no-build', run)
+        self.assertIn('run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj', run)
+        self.assertIn('--coverage', run)
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertIn("&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        selection = subprocess.run(
+            ["node", "--input-type=module", "-e", """
+                import { ordinaryProjects, v3Projects, shippingProjects }
+                    from './.github/scripts/mixed-specs-selection.mjs';
+                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
+                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+            """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
+        projects = json.loads(selection.stdout)
+        self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
+        self.assertEqual(24, len(set(projects)))
+        self.assertIn("Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", projects)
+        self.assertIn("Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj", projects)
+        self.assertEqual("ubuntu-latest", jobs["specs-other"]["runs-on"])
+        prepare = next(step["run"] for step in jobs["specs-other"]["steps"]
+                       if step["name"] == "Build Azure Key Vault specs when absent from solution")
+        self.assertIn('if [ "$listed" = false ]; then', prepare)
+        self.assertIn("dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release", prepare)
+        self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
+        self.assertFalse(any(project.startswith("Integration/") for project in projects))
+        self.assertIn('--coverage', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
@@ -453,6 +476,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertFalse(condition_allows(coverage, context))
 
 
+VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+
+
 class IntegrationSingleBuildContracts(unittest.TestCase):
     def test_every_lane_consumes_current_run_outputs_without_a_fallback_build(self):
         jobs = workflow("integration.yml")["jobs"]
@@ -468,6 +494,16 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
                 for step in steps:
                     command = step.get("run", "")
+                    if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
+                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # previous release so the compatibility check orders the two sides correctly (#5353).
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
+                        self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
+                        self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
+                        self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
+                        self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                        continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
         producers = workflow("dotnet-build.yml")["jobs"]
@@ -497,7 +533,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
-                    fake = path / "dotnet"
+                    fake = path / "node"
                     fake.write_text("""#!/usr/bin/env python3
 import json, os, pathlib, sys
 args = sys.argv[1:]
@@ -507,11 +543,10 @@ calls.append(args)
 log.write_text(json.dumps(calls))
 if os.environ['MISSING'] == '1':
     sys.exit(1)
-logger = next(arg for arg in args if arg.startswith('trx;LogFileName='))
 results = pathlib.Path(args[args.index('--results-directory') + 1])
 results.mkdir(parents=True, exist_ok=True)
 failed = len(calls) < 3
-(results / logger.split('=', 1)[1]).write_text(
+(results / 'results.trx').write_text(
     '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
     '<UnitTestResult testName="Example.A.should_work" outcome="' +
     ('Failed' if failed else 'Passed') + '" /></TestRun>')
@@ -538,15 +573,9 @@ sys.exit(1 if failed else 0)
     def assert_test_arguments(self, lane, calls, expected_filter):
         project = "SqlClustering" if lane == "sql-clustering" else lane.title()
         for index, args in enumerate(calls):
-            self.assertEqual(["test", f"Integration/{project}/{project}.csproj"], args[:2])
-            self.assertIn("--no-build", args)
-            # --no-build implies --no-restore; the wrapper is explicit as well.
-            if lane != "sql-clustering":
-                self.assertIn("--no-restore", args)
-            configuration = "--configuration" if "--configuration" in args else "-c"
-            self.assertEqual("Release", args[args.index(configuration) + 1])
-            if lane in ("client", "sql-clustering"):
-                self.assertIn("-p:DisableDockerBuild=true", args)
+            self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
+            self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertIn("--results-directory", args)
             self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
                              args[args.index("--filter") + 1])
 

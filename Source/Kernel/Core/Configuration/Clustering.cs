@@ -19,11 +19,6 @@ public class Clustering
     public SingleWriterLease SingleWriterLease { get; set; } = new();
 
     /// <summary>
-    /// Gets the fallback when no job worker silo is available. Only AnySilo is currently supported.
-    /// </summary>
-    public JobsFallback JobsFallback { get; set; } = JobsFallback.AnySilo;
-
-    /// <summary>
     /// Gets the type of cluster membership to use. Defaults to single node localhost clustering;
     /// use <see cref="ClusteringType.MongoDB"/> or <see cref="ClusteringType.Sql"/> to let multiple
     /// nodes sharing the same storage and cluster id form one cluster.

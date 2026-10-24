@@ -80,7 +80,8 @@ export const AddWebhookDialog = () => {
         { label: strings.eventStore.general.webhooks.authTypes.none, value: AuthorizationType.none },
         { label: strings.eventStore.general.webhooks.authTypes.basic, value: AuthorizationType.basic },
         { label: strings.eventStore.general.webhooks.authTypes.bearer, value: AuthorizationType.bearer },
-        { label: strings.eventStore.general.webhooks.authTypes.oauth, value: AuthorizationType.OAuth }
+        { label: strings.eventStore.general.webhooks.authTypes.oauth, value: AuthorizationType.OAuth },
+        { label: strings.eventStore.general.webhooks.authTypes.managedIdentity, value: AuthorizationType.managedIdentity }
     ];
 
     const eventSequenceOptions = allEventSequences.data.map(eventSequence => ({ label: eventSequence.name, value: eventSequence.name }));
@@ -206,6 +207,19 @@ export const AddWebhookDialog = () => {
                             value={c => c.OAuthScope}
                             title={strings.eventStore.general.webhooks.dialogs.addWebhook.oauthScope}
                             required={false}
+                        />
+                    </>
+                )}
+                {authType === AuthorizationType.managedIdentity && (
+                    <>
+                        <InputTextField<AddWebhook>
+                            value={c => c.managedIdentityClientId}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.managedIdentityClientId}
+                            required={false}
+                        />
+                        <InputTextField<AddWebhook>
+                            value={c => c.managedIdentityScope}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.managedIdentityScope}
                         />
                     </>
                 )}

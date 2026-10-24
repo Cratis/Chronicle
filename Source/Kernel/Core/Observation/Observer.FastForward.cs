@@ -20,7 +20,6 @@ public partial class Observer
     public async Task<FastForwardResult> FastForward()
     {
         ThrowIfSealed();
-        await ThrowIfKeyDoesNotOwnDefinition();
         var previous = State.NextEventSequenceNumber;
         if (IsRetired || _removed)
         {

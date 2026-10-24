@@ -13,7 +13,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReleaseRefusedReplay()
     {
-        if (IsRetired || _removed || !KeyOwnsDefinition || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
+        if (IsRetired || _removed || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
 
         Skips.Reset();
         State = State with
@@ -37,7 +37,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
     {
-        if (IsRetired || _removed || !KeyOwnsDefinition || !State.ReplayingPartitions.Contains(partition)) return;
+        if (IsRetired || _removed || !State.ReplayingPartitions.Contains(partition)) return;
 
         // Keep ownership until the catch-up decision, but claim no replay coverage or successful delivery.
         Skips.JobStarted(partition);
@@ -85,7 +85,7 @@ public partial class Observer
 
             ChangeAlertState();
             await WriteStateAsync();
-            await WriteFailedPartitions();
+            await failures.WriteStateAsync();
         }
         finally
         {

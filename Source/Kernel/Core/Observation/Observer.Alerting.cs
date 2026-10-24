@@ -39,6 +39,7 @@ public partial class Observer
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
+        _staleCatchUpRetryTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);
@@ -209,9 +210,7 @@ public partial class Observer
             await UnregisterReminderNamed(LegacyAlertReminderName);
         }
 
-        // An activation under another event sequence than the definition's is not this observer, even though it
-        // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
-        if (source.Identifier != _observerId || !KeyOwnsDefinition)
+        if (source.Identifier != _observerId)
         {
             await UnregisterReminderNamed(AlertReminderName);
             return;

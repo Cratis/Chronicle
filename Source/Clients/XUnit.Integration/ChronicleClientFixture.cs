@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
-using Xunit;
 using EventSequencesStorageProvider = KernelCore::Cratis.Chronicle.EventSequences.EventSequencesStorageProvider;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -25,7 +24,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents the base fixture.
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
-public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
+public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDisposable, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
@@ -293,7 +292,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         DisposeServicesScope();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes the fixture: resets or bootstraps the environment, then runs the scenario setup.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public async Task InitializeAsync()
     {
         try
@@ -311,7 +313,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Disposes the fixture, running every cleanup step and rethrowing the failures together.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public virtual async Task DisposeAsync()
     {
         try
