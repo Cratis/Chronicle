@@ -14,6 +14,8 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Projections;
+using Orleans.TestKit;
+
 using IObserver = Cratis.Chronicle.Observation.IObserver;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -36,16 +38,34 @@ public class a_content_mutation_with_observers : an_event_sequence
     void Establish()
     {
         _eventSourceId = "mutated-source-not-a-document-key";
-        _originalEvent = new(EventContext.From(
-            EventStore, EventStoreNamespace, _eventType, EventSourceType.Default, _eventSourceId,
-            EventStreamType.All, EventStreamId.Default, 42UL, CorrelationId.New()), new ExpandoObject());
+        _originalEvent = new(
+            EventContext.From(
+                EventStore,
+                EventStoreNamespace,
+                _eventType,
+                EventSourceType.Default,
+                _eventSourceId,
+                EventStreamType.All,
+                EventStreamId.Default,
+                42UL,
+                CorrelationId.New()),
+            new ExpandoObject());
         _eventSequenceStorage.GetEventAt(42UL).Returns(_originalEvent);
         _eventSequenceStorage.Redact(
-            Arg.Any<EventSequenceNumber>(), Arg.Any<RedactionReason>(), Arg.Any<CorrelationId>(),
-            Arg.Any<IEnumerable<Causation>>(), Arg.Any<IEnumerable<IdentityId>>(), Arg.Any<DateTimeOffset>()).Returns(_originalEvent);
+            Arg.Any<EventSequenceNumber>(),
+            Arg.Any<RedactionReason>(),
+            Arg.Any<CorrelationId>(),
+            Arg.Any<IEnumerable<Causation>>(),
+            Arg.Any<IEnumerable<IdentityId>>(),
+            Arg.Any<DateTimeOffset>()).Returns(_originalEvent);
         _eventSequenceStorage.Redact(
-            _eventSourceId, Arg.Any<RedactionReason>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<CorrelationId>(),
-            Arg.Any<IEnumerable<Causation>>(), Arg.Any<IEnumerable<IdentityId>>(), Arg.Any<DateTimeOffset>()).Returns([_eventType, _secondEventType]);
+            _eventSourceId,
+            Arg.Any<RedactionReason>(),
+            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<CorrelationId>(),
+            Arg.Any<IEnumerable<Causation>>(),
+            Arg.Any<IEnumerable<IdentityId>>(),
+            Arg.Any<DateTimeOffset>()).Returns([_eventType, _secondEventType]);
 
         _observerDefinitions = Substitute.For<IObserverDefinitionsStorage>();
         _projectionDefinitions = Substitute.For<IProjectionDefinitionsStorage>();
@@ -77,9 +97,14 @@ public class a_content_mutation_with_observers : an_event_sequence
         {
             Children = new Dictionary<PropertyPath, ChildrenDefinition>
             {
-                ["children"] = new("id", new Dictionary<EventType, FromDefinition>(), new Dictionary<EventType, JoinDefinition>(),
-                    new Dictionary<PropertyPath, ChildrenDefinition>(), new(new Dictionary<PropertyPath, string>(), false),
-                    new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>())
+                ["children"] = new(
+                    "id",
+                    new Dictionary<EventType, FromDefinition>(),
+                    new Dictionary<EventType, JoinDefinition>(),
+                    new Dictionary<PropertyPath, ChildrenDefinition>(),
+                    new(new Dictionary<PropertyPath, string>(), false),
+                    new Dictionary<EventType, RemovedWithDefinition>(),
+                    new Dictionary<EventType, RemovedWithJoinDefinition>())
             }
         });
         AddProjection("legacy", Definition("legacy") with { HasLegacyStorageFields = true });
@@ -93,7 +118,8 @@ public class a_content_mutation_with_observers : an_event_sequence
         AddObserver("non-replayable", ObserverType.Projection, replayable: false);
 
         var byKey = _observers.ToDictionary(
-            pair => new ObserverKey(pair.Key, EventStore, EventStoreNamespace, SequenceId).ToString(), pair => pair.Value);
+            pair => new ObserverKey(pair.Key, EventStore, EventStoreNamespace, SequenceId).ToString(),
+            pair => pair.Value);
         _silo.AddProbe<IObserver>(identity => byKey[identity.ToString()]);
         _projectionDefinitions.ClearReceivedCalls();
         _storage.ClearReceivedCalls();
@@ -136,10 +162,19 @@ public class a_content_mutation_with_observers : an_event_sequence
     }
 
     protected ProjectionDefinition Definition(string id) => new(
-        ProjectionOwner.Client, SequenceId, id, ReadModelIdentifier.NotSet, true, true, new(),
+        ProjectionOwner.Client,
+        SequenceId,
+        id,
+        ReadModelIdentifier.NotSet,
+        true,
+        true,
+        new(),
         new Dictionary<EventType, FromDefinition> { [_eventType] = new(new Dictionary<PropertyPath, string>(), "", null) },
-        new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), [],
-        new(new Dictionary<PropertyPath, string>(), false), new Dictionary<EventType, RemovedWithDefinition>(),
+        new Dictionary<EventType, JoinDefinition>(),
+        new Dictionary<PropertyPath, ChildrenDefinition>(),
+        [],
+        new(new Dictionary<PropertyPath, string>(), false),
+        new Dictionary<EventType, RemovedWithDefinition>(),
         new Dictionary<EventType, RemovedWithJoinDefinition>());
 
     ProjectionDefinition WithKey(ProjectionDefinition definition, PropertyExpression key) => definition with
