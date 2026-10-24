@@ -28,7 +28,8 @@ const trx = (outcome = 'Passed', name = 'Specs.theory(value: &quot;a&amp;b&quot;
 const coverage = (filename = 'Source/Library/Decision.cs', hits = '1') => `<coverage><packages><package><classes><class filename="${filename}"><lines><line number="1" hits="${hits}" /></lines></class></classes></package></packages></coverage>`;
 function graph(projectPath = v3Projects[0]) {
     const shipping = shippingProjects.includes(projectPath);
-    const packages = ['xunit.v3.extensibility.core', ...(!shipping ? ['xunit.v3.mtp-off'] : []), ...(projectPath === shippingProjects[0] ? [] : ['cratis.specifications.xunit.v3'])];
+    const testing = projectPath === shippingProjects[0];
+    const packages = [...(testing ? [] : ['xunit.v3.extensibility.core']), ...(!shipping ? ['xunit.v3.mtp-off'] : []), ...(testing ? [] : ['cratis.specifications.xunit.v3'])];
     const libraries = Object.fromEntries(packages.map(id => [`${id}/1.2.3`, { type: 'package' }]));
     return {
         evaluated: { Properties: { IsTestProject: String(!shipping), OutputType: shipping ? 'Library' : 'Exe', TargetFramework: 'net10.0', TargetFrameworks: '', AssemblyName: 'Actual.Output', TargetPath: '/built/Actual.Output.dll' }, Items: { PackageReference: packages.map(Identity => ({ Identity })), PackageVersion: packages.map(Identity => ({ Identity, Version: '1.2.3' })) } },
@@ -52,6 +53,22 @@ test('exact 31 executable v3 + 2 shipping boundary, not a Storage prefix heurist
         assert.equal(selected.tfm, 'net10.0');
         assert.deepEqual(selected.coverageRoots, p === benchmarkProject ? ['Source', 'Benchmarks/Chronicle.Benchmarks.Clustering'] : ['Source']);
     }
+});
+
+test('xunit is required for spec projects and optional but consistent for shipping packages', () => {
+    const [testing, integration] = shippingProjects;
+    const plain = graph(testing);
+    assert.equal(validateSelection(testing, plain.evaluated, plain.assets, plain.deps).project, testing);
+    const withXunit = graph(integration);
+    assert.equal(validateSelection(integration, withXunit.evaluated, withXunit.assets, withXunit.deps).project, integration);
+    const halfXunit = graph(testing);
+    halfXunit.assets.libraries['xunit.v3.extensibility.core/1.2.3'] = { type: 'package' };
+    assert.throws(() => validateSelection(testing, halfXunit.evaluated, halfXunit.assets, halfXunit.deps), /resolved\/runtime mismatch for xunit.v3.extensibility.core/);
+    const missingRunner = graph(v3Projects[0]);
+    for (const libraries of [missingRunner.assets.libraries, missingRunner.deps.libraries]) delete libraries['xunit.v3.extensibility.core/1.2.3'];
+    missingRunner.evaluated.Items.PackageReference = missingRunner.evaluated.Items.PackageReference.filter(x => x.Identity !== 'xunit.v3.extensibility.core');
+    missingRunner.evaluated.Items.PackageVersion = missingRunner.evaluated.Items.PackageVersion.filter(x => x.Identity !== 'xunit.v3.extensibility.core');
+    assert.throws(() => validateSelection(v3Projects[0], missingRunner.evaluated, missingRunner.assets, missingRunner.deps), /resolved\/runtime mismatch for xunit.v3.extensibility.core/);
 });
 
 test('solution completeness rejects an unclassified spec before any evaluation', async () => {
