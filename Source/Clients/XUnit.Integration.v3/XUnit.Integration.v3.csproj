@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
+        <AssemblyName>Cratis.Chronicle.XUnit.Integration.v3</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
+        <Description>xUnit v3 integration-testing support for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. Fixtures and helpers for integration tests against an in-process kernel. Must not be referenced together with Cratis.Chronicle.XUnit.Integration.</Description>
+        <PackageTags>event-sourcing;event-store;cqrs;testing;xunit;integration-testing;dotnet;chronicle</PackageTags>
+        <IsTestProject>false</IsTestProject>
+        <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications 5's experimental resource types. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="../XUnit.Integration/**/*.cs" Exclude="../XUnit.Integration/bin/**;../XUnit.Integration/obj/**;../XUnit.Integration/ChronicleClientFixture.Lifetime.cs" LinkBase="Shared" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+
+        <!-- Kernel assemblies as runtime-only with aliases -->
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
+            <Aliases>KernelConcepts</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Compatibility/Compatibility.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <Aliases>KernelCore</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="mongodb.driver" />
+        <PackageReference Include="Testcontainers" />
+        <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->
+        <PackageReference Include="SSH.NET" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="Cratis.Specifications.XUnit.v3" />
+        <!-- Cratis.Specifications 5 arrives transitively through Cratis.Specifications.XUnit.v3; the central pin (4.x) only binds direct references. -->
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Cratis.Arc.MongoDB" />
+    </ItemGroup>
+
+    <!-- The embedded kernel's runtime dependencies must travel with the package, as checked by the closure specs. -->
+    <ItemGroup>
+        <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Orleans" />
+        <PackageReference Include="Cratis.Orleans.Storage" />
+        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
+        <PackageReference Include="Cratis.Screenplay" />
+        <PackageReference Include="JsonCons.JmesPath" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Serialization" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <!-- Embedded rather than declared because the kernel pins a prerelease (NU5104). -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" PrivateAssets="all" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+        <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="protobuf-net" />
+        <PackageReference Include="protobuf-net.Reflection" />
+        <PackageReference Include="SharpCompress" />
+        <PackageReference Include="Snappier" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PrivatePackageRuntimeAssemblyRegex>^OpenTelemetry\.Instrumentation\.GrpcNetClient\.dll$</PrivatePackageRuntimeAssemblyRegex>
+    </PropertyGroup>
+</Project>

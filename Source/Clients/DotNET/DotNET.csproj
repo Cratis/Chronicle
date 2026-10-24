@@ -18,6 +18,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
         <InternalsVisibleTo Include="ProtoBuf.Grpc.Internal.Proxies" />
         <InternalsVisibleTo Include="System.Reflection.Emit" />
