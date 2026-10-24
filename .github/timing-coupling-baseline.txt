@@ -88,7 +88,6 @@
 1 Integration/Client/for_Webhooks/given/webhook_states_after_registering.cs
 2 Integration/Clustering/ClusteringFixture.cs
 1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
-1 Integration/Clustering/for_RolePlacement/PlacementScenario.cs
 1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
