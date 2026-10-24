@@ -82,35 +82,21 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         entity.Owner = owner.Value;
         var existing = await scope.DbContext.Observers.AsTracking()
             .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
-        if (existing is null)
-        {
-            await scope.DbContext.Observers.AddAsync(entity);
-        }
-        else
-        {
-            if (existing.Owner is not null && existing.Owner != owner.Value) return false;
-            PreserveControl(entity, existing);
-
-            // Owner is a concurrency token: the UPDATE atomically requires the read owner (this sequence or null).
-            // Keep the existing control token as well, so competing control writes still fail their concurrency check.
-            scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
-        }
-
         try
         {
-            await scope.DbContext.SaveChangesAsync();
-            return true;
-        }
-        catch (DbUpdateConcurrencyException error)
-        {
-            var entry = error.Entries.Single();
-            var current = await entry.GetDatabaseValuesAsync();
-            if (current is null || !Equals(current[nameof(ObserverState.Owner)], entry.OriginalValues[nameof(ObserverState.Owner)])) return false;
-            throw;
+            return await SaveState(scope.DbContext, entity, existing);
         }
         catch (DbUpdateException error) when (existing is null && StorageWriteConflicts.IsUnique(error))
         {
-            return false;
+            scope.DbContext.ChangeTracker.Clear();
+            var winner = await scope.DbContext.Observers.AsTracking().FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+            if (winner is null)
+            {
+                throw;
+            }
+
+            SqlStorageTelemetry.RecoveredCollision("observer-state");
+            return await SaveState(scope.DbContext, entity, winner);
         }
     }
 
@@ -200,6 +186,36 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             {
                 throw;
             }
+        }
+    }
+
+    static async Task<bool> SaveState(NamespaceDbContext context, ObserverState entity, ObserverState? existing)
+    {
+        if (existing is null)
+        {
+            await context.Observers.AddAsync(entity);
+        }
+        else
+        {
+            if (existing.Owner is not null && existing.Owner != entity.Owner) return false;
+            PreserveControl(entity, existing);
+
+            // Owner is a concurrency token: the UPDATE atomically requires the read owner (this sequence or null).
+            // Keep the existing control token as well, so competing control writes still fail their concurrency check.
+            context.Entry(existing).CurrentValues.SetValues(entity);
+        }
+
+        try
+        {
+            await context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException error)
+        {
+            var entry = error.Entries.Single();
+            var current = await entry.GetDatabaseValuesAsync();
+            if (current is null || !Equals(current[nameof(ObserverState.Owner)], entry.OriginalValues[nameof(ObserverState.Owner)])) return false;
+            throw;
         }
     }
 

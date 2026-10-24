@@ -120,7 +120,10 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
         }
         catch (MongoWriteException error) when (error.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return false;
+            // A matching owner may have won the first insert. Retry the guarded update without
+            // upserting so a different owner's row remains untouched.
+            var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            return result.MatchedCount > 0;
         }
     }
 
