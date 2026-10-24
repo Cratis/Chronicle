@@ -449,6 +449,12 @@ public partial class Observer
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
+        if (await ExceedsLiveBudget(eventsToHandle.Length))
+        {
+            await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle);
+            return;
+        }
+
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
@@ -471,7 +477,7 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
-                    var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
+                    var subscriberTimeout = GetLiveSubscriberTimeout(await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey));
                     var hold = await GetClientDeliveryHold();
 
                     ObserverSubscriberResult result;
