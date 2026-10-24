@@ -472,8 +472,9 @@ public partial class Sink : ISink, ICanReconcileIndexes
     {
         var containerName = QueriedTableNameFor(occurrence);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-        var totalCount = await scope.DbContext.Entries.CountAsync();
-        var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
+        var visible = VisibleInstances(scope.DbContext.Entries.AsNoTracking());
+        var totalCount = await visible.CountAsync();
+        var entries = await OrderByKey(visible).Skip(skip).Take(take).ToListAsync();
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
     }
 
@@ -488,8 +489,9 @@ public partial class Sink : ISink, ICanReconcileIndexes
         {
             var containerName = QueriedTableNameFor(occurrence);
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-            var totalCount = await scope.DbContext.Entries.CountAsync();
-            var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToArrayAsync();
+            var visible = VisibleInstances(scope.DbContext.Entries.AsNoTracking());
+            var totalCount = await visible.CountAsync();
+            var entries = await OrderByKey(visible).Skip(skip).Take(take).ToArrayAsync();
             return [new ObservedPage(totalCount, entries)];
         }
 
@@ -511,6 +513,9 @@ public partial class Sink : ISink, ICanReconcileIndexes
     /// empty or only partly rebuilt.
     /// </remarks>
     string QueriedTableNameFor(ReadModelContainerName? occurrence) => occurrence?.Value ?? _tableName;
+
+    static IQueryable<DynamicReadModelEntity> VisibleInstances(IQueryable<DynamicReadModelEntity> entries) =>
+        entries.Where(entity => EF.Property<bool>(entity, WellKnownProperties.ReadModelInstanceInitialized));
 
     IQueryable<DynamicReadModelEntity> OrderByKey(IQueryable<DynamicReadModelEntity> entries)
     {

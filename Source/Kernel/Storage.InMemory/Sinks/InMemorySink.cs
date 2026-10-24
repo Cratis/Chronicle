@@ -483,10 +483,11 @@ public partial class InMemorySink(
         // collection, and the primary one keeps the previous state until the replay ends and promotes it.
         lock (_collectionLock)
         {
-            var collection = _collection;
-            var instances = collection.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
+            var visible = _collection.Where(entry =>
+                !((IDictionary<string, object?>)entry.Value).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) || initialized is not false).ToArray();
+            var instances = visible.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
                 .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();
-            return (instances, collection.Count);
+            return (instances, visible.Length);
         }
     }
 

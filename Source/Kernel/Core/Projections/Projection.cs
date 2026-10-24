@@ -211,7 +211,7 @@ public class Projection(
         var identifierPropertyName = !schemaProperties.ContainsKey("_id") && schemaProperties.ContainsKey("id") ? "id" : "_id";
 
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
-        return [.. sink.ReadModels.Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
+        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
     }
 
     static bool SuppressesDirectRootUpdate(Change[] changes) =>
@@ -417,7 +417,7 @@ public class Projection(
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
 
         // Set the last handled event sequence number to mirror what the sink writes
-        return [.. sink.ReadModels.Select(readModel =>
+        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel =>
         {
             var state = WithIdentifier(readModel, _identifierPropertyName);
             ((IDictionary<string, object?>)state)[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)readModel.LastHandledEventSequenceNumber;
