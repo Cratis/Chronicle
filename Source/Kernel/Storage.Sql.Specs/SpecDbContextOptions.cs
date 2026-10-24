@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -10,6 +11,17 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// </summary>
 public static class SpecDbContextOptions
 {
+    static readonly ServiceProvider _sharedServices = new ServiceCollection().BuildServiceProvider();
+
+    /// <summary>
+    /// Builds options with the kernel's EF services and internal service provider caching enabled.
+    /// </summary>
+    /// <typeparam name="TContext">The context type.</typeparam>
+    /// <param name="connectionString">The connection string for the isolated specification database.</param>
+    /// <returns>The kernel-shaped options for the context.</returns>
+    public static DbContextOptions<TContext> Kernel<TContext>(string connectionString)
+        where TContext : DbContext => Database.BuildOptions<TContext>(_sharedServices, connectionString);
+
     /// <summary>
     /// Disables EF Core's internal service provider cache for the options being built.
     /// </summary>
