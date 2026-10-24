@@ -29,6 +29,16 @@ namespace Cratis.Chronicle.EventSequences;
 public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     /// <summary>
+    /// The most sequential per-partition deliveries one coalesced dispatch may cost a live observer before it is moved to its catch-up path.
+    /// </summary>
+    /// <remarks>
+    /// Live delivery makes one sequential <c language="csharp">Handle</c> call per run of consecutive same-partition events, each of which persists
+    /// observer state. Past this many runs, catch-up (parallel per partition, page-based) is cheaper and gives the same no-loss
+    /// guarantee. Do not lower it without benchmark evidence.
+    /// </remarks>
+    internal const int MaxPartitionRunsPerLiveDispatch = 256;
+
+    /// <summary>
     /// Upper bound on how many queued batches a single dispatch coalesces before delivering. Bounds the size of the
     /// merged batch (and therefore the work of one dispatch); any remaining backlog is drained on the next loop pass.
     /// </summary>
@@ -50,7 +60,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     readonly List<Task> _catchupTriggers = [];
-    readonly HashSet<ObserverKey> _observersCatchingUp = [];
+    readonly Dictionary<ObserverKey, CatchupTrigger> _catchupTriggersByObserver = [];
     readonly CancellationTokenSource _catchupCancellation = new();
     readonly CancellationToken _catchupCancellationToken;
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
@@ -409,6 +419,66 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             : matchingEvents[..numberOfMatchingEvents];
     }
 
+#pragma warning disable RCS1075 // Telemetry failures are deliberately swallowed: they must never replace the spill or delivery they observe
+    static void Observe(Action telemetry)
+    {
+        try
+        {
+            telemetry();
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            // Observation only.
+        }
+    }
+#pragma warning restore RCS1075
+
+    static List<(EventSourceId Partition, List<AppendedEvent> Events)> SplitIntoPartitionRuns(List<AppendedEvent> sorted)
+    {
+        var runs = new List<(EventSourceId Partition, List<AppendedEvent> Events)>();
+        var index = 0;
+        while (index < sorted.Count)
+        {
+            var partition = sorted[index].Context.EventSourceId;
+            var start = index;
+            while (index < sorted.Count && sorted[index].Context.EventSourceId == partition)
+            {
+                index++;
+            }
+
+            runs.Add((partition, sorted.GetRange(start, index - start)));
+        }
+
+        return runs;
+    }
+
+    static int CountRunsUpTo(
+        AppendedEventsQueueObserverSubscription subscription,
+        List<(EventSourceId Partition, List<AppendedEvent> Events)> runs,
+        int limit)
+    {
+        var count = 0;
+        foreach (var (_, runEvents) in runs)
+        {
+            foreach (var @event in runEvents)
+            {
+                if (!MatchesSubscription(subscription, @event))
+                {
+                    continue;
+                }
+
+                if (++count >= limit)
+                {
+                    return count;
+                }
+
+                break;
+            }
+        }
+
+        return count;
+    }
+
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
     {
         lock (_subscriptionsLock)
@@ -489,23 +559,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         // observers within a partition, never across partitions: handling a higher-numbered partition first would
         // advance an observer's NextEventSequenceNumber past lower-numbered events from another partition and drop them.
         var sorted = events.OrderBy(e => e.Context.SequenceNumber).ToList();
+        var runs = SplitIntoPartitionRuns(sorted);
 
-        var index = 0;
-        while (index < sorted.Count)
+        // Spill decided before any delivery: an observer whose share of this dispatch would cost too many sequential Handle
+        // calls is moved to catch-up before anything is handed to it, so its cursor can never pass an event it skipped.
+        // Every event here was durable before Enqueue, hence before the spill and the CatchUp() call that follows it, so
+        // catch-up covers them all. Skipping it for the rest of the dispatch, including a replacement subscription that
+        // appears mid-dispatch, is safe for that reason (delivering would also be harmless: Handle discards anything below
+        // the cursor).
+        var spilled = SpillFragmentedSubscriptions(runs);
+
+        foreach (var (partition, partitionEvents) in runs)
         {
-            var partition = sorted[index].Context.EventSourceId;
-            var start = index;
-            while (index < sorted.Count && sorted[index].Context.EventSourceId == partition)
-            {
-                index++;
-            }
-
-            var partitionEvents = sorted.GetRange(start, index - start);
             var subscriptions = GetSubscriptionsSnapshot();
 
             var tasks = new List<Task>();
             foreach (var subscription in subscriptions)
             {
+                if (spilled.Contains(subscription.ObserverKey))
+                {
+                    continue;
+                }
+
                 var actualEvents = GetFilteredEvents(partitionEvents, subscription);
                 if (actualEvents.Length == 0)
                 {
@@ -556,7 +631,54 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         foreach (var observerKey in observerKeys)
         {
             StartCatchupTrigger(observerKey);
+            ReportSpill(observerKey, AppendedEventsQueueSpillReasons.QueueFull);
         }
+    }
+
+    HashSet<ObserverKey> SpillFragmentedSubscriptions(List<(EventSourceId Partition, List<AppendedEvent> Events)> runs)
+    {
+        var spilled = new HashSet<ObserverKey>();
+
+        // A subscription cannot have more runs than the batch has, so most dispatches skip the scan entirely.
+        if (runs.Count <= MaxPartitionRunsPerLiveDispatch)
+        {
+            return spilled;
+        }
+
+        foreach (var subscription in GetSubscriptionsSnapshot())
+        {
+            if (CountRunsUpTo(subscription, runs, MaxPartitionRunsPerLiveDispatch + 1) > MaxPartitionRunsPerLiveDispatch &&
+                SpillFragmentedSubscriptionToCatchup(subscription))
+            {
+                spilled.Add(subscription.ObserverKey);
+            }
+        }
+
+        return spilled;
+    }
+
+    bool SpillFragmentedSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription)
+    {
+        lock (_subscriptionsLock)
+        {
+            if (_isDisposed || _isResetting)
+            {
+                return false;
+            }
+
+            // Remove by identity, as for a failed dispatch: a replacement subscription for the same observer must survive,
+            // and then the caller must not skip it. A skip implies this subscription was removed and a catch-up trigger started.
+            if (_subscriptions.RemoveAll(candidate => ReferenceEquals(candidate, subscription)) == 0)
+            {
+                return false;
+            }
+
+            StartCatchupTrigger(subscription.ObserverKey);
+        }
+
+        Observe(() => _logger.SpillingFragmentedObserverToCatchup(subscription.ObserverKey, MaxPartitionRunsPerLiveDispatch));
+        ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.FragmentedBacklog);
+        return true;
     }
 
     void SpillFailedSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription, AppendedEvent[] events)
@@ -574,6 +696,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
 
         _logger.DispatchFailedSpillingToCatchup(subscription.ObserverKey, events[0].Context.SequenceNumber, events[^1].Context.SequenceNumber);
+        ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.DispatchFailed);
     }
 
     void StartCatchupTrigger(ObserverKey observerKey)
@@ -584,13 +707,19 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 return;
             }
-            if (!_observersCatchingUp.Add(observerKey))
+
+            // A trigger is already live for this observer: its CatchUp() call may have begun before this spill, so owe it
+            // one more call instead of dropping the spill. Owed calls coalesce into a single rerun.
+            if (_catchupTriggersByObserver.TryGetValue(observerKey, out var existing))
             {
+                existing.Spills++;
                 return;
             }
 
+            var trigger = new CatchupTrigger();
+            _catchupTriggersByObserver[observerKey] = trigger;
             _catchupTriggers.RemoveAll(task => task.IsCompleted);
-            _catchupTriggers.Add(TriggerCatchup(observerKey));
+            _catchupTriggers.Add(TriggerCatchup(observerKey, trigger));
         }
     }
 
@@ -598,15 +727,34 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// Starts catch-up without waiting for historical processing. Failures back off from 200 ms to five seconds;
     /// after two minutes an unthrottled warning and counter mark the prolonged outage, but retries never give up.
     /// Disposal/reset ends the trigger. If the silo dies, the observer's unchanged persisted cursor and the
-    /// missed-event check on its next subscription provide durable recovery.
+    /// missed-event check on its next subscription provide durable recovery. There is at most one live trigger, and so one
+    /// <c language="csharp">CatchUp()</c> call, per observer. A spill that lands while it is in flight re-runs it once, after the current call
+    /// succeeds, so every spill is followed by a call that started after it.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the spilled observer to recover.</param>
+    /// <param name="trigger">The <see cref="CatchupTrigger"/> registered for the observer; this task owns it.</param>
     /// <returns>Awaitable task.</returns>
-    async Task TriggerCatchup(ObserverKey observerKey)
+    async Task TriggerCatchup(ObserverKey observerKey, CatchupTrigger trigger)
     {
         try
         {
-            await RetryCatchupUntilStarted(observerKey);
+            while (true)
+            {
+                var observedSpills = await RetryCatchupUntilStarted(observerKey, trigger);
+
+                // Check and release in one critical section: a spill either sees the entry (and bumps it, which this
+                // check then sees) or finds it gone and starts a new trigger.
+                lock (_subscriptionsLock)
+                {
+                    if (trigger.Spills == observedSpills)
+                    {
+                        ReleaseCatchupTrigger(observerKey, trigger);
+                        return;
+                    }
+                }
+
+                Observe(() => _logger.CatchupRequestedAgain(observerKey));
+            }
         }
         catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)
         {
@@ -616,12 +764,21 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         {
             lock (_subscriptionsLock)
             {
-                _observersCatchingUp.Remove(observerKey);
+                ReleaseCatchupTrigger(observerKey, trigger);
             }
         }
     }
 
-    async Task RetryCatchupUntilStarted(ObserverKey observerKey)
+    void ReleaseCatchupTrigger(ObserverKey observerKey, CatchupTrigger trigger)
+    {
+        // Only this task's own entry: a newer trigger registered after this one released must survive.
+        if (_catchupTriggersByObserver.TryGetValue(observerKey, out var current) && ReferenceEquals(current, trigger))
+        {
+            _catchupTriggersByObserver.Remove(observerKey);
+        }
+    }
+
+    async Task<int> RetryCatchupUntilStarted(ObserverKey observerKey, CatchupTrigger trigger)
     {
         var clock = CatchupTimeProvider;
         var started = clock.GetTimestamp();
@@ -630,11 +787,19 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         for (var attempt = 1; ; attempt++)
         {
             _catchupCancellationToken.ThrowIfCancellationRequested();
+
+            // Snapshot before the call: only spills that land after this point are not covered by it.
+            int observedSpills;
+            lock (_subscriptionsLock)
+            {
+                observedSpills = trigger.Spills;
+            }
+
             try
             {
                 var observer = _grainFactory.GetGrain<IObserver>(observerKey);
                 await observer.CatchUp();
-                return;
+                return observedSpills;
             }
             catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
             {
@@ -649,6 +814,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
 #pragma warning disable RCS1075 // Telemetry must not strand a spilled observer by stopping retries
+    void ReportSpill(ObserverKey observerKey, string reason) =>
+        Observe(() => _metrics?.ObserverSpilledToCatchup(observerKey.ObserverId, reason));
+
     void ReportCatchupTriggerFailure(ObserverKey observerKey, int attempt, Exception exception, bool exceededBudget)
     {
         try
@@ -735,4 +903,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 #pragma warning restore RCS1075
+
+    /// <summary>
+    /// The live catch-up trigger of one spilled observer. Only read and written under <c language="csharp">_subscriptionsLock</c>.
+    /// </summary>
+    sealed class CatchupTrigger
+    {
+        /// <summary>
+        /// Gets or sets how many spills joined this trigger while it was live.
+        /// </summary>
+        public int Spills { get; set; }
+    }
 }
