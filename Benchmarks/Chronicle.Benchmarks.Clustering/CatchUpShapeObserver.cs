@@ -85,21 +85,6 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
         subscriptionControl.Resume();
     }
 
-    Task Resubscribe(string observerType)
-    {
-        if (observerType != "projection")
-        {
-            return Subscribe<KernelReactors.IReactorObserverSubscriber>(KernelObserverConcepts.ObserverType.Reactor);
-        }
-
-        if (subscription.SubscriberType == typeof(KernelProjections.ICollapsingProjectionObserverSubscriber))
-        {
-            return Subscribe<KernelProjections.ICollapsingProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
-        }
-
-        return Subscribe<KernelProjections.IProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
-    }
-
     /// <summary>
     /// Prints the subscriber and observer types used for the measurement.
     /// </summary>
@@ -147,6 +132,21 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
         state.LastHandledEventSequenceNumber.IsActualValue && state.LastHandledEventSequenceNumber.Value >= tail &&
         state.RunningState == KernelObserverConcepts.ObserverRunningState.Active &&
         state.CatchingUpPartitions.Count == 0 && state.ReplayingPartitions.Count == 0;
+
+    Task Resubscribe(string observerType)
+    {
+        if (observerType != "projection")
+        {
+            return Subscribe<KernelReactors.IReactorObserverSubscriber>(KernelObserverConcepts.ObserverType.Reactor);
+        }
+
+        if (subscription.SubscriberType == typeof(KernelProjections.ICollapsingProjectionObserverSubscriber))
+        {
+            return Subscribe<KernelProjections.ICollapsingProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
+        }
+
+        return Subscribe<KernelProjections.IProjectionObserverSubscriber>(KernelObserverConcepts.ObserverType.Projection);
+    }
 
     Task Subscribe<TSubscriber>(KernelObserverConcepts.ObserverType observerType)
         where TSubscriber : KernelObservation.IObserverSubscriber => observer.SubscribeWithGenerationDelivery<TSubscriber>(

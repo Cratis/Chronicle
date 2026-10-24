@@ -75,6 +75,7 @@ internal sealed class CatchUpShapeSubscriptionControl : IIncomingGrainCallFilter
     {
         if (context.Grain is not KernelReactors.Reactor) return false;
         if (context.MethodName != nameof(KernelReactors.IReactor.KeepSubscription)) return false;
-        return context.Request.GetArgument(0) is ReactorDefinition { Identifier.Value: ReactorId };
+        return context.Request.GetArgument(0) is ReactorDefinition definition &&
+            string.Equals(definition.Identifier.Value, ReactorId, StringComparison.Ordinal);
     }
 }
