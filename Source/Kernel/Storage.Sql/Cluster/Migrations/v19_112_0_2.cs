@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster.Migrations;
 
 #pragma warning disable SA1600
 [DbContext(typeof(ClusterDbContext))]
-[Migration("Cluster-AdministratorPrivileges-v19_113_0")]
-public class v19_113_0 : Migration
+[Migration("Cluster-AdministratorPrivileges-v19_112_0_2")]
+public class v19_112_0_2 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
