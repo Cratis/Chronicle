@@ -7,7 +7,7 @@ public class and_clearing_failed_partitions : given.an_observer_under_a_mismatch
 {
     Exception? _error;
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.ClearFailedPartitions());
+    async Task Because() => _error = await Catch.Exception(_observer.ClearFailedPartitions);
 
     [Fact] void should_reject_the_operation() => _error.ShouldBeOfExactType<ObserverKeyDoesNotMatchDefinition>();
     [Fact] void should_name_the_event_sequence_of_the_definition() => _error!.Message.ShouldContain(_definitionEventSequenceId.Value);
