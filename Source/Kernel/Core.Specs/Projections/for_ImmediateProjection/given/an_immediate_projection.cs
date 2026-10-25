@@ -40,6 +40,7 @@ public class an_immediate_projection : Specification
 
     protected virtual ImmediateProjectionStreamScope? StreamScope => null;
     protected virtual ProjectionSessionId? SessionId => null;
+    protected virtual ProjectionDefinition DefinitionAtActivation => CreateProjectionDefinition();
 
     async Task Establish()
     {
@@ -71,7 +72,7 @@ public class an_immediate_projection : Specification
         _silo.AddProbe(_ => _eventSequence);
 
         var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
-        stateStorage.State = CreateProjectionDefinition();
+        stateStorage.State = DefinitionAtActivation;
         _silo.Options.StorageFactory = _ => stateStorage;
 
         var key = new ImmediateProjectionKey(
