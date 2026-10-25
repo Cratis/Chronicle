@@ -110,8 +110,11 @@ public class ReadModelMigrator(
             await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
-        var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
-        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+        if (await ShadowColumnIndexes.NeedsReconciliation(context))
+        {
+            var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
+            await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+        }
         _columnMigrations.TryAdd(cacheKey, true);
     }
 
