@@ -30,6 +30,6 @@ public class when_configuring_hashed_identifier_tracing : Specification
 
     void Destroy() => _provider.Dispose();
 
-    [It] void should_apply_the_tracing_mode_to_client_options() => _options.Telemetry.EventSourceIdTracing.ShouldEqual(EventSourceIdTracing.Hashed);
-    [It] void should_apply_the_hash_key_to_client_options() => _options.Telemetry.EventSourceIdHashKey.ShouldEqual(HashKey);
+    [Fact] void should_apply_the_tracing_mode_to_client_options() => _options.Telemetry.EventSourceIdTracing.ShouldEqual(EventSourceIdTracing.Hashed);
+    [Fact] void should_apply_the_hash_key_to_client_options() => _options.Telemetry.EventSourceIdHashKey.ShouldEqual(HashKey);
 }

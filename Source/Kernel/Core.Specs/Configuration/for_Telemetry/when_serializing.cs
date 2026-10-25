@@ -17,7 +17,7 @@ public class when_serializing : Specification
         EventSourceIdHashKey = HashKey
     });
 
-    [It] void should_not_include_the_hash_key_property() => _json.ShouldNotContain(nameof(Telemetry.EventSourceIdHashKey));
-    [It] void should_not_include_the_hash_key_value() => _json.ShouldNotContain(HashKey);
-    [It] void should_include_the_tracing_mode() => _json.ShouldContain(nameof(Telemetry.EventSourceIdTracing));
+    [Fact] void should_not_include_the_hash_key_property() => _json.ShouldNotContain(nameof(Telemetry.EventSourceIdHashKey));
+    [Fact] void should_not_include_the_hash_key_value() => _json.ShouldNotContain(HashKey);
+    [Fact] void should_include_the_tracing_mode() => _json.ShouldContain(nameof(Telemetry.EventSourceIdTracing));
 }
