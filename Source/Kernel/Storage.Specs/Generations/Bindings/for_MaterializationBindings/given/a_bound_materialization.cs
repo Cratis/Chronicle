@@ -11,6 +11,8 @@ namespace Cratis.Chronicle.Storage.Generations.Bindings.for_MaterializationBindi
 public abstract class a_bound_materialization<THarness> : Specification
     where THarness : IMaterializationBindingStorageHarness, new()
 {
+    protected BindingTimeProvider _time = new();
+    protected TimeSpan _rollbackWindow = TimeSpan.FromHours(1);
     protected EventStoreName _store = "bindings";
     protected MaterializationKey _key = new(new(Guid.Parse("fa5dc415-e617-48a0-9975-fd1580aa321a")), "one", "projection", "mongodb", SinkConfigurationId.None);
     protected MaterializationGenerationRecord _first;
@@ -22,7 +24,7 @@ public abstract class a_bound_materialization<THarness> : Specification
     async Task Establish()
     {
         _harness = CreateHarness();
-        _storage = _harness.Create();
+        _storage = _harness.Create(_time);
         _first = new(MaterializationGenerationIdentity.For(_key.Projection, MaterializationGeneration.First, "models"), MaterializationGenerationState.Active, MaterializationRevision.Unknown, DateTimeOffset.UnixEpoch);
         await _storage.TryAdoptFirst(_store, _key, _first);
         await _storage.TrySetBindingEpoch(_store, _key, ServingEpoch.Unset, ServingEpoch.Initial);

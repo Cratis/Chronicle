@@ -33,7 +33,7 @@ public class and_compliance_changes_nested_property_after_complex_property_is_se
         public Exception? Error;
         public ExpandoObject? Result;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             _databaseName = MongoDBSpecDatabaseNames.New();
             _client = new MongoClient(fixture.ConnectionString);
@@ -60,11 +60,19 @@ public class and_compliance_changes_nested_property_after_complex_property_is_se
             Result = await _sink.FindOrDefault(_key);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            if (_databaseName is not null)
+            try
             {
-                await _client.DropDatabaseAsync(_databaseName);
+                if (_databaseName is not null)
+                {
+                    await _client.DropDatabaseAsync(_databaseName);
+                }
+            }
+            finally
+            {
+                _sink?.Dispose();
+                _client?.Dispose();
             }
         }
 

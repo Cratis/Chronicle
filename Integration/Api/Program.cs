@@ -23,19 +23,18 @@ public sealed class Program
     }
 
     /// <summary>
-    /// Main entry point.
+    /// Creates the marker host independently of the xUnit executable entry point.
     /// </summary>
     /// <param name="args">Command line arguments.</param>
-    /// <returns>A task representing the async operation.</returns>
-    public static async Task Main(string[] args)
+    /// <returns>The marker host builder.</returns>
+    public static IHostBuilder CreateHostBuilder(string[] args)
     {
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-        var builder = WebApplication.CreateBuilder(args);
-        var app = builder.Build();
-        await app.RunAsync();
+        return Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(builder => builder.Configure(_ => { }));
     }
 }
