@@ -27,6 +27,7 @@ public static class GenerationCatalogServiceExtensions
         services.TryAddSingleton<IGenerationObserverBindings, GenerationObserverBindings>();
         services.TryAddSingleton(new GenerationExecutionSpecifications(Globals.JsonSerializerOptions));
         services.TryAddSingleton<IGenerationProjectionResolver, GenerationProjectionResolver>();
+        services.TryAddSingleton<IGenerationBuildRecovery, GenerationBuildRecovery>();
         services.TryAddSingleton<GenerationBulkWindowStore>();
         return services;
     }

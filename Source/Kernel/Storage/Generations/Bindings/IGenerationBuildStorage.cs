@@ -33,8 +33,8 @@ public interface IGenerationBuildStorage
     /// <param name="generation">The reserved generation.</param>
     /// <returns>The original request, or null when no build intent was persisted.</returns>
     /// <exception cref="GenerationBuildConflict">The persisted intent is ambiguous or inconsistent with the catalog.</exception>
-    /// <exception cref="NotSupportedException">The provider does not support generation build intent recovery.</exception>
-    Task<GenerationBuildRequest?> GetBuildRequest(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => throw new NotSupportedException();
+    /// <exception cref="MaterializationBindingsNotSupported">The provider does not support generation build intent recovery.</exception>
+    Task<GenerationBuildRequest?> GetBuildRequest(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => throw new MaterializationBindingsNotSupported();
 
     /// <summary>
     /// Captures current G1 execution without asserting knowledge of its historical provenance.
