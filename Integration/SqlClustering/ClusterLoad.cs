@@ -179,10 +179,16 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
         IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message);
 
-    // Until the cluster has declared a killed or stopped silo dead, a surviving silo can still forward an append to
-    // it and fail to connect. Like an append to an unavailable silo (#5231), the outcome is uncertain, so it is
-    // recorded as unknown and still verified against the stream (#5127). Only the incarnations this fixture took
-    // down qualify; a refused connection to any other silo is a real failure.
+    /// <summary>
+    /// Until the cluster has declared a killed or stopped silo dead, a surviving silo can still forward an append to
+    /// it and fail to connect. Like an append to an unavailable silo (#5231), the outcome is uncertain, so it is
+    /// recorded as unknown and still verified against the stream (#5127). Only the incarnations this fixture took
+    /// down qualify; a refused connection to any other silo is a real failure.
+    /// </summary>
+    /// <param name="exceptionType">The full exception type name.</param>
+    /// <param name="message">The connection failure message.</param>
+    /// <param name="departed">The silo incarnations stopped by this fixture.</param>
+    /// <returns>Whether the failure targets a silo incarnation stopped by this fixture.</returns>
     internal static bool IsAppendToDepartedSilo(string? exceptionType, string message, ICollection<(string Address, int Generation)> departed)
     {
         // Orleans reports the refused connection itself once, then - while it backs off before trying the silo
@@ -195,7 +201,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             return false;
         }
 
-        var endpoint = DepartedEndpoint().Match(message);
+        var endpoint = DepartedEndpoint.Match(message);
         return endpoint.Success &&
             departed.Contains((endpoint.Groups["address"].Value, int.Parse(endpoint.Groups["generation"].Value, System.Globalization.CultureInfo.InvariantCulture)));
     }
@@ -273,6 +279,6 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
     }
 
-    [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant)]
-    private static partial Regex DepartedEndpoint();
+    [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant, 1000)]
+    private static partial Regex DepartedEndpoint { get; }
 }
