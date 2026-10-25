@@ -34,6 +34,7 @@ public class and_states_exist : given.an_observer_state_storage
         _load = new TaskCompletionSource();
 
         var completion = new TaskCompletionSource<IEnumerable<KernelObserverState>>();
+
         // Attach on a pool thread, off xUnit's synchronization context, but finish attaching before the load is released.
         var subject = _storage.ObserveAll();
         _subscription = await Task.Run(() => subject.Subscribe(states => completion.TrySetResult(states)));
