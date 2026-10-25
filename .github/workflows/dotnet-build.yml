@@ -64,18 +64,37 @@ on:
       - ".github/legacy-contracts.json"
 
 jobs:
+  # Nightly runs skip every job when this workflow already succeeded on the same commit. Pull requests, pushes
+  # and manual runs are never skipped (the action only skips the schedule event).
+  already-ran:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+    steps:
+      - name: Check for a prior successful run
+        id: gate
+        uses: Cratis/Workflows/.github/actions/skip-if-already-ran@main
+
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
   # major cannot ship, so there is nothing to gain from building and testing it. See wire-compatibility.yml.
   wire-compatibility:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/wire-compatibility.yml
 
   # Alongside it, the silo-to-silo contract: a change that stops this build's silos from sharing a cluster with the
   # latest release's breaks every rolling upgrade. See grain-compatibility.yml.
   grain-compatibility:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/grain-compatibility.yml
 
   dotnet-build:
-    needs: [wire-compatibility, grain-compatibility]
+    needs: [already-ran, wire-compatibility, grain-compatibility]
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     outputs:
@@ -214,8 +233,8 @@ jobs:
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
-    if: github.event_name != 'pull_request'
-    needs: [wire-compatibility, grain-compatibility]
+    if: needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request')
+    needs: [already-ran, wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -274,8 +293,8 @@ jobs:
   # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
   # requested PR path waits for successful specs (implicit success() also blocks cancellation).
   dotnet-build-development-requested:
-    if: github.event_name == 'pull_request' && inputs.integration_requested
-    needs: [wire-compatibility, grain-compatibility, specs]
+    if: needs.already-ran.outputs.skip != 'true' && (github.event_name == 'pull_request' && inputs.integration_requested)
+    needs: [already-ran, wire-compatibility, grain-compatibility, specs]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -332,9 +351,10 @@ jobs:
           if-no-files-found: error
 
   specs-other:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -377,10 +397,11 @@ jobs:
           retention-days: 1
 
   specs-sql:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
     timeout-minutes: 45
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
       matrix:
@@ -427,8 +448,8 @@ jobs:
 
   legacy-contracts:
     # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
-    if: ${{ !cancelled() }}
-    needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled()) }}
+    needs: [already-ran, wire-compatibility, grain-compatibility, specs-other, specs-sql]
     permissions:
       contents: read
       issues: read
@@ -440,8 +461,8 @@ jobs:
   # Preserve the required check and all existing integration/coverage dependencies.
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
-    if: always()
-    needs: [specs-other, specs-sql]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
+    needs: [already-ran, specs-other, specs-sql]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -458,8 +479,8 @@ jobs:
     # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
     # independent of specs, so a failing spec does not hide integration results there.
     # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
-    needs: [dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]') }}
+    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -475,10 +496,10 @@ jobs:
 
   integration-api:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build, specs]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -535,10 +556,10 @@ jobs:
 
   mongodb:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build, specs]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -587,10 +608,10 @@ jobs:
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [specs, integration, integration-api, mongodb]
+    needs: [already-ran, specs, integration, integration-api, mongodb]
     outputs:
       coverage-cache-key: ${{ steps.export-coverage-key.outputs.key }}
 
@@ -677,9 +698,10 @@ jobs:
   # ArtifactsPath set, which changes which project references apply - is what catches that, and costs ~2
   # minutes off the critical path rather than ~13 on it.
   benchmarks-build:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
 
     steps:
       - name: Checkout code
