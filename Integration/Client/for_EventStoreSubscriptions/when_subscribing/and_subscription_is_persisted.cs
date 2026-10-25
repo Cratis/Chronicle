@@ -21,7 +21,21 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
                 new EventStoreSubscriptionId(SubscriptionId),
                 SourceEventStoreName);
 
-            PersistedSubscriptions = await GetStoredSubscriptions(TargetEventStoreName);
+            // The target store is shared with other classes in the collection, and the kernel reset between them can
+            // leave their subscriptions behind (Cratis/Chronicle#5402). Only this class's own id is its subject;
+            // a duplicate of it still shows.
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (true)
+            {
+                var all = await GetStoredSubscriptions(TargetEventStoreName);
+                PersistedSubscriptions = all.Where(_ => _.Id.Value == SubscriptionId).ToArray();
+                if (PersistedSubscriptions.Any())
+                {
+                    break;
+                }
+
+                await Task.Delay(100, cts.Token);
+            }
         }
     }
 
