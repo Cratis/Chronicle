@@ -27,9 +27,14 @@ public class OnlineIndexGate : DbCommandInterceptor
     public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
         var sql = command.CommandText;
+        if (sql.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase) && sql.Contains(WellKnownProperties.ReadModelInstanceInitialized, StringComparison.Ordinal))
+        {
+            // The migrator's initialized-marker build consumes its own capability check and is not the build under specification.
+            _onlineRequested = false;
+            return result;
+        }
         if (ForceOffline && _onlineRequested && sql.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase)) UsedOfflineBuild = !sql.Contains("ONLINE = ON", StringComparison.OrdinalIgnoreCase);
         if (sql.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase) &&
-            !sql.Contains(WellKnownProperties.ReadModelInstanceInitialized, StringComparison.Ordinal) &&
             ((ForceOffline && _onlineRequested) || sql.Contains("CONCURRENTLY", StringComparison.OrdinalIgnoreCase) || sql.Contains("ONLINE = ON", StringComparison.OrdinalIgnoreCase)) &&
             Interlocked.Exchange(ref _paused, 1) == 0)
         {
