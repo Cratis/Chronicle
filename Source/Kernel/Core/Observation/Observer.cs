@@ -140,9 +140,6 @@ public partial class Observer(
     /// Counts consecutive catch-up laps that concluded without moving the observer forward.
     /// </summary>
     int _zeroWorkCatchUps;
-    int _staleCatchUpLaps;
-    int _deferredStaleCatchUpLaps;
-    IGrainTimer? _staleCatchUpRetryTimer;
 
     /// <summary>
     /// The moment from which a catch-up that produced no work may be tried again, or the default value when none is backing off.
