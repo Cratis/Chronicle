@@ -24,10 +24,12 @@ public class and_a_reducer_partition_failed : given.a_replay_observer_job
     {
         await _job.Start(_request);
         await _job.CompleteForTesting();
+        await _job.CompletionNotification;
     }
 
     [Fact] void should_abandon_the_replay() => _replayServiceClient.Received(1).AbandonReplayFor(Arg.Is<ObserverDetails>(_ => _.Type == ObserverType.Reducer));
     [Fact] void should_not_promote_the_rebuilt_read_model() => _replayServiceClient.DidNotReceive().EndReplayFor(Arg.Any<ObserverDetails>());
-    [Fact] void should_notify_observer_of_incomplete_replay() => _observer.Received(1).Replayed(_lastHandled);
+    [Fact] async Task should_release_the_observer_without_claiming_progress() => await _observer.Received(1).ReleaseRefusedReplay();
+    [Fact] void should_not_report_an_incomplete_replay() => _observer.DidNotReceive().Replayed(Arg.Any<EventSequenceNumber>());
     [Fact] void should_not_notify_observer_of_successful_replay() => _observer.DidNotReceive().ReplayedSuccessfullySince(Arg.Any<EventSequenceNumber>(), Arg.Any<IReadOnlyDictionary<Key, EventSequenceNumber>>(), Arg.Any<EventType[]>(), Arg.Any<DateTimeOffset>());
 }

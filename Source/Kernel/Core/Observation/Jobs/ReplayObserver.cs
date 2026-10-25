@@ -79,7 +79,7 @@ public class ReplayObserver(
     /// An abandoned replay keeps the read model as it was before the replay, so the observer must continue from where
     /// that read model is, not from where the replay got to.
     /// </remarks>
-    bool ReleasesAbandonedReplayAtRetainedCursor => Request.ObserverType == ObserverType.Projection;
+    bool ReleasesAbandonedReplayAtRetainedCursor => Request.ObserverType != ObserverType.Reactor;
 
     /// <inheritdoc/>
     /// <remarks>
