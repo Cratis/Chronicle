@@ -34,9 +34,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </summary>
     const int MaxCoalescedBatchesPerDispatch = 100;
 
+    /// <summary>
+    /// How many times a spilled observer's catch-up trigger is retried before giving up. The whole no-loss guarantee
+    /// of the spill rests on the catch-up actually starting, so a transient failure to start it must not strand the
+    /// observer; retries make the trigger reliable and a final failure is logged as an error.
+    /// </summary>
+    const int MaxCatchupTriggerAttempts = 3;
+
     static readonly TimeSpan _catchupTriggerRetryBaseDelay = TimeSpan.FromMilliseconds(200);
-    static readonly TimeSpan _catchupTriggerRetryMaxDelay = TimeSpan.FromSeconds(5);
-    static readonly TimeSpan _catchupTriggerWarningBudget = TimeSpan.FromMinutes(2);
 
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
@@ -50,9 +55,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     readonly List<Task> _catchupTriggers = [];
-    readonly HashSet<ObserverKey> _observersCatchingUp = [];
-    readonly CancellationTokenSource _catchupCancellation = new();
-    readonly CancellationToken _catchupCancellationToken;
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
@@ -87,7 +89,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _activitySource = activitySource;
         _logger = logger;
         _stopBudget = stopBudget;
-        _catchupCancellationToken = _catchupCancellation.Token;
 
         var eventsConfig = options.Value.Events;
         _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
@@ -109,11 +110,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         StartQueueHandler();
     }
-
-    /// <summary>
-    /// Gets or sets the clock used for catch-up trigger deadlines and retry delays.
-    /// </summary>
-    internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -195,7 +191,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _isResetting = true;
         _isDraining = true;
-        await _catchupCancellation.CancelAsync();
         Task[] catchupTriggers;
         lock (_subscriptionsLock)
         {
@@ -285,17 +280,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        lock (_subscriptionsLock)
-        {
-            if (_isDisposed)
-            {
-                return;
-            }
-
-            _isDisposed = true;
-            _catchupCancellation.Cancel();
-            _catchupCancellation.Dispose();
-        }
+        _isDisposed = true;
         _channel.Writer.TryComplete();
 
         _metrics?.Dispose();
@@ -336,7 +321,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     }
                 }
 
-                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
+                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs));
             }
         });
     }
@@ -512,7 +497,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     continue;
                 }
 
-                tasks.Add(DispatchWithTracing(partition, actualEvents, subscription));
+                var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                tasks.Add(DispatchWithTracing(observer, partition, actualEvents, subscription.ObserverKey));
             }
 
             try
@@ -521,8 +507,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             }
             catch (Exception ex)
             {
-                // Only the failed subscription is spilled: other observers keep receiving the remaining partitions.
-                // The spilled observer must catch up before any later live batch can advance its cursor past the hole.
+                // Contain the failure to this partition so a coalesced dispatch still delivers the remaining
+                // partitions; the observer's own partition-failure and catchup machinery recovers the failed one.
                 _logger.NotifyingObserversFailed(ex);
                 _metrics?.EventsHandlingFailures();
             }
@@ -555,142 +541,71 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger.SpillingToCatchup(observerKeys.Length);
         foreach (var observerKey in observerKeys)
         {
-            StartCatchupTrigger(observerKey);
-        }
-    }
-
-    void SpillFailedSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription, AppendedEvent[] events)
-    {
-        lock (_subscriptionsLock)
-        {
-            // A reactivation may already have replaced this snapshot entry with an equal record. Remove by identity,
-            // never by ObserverKey or record equality, so the new subscription is not accidentally dropped.
-            if (_subscriptions.RemoveAll(candidate => ReferenceEquals(candidate, subscription)) == 0)
+            lock (_subscriptionsLock)
             {
-                return;
+                if (_isResetting)
+                {
+                    return;
+                }
+
+                _catchupTriggers.RemoveAll(task => task.IsCompleted);
+                _catchupTriggers.Add(TriggerCatchup(observerKey));
             }
-
-            StartCatchupTrigger(subscription.ObserverKey);
-        }
-
-        _logger.DispatchFailedSpillingToCatchup(subscription.ObserverKey, events[0].Context.SequenceNumber, events[^1].Context.SequenceNumber);
-    }
-
-    void StartCatchupTrigger(ObserverKey observerKey)
-    {
-        lock (_subscriptionsLock)
-        {
-            if (_isDisposed || _isResetting)
-            {
-                return;
-            }
-            if (!_observersCatchingUp.Add(observerKey))
-            {
-                return;
-            }
-
-            _catchupTriggers.RemoveAll(task => task.IsCompleted);
-            _catchupTriggers.Add(TriggerCatchup(observerKey));
         }
     }
 
     /// <summary>
-    /// Starts catch-up without waiting for historical processing. Failures back off from 200 ms to five seconds;
-    /// after two minutes an unthrottled warning and counter mark the prolonged outage, but retries never give up.
-    /// Disposal/reset ends the trigger. If the silo dies, the observer's unchanged persisted cursor and the
-    /// missed-event check on its next subscription provide durable recovery.
+    /// Starts an observer's catch-up out of the append path and does not swallow the outcome. <c language="csharp">CatchUp</c> returns
+    /// once the catch-up job has been started (not when it completes), so this waits only for the start — never for
+    /// observer processing — and therefore never re-couples appends to observer speed. A failure to start is logged
+    /// and retried a bounded number of times so a transient transport/job-subsystem fault does not permanently strand
+    /// a spilled observer behind the gap; exhausting the retries is logged as an error. Disposal of the queue while
+    /// the retries are in progress abandons them, which is logged as well so no spill ever ends without a trace.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the spilled observer to recover.</param>
     /// <returns>Awaitable task.</returns>
     async Task TriggerCatchup(ObserverKey observerKey)
     {
-        try
+        var observer = _grainFactory.GetGrain<IObserver>(observerKey);
+        for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts; attempt++)
         {
-            await RetryCatchupUntilStarted(observerKey);
-        }
-        catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)
-        {
-            _logger.SpillCatchupTriggerAbandonedOnDispose(observerKey);
-        }
-        finally
-        {
-            lock (_subscriptionsLock)
+            if (_isDisposed || _isResetting)
             {
-                _observersCatchingUp.Remove(observerKey);
+                _logger.SpillCatchupTriggerAbandonedOnDispose(observerKey);
+                return;
             }
-        }
-    }
 
-    async Task RetryCatchupUntilStarted(ObserverKey observerKey)
-    {
-        var clock = CatchupTimeProvider;
-        var started = clock.GetTimestamp();
-        var delay = _catchupTriggerRetryBaseDelay;
-        var warned = false;
-        for (var attempt = 1; ; attempt++)
-        {
-            _catchupCancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var observer = _grainFactory.GetGrain<IObserver>(observerKey);
                 await observer.CatchUp();
                 return;
             }
-            catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+            catch (Exception ex)
             {
-                var exceededBudget = !warned && clock.GetElapsedTime(started) >= _catchupTriggerWarningBudget;
-                ReportCatchupTriggerFailure(observerKey, attempt, ex, exceededBudget);
-                warned |= exceededBudget;
+                _logger.SpillCatchupTriggerFailed(observerKey, attempt, MaxCatchupTriggerAttempts, ex);
+                if (attempt < MaxCatchupTriggerAttempts)
+                {
+                    await Task.Delay(_catchupTriggerRetryBaseDelay * attempt);
+                }
+                else
+                {
+                    _logger.SpillCatchupTriggerAbandoned(observerKey);
+                }
             }
-
-            await Task.Delay(delay, clock, _catchupCancellationToken);
-            delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, _catchupTriggerRetryMaxDelay.Ticks));
         }
     }
 
-#pragma warning disable RCS1075 // Telemetry must not strand a spilled observer by stopping retries
-    void ReportCatchupTriggerFailure(ObserverKey observerKey, int attempt, Exception exception, bool exceededBudget)
-    {
-        try
-        {
-            if (exceededBudget)
-            {
-                _logger.SpillCatchupTriggerBudgetExceeded(observerKey);
-            }
-            _logger.SpillCatchupTriggerFailed(observerKey, attempt, exception);
-        }
-        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
-        {
-            // Observation only.
-        }
-
-        try
-        {
-            if (exceededBudget)
-            {
-                _metrics?.CatchupTriggerBudgetExceeded();
-            }
-        }
-        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
-        {
-            // Observation only.
-        }
-    }
-#pragma warning restore RCS1075
-
-    async Task DispatchWithTracing(EventSourceId partition, AppendedEvent[] events, AppendedEventsQueueObserverSubscription subscription)
+    async Task DispatchWithTracing(IObserver observer, EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
     {
         using var span = _activitySource.Dispatch();
-        span?.Activity?.Tag(subscription.ObserverKey);
+        span?.Activity?.Tag(observerKey);
         try
         {
-            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
             await observer.Handle(partition, events);
         }
         catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
-            ReportSuspectedUndeliveredEvents(partition, events, subscription.ObserverKey);
-            SpillFailedSubscriptionToCatchup(subscription, events);
+            ReportSuspectedUndeliveredEvents(partition, events, observerKey);
             throw;
         }
     }
