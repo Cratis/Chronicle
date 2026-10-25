@@ -39,6 +39,10 @@ def workflow(filename):
         return yaml.load(file, Loader=yaml.BaseLoader)
 
 
+def named_step(steps, name):
+    return next(step for step in steps if step.get("name") == name)
+
+
 @dataclass(frozen=True)
 class ConditionContext:
     event: str
@@ -413,13 +417,14 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(9, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
-        upload = steps[-1]["with"]
+        upload = named_step(steps, "Upload DEVELOPMENT build output")["with"]
         self.assertEqual("build-output-development", upload["name"])
         self.assertEqual("build-output-development.tar.zst", upload["path"])
+        bundles = next(step for step in steps if step.get("uses") == "./.github/actions/upload-integration-bundles")
+        self.assertEqual({"prefix": "build-output-development"}, bundles["with"])
         self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
         self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
                          jobs["integration"]["with"]["chronicle-image"])
@@ -566,7 +571,8 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn("Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering", pack)
             self.assertIn('test -d "$project/bin/Release/net10.0"', pack)
             self.assertIn("exit 1", pack)
-            self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
+            upload = named_step(steps, "Upload DEVELOPMENT build output")
+            self.assertEqual("error", upload["with"]["if-no-files-found"])
 
     def test_effective_test_arguments_survive_every_retry_and_missing_outputs(self):
         root = WORKFLOWS.parents[1]

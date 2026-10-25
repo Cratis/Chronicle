@@ -155,6 +155,11 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+      - name: Upload integration bundles
+        uses: ./.github/actions/upload-integration-bundles
+        with:
+          prefix: hot-core-build-output
+
       - name: Export image
         id: export
         run: echo "image=${{ env.HOT_CORE_IMAGE }}" >> "$GITHUB_OUTPUT"

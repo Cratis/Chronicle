@@ -133,5 +133,42 @@ class ArtifactHandoff(unittest.TestCase):
         self.assertIn("runtimeconfig.json", failure.stdout)
 
 
+class IntegrationBundleHandoff(unittest.TestCase):
+    def test_every_development_producer_uploads_bundles_alongside_the_full_archive(self):
+        for filename, names, prefix in (
+            ("dotnet-build.yml", ("dotnet-build-development", "dotnet-build-development-requested"),
+             "build-output-development"),
+            ("hot-core-gate.yml", ("build",), "hot-core-build-output"),
+        ):
+            jobs = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"]
+            for name in names:
+                with self.subTest(workflow=filename, job=name):
+                    steps = jobs[name]["steps"]
+                    bundles = next(step for step in steps
+                                   if step.get("uses") == "./.github/actions/upload-integration-bundles")
+                    self.assertEqual({"prefix": prefix}, bundles["with"])
+                    full = next(step for step in steps if step.get("uses") == "actions/upload-artifact@v4"
+                                and step["with"]["name"] == prefix)
+                    self.assertEqual(prefix + ".tar.zst", full["with"]["path"])
+                    build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
+                    self.assertLess(steps.index(build), steps.index(bundles))
+
+    def test_bundle_uploads_are_required_and_uncompressed(self):
+        action = yaml.safe_load((ROOT / ".github/actions/upload-integration-bundles/action.yml").read_text())
+        steps = action["runs"]["steps"]
+        pack = steps[0]
+        self.assertEqual("${{ inputs.prefix }}", pack["env"]["BUNDLE_PREFIX"])
+        self.assertIn('pack --prefix "$BUNDLE_PREFIX" --out .integration-bundles', pack["run"])
+        uploads = [step for step in steps if step.get("uses") == "actions/upload-artifact@v4"]
+        self.assertEqual(3, len(uploads))
+        for bundle, upload in zip(("client", "kernel", "clustering"), uploads):
+            with self.subTest(bundle=bundle):
+                self.assertIn("--bundle " + bundle, pack["run"])
+                self.assertEqual({"name": "${{ inputs.prefix }}-bundle-" + bundle,
+                                  "path": ".integration-bundles/integration-bundle-" + bundle + ".tar.zst",
+                                  "retention-days": 1, "compression-level": 0, "if-no-files-found": "error"},
+                                 upload["with"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

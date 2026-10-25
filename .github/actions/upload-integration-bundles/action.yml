@@ -1,0 +1,44 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Upload integration bundles
+description: Pack and upload the three DEVELOPMENT integration executables with verified manifests.
+inputs:
+  prefix:
+    description: Build artifact prefix shared by producer and consumers.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Pack integration bundles
+      shell: bash
+      env:
+        BUNDLE_PREFIX: ${{ inputs.prefix }}
+      run: >-
+        node .github/scripts/integration-bundles.mjs pack
+        --prefix "$BUNDLE_PREFIX" --out .integration-bundles
+        --bundle client --bundle kernel --bundle clustering
+    - name: Upload Client integration bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-bundle-client
+        path: .integration-bundles/integration-bundle-client.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error
+    - name: Upload Kernel integration bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-bundle-kernel
+        path: .integration-bundles/integration-bundle-kernel.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error
+    - name: Upload Clustering integration bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.prefix }}-bundle-clustering
+        path: .integration-bundles/integration-bundle-clustering.tar.zst
+        retention-days: 1
+        compression-level: 0
+        if-no-files-found: error

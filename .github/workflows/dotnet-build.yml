@@ -119,7 +119,7 @@ jobs:
         run: python3 .github/scripts/assert-solution-membership.py
 
       - name: Spec executable runner contracts and forbid test-host dispatch
-        run: node --test .github/scripts/test-mixed-spec-runners.mjs
+        run: node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-integration-bundles.mjs
 
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
@@ -322,6 +322,11 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+      - name: Upload integration bundles
+        uses: ./.github/actions/upload-integration-bundles
+        with:
+          prefix: build-output-development
+
   # Requested PR path: builds in parallel with the specs, so integration does not wait for
   # specs and then for this build in sequence. The integration job still requires successful
   # specs before any shard runs; a red spec costs only this one build.
@@ -385,6 +390,11 @@ jobs:
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
+
+      - name: Upload integration bundles
+        uses: ./.github/actions/upload-integration-bundles
+        with:
+          prefix: build-output-development
 
   specs-other:
     if: needs.already-ran.outputs.skip != 'true'
