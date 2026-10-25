@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
 
-public class when_a_generation_observer_lost_its_claim : given.the_provider
+public class when_a_generation_observer_lost_its_claim : given.a_provider_with_identity_claims
 {
     Exception _error;
 

@@ -9,6 +9,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Serialization;
 using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +33,7 @@ internal static class ChronicleClientServiceCollectionExtensions
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services, IChronicleBuilder? chronicleBuilder = null)
     {
+        RegisterDefaultDependencies(services);
         services.AddEventSerializer();
         services.AddReactorSideEffectHandlers();
         services.AddChronicleOccurrenceLifecycle();
@@ -116,6 +118,12 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
         return services;
+    }
+
+    static void RegisterDefaultDependencies(IServiceCollection services)
+    {
+        services.TryAddSingleton<IClientArtifactsActivator, ClientArtifactsActivator>();
+        services.TryAddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
     }
 
     sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>

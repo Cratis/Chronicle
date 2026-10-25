@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Generations.Bindings;
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
 
-public class when_no_claims_storage_is_registered : given.the_provider
+public class when_no_claims_storage_is_registered : given.a_provider_with_identity_claims
 {
     void Establish() => provider = new(storage, enablement, null, builds);
 

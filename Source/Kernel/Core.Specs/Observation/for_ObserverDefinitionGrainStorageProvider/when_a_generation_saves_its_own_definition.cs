@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
 
-public class when_a_generation_saves_its_own_definition : given.the_provider
+public class when_a_generation_saves_its_own_definition : given.a_provider_with_identity_claims
 {
     void Establish()
     {

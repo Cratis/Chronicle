@@ -6,7 +6,7 @@ using Cratis.Chronicle.Storage.Generations.Bindings;
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
 
-public class when_generations_are_disabled : given.the_provider
+public class when_generations_are_disabled : given.a_provider_with_identity_claims
 {
     void Establish() => enablement.Enabled.Returns(false);
 

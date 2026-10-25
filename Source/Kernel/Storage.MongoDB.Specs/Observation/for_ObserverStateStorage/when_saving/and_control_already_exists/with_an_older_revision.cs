@@ -20,7 +20,7 @@ public class with_an_older_revision(MongoDBFixture fixture) : given.a_persisted_
             RetirementResults = null,
             PendingChange = null
         };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = stale, NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = stale, NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
 
-public class when_registering_an_unclaimed_identity : given.the_provider
+public class when_registering_an_unclaimed_identity : given.a_provider_with_identity_claims
 {
     void Establish() => claims.Claim(observerKey.EventStore, registration).Returns(registration);
 
