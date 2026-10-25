@@ -10,11 +10,19 @@ namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_reducin
 public class and_the_instance_is_new : given.all_dependencies
 {
     ReadModelChangeNotification _result;
+    ExpandoObject _returnedState;
     bool _written;
     bool _writtenBeforeNotification;
 
     void Establish()
     {
+        _returnedState = new ExpandoObject();
+        ((IDictionary<string, object?>)_returnedState)["value"] = "after";
+        _objectComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<Changes.PropertyDifference>>()).Returns(call =>
+        {
+            call[2] = new Changes.PropertyDifference[] { new("value", null, "after") };
+            return false;
+        });
         _sink.ApplyChanges(Arg.Any<Concepts.Keys.Key>(), Arg.Any<Changes.IChangeset<Concepts.Events.AppendedEvent, ExpandoObject>>(), Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Storage.Sinks.SinkWriteMode>()).Returns(_ =>
         {
             _written = true;
@@ -24,7 +32,7 @@ public class and_the_instance_is_new : given.all_dependencies
 
     async Task Because()
     {
-        _result = await _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(new ExpandoObject()));
+        _result = await _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(_returnedState));
         _writtenBeforeNotification = _written;
     }
 

@@ -10,10 +10,23 @@ namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_reducin
 public class and_the_state_changes : given.all_dependencies
 {
     ReadModelChangeNotification _result;
+    ExpandoObject _returnedState;
 
-    void Establish() => _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(new ExpandoObject());
+    void Establish()
+    {
+        var initial = new ExpandoObject();
+        ((IDictionary<string, object?>)initial)["value"] = "before";
+        _returnedState = new ExpandoObject();
+        ((IDictionary<string, object?>)_returnedState)["value"] = "after";
+        _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(initial);
+        _objectComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<Changes.PropertyDifference>>()).Returns(call =>
+        {
+            call[2] = new Changes.PropertyDifference[] { new("value", "before", "after") };
+            return false;
+        });
+    }
 
-    async Task Because() => _result = await _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(new ExpandoObject()));
+    async Task Because() => _result = await _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(_returnedState));
 
     [Fact] void should_report_modified() => _result.Change.ChangeType.ShouldEqual(ReadModelChangeType.Modified);
     [Fact] void should_serialize_the_stored_state() => _result.ReadModel.ShouldNotBeNull();
