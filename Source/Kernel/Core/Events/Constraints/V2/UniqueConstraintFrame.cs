@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// </summary>
 internal static class UniqueConstraintFrame
 {
+    /// <summary>
+    /// Writes a count or length as an unsigned 32-bit big-endian integer.
+    /// </summary>
+    /// <param name="target">The stream to write to.</param>
+    /// <param name="count">The non-negative count.</param>
     internal static void WriteCount(Stream target, int count)
     {
         Span<byte> bytes = stackalloc byte[sizeof(uint)];
@@ -19,6 +24,11 @@ internal static class UniqueConstraintFrame
         target.Write(bytes);
     }
 
+    /// <summary>
+    /// Writes text as a null marker (0x00), or a present marker (0x01), a length and the UTF-8 bytes.
+    /// </summary>
+    /// <param name="target">The stream to write to.</param>
+    /// <param name="text">The text, or null.</param>
     internal static void WriteText(Stream target, string? text)
     {
         if (text is null)
@@ -32,6 +42,13 @@ internal static class UniqueConstraintFrame
         target.Write(bytes);
     }
 
+    /// <summary>
+    /// Writes one component as a scalar or, for a collection, a tagged array of scalars.
+    /// </summary>
+    /// <param name="target">The stream to write to.</param>
+    /// <param name="component">The component to write.</param>
+    /// <param name="ignoreCasing">Whether to lowercase string leaves.</param>
+    /// <exception cref="UnsupportedUniqueConstraintFormat">The format or a nested array is unsupported.</exception>
     internal static void WriteComponent(Stream target, UniqueConstraintComponent component, bool ignoreCasing)
     {
         UniqueConstraintCanonicalText.ValidateFormat(component.Format);

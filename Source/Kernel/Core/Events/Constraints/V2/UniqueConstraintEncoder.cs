@@ -38,6 +38,14 @@ internal static class UniqueConstraintEncoder
         return new UniqueConstraintValue(Convert.ToHexString(hash).ToLowerInvariant());
     }
 
+    /// <summary>
+    /// Builds the unhashed v2 preimage: a version prefix, the component count, then each framed component.
+    /// </summary>
+    /// <param name="components">The schema-converted properties, in declaration order.</param>
+    /// <param name="ignoreCasing">Whether to lowercase string leaves.</param>
+    /// <returns>The preimage bytes.</returns>
+    /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
+    /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
     internal static byte[] GetPreimage(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
     {
         using var target = new MemoryStream();
