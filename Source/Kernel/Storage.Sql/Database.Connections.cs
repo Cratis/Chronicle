@@ -167,7 +167,7 @@ public partial class Database
     {
         var schema = _resolution.SchemaFor(resolved);
         return new(
-            SqlConnectionStrings.WithSchema(connectionString, schema),
+            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, purpose) : null);
     }
@@ -274,5 +274,8 @@ public partial class Database
     /// <param name="connectionString">The candidate's connection string.</param>
     /// <returns>The <see cref="SqlTarget"/>.</returns>
     SqlTarget MetadataTarget(string connectionString) =>
-        new(connectionString, options.Value.Storage.Schema, _resolution.IsConfigured ? _resolution.RequestFor(DatabaseIdentity.Cluster, ConnectionPurpose.Schema) : null);
+        new(
+            SqlConnectionStrings.WithPooling(connectionString, options.Value.Storage.PostgreSqlPooling),
+            options.Value.Storage.Schema,
+            _resolution.IsConfigured ? _resolution.RequestFor(DatabaseIdentity.Cluster, ConnectionPurpose.Schema) : null);
 }
