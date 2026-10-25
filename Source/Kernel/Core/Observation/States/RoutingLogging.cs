@@ -23,6 +23,9 @@ internal static partial class RoutingLogMessages
     [LoggerMessage(LogLevel.Warning, "Keeping {HeldCount} partition holds because the job lookup failed")]
     internal static partial void KeepingPartitionHoldsJobLookupFailed(this ILogger<Routing> logger, int heldCount);
 
+    [LoggerMessage(LogLevel.Warning, "Keeping {HeldCount} partition holds because they changed during every job lookup")]
+    internal static partial void KeepingPartitionHoldsChangedDuringLookup(this ILogger<Routing> logger, int heldCount);
+
     [LoggerMessage(LogLevel.Debug, "Released {Released} partition holds without outstanding jobs")]
     internal static partial void ReleasedPartitionHolds(this ILogger<Routing> logger, int released);
 

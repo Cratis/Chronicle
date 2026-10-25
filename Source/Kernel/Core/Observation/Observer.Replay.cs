@@ -159,6 +159,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
         {
@@ -188,6 +189,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
+        _partitionHoldsVersion++;
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -260,6 +262,7 @@ public partial class Observer
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
         await WriteStateAsync();

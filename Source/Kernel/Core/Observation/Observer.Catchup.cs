@@ -18,7 +18,7 @@ public partial class Observer
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
 
-    int _catchingUpHoldsVersion;
+    int _partitionHoldsVersion;
 
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
@@ -152,7 +152,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Remove(partition);
-        _catchingUpHoldsVersion++;
+        _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
@@ -176,12 +176,12 @@ public partial class Observer
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var partitions = State.CatchingUpPartitions.ToArray();
-            var version = _catchingUpHoldsVersion;
+            var version = _partitionHoldsVersion;
             try
             {
                 var result = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs.GetOutstandingJobs();
                 if (!result.TryGetResult(out var jobs)) return new HashSet<Key>();
-                if (version != _catchingUpHoldsVersion) continue;
+                if (version != _partitionHoldsVersion) continue;
 
                 var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow);
                 return partitions.Where(partition => !owned.Contains(partition)).ToHashSet();
@@ -419,7 +419,7 @@ public partial class Observer
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
-        _catchingUpHoldsVersion++;
+        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();
