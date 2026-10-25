@@ -363,7 +363,12 @@ public class JsonSchemaMetadataManager(
         if (!schema.HasReference || schema.Reference is not { } reference) return own;
         var referenced = categories.SelectMany(category => reference.GetSchemaMetadata(category).Select(metadata => (category, metadata))).ToArray();
         if (referenced.Length == 0) return own;
-        if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference)) return own.Concat(referenced);
+        if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference))
+        {
+            // Referenced containers retain their existing member-level protection boundaries.
+            var type = reference.ActualTypeSchema.Type;
+            return (type & (JsonObjectType.Object | JsonObjectType.Array)) != JsonObjectType.None ? own : own.Concat(referenced);
+        }
         logger.UnsupportedReferencedMetadata();
         return own;
     }
