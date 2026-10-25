@@ -19,6 +19,7 @@ using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
@@ -70,6 +71,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </remarks>
     readonly ConcurrentDictionary<EventStoreKey, Lazy<Task<IEventStore>>> _eventStores = new();
     int _isDisposed;
+    int _serverlessReported;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -113,6 +115,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
+    /// <exception cref="InvalidServerlessConfiguration">Thrown when serverless mode is on and the configuration is not valid.</exception>
     public ChronicleClient(
         ChronicleOptions options,
         IClientArtifactsProvider? artifactsProvider = null,
@@ -189,6 +192,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
+    /// <exception cref="InvalidServerlessConfiguration">Thrown when serverless mode is on and the configuration is not valid.</exception>
     public ChronicleClient(
         IChronicleConnection connection,
         ChronicleOptions options,
@@ -216,6 +220,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _artifactActivator = result.ArtifactActivator;
         _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
         _connection = connection;
+        if (ServerlessActivation.IsOn(options))
+        {
+            ServerlessActivation.RequireSkippedKeepAlive(connection);
+        }
+
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -328,6 +337,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()
     {
+        ServerlessActivation.Apply(Options, ServerlessEnvironment.Resolve(_serviceProvider));
+
         if (Options.SoftwareVersion == DefaultSoftwareVersion)
         {
             _loggerFactory.CreateLogger<ChronicleClient>().SoftwareVersionIsDefault(Options.SoftwareVersion);
@@ -412,6 +423,31 @@ public class ChronicleClient : IChronicleClient, IDisposable
         Options.JsonSerializerOptions.WithDeclaredCollectionsNeverNull();
     }
 
+    void ReportServerlessStartup(EventStore eventStore)
+    {
+        if (Interlocked.Exchange(ref _serverlessReported, 1) == 1)
+        {
+            return;
+        }
+
+        var logger = _loggerFactory.CreateLogger<ChronicleClient>();
+        var plan = eventStore.DeliveryPlan;
+        if (ServerlessActivation.IsOn(Options))
+        {
+            var level = ServerlessEnvironment.IsDevelopment(ServerlessEnvironment.Resolve(_serviceProvider)) ? LogLevel.Information : LogLevel.Warning;
+            logger.ServerlessDowngrades(level, string.Join("; ", ServerlessDowngrades.Describe(plan, Options)));
+        }
+        else if (ServerlessEnvironmentHints.Detect(Environment.GetEnvironmentVariable) is { } variable && plan is { Stream.Count: > 0 })
+        {
+            logger.ServerlessHostDetected(variable, plan.Stream.Count);
+        }
+
+        if (plan is { UnknownOverrides.Count: > 0 })
+        {
+            logger.UnknownObserverDeliveryOverrides(string.Join(", ", plan.UnknownOverrides));
+        }
+    }
+
     async Task<IEventStore> CreateEventStore(EventStoreKey key)
     {
         var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
@@ -446,6 +482,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 await eventStore.DiscoverAll();
             }
 
+            ReportServerlessStartup(eventStore);
             await _connection.Connect();
             if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
             {

@@ -141,6 +141,20 @@ public static class ChronicleConnectionStringBuilderExtensions
     }
 
     /// <summary>
+    /// Turns on serverless mode in the .NET client for the connection string.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    /// <remarks>
+    /// Intended for functions and other scaled-to-zero hosts. Serverless mode also skips the keep-alive connection.
+    /// </remarks>
+    public static ChronicleConnectionStringBuilder WithServerless(this ChronicleConnectionStringBuilder builder)
+    {
+        builder.Serverless = true;
+        return builder;
+    }
+
+    /// <summary>
     /// Configures the TLS certificate for the connection.
     /// </summary>
     /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>

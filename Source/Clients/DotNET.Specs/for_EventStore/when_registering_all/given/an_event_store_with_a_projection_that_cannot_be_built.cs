@@ -15,6 +15,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -76,6 +77,9 @@ public class an_event_store_with_a_projection_that_cannot_be_built : Specificati
 
         _servicesAccessor = ServicesAccessorEnsuringTheEventStore();
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
+        var options = new ChronicleOptions();
+        SetField("_chronicleOptions", options);
+        SetAutoProperty(nameof(EventStore.Deliveries), new ObserverDeliveries(options));
         SetField("_eventStoreName", new EventStoreName("Testing"));
         SetField("_clientArtifactsProvider", clientArtifacts);
         SetField("_servicesAccessor", _servicesAccessor);

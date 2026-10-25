@@ -30,6 +30,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SkipTlsValidationKey = "skipTlsValidation";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
     const string SkipKeepAliveKey = "skipKeepAlive";
+    const string ServerlessKey = "serverless";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -59,6 +60,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         SkipTlsValidationKey,
         SkipCompatibilityCheckKey,
         SkipKeepAliveKey,
+        ServerlessKey,
         LoadBalancerKey,
         SrvNameServerKey,
         CertificatePathKey,
@@ -322,6 +324,19 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether the .NET client runs in serverless mode.
+    /// </summary>
+    /// <remarks>
+    /// Serverless mode implies skipping the keep-alive connection. It is equal to setting
+    /// <c language="json">Cratis:Chronicle:Serverless:Mode</c> to <c language="csharp">Serverless</c> in the .NET client. Other clients ignore the key.
+    /// </remarks>
+    public bool Serverless
+    {
+        get => ContainsKey(ServerlessKey) && Convert.ToBoolean(this[ServerlessKey]);
+        set => this[ServerlessKey] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the load balancer strategy to use when multiple servers are available.
     /// </summary>
     public string? LoadBalancer
@@ -444,6 +459,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         }
 
         AddSkipKeepAlive(queryParams);
+        AddServerless(queryParams);
 
         if (ContainsKey(LoadBalancerKey))
         {
@@ -582,6 +598,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (SkipKeepAlive)
         {
             queryParams.Add("skipKeepAlive=true");
+        }
+    }
+
+    void AddServerless(List<string> queryParams)
+    {
+        if (Serverless)
+        {
+            queryParams.Add("serverless=true");
         }
     }
 

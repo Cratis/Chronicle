@@ -15,6 +15,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Serverless;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 
@@ -118,6 +119,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// Gets the generation delivery policy supplied by the event store.
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets how the events of reactors are delivered, when supplied by the event store.
+    /// </summary>
+    internal ObserverDeliveries? Deliveries { get; init; }
 
     /// <summary>
     /// Gets how many partitions of one reactor are handled at the same time.
@@ -551,9 +557,23 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
+    /// <summary>
+    /// Refuses a reactor that resolves to HTTP delivery, which is not available yet.
+    /// </summary>
+    /// <param name="handler">The <see cref="ReactorHandler"/> being registered.</param>
+    /// <exception cref="HttpDeliveryNotAvailable">Thrown when the reactor resolves to HTTP delivery.</exception>
+    void ThrowIfDeliveredOverHttp(ReactorHandler handler)
+    {
+        if (Deliveries?.Resolve(handler.Id.Value, handler.ReactorType) == ObserverDelivery.Http)
+        {
+            throw new HttpDeliveryNotAvailable([handler.Id.Value]);
+        }
+    }
+
     void RegisterReactor(ReactorRegistration registration)
     {
         var handler = registration.Handler;
+        ThrowIfDeliveredOverHttp(handler);
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {

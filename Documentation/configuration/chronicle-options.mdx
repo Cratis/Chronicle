@@ -134,6 +134,17 @@ Intended for short-lived processes such as command line tools, functions and job
 
 Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
 
+### Serverless
+
+Settings for running the .NET client in a function or another scaled-to-zero host, bound from `Cratis:Chronicle:Serverless`.
+
+| | |
+|---|---|
+| Type | `ChronicleServerlessOptions` |
+| Default | `Mode` is `Off` |
+
+Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. See [Serverless mode](../clients/dotnet/serverless-mode.md).
+
 ### DefaultSinkTypeId
 
 Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:

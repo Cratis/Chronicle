@@ -148,6 +148,14 @@ public class ChronicleConnectionString
     public bool SkipKeepAlive => _builder.SkipKeepAlive;
 
     /// <summary>
+    /// Gets whether the .NET client runs in serverless mode.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.Serverless"/> for what this does.
+    /// </remarks>
+    public bool Serverless => _builder.Serverless;
+
+    /// <summary>
     /// Gets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath => _builder.CertificatePath;

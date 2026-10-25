@@ -43,6 +43,8 @@ Appending and reading events, and the rest of the client, work as before. Host r
 
 Use `EventTypesOnly` or `AtDeployment` so a short-lived process does not pay for registering projections, constraints and read models on every start. `RegistrationMode` only has an effect when `AutoDiscoverAndRegister` is enabled.
 
+For functions and other scaled-to-zero hosts, see [Serverless mode](./serverless-mode.md), which builds on this preset.
+
 ## From a connection string
 
 The same keep-alive behavior is available from the connection string with `skipKeepAlive=true`, and from the builder with `WithKeepAliveSkipped()`. See [connection strings](../../connection-strings/server.md).

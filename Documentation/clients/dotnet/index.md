@@ -40,6 +40,7 @@ dotnet add package Cratis.Chronicle.AspNetCore
 
 - [Health checks](./health-checks.md)
 - [Short-lived processes](./short-lived-processes.md)
+- [Serverless mode](./serverless-mode.md)
 - [Explicit artifact registration](./explicit-artifacts)
 - [Console quickstart](/chronicle/get-started/console/)
 - [ASP.NET Core hosting](/chronicle/get-started/aspnetcore/)

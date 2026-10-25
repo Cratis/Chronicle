@@ -3,8 +3,10 @@
 
 using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Serverless;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle;
@@ -28,6 +30,7 @@ internal static class ChronicleOptionsConfiguration
         string connectionStringName)
         where TOptions : ChronicleOptions
     {
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<TOptions>, ServerlessOptionsValidator<TOptions>>());
         var unconfiguredConnectionStrings = new ConditionalWeakTable<TOptions, ChronicleConnectionString>();
         return builder
             .Configure(options =>

@@ -9,6 +9,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
 
@@ -34,6 +35,11 @@ public class ChronicleOptions(
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5)
 {
+    /// <summary>
+    /// The default program identifier used when none is configured.
+    /// </summary>
+    internal const string DefaultProgramIdentifier = "[N/A]";
+
     ReactorOptions _reactors = new();
     ReducerOptions _reducers = new();
 
@@ -89,7 +95,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets or sets the program identifier.
     /// </summary>
-    public string ProgramIdentifier { get; set; } = "[N/A]";
+    public string ProgramIdentifier { get; set; } = DefaultProgramIdentifier;
 
     /// <summary>
     /// Gets or sets the <see cref="ILoadBalancerStrategy"/> to use when the connection string holds
@@ -191,6 +197,14 @@ public class ChronicleOptions(
     /// Only has an effect when <see cref="AutoDiscoverAndRegister"/> is enabled.
     /// </remarks>
     public RegistrationMode RegistrationMode { get; set; } = RegistrationMode.Inline;
+
+    /// <summary>
+    /// Gets or sets the serverless mode settings.
+    /// </summary>
+    /// <remarks>
+    /// Bound from <c language="json">Cratis:Chronicle:Serverless</c>. See <see cref="UseServerless"/> for a preset.
+    /// </remarks>
+    public ChronicleServerlessOptions Serverless { get; set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether to skip the server compatibility check on connect.
@@ -359,6 +373,32 @@ public class ChronicleOptions(
         FromConnectionString(connectionString).UseShortLivedProcess(registration);
 
     /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="connectionString">Connection string to create from.</param>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseServerless"/> for what this configures.
+    /// </remarks>
+    public static ChronicleOptions ForServerless(string connectionString, string programIdentifier, Uri? receiverUrl = null) =>
+        ForServerless(new ChronicleConnectionString(connectionString), programIdentifier, receiverUrl);
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to create from.</param>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseServerless"/> for what this configures.
+    /// </remarks>
+    public static ChronicleOptions ForServerless(ChronicleConnectionString connectionString, string programIdentifier, Uri? receiverUrl = null) =>
+        FromConnectionString(connectionString).UseServerless(programIdentifier, receiverUrl);
+
+    /// <summary>
     /// Configure the options for a short-lived process, such as a command line tool, function or job.
     /// </summary>
     /// <param name="registration">The <see cref="RegistrationMode"/> to use. Defaults to <see cref="RegistrationMode.Inline"/>.</param>
@@ -374,5 +414,23 @@ public class ChronicleOptions(
         SkipKeepAlive = true;
         RegistrationMode = registration;
         return this;
+    }
+
+    /// <summary>
+    /// Configure the options for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>The same <see cref="ChronicleOptions"/> for chaining.</returns>
+    /// <remarks>
+    /// Turns serverless mode on, sets <see cref="ProgramIdentifier"/> and the receiver URL, and applies the
+    /// short-lived process behavior with registration at deployment.
+    /// </remarks>
+    public ChronicleOptions UseServerless(string programIdentifier, Uri? receiverUrl = null)
+    {
+        Serverless.Mode = ServerlessMode.Serverless;
+        ProgramIdentifier = programIdentifier;
+        Serverless.ReceiverUrl = receiverUrl;
+        return UseShortLivedProcess(RegistrationMode.AtDeployment);
     }
 }

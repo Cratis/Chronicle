@@ -36,6 +36,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
@@ -74,6 +75,8 @@ public partial class EventStore : IEventStore
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     readonly bool _autoDiscoverAndRegister;
     readonly RegistrationMode _registrationMode;
+    readonly ChronicleOptions _chronicleOptions;
+    readonly bool _serverless;
     readonly bool _nominatesClientObservers;
     readonly string? _nominatedObserverKind;
     readonly string? _nominatedObserverId;
@@ -144,6 +147,9 @@ public partial class EventStore : IEventStore
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
         _preparation = new(PublishLocalPreparationFailure);
         _registrationMode = options.Value.RegistrationMode;
+        _chronicleOptions = options.Value;
+        _serverless = ServerlessActivation.IsOn(options.Value);
+        Deliveries = new ObserverDeliveries(options.Value);
         var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
         var nominatedType = explicitSnapshot.Types.FirstOrDefault(_ => _.Kind is ExplicitArtifactKind.Reactor or ExplicitArtifactKind.Reducer);
         _nominatesClientObservers = !explicitSnapshot.Reactors.IsEmpty || nominatedType is not null;
@@ -232,6 +238,7 @@ public partial class EventStore : IEventStore
             loggerFactory)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
         };
         Reactors = reactors;
@@ -256,6 +263,7 @@ public partial class EventStore : IEventStore
             loggerFactory.CreateLogger<Reducers.Reducers>())
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions
         };
 
@@ -434,6 +442,16 @@ public partial class EventStore : IEventStore
 
     /// <inheritdoc/>
     public DiscoveryReport Discovery { get; private set; } = DiscoveryReport.NotRun;
+
+    /// <summary>
+    /// Gets how the events of the observers of this store are delivered.
+    /// </summary>
+    internal ObserverDeliveries Deliveries { get; }
+
+    /// <summary>
+    /// Gets the delivery plan built when the artifacts were discovered, or null before that.
+    /// </summary>
+    internal ObserverDeliveryPlan? DeliveryPlan { get; private set; }
 
     /// <summary>
     /// Gets the monitor coordinating read-model builder ownership within this store.

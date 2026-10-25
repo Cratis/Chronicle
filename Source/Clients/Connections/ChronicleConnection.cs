@@ -117,7 +117,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
-        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive;
+        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive || connectionString.Serverless;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
