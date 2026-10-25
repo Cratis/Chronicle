@@ -212,6 +212,7 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         _webhookProbe = State.WebhookProbe;
+        RestoreShadowClaims();
         await InitializeAlertState();
         if (!KeyOwnsDefinition)
         {
@@ -746,6 +747,7 @@ public partial class Observer(
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            var shadowClaims = ShadowClaimsSnapshot();
             State = State with
             {
                 AlertLifecycleId = _alertLifecycleId,
@@ -753,7 +755,10 @@ public partial class Observer(
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot()
+                DeliveryFences = DeliveryFenceSnapshot(),
+                PartitionClaims = shadowClaims.Claims,
+                ObserverWideClaim = shadowClaims.Wide,
+                OwnershipRevision = shadowClaims.Revision
             };
             var revision = _alertRevision;
             try

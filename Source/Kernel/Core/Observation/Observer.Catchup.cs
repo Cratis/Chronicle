@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 
@@ -46,6 +47,7 @@ public partial class Observer
         try
         {
             jobId = await AcquireCatchUpJob();
+            ShadowGrantObserverWide(ClaimHolderKind.ObserverCatchUp, jobId, State.NextEventSequenceNumber);
         }
         finally
         {
@@ -149,6 +151,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
+        ShadowHandOverPartition(partition);
         State.CatchingUpPartitions.Remove(partition);
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
@@ -178,6 +181,7 @@ public partial class Observer
 
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        ShadowHandOverObserverWide();
         State.CatchingUpPartitions.Clear();
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
@@ -386,6 +390,7 @@ public partial class Observer
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
+        ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();

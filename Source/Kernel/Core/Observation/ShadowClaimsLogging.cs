@@ -29,4 +29,13 @@ internal static partial class ShadowClaimsLogging
     /// <param name="observerId">The observer identifier.</param>
     [LoggerMessage(LogLevel.Debug, "Observer {ObserverId} shadow claims seeded from legacy state")]
     internal static partial void ShadowClaimsSeededFromLegacyState(this ILogger<Observer> logger, ObserverId observerId);
+
+    /// <summary>
+    /// Logs a shadow diagnostic failure without changing delivery behavior.
+    /// </summary>
+    /// <param name="logger">The observer logger.</param>
+    /// <param name="observerId">The observer identifier.</param>
+    /// <param name="exception">The diagnostic failure.</param>
+    [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} shadow claims failed; delivery is unchanged")]
+    internal static partial void ShadowClaimsFailed(this ILogger<Observer> logger, ObserverId observerId, Exception exception);
 }
