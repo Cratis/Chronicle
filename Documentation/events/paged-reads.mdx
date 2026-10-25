@@ -1,0 +1,93 @@
+---
+title: Read bounded event pages
+description: Read Chronicle events forward or newest first with inclusive keyset continuations and filters applied before the page limit.
+---
+
+Use the .NET `IEventSequence.GetPage` API for bounded history views, resumable reads, and
+endless scrolling. `IEventLog` exposes the same API. Other language clients do not yet
+expose this paged-read API.
+
+Each request returns at most `Count` events and a nullable `Next` sequence number. Events
+are in **read order**: oldest first for `Forward`, newest first for `Backward`. A page
+reads one extra matching event to decide whether another page exists; it does not use
+offsets or count the entire sequence.
+
+## Read from the beginning
+
+This function accepts an existing event sequence and a cancellation token. Keep the
+request's direction, stop bound, and filters when advancing to `Next`:
+
+```csharp
+using Cratis.Chronicle.EventSequences;
+
+static async Task ReadHistory(IEventSequence sequence, CancellationToken cancellationToken)
+{
+    var request = EventSequencePageRequest.Forward(null, 100);
+    while (true)
+    {
+        var page = await sequence.GetPage(request, cancellationToken);
+        foreach (var appended in page.Events)
+        {
+            Console.WriteLine(appended.Context.SequenceNumber);
+        }
+
+        if (!page.HasMore) break;
+        request = request with { From = page.Next };
+    }
+}
+```
+
+`From` is inclusive. A null start means the beginning for forward reads and the tail for
+backward reads. Do not pass `EventSequenceNumber.Unavailable` to mean the tail.
+
+## Read the newest matching events
+
+For an existing `IEventSequence sequence`, this reads at most 50 matching events, newest
+first:
+
+```csharp
+var filter = new EventSequenceFilter(Tags: ["billing", "priority"]);
+var latest = await sequence.GetLatest(50, filter, cancellationToken);
+```
+
+`GetLatest` is shorthand for `GetPage(EventSequencePageRequest.Backward(null, 50, filter),
+cancellationToken)`. To read older matching events, call `GetPage` with
+`EventSequencePageRequest.Backward(latest.Next, 50, filter)` **only when** `latest.HasMore`
+is true. Passing null again starts over at the tail.
+
+## Bounds and continuation
+
+`Until` is also inclusive. It is an upper bound for forward reads and a lower bound for
+backward reads. For example, `EventSequencePageRequest.Backward(200, 50) with { Until = 100 }`
+reads newest first within sequence numbers 100 through 200. Reversed bounds, an empty
+sequence, or a filter with no matches return an empty page with no continuation.
+
+`Next` is one sequence number past the last returned event in the read direction, and is
+present only if another matching event exists inside the bounds. It need not identify an
+existing event: sequence numbers and filtered results can have gaps. Use the returned
+value unchanged instead of adding or subtracting `Count`. A full page can still have no
+continuation.
+
+These are independent reads, not a frozen snapshot. To exclude subsequent appends during
+a forward traversal, set `Until` to an initial tail sequence number. Check that the
+sequence is nonempty before using that tail as a bound.
+
+## Filters and limits
+
+`EventSequenceFilter` supports event source identifier, source type, stream type, stream
+identifier, event types, and tags. Filters are combined; a tag filter matches **any** of
+its supplied tags. Filtering happens in storage before the page limit. Null or empty
+sets do not narrow the results. The usual unspecified/default routing sentinels also
+mean no restriction.
+
+`Count` must be between **1 and 1000**, inclusive. Invalid counts are rejected, not
+clamped. Cancellation is supported by both client methods. Stored compliance-protected
+content is released for returned events, just as for other event-content reads; a page
+is not a metadata-only read. Authorize access to the store, namespace, and event content
+before reading.
+
+Existing `GetFromSequenceNumber` reads remain available and retain their behavior.
+External `IEventSequence` implementations remain source-compatible through default
+interface members, but must implement `GetPage` to support paged reads; otherwise it
+throws `NotSupportedException`. The in-process Testing package uses the same client and
+kernel query path.
