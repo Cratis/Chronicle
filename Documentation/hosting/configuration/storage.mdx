@@ -63,6 +63,45 @@ For environment-variable configuration, use `Cratis__Chronicle__Storage__Databas
 }
 ```
 
+### Connection pooling
+
+Chronicle keeps one PostgreSQL connection pool per database: the cluster database, each event store,
+each namespace, and the read-model databases. Idle connections across these pools can reach the
+server's `max_connections` limit even when no pool is full. Chronicle bounds each pool and prunes idle
+connections sooner than Npgsql's defaults.
+
+```json
+{
+  "storage": {
+    "postgreSqlPooling": {
+      "maxPoolSize": 20,
+      "connectionIdleLifetimeSeconds": 15,
+      "connectionPruningIntervalSeconds": 5
+    }
+  }
+}
+```
+
+| Property | Default | Description |
+| --- | --- | --- |
+| maxPoolSize | 20 | Maximum connections in each database's pool |
+| connectionIdleLifetimeSeconds | 15 | Seconds a connection can remain idle before closing when the pool exceeds its minimum size |
+| connectionPruningIntervalSeconds | 5 | Seconds between samples for pruning idle connections; must be greater than zero and no greater than the idle lifetime |
+
+These settings shorten how long idle connections are held; they do not cap the total across pools, kernel
+replicas, or other clients of the same server. The peak connection count is roughly the number of databases
+multiplied by `maxPoolSize`, per kernel. Keep
+`max_connections` above the expected concurrent demand. When serving many event stores or namespaces,
+lower `maxPoolSize` or the idle lifetime to reduce the connections held across their pools. A lower
+maximum means operations can wait for a connection during bursts; increase it for workloads that need
+more concurrent connections per database.
+
+Values in `connectionDetails`, or a resolved connection string, take precedence over these settings.
+The keys `Maximum Pool Size`, `Connection Idle Lifetime`, `Connection Pruning Interval`, and
+`Minimum Pool Size` remain available there. The effective maximum is at least the minimum pool size;
+the pruning interval is limited to the idle lifetime and stays at least one second. These settings
+apply only to PostgreSQL; SQL Server and SQLite connection strings are unchanged.
+
 ## Microsoft SQL Server
 
 ```json

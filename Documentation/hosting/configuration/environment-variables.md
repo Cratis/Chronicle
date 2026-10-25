@@ -43,6 +43,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionIdleLifetimeSeconds | PostgreSQL idle connection lifetime above the minimum pool size, in seconds (default 15) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionPruningIntervalSeconds | PostgreSQL idle pruning sample interval in seconds (default 5) |
 | Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
