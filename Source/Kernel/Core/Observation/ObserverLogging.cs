@@ -18,6 +18,9 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Client subscription for observer '{ObserverKey}' is waiting for the webhook to leave")]
+    internal static partial void ClientSubscriptionWaitingForWebhook(this ILogger<Observer> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Warning, "Stored webhook target violates current policy; Warn mode allows delivery: {Reason}")]
     internal static partial void StoredWebhookTargetWarning(this ILogger<Observer> logger, string reason);
 

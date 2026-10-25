@@ -919,6 +919,7 @@ public partial class Observer(
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
+        ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.

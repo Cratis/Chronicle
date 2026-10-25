@@ -7,10 +7,12 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
@@ -69,6 +71,7 @@ public sealed class WebhookRegistrar(
         // Validate the entire request before appending any registration changes.
         ValidateManagedIdentities(eventStore, webhooks);
         await ValidatePins(eventStore, webhooks);
+        await ValidateTransportOwnership(eventStore, webhooks);
 
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
         var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore);
@@ -260,6 +263,23 @@ public sealed class WebhookRegistrar(
             if (target.Authorization.IsT4 && targetPolicy?.CheckManagedIdentity(target.Authorization.AsT4, target.Url, eventStore).IsAllowed != true)
             {
                 throw new ManagedIdentityWebhookNotAllowed();
+            }
+        }
+    }
+
+    async Task ValidateTransportOwnership(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
+        foreach (var webhook in webhooks)
+        {
+            foreach (var @namespace in namespaces)
+            {
+                var key = new ObserverKey(webhook.Identifier, eventStore, @namespace, webhook.EventSequenceId);
+                var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
+                if (subscription.IsServedByConnectedClient)
+                {
+                    throw new ObserverServedByAnotherTransport(key);
+                }
             }
         }
     }
