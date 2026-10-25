@@ -35,7 +35,7 @@ public static class GenerationBuildStorageExtensions
         ObserverId observerId)
     {
         var binding = await builds.ResolveObserver(store, ns, eventSequence, observerId);
-        if (binding is null || binding.Identity.Generation.IsFirst || claims is null) return binding;
+        if (binding?.Identity.Generation.IsFirst != false || claims is null) return binding;
 
         var stored = await claims.Get(store, observerId);
         return stored is null || stored == ObserverIdentityClaim.ForGeneration(binding) ? binding : null;
