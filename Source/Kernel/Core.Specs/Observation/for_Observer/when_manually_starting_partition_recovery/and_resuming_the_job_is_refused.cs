@@ -20,7 +20,7 @@ public class and_resuming_the_job_is_refused : given.an_observer_with_a_failed_p
 
     async Task Because() => _error = await Cratis.Specifications.Catch.Exception(() => _observer.TryStartRecoverJobForFailedPartition(Partition));
 
-    [Fact] void should_report_an_error_instead_of_started() => _error.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_report_an_error_instead_of_started() => _error.ShouldBeOfExactType<FailedPartitionRecoveryCouldNotStart>();
     [Fact] async Task should_try_to_resume_the_existing_job() => await _jobsManager.Received(1).Resume(_job.Id);
     [Fact] void should_not_start_a_second_job() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
 }

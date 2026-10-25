@@ -96,66 +96,12 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        ThrowIfSealed();
-        await ThrowIfKeyDoesNotOwnDefinition();
-        await CancelWebhookProbe();
-        if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
-        if (IsQuarantined)
+        var (outcome, startFailed) = await TryRecoverFailedPartition(partition);
+        if (startFailed)
         {
-            logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return PartitionRecoveryOutcome.ObserverQuarantined;
+            throw new FailedPartitionRecoveryCouldNotStart(partition, _observerKey);
         }
-
-        if (!Failures.TryGet(partition, out var failure))
-        {
-            logger.SkippingFailedPartitionRecoveryBecausePartitionNotFound(partition);
-            return PartitionRecoveryOutcome.PartitionNotFound;
-        }
-
-        if (failure.IsQuarantined)
-        {
-            logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
-            return PartitionRecoveryOutcome.PartitionQuarantined;
-        }
-
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (failure.Deferral is { } deferral)
-            {
-                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
-                failure.Deferral = null;
-                await WriteFailedPartitions();
-                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
-            }
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        var startAttempted = false;
-        var jobId = await StartRecoverJobForFailedPartition(failure, () => startAttempted = true);
-        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
-        {
-            ReportJobNotStarted();
-        }
-        return PartitionRecoveryOutcome.Started;
-
-        void ReportJobNotStarted()
-        {
-            var observerNotActive = IsRetired || _removed || !KeyOwnsDefinition;
-            if (observerNotActive)
-            {
-                logger.FailedPartitionRetryDidNotStart(partition, "ObserverNotActive");
-                return;
-            }
-            if (startAttempted)
-            {
-                throw new InvalidOperationException($"Could not start or resume recovery for failed partition '{partition}' on observer '{_observerKey}'.");
-            }
-            logger.FailedPartitionRetryDidNotStart(partition, "RetryScheduled");
-        }
+        return outcome;
     }
 
     /// <inheritdoc/>
@@ -198,7 +144,7 @@ public partial class Observer
             return new(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
         }
 
-        var retryOutcome = await TryStartRecoverJobForFailedPartition(partition);
+        var (retryOutcome, _) = await TryRecoverFailedPartition(partition);
         if (retryOutcome != PartitionRecoveryOutcome.Started)
         {
             await RegisterRetryReminder(failure);
@@ -262,6 +208,71 @@ public partial class Observer
     /// </remarks>
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
+
+    async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartition(Key partition)
+    {
+        ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
+        await CancelWebhookProbe();
+        if (IsRetired) return (PartitionRecoveryOutcome.PartitionNotFound, false);
+        if (IsQuarantined)
+        {
+            logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
+            return (PartitionRecoveryOutcome.ObserverQuarantined, false);
+        }
+
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            logger.SkippingFailedPartitionRecoveryBecausePartitionNotFound(partition);
+            return (PartitionRecoveryOutcome.PartitionNotFound, false);
+        }
+
+        if (failure.IsQuarantined)
+        {
+            logger.SkippingFailedPartitionRecoveryBecausePartitionIsQuarantined(partition);
+            return (PartitionRecoveryOutcome.PartitionQuarantined, false);
+        }
+
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (failure.Deferral is { } deferral)
+            {
+                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
+                failure.Deferral = null;
+                await WriteFailedPartitions();
+                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        var startAttempted = false;
+        var jobId = await StartRecoverJobForFailedPartition(failure, () => startAttempted = true);
+        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        {
+            return (PartitionRecoveryOutcome.Started, ReportJobNotStarted());
+        }
+        return (PartitionRecoveryOutcome.Started, false);
+
+        bool ReportJobNotStarted()
+        {
+            if (IsRetired || _removed || !KeyOwnsDefinition)
+            {
+                logger.FailedPartitionRetryDidNotStart(partition, "ObserverNotActive");
+                return false;
+            }
+            if (startAttempted)
+            {
+                logger.FailedPartitionRetryDidNotStart(partition, "StartFailed");
+                return true;
+            }
+            logger.FailedPartitionRetryDidNotStart(partition, "RetryScheduled");
+            return false;
+        }
+    }
 
     async Task RecordPartitionFailure(
         Key partition,
