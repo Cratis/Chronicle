@@ -15,7 +15,7 @@ public class and_unrelated_interfaces_are_ambiguous : given.emitted_methods
             Method(type, reverse ? typeof(ILeft) : typeof(IRight));
         });
         _ = new SelfReducerInvoker(Registry(typeof(Joined)), model, "state");
-    })).ToArray();
+    })!).ToArray();
 
     [Fact] void should_fail_in_both_declaration_orders() => _failures.All(failure => failure is AmbiguousSelfReducerMethod).ShouldBeTrue();
 }
