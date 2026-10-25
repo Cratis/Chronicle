@@ -118,6 +118,6 @@ The delivery receiver is internal and is not available to applications. HTTP del
 
 There is no public endpoint mapping or receiver configuration. The internal mapped endpoint refuses every request with 503 without reading the body or dispatching events, because no signature verifier exists yet. Host authorization is not a substitute for delivery-signature verification.
 
-Internal dispatch is restricted to the client's configured event store and the namespace selected by its configured namespace resolver. The client has no non-creating namespace lookup, so a delivery cannot select another namespace.
+Internal dispatch is restricted to the client's configured event store and the namespace selected by its configured namespace resolver. The client has no non-creating namespace lookup, so a delivery must match the resolver's namespace. A resolver that reads the request itself, such as the HTTP header or subdomain resolver, gives the sender that choice too, which is why the receiver stays unavailable until deliveries are signed.
 
-A cancelled request returns 503, and the kernel retries the whole batch. Cancellation is advisory: handlers may already have completed side effects before cancellation, so delivery handlers must tolerate whole-batch retries. The internal dispatch status mapping is provisional; 400 and 404 currently pause the observer through the kernel webhook mediator.
+A cancelled request returns 503, and the kernel retries the whole batch. Cancellation is advisory: handlers may already have completed side effects before cancellation, so delivery handlers must tolerate whole-batch retries.
