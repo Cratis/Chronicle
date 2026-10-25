@@ -37,9 +37,11 @@ public partial class Observer
     public async Task TryRecoverAllFailedPartitions()
     {
         if (IsRetired || _removed) return;
+        await ThrowIfKeyDoesNotOwnDefinition();
 
         await ReconcilePartitionDeferrals();
         _recoveryOfAllFailedPartitionsRequested = true;
+        _retryJobSweepRequested = true;
         SchedulePartitionRecoveryTurn();
     }
 
@@ -63,6 +65,20 @@ public partial class Observer
             return;
         }
 
+        // The sweep and the partition recoveries of this turn share one budget of job drops.
+        _retryJobDropBudget = MaxRetryJobDropsPerTurn;
+        try
+        {
+            await RecoverBatchOfFailedPartitions();
+        }
+        finally
+        {
+            _retryJobDropBudget = null;
+        }
+    }
+
+    async Task RecoverBatchOfFailedPartitions()
+    {
         if (_recoveryOfAllFailedPartitionsRequested)
         {
             _recoveryOfAllFailedPartitionsRequested = false;
@@ -70,6 +86,11 @@ public partial class Observer
             {
                 _partitionsAwaitingRecovery.Enqueue(partition.Id);
             }
+        }
+
+        if (_retryJobSweepRequested)
+        {
+            _retryJobSweepRequested = await DropRetryJobsThatCanNeverRun();
         }
 
         var config = await GetRetryConfiguration();
@@ -101,7 +122,7 @@ public partial class Observer
             started++;
         }
 
-        if (_partitionsAwaitingRecovery.Count > 0)
+        if (_partitionsAwaitingRecovery.Count > 0 || _retryJobSweepRequested)
         {
             logger.DeferringRecoveryOfFailedPartitions(_partitionsAwaitingRecovery.Count);
             SchedulePartitionRecoveryTurn();
@@ -130,6 +151,7 @@ public partial class Observer
     void ForgetPartitionsAwaitingRecovery()
     {
         _recoveryOfAllFailedPartitionsRequested = false;
+        _retryJobSweepRequested = false;
         _partitionsAwaitingRecovery.Clear();
         _partitionsAwaitingRecoveryLookup.Clear();
     }

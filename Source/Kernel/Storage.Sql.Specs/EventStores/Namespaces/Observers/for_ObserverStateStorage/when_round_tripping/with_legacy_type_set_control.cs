@@ -13,7 +13,7 @@ public class with_legacy_type_set_control : given.an_observer_state_storage
 
     async Task Establish()
     {
-        await _storage.Save(new() { Identifier = "observer" });
+        await _storage.Save(new() { Identifier = "observer" }, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         const string control = """
             {"Revision":7,"Contract":{"SubscriberType":"reactor-subscriber","Filters":{"Tags":[],"EventSourceType":"","EventStreamType":""}},"Members":{"event-a":{"Incarnation":3,"JoinFence":42}},"Registrations":[]}

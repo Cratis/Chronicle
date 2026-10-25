@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
@@ -261,6 +262,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
     internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' moved from event sequence '{KeyEventSequenceId}' to '{DefinitionEventSequenceId}'. The old activation relinquishes ownership and deactivates")]
+    internal static partial void LostOwnershipToAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' was activated on event sequence '{KeyEventSequenceId}', but it observes event sequence '{DefinitionEventSequenceId}'. The activation stays inert and persists nothing")]
+    internal static partial void ActivatedOnAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
 }
 
 internal static class ObserverScopes
