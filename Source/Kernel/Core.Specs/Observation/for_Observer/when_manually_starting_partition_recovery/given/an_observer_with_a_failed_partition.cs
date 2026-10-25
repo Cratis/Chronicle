@@ -15,13 +15,9 @@ public class an_observer_with_a_failed_partition : for_Observer.given.an_observe
     protected const string Partition = "some-partition";
     protected FailedPartition _failure;
     protected PartitionRecoveryOutcome _outcome;
-    readonly ILogger<Observer> _recoveryLogger = Substitute.For<ILogger<Observer>>();
+    readonly RecordingLogger _recoveryLogger = new();
 
-    protected override ILogger<Observer> CreateLogger()
-    {
-        _recoveryLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-        return _recoveryLogger;
-    }
+    protected override ILogger<Observer> CreateLogger() => _recoveryLogger;
 
     void Establish()
     {
@@ -32,10 +28,25 @@ public class an_observer_with_a_failed_partition : for_Observer.given.an_observe
         _jobsManager.ClearReceivedCalls();
     }
 
-    protected bool LoggedReason(string reason) => _recoveryLogger.ReceivedCalls()
-        .Where(call => call.GetMethodInfo().Name == nameof(ILogger.Log))
-        .Select(call => call.GetArguments()[2])
-        .OfType<IEnumerable<KeyValuePair<string, object?>>>()
-        .Any(state => state.Any(value => value.Key == "Partition" && Equals(value.Value, (Key)Partition)) &&
-            state.Any(value => value.Key == "Reason" && Equals(value.Value, reason)));
+    protected bool LoggedReason(string reason) => _recoveryLogger.Entries.Exists(state =>
+        state.Any(value => value.Key == "Partition" && Equals(value.Value, (Key)Partition)) &&
+        state.Any(value => value.Key == "Reason" && Equals(value.Value, reason)));
+
+    sealed class RecordingLogger : ILogger<Observer>
+    {
+        public List<KeyValuePair<string, object?>[]> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (state is IEnumerable<KeyValuePair<string, object?>> values)
+            {
+                Entries.Add([.. values]);
+            }
+        }
+    }
 }
