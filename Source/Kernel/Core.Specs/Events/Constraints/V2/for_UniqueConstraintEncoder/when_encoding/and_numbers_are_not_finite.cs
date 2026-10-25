@@ -17,7 +17,7 @@ public class and_numbers_are_not_finite : Specification
             new(float.NaN, IsInSchema: false), new(double.PositiveInfinity, IsInSchema: false), new(double.NegativeInfinity, IsInSchema: false),
             new(new[] { float.NaN }, "float"), new(new[] { double.PositiveInfinity }, "double"), new(new[] { double.NegativeInfinity })
         ];
-        _errors = inputs.Select(_ => Catch.Exception(() => { UniqueConstraintEncoder.Encode([1], [_]); })).ToArray();
+        _errors = inputs.Select(_ => Catch.Exception(() => UniqueConstraintEncoder.Encode([1], [_]))!).ToArray();
     }
 
     [Fact] void should_reject_single_nan() => _errors[0].ShouldBeOfExactType<NonFiniteUniqueConstraintNumber>();

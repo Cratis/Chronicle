@@ -21,9 +21,10 @@ public class and_reference_vectors_are_used : Specification
     {
         _preimages = _inputs.Select(_ => Convert.ToHexString(UniqueConstraintEncoder.GetPreimage(_)).ToLowerInvariant()).ToArray();
         _values = _inputs.Select(_ => UniqueConstraintEncoder.Encode(_key, _).AsT0.Value).ToArray();
+
+        // Preimages were written independently from the framing grammar; hashes computed with Node crypto.
     }
 
-    // Preimages were written independently from the framing grammar; hashes computed with Node crypto.
     [Fact] void should_frame_a_single_scalar() => _preimages[0].ShouldEqual("6368726f6e69636c652f756e697175652f76320000000001010000000178");
     [Fact] void should_hash_a_single_scalar() => _values[0].ShouldEqual("1db63c4279b32526344aecc2769e7d630f974e5f6d7d68cace455a4c66f8359c");
     [Fact] void should_frame_null_and_empty_separately() => _preimages[1].ShouldEqual("6368726f6e69636c652f756e697175652f76320000000002000100000000");
