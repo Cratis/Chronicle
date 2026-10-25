@@ -57,7 +57,7 @@ public class when_provisioning_registered_dynamic_objects : given.a_schema_provi
 
     [Fact] void should_create_registered_and_catalog_discovered_objects() => _objectsExist.ShouldBeTrue();
     [Fact] void should_not_run_schema_changing_ddl_on_a_second_migration() => _migrationWasIdempotent.ShouldBeTrue();
-    [Fact] void should_verify_the_complete_manifest() => _current.IsCurrent.ShouldBeTrue();
+    [Fact] void should_verify_the_complete_manifest() => _current.Scopes.SelectMany(scope => scope.Pending).ShouldBeEmpty();
     [Fact] void should_aggregate_the_missing_constraint_index() => _damaged.Scopes.SelectMany(scope => scope.Pending).Any(item => item.Contains(given.RegisteredDynamicSchema.RegisteredValueIndex, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_also_report_the_missing_declared_read_model_index() => _damaged.Scopes.SelectMany(scope => scope.Pending).Any(item => item.Contains("declared index", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_leave_verification_read_only() => _verificationWasReadOnly.ShouldBeTrue();

@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Storage.Sql.Schema;
 /// <summary>
 /// Reads the shape of the unique Value index protecting a dynamic constraint table.
 /// </summary>
+/// <remarks>
+/// PostgreSQL name casts reproduce its native UTF-8 identifier truncation without relaxing index-shape checks.
+/// </remarks>
 internal static class DynamicIndexShape
 {
     /// <summary>
@@ -33,7 +36,7 @@ internal static class DynamicIndexShape
             ? "SELECT a.attname AS \"Value\" FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace " +
               "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid " +
               "JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=ANY(ix.indkey) " +
-              "WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indisunique AND ix.indisvalid " +
+              "WHERE t.relname={0} AND i.relname=CAST({1} AS name) AND n.nspname=current_schema() AND ix.indisunique AND ix.indisvalid " +
               "AND ix.indisready AND ix.indpred IS NULL AND ix.indnkeyatts=1 AND ix.indnatts=1"
             : "SELECT c.name AS [Value] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id " +
               "JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id " +
@@ -52,7 +55,7 @@ internal static class DynamicIndexShape
     internal static Task<bool> Exists(DbContext context, string table, string index) =>
         context.Database.GetDatabaseType() switch
         {
-            DatabaseType.PostgreSql => context.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_index x JOIN pg_class t ON t.oid=x.indrelid JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE t.relname={table} AND i.relname={index} AND n.nspname=current_schema() AND x.indisvalid AND x.indisready").AnyAsync(),
+            DatabaseType.PostgreSql => context.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_index x JOIN pg_class t ON t.oid=x.indrelid JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE t.relname={table} AND i.relname=CAST({index} AS name) AND n.nspname=current_schema() AND x.indisvalid AND x.indisready").AnyAsync(),
             DatabaseType.SqlServer => context.Database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND name={index} AND is_disabled=0").AnyAsync(),
             _ => context.Database.SqlQuery<int>($"SELECT 1 AS Value FROM pragma_index_list({table}) WHERE name={index}").AnyAsync()
         };
@@ -84,7 +87,7 @@ internal static class DynamicIndexShape
                 ? "SELECT a.attname AS \"Value\" FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace " +
                   "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid " +
                   "JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum,position) ON true JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum " +
-                  "WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indisunique={2} AND ix.indisvalid AND ix.indisready AND (ix.indpred IS NOT NULL)={3} ORDER BY k.position"
+                  "WHERE t.relname={0} AND i.relname=CAST({1} AS name) AND n.nspname=current_schema() AND ix.indisunique={2} AND ix.indisvalid AND ix.indisready AND (ix.indpred IS NOT NULL)={3} ORDER BY k.position"
                 : "SELECT c.name AS [Value] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id " +
                   "JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id " +
                   "WHERE i.object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0})) AND i.name={1} AND i.is_unique={2} AND i.is_disabled=0 AND i.has_filter={3} AND ic.key_ordinal>0 ORDER BY ic.key_ordinal";
@@ -100,7 +103,7 @@ internal static class DynamicIndexShape
         var sql = type switch
         {
             DatabaseType.PostgreSql => "SELECT pg_get_expr(ix.indpred,ix.indrelid) AS \"Value\" FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace " +
-                "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indpred IS NOT NULL",
+                "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid WHERE t.relname={0} AND i.relname=CAST({1} AS name) AND n.nspname=current_schema() AND ix.indpred IS NOT NULL",
             DatabaseType.SqlServer => "SELECT filter_definition AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0})) AND name={1} AND has_filter=1",
             _ => "SELECT substr(sql,instr(upper(sql),' WHERE ')+7) AS Value FROM sqlite_master WHERE type='index' AND tbl_name={0} AND name={1} AND instr(upper(sql),' WHERE ')>0"
         };

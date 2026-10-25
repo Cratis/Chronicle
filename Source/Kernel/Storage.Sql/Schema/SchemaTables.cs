@@ -33,7 +33,7 @@ internal static class SchemaTables
             switch (context.Database.ProviderName)
             {
                 case "Microsoft.EntityFrameworkCore.Sqlite":
-                    command.CommandText = "SELECT m.name, p.name FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type = 'table'";
+                    command.CommandText = "SELECT m.name, p.name FROM sqlite_master m JOIN pragma_table_xinfo(m.name) p WHERE m.type = 'table'";
                     break;
                 case "Microsoft.EntityFrameworkCore.SqlServer":
                     command.CommandText = "SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME()";

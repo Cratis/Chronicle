@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations.Schema;
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -40,7 +42,7 @@ internal static class DynamicTableShape
             else
             {
                 var storeType = ExpectedStoreType(context, table, expected);
-                if (!Compatible(storeType, found.StoreType) || (found.Nullable && !expected.IsNullable))
+                if ((!Compatible(storeType, found.StoreType) && !MatchesUntypedSqliteComputedColumn(context, expected, found)) || (found.Nullable && !expected.IsNullable))
                 {
                     differences.Add($"column '{table.Name}.{expected.Name}' expected {storeType} nullable={expected.IsNullable}, found {found.StoreType} nullable={found.Nullable}");
                 }
@@ -82,8 +84,8 @@ internal static class DynamicTableShape
         var type = context.Database.GetDatabaseType();
         if (type == DatabaseType.Sqlite)
         {
-            var rows = await context.Database.SqlQuery<SqliteColumn>($"SELECT name AS Name, type AS Type, \"notnull\" AS \"Notnull\", pk AS Pk FROM pragma_table_info({table})").ToListAsync();
-            return rows.ConvertAll(row => new Column { Name = row.Name, StoreType = row.Type, Nullable = row.Notnull == 0 && row.Pk == 0, KeyOrdinal = row.Pk });
+            var rows = await context.Database.SqlQuery<SqliteColumn>($"SELECT p.name AS Name, p.type AS Type, p.\"notnull\" AS \"Notnull\", p.pk AS Pk, p.hidden AS Hidden, m.sql AS Definition FROM pragma_table_xinfo({table}) p JOIN sqlite_master m ON m.name={table} AND m.type='table'").ToListAsync();
+            return rows.ConvertAll(row => new Column { Name = row.Name, StoreType = row.Type, Nullable = row.Notnull == 0 && row.Pk == 0, KeyOrdinal = row.Pk, Hidden = row.Hidden, Definition = row.Definition });
         }
         var sql = type == DatabaseType.PostgreSql
             ? "SELECT a.attname AS \"Name\", pg_catalog.format_type(a.atttypid,a.atttypmod) AS \"StoreType\", NOT a.attnotnull AS \"Nullable\", " +
@@ -108,6 +110,19 @@ internal static class DynamicTableShape
         ?? context.GetService<IRelationalTypeMappingSource>().FindMapping(column.ClrType, null, false, column.IsUnicode, column.MaxLength, column.IsRowVersion, column.IsFixedLength, column.Precision, column.Scale)?.StoreType
         ?? string.Empty;
 
+    static bool MatchesUntypedSqliteComputedColumn(DbContext context, AddColumnOperation expected, Column actual)
+    {
+        // SQLite's migration generator omits the declared type of computed columns. Admit that exact
+        // representation only: an untyped generated column with the provider-emitted definition.
+        if (!context.Database.IsSqlite() || actual.StoreType.Length != 0 || expected.ComputedColumnSql is null || actual.Hidden != (expected.IsStored == true ? 3 : 2)) return false;
+        var helper = context.GetService<ISqlGenerationHelper>();
+        var prefix = $"ALTER TABLE {helper.DelimitIdentifier(expected.Table, expected.Schema)} ADD ";
+        var command = context.GetService<IMigrationsSqlGenerator>().Generate([expected], context.Model).Single().CommandText.Trim();
+        if (!command.StartsWith(prefix, StringComparison.Ordinal)) return false;
+        var declaration = command[prefix.Length..].TrimEnd(';');
+        return actual.Definition.Contains(declaration, StringComparison.Ordinal);
+    }
+
     static bool Compatible(string expected, string actual) =>
         string.Equals(Normalize(expected), Normalize(actual), StringComparison.Ordinal);
 
@@ -117,6 +132,10 @@ internal static class DynamicTableShape
         public string StoreType { get; set; } = string.Empty;
         public bool Nullable { get; set; }
         public int KeyOrdinal { get; set; }
+        [NotMapped]
+        public int Hidden { get; set; }
+        [NotMapped]
+        public string Definition { get; set; } = string.Empty;
     }
 
     private sealed class SqliteColumn
@@ -125,5 +144,7 @@ internal static class DynamicTableShape
         public string Type { get; set; } = string.Empty;
         public int Notnull { get; set; }
         public int Pk { get; set; }
+        public int Hidden { get; set; }
+        public string Definition { get; set; } = string.Empty;
     }
 }

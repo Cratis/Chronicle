@@ -55,16 +55,26 @@ public partial class Database
             var replay = PrimaryKeyNames.TableIdentifier(type, $"replay-{primary}");
             foreach (var name in tables.Keys.Where(name => name == replay || backups.Contains(name)).Append(primary).Distinct(StringComparer.Ordinal))
             {
+                // The await using declaration owns disposal; CA2000 misreads this path, as above.
+#pragma warning disable CA2000
                 await using var table = new ReadModelDbContext(BuildOptions<ReadModelDbContext>(target), name, columns, readModelMigrator);
+#pragma warning restore CA2000
                 await table.EnsureTableExists();
+                if (!verify) await RequireInternalReadModelIndexes(table);
                 foreach (var index in definition.Indexes)
                 {
                     var plan = ReadModelIndexPlan.Resolve(index, schema, columns, type);
                     if (plan is null) continue;
                     if (verify)
                     {
-                        // Declared indexes are checked by generated name only, not keys, ordering, filters, or expression SQL.
-                        if (!await DynamicIndexShape.Exists(table, name, plan.Name(type, name))) DynamicSchemaVerification.Report($"declared index '{name}.{plan.Name(type, name)}' is missing");
+                        // A legacy SQLite decimal declaration is implemented by its required ordering-shadow index,
+                        // not by a declared-name index (ProjectedColumnIndexes removes that obsolete TEXT index).
+                        var exists = type == DatabaseType.Sqlite && plan.IsLegacy && SqliteDecimalSortKey.IsDecimal(plan.Targets[0].Column)
+                            ? ShadowColumns.IndexedFor(table).Contains(SqliteDecimalSortKey.ColumnNameFor(plan.Targets[0].Column.Name), StringComparer.Ordinal) && !await ShadowColumnIndexes.NeedsReconciliation(table)
+                            : await DynamicIndexShape.Exists(table, name, plan.Name(type, name));
+
+                        // Other declared indexes are checked by generated name only, not full shape.
+                        if (!exists) DynamicSchemaVerification.Report($"declared index '{name}.{plan.Name(type, name)}' is missing");
                         continue;
                     }
                     if (await SqlServerIndexKeyBudget.RejectionReason(table, name, plan) is not null) continue;
@@ -73,5 +83,13 @@ public partial class Database
                 }
             }
         }
+    }
+
+    static async Task RequireInternalReadModelIndexes(ReadModelDbContext context)
+    {
+        var pending = new List<string>();
+        if (await ShadowColumnIndexes.NeedsReconciliation(context)) pending.Add($"table '{context.TableName}' has missing or invalid shadow indexes");
+        if (await InitializedMarkerIndex.NeedsIndex(context)) pending.Add($"table '{context.TableName}' has a missing or invalid initialized-marker index");
+        if (pending.Count > 0) throw new SchemaNotCurrent(context.Database.GetDbConnection().Database, context.TableName, pending);
     }
 }

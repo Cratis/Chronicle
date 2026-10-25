@@ -35,7 +35,7 @@ public static class RegisteredDynamicSchema
         IndexesJson = "[\"name\"]",
         Schemas = new Dictionary<uint, string>
         {
-            [1] = """{"type":"object","properties":{"name":{"type":"string"},"score":{"type":"integer"}}}"""
+            [1] = """{"type":"object","properties":{"name":{"type":"string"},"score":{"type":"integer"},"amount":{"type":"number","format":"decimal"}}}"""
         }
     };
 
