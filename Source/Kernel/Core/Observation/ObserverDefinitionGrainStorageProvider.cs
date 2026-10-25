@@ -68,7 +68,7 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage, IGeneratio
         var binding = definition.Type == ObserverType.Projection
             ? await builds.ResolveOwnedObserver(claims, observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, observerKey.ObserverId)
             : null;
-        if (binding is not null && !binding.Identity.Generation.IsFirst)
+        if (binding?.Identity.Generation.IsFirst == false)
         {
             var generation = ObserverIdentityClaim.ForGeneration(binding);
             if (await claims.Claim(observerKey.EventStore, generation) != generation) throw new GenerationBuildConflict();
