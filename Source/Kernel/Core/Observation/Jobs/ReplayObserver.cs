@@ -222,8 +222,8 @@ public class ReplayObserver(
     /// this job already running and does not call back into it. If the observer does not enter replay with this job, the
     /// resume fails rather than run steps beside live handling. <see cref="CanResume"/> already refuses an observer that
     /// cannot replay, so this is left for an observer that changed state in between. Since Cratis.Orleans 1.31.0 a failed
-    /// resume hook holds step dispatch, so the job stays running with
-    /// nothing dispatched until the resume is retried.
+    /// resume hook holds step dispatch, and the job's watchdog runs the hook again with a growing delay until it succeeds,
+    /// so the job stays running with nothing dispatched, and the sinks untouched, until the observer enters replay.
     /// </para>
     /// </remarks>
     /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
