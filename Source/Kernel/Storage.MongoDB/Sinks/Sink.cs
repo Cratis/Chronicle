@@ -779,11 +779,13 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
@@ -799,6 +801,7 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
             // Preserve queued writes only when they belong to the collection this mode will flush to.
@@ -808,22 +811,40 @@ public partial class Sink(
                 return Task.CompletedTask;
             }
 
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
 
-    void OpenBulkWindow(bool isReplay)
+    BulkWindowChange OpenBulkWindow(bool isReplay)
     {
+        var change = new BulkWindowChange(_bulkWindowId, new(Guid.NewGuid()), _bulkOperations.Count, _inFlight.Count);
         _isBulkMode = true;
-        _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowId = change.Current;
         _bulkWindowIsReplay = isReplay;
         _bulkWindowHasFailedWrites = false;
         _inFlight.Clear();
         ClearBulkOperations();
+        return change;
     }
+
+    void LogBulkWindowReplacement(BulkWindowChange change, bool isReplay)
+    {
+        if (change.Previous is null)
+        {
+            return;
+        }
+
+        if (change.QueuedOperationCount > 0 || change.InFlightBatchCount > 0)
+        {
+            logger.OpenBulkWindowReplaced(readModel.Identifier, change.Previous.Value, change.Current.Value, isReplay ? "replay" : "catch-up", change.QueuedOperationCount, change.InFlightBatchCount);
+        }
+    }
+
+    sealed record BulkWindowChange(BulkWindowId? Previous, BulkWindowId Current, int QueuedOperationCount, int InFlightBatchCount);
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushBulk()
@@ -840,7 +861,9 @@ public partial class Sink(
             // Never confirm a window that was replaced or closed while its writes were draining.
             if (windowId != _bulkWindowId)
             {
-                throw new BulkWindowLost();
+                throw new BulkWindowLost(_bulkWindowId is null
+                    ? $"window '{windowId?.Value.ToString() ?? "none"}' was closed while its writes were draining"
+                    : $"window '{windowId?.Value.ToString() ?? "none"}' was replaced by window '{_bulkWindowId.Value}' while its writes were draining");
             }
 
             var failures = TakeBulkFailures(drain.Batches);

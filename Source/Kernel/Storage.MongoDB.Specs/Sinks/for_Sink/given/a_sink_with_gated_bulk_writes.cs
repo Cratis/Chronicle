@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.given;
 public class a_sink_with_gated_bulk_writes : Specification
 {
     protected Sink _sink;
+    protected RecordingLogger _logger = new();
     protected IMongoCollection<BsonDocument> _collection;
     protected SinkCollections _collections;
     protected readonly TaskCompletionSource _firstFlushStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -58,7 +59,7 @@ public class a_sink_with_gated_bulk_writes : Specification
         _collection.CollectionNamespace.Returns(new CollectionNamespace(new DatabaseNamespace("specs"), "bulk"));
         _collections = new SinkCollections(readModel, new MongoClient().GetDatabase("specs"));
         var collections = new FixedCollections(_collection, _collections);
-        _sink = new Sink(readModel, converter, collections, new ChangesetConverter(readModel, converter, collections, expando), expando, new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance));
+        _sink = new Sink(readModel, converter, collections, new ChangesetConverter(readModel, converter, collections, expando), expando, new ReadModelChangeStreams(NullLogger<ReadModelChangeStreams>.Instance), _logger);
         _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<BsonDocument>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
             .Returns(info => WriteBatch(info.ArgAt<IEnumerable<WriteModel<BsonDocument>>>(0).ToArray()));
         _collection.UpdateOneAsync(Arg.Any<FilterDefinition<BsonDocument>>(), Arg.Any<UpdateDefinition<BsonDocument>>(), Arg.Any<UpdateOptions>(), Arg.Any<CancellationToken>())
