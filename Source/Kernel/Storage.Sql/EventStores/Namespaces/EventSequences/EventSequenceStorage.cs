@@ -42,6 +42,8 @@ public partial class EventSequenceStorage(
     Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
     Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
+    const int MaxRevisionAttempts = 16;
+
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
 
@@ -249,18 +251,56 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var seqNumRevise = sequenceNumber.Value;
-        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == seqNumRevise);
-        if (eventEntry is null)
+        var number = sequenceNumber.Value;
+        var revision = new EventRevisionEntry(
+            eventType.Generation.Value,
+            correlationId.Value,
+            causation.ToArray(),
+            causedByChain.Select(id => id.ToString()).ToArray(),
+            occurred,
+            EventEntryConverter.SerializeContent(content),
+            hash.Value);
+
+        for (var attempt = 0; attempt < MaxRevisionAttempts; attempt++)
         {
-            return;
+            var observed = await scope.DbContext.Events.AsNoTracking()
+                .Where(e => e.SequenceNumber == number)
+                .Select(e => new { e.Type, e.Revisions })
+                .FirstOrDefaultAsync();
+
+            if (observed is null || observed.Type == GlobalEventTypes.Redaction)
+            {
+                return;
+            }
+
+            var revisions = EventEntryConverter.ParseRevisions(observed.Revisions).ToList();
+            revisions.Add(revision);
+            var revised = EventEntryConverter.SerializeRevisions(revisions);
+            var observedType = observed.Type;
+            var observedRevisions = observed.Revisions;
+            uint? revisedGeneration = eventType.Generation.Value;
+
+            // The compare-and-swap is only on the revisions the update was based on. Two explicit branches
+            // are used instead of one parameterized comparison, since NULL never equals NULL in SQL.
+            var rows = observedRevisions is null
+                ? await scope.DbContext.Events
+                    .Where(e => e.SequenceNumber == number && e.Type == observedType && e.Revisions == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(e => e.Revisions, revised)
+                        .SetProperty(e => e.RevisedGeneration, revisedGeneration))
+                : await scope.DbContext.Events
+                    .Where(e => e.SequenceNumber == number && e.Type == observedType && e.Revisions == observedRevisions)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(e => e.Revisions, revised)
+                        .SetProperty(e => e.RevisedGeneration, revisedGeneration));
+
+            if (rows == 1)
+            {
+                return;
+            }
         }
 
-        EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
-        EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
-        eventEntry.RevisedGeneration = eventType.Generation.Value;
-        scope.DbContext.Events.Update(eventEntry);
-        await scope.DbContext.SaveChangesAsync();
+        throw new ConcurrentEventRevision(sequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -271,7 +311,6 @@ public partial class EventSequenceStorage(
         var seqNumReplace = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumReplace);
         EventEntryConverter.ReplaceAllGenerationContent(eventEntry, content);
-        scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
     }
 
@@ -337,6 +376,7 @@ public partial class EventSequenceStorage(
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
         eventEntry.RevisedGeneration = null;
+        eventEntry.Revisions = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -409,6 +449,7 @@ public partial class EventSequenceStorage(
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
             eventEntry.RevisedGeneration = null;
+            eventEntry.Revisions = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }

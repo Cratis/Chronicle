@@ -515,6 +515,11 @@ public static class EventEntryConverter
             return EventTypeGeneration.First.Value;
         }
 
+        if (entry.Type != GlobalEventTypes.Redaction && GetLatestRevision(entry) is { } latestRevision)
+        {
+            return latestRevision.Generation;
+        }
+
         var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
         if (contentDict is null || contentDict.Count == 0)
         {
@@ -553,7 +558,10 @@ public static class EventEntryConverter
         IReadOnlyCollection<NamedTag>? namedTags = null)
     {
         var eventType = new EventType(entry.Type, new EventTypeGeneration(GetReadGeneration(entry)), false);
-        var content = GetContentForGeneration(entry, eventType.Generation);
+        var latestRevision = entry.Type == GlobalEventTypes.Redaction ? null : GetLatestRevision(entry);
+        var content = latestRevision is null
+            ? GetContentForGeneration(entry, eventType.Generation)
+            : ConvertJsonObjectToExpando(JsonSerializer.Deserialize<JsonElement>(latestRevision.Content, _jsonSerializerOptions));
         var causation = GetCausation(entry);
         var causedBy = GetCausedBy(entry);
 
@@ -571,7 +579,7 @@ public static class EventEntryConverter
             causation,
             await identityStorage.GetFor(causedBy),
             GetTags(entry),
-            GetHashForGeneration(entry, eventType.Generation),
+            latestRevision is null ? GetHashForGeneration(entry, eventType.Generation) : new EventHash(latestRevision.Hash),
             Subject: GetSubject(entry))
         {
             NamedTags = namedTags ?? [],
@@ -582,9 +590,27 @@ public static class EventEntryConverter
         var hashes = string.IsNullOrEmpty(entry.ContentHashes)
             ? new Dictionary<string, string>()
             : JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions) ?? [];
+        var generationalContent = GetAllGenerationalContent(entry);
+        var revisions = new List<EventRevision>();
+        if (latestRevision is not null)
+        {
+            foreach (var revision in GetRevisions(entry))
+            {
+                revisions.Add(new EventRevision(
+                    new EventTypeGeneration(revision.Generation),
+                    new CorrelationId(revision.CorrelationId),
+                    revision.Causation,
+                    await identityStorage.GetFor(revision.CausedBy.Select(id => new IdentityId(Guid.Parse(id)))),
+                    revision.Occurred,
+                    revision.Content));
+            }
+        }
+
         return new AppendedEvent(eventContext, content)
         {
-            GenerationalContent = GetAllGenerationalContent(entry),
+            OriginalContent = latestRevision is not null && generationalContent.TryGetValue((int)EventTypeGeneration.First.Value, out var original) ? original : string.Empty,
+            Revisions = revisions,
+            GenerationalContent = generationalContent,
             GenerationalHashes = hashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value)),
             RevisedGeneration = entry.RevisedGeneration is { } revised ? new EventTypeGeneration(revised) : null
         };
@@ -620,6 +646,11 @@ public static class EventEntryConverter
         {
             return result;
         }
+        if (GetLatestRevision(entry) is { } latestRevision)
+        {
+            return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(latestRevision.Content)!.AsObject(), schema) };
+        }
+
         var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
         if (content?.TryGetValue(result.Context.EventType.Generation.ToString(), out var element) != true)
         {
@@ -627,6 +658,39 @@ public static class EventEntryConverter
         }
         return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema) };
     }
+
+    /// <summary>
+    /// Get the revisions recorded on an event entry, oldest first.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The revisions - empty when the event was never revised through revision tracking.</returns>
+    internal static IReadOnlyList<EventRevisionEntry> GetRevisions(EventEntry entry) => ParseRevisions(entry.Revisions);
+
+    /// <summary>
+    /// Parse the stored revisions JSON array.
+    /// </summary>
+    /// <param name="revisions">The stored JSON, or null or empty when there are no revisions.</param>
+    /// <returns>The revisions, oldest first.</returns>
+    internal static IReadOnlyList<EventRevisionEntry> ParseRevisions(string? revisions) =>
+        string.IsNullOrEmpty(revisions)
+            ? []
+            : JsonSerializer.Deserialize<List<EventRevisionEntry>>(revisions, _jsonSerializerOptions) ?? [];
+
+    /// <summary>
+    /// Serialize revisions to the JSON array stored in <see cref="EventEntry.Revisions"/>.
+    /// </summary>
+    /// <param name="revisions">The revisions to serialize.</param>
+    /// <returns>The serialized JSON array.</returns>
+    internal static string SerializeRevisions(IEnumerable<EventRevisionEntry> revisions) =>
+        JsonSerializer.Serialize(revisions, _jsonSerializerOptions);
+
+    /// <summary>
+    /// Get the latest revision recorded on an event entry.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The latest revision, or null when there is none.</returns>
+    internal static EventRevisionEntry? GetLatestRevision(EventEntry entry) =>
+        GetRevisions(entry) is { Count: > 0 } revisions ? revisions[^1] : null;
 
     static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)
     {

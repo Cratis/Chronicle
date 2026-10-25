@@ -31,7 +31,7 @@ public class a_storage_with_stored_generations : a_storage_for_appended_generati
     protected async Task<string> Fingerprint()
     {
         await Task.CompletedTask;
-        return JsonSerializer.Serialize(new[] { Stored(0).Content, Stored(0).ContentHashes, Stored(0).DerivedGenerations });
+        return JsonSerializer.Serialize(new[] { Stored(0).Content, Stored(0).ContentHashes, Stored(0).DerivedGenerations, Stored(0).Revisions });
     }
 
     protected async Task<GenerationProvenance> Provenance(EventTypeGeneration generation)

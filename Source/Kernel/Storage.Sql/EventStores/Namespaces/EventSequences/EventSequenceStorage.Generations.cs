@@ -23,8 +23,9 @@ public partial class EventSequenceStorage
 
         var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(stored.Content)!;
 
-        var revised = stored.RevisedGeneration;
-        var revisedContent = revised is not null && content.TryGetValue(revised.Value.ToString(), out var revisedElement) ? revisedElement.GetRawText() : null;
+        var revisions = EventEntryConverter.GetRevisions(stored);
+        var revised = revisions.Count > 0 ? revisions[^1].Generation : stored.RevisedGeneration;
+        var revisedContent = revisions.Count > 0 ? revisions[^1].Content : StoredContentFor(content, revised);
 
         return new(
             sequenceNumber,
@@ -33,8 +34,8 @@ public partial class EventSequenceStorage
             stored.Subject is { } subject ? new Subject(subject) : Subject.NotSet,
             stored.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null,
             content.ToDictionary(_ => new EventTypeGeneration(uint.Parse(_.Key)), _ => _.Value.GetRawText()),
-            0,
-            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes }),
+            revisions.Count,
+            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes, stored.Revisions }),
             revisedContent is null ? null : new EventTypeGeneration(revised!.Value),
             revisedContent);
     }
@@ -49,9 +50,15 @@ public partial class EventSequenceStorage
             return false;
         }
 
-        var token = JsonSerializer.Deserialize<string[]>(observed.ConcurrencyToken)!;
+        var token = JsonSerializer.Deserialize<string?[]>(observed.ConcurrencyToken)!;
         var tokenContent = token[0];
         var tokenHashes = token[1];
+        var tokenRevisions = token.Length > 2 ? token[2] : null;
+        if (tokenContent is null)
+        {
+            return false;
+        }
+
         var content = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(tokenContent)!;
         var hashes = string.IsNullOrEmpty(tokenHashes) ? [] : JsonSerializer.Deserialize<Dictionary<string, string>>(tokenHashes)!;
         if (additions.Any(_ => content.ContainsKey(_.Generation.Value.ToString())))
@@ -84,13 +91,25 @@ public partial class EventSequenceStorage
         var merged = JsonSerializer.Serialize(content);
         var mergedHashes = JsonSerializer.Serialize(hashes);
         var mergedProvenance = JsonSerializer.Serialize(provenance);
-        var rows = await scope.DbContext.Events
-            .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(_ => _.Content, merged)
-                .SetProperty(_ => _.ContentHashes, mergedHashes)
-                .SetProperty(_ => _.DerivedGenerations, mergedProvenance));
+
+        // Two explicit branches for the revisions predicate, since NULL never equals NULL in SQL.
+        var rows = tokenRevisions is null
+            ? await scope.DbContext.Events
+                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(_ => _.Content, merged)
+                    .SetProperty(_ => _.ContentHashes, mergedHashes)
+                    .SetProperty(_ => _.DerivedGenerations, mergedProvenance))
+            : await scope.DbContext.Events
+                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == tokenRevisions)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(_ => _.Content, merged)
+                    .SetProperty(_ => _.ContentHashes, mergedHashes)
+                    .SetProperty(_ => _.DerivedGenerations, mergedProvenance));
 
         return rows == 1;
     }
+
+    static string? StoredContentFor(Dictionary<string, JsonElement> content, uint? generation) =>
+        generation is not null && content.TryGetValue(generation.Value.ToString(), out var element) ? element.GetRawText() : null;
 }

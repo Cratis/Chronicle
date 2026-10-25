@@ -142,6 +142,7 @@ public partial class EventSequenceMigrator(
                 Content = table.StringColumn(migrationBuilder),
                 ContentHashes = table.StringColumn(migrationBuilder),
                 DerivedGenerations = table.StringColumn(migrationBuilder, nullable: true),
+                Revisions = table.StringColumn(migrationBuilder, nullable: true),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
                 EventSource = table.StringColumn(migrationBuilder, nullable: true),
@@ -196,6 +197,13 @@ public partial class EventSequenceMigrator(
             var provenanceMigration = new MigrationBuilder(context.Database.ProviderName);
             provenanceMigration.AddColumn<string>(nameof(EventEntry.DerivedGenerations), tableName, nullable: true);
             await tableMigrator.ExecuteMigrationOperations(context, provenanceMigration);
+        }
+
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Revisions)))
+        {
+            var revisionsMigration = new MigrationBuilder(context.Database.ProviderName);
+            revisionsMigration.AddColumn<string>(nameof(EventEntry.Revisions), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, revisionsMigration);
         }
 
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.AppendedGeneration)))
