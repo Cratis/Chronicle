@@ -823,11 +823,14 @@ public partial class EventStore : IEventStore
             Projections.Register(),
             hostsClientObservers && Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
 
+        // Auto-subscribe to any external event stores referenced by observers. Server-hosted projections need their
+        // subscriptions even when this client hosts no observers of its own.
+        await (hostsClientObservers
+            ? RegisterExternalEventStoreSubscriptionsAsync()
+            : RegisterProjectionExternalEventStoreSubscriptionsAsync());
+
         if (hostsClientObservers)
         {
-            // Auto-subscribe to any external event stores referenced by observers
-            await RegisterExternalEventStoreSubscriptionsAsync();
-
             // Start watching read models for any registered read model reactors
             ReadModelReactors.Start();
         }
@@ -843,38 +846,13 @@ public partial class EventStore : IEventStore
         }
     }
 
-    async Task RegisterExternalEventStoreSubscriptionsAsync()
+    Task RegisterExternalEventStoreSubscriptionsAsync() =>
+        SubscribeToExternalEventStores(GetClientObserverExternalSubscriptions(_eventStoreName.Value));
+
+    Task RegisterProjectionExternalEventStoreSubscriptionsAsync() => SubscribeToExternalEventStores([]);
+
+    async Task SubscribeToExternalEventStores(Dictionary<string, List<EventTypeId>> observerExternalSubscriptions)
     {
-        var currentStoreName = _eventStoreName.Value;
-        var reactorHandlers = Reactors is Reactors.Reactors reactors
-            ? reactors.Handlers
-            : _clientArtifactsProvider.Reactors.Select(Reactors.GetHandlerFor);
-
-        var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
-            .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
-            .Join(
-                reactorHandlers,
-                type => type,
-                handler => handler.ReactorType,
-                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
-            .Concat(_clientArtifactsProvider.Reducers
-                .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
-                .Join(
-                    Reducers.GetAllHandlers(),
-                    type => type,
-                    handler => handler.ReducerType,
-                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes)))
-            .Select(observer =>
-            {
-                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);
-                return (observer.HandledEventTypes, sourceStore);
-            })
-            .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)
-            .GroupBy(item => item.sourceStore!, item => item.HandledEventTypes)
-            .ToDictionary(
-                g => g.Key,
-                g => ObserverEventTypes.GetIds(g.SelectMany(types => types)).ToList());
-
         // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
         var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
         foreach (var kvp in observerExternalSubscriptions)
@@ -910,5 +888,37 @@ public partial class EventStore : IEventStore
                     }
                 });
         }
+    }
+
+    Dictionary<string, List<EventTypeId>> GetClientObserverExternalSubscriptions(string currentStoreName)
+    {
+        var reactorHandlers = Reactors is Reactors.Reactors reactors
+            ? reactors.Handlers
+            : _clientArtifactsProvider.Reactors.Select(Reactors.GetHandlerFor);
+
+        return _clientArtifactsProvider.Reactors
+            .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
+            .Join(
+                reactorHandlers,
+                type => type,
+                handler => handler.ReactorType,
+                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
+            .Concat(_clientArtifactsProvider.Reducers
+                .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
+                .Join(
+                    Reducers.GetAllHandlers(),
+                    type => type,
+                    handler => handler.ReducerType,
+                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes)))
+            .Select(observer =>
+            {
+                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);
+                return (observer.HandledEventTypes, sourceStore);
+            })
+            .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)
+            .GroupBy(item => item.sourceStore!, item => item.HandledEventTypes)
+            .ToDictionary(
+                g => g.Key,
+                g => ObserverEventTypes.GetIds(g.SelectMany(types => types)).ToList());
     }
 }
