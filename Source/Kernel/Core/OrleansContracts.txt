@@ -443,6 +443,11 @@ class [GrainType("patterncapturesubscriptions")] Cratis.Chronicle.Patterns.Patte
 
 class [GrainType("patternminer")] Cratis.Chronicle.Patterns.PatternMiner
 
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.Generations.IProjectionGenerationBuild")] Cratis.Chronicle.Projections.Generations.IProjectionGenerationBuild [Version(0)]
+  D1507896: Start(Cratis.Chronicle.Concepts.Projections.Generations.GenerationBuildRequest) -> Task<Cratis.Chronicle.Projections.Generations.GenerationBuildAdmission>
+
+class [GrainType("projectiongenerationbuild")] Cratis.Chronicle.Projections.Generations.ProjectionGenerationBuild
+
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber")] Cratis.Chronicle.Projections.ICollapsingProjectionObserverSubscriber [Version(1)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation")] Cratis.Chronicle.Projections.IIgnoredProjectionRegistrationRecommendation [Version(0)]
