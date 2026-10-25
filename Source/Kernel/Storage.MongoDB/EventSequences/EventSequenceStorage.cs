@@ -57,6 +57,23 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => true;
 
+    /// <summary>
+    /// Gets the effect receipt indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> EffectReceiptIndexes { get; } =
+    [
+        new(Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"), new CreateIndexOptions { Name = "occurrenceId" })
+    ];
+
+    /// <summary>
+    /// Gets the additional event sequence indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<Event>> SequenceIndexes { get; } =
+    [
+        new(Builders<Event>.IndexKeys.Ascending(e => e.PublicationId), new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" }),
+        new(Builders<Event>.IndexKeys.Ascending(e => e.Subject), new CreateIndexOptions { Sparse = true, Name = "subject_index" })
+    ];
+
     /// <inheritdoc/>
     public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => EventContentBson.ToJson(SerializeContent(content, schema));
 
@@ -984,18 +1001,8 @@ public partial class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
-        await ReceiptCollection.EnsureIndexesAsync(
-            new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"),
-                new CreateIndexOptions { Name = "occurrenceId" })).ConfigureAwait(false);
-        await _collection.EnsureIndexesAsync(
-            new CreateIndexModel<Event>(
-                Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),
-                new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" })).ConfigureAwait(false);
-        await _collection.EnsureIndexesAsync(
-            new CreateIndexModel<Event>(
-                Builders<Event>.IndexKeys.Ascending(e => e.Subject),
-                new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
+        await ReceiptCollection.EnsureIndexesAsync(EffectReceiptIndexes.ToArray()).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(SequenceIndexes.ToArray()).ConfigureAwait(false);
     }
 
     /// <summary>
