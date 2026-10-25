@@ -24,6 +24,11 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
         return new(Convert.ToHexString(hash).ToLowerInvariant()[..32]);
     }
 
+    /// <summary>
+    /// Builds the unhashed scope preimage from the event source type, event stream type and event stream identifier.
+    /// </summary>
+    /// <param name="scope">The typed scope; null dimensions are written as null.</param>
+    /// <returns>The preimage bytes.</returns>
     internal static byte[] GetPreimage(ResolvedConstraintScope? scope)
     {
         using var target = new MemoryStream();

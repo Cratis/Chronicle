@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// The exception that is thrown when a unique constraint uses an unsupported scalar format or nested collection.
 /// </summary>
 /// <param name="format">The unsupported format.</param>
-internal class UnsupportedUniqueConstraintFormat(string format)
+public class UnsupportedUniqueConstraintFormat(string format)
     : Exception($"Unique-constraint encoding v2 does not support format '{format}'.");

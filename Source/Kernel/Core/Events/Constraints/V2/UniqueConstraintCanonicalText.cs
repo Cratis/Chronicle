@@ -88,7 +88,11 @@ internal static class UniqueConstraintCanonicalText
         ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
         : value.ToUniversalTime();
 
-    // Provider precision is UNVERIFIED. This is the single future truncation point;
-    // until provider round-trip vectors establish a common precision, preserve the CLR value exactly.
+    /// <summary>
+    /// Applies provider precision, which is UNVERIFIED. This is the single future truncation point;
+    /// until provider round-trip vectors establish a common precision, the CLR value is preserved exactly.
+    /// </summary>
+    /// <param name="value">The CLR value.</param>
+    /// <returns>The value, unchanged.</returns>
     static object ApplyProviderPrecision(object value) => value;
 }
