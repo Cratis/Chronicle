@@ -402,7 +402,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                          "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
         self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(parallel))
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs"], prerequisites_of(requested))
+        # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(requested))
         self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
             self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
@@ -451,8 +452,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 gates = wire == "success" and grain == "success"
                 self.assertEqual(event != "pull_request" and gates,
                                  condition_allows(jobs["dotnet-build-development"], context))
-                self.assertEqual(event == "pull_request" and requested and
-                                 specs == "success" and gates,
+                self.assertEqual(event == "pull_request" and requested and gates,
                                  condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
