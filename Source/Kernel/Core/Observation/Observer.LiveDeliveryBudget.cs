@@ -57,7 +57,7 @@ public partial class Observer
     /// <returns>True if catch-up owns the batch; false if it must be delivered live after all.</returns>
     async Task<bool> HandOverLargeLiveBatchToCatchUp(Key partition, AppendedEvent[] events)
     {
-        if (IsRetired || _removed || State.CatchingUpPartitions.Contains(partition))
+        if (IsRetired || _removed || !_observerExists || State.CatchingUpPartitions.Contains(partition))
         {
             return true;
         }
@@ -73,6 +73,10 @@ public partial class Observer
             LogLiveBatchDeferred(logger, events.Length, partition);
             State.CatchingUpPartitions.Add(partition);
             await WriteStateAsync();
+
+            // Writing state can find that another sequence owns the definition; an inert activation starts nothing.
+            if (!_observerExists) return true;
+
             var startResult = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
                 new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
             if (startResult?.TryGetResult(out _) is true)
