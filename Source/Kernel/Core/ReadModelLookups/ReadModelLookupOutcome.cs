@@ -1,0 +1,28 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.ReadModelLookups;
+
+/// <summary>
+/// Describes the outcome of a structured composite-key read.
+/// </summary>
+public enum ReadModelLookupOutcome
+{
+    /// <summary>No materialized instance matches.</summary>
+    NotFound = 0,
+
+    /// <summary>One materialized instance matches.</summary>
+    Found = 1,
+
+    /// <summary>The legacy key cannot identify one instance safely.</summary>
+    AmbiguousLegacyKey = 2,
+
+    /// <summary>Another key owns the legacy id.</summary>
+    KeyCollision = 3,
+
+    /// <summary>The supplied key parts do not match the schema.</summary>
+    InvalidKey = 4,
+
+    /// <summary>The read model or sink does not support this operation.</summary>
+    NotSupported = 5
+}

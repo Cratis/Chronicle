@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
 public partial class InMemorySink(
     ReadModelDefinition readModel,
-    ITypeFormats typeFormats) : ISink, IDisposable
+    ITypeFormats typeFormats) : ISink, ISinkCompositeKeyLookup, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
@@ -138,6 +138,13 @@ public partial class InMemorySink(
         {
             return Task.FromResult(_collection.GetValueOrDefault(keyValue));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(Key key)
+    {
+        var instance = await FindInPrimaryOrDefault(key);
+        return instance is null ? CompositeKeyLookupResult.NotFound : CompositeKeyLookupResult.Found(instance);
     }
 
     /// <inheritdoc/>
