@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverPayloadRo
 /// </summary>
 public sealed class ReleasedKernelFixture : IAsyncDisposable
 {
+    internal const string StorageTypeKey = "Cratis__Chronicle__Storage__Type";
+    internal const string StorageConnectionKey = "Cratis__Chronicle__Storage__ConnectionDetails";
+
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly IContainer _mongoDB;
     readonly IContainer _kernel;
@@ -33,11 +36,11 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"))
             .Build();
         _ready = new(() => Client);
-        _kernel = new ContainerBuilder("cratis/chronicle:19.106.2-development-slim")
+        _kernel = new ContainerBuilder("cratis/chronicle:19.106.2-development-slim@sha256:3dcf0cf274200619809573faa16395195364568a1162d9c210e815b5ba5a9643")
             .WithNetwork(_network)
             .WithEnvironment("CHRONICLE_HEALTH_PORT", "8080")
-            .WithEnvironment("Chronicle__Storage__Clusters__Default__Type", "MongoDB")
-            .WithEnvironment("Chronicle__Storage__Clusters__Default__ConnectionDetails", "mongodb://chronicle-test:chronicle-test@mongodb:27017/?authSource=admin")
+            .WithEnvironment(StorageTypeKey, "MongoDB")
+            .WithEnvironment(StorageConnectionKey, "mongodb://chronicle-test:chronicle-test@mongodb:27017/?authSource=admin")
             .WithPortBinding(8080, true)
             .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(new HttpsHealthWait(8080)).AddCustomWaitStrategy(_ready))
             .Build();

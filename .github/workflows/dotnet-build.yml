@@ -674,6 +674,59 @@ jobs:
       - name: Restore pinned coverage tool
         run: dotnet tool restore
 
+      - name: Extract pinned released runtime for MongoDB binding proof
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          # Registry metadata pins the bytes; image-to-release-source provenance remains UNKNOWN.
+          image='cratis/chronicle:19.106.2-development-slim@sha256:3dcf0cf274200619809573faa16395195364568a1162d9c210e815b5ba5a9643'
+          runtime="$RUNNER_TEMP/chronicle-released-binding"
+          test ! -e "$runtime"
+          mkdir "$runtime"
+          timeout --kill-after=10s 5m docker pull "$image"
+          container="chronicle-released-binding-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if ! timeout --kill-after=10s 30s docker rm "$container" >/dev/null; then
+              echo '::error::Could not remove the stopped released-runtime extraction container'
+              exit 1
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          timeout --kill-after=10s 30s docker create --name "$container" "$image" >/dev/null
+          timeout --kill-after=10s 2m docker cp "$container:/app/." "$runtime/"
+          test -f "$runtime/Cratis.Chronicle.Core.dll"
+          test -f "$runtime/Cratis.Chronicle.Server.dll"
+          echo "CHRONICLE_RELEASED_RUNTIME_DIRECTORY=$runtime" >> "$GITHUB_ENV"
+
+      - name: Prove MongoDB keys bind only through released direct storage options
+        run: |
+          timeout --kill-after=10s 120s node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --filter 'FullyQualifiedName~for_ReleasedKernelConfiguration' --results-directory ./Integration/MongoDB/released-binding-results
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          import { nodes, parseXml } from './.github/scripts/mixed-specs-results.mjs';
+          const root = parseXml(await readFile('./Integration/MongoDB/released-binding-results/results.trx', 'utf8'));
+          const results = nodes(root, 'UnitTestResult');
+          assert.equal(results.length, 8, 'All eight released binding facts must run');
+          assert.ok(results.every(result => result.attrs.outcome === 'Passed'), 'Released binding facts must pass, never skip');
+          const passed = new Set(results.map(result => result.attrs.testId));
+          const methods = nodes(root, 'UnitTest').filter(test => passed.has(test.attrs.id))
+            .map(test => nodes(test, 'TestMethod')[0].attrs);
+          const classes = {
+            when_binding_fixture_storage_keys: ['should_bind_the_fixture_provider', 'should_bind_the_fixture_connection'],
+            when_binding_original_cluster_keys: ['should_not_bind_the_original_provider', 'should_not_bind_the_original_connection']
+          };
+          for (const [type, facts] of Object.entries(classes)) {
+            const expected = [...facts, 'should_use_released_options_not_head', 'should_use_released_storage_not_head'];
+            for (const name of expected) {
+              assert.ok(methods.some(method => method.className === `Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration.${type}` && method.name === name), `Missing released binding fact: ${type}.${name}`);
+            }
+          }
+          NODE
+
       - name: Run MongoDB integration tests with coverage
         run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
@@ -683,12 +736,42 @@ jobs:
           path: ./Integration/MongoDB/coverage-results
           name: The MongoDB integration job
 
+      - name: Require actual old MongoDB writer and payload preservation facts
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          import { nodes, parseXml } from './.github/scripts/mixed-specs-results.mjs';
+          const root = parseXml(await readFile('./Integration/MongoDB/coverage-results/results.trx', 'utf8'));
+          const passed = new Set(nodes(root, 'UnitTestResult').filter(result => result.attrs.outcome === 'Passed').map(result => result.attrs.testId));
+          const methods = nodes(root, 'UnitTest').filter(test => passed.has(test.attrs.id))
+            .map(test => nodes(test, 'TestMethod')[0].attrs);
+          for (const name of [
+            'should_require_an_actual_old_writer_update',
+            'should_preserve_the_legacy_identity',
+            'should_preserve_legacy_subscription_mode',
+            'should_preserve_the_last_handled_event',
+            'should_preserve_the_next_event',
+            'should_preserve_handled_count',
+            'should_preserve_legacy_replay_sets',
+            'should_preserve_legacy_partition_sets',
+            'should_preserve_partition_claims_byte_for_byte',
+            'should_preserve_the_wide_claim_byte_for_byte',
+            'should_preserve_the_revision',
+            'should_remain_readable_by_the_new_provider'
+          ]) {
+            assert.ok(methods.some(method => method.className === 'Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverPayloadRoundTrip.when_old_kernel_reads_and_writes_new_claims' && method.name === name), `Missing passing old MongoDB writer fact: ${name}`);
+          }
+          NODE
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-results-mongodb
-          path: ./Integration/MongoDB/coverage-results/
+          path: |
+            ./Integration/MongoDB/coverage-results/
+            ./Integration/MongoDB/released-binding-results/
           retention-days: 1
 
   coverage-merge-and-cache:
