@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.for_Storage;
 
 public class when_getting_an_invalid_event_store : given.a_storage_with_legacy_event_store_names
 {
-    Exception[] _errors;
+    Exception?[] _errors;
 
     void Because() => _errors = new EventStoreName[] { null!, "", " ", EventStoreName.NotSet }
         .Select(name => Catch.Exception(() => _storage.GetEventStore(name))).ToArray();
