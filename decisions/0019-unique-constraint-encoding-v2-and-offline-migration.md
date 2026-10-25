@@ -37,8 +37,8 @@ destructive exception. This record does not cover it.
 
 Unique-constraint values and scopes are encoded in a way that loses information or aliases keys:
 
-- **[#4384](https://github.com/Cratis/Chronicle/issues/4384).** The v1 value drops null components, so a null
-  component and an absent one look the same, and `("x")` equals `(null, "x")`.
+- **[#4384](https://github.com/Cratis/Chronicle/issues/4384).** The v1 value drops null components and loses
+  their position, so `("x", null)`, `(null, "x")` and `("x")` all look the same.
 - **[#4131](https://github.com/Cratis/Chronicle/issues/4131).** Components are joined with `-`, which can appear
   inside a value.
 - **[#4385](https://github.com/Cratis/Chronicle/issues/4385).** The scope key joins its parts with `|` and escapes
@@ -319,7 +319,7 @@ specification.
 
 ## Default if unanswered
 
-The encoding stays v1. Null and absent components alias, scopes alias, `-` stays ambiguous, PostgreSQL keeps clipping
+The encoding stays v1. Null components lose their position, scopes alias, `-` stays ambiguous, PostgreSQL keeps clipping
 scope-bearing names, and the unsalted hash still confirms guesses at unerased values. Every later fix to one of these
 needs its own migration, with the same exclusion problem and no agreed protocol.
 
@@ -373,7 +373,7 @@ needs its own migration, with the same exclusion problem and no agreed protocol.
 
 ## Consequences
 
-- **Fixed.** A null component and an absent one differ, `-` and `|` in values or scopes no longer alias, scopes no
+- **Fixed.** Null components keep their position (JSON null and a missing property stay equivalent), `-` and `|` in values or scopes no longer alias, scopes no
   longer sit in names, and PostgreSQL clipping can no longer put two constraints in one table. The unsalted hash is
   gone, so guesses at unerased values are no longer confirmable without the store key.
 - **Outage.** The cutover is offline. Its length depends on the rebuild and on any collisions that must be fixed in
