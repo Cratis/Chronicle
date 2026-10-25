@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
 using FluentValidation;
 
@@ -47,6 +48,8 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
         _storage = storage;
         _policy = policy;
         _managedIdentityTokens = managedIdentityTokens;
+
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
 
         When(_ => _.AuthorizationType == AuthorizationType.OAuth, () =>
         {
