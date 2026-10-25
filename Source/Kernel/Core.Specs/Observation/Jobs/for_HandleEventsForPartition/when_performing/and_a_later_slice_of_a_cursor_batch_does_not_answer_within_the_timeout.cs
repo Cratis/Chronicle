@@ -56,6 +56,13 @@ public class and_a_later_slice_of_a_cursor_batch_does_not_answer_within_the_time
     }
 
     [Fact]
+    void should_retry_only_the_slice_that_timed_out() =>
+        string.Join('|', _observerSubscriber.ReceivedCalls()
+            .Where(_ => _.GetMethodInfo().Name == "OnNext")
+            .Select(_ => string.Join(',', ((IEnumerable<AppendedEvent>)_.GetArguments()[1]!).Select(e => e.Context.SequenceNumber.Value))))
+            .ShouldEqual("1,2|3,4|3,4");
+
+    [Fact]
     void should_fail_at_the_first_event_of_the_slice_that_timed_out()
     {
         _result.TryGetResult(out var stepResult).ShouldBeTrue();
