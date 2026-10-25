@@ -7,6 +7,7 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.InMemory.Events.EventTypes.for_EventTypesStorage;
 
+[PerFactSpecificationLifecycle] // One fact registers another event type and changes the notifications asserted by the others.
 public class when_observing_the_latest_for_all_event_types : given.an_event_types_storage
 {
     readonly List<IEnumerable<EventTypeSchema>> _received = [];

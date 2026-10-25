@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Storage.InMemory.Occurrences.for_OccurrencesStorage.when_rearming;
 
+[PerFactSpecificationLifecycle] // The replay fact retries a storage mutation while the other facts inspect the original retry.
 public class with_an_operator : given.an_occurrence_storage
 {
     bool _result;
