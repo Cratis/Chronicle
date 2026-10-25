@@ -1,0 +1,61 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Consume integration bundle
+description: Download and verify a single executable bundle without restoring or building its project.
+inputs:
+  artifact-prefix:
+    description: Build artifact prefix selected by the calling workflow.
+    required: true
+  project:
+    description: Integration project whose executable bundle is required.
+    required: true
+  filter:
+    description: Fully qualified test-name filter for the consuming lane.
+    required: true
+  namespaces:
+    description: Optional comma-separated constituent namespaces that must each contain cases.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Select integration bundle
+      id: bundle
+      shell: bash
+      env:
+        BUNDLE_PROJECT: ${{ inputs.project }}
+      run: |
+        case "$BUNDLE_PROJECT" in
+          Integration/Client/Client.csproj) bundle=client ;;
+          Integration/Kernel/Kernel.csproj) bundle=kernel ;;
+          Integration/Clustering/Clustering.csproj) bundle=clustering ;;
+          *) echo "Unsupported integration bundle project: $BUNDLE_PROJECT" >&2; exit 1 ;;
+        esac
+        echo "name=$bundle" >> "$GITHUB_OUTPUT"
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    - name: Restore coverage tool
+      shell: bash
+      run: dotnet tool restore
+    - name: Download integration bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-prefix }}-bundle-${{ steps.bundle.outputs.name }}
+        path: .integration-bundles
+    - name: Verify integration bundle
+      shell: bash
+      env:
+        BUNDLE_NAME: ${{ steps.bundle.outputs.name }}
+        BUNDLE_FILTER: ${{ inputs.filter }}
+        BUNDLE_NAMESPACES: ${{ inputs.namespaces }}
+      run: |
+        args=(verify --bundle "$BUNDLE_NAME"
+          --archive ".integration-bundles/integration-bundle-$BUNDLE_NAME.tar.zst"
+          --filter "$BUNDLE_FILTER")
+        if [[ -n "$BUNDLE_NAMESPACES" ]]; then
+          args+=(--namespaces "$BUNDLE_NAMESPACES")
+        fi
+        node .github/scripts/integration-bundles.mjs "${args[@]}"

@@ -102,24 +102,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
-      # only happens during `dotnet pack` in the publish workflows.
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+      - name: Consume Client integration bundle
+        uses: ./.github/actions/consume-integration-bundle
         with:
-          dotnet-version: 10.0.x
-
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.build-output-artifact }}
-
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+          artifact-prefix: ${{ inputs.build-output-artifact }}
+          project: Integration/Client/Client.csproj
+          filter: ${{ matrix.filter }}
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -128,12 +116,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Restore Client project
-        run: dotnet restore Integration/Client/Client.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
 
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
@@ -181,8 +163,8 @@ jobs:
         #
         # --no-build: the downloaded artifact is the DEVELOPMENT-symbol build
         # from dotnet-build-development (or a labeled hot-core run), so the shard runs
-        # it directly instead of recompiling the kernel from source. The restore
-        # step above still regenerates project.assets.json for the test host.
+        # it directly instead of recompiling the kernel from source. The bundle
+        # supplies the project metadata and verifies the executable before use.
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
@@ -216,30 +198,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
-      # only happens during `dotnet pack` in the publish workflows.
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+      - name: Consume Kernel integration bundle
+        uses: ./.github/actions/consume-integration-bundle
         with:
-          dotnet-version: 10.0.x
-
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.build-output-artifact }}
-
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
-
-      - name: Restore Kernel project
-        run: dotnet restore Integration/Kernel/Kernel.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+          artifact-prefix: ${{ inputs.build-output-artifact }}
+          project: Integration/Kernel/Kernel.csproj
+          filter: FullyQualifiedName~${{ matrix.namespace }}
+          namespaces: ${{ matrix.namespace }}
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
@@ -292,27 +257,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # See client-integration-specs for the single-SDK rationale.
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+      - name: Consume Clustering integration bundle
+        uses: ./.github/actions/consume-integration-bundle
         with:
-          dotnet-version: 10.0.x
-
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ inputs.build-output-artifact }}
-
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
-
-      - name: Restore Clustering project
-        run: dotnet restore Integration/Clustering/Clustering.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+          artifact-prefix: ${{ inputs.build-output-artifact }}
+          project: Integration/Clustering/Clustering.csproj
+          filter: FullyQualifiedName~${{ matrix.namespace }}
 
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:

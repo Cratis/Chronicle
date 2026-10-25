@@ -543,25 +543,9 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         for lane in lanes:
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
-                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
-                self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
-                extract = next(step for step in steps if step["name"] == "Extract build output")
-                self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
-                self.assertLess(steps.index(download), steps.index(extract))
-                self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
-                for step in steps:
-                    command = step.get("run", "")
-                    if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
-                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
-                        # previous release so the compatibility check orders the two sides correctly (#5353).
-                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
-                        self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
-                        self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
-                        self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
-                        self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
-                        self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
-                        continue
-                    self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
+                if lane == "sql-clustering":
+                    self.assert_full_build_input(steps)
+                self.assert_no_fallback(lane, steps)
 
         producers = workflow("dotnet-build.yml")["jobs"]
         for name in ("dotnet-build-development", "dotnet-build-development-requested"):
@@ -573,6 +557,28 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn("exit 1", pack)
             upload = named_step(steps, "Upload DEVELOPMENT build output")
             self.assertEqual("error", upload["with"]["if-no-files-found"])
+
+    def assert_full_build_input(self, steps):
+        download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
+        self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
+        extract = named_step(steps, "Extract build output")
+        self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
+        self.assertLess(steps.index(download), steps.index(extract))
+
+    def assert_no_fallback(self, lane, steps):
+        self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
+        for step in steps:
+            command = step.get("run", "")
+            if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
+                # Preserve the rolling-upgrade leg's single version-stamped rebuild (#5353).
+                self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
+                self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
+                self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
+                self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
+                self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                continue
+            self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
     def test_effective_test_arguments_survive_every_retry_and_missing_outputs(self):
         root = WORKFLOWS.parents[1]

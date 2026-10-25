@@ -170,5 +170,46 @@ class IntegrationBundleHandoff(unittest.TestCase):
                                  upload["with"])
 
 
+class IntegrationBundleConsumer(unittest.TestCase):
+    def test_each_main_lane_consumes_its_project_bundle_before_execution(self):
+        jobs = yaml.safe_load((ROOT / ".github/workflows/integration.yml").read_text())["jobs"]
+        for lane, project in (("client", "Client"), ("kernel", "Kernel"), ("clustering", "Clustering")):
+            with self.subTest(lane=lane):
+                self.assert_bundle_input(lane, project, jobs[f"{lane}-integration-specs"]["steps"])
+
+    def assert_bundle_input(self, lane, project, steps):
+        consume = next(step for step in steps if step.get("uses") == "./.github/actions/consume-integration-bundle")
+        expected = {"artifact-prefix": "${{ inputs.build-output-artifact }}",
+                    "project": f"Integration/{project}/{project}.csproj",
+                    "filter": "${{ matrix.filter }}" if lane == "client" else "FullyQualifiedName~${{ matrix.namespace }}"}
+        if lane == "kernel":
+            expected["namespaces"] = "${{ matrix.namespace }}"
+        self.assertEqual(expected, consume["with"])
+        execution = next(step for step in steps if step.get("name", "").startswith(f"Run {project} integration tests"))
+        self.assertLess(steps.index(consume), steps.index(execution))
+        self.assertFalse(any(step.get("uses") == "actions/download-artifact@v4" for step in steps))
+        for step in steps:
+            self.assertNotRegex(step.get("run", ""), r"dotnet\s+restore\b|tar\s+-I")
+
+    def test_only_restores_the_coverage_tool(self):
+        action = yaml.safe_load((ROOT / ".github/actions/consume-integration-bundle/action.yml").read_text())
+        steps = {step["name"]: step for step in action["runs"]["steps"]}
+        self.assertEqual({"dotnet-version": "10.0.x"}, steps["Setup .NET"]["with"])
+        self.assertEqual("dotnet tool restore", steps["Restore coverage tool"]["run"])
+        self.assertEqual({"name": "${{ inputs.artifact-prefix }}-bundle-${{ steps.bundle.outputs.name }}",
+                          "path": ".integration-bundles"}, steps["Download integration bundle"]["with"])
+        verify = steps["Verify integration bundle"]
+        self.assertIn('node .github/scripts/integration-bundles.mjs "${args[@]}"', verify["run"])
+        self.assertIn('args=(verify --bundle "$BUNDLE_NAME"', verify["run"])
+        self.assertIn('--filter "$BUNDLE_FILTER"', verify["run"])
+        self.assertIn('--namespaces "$BUNDLE_NAMESPACES"', verify["run"])
+        names = list(steps)
+        self.assertLess(names.index("Restore coverage tool"), names.index("Verify integration bundle"))
+        self.assertLess(names.index("Download integration bundle"), names.index("Verify integration bundle"))
+        for step in steps.values():
+            self.assertNotRegex(step.get("run", ""), r"dotnet\s+(restore|build|publish|run|msbuild)\b")
+            self.assertNotIn("cache", step.get("uses", ""))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
