@@ -86,7 +86,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
-    [LoggerMessage(LogLevel.Information, "Skipping catch-up because observer is replaying")]
+    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Waiting for catch-up handover to finish routing before replaying")]
@@ -155,13 +155,13 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
     internal static partial void Entering(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Existing catch up job running, will let it finish")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
     internal static partial void FinishingExistingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Existing catch up job found - resuming")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
@@ -190,7 +190,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
-    [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
+    [LoggerMessage(LogLevel.Debug, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
@@ -255,15 +255,6 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
-
-    [LoggerMessage(LogLevel.Information, "Stale catch-up lap: retry {Attempt} in {Delay}, Next {Next}, event-type tail {TypeTail}")]
-    internal static partial void RetryingStaleCatchUp(this ILogger<Observer> logger, int attempt, TimeSpan delay, EventSequenceNumber next, EventSequenceNumber typeTail);
-
-    [LoggerMessage(LogLevel.Information, "Stale catch-up retries exhausted after {Attempts} attempts, Next {Next}, event-type tail {TypeTail}. Falling back to zero-work backoff")]
-    internal static partial void StaleCatchUpRetriesExhausted(this ILogger<Observer> logger, int attempts, EventSequenceNumber next, EventSequenceNumber typeTail);
-
-    [LoggerMessage(LogLevel.Warning, "Could not look up the event-type tail after a zero-work catch-up lap. Falling back to zero-work backoff")]
-    internal static partial void CatchUpTypeTailLookupFailed(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
