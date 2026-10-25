@@ -16,26 +16,14 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
 
         async Task Because()
         {
-            var targetEventStore = await ChronicleClient.GetEventStore(TargetEventStoreName);
-            await targetEventStore.Subscriptions.Subscribe(
-                new EventStoreSubscriptionId(SubscriptionId),
-                SourceEventStoreName);
+            // The setup's Subscribe waits until the target's subscriptions reactor has processed the subscription.
+            await Subscribe(SubscriptionId, SourceEventStoreName, TargetEventStoreName);
 
             // The target store is shared with other classes in the collection, and the kernel reset between them can
             // leave their subscriptions behind (Cratis/Chronicle#5402). Only this class's own id is its subject;
             // a duplicate of it still shows.
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (true)
-            {
-                var all = await GetStoredSubscriptions(TargetEventStoreName);
-                PersistedSubscriptions = all.Where(_ => _.Id.Value == SubscriptionId).ToArray();
-                if (PersistedSubscriptions.Any())
-                {
-                    break;
-                }
-
-                await Task.Delay(100, cts.Token);
-            }
+            var all = await GetStoredSubscriptions(TargetEventStoreName);
+            PersistedSubscriptions = all.Where(_ => _.Id.Value == SubscriptionId).ToArray();
         }
     }
 
