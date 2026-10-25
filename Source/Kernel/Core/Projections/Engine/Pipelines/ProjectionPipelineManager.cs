@@ -182,8 +182,11 @@ public class ProjectionPipelineManager(
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var sink = await namespaceStorage.Sinks.GetFor(context);
         var futures = grainFactory.GetProjectionFutures(eventStore, @namespace, context.Binding.Identity.ObserverId);
-        var key = KeyHelper.Combine(eventStore, @namespace, "execution", context.Grant.Gate.Value, context.Binding.Revision, context.Grant.Epoch, context.Grant.Attempt);
-        return Build(eventStore, @namespace, projection, namespaceStorage, sink, futures, key, context.Binding.Identity);
+
+        // The pipeline is cached per execution and grant, but it serializes in the generation's stable lock domain:
+        // an explicit generation 1 shares the legacy projection's handle lock, because both write the same container.
+        var lockKey = GenerationKey(eventStore, @namespace, context.Binding.Identity);
+        return Build(eventStore, @namespace, projection, namespaceStorage, sink, futures, lockKey, context.Binding.Identity);
     }
 
     ProjectionPipeline Build(

@@ -159,6 +159,11 @@ public partial class Sink(
     /// <summary>
     /// Gets the fixed-epoch, create-only index admission for an exclusively owned generation destination.
     /// </summary>
+    /// <remarks>
+    /// A delayed creation from a revoked epoch is benign while the destination exists, because the index set comes from the
+    /// generation's immutable execution snapshot. Creating an index implicitly creates its collection, so whoever later drops a
+    /// retired generation destination must first make sure no index creation for it can still arrive.
+    /// </remarks>
     internal Func<Func<Task>, Task>? GenerationIndexDdl { get; init; }
 
     /// <inheritdoc/>

@@ -50,6 +50,7 @@ public class and_a_fixed_execution_context_is_supplied : a_generation_pipeline_m
     [Fact] void should_cache_an_identical_execution_admission() => _cached.ShouldBeSame(_active);
     [Fact] void should_not_reuse_a_pipeline_after_grant_refresh() => _refreshed.ShouldNotBeSame(_active);
     [Fact] void should_not_hide_execution_revision_behind_the_current_fingerprint() => _revised.ShouldNotBeSame(_active);
-    [Fact] void should_not_share_the_legacy_handle_lock() => HandleLock(_active).ShouldNotBeSame(HandleLock(_legacy));
+    [Fact] void should_share_the_legacy_handle_lock_for_generation_one() => HandleLock(_active).ShouldBeSame(HandleLock(_legacy));
+    [Fact] void should_keep_the_handle_lock_across_grant_refresh() => HandleLock(_refreshed).ShouldBeSame(HandleLock(_active));
     [Fact] async Task should_route_the_explicit_context_to_storage() => await _storage.GetEventStore(_store).GetNamespace(_namespace).Sinks.Received().GetFor(_context);
 }
