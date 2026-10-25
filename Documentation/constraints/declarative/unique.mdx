@@ -9,7 +9,7 @@ Chronicle discovers all `IConstraint` implementations automatically — no regis
 
 ## Upgrading persisted claims
 
-Before upgrading to Chronicle 19.110.2 or later, back up every namespace database. The startup patch **permanently deletes** unique-constraint claim rows whose stored value is not exactly 64 lowercase hexadecimal characters (`^[0-9a-f]{64}$`). The comparison is case-sensitive, including on SQL Server databases with case-insensitive collations: uppercase values are deleted. Both current per-event-source claims and retained per-value claims are cleaned, across all event sequences and scopes. A legacy raw value that already has the exact hash shape is indistinguishable from a hash and remains unchanged.
+Before upgrading to Chronicle 19.112.0 or later, back up every namespace database. The startup patch **permanently deletes** unique-constraint claim rows whose stored value is not exactly 64 lowercase hexadecimal characters (`^[0-9a-f]{64}$`). The comparison is case-sensitive, including on SQL Server databases with case-insensitive collations: uppercase values are deleted. Both current per-event-source claims and retained per-value claims are cleaned, across all event sequences and scopes. A legacy raw value that already has the exact hash shape is indistinguishable from a hash and remains unchanged.
 
 After cleanup, SQL value columns and indexes are repaired directly, even if a running silo cached an earlier skipped migration. Duplicate hash-shaped claims remain intact and retain the existing non-unique-index fallback with a warning. A cleanup or DDL failure stops the patch without recording completion; retrying is safe.
 

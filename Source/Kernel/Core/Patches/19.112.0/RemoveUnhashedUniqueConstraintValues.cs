@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Patches;
 public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger) : ICanApplyPatch
 {
     /// <inheritdoc/>
-    public SemanticVersion Version => new(19, 110, 2);
+    public SemanticVersion Version => new(19, 112, 0);
 
     /// <inheritdoc/>
     public async Task Up()

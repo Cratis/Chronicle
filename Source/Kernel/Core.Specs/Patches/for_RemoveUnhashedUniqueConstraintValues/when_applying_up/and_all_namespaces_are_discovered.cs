@@ -13,5 +13,5 @@ public class and_all_namespaces_are_discovered : given.a_cleanup_patch
     [Fact] void should_clean_each_other_sequence_once_in_each_store_and_namespace() => _other.Received(4).RemoveUnhashedValues();
     [Fact] void should_log_the_deleted_counts() => _logger.Messages.Count(message => message.Contains("3 per-event-source and 5 per-value")).ShouldEqual(4);
     [Fact] void should_log_every_cleaned_sequence() => _logger.Messages.Count(message => message.StartsWith("Removed ")).ShouldEqual(8);
-    [Fact] void should_run_after_the_latest_released_version() => (_patch.Version > new Concepts.System.SemanticVersion(19, 110, 1)).ShouldBeTrue();
+    [Fact] void should_run_after_the_previous_train_version() => (_patch.Version > new Concepts.System.SemanticVersion(19, 111, 0)).ShouldBeTrue();
 }
