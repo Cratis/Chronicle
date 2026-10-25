@@ -18,7 +18,29 @@ internal static class InitializedMarkerIndex
     /// </summary>
     internal const string Prefix = "chronicle_imx_";
 
+    /// <summary>
+    /// Observes entry to the table's marker-index lock in the current asynchronous flow, including SQLite's absent lock.
+    /// </summary>
+    internal static readonly AsyncLocal<Action?> OnLock = new();
+
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new();
+
+    /// <summary>
+    /// Checks whether the marker index is missing or has a failed build to drop, without taking any lock.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="cancellationToken">The cancellation token for reading existing indexes.</param>
+    /// <returns>Whether <see cref="Ensure"/> would issue DDL.</returns>
+    /// <remarks>
+    /// Reads the catalog over the context's own connection, so an already-current table takes no lock and opens no
+    /// extra connection. <see cref="Ensure"/> reads the catalog again under the table's lock.
+    /// </remarks>
+    internal static async Task<bool> NeedsIndex(ReadModelDbContext context, CancellationToken cancellationToken = default)
+    {
+        if (!context.Columns.Any(column => column.Name == WellKnownProperties.ReadModelInstanceInitialized)) return false;
+        var indexes = await Existing(context).ToArrayAsync(cancellationToken);
+        return !indexes.Any(index => index.IsValid) || indexes.Any(index => !index.IsValid);
+    }
 
     /// <summary>
     /// Ensures an index on the initialized marker under a per-table gate, a per-table database lock and a DDL deadline.
@@ -57,6 +79,7 @@ internal static class InitializedMarkerIndex
     static async Task<bool> EnsureUnderTableLock(ReadModelDbContext context, ReadModelIndexOperations.Execution execution, (TimeSpan Wait, CancellationToken CallerToken) acquisition)
     {
         var (wait, callerToken) = acquisition;
+        OnLock.Value?.Invoke();
         await context.Database.OpenConnectionAsync(execution.CancellationToken);
         try
         {
