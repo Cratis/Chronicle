@@ -37,7 +37,7 @@ public class when_resolving_an_enumerable_from_a_shared_host : Specification
     [Fact] void should_reject_enumerable_of_an_unregistered_helper_taking_dependencies() => _unregisteredError.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_name_the_rejected_helper() => Assert.Contains(typeof(helper).FullName!, _unregisteredError?.Message ?? string.Empty);
     [Fact] void should_still_resolve_enumerable_of_a_dependency_free_service() => _free.Count().ShouldEqual(1);
-    [Fact] void should_not_reject_once_the_helper_is_registered_for_the_current_context() => _registeredError.ShouldBeNull();
+    [Fact] void should_still_reject_when_only_the_element_is_registered_for_the_current_context() => _registeredError.ShouldBeOfExactType<InvalidOperationException>();
 
     public sealed class dependency;
 

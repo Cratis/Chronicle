@@ -28,7 +28,9 @@ internal sealed class FallbackServiceProviderFactory(Assembly? sharedHostTestAss
     public IServiceProvider CreateServiceProvider(IServiceCollection containerBuilder)
     {
         var options = new ServiceProviderOptions { ValidateOnBuild = false };
-        var rejected = sharedHostTestAssembly is null ? Type.EmptyTypes : FindDependencyTakingFallbacks(containerBuilder, sharedHostTestAssembly);
+        var policy = sharedHostTestAssembly is null
+            ? ContainerFallbackPolicy.Empty
+            : ContainerFallbackPolicy.Create(containerBuilder, sharedHostTestAssembly);
         var innerProvider = containerBuilder.BuildServiceProvider(options);
 
         var registry = innerProvider.GetService<MutableServiceRegistry>();
@@ -37,30 +39,7 @@ internal sealed class FallbackServiceProviderFactory(Assembly? sharedHostTestAss
             return innerProvider;
         }
 
-        registry.RejectContainerFallbackFor(rejected);
+        registry.InstallFallbackPolicy(policy);
         return new FallbackServiceProvider(innerProvider, registry);
     }
-
-    static Type[] FindDependencyTakingFallbacks(IServiceCollection services, Assembly testAssembly)
-    {
-        var effective = new Dictionary<Type, ServiceDescriptor>();
-        foreach (var descriptor in services.Where(descriptor => !descriptor.IsKeyedService))
-        {
-            effective[descriptor.ServiceType] = descriptor;
-        }
-
-        return effective.Values
-            .Where(descriptor => IsFromTestAssembly(descriptor, testAssembly) && !IsDependencyFreeSelfBinding(descriptor))
-            .Select(descriptor => descriptor.ServiceType)
-            .ToArray();
-    }
-
-    static bool IsFromTestAssembly(ServiceDescriptor descriptor, Assembly testAssembly) =>
-        descriptor.ServiceType.Assembly == testAssembly || descriptor.ImplementationType?.Assembly == testAssembly;
-
-    static bool IsDependencyFreeSelfBinding(ServiceDescriptor descriptor) =>
-        descriptor.ImplementationFactory is null &&
-        descriptor.ImplementationInstance is null &&
-        descriptor.ImplementationType == descriptor.ServiceType &&
-        descriptor.ServiceType.GetConstructors().All(constructor => constructor.GetParameters().Length == 0);
 }

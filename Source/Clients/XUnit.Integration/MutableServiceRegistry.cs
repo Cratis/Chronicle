@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 internal class MutableServiceRegistry
 {
     readonly ConcurrentDictionary<Type, Func<IServiceProvider, object>> _factories = new();
-    volatile HashSet<Type> _rejectedContainerFallbacks = [];
+    ContainerFallbackPolicy? _fallbackPolicy;
 
     /// <summary>
     /// Gets the service types currently registered in the registry.
@@ -28,31 +28,24 @@ internal class MutableServiceRegistry
     public IEnumerable<Type> RegisteredTypes => [.. _factories.Keys];
 
     /// <summary>
-    /// Records the service types that must not be resolved from the built container when the current context has no registration for them.
+    /// Installs the immutable built-container policy once, before exposing the provider.
     /// </summary>
-    /// <param name="serviceTypes">The service types to reject. Retained across <see cref="Clear"/>.</param>
-    public void RejectContainerFallbackFor(IEnumerable<Type> serviceTypes) => _rejectedContainerFallbacks = [.. serviceTypes];
+    /// <param name="policy">The policy retained across <see cref="Clear"/>.</param>
+    /// <exception cref="InvalidOperationException">The policy has already been installed.</exception>
+    public void InstallFallbackPolicy(ContainerFallbackPolicy policy)
+    {
+        if (Interlocked.CompareExchange(ref _fallbackPolicy, policy, null) is not null)
+        {
+            throw new InvalidOperationException("The container fallback policy is already installed.");
+        }
+    }
 
     /// <summary>
     /// Returns a value indicating whether <paramref name="serviceType"/> must not be resolved from the built container.
     /// </summary>
     /// <param name="serviceType">The service type to check.</param>
     /// <returns><see langword="true"/> if the container fallback is rejected; otherwise <see langword="false"/>.</returns>
-    public bool IsContainerFallbackRejected(Type serviceType)
-    {
-        var rejected = _rejectedContainerFallbacks;
-        if (rejected.Contains(serviceType))
-        {
-            return true;
-        }
-
-        if (serviceType.IsGenericType && rejected.Contains(serviceType.GetGenericTypeDefinition()))
-        {
-            return true;
-        }
-
-        return IsEnumerableOfRejectedService(serviceType);
-    }
+    public bool IsContainerFallbackRejected(Type serviceType) => Volatile.Read(ref _fallbackPolicy)?.Rejects(serviceType) ?? false;
 
     /// <summary>
     /// Removes all factories from the registry so the next test starts with a clean slate.
@@ -110,15 +103,4 @@ internal class MutableServiceRegistry
     /// <returns>The resolved service instance or <see langword="null"/>.</returns>
     public object? TryGet(Type serviceType, IServiceProvider serviceProvider) =>
         _factories.TryGetValue(serviceType, out var factory) ? factory(serviceProvider) : null;
-
-    bool IsEnumerableOfRejectedService(Type serviceType)
-    {
-        if (!serviceType.IsGenericType || serviceType.GetGenericTypeDefinition() != typeof(IEnumerable<>))
-        {
-            return false;
-        }
-
-        var element = serviceType.GetGenericArguments()[0];
-        return !_factories.ContainsKey(element) && IsContainerFallbackRejected(element);
-    }
 }
