@@ -779,11 +779,13 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
@@ -799,6 +801,7 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
             // Preserve queued writes only when they belong to the collection this mode will flush to.
@@ -808,22 +811,40 @@ public partial class Sink(
                 return Task.CompletedTask;
             }
 
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
 
-    void OpenBulkWindow(bool isReplay)
+    BulkWindowChange OpenBulkWindow(bool isReplay)
     {
+        var change = new BulkWindowChange(_bulkWindowId, new(Guid.NewGuid()), _bulkOperations.Count, _inFlight.Count);
         _isBulkMode = true;
-        _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowId = change.Current;
         _bulkWindowIsReplay = isReplay;
         _bulkWindowHasFailedWrites = false;
         _inFlight.Clear();
         ClearBulkOperations();
+        return change;
     }
+
+    void LogBulkWindowReplacement(BulkWindowChange change, bool isReplay)
+    {
+        if (change.Previous is null)
+        {
+            return;
+        }
+
+        if (change.QueuedOperationCount > 0 || change.InFlightBatchCount > 0)
+        {
+            logger.OpenBulkWindowReplaced(readModel.Identifier, change.Previous.Value, change.Current.Value, isReplay ? "replay" : "catch-up", change.QueuedOperationCount, change.InFlightBatchCount);
+        }
+    }
+
+    sealed record BulkWindowChange(BulkWindowId? Previous, BulkWindowId Current, int QueuedOperationCount, int InFlightBatchCount);
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushBulk()
@@ -840,7 +861,9 @@ public partial class Sink(
             // Never confirm a window that was replaced or closed while its writes were draining.
             if (windowId != _bulkWindowId)
             {
-                throw new BulkWindowLost();
+                throw new BulkWindowLost(_bulkWindowId is null
+                    ? $"window '{windowId?.Value.ToString() ?? "none"}' was closed while its writes were draining"
+                    : $"window '{windowId?.Value.ToString() ?? "none"}' was replaced by window '{_bulkWindowId.Value}' while its writes were draining");
             }
 
             var failures = TakeBulkFailures(drain.Batches);
@@ -1137,7 +1160,11 @@ public partial class Sink(
         var existingIndexes = await cursor.ToListAsync();
         var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-        foreach (var indexDefinition in readModel.Indexes)
+        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+            ? readModel.Indexes
+            : readModel.Indexes.Append(initializedIndex);
+        foreach (var indexDefinition in indexes)
         {
             ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
             var indexName = ReadModelIndexKeys.Name(indexDefinition);
@@ -1178,7 +1205,7 @@ public partial class Sink(
     {
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
         var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
-        var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter());
         var instances = await ReadPage(collection, skip, take, CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
@@ -1266,10 +1293,18 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
+    /// <summary>
+    /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
+    /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
+    /// </summary>
+    /// <returns>The visible-root filter.</returns>
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
+
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
         var documents = await collection
-            .Find(FilterDefinition<BsonDocument>.Empty)
+            .Find(VisibleInstancesFilter())
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)
@@ -1640,13 +1675,13 @@ public partial class Sink(
             catch (MongoBulkWriteException ex)
             {
                 var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
-                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, ex.WriteConcernError is not null);
                 break;
             }
         }
 
         return batch.FailedPartitions
-            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
+            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason, OutcomeUnknown = partition.Value.OutcomeUnknown })
             .ToArray();
     }
 
@@ -1675,7 +1710,7 @@ public partial class Sink(
 
         if (!CanResumeAfter(exception, remaining))
         {
-            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, exception.WriteConcernError is not null);
             return null;
         }
 
@@ -1724,21 +1759,33 @@ public partial class Sink(
     static void AddFailedPartitions(
         IEnumerable<int> indexes,
         Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions,
-        BulkWriteFailureReasons reasons)
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions,
+        BulkWriteFailureReasons reasons,
+        bool outcomeUnknown = false)
     {
         foreach (var index in indexes)
         {
-            if (metadata.TryGetValue(index, out var operationMetadata) && IsEarliestFailure(operationMetadata, failedPartitions))
+            if (!metadata.TryGetValue(index, out var operationMetadata))
             {
-                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index));
+                continue;
+            }
+
+            var hasExisting = failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var existing);
+            var unknown = outcomeUnknown || (hasExisting && existing.OutcomeUnknown);
+            if (IsEarliestFailure(operationMetadata, failedPartitions))
+            {
+                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index), unknown);
+            }
+            else if (unknown && hasExisting)
+            {
+                failedPartitions[operationMetadata.EventSourceId] = existing with { OutcomeUnknown = true };
             }
         }
     }
 
     static bool IsEarliestFailure(
         (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber) operationMetadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions) =>
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions) =>
         !failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
         operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value;
 
@@ -1972,7 +2019,7 @@ public partial class Sink(
         Task[] Predecessors,
         IReadOnlySet<WriteModel<BsonDocument>> GuardedUpserts)
     {
-        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> FailedPartitions { get; } = [];
+        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> FailedPartitions { get; } = [];
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool HasOutcome { get; set; }
     }

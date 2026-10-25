@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.given;
 public class real_pii_protection : Specification
 {
     protected JsonSchemaMetadataManager _manager;
+    protected IEncryptionKeyStorage _keys;
     protected JsonSchema _schema;
     protected JsonObject _plaintext;
     protected JsonObject _protected;
@@ -23,11 +24,12 @@ public class real_pii_protection : Specification
     {
         var encryption = new Encryption();
         var key = encryption.GenerateKey();
-        var keys = Substitute.For<IEncryptionKeyStorage>();
-        keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        _keys = Substitute.For<IEncryptionKeyStorage>();
+        _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        _keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
         provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
-        var handler = new PIICompliancePropertyValueHandler(provisioner, keys, encryption);
+        var handler = new PIICompliancePropertyValueHandler(provisioner, _keys, encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }
 

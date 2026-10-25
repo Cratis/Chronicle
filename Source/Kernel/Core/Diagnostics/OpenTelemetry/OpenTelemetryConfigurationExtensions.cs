@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,6 +69,7 @@ public static class OpenTelemetryConfigurationExtensions
             {
                 tracing
                     .AddChronicleInstrumentation()
+                    .AddProcessor(new IdentifierSpanProcessor())
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
                     .AddGrpcClientInstrumentation()

@@ -139,6 +139,15 @@ public class ChronicleConnectionString
     public bool SkipCompatibilityCheck => _builder.SkipCompatibilityCheck;
 
     /// <summary>
+    /// Gets whether the keep-alive connection is skipped on connect.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.SkipKeepAlive"/> for what this does and why
+    /// it exists.
+    /// </remarks>
+    public bool SkipKeepAlive => _builder.SkipKeepAlive;
+
+    /// <summary>
     /// Gets the path to the certificate file for TLS.
     /// </summary>
     public string? CertificatePath => _builder.CertificatePath;

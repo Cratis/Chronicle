@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -22,6 +23,7 @@ internal class AddWebhooksValidator : CommandValidator<AddWebhooks>
     public AddWebhooksValidator(IWebhookTargetPolicy policy)
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Webhooks).NotEmpty().WithMessage("At least one webhook is required.");
         RuleForEach(_ => _.Webhooks).ChildRules(webhook =>
         {

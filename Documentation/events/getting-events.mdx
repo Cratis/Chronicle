@@ -12,6 +12,11 @@ Event sequences support multiple ways of reading events depending on your needs.
 
 Use the client APIs to select the pattern that best matches your scenario, such as replaying state, building read models, or auditing changes.
 
+For bounded history views and endless scrolling, use [.NET keyset-paged reads](./paged-reads).
+`GetPage` reads forward or backward with inclusive bounds and filters; `GetLatest` starts
+at the tail and returns matching events newest first. Both return a continuation only
+when another matching page exists.
+
 ## Read metadata by sequence locator
 
 Use `GetMetadataAt` when you already know an event's sequence number and need its context,

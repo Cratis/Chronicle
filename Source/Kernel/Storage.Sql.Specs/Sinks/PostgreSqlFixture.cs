@@ -22,6 +22,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 #pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
 #pragma warning restore CA2213
+    NpgsqlDataSource _adminDataSource;
     SqlCommandTimings? _commandTimings;
 
     internal IntegrationTimings Timings { get; } = new(nameof(PostgreSqlFixture), "sql-specs", "postgresql");
@@ -87,13 +88,17 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
+        // The isolated test container is disposable; durability is not part of these contracts.
         _container = new ContainerBuilder("postgres:16-alpine")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
             .WithEnvironment("POSTGRES_DB", "chronicle")
+            .WithCommand("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off", "-c", "max_connections=200")
+            .WithTmpfsMount("/var/lib/postgresql/data")
             .WithPortBinding(Port, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chronicle"))
             .Build();
         await Timings.Run("sql-container-start", () => _container.StartAsync());
+        _adminDataSource = NpgsqlDataSource.Create(ConnectionString);
     }
 
     /// <inheritdoc/>
@@ -101,15 +106,25 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     {
         try
         {
-            if (_container is not null)
+            if (_adminDataSource is not null)
             {
-                await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
+                await _adminDataSource.DisposeAsync();
             }
         }
         finally
         {
-            _commandTimings?.Dispose();
-            Timings.Complete();
+            try
+            {
+                if (_container is not null)
+                {
+                    await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
+                }
+            }
+            finally
+            {
+                _commandTimings?.Dispose();
+                Timings.Complete();
+            }
         }
     }
 
@@ -134,8 +149,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     async Task Execute(string sql)
     {
-        await using var dataSource = NpgsqlDataSource.Create(ConnectionString);
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = _adminDataSource.CreateCommand(sql);
         await command.ExecuteNonQueryAsync();
     }
 }

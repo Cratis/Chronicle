@@ -14,9 +14,24 @@ message CommandResult {
 message EnsureEventStoreRequest {
    string Name = 1;
 }
+message EventStoreDeploymentResponse {
+   uint64 Generation = 1;
+   string Fingerprint = 2;
+}
 message EventStoreNamesResponse {
    string Name = 1;
    string Id = 2;
+}
+message GetEventStoreDeploymentRequest {
+   string EventStore = 1;
+}
+message QueryResult_EventStoreDeploymentResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   EventStoreDeploymentResponse Data = 6;
 }
 message QueryResult_IEnumerable_EventStoreNamesResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -25,6 +40,11 @@ message QueryResult_IEnumerable_EventStoreNamesResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    repeated EventStoreNamesResponse Data = 6;
+}
+message RegisterDeploymentRequest {
+   string EventStore = 1;
+   uint64 Generation = 2;
+   string Fingerprint = 3;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -40,5 +60,7 @@ enum ValidationResultSeverity {
 service EventStores {
    rpc AllEventStores (.google.protobuf.Empty) returns (QueryResult_IEnumerable_EventStoreNamesResponse);
    rpc EnsureEventStore (EnsureEventStoreRequest) returns (CommandResult);
+   rpc GetEventStoreDeployment (GetEventStoreDeploymentRequest) returns (QueryResult_EventStoreDeploymentResponse);
    rpc ObserveEventStores (.google.protobuf.Empty) returns (stream QueryResult_IEnumerable_EventStoreNamesResponse);
+   rpc RegisterDeployment (RegisterDeploymentRequest) returns (CommandResult);
 }

@@ -55,4 +55,10 @@ public class ConcurrencyScope
     /// </summary>
     [ProtoMember(7)]
     public bool ExpectsNoMatchingEvent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the MutationEpoch.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::System.UInt64? MutationEpoch { get; set; }
 }

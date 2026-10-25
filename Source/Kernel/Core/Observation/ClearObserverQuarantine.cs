@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// operator decision, taken once whatever kept failing has been dealt with.
 /// </remarks>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 public record ClearObserverQuarantine(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
     /// <summary>

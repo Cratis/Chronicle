@@ -34,5 +34,5 @@ public class and_healing_the_primary_store_fails : given.two_key_stores
 
     [Fact] void should_still_return_the_key() => _result.ShouldEqual(_key);
     [Fact] void should_not_turn_a_failed_heal_into_a_failed_read() => _error.ShouldBeNull();
-    [Fact] void should_have_attempted_the_heal() => _readableButUnwritablePrimary.Received(1).SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, _key, null);
+    [Fact] void should_have_attempted_the_heal() => _readableButUnwritablePrimary.Received(1).SaveFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, _key, EncryptionKeyRevision.Initial);
 }

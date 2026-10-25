@@ -28,4 +28,5 @@ public class and_the_server_reports_a_write_concern_error : given.an_ordered_bul
     [Fact] void should_log_how_many_operations_have_an_unknown_outcome() => _entry.Values["OperationCount"].ShouldEqual(OperationCount);
     [Fact] void should_not_log_the_document() => _logger.Entries.Any(_ => _.Message.Contains(DocumentContent)).ShouldBeFalse();
     [Fact] void should_carry_the_server_message_with_every_failed_partition() => _failedPartitions.All(_ => _.Reason.Contains(WriteConcernErrorMessage)).ShouldBeTrue();
+    [Fact] void should_mark_every_partition_outcome_unknown() => _failedPartitions.All(_ => _.OutcomeUnknown).ShouldBeTrue();
 }

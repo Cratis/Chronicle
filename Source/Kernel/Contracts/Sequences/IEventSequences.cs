@@ -220,6 +220,14 @@ public interface IEventSequences
     [Operation]
     Task<QueryResult<IEnumerable<EventSequenceNamesResponse>>> AllEventSequences(AllEventSequencesRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the Page query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<EventSequencePageResponse>> Page(PageRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the TailSequenceNumber query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -2506,6 +2514,110 @@ public class AllEventSequencesRequest
 }
 
 /// <summary>
+/// Represents the EventSequencePageResponse message.
+/// </summary>
+[ProtoContract]
+public class EventSequencePageResponse
+{
+    /// <summary>
+    /// Gets or sets the Events.
+    /// </summary>
+    [ProtoMember(1)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse> Events { get; set; } = new List<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>();
+
+    /// <summary>
+    /// Gets or sets the Next.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64? Next { get; set; }
+}
+
+/// <summary>
+/// Represents the PageRequest message.
+/// </summary>
+[ProtoContract]
+public class PageRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the from.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::System.UInt64? From { get; set; }
+
+    /// <summary>
+    /// Gets or sets the count.
+    /// </summary>
+    [ProtoMember(5)]
+    public int Count { get; set; }
+
+    /// <summary>
+    /// Gets or sets the backward.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool Backward { get; set; }
+
+    /// <summary>
+    /// Gets or sets the until.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::System.UInt64? Until { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(8)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceType.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? EventSourceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamType.
+    /// </summary>
+    [ProtoMember(10)]
+    public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventStreamId.
+    /// </summary>
+    [ProtoMember(11)]
+    public string? EventStreamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(12)]
+    public string? EventTypeIds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags.
+    /// </summary>
+    [ProtoMember(13)]
+    public string? Tags { get; set; }
+}
+
+/// <summary>
 /// Represents the EventSequenceTailResponse message.
 /// </summary>
 [ProtoContract]
@@ -2516,6 +2628,12 @@ public class EventSequenceTailResponse
     /// </summary>
     [ProtoMember(1)]
     public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the MutationEpoch.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64? MutationEpoch { get; set; }
 }
 
 /// <summary>
@@ -2571,6 +2689,12 @@ public class TailSequenceNumberRequest
     /// </summary>
     [ProtoMember(8)]
     public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the includeMutationEpoch.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool IncludeMutationEpoch { get; set; }
 }
 
 /// <summary>

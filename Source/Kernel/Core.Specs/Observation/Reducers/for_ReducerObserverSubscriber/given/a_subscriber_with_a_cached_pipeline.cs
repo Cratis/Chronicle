@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Observation.given;
+using Cratis.Chronicle.Projections;
+using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -17,6 +19,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     protected ReducerDefinition _definition;
     protected IReducerPipelineFactory _pipelineFactory;
     protected IReducerMediator _mediator;
+    protected IProjectionChangesetNotifier _notifier;
+    protected ILogger<ReducerObserverSubscriber> _logger;
     protected IReducerPipeline _firstPipeline;
     protected IReducerPipeline _secondPipeline;
     protected DeliveryClock _clock;
@@ -26,6 +30,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     async Task Establish()
     {
         var silo = _silo = new TestKitSilo();
+        _notifier = Substitute.For<IProjectionChangesetNotifier>();
+        silo.AddProbe(_ => _notifier);
         _definition = CreateDefinition();
         var stateStorage = Substitute.For<IStorage<ReducerDefinition>>();
         stateStorage.State = _definition;
@@ -54,11 +60,23 @@ public class a_subscriber_with_a_cached_pipeline : Specification
                 new ReducerSubscriberResult(ObserverSubscriberResult.Ok(42), null)));
         silo.AddService(_mediator);
 
-        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(callInfo => callInfo.Arg<ReducerDelegate>()([], null));
-        _secondPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(callInfo => callInfo.Arg<ReducerDelegate>()([], null));
+        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
+        {
+            await callInfo.Arg<ReducerDelegate>()([], null);
+            return null;
+        });
+        _secondPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
+        {
+            await callInfo.Arg<ReducerDelegate>()([], null);
+            return null;
+        });
 
         _clock = new DeliveryClock();
         silo.AddService<TimeProvider>(_clock);
+
+        _logger = Substitute.For<ILogger<ReducerObserverSubscriber>>();
+        _logger.IsEnabled(LogLevel.Error).Returns(true);
+        silo.AddService(_logger);
 
         _subscriber = await silo.CreateGrainAsync<ReducerObserverSubscriber>(_key.ToString());
         _pipelineFactory.ClearReceivedCalls();

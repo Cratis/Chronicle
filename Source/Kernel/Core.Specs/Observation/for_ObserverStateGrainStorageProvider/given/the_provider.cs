@@ -36,6 +36,7 @@ public class the_provider : Specification
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(eventStoreNamespaceStorage);
         observerStateStorage.Get(Arg.Any<ObserverId>()).Returns(Task.FromResult(new ObserverState()));
+        observerStateStorage.Save(Arg.Any<ObserverState>(), Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(true);
         failedPartitionsStorage.GetFor(Arg.Any<ObserverId>()).Returns(Task.FromResult(new FailedPartitions()));
     }
 }

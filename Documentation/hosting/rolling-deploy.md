@@ -35,6 +35,31 @@ Startup step 'DiscoverAndRegisterKernelProjections' failed because a silo in thi
 
 The exception beneath it is a `TypeLoadException` such as `Unable to resolve type alias "("inv",[Orleans.Runtime.GrainReference],[Cratis.Chronicle.Projections.IProjectionsManager,Cratis.Chronicle.Core],"F436C56F")"`. Versions before 19.107.0 show only the exception. Either way, roll back the new node, then stop every node and start the new version.
 
+## Roll out administrator authorization
+
+Keep `Authentication.EnforceAdministratorPolicyForOperations=false` on every node while replacing nodes
+with the administrator-policy release. Existing operational calls then remain in audit mode. The new
+administrator-management service is always enforced on upgraded nodes when authentication is enabled;
+old nodes do not expose that service.
+
+After every node has been upgraded, review the would-deny warnings for user/application management,
+System job recovery and System observer recovery. Confirm that the operators who need those operations
+are active administrators, and obtain fresh user sessions carrying `chronicle_principal=user`. Refresh
+OpenIddict user tokens or sign in again for existing cookie and Identity bearer sessions. Applications
+cannot acquire administrator privilege, even if their token subject matches an administrator's identifier.
+
+Only then set `Authentication.EnforceAdministratorPolicyForOperations=true` consistently across the
+cluster. During a staggered configuration change, a call can still be audited rather than denied on a
+node that retains audit mode; enforcement is not cluster-wide until every node has the setting. Application-store
+operations are unaffected. See [Administrator authorization](configuration/authentication.md#administrator-authorization)
+for the configuration and external-authority limitations.
+
+Every release that includes the administrator roster must recognize `GrantReason.AdministratorGrant`
+(value `3`) before administrator-management grants are written. A node whose enum converter does not
+recognize a persisted reason cannot safely replay that history. Do not roll back to such a version after
+writing those grants. A roster without active administrators must be recovered through the server-local
+recovery configuration, not by disabling policy enforcement on a reachable node.
+
 ## Know what a starting node does
 
 Every node runs the same startup. Nothing in it is specific to the first node, so the order of your rollout decides which node does the work:

@@ -14,9 +14,9 @@ public class and_candidates_have_different_dispositions : Specification
     async Task Establish()
     {
         _storage = new();
-        await _storage.Save(new ObserverState { Identifier = "retired", AlertDisposition = AlertDisposition.Retired });
-        await _storage.Save(new ObserverState { Identifier = "active", AlertDisposition = AlertDisposition.Active });
-        await _storage.Save(new ObserverState { Identifier = "unsubmitted", AlertDisposition = AlertDisposition.Retired });
+        await _storage.Save(new ObserverState { Identifier = "retired", AlertDisposition = AlertDisposition.Retired }, Concepts.EventSequences.EventSequenceId.Log);
+        await _storage.Save(new ObserverState { Identifier = "active", AlertDisposition = AlertDisposition.Active }, Concepts.EventSequences.EventSequenceId.Log);
+        await _storage.Save(new ObserverState { Identifier = "unsubmitted", AlertDisposition = AlertDisposition.Retired }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because() => _result = await _storage.GetRetired(["retired", "active", "missing", "retired"]);

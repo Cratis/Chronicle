@@ -16,7 +16,7 @@ public class with_initialization : given.an_observer_state_storage
         _expected = _state.ToMongoDB().ToBsonDocument()["initialization"];
     }
 
-    async Task Because() => await _storage.Save(_state);
+    async Task Because() => await _storage.Save(_state, Concepts.EventSequences.EventSequenceId.Log);
 
     [Fact] void should_set_the_whole_initialization_record() => _set["initialization"].ShouldEqual(_expected);
 }

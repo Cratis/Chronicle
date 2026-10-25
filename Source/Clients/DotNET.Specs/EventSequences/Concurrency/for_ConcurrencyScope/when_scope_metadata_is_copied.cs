@@ -23,5 +23,7 @@ public class when_scope_metadata_is_copied : Specification
     [Fact] void should_preserve_dictionary_lookup() => _lookup[_copy].ShouldEqual("found");
     [Fact] void should_preserve_strategy_provenance_in_a_with_copy() => (_copy with { SequenceNumber = EventSequenceNumber.Unavailable }).IssuedByStrategy.ShouldBeTrue();
     [Fact] void should_preserve_definition_link_in_a_with_copy() => (_copy with { SequenceNumber = EventSequenceNumber.Unavailable }).DefinitionType.ShouldEqual(typeof(string));
+    [Fact] void should_preserve_the_mutation_epoch_in_a_with_copy() => (_original with { MutationEpoch = 6UL } with { SequenceNumber = EventSequenceNumber.Unavailable }).MutationEpoch.ShouldEqual(6UL);
+    [Fact] void should_keep_the_mutation_epoch_outside_value_equality() => (_original with { MutationEpoch = 6UL }).ShouldEqual(_original);
     [Fact] void should_preserve_collection_reference_equality() => (_original with { EventTypes = _original.EventTypes!.ToArray() }).ShouldNotEqual(_original);
 }

@@ -22,6 +22,7 @@ using Microsoft.Extensions.Logging;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
+using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -85,6 +86,13 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+        {
+            // The projection grain is deactivating with the silo too, so the call could not complete.
+            logger.SkippingDefinitionUnsubscribeDuringShutdown(_key);
+            return;
+        }
+
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
     }
@@ -207,10 +215,7 @@ public class ProjectionObserverSubscriber(
             return;
         }
 
-        if (_pipeline is null)
-        {
-            await HandlePipeline();
-        }
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -227,14 +232,14 @@ public class ProjectionObserverSubscriber(
         }
     }
 
+    bool CanNotify(ExpandoObject state) => _definition.IsActive && !ReadModelInitialization.IsUninitialized(state);
+
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {
-        if (_pipeline is null)
-        {
-            // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
-            // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
-            await HandlePipeline();
-        }
+        // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
+        // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
+        // A definition written after activation is also picked up here.
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -311,15 +316,10 @@ public class ProjectionObserverSubscriber(
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
                 {
-                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    var failure = await HandleBulkFailures(partition, events, pipelineContext.FailedPartitions);
+                    if (failure is not null)
                     {
-                        await observer.PartitionFailed(
-                            failedPartition.EventSourceId,
-                            failedPartition.EventSequenceNumber,
-                            [ProjectionBulkFailures.MessageFor(failedPartition)],
-                            string.Empty,
-                            FailureKind.Handling);
+                        return (failure, null);
                     }
                 }
 
@@ -328,7 +328,7 @@ public class ProjectionObserverSubscriber(
             }
 
             // Note: We don't want to send changesets if the projection is not active
-            if (changeset?.HasChanges == true && _definition.IsActive)
+            if (changeset?.HasChanges == true && CanNotify(changeset.CurrentState))
             {
                 var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
 
@@ -375,6 +375,50 @@ public class ProjectionObserverSubscriber(
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty), null);
         }
+    }
+
+    async Task<ObserverSubscriberResult?> HandleBulkFailures(Key partition, IEnumerable<AppendedEvent> events, IEnumerable<SinkFailedPartition> failedPartitions)
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failedPartition in failedPartitions.Where(_ => _.EventSourceId != partition))
+        {
+            await observer.PartitionFailed(
+                failedPartition.EventSourceId,
+                failedPartition.EventSequenceNumber,
+                [ProjectionBulkFailures.MessageFor(failedPartition)],
+                string.Empty,
+                FailureKind.Handling);
+        }
+
+        var deliveryFailure = failedPartitions.FirstOrDefault(_ => _.EventSourceId == partition);
+        if (deliveryFailure is null)
+        {
+            return null;
+        }
+
+        var lastHandled = events.TakeWhile(_ => _.Context.SequenceNumber < deliveryFailure.EventSequenceNumber)
+            .LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        return ObserverSubscriberResult.Failed(lastHandled, ProjectionBulkFailures.MessageFor(deliveryFailure));
+    }
+
+    async Task EnsurePipeline()
+    {
+        if (_pipeline is not null)
+        {
+            return;
+        }
+
+        if (_definition.ReadModel is null)
+        {
+            // SetDefinition awaits subscriber notifications, so read storage rather than calling that grain.
+            var definitions = storage.GetEventStore(_key.EventStore).Projections;
+            if (await definitions.Has(_key.ObserverId))
+            {
+                _definition = await definitions.Get(_key.ObserverId);
+            }
+        }
+
+        await HandlePipeline();
     }
 
     async Task<ObserverSubscriberResult?> RefreshWhenEngineHasNewerDefinition()

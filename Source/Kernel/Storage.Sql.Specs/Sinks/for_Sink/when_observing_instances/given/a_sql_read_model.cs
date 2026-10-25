@@ -137,8 +137,16 @@ public abstract class a_sql_read_model : Specification
 
     ReadModelDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>();
+        var postgreSql = _connection is Npgsql.NpgsqlConnection;
+        var options = postgreSql
+            ? new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(_connection.ConnectionString))
+            : new DbContextOptionsBuilder<ReadModelDbContext>();
         Configure(options, _connection);
-        return new ReadModelDbContext(options.AddConceptAsSupport().WithoutServiceProviderCaching().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+        options.AddConceptAsSupport();
+        if (!postgreSql)
+        {
+            options.WithoutServiceProviderCaching();
+        }
+        return new ReadModelDbContext(options.Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
     }
 }

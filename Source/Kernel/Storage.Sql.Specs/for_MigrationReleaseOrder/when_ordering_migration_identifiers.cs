@@ -11,6 +11,9 @@ public class when_ordering_migration_identifiers : Specification
     [
         .. new[]
         {
+            "NS-Observers-v19_112_0_1",
+            "NS-Observers-v19_110_0",
+            "NS-Observers-v19_83_1_3",
             "NS-Observers-v19_104_0_0",
             "NS-Alerts-v19_32_0",
             "without-a-release",
@@ -33,8 +36,11 @@ public class when_ordering_migration_identifiers : Specification
         "NS-Observers-v19_83_1",
         "NS-Observers-v19_83_1_0",
         "NS-Observers-v19_83_1_1",
+        "NS-Observers-v19_83_1_3",
         "NS-InFlightEvents-v19_93_0",
         "NS-ObserverHandledCounts-v19_93_0",
         "NS-Observers-v19_104_0_0",
+        "NS-Observers-v19_110_0",
+        "NS-Observers-v19_112_0_1",
     ]);
 }

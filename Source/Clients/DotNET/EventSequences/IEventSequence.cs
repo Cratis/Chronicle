@@ -175,6 +175,26 @@ public interface IEventSequence
     Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? filterEventTypes = default);
 
     /// <summary>
+    /// Reads one bounded keyset page in the requested direction.
+    /// </summary>
+    /// <param name="request">The inclusive bounds, count and filters.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The events in read order and the next inclusive start, if more matching events remain.</returns>
+    /// <exception cref="NotSupportedException">The implementation does not support paged reads.</exception>
+    Task<EventSequencePage> GetPage(EventSequencePageRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This event sequence does not support paged reads.");
+
+    /// <summary>
+    /// Reads a bounded newest-first page starting at the tail.
+    /// </summary>
+    /// <param name="count">The maximum events to return, between 1 and 1000.</param>
+    /// <param name="filter">Optional filters applied in storage.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The latest events and the next inclusive start toward older events.</returns>
+    Task<EventSequencePage> GetLatest(int count, EventSequenceFilter? filter = default, CancellationToken cancellationToken = default) =>
+        GetPage(EventSequencePageRequest.Backward(null, count, filter), cancellationToken);
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>

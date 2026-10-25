@@ -30,6 +30,7 @@ public class and_the_observer_is_unsubscribed : Specification
         observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _silo.AddProbe(_ => observer);
         _silo.AddService(Substitute.For<Storage.IStorage>());
+        _silo.AddService(Substitute.For<IObserverServiceClient>());
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService(Substitute.For<IEventCompliance>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());

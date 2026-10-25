@@ -130,6 +130,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Jobs);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Connections);
         services.AddTransient(sp => sp.GetRequiredService<IServices>().Occurrences);
+        services.AddTransient(sp => sp.GetRequiredService<IServices>().Administrators);
 
         return services;
     }

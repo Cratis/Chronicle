@@ -60,6 +60,11 @@ public class Storage
     public PostgreSqlEntra PostgreSqlEntra { get; init; } = new();
 
     /// <summary>
+    /// Gets the PostgreSQL connection pool settings. Connection string values take precedence.
+    /// </summary>
+    public PostgreSqlPooling PostgreSqlPooling { get; init; } = new();
+
+    /// <summary>
     /// Gets how connections are resolved per event store, namespace and purpose.
     /// </summary>
     /// <remarks>

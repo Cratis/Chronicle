@@ -13,7 +13,11 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
 
     async Task Establish() => await _cluster.Start();
 
-    // A rolling upgrade replaces every node of the three-node cluster, and each replacement is a transition of its own.
+    /// <summary>
+    /// A rolling upgrade replaces every node of the three-node cluster, and each replacement is a transition of its own.
+    /// </summary>
+    /// <param name="change">The cluster topology change being exercised.</param>
+    /// <returns>The number of node transitions to verify.</returns>
     static int TransitionsFor(ClusterChange change) => change == ClusterChange.RollingUpgrade ? 3 : 1;
 
     async Task Because()

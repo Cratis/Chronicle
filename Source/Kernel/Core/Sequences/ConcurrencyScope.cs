@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventSourceType">Optional event source type to scope to. If not set, it will not be used.</param>
 /// <param name="EventTypes">Optional collection of event types to scope to. If not set, it will not be used.</param>
 /// <param name="ExpectsNoMatchingEvent">Whether the scope expects no event matching its narrowing to exist yet.</param>
+/// <param name="MutationEpoch">Optional mutation epoch of the event sequence observed by a decision read. When set, the append is refused if a revision or redaction changed the history since.</param>
 /// <remarks>
 /// Deliberately its own type rather than <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScope"/> directly
 /// - the same reason <see cref="EventType"/> is its own local type rather than <see cref="Concepts.Events.EventType"/>
@@ -27,4 +28,5 @@ public record ConcurrencyScope(
     string? EventStreamId = default,
     string? EventSourceType = default,
     IEnumerable<EventType>? EventTypes = default,
-    bool ExpectsNoMatchingEvent = default);
+    bool ExpectsNoMatchingEvent = default,
+    ulong? MutationEpoch = default);

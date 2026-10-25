@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="UserId">The unique identifier of the user.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Users)]
 public record RequirePasswordChange(UserId UserId)
 {

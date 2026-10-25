@@ -107,7 +107,9 @@ public class Projection(
         }
 
         var storageUpgraded = previousDefinition.HasLegacyStorageFields && !definition.HasLegacyStorageFields;
-        if (compareResult == ProjectionDefinitionCompareResult.Different || storageUpgraded)
+
+        // First writes, including re-writes after removal, must also reach subscribers that activated early.
+        if (compareResult != ProjectionDefinitionCompareResult.Same || storageUpgraded)
         {
             _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
@@ -219,7 +221,7 @@ public class Projection(
         var identifierPropertyName = !schemaProperties.ContainsKey("_id") && schemaProperties.ContainsKey("id") ? "id" : "_id";
 
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
-        return [.. sink.ReadModels.Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
+        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
     }
 
     static bool SuppressesDirectRootUpdate(Change[] changes) =>
@@ -425,7 +427,7 @@ public class Projection(
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
 
         // Set the last handled event sequence number to mirror what the sink writes
-        return [.. sink.ReadModels.Select(readModel =>
+        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel =>
         {
             var state = WithIdentifier(readModel, _identifierPropertyName);
             ((IDictionary<string, object?>)state)[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)readModel.LastHandledEventSequenceNumber;
@@ -449,13 +451,14 @@ public class Projection(
     {
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
+        var projectionEvents = new InMemoryProjectionEvents(
+            projection,
+            eventSequenceStorage,
+            sink,
+            (key, @event) => ProjectInMemory(projection, eventSequenceStorage, sink, initialize, key, @event));
         foreach (var @event in events)
         {
-            var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
-            if (keyResult is ResolvedKey resolvedKey)
-            {
-                await ProjectInMemory(projection, eventSequenceStorage, sink, initialize, resolvedKey, @event);
-            }
+            await projectionEvents.Project(@event);
         }
 
         return sink;

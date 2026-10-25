@@ -119,6 +119,21 @@ Skips the connect-time wire-compatibility check against the server.
 
 Use this only as a deliberate, temporary escape hatch — for example, when a client that has only *gained* capabilities since the server's release is incorrectly refused by a server that cannot be redeployed to pick up a wire-compatibility fix. It does not make an incompatibility disappear; it silences every incompatibility the check would have caught, including a genuine one. The connection string's `skipCompatibilityCheck=true` option asks for the same thing; either input is enough. See [Server support: Compatibility check](../connection-strings/server#compatibility-check) for the full explanation.
 
+### SkipKeepAlive
+
+Skips the keep-alive connection on connect.
+
+| | |
+|---|---|
+| Type | `bool` |
+| Default | `false` |
+
+Intended for short-lived processes such as command line tools, functions and jobs. A client that skips keep-alive registers no reactors or reducers. The connection string's `skipKeepAlive=true` option asks for the same thing. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+
+### RegistrationMode
+
+Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+
 ### DefaultSinkTypeId
 
 Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:
