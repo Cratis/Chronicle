@@ -8,8 +8,8 @@ using Cratis.Specifications;
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
-/// xUnit test framework that initializes the server-faithful MongoDB serialization setup before discovering or
-/// executing specs.
+/// Shared-lifecycle specification test framework that initializes the server-faithful MongoDB serialization setup
+/// before discovering or executing specs.
 /// </summary>
 public sealed class MongoDBTestFramework : SpecificationTestFramework
 {

@@ -4,8 +4,6 @@
         <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
-        <!-- MongoDBTestFramework derives from SpecificationTestFramework and owns the assembly attribute. -->
-        <CratisSpecificationsTestFrameworkAttribute>false</CratisSpecificationsTestFrameworkAttribute>
         <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -28,4 +26,11 @@
     </ItemGroup>
     <ItemGroup>
     </ItemGroup>
+
+    <!-- Keep the handwritten MongoDBTestFramework attribute; package targets add the default after project evaluation. -->
+    <Target Name="_KeepMongoDBTestFramework" AfterTargets="GetAssemblyAttributes" BeforeTargets="CreateGeneratedAssemblyInfoInputsCacheFile">
+        <ItemGroup>
+            <AssemblyAttribute Remove="Xunit.TestFrameworkAttribute" />
+        </ItemGroup>
+    </Target>
 </Project>
