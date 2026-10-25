@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -18,6 +19,7 @@ internal sealed partial class DynamicSchemaGuard(ILogger<DynamicSchemaGuard> log
 {
     static readonly AsyncLocal<DynamicSchemaPolicy?> _override = new();
     static readonly DynamicSchemaGuard _default = new(NullLogger<DynamicSchemaGuard>.Instance);
+    static readonly ConditionalWeakTable<DbContext, DynamicSchemaGuard> _contexts = new();
     readonly ConcurrentDictionary<(string Connection, string Kind, string Name), byte> _reported = new();
     readonly AsyncLocal<int> _batchDepth = new();
     int _pending;
@@ -28,12 +30,26 @@ internal sealed partial class DynamicSchemaGuard(ILogger<DynamicSchemaGuard> log
     internal static bool IsProvisioning => _override.Value == DynamicSchemaPolicy.Allow;
 
     /// <summary>
-    /// Finds the process guard carried by the context options.
+    /// Finds the process guard associated with the context.
     /// </summary>
     /// <param name="context">The connected context.</param>
     /// <returns>The shared guard.</returns>
     internal static DynamicSchemaGuard For(DbContext context) =>
-        context.GetService<IDbContextOptions>().FindExtension<SchemaModeOptionsExtension>()?.Guard ?? _default;
+        _contexts.TryGetValue(context, out var guard) ? guard : _default;
+
+    /// <summary>
+    /// Associates warning state with a context, outside EF's cached service options.
+    /// </summary>
+    /// <typeparam name="TContext">The context type.</typeparam>
+    /// <param name="context">The context to attach the guard to.</param>
+    /// <param name="guard">The process-wide guard.</param>
+    /// <returns>The same context, for chaining.</returns>
+    internal static TContext Attach<TContext>(TContext context, DynamicSchemaGuard? guard)
+        where TContext : DbContext
+    {
+        if (guard is not null) _contexts.Add(context, guard);
+        return context;
+    }
 
     /// <summary>
     /// Resolves the policy without querying the database.

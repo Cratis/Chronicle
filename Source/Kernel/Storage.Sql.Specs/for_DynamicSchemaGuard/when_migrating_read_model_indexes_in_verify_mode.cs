@@ -25,8 +25,8 @@ public class when_migrating_read_model_indexes_in_verify_mode : EventStores.Name
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"object","properties":{"part":{"type":"string"}}}}}""");
         await using var original = CreateContext("guarded_read_model", ProjectedColumns.ForSchema(schema));
         var options = new DbContextOptionsBuilder<ReadModelDbContext>((DbContextOptions<ReadModelDbContext>)original.GetService<IDbContextOptions>());
-        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify, new DynamicSchemaGuard(_logger)));
-        _context = new ReadModelDbContext(options.Options, original.TableName, original.Columns, _migrator);
+        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify));
+        _context = DynamicSchemaGuard.Attach(new ReadModelDbContext(options.Options, original.TableName, original.Columns, _migrator), new DynamicSchemaGuard(_logger));
     }
 
     async Task Because()

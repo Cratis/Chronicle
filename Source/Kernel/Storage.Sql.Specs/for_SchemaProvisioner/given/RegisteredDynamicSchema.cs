@@ -55,10 +55,10 @@ public static class RegisteredDynamicSchema
         await using (var values = await database.UniqueConstraintValuesTable(store, ns, ScopedValues)) await values.DbContext.EnsureTableExists();
         foreach (var name in new[] { Replay, Backup })
         {
-            await using var table = await database.ReadModelTable(store, ns, name, []);
+            await using var table = await database.ReadModelTable(store, ns, name, Columns);
             await table.DbContext.EnsureTableExists();
         }
-        await using var backup = await database.ReadModelTable(store, ns, Backup, []);
+        await using var backup = await database.ReadModelTable(store, ns, Backup, Columns);
         await backup.DbContext.EnsureReplayPromotions();
         backup.DbContext.ReplayPromotions.Add(new(ReplayPromotion.IdentifierFor(Primary, Backup), Primary, Backup, Backup));
         await backup.DbContext.SaveChangesAsync();

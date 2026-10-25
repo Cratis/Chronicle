@@ -19,11 +19,13 @@ public class when_comparing_postgresql_catalog_shapes(PostgreSqlFixture fixture)
     Exception? _wrongKeys;
     Exception? _wrongUniqueness;
     Exception? _partial;
+    Exception? _matchingFilter;
+    Exception? _wrongFilter;
     IReadOnlyList<string> _tableDifferences;
 
     async Task Because()
     {
-        await using var context = new DbContext(new DbContextOptionsBuilder().UseNpgsql(ConnectionString).Options);
+        await using var context = new DbContext(new DbContextOptionsBuilder().UseNpgsql(ConnectionString).WithoutServiceProviderCaching().Options);
         await context.Database.ExecuteSqlRawAsync("CREATE TABLE catalog_shape (\"Value\" integer NOT NULL PRIMARY KEY, \"Other\" integer NOT NULL, \"Label\" varchar(24) NOT NULL, \"Amount\" numeric(12,2) NOT NULL, \"Enabled\" boolean NOT NULL)");
         var migration = new MigrationBuilder(context.Database.ProviderName);
         migration.CreateTable(
@@ -47,14 +49,16 @@ public class when_comparing_postgresql_catalog_shapes(PostgreSqlFixture fixture)
         await context.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX catalog_value ON catalog_shape (\"Value\") WHERE \"Other\" > 0");
         _partialWasAccepted = await DynamicIndexShape.IsUniqueValue(context, "catalog_shape", "catalog_value");
         _partial = await Inspect(context, ["Value"], unique: true);
+        _matchingFilter = await Inspect(context, ["Value"], unique: true, filter: "\"Other\" > 0");
+        _wrongFilter = await Inspect(context, ["Value"], unique: true, filter: "\"Other\" > 1");
         await context.Database.ExecuteSqlRawAsync("DROP INDEX catalog_value");
         _missingWasAccepted = await DynamicIndexShape.Exists(context, "catalog_shape", "catalog_value");
     }
 
-    static async Task<Exception?> Inspect(DbContext context, string[] columns, bool unique)
+    static async Task<Exception?> Inspect(DbContext context, string[] columns, bool unique, string? filter = null)
     {
         using var inspection = DynamicSchemaVerification.Begin();
-        await DynamicIndexShape.Verify(context, new() { Name = "catalog_value", Table = "catalog_shape", Columns = columns, IsUnique = unique });
+        await DynamicIndexShape.Verify(context, new() { Name = "catalog_value", Table = "catalog_shape", Columns = columns, IsUnique = unique, Filter = filter });
         return Catch.Exception(() => DynamicSchemaVerification.Complete("test"));
     }
 
@@ -64,6 +68,8 @@ public class when_comparing_postgresql_catalog_shapes(PostgreSqlFixture fixture)
     [Fact] void should_reject_different_keys() => _wrongKeys.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_reject_different_uniqueness() => _wrongUniqueness.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_not_accept_a_partial_unique_value_index() => _partialWasAccepted.ShouldBeFalse();
+    [Fact] void should_accept_the_expected_filter() => _matchingFilter.ShouldBeNull();
+    [Fact] void should_reject_a_different_filter() => _wrongFilter.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_report_partial_index_filtering() => _partial.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_not_accept_a_missing_index() => _missingWasAccepted.ShouldBeFalse();
 }

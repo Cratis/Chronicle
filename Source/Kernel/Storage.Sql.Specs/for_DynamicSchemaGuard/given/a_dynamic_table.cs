@@ -24,9 +24,9 @@ public class a_dynamic_table : for_Database.given.a_sqlite_database
         _logger = Substitute.For<ILogger<DynamicSchemaGuard>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         var guard = new DynamicSchemaGuard(_logger);
-        var options = new DbContextOptionsBuilder().UseSqlite(_connectionString);
-        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify, guard));
-        _context = new DbContext(options.Options);
+        var options = new DbContextOptionsBuilder().UseSqlite(_connectionString).WithoutServiceProviderCaching();
+        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify));
+        _context = DynamicSchemaGuard.Attach(new DbContext(options.Options), guard);
         await _context.Database.OpenConnectionAsync();
         _migrator = new TableMigrator<DbContext>(Substitute.For<ILogger<TableMigrator<DbContext>>>());
     }

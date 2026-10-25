@@ -33,7 +33,7 @@ public class when_reporting_multiple_registered_read_models : for_SchemaProvisio
         await registry.DbContext.SaveChangesAsync();
         var options = new ChronicleOptions
         {
-            Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _directory, SchemaMode = SchemaMode.Verify }
+            Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _connectionString, SchemaMode = SchemaMode.Verify }
         };
         var services = new ServiceCollection();
         services.AddLogging();

@@ -114,7 +114,7 @@ public partial class Database
             builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
         }
 
-        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode, serviceProvider.GetService<DynamicSchemaGuard>()));
+        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode));
 
         // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
         // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
@@ -218,7 +218,7 @@ public partial class Database
         where TDbContext : DbContext
     {
         var target = await Target(identity, purpose);
-        var context = create(OptionsFor(cache, $"{key}:{purpose}", target));
+        var context = DynamicSchemaGuard.Attach(create(OptionsFor(cache, $"{key}:{purpose}", target)), serviceProvider.GetService<DynamicSchemaGuard>());
         try
         {
             if (!_resolution.IsConfigured || purpose == ConnectionPurpose.Schema)
@@ -228,7 +228,7 @@ public partial class Database
             }
 
             var schemaTarget = await Target(identity, ConnectionPurpose.Schema);
-            await using var schemaContext = create(OptionsFor(cache, $"{key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget));
+            await using var schemaContext = DynamicSchemaGuard.Attach(create(OptionsFor(cache, $"{key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget)), serviceProvider.GetService<DynamicSchemaGuard>());
             await prepare(schemaContext, schemaTarget);
             return context;
         }

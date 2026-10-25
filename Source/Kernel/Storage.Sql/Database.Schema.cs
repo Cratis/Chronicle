@@ -33,7 +33,7 @@ public partial class Database
         where TContext : DbContext
     {
         var target = await Target(identity, ConnectionPurpose.Schema, verify);
-        var context = create(BuildOptions<TContext>(target, verify ? SchemaMode.Verify : null));
+        var context = DynamicSchemaGuard.Attach(create(BuildOptions<TContext>(target, verify ? SchemaMode.Verify : null)), serviceProvider.GetService<DynamicSchemaGuard>());
         try
         {
             if (verify)

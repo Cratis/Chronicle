@@ -70,7 +70,7 @@ internal static class DynamicIndexShape
         if (type == DatabaseType.Sqlite)
         {
             var indexes = await context.Database.SqlQuery<SqliteIndex>($"SELECT name AS Name, \"unique\" AS \"Unique\", partial AS Partial FROM pragma_index_list({index.Table})").ToListAsync();
-            if (!indexes.Exists(item => item.Name == index.Name && item.Unique == (index.IsUnique ? 1 : 0) && item.Partial == 0))
+            if (!indexes.Exists(item => item.Name == index.Name && item.Unique == (index.IsUnique ? 1 : 0) && item.Partial == (index.Filter is null ? 0 : 1)))
             {
                 DynamicSchemaVerification.Report($"index '{index.Table}.{index.Name}' is missing or has different uniqueness or filtering");
                 return;
@@ -84,13 +84,47 @@ internal static class DynamicIndexShape
                 ? "SELECT a.attname AS \"Value\" FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace " +
                   "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid " +
                   "JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS k(attnum,position) ON true JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum " +
-                  "WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indisunique={2} AND ix.indisvalid AND ix.indisready AND ix.indpred IS NULL ORDER BY k.position"
+                  "WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indisunique={2} AND ix.indisvalid AND ix.indisready AND (ix.indpred IS NOT NULL)={3} ORDER BY k.position"
                 : "SELECT c.name AS [Value] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id " +
                   "JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id " +
-                  "WHERE i.object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0})) AND i.name={1} AND i.is_unique={2} AND i.is_disabled=0 AND i.has_filter=0 AND ic.key_ordinal>0 ORDER BY ic.key_ordinal";
-            columns = (await context.Database.SqlQueryRaw<string>(sql, index.Table, index.Name, index.IsUnique).ToListAsync()).ToArray();
+                  "WHERE i.object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0})) AND i.name={1} AND i.is_unique={2} AND i.is_disabled=0 AND i.has_filter={3} AND ic.key_ordinal>0 ORDER BY ic.key_ordinal";
+            columns = (await context.Database.SqlQueryRaw<string>(sql, index.Table, index.Name, index.IsUnique, index.Filter is not null).ToListAsync()).ToArray();
         }
         if (!columns.SequenceEqual(index.Columns, StringComparer.Ordinal)) DynamicSchemaVerification.Report($"index '{index.Table}.{index.Name}' is missing or has different ordered keys or uniqueness");
+        if (index.Filter is not null && !await HasExpectedFilter(context, index)) DynamicSchemaVerification.Report($"index '{index.Table}.{index.Name}' has a different filter");
+    }
+
+    static async Task<bool> HasExpectedFilter(DbContext context, CreateIndexOperation index)
+    {
+        var type = context.Database.GetDatabaseType();
+        var sql = type switch
+        {
+            DatabaseType.PostgreSql => "SELECT pg_get_expr(ix.indpred,ix.indrelid) AS \"Value\" FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace " +
+                "JOIN pg_index ix ON ix.indrelid=t.oid JOIN pg_class i ON i.oid=ix.indexrelid WHERE t.relname={0} AND i.relname={1} AND n.nspname=current_schema() AND ix.indpred IS NOT NULL",
+            DatabaseType.SqlServer => "SELECT filter_definition AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0})) AND name={1} AND has_filter=1",
+            _ => "SELECT substr(sql,instr(upper(sql),' WHERE ')+7) AS Value FROM sqlite_master WHERE type='index' AND tbl_name={0} AND name={1} AND instr(upper(sql),' WHERE ')>0"
+        };
+        var filters = await context.Database.SqlQueryRaw<string>(sql, index.Table, index.Name).ToListAsync();
+        return filters.Count == 1 && string.Equals(Unwrap(filters[0]), Unwrap(index.Filter!), StringComparison.Ordinal);
+    }
+
+    static string Unwrap(string filter)
+    {
+        filter = filter.Trim();
+        while (filter.StartsWith('(') && filter.EndsWith(')'))
+        {
+            var depth = 0;
+            var wraps = true;
+            for (var i = 0; i < filter.Length - 1; i++)
+            {
+                if (filter[i] == '(') depth++;
+                if (filter[i] == ')') depth--;
+                if (depth == 0) wraps = false;
+            }
+            if (!wraps) break;
+            filter = filter[1..^1].Trim();
+        }
+        return filter;
     }
 
     private sealed class SqliteIndex

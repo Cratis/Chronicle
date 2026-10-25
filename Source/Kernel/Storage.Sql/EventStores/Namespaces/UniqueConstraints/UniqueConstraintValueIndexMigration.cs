@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,18 @@ internal static class UniqueConstraintValueIndexMigration
     /// <returns>The migration task.</returns>
     internal static async Task EnsureValueIndexIsUnique(string tableName, UniqueConstraintDbContext context, ILogger<UniqueConstraintMigrator> logger)
     {
+        if (DynamicSchemaVerification.IsActive)
+        {
+            await DynamicIndexShape.Verify(context, new CreateIndexOperation
+            {
+                Table = tableName,
+                Name = $"IX_{tableName}_Value",
+                Columns = ["Value"],
+                IsUnique = true
+            });
+            return;
+        }
+
         using var warnings = DynamicSchemaGuard.For(context).FlushOnDispose();
 
         // Hold off writers across the guards and DDL, including writers in other silos.

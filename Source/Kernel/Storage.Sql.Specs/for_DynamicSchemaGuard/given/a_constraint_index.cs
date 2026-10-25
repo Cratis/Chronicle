@@ -24,8 +24,8 @@ public class a_constraint_index : for_Database.given.a_sqlite_database
     {
         var options = new DbContextOptionsBuilder<UniqueConstraintDbContext>().UseSqlite(_connectionString)
             .AddConceptAsSupport().WithoutServiceProviderCaching();
-        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify, new DynamicSchemaGuard(_guardLogger)));
-        _context = new(options.Options, Table, Substitute.For<IUniqueConstraintMigrator>());
+        ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify));
+        _context = DynamicSchemaGuard.Attach(new UniqueConstraintDbContext(options.Options, Table, Substitute.For<IUniqueConstraintMigrator>()), new DynamicSchemaGuard(_guardLogger));
         await _context.Database.ExecuteSqlRawAsync("CREATE TABLE guarded_claims (EventSourceId TEXT NOT NULL PRIMARY KEY, Value TEXT NOT NULL)");
     }
 

@@ -22,7 +22,7 @@ public class when_a_registered_index_build_fails : given.a_schema_provisioner
         _indexName = plan.Name(Cratis.Arc.EntityFrameworkCore.DatabaseType.Sqlite, given.RegisteredDynamicSchema.Primary);
 
         // SQLite shares table and index names. A table collision makes the real CREATE INDEX fail.
-        await using var collision = await _schemaDatabase.ReadModelTable("orders", "production", _indexName, []);
+        await using var collision = await _schemaDatabase.ReadModelTable("orders", "production", _indexName, given.RegisteredDynamicSchema.Columns);
         await collision.DbContext.EnsureTableExists();
     }
 
