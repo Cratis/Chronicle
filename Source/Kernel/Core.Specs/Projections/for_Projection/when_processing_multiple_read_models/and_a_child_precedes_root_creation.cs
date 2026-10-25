@@ -44,4 +44,6 @@ public class and_a_child_precedes_root_creation : given.an_order_projection_grai
     [Fact] void should_hide_the_uninitialized_root_from_preview_results() => _previewBeforeCreation.ShouldBeEmpty();
     [Fact] void should_return_the_root_after_creation() => _afterCreation.Count().ShouldEqual(1);
     [Fact] void should_preview_the_root_after_creation() => _previewAfterCreation.Count().ShouldEqual(1);
+    [Fact] void should_keep_the_child_after_creation() => LinesOf(ReadModelFor(_afterCreation, Order)).Single()["Quantity"].ShouldEqual(2);
+    [Fact] void should_preview_the_child_after_creation() => LinesOf(ReadModelFor(_previewAfterCreation, Order)).Single()["Quantity"].ShouldEqual(2);
 }

@@ -451,13 +451,14 @@ public class Projection(
     {
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
+        var projectionEvents = new InMemoryProjectionEvents(
+            projection,
+            eventSequenceStorage,
+            sink,
+            (key, @event) => ProjectInMemory(projection, eventSequenceStorage, sink, initialize, key, @event));
         foreach (var @event in events)
         {
-            var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
-            if (keyResult is ResolvedKey resolvedKey)
-            {
-                await ProjectInMemory(projection, eventSequenceStorage, sink, initialize, resolvedKey, @event);
-            }
+            await projectionEvents.Project(@event);
         }
 
         return sink;
