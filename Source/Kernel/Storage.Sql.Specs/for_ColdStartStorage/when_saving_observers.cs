@@ -14,7 +14,7 @@ public class when_saving_observers : given.a_cold_start_database
     async Task Because()
     {
         var storage = new ObserverStateStorage(Store, Namespace, _database);
-        await Race(() => storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(42) }));
+        await Race(() => storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(42) }, Concepts.EventSequences.EventSequenceId.Log));
         _count = await _namespace.Observers.CountAsync();
         _progress = (await _namespace.Observers.SingleAsync()).NextEventSequenceNumber;
     }
