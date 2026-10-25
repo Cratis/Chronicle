@@ -78,6 +78,19 @@ Two parts are separable and are proposed as a split (see [Q1](#q1-one-record-or-
 - **Signing key custody**: key scope, generation, storage, rotation procedure and public-key distribution. This is an operational security lifecycle rather than a wire shape; the wire part (which headers, which algorithms, what is signed) stays here.
 - **Transport ownership and cutover**: already owned by [#5115](https://github.com/Cratis/Chronicle/issues/5115) and [#5370](https://github.com/Cratis/Chronicle/issues/5370), and kept out of this record.
 
+### What a receiver cannot do today
+
+A function host cannot hold a gRPC stream, so HTTP is its only delivery path. On the current tree a receiver cannot:
+
+- **Verify the sender.** A Lambda Function URL with `AuthType NONE` or an anonymous Azure Function is public, and the kernel sends no signature (`Source/Kernel/Core/Observation/Webhooks/WebhookHttpClientFactory.cs` L35-L71).
+- **Tell a retry from a replay.** There is no delivery id, and the per-event `Replay` flag is the only replay signal.
+- **Reset before a replay.** Webhook observers get no replay boundary (`Source/Kernel/Core/Observation/ReactorReplayHandler.cs` L26, L90).
+- **Accept part of a batch.** Any `2xx` acknowledges all of it and the body is not read (`WebhookMediator.cs` L59-L65).
+- **Survive a platform size limit.** A `413` pauses the whole observer, although platforms answer `413` themselves (Vercel `FUNCTION_PAYLOAD_TOO_LARGE` above 4.5 MB).
+- **Stop in time.** No deadline is sent, and the kernel's fences do not cover webhooks.
+
+Each receiver built against today's body binds to an internal record, so every one of these fixes becomes a breaking change later. That is why the contract is fixed before [#5119](https://github.com/Cratis/Chronicle/issues/5119), [#5120](https://github.com/Cratis/Chronicle/issues/5120) and [#5121](https://github.com/Cratis/Chronicle/issues/5121) ship.
+
 ## Decision
 
 The kernel delivers events to Cratis HTTP receivers as `POST` requests with the content type `application/vnd.cratis.chronicle.delivery+json; v=1`, whose body is a versioned envelope of kind `events`, `replay-started`, `replay-ended` or `ping`, carrying the observer, event store, namespace, event sequence, partition, delivery id and events in a pinned public shape. Delivery is at least once and ordered per (observer, namespace, partition), with at most one request in flight per partition from the kernel's side (the kernel bounds its own dispatch and wait, not how long a receiver keeps executing an abandoned request), and with per-target concurrency caps that include replay. Each request carries a deterministic `webhook-id` that is identical across retries of the same batch and different for each replay operation over the same range, together with `webhook-timestamp`, a `webhook-signature` per the Standard Webhooks specification (Ed25519 `v1a` by default, HMAC `v1` where a receiver only supports shared secrets), a deadline header and `traceparent`. Retry, deferral, park and quarantine follow the policy shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108), extended with partial acknowledgement and payload limits. A replay is bracketed by `replay-started` and `replay-ended`, and the kernel dispatches no replayed partition before the receiver has acknowledged `replay-started`. Within this major release generic webhooks keep today's body until they opt in.
@@ -88,6 +101,7 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 - Body fields: `kind`, `observerType`, `observerId`, `eventStore`, `namespace`, `eventSequenceId`, `partition`, `deliveryId`, `events[]`, and `initialState` for reducers (from [#5116](https://github.com/Cratis/Chronicle/issues/5116)). A signed `replayEpoch` (the replay-operation identifier, see [Replay](#replay-catch-up-and-redaction)) is present on `replay-started`, `replay-ended` and on `events` deliveries that belong to a replay; it is absent (null) on ordinary deliveries and `ping`.
 - Events use a pinned public shape defined in the contracts, not the kernel's `Concepts.Events.AppendedEvent`. Each event carries its context (including sequence number, event type with the delivered generation, observation state, correlation and causation) and its content. Internal storage fields (`OriginalContent`, `GenerationalContent`, `GenerationalHashes`) are not part of v1.
 - Unknown fields are ignored by receivers; adding a field is not a version change. Removing or renaming a field, or changing a semantic, is.
+- Receivers also ignore an unknown `kind` and answer `2xx`, so a new kind (for example per-partition replay boundaries) is an additive change, not a new version.
 
 ### Ordering and concurrency
 
@@ -105,14 +119,17 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 - `2xx` with an empty body or `204` acknowledges the whole batch. `200` with a JSON result `{state, lastSuccessfulObservation, exceptionMessages, exceptionStackTrace, readModelState}` acknowledges up to `lastSuccessfulObservation` and fails from the next event.
 - `413` halves the batch instead of pausing the observer; a single event over the size limit parks the partition with reason `PayloadTooLarge`. Batches are bounded by an event count and a byte size (proposed 100 events and 4 MiB).
 - All other classifications, the retry schedule, the 24-hour budget, park and quarantine stay as shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108) and documented in `Documentation/webhooks/index.mdx`.
-- A `Cratis-Delivery-Deadline` header (UTC) tells the receiver when the kernel abandons the request. The platform's request timeout must be at most the delivery timeout.
+- A `Cratis-Delivery-Deadline` header (UTC) tells the receiver when the kernel abandons the request. The function's execution timeout (Azure Functions `functionTimeout`, the Lambda function timeout) must be at most the delivery timeout. An HTTP front's timeout is not enough: the Azure Functions load balancer answers `502` after 230 seconds while the function keeps running, and an API Gateway HTTP API answers after 30 seconds while the Lambda runs on. The kernel classifies both as transient failures and retries while the first execution is still running.
 
 ### Authentication and signatures
 
 - Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is available for receivers that only support shared secrets. Several signatures can be sent at once so keys can rotate with an overlap.
+- An HMAC `v1` secret is unique per target, as the Standard Webhooks specification requires for symmetric keys; a shared secret would let one receiver forge deliveries to another. An Ed25519 key may be shared by the targets of one event store, because receivers hold only the public key. Receivers take the public key from configuration, never from the request.
+- No published Standard Webhooks library verifies `v1a`, and .NET has no built-in Ed25519 ([dotnet/runtime#63174](https://github.com/dotnet/runtime/issues/63174)). The kernel signs and the .NET receiver verifies `v1a` with code owned by this repository on top of one named Ed25519 library. `v1` is the interoperable choice for receivers in other languages.
 - Receivers verify the signature in constant time, reject timestamps outside a tolerance (proposed 5 minutes), and never follow redirects.
 - The existing transport authentication modes stay available and combine with signing: Basic, Bearer, OAuth client credentials, managed identity and static headers (for example a platform function key). `None` without a signature requires an explicit `AllowUnauthenticated` setting and logs a startup warning ([#5117](https://github.com/Cratis/Chronicle/issues/5117)).
 - Signing is opt-in for generic webhooks, which keep today's body.
+- The existing target rules stay part of the contract: HTTPS outside development, cloud metadata addresses only through an explicit allow-list (`Source/Kernel/Core/Observation/Webhooks/Validation/WebhookTargetPolicy.cs` L76-L87), and no redirects (`Source/Kernel/Core/Setup/WebhookHttpClientExtensions.cs` L78).
 - Key custody (scope, storage under the kernel's `IEncryption`, rotation, distribution of the public key) is either decided here as proposed by [#5117](https://github.com/Cratis/Chronicle/issues/5117) (one key per event store, rotated through the CLI, returned by registration and exposed by a kernel `GET`) or split into its own record ([Q1](#q1-one-record-or-a-split), [Q9](#q9-signing-key-scope-and-rotation)).
 
 ### Replay, catch-up and redaction
@@ -155,7 +172,7 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 
 - **Transport authentication only (today).** Works for webhooks behind an authenticated gateway. A function exposed with no platform authentication (for example a Lambda Function URL with `AuthType NONE`) then has nothing to verify, and a bearer secret must be distributed to every function. Rejected as the default for HTTP reactors and reducers.
 - **HMAC `v1` only.** Widest receiver library support, including Svix verifiers. Every receiver holds a secret that can forge deliveries. Kept as an alternative, not the default.
-- **Ed25519 `v1a` by default.** Chosen. A leaked function configuration cannot forge deliveries. The cost is key lifecycle in the kernel, and verifier support for `v1a` in the .NET library named by [#5117](https://github.com/Cratis/Chronicle/issues/5117) is unverified.
+- **Ed25519 `v1a` by default.** Chosen. A leaked function configuration cannot forge deliveries. The cost is key lifecycle in the kernel, and `v1a` verification the project must own, because the .NET library named by [#5117](https://github.com/Cratis/Chronicle/issues/5117) verifies `v1` only (see [Q8](#q8-mandatory-signing-and-default-algorithm)).
 - **HTTP Message Signatures (RFC 9421) or JWS.** Standards with broader scope, but less receiver tooling in the webhook ecosystem and no ready verifier in the platforms targeted. Rejected.
 - **Mutual TLS.** Strong, but not available on the managed HTTP fronts of Azure Functions and Lambda Function URLs without extra infrastructure. Rejected as a default.
 - **Cloud IAM (AWS SigV4, Entra ID).** Native to each platform but different on each. Deferred by epic decision 11, except that the managed identity mode already exists for webhooks.
@@ -166,6 +183,29 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 - **Fire-and-forget begin and end, as on the stream.** Already shown to race on the stream path ([#5116](https://github.com/Cratis/Chronicle/issues/5116)); over HTTP the risk is larger. Rejected.
 - **Awaited `replay-started` and `replay-ended`.** Chosen. One extra request per replay; partitions wait on an acknowledgement.
 - **Per-partition replay boundaries as well.** The stream handler has `BeginReplayPartitionFor` and `EndReplayPartitionFor` (`ReactorReplayHandler.cs` L57-L88). Left open ([Q11](#q11-replay-boundaries)).
+
+### Partial failure status
+
+- **`200` with a result (chosen).** Matches `ObserverSubscriberResult` on the stream path. The cost is that a partial failure is a `200`, so platform dashboards and alerts count it as a success.
+- **Non-`2xx` with the same result.** Platform metrics see a failure as a failure. Some gateways replace error bodies, so the kernel would treat a missing body as "nothing acknowledged", which is safe but adds duplicates. Not chosen, to keep one meaning across stream and HTTP.
+- **A per-event status array.** Finer than the kernel can use, since the observer advances to one last-successful position. Rejected.
+
+### Deadline format
+
+- **Absolute UTC time (chosen).** Easy to log and compare. Depends on clock sync, which signature timestamp checks already assume, but at a 5-minute tolerance rather than seconds.
+- **Relative remaining time, like gRPC's `grpc-timeout`.** Immune to clock skew; loses only transit time. A relative header can be added later without a version change.
+
+### Signing key scope
+
+- **Per kernel.** One key; a compromise affects every event store. Rejected.
+- **Per event store (chosen for `v1a`).** One public key per store to distribute. Allowed by the specification for asymmetric keys.
+- **Per target (required for `v1`).** Smallest blast radius; many secrets to rotate.
+
+### Receiver-enforced fencing
+
+- **Document overlap only.** No kernel work. Overlap after a timeout stays unbounded when the function's execution timeout exceeds the delivery timeout or the function sits behind an HTTP front.
+- **A fencing token in the envelope.** Receivers that commit effects to their own store reject a commit whose token is lower than the highest stored for the partition (the fencing pattern in [Kleppmann, "How to do distributed locking"](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)). It must strictly increase per observer key and partition across retries, timeouts, park and resume, kernel restarts and failover, and must never be reused. A retry count does not qualify: the failed-partition attempt history is removed when a partition recovers (`Source/Kernel/Concepts/Observation/FailedPartitions.cs` L140), and the observer's ownership epoch is in memory only (`Source/Kernel/Core/Observation/Observer.cs` L136). The partition-claim epoch of [decision 0018](0018-partition-ownership-protocol.md) has the required properties but is not implemented yet. The token does not protect external effects such as a sent email; those still need the per-event key.
+- **Platform timeouts only.** Require execution timeout ≤ delivery timeout. Cheap but not enforceable by the kernel, and not sufficient behind HTTP fronts.
 
 ## Default if unanswered
 
@@ -223,7 +263,7 @@ HTTP receivers keep receiving the serialization of `Concepts.Events.AppendedEven
 
 **Easier:** receivers in any language can be written against a documented, versioned contract; the .NET receiver core and the platform adapters share one verification and dispatch path; operators can correlate a request with an observer, partition and replay from headers alone; broker sinks can reuse the same identity fields.
 
-**Harder:** the project owns a public wire contract and its compatibility; the kernel gains signing key lifecycle; replays wait on a receiver acknowledgement, so an unreachable receiver delays a replay instead of letting it race; partial acknowledgement adds a response parser to the delivery path.
+**Harder:** the project owns a public wire contract and its compatibility; the kernel gains signing key lifecycle; replays wait on a receiver acknowledgement, so an unreachable receiver delays a replay instead of letting it race; partial acknowledgement adds a response parser to the delivery path. The kernel and the .NET receiver take a third-party Ed25519 dependency, and `v1a` verification is code this repository owns. A partial failure answered with `200` looks like a success in platform dashboards. The result's `exceptionStackTrace` carries receiver stack traces across the network into kernel storage.
 
 **Foreclosed:** sending the kernel's internal event record over HTTP to Cratis receivers; fire-and-forget replay notification over HTTP; unsigned envelope deliveries unless an operator explicitly allows them.
 
@@ -263,9 +303,13 @@ Do the webhook defaults shipped in [#5108](https://github.com/Cratis/Chronicle/i
 
 Is signing mandatory for envelope deliveries (unless `AllowUnauthenticated` is set), with Ed25519 `v1a` as the default and HMAC `v1` as the alternative? What happens if the chosen .NET verifier lacks `v1a`? **Recommendation:** mandatory, Ed25519 by default; if the library lacks `v1a`, the receiver uses the kernel's own verification code for `v1a` and the library for `v1`.
 
+**Open point:** no published Standard Webhooks library verifies `v1a`, and .NET has no built-in Ed25519 ([dotnet/runtime#63174](https://github.com/dotnet/runtime/issues/63174)), so the project would own that verification code plus one third-party Ed25519 dependency, whose runtime support on Azure Functions and Lambda is unverified.
+
 ### Q9. Signing key scope and rotation
 
 One key per event store or one per target? How long is the rotation overlap, and how does a receiver obtain the public key (registration response, kernel endpoint, CLI)? **Recommendation:** per event store, rotated through the CLI, keys stored encrypted with `IEncryption`, the public key returned by registration and by a kernel endpoint. Settled here only if Q1 keeps key custody in this record.
+
+**Open point:** this recommendation holds for Ed25519 `v1a`. HMAC `v1` secrets are per target, not per store, because the Standard Webhooks specification requires a unique symmetric secret per receiver.
 
 ### Q10. Transport authentication alongside signatures
 
@@ -283,14 +327,42 @@ Is catch-up after downtime delivered without boundaries (not a replay), and is a
 
 Is `Cratis-Delivery-Deadline` the header name, and is "the platform request timeout must be at most the delivery timeout" a documented requirement or something the kernel checks at registration? **Recommendation:** document it in v1; check at registration later if adapters can report their platform limit.
 
+**Open points:** the function's execution timeout governs, not the HTTP front (a front can answer `502` or time out while the function keeps running), so the documented requirement is about execution timeout. The 60 second webhook request timeout default conflicts with the 30 seconds [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes; which one applies to HTTP reactors and reducers is undecided.
+
 ### Q14. Receiver-enforced fencing
 
 Should the contract define a receiver-enforced execution or fencing token (for example a monotonic lease or attempt number the receiver checks before committing effects) so an abandoned request cannot land after a newer attempt? Without it, remote overlap after a timeout is unbounded. **Recommendation:** document the overlap as a receiver responsibility in v1 and decide a fencing token in a follow-up record once receivers exist.
 
+**Open point:** a fencing token needs a durable, strictly increasing epoch. The partition-claim epoch of [decision 0018](0018-partition-ownership-protocol.md) fits but is not implemented yet, and a retry count or the in-memory observer epoch does not qualify. Adding an optional `fencingToken` field later is not a version change, so v1 can reserve it; once receivers compare it, weakening its monotonicity is.
+
+### Reversibility of each answer
+
+Adding a field or a `kind` is not a version change; changing a meaning is.
+
+| Question | Changeable later without a new contract version |
+| --- | --- |
+| Q1 split | Yes |
+| Q2 envelope fields | Adding yes; removing or renaming no |
+| Q3 generic default | Yes, at a major release |
+| Q4 ordering unit and caps | Caps yes; narrowing the ordering unit no |
+| Q5 `webhook-id` and dedupe key | No |
+| Q6 meaning of `200` with a result | No; limits and halving yes |
+| Q7 retry and park | Yes |
+| Q8 mandatory signing, algorithms | Adding algorithms yes; dropping signing or an algorithm no |
+| Q9 key scope | Yes, if receivers take keys from configuration |
+| Q10 transport authentication | Yes |
+| Q11 observer-level boundaries | Adding kinds yes; dropping the await no |
+| Q12 catch-up and redaction flags | No |
+| Q13 deadline header | Name and format no; adding a relative header yes |
+| Q14 fencing token | Adding the field yes; weakening its monotonicity no |
+
 ## Unknowns
 
 - Platform limits (Azure Functions HTTP trigger limit, Lambda Function URL timeout and payload, Cloud Run timeout) are taken from vendor documentation in [#5114](https://github.com/Cratis/Chronicle/issues/5114) and were not measured.
-- The license and `v1a` support of the `StandardWebhooks` .NET package named in [#5117](https://github.com/Cratis/Chronicle/issues/5117) are unverified.
+- Resolved: the `StandardWebhooks` .NET package named in [#5117](https://github.com/Cratis/Chronicle/issues/5117) is MIT-licensed and verifies `v1` only (`codefactors/StandardWebhooks`, `src/StandardWebhooks/StandardWebhook.cs` L130). None of the official Standard Webhooks libraries verifies `v1a`.
+- Which Ed25519 library the kernel and receiver use, and whether it runs on the Azure Functions isolated worker and on Lambda with SnapStart (including any native binaries), is not verified.
+- Which timeout governs an HTTP reactor or reducer is not settled: the webhook request timeout defaults to 60 seconds (`Source/Kernel/Core/Configuration/Webhooks.cs` L67) while [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes `Serverless:Delivery:Timeout` of 30 seconds.
+- RFC 9110 allows a `413` with `Retry-After` for a temporary condition; halving ignores it. Whether to honor `Retry-After` on `413` is not decided.
 - Behavior with several receiver instances during a replay, and live deliveries interleaved with a replay, were not measured.
 - Whether concurrent replays of one partition (whole-observer and partition replay) can overlap, and how a replay epoch relates to them, is not verified.
 - Whether the observation flag is `Initial` on every catch-up path is not verified from code.
