@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { createHash } from 'node:crypto';
-import { realpathSync } from 'node:fs';
-import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { constants, realpathSync } from 'node:fs';
+import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { evaluateProject, v3Projects } from './mixed-specs-selection.mjs';
@@ -29,10 +29,10 @@ function relative(root, file) {
     if (result.split('/').includes('..')) fail('Path outside checkout');
     return result;
 }
-async function filesUnder(root, directory) {
+async function filesUnder(root, directory = '') {
     const files = [];
     for (const entry of await readdir(path.join(root, directory), { withFileTypes: true })) {
-        const file = `${directory}/${entry.name}`;
+        const file = path.posix.join(directory, entry.name);
         if (entry.isDirectory()) files.push(...await filesUnder(root, file));
         else if (entry.isFile()) files.push(file);
         else fail(`Unsupported bundle entry ${file}`);
@@ -103,21 +103,77 @@ export async function pack({ root, bundle, out, prefix, sha, execute = runProces
     await mkdir(path.join(root, '.integration-bundles'), { recursive: true });
     await writeFile(path.join(root, contract.manifest), `${JSON.stringify(manifest, null, 2)}\n`);
     await mkdir(out, { recursive: true });
-    await command(execute, root, 'tar', ['-I', 'zstd', '-cf', path.resolve(out, `integration-bundle-${bundle}.tar.zst`),
+    await command(execute, root, 'tar', ['--use-compress-program', 'zstd', '-cf', path.resolve(out, `integration-bundle-${bundle}.tar.zst`),
         ...manifest.files.map(file => file.path), contract.manifest]);
     return manifest;
 }
-async function extract(root, bundle, archive, execute) {
-    const contract = layout(bundle);
-    for (const file of [contract.bin, contract.assets]) {
-        if (await exists(path.join(root, file))) fail(`Pre-existing bundle output ${file}`);
-    }
-    const result = await command(execute, root, 'tar', ['-I', 'zstd', '-tf', archive]);
-    const entries = result.stdout.trim().split('\n');
+async function extract(stage, contract, archive, execute) {
+    const names = await command(execute, stage, 'tar', ['--use-compress-program', 'zstd -d', '-tf', archive]);
+    const types = await command(execute, stage, 'tar', ['--use-compress-program', 'zstd -d', '-tvf', archive]);
+    if (names.stderr.trim() || types.stderr.trim()) fail('Bundle archive listing wrote diagnostics');
+    const entries = names.stdout.trim().split('\n');
+    const details = types.stdout.trim().split('\n');
+    // Both GNU tar and bsdtar mark regular members with '-', hardlinks with 'h'
+    // and symlinks with 'l'. Reject every other type before invoking extraction.
+    if (details.length !== entries.length) fail('Inconsistent bundle archive listing');
+    if (!details.every(line => line.startsWith('-'))) fail('Non-regular bundle archive member');
     if (!entries.includes(contract.manifest)) fail('Missing bundle manifest');
     if (new Set(entries).size !== entries.length) fail('Duplicate bundle archive paths');
     if (!entries.every(file => validEntry(file, contract))) fail('Invalid bundle archive paths');
-    await command(execute, root, 'tar', ['-I', 'zstd', '-xf', archive]);
+    await command(execute, stage, 'tar', ['--use-compress-program', 'zstd -d', '-xf', archive, '--no-same-owner', '--no-same-permissions']);
+    return entries.sort();
+}
+async function checkedDirectory(root, directory) {
+    let current = root;
+    for (const segment of directory.split('/')) {
+        current = path.join(current, segment);
+        try { await mkdir(current, { mode: 0o700 }); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        if (!(await lstat(current)).isDirectory()) fail(`Unsafe bundle parent ${current}`);
+    }
+    return current;
+}
+async function regularFile(file) {
+    const stat = await lstat(file);
+    if (!stat.isFile() || stat.nlink !== 1) fail(`Non-regular or linked bundle file ${file}`);
+    return stat;
+}
+async function evaluateStaged(root, stage, contract, execute) {
+    return evaluateProject(stage, contract.project, (program, args, options) => execute(program, [...args,
+        `-p:BaseOutputPath=${path.join(stage, contract.bin)}/`,
+        `-p:MSBuildProjectExtensionsPath=${path.dirname(path.join(stage, contract.assets))}/`
+    ], { ...options, cwd: root }));
+}
+async function validateStage({ root, stage, bundle, entries, filter, namespaces, sha, execute }) {
+    if (JSON.stringify(await filesUnder(stage)) !== JSON.stringify(entries)) fail('Bundle extraction inventory mismatch');
+    for (const file of entries) await regularFile(path.join(stage, file));
+    const contract = layout(bundle);
+    const manifest = JSON.parse(await readFile(path.join(stage, contract.manifest), 'utf8'));
+    await validateInventory(stage, bundle, manifest, sha);
+    const info = await evaluateStaged(root, stage, contract, execute);
+    if (relative(stage, info.dll) !== manifest.dll) fail('Bundle executable mismatch');
+    validateCases(await discover(root, path.join(stage, manifest.dll), execute), manifest, filter, namespaces);
+    return manifest;
+}
+async function copyRegularFile(stage, root, file) {
+    await checkedDirectory(root, path.posix.dirname(file));
+    const stat = await regularFile(path.join(stage, file));
+    const source = await open(path.join(stage, file), constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+        const destination = await open(path.join(root, file), constants.O_WRONLY | constants.O_CREAT |
+            constants.O_EXCL | constants.O_NOFOLLOW, stat.mode & 0o777);
+        try { await destination.writeFile(await source.readFile()); }
+        finally { await destination.close(); }
+    } finally { await source.close(); }
+}
+async function copyValidated(stage, root, entries) {
+    // Check every destination before the first copy, then recheck each parent at
+    // copy time. Exclusive no-follow opens never truncate an existing inode.
+    for (const file of entries) {
+        await checkedDirectory(root, path.posix.dirname(file));
+        if (await exists(path.join(root, file))) fail(`Pre-existing bundle destination ${file}`);
+    }
+    for (const file of entries) await copyRegularFile(stage, root, file);
 }
 function validEntry(file, contract) {
     if (path.posix.normalize(file) !== file) return false;
@@ -142,14 +198,22 @@ function validateCases(cases, manifest, filter, namespaces) {
     }
 }
 export async function verify({ root, bundle, archive, filter, namespaces = [], sha, execute = runProcess }) {
+    root = realpathSync(root);
     const contract = layout(bundle);
-    await extract(root, bundle, archive, execute);
-    const manifest = JSON.parse(await readFile(path.join(root, contract.manifest), 'utf8'));
-    await validateInventory(root, bundle, manifest, sha);
-    const info = await evaluateProject(root, contract.project, execute);
-    if (relative(root, info.dll) !== manifest.dll) fail('Bundle executable mismatch');
-    validateCases(await discover(root, manifest.dll, execute), manifest, filter, namespaces);
-    return manifest;
+    for (const file of [contract.bin, contract.assets]) {
+        if (await exists(path.join(root, file))) fail(`Pre-existing bundle output ${file}`);
+    }
+    const parent = await checkedDirectory(root, '.ai-work/integration-bundles');
+    const temporary = await mkdtemp(path.join(parent, 'verify-'));
+    try {
+        const snapshot = path.join(temporary, 'bundle.tar.zst');
+        await copyFile(path.resolve(root, archive), snapshot, constants.COPYFILE_EXCL);
+        const stage = await checkedDirectory(temporary, 'checkout');
+        const entries = await extract(stage, contract, snapshot, execute);
+        const manifest = await validateStage({ root, stage, bundle, entries, filter, namespaces, sha, execute });
+        await copyValidated(stage, root, entries);
+        return manifest;
+    } finally { await rm(temporary, { recursive: true, force: true }); }
 }
 function parseOptions(args) {
     const options = new Map();

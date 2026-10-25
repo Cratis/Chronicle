@@ -3,9 +3,10 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, cp, link, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pack, verify } from './integration-bundles.mjs';
+import { runProcess } from './mixed-specs-process.mjs';
 
 const sha = 'test-sha';
 const project = 'Integration/Client/Client.csproj';
@@ -39,25 +40,28 @@ async function fixture(t) {
         await writeFile(path.join(root, file), bytes);
     }
     await mkdir(consumer);
-    const state = { entries: [], result: listed(cases), absolute: true };
+    await writeFile(path.join(consumer, 'mock.tar.zst'), 'mock archive');
+    const state = { entries: [], result: listed(cases), absolute: true, discovery: [] };
     const alias = path.join(directory, 'alias');
     await symlink(root, alias);
     const execute = async (command, args, options) => {
         assert.ok(options.timeout > 0);
-        if (command === 'tar') return executeTar(args, state, root, consumer);
+        if (command === 'tar') return executeTar(args, state, root, options.cwd);
         assert.equal(command, 'dotnet');
         if (args[0] === 'msbuild') {
             assert.equal(args[1], project);
-            const evaluationRoot = options.cwd === root && state.alias ? alias : options.cwd;
-            return listedEvaluation(evaluationRoot, libraries, state.absolute);
+            const outputOverride = args.find(value => value.startsWith('-p:BaseOutputPath='));
+            const evaluationRoot = outputOverride ? path.resolve(outputOverride.slice('-p:BaseOutputPath='.length), '../../..') : options.cwd;
+            return listedEvaluation(evaluationRoot === root && state.alias ? alias : evaluationRoot, libraries, state.absolute);
         }
         assert.deepEqual(args.slice(1), ['-nologo', '-list', 'full/json']);
+        state.discovery.push({ dll: args[0], cwd: options.cwd });
         if (state.result instanceof Error) throw state.result;
         return state.result;
     };
     const common = { bundle: 'client', sha, execute };
-    return { root, consumer, state,
-        pack: () => pack({ ...common, root, out, prefix: 'local' }),
+    return { root, consumer, state, directory, execute, archive: path.join(out, 'integration-bundle-client.tar.zst'),
+        pack: overrides => pack({ ...common, root, out, prefix: 'local', ...overrides }),
         verify: overrides => verify({ ...common, root: consumer, archive: 'mock.tar.zst', filter, ...overrides }),
         mutate: async change => {
             const file = path.join(root, manifestPath);
@@ -68,6 +72,7 @@ async function fixture(t) {
 }
 async function executeTar(args, state, root, consumer) {
     if (args[2] === '-tf') return { code: 0, stdout: state.entries.join('\n'), stderr: '' };
+    if (args[2] === '-tvf') return { code: 0, stdout: state.entries.map(file => `-rw------- ${file}`).join('\n'), stderr: '' };
     if (args[2] === '-cf') state.entries = args.slice(4);
     else {
         assert.equal(args[2], '-xf');
@@ -178,4 +183,146 @@ test('verify detects lost cases and changed identities with unchanged count', as
         f.state.result = listed(entries);
         await assert.rejects(() => f.verify(), /discovery mismatch/);
     }
+});
+
+function realTar(f) {
+    const calls = [];
+    const execute = async (program, args, options) => {
+        if (program !== 'tar') return f.execute(program, args, options);
+        calls.push({ args, cwd: options.cwd });
+        const result = await runProcess(program, args, options);
+        assert.equal(result.code, 0, result.stderr);
+        return result;
+    };
+    return { calls, execute };
+}
+function tarMember({ name, type = '0', target = '', content = '' }) {
+    const data = Buffer.from(content);
+    const header = Buffer.alloc(512);
+    const octal = (value, offset, width) => header.write(`${value.toString(8).padStart(width - 1, '0')}\0`, offset, width);
+    assert.ok(Buffer.byteLength(name) <= 100);
+    assert.ok(Buffer.byteLength(target) <= 100);
+    header.write(name, 0, 100);
+    octal(0o600, 100, 8);
+    octal(0, 108, 8);
+    octal(0, 116, 8);
+    octal(data.length, 124, 12);
+    octal(0, 136, 12);
+    header.fill(' ', 148, 156);
+    header.write(type, 156, 1);
+    header.write(target, 157, 100);
+    header.write('ustar\0', 257, 6);
+    header.write('00', 263, 2);
+    const checksum = header.reduce((sum, byte) => sum + byte, 0);
+    header.write(`${checksum.toString(8).padStart(6, '0')}\0 `, 148, 8);
+    return Buffer.concat([header, data, Buffer.alloc((512 - data.length % 512) % 512)]);
+}
+async function craftedArchive(f, entries) {
+    const tar = path.join(f.directory, 'crafted.tar');
+    const archive = `${tar}.zst`;
+    await writeFile(tar, Buffer.concat([...entries.map(tarMember), Buffer.alloc(1024)]));
+    const result = await runProcess('zstd', ['-q', '-f', tar, '-o', archive], { capture: true, timeout: 10000 });
+    assert.equal(result.code, 0, result.stderr);
+    return archive;
+}
+async function assertNoConsumerFiles(f) {
+    await assert.rejects(lstat(path.join(f.consumer, 'Integration')), { code: 'ENOENT' });
+    await assert.rejects(lstat(path.join(f.consumer, '.integration-bundles')), { code: 'ENOENT' });
+    assert.deepEqual(await readdir(path.join(f.consumer, '.ai-work/integration-bundles')), []);
+}
+const maliciousMembers = {
+    symlink: [{ name: dll, type: '2', target: '../../../../../../outside' }],
+    hardlink: [{ name: dll, type: '1', target: '../outside' }],
+    fifo: [{ name: dll, type: '6' }],
+    'character device': [{ name: dll, type: '3' }],
+    'block device': [{ name: dll, type: '4' }],
+    directory: [{ name: `${output}/directory`, type: '5' }],
+    'parent symlink redirection': [
+        { name: `${output}/redirect`, type: '2', target: '../../../../../../outside-directory' },
+        { name: `${output}/redirect/sentinel`, content: 'changed' }
+    ]
+};
+for (const [name, entries] of Object.entries(maliciousMembers)) {
+    test(`REAL archive rejects ${name} before any extraction or checkout writes`, async t => {
+        const f = await fixture(t);
+        const sentinel = path.join(f.directory, 'outside');
+        await writeFile(sentinel, 'unchanged');
+        await mkdir(path.join(f.directory, 'outside-directory'));
+        await writeFile(path.join(f.directory, 'outside-directory/sentinel'), 'unchanged');
+        const archive = await craftedArchive(f, [...entries, { name: manifestPath, content: '{}' }]);
+        const real = realTar(f);
+        await assert.rejects(() => f.verify({ archive, execute: real.execute }), /Non-regular bundle archive member|listing wrote diagnostics/);
+        assert.equal(real.calls.filter(call => call.args[2] === '-xf').length, 0);
+        assert.equal(await readFile(sentinel, 'utf8'), 'unchanged');
+        assert.equal((await lstat(sentinel)).nlink, 1);
+        assert.equal(await readFile(path.join(f.directory, 'outside-directory/sentinel'), 'utf8'), 'unchanged');
+        await assertNoConsumerFiles(f);
+    });
+}
+test('REAL archive rejects traversal before extraction', async t => {
+    const f = await fixture(t);
+    const sentinel = path.join(f.directory, 'outside');
+    await writeFile(sentinel, 'unchanged');
+    const archive = await craftedArchive(f, [
+        { name: `${output}/../../../../../../outside`, content: 'changed' },
+        { name: manifestPath, content: '{}' }
+    ]);
+    const real = realTar(f);
+    await assert.rejects(() => f.verify({ archive, execute: real.execute }), /Invalid bundle archive paths|listing wrote diagnostics/);
+    assert.equal(real.calls.filter(call => call.args[2] === '-xf').length, 0);
+    assert.equal(await readFile(sentinel, 'utf8'), 'unchanged');
+    await assertNoConsumerFiles(f);
+});
+test('REAL archive round trip snapshots and stages extraction, preserving owner executable permissions', async t => {
+    const f = await fixture(t);
+    await chmod(path.join(f.root, dll), 0o755);
+    const real = realTar(f);
+    const manifest = await f.pack({ execute: real.execute });
+    real.calls.length = 0;
+    f.state.discovery.length = 0;
+    assert.deepEqual(await f.verify({ archive: f.archive, execute: real.execute }), manifest);
+    const extraction = real.calls.find(call => call.args[2] === '-xf');
+    assert.ok(extraction.cwd.startsWith(path.join(f.consumer, '.ai-work/integration-bundles/verify-')));
+    assert.ok(real.calls.every(call => call.args[3] === extraction.args[3]));
+    assert.notEqual(extraction.args[3], f.archive);
+    assert.deepEqual(f.state.discovery, [{ dll: path.join(extraction.cwd, dll), cwd: f.consumer }]);
+    assert.equal((await lstat(path.join(f.consumer, dll))).mode & 0o700, 0o700);
+    assert.deepEqual(await readdir(path.join(f.consumer, '.ai-work/integration-bundles')), []);
+});
+for (const parent of ['Integration', 'Integration/Client/obj', '.integration-bundles', '.ai-work']) {
+    test(`REAL valid archive cannot copy through a symlinked checkout parent ${parent}`, async t => {
+        const f = await fixture(t);
+        const real = realTar(f);
+        await f.pack({ execute: real.execute });
+        const outside = path.join(f.directory, 'outside-parent');
+        await mkdir(outside);
+        await mkdir(path.dirname(path.join(f.consumer, parent)), { recursive: true });
+        await symlink(outside, path.join(f.consumer, parent));
+        await assert.rejects(() => f.verify({ archive: f.archive, execute: real.execute }), /Unsafe bundle parent/);
+        assert.deepEqual(await readdir(outside), []);
+        await assert.rejects(lstat(path.join(f.consumer, '.integration-bundles/client.json')), { code: 'ENOENT' });
+    });
+}
+for (const kind of ['symlink', 'hardlink']) {
+    test(`REAL valid archive cannot overwrite a checkout destination ${kind}`, async t => {
+        const f = await fixture(t);
+        const real = realTar(f);
+        await f.pack({ execute: real.execute });
+        const sentinel = path.join(f.directory, 'outside');
+        await writeFile(sentinel, 'unchanged');
+        await mkdir(path.join(f.consumer, '.integration-bundles'));
+        const destination = path.join(f.consumer, manifestPath);
+        if (kind === 'symlink') await symlink(sentinel, destination);
+        else await link(sentinel, destination);
+        await assert.rejects(() => f.verify({ archive: f.archive, execute: real.execute }), /Pre-existing bundle destination/);
+        assert.equal(await readFile(sentinel, 'utf8'), 'unchanged');
+        await assert.rejects(lstat(path.join(f.consumer, dll)), { code: 'ENOENT' });
+    });
+}
+test('REAL archive manifest rejection leaves checkout outputs absent', async t => {
+    const f = await fixture(t);
+    const real = realTar(f);
+    await f.pack({ execute: real.execute });
+    await assert.rejects(() => f.verify({ archive: f.archive, execute: real.execute, sha: 'wrong' }), /SHA mismatch/);
+    await assertNoConsumerFiles(f);
 });
