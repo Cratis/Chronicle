@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="RevisedGeneration">The generation of the most recent revision, also when storage keeps no revision history. Null when unrevised.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
-public record AppendedEvent(
+public partial record AppendedEvent(
     string Id,
     EventContext Context,
     string Content,

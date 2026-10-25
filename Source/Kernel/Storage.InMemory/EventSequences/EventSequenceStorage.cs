@@ -173,6 +173,38 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetWindow(
+        EventSequenceNumber from,
+        EventSequenceNumber until,
+        int limit,
+        bool descending,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var criteria = new EventSequenceQueryCriteria(
+            eventSourceId,
+            eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
+            eventStreamType,
+            EventTypes: eventTypes,
+            Tags: tags);
+        var matching = Matching(Events, criteria)
+            .Where(_ => _.Context.SequenceNumber >= from && _.Context.SequenceNumber <= until);
+        if (eventStreamId is { Value.Length: > 0, IsDefault: false })
+        {
+            matching = matching.Where(_ => _.Context.EventStreamId == eventStreamId);
+        }
+
+        var ordered = OrderBy(matching, _ => _.Context.SequenceNumber.Value, descending);
+        return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Take(limit)]));
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
     {
         var buckets = Matching(Events, criteria)

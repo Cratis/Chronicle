@@ -870,6 +870,48 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IEventCursor> GetWindow(
+        EventSequenceNumber from,
+        EventSequenceNumber until,
+        int limit,
+        bool descending,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Tag>? tags = default,
+        CancellationToken cancellationToken = default)
+    {
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var criteria = new EventSequenceQueryCriteria(
+            eventSourceId,
+            eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
+            eventStreamType,
+            EventTypes: eventTypes,
+            Tags: tags);
+        var first = from.Value;
+        var query = ApplyCriteria(scope.DbContext, eventSequenceId.Value, criteria)
+            .Where(e => e.SequenceNumber >= first);
+        if (until != EventSequenceNumber.Max)
+        {
+            var last = until.Value;
+            query = query.Where(e => e.SequenceNumber <= last);
+        }
+        if (eventStreamId is { Value.Length: > 0, IsDefault: false })
+        {
+            var streamId = eventStreamId.Value;
+            query = query.Where(e => e.EventStreamId == streamId);
+        }
+
+        query = descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber);
+        var schemas = new EventSchemaResolver(eventTypesStorage);
+        return new EventWindowCursor(query.Take(limit), scope,
+            (entry, namedTags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, namedTags, schemas.GetFor, converter),
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
