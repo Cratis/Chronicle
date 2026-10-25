@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
+using Cratis.Arc.Commands;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +25,8 @@ public class SystemStoreOperationAuthorizationHandler(
     /// <inheritdoc/>
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, SystemStoreOperationRequirement requirement)
     {
-        var store = context.Resource?.GetType().GetProperty("EventStore")?.GetValue(context.Resource);
+        var operation = context.Resource is CommandContext commandContext ? commandContext.Command : context.Resource;
+        var store = operation?.GetType().GetProperty("EventStore")?.GetValue(operation);
         var storeName = store is EventStoreName name ? name.Value : store as string;
         if (storeName is not null && !string.Equals(storeName, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
         {
@@ -37,7 +39,7 @@ public class SystemStoreOperationAuthorizationHandler(
             return;
         }
         if (options.Value.Authentication.EnforceAdministratorPolicyForOperations) return;
-        logger.AdministratorOperationWouldDeny(CallerKind(context.User), context.Resource?.GetType().Name ?? "unknown");
+        logger.AdministratorOperationWouldDeny(CallerKind(context.User), operation?.GetType().Name ?? "unknown");
         context.Succeed(requirement);
     }
 
