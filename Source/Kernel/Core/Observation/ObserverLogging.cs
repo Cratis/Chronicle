@@ -261,6 +261,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
     internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
+    internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed")]
+    internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed")]
+    internal static partial void ResumingStalledObserverJobFailed(this ILogger<Observer> logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
+    internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
 }
 
 internal static class ObserverScopes
