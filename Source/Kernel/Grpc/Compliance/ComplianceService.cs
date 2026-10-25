@@ -38,11 +38,11 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         }
         catch (SchemaMetadataActionFailed ex) when (request.Strict)
         {
-            return StrictFailure(request, ex.PropertyPath);
+            return StrictFailure(ex, ex.PropertyPath);
         }
-        catch (Exception) when (request.Strict)
+        catch (Exception ex) when (request.Strict)
         {
-            return StrictFailure(request);
+            return StrictFailure(ex);
         }
         catch (JsonException ex)
         {
@@ -69,9 +69,9 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
             ? schemaMetadataManager.ReleaseStrict((EventStoreName)request.EventStore, (EventStoreNamespaceName)request.Namespace, schema, request.Subject, json)
             : schemaMetadataManager.Release((EventStoreName)request.EventStore, (EventStoreNamespaceName)request.Namespace, schema, request.Subject, json);
 
-    ReleaseResponse StrictFailure(ReleaseRequest request, string? propertyPath = null)
+    ReleaseResponse StrictFailure(Exception exception, string? propertyPath = null)
     {
-        logger.FailedToReleaseStrictly(request.EventStore, request.Namespace, request.Subject, propertyPath ?? string.Empty);
+        logger.FailedToReleaseStrictly(exception.GetType().Name, propertyPath ?? string.Empty);
         return new ReleaseResponse
         {
             HasError = true,
