@@ -12,8 +12,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mig
 /// Adds the nullable mutation epoch that every revision and redaction advances, without inventing one for existing sequences.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.EventSequences}-{nameof(v19_111_0)}")]
-public class v19_111_0 : Migration
+[Migration($"NS-{WellKnownTableNames.EventSequences}-{nameof(v19_112_0)}")]
+public class v19_112_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
