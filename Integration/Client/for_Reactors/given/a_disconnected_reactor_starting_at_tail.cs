@@ -8,6 +8,18 @@ public class a_disconnected_reactor_starting_at_tail(ChronicleFixture chronicleF
     public ReactorStartingAtTail Reactor;
     public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
+    public override void Dispose()
+    {
+        Reactor?.Dispose();
+        base.Dispose();
+    }
+
+    protected override async Task OnDisposeAsync()
+    {
+        await base.OnDisposeAsync();
+        Reactor?.Dispose();
+    }
+
     protected override void ConfigureServices(IServiceCollection services)
     {
         Reactor = new();
