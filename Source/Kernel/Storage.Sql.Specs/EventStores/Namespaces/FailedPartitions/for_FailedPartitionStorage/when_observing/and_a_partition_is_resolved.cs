@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -31,7 +32,7 @@ public class and_a_partition_is_resolved : given.a_failed_partition_storage
     {
         var initial = new TaskCompletionSource();
         var completion = new TaskCompletionSource<IEnumerable<Concepts.Observation.FailedPartition>>();
-        _subscription = _storage.ObserveAllFor().Subscribe(partitions =>
+        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(partitions =>
         {
             if (partitions.Any()) initial.TrySetResult();
             if (initial.Task.IsCompleted && !partitions.Any()) completion.TrySetResult(partitions);

@@ -3,6 +3,8 @@
 
 using System.Data.Common;
 using System.Dynamic;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Changes;
@@ -107,7 +109,7 @@ public abstract class a_sql_read_model : Specification
         _secondPage = await _updated.Task.WaitAsync(TimeSpan.FromSeconds(15));
     }
 
-    protected void Subscribe(int skip = 0, int take = 50) => _subscription = _sink.ObserveInstances(skip: skip, take: take).Subscribe(
+    protected void Subscribe(int skip = 0, int take = 50) => _subscription = _sink.ObserveInstances(skip: skip, take: take).SubscribeOn(TaskPoolScheduler.Default).Subscribe(
         instances =>
         {
             var snapshot = instances.ToArray();

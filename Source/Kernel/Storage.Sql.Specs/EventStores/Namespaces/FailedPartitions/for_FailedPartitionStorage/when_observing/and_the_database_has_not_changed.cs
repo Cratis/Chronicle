@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts;
 
@@ -36,7 +37,7 @@ public class and_the_database_has_not_changed : given.a_failed_partition_storage
                 return new DbContextScope<NamespaceDbContext>(CreateContext(), () => { });
             });
 
-        _subscription = _storage.ObserveAllFor().Subscribe(_ => _receivedCount++);
+        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(_ => _receivedCount++);
         await threeQueriesCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
     }
 
