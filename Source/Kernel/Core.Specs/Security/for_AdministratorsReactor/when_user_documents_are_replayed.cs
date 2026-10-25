@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Security;
 using Microsoft.Extensions.Logging.Abstractions;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
@@ -12,7 +12,7 @@ public class when_user_documents_are_replayed : given.an_administrators_reactor
     UsersReactor _users;
     EventContext _context;
     EventContext _grantContext;
-    Administrator[] _privileges;
+    StoredAdministrator[] _privileges;
 
     void Establish()
     {

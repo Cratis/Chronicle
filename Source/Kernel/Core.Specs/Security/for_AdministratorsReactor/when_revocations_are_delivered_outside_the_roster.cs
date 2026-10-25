@@ -2,19 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
 public class when_revocations_are_delivered_outside_the_roster : given.an_administrators_reactor
 {
     EventContext _context;
-    IEnumerable<Administrator> _privileges;
+    IEnumerable<StoredAdministrator> _privileges;
 
     async Task Establish()
     {
         _context = SeedGrant();
-        await _storage.System.Administrators.Save(new Administrator(_userId, _grant.Reason, _grant.Evidence));
+        await _storage.System.Administrators.Save(new StoredAdministrator(_userId, _grant.Reason, _grant.Evidence));
     }
 
     async Task Because()

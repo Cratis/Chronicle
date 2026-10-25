@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
 public class when_a_user_removal_is_replayed : given.an_administrators_reactor
 {
-    IEnumerable<Administrator> _privileges;
-    IEnumerable<Administrator> _beforeRemoval;
+    IEnumerable<StoredAdministrator> _privileges;
+    IEnumerable<StoredAdministrator> _beforeRemoval;
 
     async Task Because()
     {

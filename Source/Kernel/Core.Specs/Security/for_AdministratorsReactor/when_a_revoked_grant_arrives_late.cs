@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
@@ -11,8 +11,8 @@ public class when_a_revoked_grant_arrives_late : given.an_administrators_reactor
     EventContext _grantContext;
     EventContext _revocationContext;
     UserRevokedAdministrator _revoked;
-    IEnumerable<Administrator> _privileges;
-    IEnumerable<Administrator> _beforeRevocation;
+    IEnumerable<StoredAdministrator> _privileges;
+    IEnumerable<StoredAdministrator> _beforeRevocation;
 
     async Task Establish()
     {

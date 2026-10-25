@@ -4,7 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Security;
+
+using IAdministratorStorage = Cratis.Chronicle.Storage.Security.IAdministratorStorage;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
@@ -12,7 +14,7 @@ public class when_removal_is_appended_during_a_projection_write : given.an_admin
 {
     IAdministratorStorage _actual;
     EventContext _context;
-    IEnumerable<Administrator> _privileges;
+    IEnumerable<StoredAdministrator> _privileges;
     int _writes;
 
     void Establish()
@@ -20,11 +22,11 @@ public class when_removal_is_appended_during_a_projection_write : given.an_admin
         _context = SeedGrant();
         _actual = _storage.System.Administrators;
         var administrators = Substitute.For<IAdministratorStorage>();
-        administrators.Save(Arg.Any<Administrator>()).Returns(call =>
+        administrators.Save(Arg.Any<StoredAdministrator>()).Returns(call =>
         {
             _writes++;
             Seed(_userId, new UserRemoved());
-            return _actual.Save(call.Arg<Administrator>());
+            return _actual.Save(call.Arg<StoredAdministrator>());
         });
         administrators.Delete(Arg.Any<UserId>()).Returns(call => _actual.Delete(call.Arg<UserId>()));
         var system = Substitute.For<ISystemStorage>();

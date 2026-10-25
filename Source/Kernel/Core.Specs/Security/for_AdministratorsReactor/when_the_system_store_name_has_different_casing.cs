@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
 public class when_the_system_store_name_has_different_casing : given.an_administrators_reactor
 {
-    IEnumerable<Administrator> _privileges;
+    IEnumerable<StoredAdministrator> _privileges;
 
     async Task Because()
     {

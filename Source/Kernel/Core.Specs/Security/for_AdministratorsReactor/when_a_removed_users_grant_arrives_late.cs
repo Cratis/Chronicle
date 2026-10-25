@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
@@ -10,8 +10,8 @@ public class when_a_removed_users_grant_arrives_late : given.an_administrators_r
 {
     EventContext _grantContext;
     EventContext _removalContext;
-    IEnumerable<Administrator> _privileges;
-    IEnumerable<Administrator> _beforeRemoval;
+    IEnumerable<StoredAdministrator> _privileges;
+    IEnumerable<StoredAdministrator> _beforeRemoval;
 
     async Task Establish()
     {

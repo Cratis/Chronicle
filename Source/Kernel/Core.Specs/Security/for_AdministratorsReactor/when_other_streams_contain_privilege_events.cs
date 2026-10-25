@@ -3,14 +3,14 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
 public class when_other_streams_contain_privilege_events : given.an_administrators_reactor
 {
     EventContext _context;
-    IEnumerable<Administrator> _privileges;
+    IEnumerable<StoredAdministrator> _privileges;
 
     void Establish()
     {
@@ -26,5 +26,5 @@ public class when_other_streams_contain_privilege_events : given.an_administrato
         _privileges = await _storage.System.Administrators.GetAll();
     }
 
-    [Fact] void should_reduce_only_the_authoritative_roster_and_user_streams() => _privileges.Single().ShouldEqual(new Administrator(_userId, _grant.Reason, _grant.Evidence));
+    [Fact] void should_reduce_only_the_authoritative_roster_and_user_streams() => _privileges.Single().ShouldEqual(new StoredAdministrator(_userId, _grant.Reason, _grant.Evidence));
 }

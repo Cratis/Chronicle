@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
@@ -13,8 +13,8 @@ public class when_a_grant_and_revocation_are_replayed_after_recovery : given.an_
     EventContext _revocationContext;
     UserRevokedAdministrator _revoked;
     UserGrantedAdministrator _recovered;
-    IEnumerable<Administrator> _privileges;
-    IEnumerable<Administrator> _afterRevocation;
+    IEnumerable<StoredAdministrator> _privileges;
+    IEnumerable<StoredAdministrator> _afterRevocation;
 
     async Task Establish()
     {
@@ -36,5 +36,5 @@ public class when_a_grant_and_revocation_are_replayed_after_recovery : given.an_
     }
 
     [Fact] void should_remove_an_ordered_revocation() => _afterRevocation.ShouldBeEmpty();
-    [Fact] void should_preserve_the_latest_grant() => _privileges.Single().ShouldEqual(new Administrator(_userId, _recovered.Reason, _recovered.Evidence));
+    [Fact] void should_preserve_the_latest_grant() => _privileges.Single().ShouldEqual(new StoredAdministrator(_userId, _recovered.Reason, _recovered.Evidence));
 }

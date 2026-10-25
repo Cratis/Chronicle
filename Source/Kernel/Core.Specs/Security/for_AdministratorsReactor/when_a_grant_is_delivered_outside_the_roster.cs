@@ -3,14 +3,14 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
-using Cratis.Chronicle.Storage.Security;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
 public class when_a_grant_is_delivered_outside_the_roster : given.an_administrators_reactor
 {
     EventContext[] _contexts;
-    IEnumerable<Administrator> _privileges;
+    IEnumerable<StoredAdministrator> _privileges;
 
     void Establish()
     {
