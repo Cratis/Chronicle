@@ -69,9 +69,6 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Recovery job for partition {Partition} did not start: {Reason}")]
     internal static partial void FailedPartitionRetryDidNotStart(this ILogger<Observer> logger, Key partition, string reason);
 
-    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
-    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
-
     [LoggerMessage(LogLevel.Warning, "Skipping recovery of partition {Partition} — already exceeded max retry attempts ({AttemptCount}/{MaxRetryAttempts}). Partition requires manual intervention or server restart to retry")]
     internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
 
