@@ -42,19 +42,21 @@ public partial class Observer
         return true;
     }
 
-    async Task StartTrackedRecoveryJob(FailedPartition failure, RetryFailedPartitionRequest request)
+    async Task<JobId> StartTrackedRecoveryJob(FailedPartition failure, RetryFailedPartitionRequest request, Action? onStartAttempted = null)
     {
         // A listing that fails comes back empty and would start a duplicate, so a webhook records its own start up front.
         RecordRecoveryStart(failure);
         var jobId = JobId.NotSet;
         try
         {
-            jobId = await StartRecoveryJob(failure, request);
+            jobId = await StartRecoveryJob(failure, request, onStartAttempted);
         }
         finally
         {
             if (jobId == JobId.NotSet) ForgetRecoveryStart(failure.Partition);
         }
+
+        return jobId;
     }
 
     void RecordRecoveryStart(FailedPartition failure) =>
