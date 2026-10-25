@@ -276,7 +276,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
-        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type.ToString());
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type);
         try
         {
             await timings.Run("sql-wipe-total", WipeCore);
@@ -285,73 +285,6 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         {
             timings.Complete();
         }
-    }
-
-    async Task WipeCore()
-    {
-        if (options.Value.Clustering.Type == ClusteringType.Sql)
-        {
-            throw new SqlClusteringPreventsKernelStateReset();
-        }
-
-        foreach (var target in (await GenerationStoreTargets()).Values)
-        {
-            await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
-            try
-            {
-                if (await context.GenerationInitializationReceipts.AnyAsync())
-                {
-                    throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
-                }
-            }
-            catch (Exception error) when (MissingGenerationTable(error))
-            {
-                // The legacy store has never been initialized.
-            }
-        }
-        var storageType = options.Value.Storage.Type;
-        var connectionDetails = options.Value.Storage.ConnectionDetails;
-        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
-        var boundDatabases = UsesBindings ? await BoundDatabases() : [];
-
-        if (isSqlite)
-        {
-            // SQLite: each event store, namespace, and read-model namespace lives in its own
-            // file. The cluster file path is the configured Data Source; the derived files
-            // sit alongside it with a "+" suffix in the basename. We drop every table inside
-            // each file via a fresh single-writer connection rather than File.Delete because
-            // grain activations in the same process may still hold open handles to the
-            // database when the wipe runs. File.Delete unlinks the path on Linux/macOS but
-            // leaves the inode live for the open handle — and the next SQLite open against
-            // the path can intermittently fail with "disk I/O error" or "attempt to write a
-            // readonly database" while the file system juggles the recreate. DROP TABLE
-            // serializes through SQLite's own RESERVED/EXCLUSIVE locks, so it is safe under
-            // concurrent grain access, leaves the file intact, and never triggers WAL
-            // recovery against a vanished main file.
-            SqliteConnection.ClearAllPools();
-            await WipeAllSqliteDatabases(connectionDetails);
-        }
-        else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
-        {
-            await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
-
-            // Every database and namespace schema has a connection string of its own, so each one keeps an
-            // Npgsql pool of its own. A wipe keeps the databases, and without releasing the idle connections
-            // here every reset carries the previous run's pools forward until the server refuses new clients.
-            NpgsqlConnection.ClearAllPools();
-        }
-        else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
-        {
-            await WipeAllMsSqlDatabases(connectionDetails, boundDatabases);
-        }
-
-        // SQLite invalidates its caches under each target's migration lock during the wipe.
-        if (!isSqlite)
-        {
-            ClearTableMigrationCache(string.Empty);
-        }
-
-        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
 #endif
@@ -619,6 +552,73 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
 
 #if DEVELOPMENT
+    async Task WipeCore()
+    {
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
+        {
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
+
+        foreach (var target in (await GenerationStoreTargets()).Values)
+        {
+            await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
+            try
+            {
+                if (await context.GenerationInitializationReceipts.AnyAsync())
+                {
+                    throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+                }
+            }
+            catch (Exception error) when (MissingGenerationTable(error))
+            {
+                // The legacy store has never been initialized.
+            }
+        }
+        var storageType = options.Value.Storage.Type;
+        var connectionDetails = options.Value.Storage.ConnectionDetails;
+        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
+        var boundDatabases = UsesBindings ? await BoundDatabases() : [];
+
+        if (isSqlite)
+        {
+            // SQLite: each event store, namespace, and read-model namespace lives in its own
+            // file. The cluster file path is the configured Data Source; the derived files
+            // sit alongside it with a "+" suffix in the basename. We drop every table inside
+            // each file via a fresh single-writer connection rather than File.Delete because
+            // grain activations in the same process may still hold open handles to the
+            // database when the wipe runs. File.Delete unlinks the path on Linux/macOS but
+            // leaves the inode live for the open handle — and the next SQLite open against
+            // the path can intermittently fail with "disk I/O error" or "attempt to write a
+            // readonly database" while the file system juggles the recreate. DROP TABLE
+            // serializes through SQLite's own RESERVED/EXCLUSIVE locks, so it is safe under
+            // concurrent grain access, leaves the file intact, and never triggers WAL
+            // recovery against a vanished main file.
+            SqliteConnection.ClearAllPools();
+            await WipeAllSqliteDatabases(connectionDetails);
+        }
+        else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        {
+            await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
+
+            // Every database and namespace schema has a connection string of its own, so each one keeps an
+            // Npgsql pool of its own. A wipe keeps the databases, and without releasing the idle connections
+            // here every reset carries the previous run's pools forward until the server refuses new clients.
+            NpgsqlConnection.ClearAllPools();
+        }
+        else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
+        {
+            await WipeAllMsSqlDatabases(connectionDetails, boundDatabases);
+        }
+
+        // SQLite invalidates its caches under each target's migration lock during the wipe.
+        if (!isSqlite)
+        {
+            ClearTableMigrationCache(string.Empty);
+        }
+
+        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+    }
+
     async Task<string[]> BoundDatabases()
     {
         await using var scope = await Cluster();
