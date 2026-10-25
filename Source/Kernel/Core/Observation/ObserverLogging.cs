@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
@@ -273,6 +274,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
     internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' moved from event sequence '{KeyEventSequenceId}' to '{DefinitionEventSequenceId}'. The old activation relinquishes ownership and deactivates")]
+    internal static partial void LostOwnershipToAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' was activated on event sequence '{KeyEventSequenceId}', but it observes event sequence '{DefinitionEventSequenceId}'. The activation stays inert and persists nothing")]
+    internal static partial void ActivatedOnAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
 }
 
 internal static class ObserverScopes
