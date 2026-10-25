@@ -226,6 +226,11 @@ public partial class Observer(
                 return;
             }
 
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
+            }
+
             await DrainWebhookProbe();
             await FlushDebouncedProgressState();
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
@@ -498,6 +503,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        using (logger.BeginObserverScope(_observerId, _observerKey))
+        {
+            logger.Unsubscribed();
+        }
+
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
@@ -519,12 +529,14 @@ public partial class Observer(
                 .ToArray();
             if (remaining.Length == _subscription.Targets.Count)
             {
+                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
                 DropSupersededRegistration(connectionId);
                 return;
             }
 
             if (remaining.Length > 0)
             {
+                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
                 _subscription = _subscription with
                 {
                     SiloAddress = remaining[0].SiloAddress,
@@ -534,6 +546,7 @@ public partial class Observer(
                 return;
             }
 
+            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
             await PromoteSupersededRegistrationOrUnsubscribe();
             return;
         }
@@ -542,10 +555,12 @@ public partial class Observer(
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
         {
+            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
             DropSupersededRegistration(connectionId);
             return;
         }
 
+        LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
 
