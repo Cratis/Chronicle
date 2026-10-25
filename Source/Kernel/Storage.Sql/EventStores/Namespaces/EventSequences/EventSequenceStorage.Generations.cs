@@ -36,7 +36,17 @@ public partial class EventSequenceStorage
             0,
             JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes }),
             revisedContent is null ? null : new EventTypeGeneration(revised!.Value),
-            revisedContent);
+            revisedContent)
+        {
+            DerivedGenerations = string.IsNullOrEmpty(stored.DerivedGenerations)
+                ? []
+                : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(stored.DerivedGenerations)!.ToDictionary(
+                    _ => new EventTypeGeneration(uint.Parse(_.Key)),
+                    _ => new GenerationProvenance(
+                        new(_.Value.GetProperty("sourceGeneration").GetUInt32()),
+                        _.Value.GetProperty("sourceIsAppended").GetBoolean(),
+                        new(_.Value.GetProperty("migrationsVersion").GetString()!)))
+        };
     }
 
     /// <inheritdoc/>
