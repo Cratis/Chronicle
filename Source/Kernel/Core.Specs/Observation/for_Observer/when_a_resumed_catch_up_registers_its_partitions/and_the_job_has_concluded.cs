@@ -16,8 +16,9 @@ public class and_the_job_has_concluded : given.an_observer_with_subscription_for
 
     async Task Because()
     {
+        var earlier = await _observer.ResumingCatchUp(_jobId);
         await _observer.CaughtUp(_jobId, 41UL);
-        await _observer.RegisterResumedCatchingUpPartitions(_jobId, [(Key)"P"]);
+        await _observer.RegisterResumedCatchingUpPartitions(_jobId, earlier, [(Key)"P"]);
         await _observer.ResumingCatchUp(_jobId);
         _isPreparingCatchup = await _observer.IsPreparingCatchup();
     }

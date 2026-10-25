@@ -66,6 +66,7 @@ public partial class Observer
 
     async Task DropJobsSkippedByFastForward()
     {
+        InvalidateCatchUpOwnership();
         var jobs = await _jobsManager.GetUnfinishedJobs();
         var skipped = jobs
             .Where(job => job is { Request: IObserverJobRequest request } &&

@@ -53,6 +53,22 @@ public class a_routing_state_with_partition_holds : a_routing_state
         Request = new CatchUpObserverPartitionRequest(_observerKey, ObserverType.Reactor, partition, EventSequenceNumber.First, [])
     };
 
+    protected JobState ObserverCatchUpJob(JobStatus status = JobStatus.Running, ObserverKey? key = null) => new()
+    {
+        Id = JobId.New(),
+        Status = status,
+        Request = new CatchUpObserverRequest(key ?? _observerKey, ObserverType.Reactor, EventSequenceNumber.First, [])
+    };
+
+    protected JobState StaleObserverCatchUpJob() => new()
+    {
+        Id = JobId.New(),
+        Status = JobStatus.Running,
+        Request = new CatchUpObserverRequest(_observerKey, ObserverType.Reactor, EventSequenceNumber.First, []),
+        Progress = new() { TotalSteps = 3, SuccessfulSteps = 3 },
+        StatusChanges = [new JobStatusChanged { Status = JobStatus.Running, Occurred = DateTimeOffset.UtcNow - JobLiveness.StaleAfter - TimeSpan.FromSeconds(1) }]
+    };
+
     protected JobState PartitionReplayJob(Key partition, JobStatus status = JobStatus.Running) => new()
     {
         Id = JobId.New(),

@@ -15,6 +15,7 @@ public interface ICatchUpObserver : IJob<CatchUpObserverRequest>
     /// <summary>
     /// Register the partitions this job owns in its observer, so live delivery stays held back for them while the job catches them up.
     /// </summary>
+    /// <param name="ownershipGeneration">The generation the observer handed out when it accepted this job as its catch-up owner.</param>
     /// <returns>Awaitable task.</returns>
-    Task RegisterPartitionOwnership();
+    Task RegisterPartitionOwnership(Guid ownershipGeneration);
 }

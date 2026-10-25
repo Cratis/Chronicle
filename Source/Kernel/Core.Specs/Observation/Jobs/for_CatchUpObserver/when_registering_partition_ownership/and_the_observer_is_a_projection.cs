@@ -23,11 +23,11 @@ public class and_the_observer_is_a_projection : given.a_catch_up_observer_job
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult<IEnumerable<Key>>([_key2]));
         _job.SetStateForTesting(_request, JobStatus.Running, []);
         _observer
-            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<IEnumerable<Key>>()))
+            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Key>>()))
             .Do(call => _registered = call.Arg<IEnumerable<Key>>().ToList());
     }
 
-    async Task Because() => await _job.RegisterPartitionOwnership();
+    async Task Because() => await _job.RegisterPartitionOwnership(_generation);
 
     [Fact] void should_register_the_keys_of_the_index_that_have_not_failed() => _registered.ShouldContainOnly(_key1, _key3);
 }

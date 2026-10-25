@@ -21,11 +21,11 @@ public class and_a_planned_partition_has_failed : given.a_catch_up_observer_job
             [PlannedPartitionStep(_key1), PlannedPartitionStep(_key2)]);
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult<IEnumerable<Key>>([_key2]));
         _observer
-            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<IEnumerable<Key>>()))
+            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Key>>()))
             .Do(call => _registered = call.Arg<IEnumerable<Key>>().ToList());
     }
 
-    async Task Because() => await _job.RegisterPartitionOwnership();
+    async Task Because() => await _job.RegisterPartitionOwnership(_generation);
 
     [Fact] void should_register_only_the_partition_that_has_not_failed() => _registered.ShouldContainOnly(_key1);
 }

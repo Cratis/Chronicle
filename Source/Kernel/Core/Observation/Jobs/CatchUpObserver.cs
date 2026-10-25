@@ -42,7 +42,7 @@ public class CatchUpObserver(
         !State.Progress.IsCompleted;
 
     /// <inheritdoc/>
-    public async Task RegisterPartitionOwnership()
+    public async Task RegisterPartitionOwnership(Guid ownershipGeneration)
     {
         if (!IsRunningWithSteps) return;
 
@@ -59,7 +59,7 @@ public class CatchUpObserver(
                 return;
             }
 
-            await observer.RegisterResumedCatchingUpPartitions(JobId, partitions);
+            await observer.RegisterResumedCatchingUpPartitions(JobId, ownershipGeneration, partitions);
         }
         catch (Exception exception)
         {
@@ -79,9 +79,15 @@ public class CatchUpObserver(
     {
         // Ownership is asserted before any step resumes: the blanket hold goes up synchronously, and the exact
         // partitions are registered in this grain's next turn so enumerating them is not billed to the caller.
-        await GrainFactory.GetGrain<IObserver>(Request.ObserverKey).ResumingCatchUp(JobId);
+        var generation = await GrainFactory.GetGrain<IObserver>(Request.ObserverKey).ResumingCatchUp(JobId);
         await catchupServiceClient.ResumeCatchupFor(State.ObserverDetails);
-        _ = GrainFactory.GetGrain<ICatchUpObserver>(JobId.Value, JobKey).RegisterPartitionOwnership();
+        if (generation == Guid.Empty)
+        {
+            logger.ObserverRefusedCatchUpOwnership();
+            return;
+        }
+
+        _ = GrainFactory.GetGrain<ICatchUpObserver>(JobId.Value, JobKey).RegisterPartitionOwnership(generation);
     }
 
     /// <inheritdoc/>

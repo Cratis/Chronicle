@@ -19,7 +19,7 @@ public class and_the_job_is_still_preparing : given.a_catch_up_observer_job
         JobStatus.PreparingSteps,
         [PlannedPartitionStep(_key1)]);
 
-    async Task Because() => await _job.RegisterPartitionOwnership();
+    async Task Because() => await _job.RegisterPartitionOwnership(_generation);
 
-    [Fact] async Task should_not_register_any_partitions() => await _observer.DidNotReceive().RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<IEnumerable<Key>>());
+    [Fact] async Task should_not_register_any_partitions() => await _observer.DidNotReceive().RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Key>>());
 }

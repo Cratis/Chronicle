@@ -9,6 +9,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="eventSequence"><see cref="IEventSequence"/> provider.</param>
 /// <param name="storage"><see cref="IStorage"/> used to find out whether catching up would have any work to do.</param>
 /// <param name="holdsVersion">Provides the observer's partition holds version, which changes whenever a catch-up or replay hold is gained or lost.</param>
+/// <param name="isConcludedCatchUpJob">Tells whether an observer-wide catch-up job has already reported back to the observer, which makes it a former owner.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Routing(
     ObserverKey observerKey,
@@ -29,6 +31,7 @@ public class Routing(
     IEventSequence eventSequence,
     IStorage storage,
     Func<int> holdsVersion,
+    Func<JobId, bool> isConcludedCatchUpJob,
     ILogger<Routing> logger) : BaseObserverState
 {
     const int MaxHoldLookupAttempts = 3;
@@ -105,7 +108,7 @@ public class Routing(
 
         logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _nextUnhandledEventSequenceNumber);
 
-        // A partition's own outstanding job keeps its hold, including while draining (#5379).
+        // A partition's own outstanding job, or a live observer-wide catch-up job, keeps its holds, including while draining (#5379, #5406).
         // Ownerless holds are released; re-issuing them needs a claim resume position (DR0018 increment 4).
         state = await KeepOwnedPartitionHolds(state);
 
@@ -154,7 +157,8 @@ public class Routing(
         var now = DateTimeOffset.UtcNow;
         var ownedCatchUp = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, now);
         var ownedReplay = jobs.PartitionsHeldBy<ReplayObserverPartitionRequest>(observerKey, now);
-        var ownerlessCatchUp = catchingUp.Where(partition => !ownedCatchUp.Contains(partition)).ToArray();
+        var observerWideCatchUpLives = HasLiveObserverWideCatchUp(jobs, now);
+        var ownerlessCatchUp = observerWideCatchUpLives ? [] : catchingUp.Where(partition => !ownedCatchUp.Contains(partition)).ToArray();
         var ownerlessReplay = replaying.Where(partition => !ownedReplay.Contains(partition)).ToArray();
         var released = ownerlessCatchUp.Count(state.CatchingUpPartitions.Remove) +
             ownerlessReplay.Count(state.ReplayingPartitions.Remove);
@@ -162,6 +166,19 @@ public class Routing(
         if (released > 0) logger.ReleasedPartitionHolds(released);
         if (heldCount > released) logger.KeptOwnedPartitionHolds(heldCount - released);
     }
+
+    /// <summary>
+    /// An observer-wide catch-up job owns every catching-up hold it registered, for as long as it is live: outstanding, not stale, and not yet reported back to the observer (#5406).
+    /// </summary>
+    /// <param name="jobs">The outstanding jobs.</param>
+    /// <param name="now">The current time.</param>
+    /// <returns>True if such a job is live.</returns>
+    bool HasLiveObserverWideCatchUp(IImmutableList<JobState> jobs, DateTimeOffset now) =>
+        jobs.Any(job => job.Request is CatchUpObserverRequest request &&
+            request.ObserverKey == observerKey &&
+            !job.Status.HasFinished() &&
+            !JobLiveness.HasConcludedAllStepsLongAgo(job, now) &&
+            !isConcludedCatchUpJob(job.Id));
 
     async Task<ObserverState> FindNextUnhandledEvent(ObserverState state)
     {

@@ -121,6 +121,7 @@ public partial class Observer
         _catchUpHandoversInFlight++;
         _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
+        EndCatchUpOwnership(jobId);
         try
         {
             await HandOverCaughtUpJob(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
@@ -338,6 +339,7 @@ public partial class Observer
             () =>
             {
                 logger.StartCatchUpJob(State.NextEventSequenceNumber);
+                InvalidateCatchUpOwnership();
                 return Task.CompletedTask;
             },
 
@@ -351,13 +353,14 @@ public partial class Observer
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
                 NotePreparationEnded();
+                InvalidateCatchUpOwnership();
                 return Task.CompletedTask;
             },
             concludedJobs: _concludedCatchUpJobs);
 
         if (foundRunningJob && jobId != JobId.NotSet)
         {
-            AskRunningCatchUpJobToRegisterItsPartitions(jobId);
+            AskRunningCatchUpJobToRegisterItsPartitions(jobId, MintCatchUpOwnership(jobId));
         }
 
         return jobId;
@@ -369,10 +372,11 @@ public partial class Observer
     /// it answers, the registration reaches this observer as a call of its own that lowers the preparing flag.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the running catch-up job.</param>
-    void AskRunningCatchUpJobToRegisterItsPartitions(JobId jobId)
+    /// <param name="ownershipGeneration">The generation the job must present when it registers.</param>
+    void AskRunningCatchUpJobToRegisterItsPartitions(JobId jobId, Guid ownershipGeneration)
     {
         var jobKey = new JobKey(_observerKey.EventStore.Value, _observerKey.Namespace.Value);
-        _ = GrainFactory.GetGrain<ICatchUpObserver>(jobId.Value, jobKey).RegisterPartitionOwnership();
+        _ = GrainFactory.GetGrain<ICatchUpObserver>(jobId.Value, jobKey).RegisterPartitionOwnership(ownershipGeneration);
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)

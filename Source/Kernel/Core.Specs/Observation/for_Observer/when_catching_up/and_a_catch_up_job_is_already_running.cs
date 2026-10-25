@@ -41,7 +41,7 @@ public class and_a_catch_up_job_is_already_running : given.an_observer_with_subs
         _isPreparingCatchup = await _observer.IsPreparingCatchup();
     }
 
-    [Fact] async Task should_ask_the_running_job_to_register_its_partitions() => await _job.Received(1).RegisterPartitionOwnership();
+    [Fact] async Task should_ask_the_running_job_to_register_its_partitions() => await _job.Received(1).RegisterPartitionOwnership(Arg.Any<Guid>());
     [Fact] void should_keep_preparing_catch_up() => _isPreparingCatchup.ShouldBeTrue();
     [Fact] async Task should_not_resume_or_start_a_job() => await _jobsManager.DidNotReceive().Resume(Arg.Any<JobId>());
 }

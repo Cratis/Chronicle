@@ -43,6 +43,7 @@ public class a_catch_up_observer_job : Specification
     protected IObserverKeyIndexes _keyIndexes;
     protected IObserverKeyIndex _keyIndex;
     protected JobId _jobId;
+    protected readonly Guid _generation = Guid.NewGuid();
     protected JobKey _jobKey;
     protected CatchUpObserverRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;

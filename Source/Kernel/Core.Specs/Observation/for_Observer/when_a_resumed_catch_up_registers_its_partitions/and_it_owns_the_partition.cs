@@ -22,8 +22,8 @@ public class and_it_owns_the_partition : given.an_observer_with_subscription_for
 
     async Task Because()
     {
-        await _observer.ResumingCatchUp(_jobId);
-        await _observer.RegisterResumedCatchingUpPartitions(_jobId, [(Key)"P"]);
+        var generation = await _observer.ResumingCatchUp(_jobId);
+        await _observer.RegisterResumedCatchingUpPartitions(_jobId, generation, [(Key)"P"]);
         _isPreparingCatchup = await _observer.IsPreparingCatchup();
         await _observer.Handle("P", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
         await _observer.Handle("Q", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 44UL)]);

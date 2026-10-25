@@ -480,6 +480,7 @@ public partial class Observer(
             _eventSequence,
             storage,
             () => _partitionHoldsVersion,
+            _concludedCatchUpJobs.Contains,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
@@ -1223,6 +1224,7 @@ public partial class Observer(
     /// </summary>
     async Task PauseJobs()
     {
+        InvalidateCatchUpOwnership();
         var allJobs = await _jobsManager.GetUnfinishedJobs();
 
         // Explicitly do not pause replay jobs.

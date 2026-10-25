@@ -12,6 +12,9 @@ internal static partial class CatchUpObserverResumeLogging
     [LoggerMessage(LogLevel.Information, "Catch-up job has no saved step plan, so the partitions it owns are unknown; live delivery stays held back until it concludes")]
     internal static partial void NoStepPlanToRegisterPartitionsFrom(this ILogger<CatchUpObserver> logger);
 
+    [LoggerMessage(LogLevel.Information, "The observer did not accept this catch-up job as its owner, so the partitions it owns are not registered")]
+    internal static partial void ObserverRefusedCatchUpOwnership(this ILogger<CatchUpObserver> logger);
+
     [LoggerMessage(LogLevel.Warning, "Could not register the partitions a catch-up job owns; live delivery stays held back until it concludes")]
     internal static partial void FailedToRegisterPartitionOwnership(this ILogger<CatchUpObserver> logger, Exception exception);
 }

@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Cratis.Orleans.StateMachines;
 using Microsoft.Extensions.Logging;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
@@ -30,6 +31,7 @@ public class a_routing_state : Specification
     protected ObserverKey _observerKey;
     protected IStorage _storage;
     protected Func<int> _holdsVersion = () => 0;
+    protected Func<JobId, bool> _isConcludedCatchUpJob = _ => false;
 
     void Establish()
     {
@@ -47,6 +49,7 @@ public class a_routing_state : Specification
             _eventSequence,
             _storage,
             () => _holdsVersion(),
+            jobId => _isConcludedCatchUpJob(jobId),
             Substitute.For<ILogger<Routing>>());
         _state.SetStateMachine(_stateMachine);
         _storedState = new ObserverState

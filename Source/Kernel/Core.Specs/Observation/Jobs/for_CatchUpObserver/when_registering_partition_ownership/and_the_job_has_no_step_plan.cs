@@ -14,7 +14,7 @@ public class and_the_job_has_no_step_plan : given.a_catch_up_observer_job
 {
     void Establish() => _job.SetStateForTesting(new(_request.ObserverKey, ObserverType.Reactor, _request.FromEventSequenceNumber, []), JobStatus.Running, null);
 
-    async Task Because() => await _job.RegisterPartitionOwnership();
+    async Task Because() => await _job.RegisterPartitionOwnership(_generation);
 
-    [Fact] async Task should_not_register_any_partitions() => await _observer.DidNotReceive().RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<IEnumerable<Key>>());
+    [Fact] async Task should_not_register_any_partitions() => await _observer.DidNotReceive().RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Key>>());
 }

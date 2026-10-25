@@ -26,13 +26,13 @@ public class and_the_observer_is_a_reactor : given.a_catch_up_observer_job
             JobStatus.Running,
             [PlannedPartitionStep(_key1), PlannedPartitionStep(_key2)]);
         _observer
-            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<IEnumerable<Key>>()))
+            .When(_ => _.RegisterResumedCatchingUpPartitions(Arg.Any<JobId>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Key>>()))
             .Do(call => _registered = call.Arg<IEnumerable<Key>>().ToList());
     }
 
-    async Task Because() => await _job.RegisterPartitionOwnership();
+    async Task Because() => await _job.RegisterPartitionOwnership(_generation);
 
     [Fact] void should_register_the_partitions_of_the_plan() => _registered.ShouldNotBeNull();
     [Fact] void should_register_exactly_the_planned_partitions() => _registered.ShouldContainOnly(_key1, _key2);
-    [Fact] async Task should_register_them_for_this_job() => await _observer.Received(1).RegisterResumedCatchingUpPartitions(_jobId, Arg.Any<IEnumerable<Key>>());
+    [Fact] async Task should_register_them_for_this_job() => await _observer.Received(1).RegisterResumedCatchingUpPartitions(_jobId, _generation, Arg.Any<IEnumerable<Key>>());
 }

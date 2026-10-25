@@ -13,6 +13,15 @@ internal static partial class ResumedCatchUpLogging
     [LoggerMessage(LogLevel.Debug, "Catch-up job {JobId} is resuming; holding back live delivery until its partitions are registered")]
     internal static partial void CatchUpJobIsResuming(this ILogger<Observer> logger, JobId jobId);
 
+    [LoggerMessage(LogLevel.Debug, "Ignoring a registration from catch-up job {JobId}: it no longer owns this observer's catch-up")]
+    internal static partial void IgnoringStaleCatchUpRegistration(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Catch-up job {JobId} lost ownership while its partitions were being persisted; leaving the hold state to its successor")]
+    internal static partial void CatchUpOwnershipLostDuringRegistration(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Catch-up job {JobId} registered its partitions, but their holds were lost during persistence; the blanket hold stays")]
+    internal static partial void CatchUpHoldsLostDuringRegistration(this ILogger<Observer> logger, JobId jobId);
+
     [LoggerMessage(LogLevel.Debug, "Catch-up job {JobId} registered {Count} partitions it owns")]
     internal static partial void RegisteredResumedCatchingUpPartitions(this ILogger<Observer> logger, JobId jobId, int count);
 }

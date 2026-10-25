@@ -40,5 +40,5 @@ public class and_an_already_running_job_has_concluded : given.an_observer_with_s
         await _observer.CatchUp();
     }
 
-    [Fact] async Task should_not_ask_the_job_to_register_its_partitions() => await _job.DidNotReceive().RegisterPartitionOwnership();
+    [Fact] async Task should_not_ask_the_job_to_register_its_partitions() => await _job.DidNotReceive().RegisterPartitionOwnership(Arg.Any<Guid>());
 }

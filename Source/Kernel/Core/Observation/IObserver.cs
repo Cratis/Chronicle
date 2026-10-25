@@ -639,18 +639,19 @@ public interface IObserver : IGrainWithStringKey
     /// Notify the observer that a catch-up job it did not just start is resuming its work, so live delivery is held back until the partitions the job owns are registered.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the resuming catch-up job.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>The ownership generation the job must present when it registers its partitions, or <see cref="Guid.Empty"/> when the observer does not accept the job as its catch-up owner.</returns>
     [AlwaysInterleave]
-    Task ResumingCatchUp(JobId jobId);
+    Task<Guid> ResumingCatchUp(JobId jobId);
 
     /// <summary>
     /// Register the partitions a resumed or already running catch-up job owns. Unlike <see cref="RegisterCatchingUpPartitions"/>, this is not forward progress and does not reset the catch-up recovery attempts.
     /// </summary>
     /// <param name="jobId">The <see cref="JobId"/> of the catch-up job that owns the partitions.</param>
+    /// <param name="ownershipGeneration">The generation handed out when the observer accepted the job as its catch-up owner. A registration from any earlier generation is ignored.</param>
     /// <param name="partitions">Collection of <see cref="Key">partitions</see>.</param>
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
-    Task RegisterResumedCatchingUpPartitions(JobId jobId, IEnumerable<Key> partitions);
+    Task RegisterResumedCatchingUpPartitions(JobId jobId, Guid ownershipGeneration, IEnumerable<Key> partitions);
 
     /// <summary>
     /// Notify that the observer has been caught up.

@@ -12,8 +12,9 @@ public class and_it_registers_twice : given.an_observer_with_subscription_for_sp
 
     async Task Because()
     {
-        await _observer.RegisterResumedCatchingUpPartitions(_jobId, [(Key)"P"]);
-        await _observer.RegisterResumedCatchingUpPartitions(_jobId, [(Key)"P"]);
+        var generation = await _observer.ResumingCatchUp(_jobId);
+        await _observer.RegisterResumedCatchingUpPartitions(_jobId, generation, [(Key)"P"]);
+        await _observer.RegisterResumedCatchingUpPartitions(_jobId, generation, [(Key)"P"]);
     }
 
     [Fact] void should_hold_the_partition_once() => _stateStorage.State.CatchingUpPartitions.Count.ShouldEqual(1);
