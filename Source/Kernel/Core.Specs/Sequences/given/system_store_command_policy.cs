@@ -92,6 +92,8 @@ public static class system_store_command_policy
         ["Cratis.Chronicle.Recommendations.IgnoreRecommendation"] = "operational dismissal of an existing recommendation, no event or definition write; administrator policy in P3",
         ["Cratis.Chronicle.Security.AddApplication"] = SecurityReason,
         ["Cratis.Chronicle.Security.AddUser"] = SecurityReason,
+        ["Cratis.Chronicle.Security.GrantAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",
+        ["Cratis.Chronicle.Security.RevokeAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",
         ["Cratis.Chronicle.Security.ChangeApplicationSecret"] = SecurityReason,
         ["Cratis.Chronicle.Security.ChangeUserPassword"] = SecurityReason,
         ["Cratis.Chronicle.Security.RemoveApplication"] = SecurityReason,

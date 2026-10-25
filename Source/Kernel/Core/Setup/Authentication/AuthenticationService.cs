@@ -105,6 +105,8 @@ internal sealed class AuthenticationService(
 
         await Security.UserProjection.WaitForAdministrator(userStorage, userId, effectiveUsername);
 
+        await GrantBootstrapPrivilege(initialResult, userId);
+
         if (!string.IsNullOrEmpty(bootstrapPassword))
         {
             logger.CreatingAdminUserWithConfiguredCredentials(effectiveUsername);
@@ -215,6 +217,11 @@ internal sealed class AuthenticationService(
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif
+
+    Task GrantBootstrapPrivilege(AppendResult initialResult, UserId userId) => initialResult.IsSuccess
+        ? grainFactory.GetGrain<Security.IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key)
+            .Grant(userId, GrantReason.Bootstrap, "Successfully appended InitialAdminUserAdded for the deterministic initial administrator.")
+        : Task.CompletedTask;
 
     async Task EnsureConfiguredPassword(
         IEventSequence eventSequence,

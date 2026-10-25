@@ -565,7 +565,17 @@ class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommend
 
 class [GrainType("recommendationsmanager")] Cratis.Chronicle.Recommendations.RecommendationsManager
 
+class [GrainType("administratorroster")] Cratis.Chronicle.Security.AdministratorRoster
+
 class [GrainType("dataprotectionkeys")] Cratis.Chronicle.Security.DataProtectionKeys
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IAdministratorRoster")] Cratis.Chronicle.Security.IAdministratorRoster [Version(1)]
+  A8E1B54E: EnsureAdministratorPrivilege() -> Task
+  077AF54B: GetActiveAdministrators() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Security.UserId>>
+  EAC34F72: Grant(Cratis.Chronicle.Concepts.Security.UserId, Cratis.Chronicle.Concepts.Security.GrantReason, string) -> Task
+  4A5AA294: IsActiveAdministrator(Cratis.Chronicle.Concepts.Security.UserId) -> Task<bool>
+  D253AABF: RemoveUser(Cratis.Chronicle.Concepts.Security.UserId) -> Task<bool>
+  ED841CF5: Revoke(Cratis.Chronicle.Concepts.Security.UserId, string) -> Task<bool>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Security.IDataProtectionKeys")] Cratis.Chronicle.Security.IDataProtectionKeys [Version(0)]
   3D4FDEB9: GetAllKeys() -> Task<System.Collections.Generic.IEnumerable<string>>
