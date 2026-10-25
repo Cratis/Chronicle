@@ -65,6 +65,20 @@ public partial class Observer
             return;
         }
 
+        // The sweep and the partition recoveries of this turn share one budget of job drops.
+        _retryJobDropBudget = MaxRetryJobDropsPerTurn;
+        try
+        {
+            await RecoverBatchOfFailedPartitions();
+        }
+        finally
+        {
+            _retryJobDropBudget = null;
+        }
+    }
+
+    async Task RecoverBatchOfFailedPartitions()
+    {
         if (_recoveryOfAllFailedPartitionsRequested)
         {
             _recoveryOfAllFailedPartitionsRequested = false;

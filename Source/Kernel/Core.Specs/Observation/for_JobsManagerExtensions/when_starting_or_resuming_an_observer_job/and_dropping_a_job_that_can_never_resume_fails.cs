@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Jobs;
+using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Observation.for_JobsManagerExtensions.when_starting_or_resuming_an_observer_job;
 
@@ -18,10 +19,10 @@ public class and_dropping_a_job_that_can_never_resume_fails : given.a_jobs_manag
     {
         var stopped = AJob(JobStatus.Stopped);
         HasJobs(stopped);
-        _jobsManager.Delete(stopped.Id).Returns(Task.FromException(new InvalidOperationException("Delete failed")));
+        _jobsManager.Configure().Delete(stopped.Id).Returns(Task.FromException(new InvalidOperationException("Delete failed")));
     }
 
-    async Task Because() => _error = await Catch.Exception(() => StartOrResume(dropJobsThatCanNeverResume: true));
+    async Task Because() => _error = await Catch.Exception(() => StartOrResume(maxJobsToDrop: 10));
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_not_report_a_job() => _result.ShouldEqual(JobId.NotSet);

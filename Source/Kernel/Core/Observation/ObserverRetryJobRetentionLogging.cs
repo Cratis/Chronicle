@@ -17,4 +17,7 @@ internal static partial class ObserverRetryJobRetentionLogging
 
     [LoggerMessage(LogLevel.Warning, "Could not drop retry job {JobId} that can never run")]
     internal static partial void CouldNotDropRetryJobThatCanNeverRun(this ILogger<Observer> logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Retry jobs dropped in the previous turn are still listed, so dropping makes no progress. Leaving the rest for later")]
+    internal static partial void DroppingRetryJobsMakesNoProgress(this ILogger<Observer> logger);
 }

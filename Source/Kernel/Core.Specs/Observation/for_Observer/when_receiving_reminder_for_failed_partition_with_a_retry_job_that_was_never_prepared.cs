@@ -2,30 +2,29 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
+using Moq;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 /// <summary>
 /// A retry job stopped before it was prepared can never resume, so the resume is refused and nothing starts the
-/// retry again. The job has to be dropped so a new one can take over the partition.
+/// retry again. The job has to be dropped; nothing is started in the same call, and the next retry is scheduled.
 /// </summary>
 public class when_receiving_reminder_for_failed_partition_with_a_retry_job_that_was_never_prepared : given.an_observer_with_subscription
 {
     const string Partition = "SomePartition";
+    FailedPartition _failedPartition;
     JobState _staleJob;
 
     void Establish()
     {
-        _failedPartitionsState.Partitions = [new() { Partition = (Key)Partition }];
+        _failedPartition = new() { Partition = (Key)Partition };
+        _failedPartitionsState.Partitions = [_failedPartition];
         _staleJob = given.stopped_retry_jobs.NeverPrepared(_observerKey, Partition);
         HasOutstandingJobs(_staleJob);
-        _jobsManager
-            .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
-            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
     }
 
     async Task Because() => await _observer.ReceiveReminder(Partition, default);
@@ -33,9 +32,11 @@ public class when_receiving_reminder_for_failed_partition_with_a_retry_job_that_
     [Fact] async Task should_drop_the_job() => await _jobsManager.Received(1).Delete(_staleJob.Id);
 
     [Fact]
-    void should_start_a_new_recover_job() => _jobsManager.Received(1)
-        .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(
-            Arg.Is<RetryFailedPartitionRequest>(_ =>
-                _.ObserverKey == _observerKey &&
-                _.Key == (Key)Partition));
+    void should_not_start_a_new_recover_job_in_the_same_call() => _jobsManager.DidNotReceive()
+        .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
+
+    [Fact]
+    void should_schedule_the_next_retry() => _silo.ReminderRegistry.Mock.Verify(
+        _ => _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), Observer.PartitionReminderName(_failedPartition.Id), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()),
+        Times.Once);
 }

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Storage.Jobs;
+using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_recovering_all_failed_partitions;
 
@@ -33,7 +34,7 @@ public class and_a_failure_resolves_while_retry_jobs_are_dropped : given.an_obse
         _staleJobForA = given.stopped_retry_jobs.Prepared(_observerKey, PartitionA, FailedPartitionId.New());
         _staleJobForB = given.stopped_retry_jobs.Prepared(_observerKey, PartitionB, FailedPartitionId.New());
         HasOutstandingJobs(_staleJobForA, _staleJobForB);
-        _jobsManager.Delete(_staleJobForA.Id).Returns(_ => _observer.FailedPartitionRecovered(PartitionB, EventSequenceNumber.First));
+        _jobsManager.Configure().Delete(_staleJobForA.Id).Returns(_ => _observer.FailedPartitionRecovered(PartitionB, EventSequenceNumber.First));
     }
 
     async Task Because()
