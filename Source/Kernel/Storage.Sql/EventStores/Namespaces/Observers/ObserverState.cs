@@ -25,6 +25,21 @@ public class ObserverState
     public string? Owner { get; set; }
 
     /// <summary>
+    /// Gets or sets the serialized shadow partition claims, absent on legacy rows.
+    /// </summary>
+    public string? PartitionClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets the serialized shadow observer-wide claim, absent on legacy rows.
+    /// </summary>
+    public string? ObserverWideClaim { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow ownership revision, absent on legacy rows.
+    /// </summary>
+    public ulong? OwnershipRevision { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]

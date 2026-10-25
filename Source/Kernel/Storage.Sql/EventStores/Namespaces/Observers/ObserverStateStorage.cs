@@ -142,6 +142,9 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         {
             Id = newId,
             Owner = existing.Owner,
+            PartitionClaims = existing.PartitionClaims,
+            ObserverWideClaim = existing.ObserverWideClaim,
+            OwnershipRevision = existing.OwnershipRevision,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
             DeliveryFences = existing.DeliveryFences,
