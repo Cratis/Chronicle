@@ -16,6 +16,34 @@ internal sealed class StalledObserverJobs
     /// </summary>
     internal const int MaxResumesPerTick = 16;
     readonly Dictionary<JobId, Mark> _marks = [];
+    DateTimeOffset? _lastListed;
+    bool _hasPendingRetry;
+
+    /// <summary>
+    /// Gets whether the jobs should be listed on this tick.
+    /// </summary>
+    /// <param name="now">The current time.</param>
+    /// <returns>True when no listing has happened yet, a full <see cref="JobLiveness.ResumeStalledAfter"/> has passed since the last one, or a resume is waiting to be retried.</returns>
+    /// <remarks>
+    /// <para>
+    /// Listing is namespace-wide and cannot be filtered to one observer, so doing it on every watchdog tick costs observers times jobs.
+    /// Sampling less often is safe: <see cref="Find"/> resets a job's stall period only when it observes a progress change, so a
+    /// coarser sample can delay detection but never reports a job as stalled that moved. The worst-case detection time is twice
+    /// <see cref="JobLiveness.ResumeStalledAfter"/>.
+    /// </para>
+    /// </remarks>
+    internal bool ShouldList(DateTimeOffset now) =>
+        _hasPendingRetry || _lastListed is null || now - _lastListed.Value >= JobLiveness.ResumeStalledAfter;
+
+    /// <summary>
+    /// Records that the jobs were listed at the given time.
+    /// </summary>
+    /// <param name="now">The time of the listing.</param>
+    internal void MarkListed(DateTimeOffset now)
+    {
+        _lastListed = now;
+        _hasPendingRetry = false;
+    }
 
     /// <summary>
     /// Finds the oldest stalled jobs, resetting their stall periods when returned.
@@ -50,13 +78,14 @@ internal sealed class StalledObserverJobs
     /// </summary>
     /// <param name="id">The job to retry.</param>
     /// <remarks>
-    /// A job that is not tracked is ignored. A progress change still resets the mark, so a job that moved is not retried.
+    /// A job that is not tracked is ignored. The next tick lists regardless of the listing period. A progress change still resets the mark, so a job that moved is not retried.
     /// </remarks>
     internal void RetryOnNextTick(JobId id)
     {
         if (_marks.TryGetValue(id, out var mark))
         {
             _marks[id] = mark with { Since = DateTimeOffset.MinValue };
+            _hasPendingRetry = true;
         }
     }
 

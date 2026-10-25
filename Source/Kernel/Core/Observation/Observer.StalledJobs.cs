@@ -22,7 +22,7 @@ public partial class Observer
     bool DependsOnObserverJobs => State.IsReplaying || State.CatchingUpPartitions.Count > 0 || Failures.HasFailedPartitions || _isPreparingCatchup;
 
     /// <summary>
-    /// Resumes this observer's running jobs when step progress has stopped moving.
+    /// Resumes this observer's running jobs when step progress has stopped moving. Jobs are listed at most once per <see cref="JobLiveness.ResumeStalledAfter"/>, unless a resume is waiting to be retried.
     /// </summary>
     /// <returns>A task that completes after scheduling the bounded resume attempts.</returns>
     internal async Task NudgeStalledJobs()
@@ -34,13 +34,20 @@ public partial class Observer
                 return;
             }
 
+            var now = StalledJobsTimeProvider.GetUtcNow();
+            if (!_stalledJobs.ShouldList(now))
+            {
+                return;
+            }
+
+            _stalledJobs.MarkListed(now);
             var jobs = await _jobsManager.GetUnfinishedJobs();
             if (IsQuarantined)
             {
                 return;
             }
 
-            var now = StalledJobsTimeProvider.GetUtcNow();
+            now = StalledJobsTimeProvider.GetUtcNow();
             var owned = jobs.Where(_ => IsResumableObserverJob(_, now));
             foreach (var id in _stalledJobs.Find(owned, now))
             {
