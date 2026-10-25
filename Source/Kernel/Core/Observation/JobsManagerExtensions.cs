@@ -73,6 +73,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
+    /// <param name="dropJobsThatCanNeverResume">Whether stopped jobs that were never prepared are deleted instead of being resumed. Cratis.Orleans refuses to resume them, so they would block the work for good.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -85,7 +86,8 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
         Func<Task>? onResumeRefused = null,
-        ICollection<JobId>? concludedJobs = null)
+        ICollection<JobId>? concludedJobs = null,
+        bool dropJobsThatCanNeverResume = false)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest =>
         jobsManager.StartOrResumeObserverJobFor<TJob, TRequest>(
@@ -96,7 +98,8 @@ public static partial class JobsManagerExtensions
             onResume,
             onStartNew,
             onResumeRefused,
-            concludedJobs);
+            concludedJobs,
+            dropJobsThatCanNeverResume);
 
     /// <summary>
     /// Starts or resumes an observer job, creating the request only once the existing jobs have been looked up.
@@ -110,6 +113,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
+    /// <param name="dropJobsThatCanNeverResume">Whether stopped jobs that were never prepared are deleted instead of being resumed. Cratis.Orleans refuses to resume them, so they would block the work for good.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -127,7 +131,8 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
         Func<Task>? onResumeRefused = null,
-        ICollection<JobId>? concludedJobs = null)
+        ICollection<JobId>? concludedJobs = null,
+        bool dropJobsThatCanNeverResume = false)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -157,6 +162,27 @@ public static partial class JobsManagerExtensions
         }
 
         var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped).ToList();
+        if (dropJobsThatCanNeverResume)
+        {
+            var unresumableJobs = pausedJobs.Where(job => !job.WasEverPrepared()).ToList();
+            foreach (var unresumableJob in unresumableJobs)
+            {
+                try
+                {
+                    logger.DroppingJobThatCanNeverResume(unresumableJob.Id);
+                    await jobsManager.Delete(unresumableJob.Id);
+                }
+                catch (Exception ex)
+                {
+                    // The job still blocks the work, so nothing is started. The caller re-arms its own retry.
+                    logger.CouldNotDropJob(unresumableJob.Id, ex);
+                    return JobId.NotSet;
+                }
+            }
+
+            pausedJobs.RemoveAll(unresumableJobs.Contains);
+        }
+
         var pausedJob = pausedJobs.FirstOrDefault();
         if (pausedJob is not null)
         {
@@ -209,6 +235,14 @@ public static partial class JobsManagerExtensions
         (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// was never prepared is refused when resumed, so it can never run again.
+    /// </summary>
+    /// <param name="job">The <see cref="JobState"/> to check.</param>
+    /// <returns>True if the job has started its steps.</returns>
+    internal static bool WasEverPrepared(this JobState job) => job.StatusChanges.Any(_ => _.Status == JobStatus.StartingSteps);
+
+    /// <summary>
     /// Gets whether a job with the given status has finished for good - excluding jobs still draining during removal.
     /// </summary>
     /// <param name="status">The <see cref="JobStatus"/> to check.</param>
@@ -247,4 +281,10 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Could not resume stopped job {JobId} - nothing will drive it forward")]
     static partial void CouldNotResumeJob(this ILogger logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Dropping stopped job {JobId} that was never prepared and can never resume")]
+    static partial void DroppingJobThatCanNeverResume(this ILogger logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Could not drop stopped job {JobId} that can never resume")]
+    static partial void CouldNotDropJob(this ILogger logger, JobId jobId, Exception exception);
 }

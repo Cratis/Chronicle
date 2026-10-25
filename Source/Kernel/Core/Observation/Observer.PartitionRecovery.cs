@@ -41,6 +41,7 @@ public partial class Observer
 
         await ReconcilePartitionDeferrals();
         _recoveryOfAllFailedPartitionsRequested = true;
+        _retryJobSweepRequested = true;
         SchedulePartitionRecoveryTurn();
     }
 
@@ -73,6 +74,11 @@ public partial class Observer
             }
         }
 
+        if (_retryJobSweepRequested)
+        {
+            _retryJobSweepRequested = await DropRetryJobsThatCanNeverRun();
+        }
+
         var config = await GetRetryConfiguration();
         var started = 0;
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
@@ -102,7 +108,7 @@ public partial class Observer
             started++;
         }
 
-        if (_partitionsAwaitingRecovery.Count > 0)
+        if (_partitionsAwaitingRecovery.Count > 0 || _retryJobSweepRequested)
         {
             logger.DeferringRecoveryOfFailedPartitions(_partitionsAwaitingRecovery.Count);
             SchedulePartitionRecoveryTurn();
@@ -131,6 +137,7 @@ public partial class Observer
     void ForgetPartitionsAwaitingRecovery()
     {
         _recoveryOfAllFailedPartitionsRequested = false;
+        _retryJobSweepRequested = false;
         _partitionsAwaitingRecovery.Clear();
         _partitionsAwaitingRecoveryLookup.Clear();
     }

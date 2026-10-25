@@ -46,7 +46,14 @@ public class a_jobs_manager : Specification
         Request = new CatchUpObserverRequest(forObserver ?? _observerKey, ObserverType.Reactor, EventSequenceNumber.First, [])
     };
 
-    protected async Task StartOrResume(Func<CatchUpObserverRequest, bool>? requestPredicate = null, ICollection<JobId>? concludedJobs = null) =>
+    protected JobState APreparedJob(JobStatus status)
+    {
+        var job = AJob(status);
+        job.StatusChanges = [new JobStatusChanged { Status = JobStatus.StartingSteps, Occurred = DateTimeOffset.UtcNow }];
+        return job;
+    }
+
+    protected async Task StartOrResume(Func<CatchUpObserverRequest, bool>? requestPredicate = null, ICollection<JobId>? concludedJobs = null, bool dropJobsThatCanNeverResume = false) =>
         _result = await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             NullLogger.Instance,
             _request,
@@ -55,7 +62,8 @@ public class a_jobs_manager : Specification
             onResume: () => Record(() => _onResumeWasCalled = true),
             onStartNew: () => Record(() => _onStartNewWasCalled = true),
             onResumeRefused: () => Record(() => _onResumeRefusedWasCalled = true),
-            concludedJobs: concludedJobs);
+            concludedJobs: concludedJobs,
+            dropJobsThatCanNeverResume: dropJobsThatCanNeverResume);
 
     static Task Record(Action record)
     {
