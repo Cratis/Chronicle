@@ -11,6 +11,7 @@ using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_immediately;
 
+[PerFactSpecificationLifecycle] // One fact drains the bulk sink while the other facts inspect the immediate write.
 [Collection(MongoDBCollection.Name)]
 public class and_a_legacy_null_parent_exists(MongoDBFixture fixture) : given.a_bulk_sink(fixture)
 {

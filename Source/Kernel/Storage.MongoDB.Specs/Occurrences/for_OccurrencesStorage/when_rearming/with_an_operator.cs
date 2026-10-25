@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Occurrences.for_OccurrencesStorage.when_rearming;
 
+[PerFactSpecificationLifecycle] // The replay fact retries a storage mutation while the other facts inspect the original retry.
 [Collection(ReplicaSetMongoDBCollection.Name)]
 public class with_an_operator(ReplicaSetMongoDBFixture fixture) : given.an_occurrence_storage(fixture)
 {

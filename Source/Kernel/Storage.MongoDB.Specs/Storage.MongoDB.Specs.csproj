@@ -4,7 +4,8 @@
         <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
-        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <!-- MongoDBTestFramework derives from SpecificationTestFramework and owns the assembly attribute. -->
+        <CratisSpecificationsTestFrameworkAttribute>false</CratisSpecificationsTestFrameworkAttribute>
         <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
