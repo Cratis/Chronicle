@@ -23,12 +23,12 @@ public class and_a_format_is_unsupported : Specification
             ["nested-array"] = new(new[] { new[] { "value" } }),
             ["empty-nested-array"] = new(Array.Empty<string[]>()),
             ["null-nested-array-item"] = new(new string[]?[] { null }),
-            ["multidimensional-array"] = new(new string[1, 1]),
+            ["multidimensional-array"] = new(Array.CreateInstance(typeof(string), 1, 1)),
             ["nested-object-array"] = new(new object[] { new[] { "value" } }),
             ["array-object"] = new(new[] { new object() }),
             ["array-byte-array-format"] = new(Array.Empty<byte[]>(), "byte-array")
         };
-        _errors = inputs.ToDictionary(_ => _.Key, _ => Catch.Exception(() => { UniqueConstraintEncoder.Encode([1], [_.Value]); }));
+        _errors = inputs.ToDictionary(_ => _.Key, _ => Catch.Exception(() => UniqueConstraintEncoder.Encode([1], [_.Value]))!);
     }
 
     [Fact] void should_reject_byte_arrays() => _errors["byte-array"].ShouldBeOfExactType<UnsupportedUniqueConstraintFormat>();

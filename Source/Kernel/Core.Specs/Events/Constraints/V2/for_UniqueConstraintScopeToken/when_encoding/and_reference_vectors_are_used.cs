@@ -17,9 +17,10 @@ public class and_reference_vectors_are_used : Specification
     {
         _preimages = _scopes.Select(_ => Convert.ToHexString(UniqueConstraintScopeToken.GetPreimage(_)).ToLowerInvariant()).ToArray();
         _tokens = _scopes.Select(_ => UniqueConstraintScopeToken.Encode(_key, _).Value).ToArray();
+
+        // Preimages were written independently from the framing grammar; hashes computed with Node crypto.
     }
 
-    // Preimages were written independently from the framing grammar; hashes computed with Node crypto.
     [Fact] void should_frame_all_unnarrowed_dimensions() => _preimages[0].ShouldEqual("6368726f6e69636c652f73636f70652f763200000000");
     [Fact] void should_tokenize_an_unscoped_constraint() => _tokens[0].ShouldEqual("45d8bbf4835ba1e84f773e330ba59079");
     [Fact] void should_frame_dimensions_in_typed_order() => _preimages[1].ShouldEqual("6368726f6e69636c652f73636f70652f7632000100000003617c620100000003633a6400");
