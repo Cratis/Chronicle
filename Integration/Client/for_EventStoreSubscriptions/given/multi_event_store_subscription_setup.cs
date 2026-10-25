@@ -16,9 +16,29 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
     [EventType]
     public record AnotherTestEvent(int Number);
 
-    public string SourceEventStoreName { get; protected set; } = "source-event-store";
-    public string TargetEventStoreName { get; protected set; } = "target-event-store";
-    public string SecondSourceEventStoreName { get; protected set; } = "second-source-event-store";
+    string? _sourceEventStoreName;
+    string? _targetEventStoreName;
+    string? _secondSourceEventStoreName;
+
+    // Each specification class gets its own event stores. The classes share one kernel, and a store name
+    // reused by another class would let its subscriptions and events show up here (Cratis/Chronicle#5402).
+    public string SourceEventStoreName
+    {
+        get => _sourceEventStoreName ??= $"source-event-store-{ClassSuffix}";
+        protected set => _sourceEventStoreName = value;
+    }
+
+    public string TargetEventStoreName
+    {
+        get => _targetEventStoreName ??= $"target-event-store-{ClassSuffix}";
+        protected set => _targetEventStoreName = value;
+    }
+
+    public string SecondSourceEventStoreName
+    {
+        get => _secondSourceEventStoreName ??= $"second-source-event-store-{ClassSuffix}";
+        protected set => _secondSourceEventStoreName = value;
+    }
 
     public Concepts.EventStoreNamespaceName DefaultNamespace { get; } = Concepts.EventStoreNamespaceName.Default;
     public Concepts.EventStoreNamespaceName TenantANamespace { get; } = "tenant-a";
@@ -114,5 +134,16 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
     {
         var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
         return await targetEventStore.Subscriptions.GetAll();
+    }
+
+    // A short, stable suffix per specification class: the context is nested in the class it belongs to.
+    string ClassSuffix
+    {
+        get
+        {
+            var owner = GetType().DeclaringType ?? GetType();
+            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(owner.FullName ?? owner.Name));
+            return Convert.ToHexString(hash, 0, 4).ToLowerInvariant();
+        }
     }
 }
