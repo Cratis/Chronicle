@@ -26,6 +26,23 @@ public class Sinks(
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, (ISink Sink, ReadModelDefinition Definition)> _sinks = new();
     readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
+    readonly ConcurrentDictionary<GenerationSinkContext, Lazy<Task<ISink>>> _generationSinks = new();
+
+    /// <inheritdoc/>
+    public async Task<ISink> GetFor(GenerationSinkContext context)
+    {
+        var model = context.GetReadModel(eventStoreName, eventStoreNamespaceName);
+        var pending = _generationSinks.GetOrAdd(context, static (key, state) => new Lazy<Task<ISink>>(() => state.Owner.CreateGenerationSink(key, state.Model)), (Owner: this, Model: model));
+        try
+        {
+            return await pending.Value;
+        }
+        catch
+        {
+            _generationSinks.TryRemove(new KeyValuePair<GenerationSinkContext, Lazy<Task<ISink>>>(context, pending));
+            throw;
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<ISink> GetFor(ReadModelDefinition readModel)
@@ -69,6 +86,14 @@ public class Sinks(
         first.Schemas.Count == second.Schemas.Count &&
         first.Schemas.All(pair => second.Schemas.TryGetValue(pair.Key, out var schema) && pair.Value.ToJson() == schema.ToJson()) &&
         first.Indexes.SequenceEqual(second.Indexes);
+
+    async Task<ISink> CreateGenerationSink(GenerationSinkContext context, ReadModelDefinition readModel)
+    {
+        if (!_factories.TryGetValue(readModel.Sink.Type, out var factory)) throw new UnknownSink(readModel.Sink.Type);
+        var sink = factory.CreateFor(eventStoreName, eventStoreNamespaceName, context);
+        await sink.EnsureIndexes();
+        return sink;
+    }
 
     void ThrowIfUnknownSink(SinkTypeId typeId)
     {

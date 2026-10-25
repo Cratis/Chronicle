@@ -36,4 +36,12 @@ public interface ISinks
     /// for the read model's own container. Used by materialization generations, each writing only to its own destination.
     /// </remarks>
     Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container);
+
+    /// <summary>
+    /// Gets a generation sink without sharing legacy mode or grant-specific cache entries.
+    /// </summary>
+    /// <param name="context">The immutable execution and fixed admission.</param>
+    /// <returns>The generation sink.</returns>
+    /// <exception cref="Generations.Bindings.MaterializationBindingsNotSupported">This provider cannot create generation writers.</exception>
+    Task<ISink> GetFor(GenerationSinkContext context) => throw new Generations.Bindings.MaterializationBindingsNotSupported();
 }

@@ -19,11 +19,39 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 /// <param name="database">The read-model database resolver.</param>
 /// <param name="gates">The gate writes joining publication.</param>
 /// <param name="timeProvider">The clock used for lifecycle stamps.</param>
-public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage
+public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
     static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
     static readonly UpdateDefinitionBuilder<BsonDocument> _update = Builders<BsonDocument>.Update;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    /// <inheritdoc/>
+    public async Task<GenerationWriterGrant?> TryAcquire(EventStoreName store, GenerationObserverBinding binding, GenerationBuildOperationId attempt, long expectedEpoch)
+    {
+        if (expectedEpoch < 0 || attempt.Value == Guid.Empty) return null;
+        var db = await PreparedBuilds(store, binding.Key);
+        try
+        {
+            return await BuildTransaction<GenerationWriterGrant?>(db, async session =>
+            {
+                if (!await HasAdmissibleExecution(db, session, binding)) return null;
+                var gate = new GenerationGateId(binding.Key, binding.Identity.Generation);
+                var collection = db.GetCollection<BsonDocument>(GenerationGateCollections.Gates);
+                var current = await collection.Find(session, _filter.Eq("_id", gate.Value)).FirstOrDefaultAsync();
+                if ((current?[GenerationGateCollections.Epoch].AsInt64 ?? 0) != expectedEpoch) return null;
+                var epoch = checked(expectedEpoch + 1);
+                if (current is null)
+                    await collection.InsertOneAsync(session, new BsonDocument { { "_id", gate.Value }, { GenerationGateCollections.Epoch, epoch }, { GenerationGateCollections.Admitted, 0L }, { "attempt", attempt.Value.ToString("N") } });
+                else
+                    await collection.UpdateOneAsync(session, _filter.Eq("_id", gate.Value) & _filter.Eq(GenerationGateCollections.Epoch, expectedEpoch), _update.Set(GenerationGateCollections.Epoch, epoch).Set("attempt", attempt.Value.ToString("N")));
+                return new GenerationWriterGrant(store, binding, attempt, epoch);
+            });
+        }
+        catch (MongoWriteException error) when (error.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return null;
+        }
+    }
 
     /// <inheritdoc/>
     /// <exception cref="InvalidMaterializationExecution">The adopted execution is missing.</exception>
@@ -192,6 +220,19 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<GenerationContainerClaim>> GetClaims(EventStoreName store, EventStoreNamespaceName ns, ReadModelContainerName container) =>
         await new MongoDBGenerationContainerClaims(database.GetReadModelDatabase(store, ns)).For(container.Value);
+
+    static async Task<bool> HasAdmissibleExecution(IMongoDatabase db, IClientSessionHandle session, GenerationObserverBinding binding)
+    {
+        var document = await Bindings(db).Find(session, Id(binding.Key)).FirstOrDefaultAsync();
+        if (document is null) return false;
+        var record = MaterializationBindingDocuments.Binding(document).Generations.FirstOrDefault(_ => _.Identity == binding.Identity);
+        if (record is null) return false;
+        if (record.State == MaterializationGenerationState.Abandoned) return false;
+        var execution = await Executions(db).Find(session, ExecutionId(binding.Key, binding.Identity.Generation)).FirstOrDefaultAsync();
+        if (execution is null) return false;
+        var snapshot = MaterializationBindingDocuments.Execution(execution);
+        return snapshot.EventSequence == binding.EventSequence && snapshot.Revision == binding.Revision;
+    }
 
     static async Task EnsureUnbound(IMongoDatabase db, EventSequenceId eventSequence, ObserverId observerId)
     {

@@ -156,6 +156,11 @@ public partial class Sink(
     /// </remarks>
     TaskCompletionSource? _closing;
 
+    /// <summary>
+    /// Gets the fixed-epoch, create-only index admission for an exclusively owned generation destination.
+    /// </summary>
+    internal Func<Func<Task>, Task>? GenerationIndexDdl { get; init; }
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
@@ -911,11 +916,16 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public Task PrepareInitialRun() => collections.PrepareInitialRun();
+    public Task PrepareInitialRun()
+    {
+        RefuseGenerationLifecycle();
+        return collections.PrepareInitialRun();
+    }
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        RefuseGenerationLifecycle();
         await collections.BeginReplay(context);
 
         // A replay writes into its own shadow collection and that collection is renamed into place at the end,
@@ -930,6 +940,7 @@ public partial class Sink(
     /// <inheritdoc/>
     public async Task ResumeReplay(ReplayContext context)
     {
+        RefuseGenerationLifecycle();
         await collections.ResumeReplay(context);
         await EnsureIndexes();
         await ResumeBulk(isReplay: true);
@@ -951,6 +962,7 @@ public partial class Sink(
     /// </remarks>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        RefuseGenerationLifecycle();
         FailedPartition[] failedPartitions;
         try
         {
@@ -984,6 +996,8 @@ public partial class Sink(
     /// <inheritdoc/>
     public async Task LeaveReplay()
     {
+        RefuseGenerationLifecycle();
+
         // Whatever is still held back belongs to a replay that has been promoted without it. Writing it to the replay
         // collection would lose it, so it goes to the read model's own collection once replay mode is left.
         collections.AbandonReplay();
@@ -995,7 +1009,11 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public Task Remove(ReadModelContainerName containerName) => collections.Remove(containerName);
+    public Task Remove(ReadModelContainerName containerName)
+    {
+        RefuseGenerationLifecycle();
+        return collections.Remove(containerName);
+    }
 
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
@@ -1063,6 +1081,11 @@ public partial class Sink(
     /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
+        if (GenerationIndexDdl is not null)
+        {
+            await GenerationIndexDdl(EnsureGenerationIndexes);
+            return;
+        }
         var collection = Collection;
         using var cursor = await collection.Indexes.ListAsync();
         var existingIndexes = await cursor.ToListAsync();
@@ -1086,6 +1109,52 @@ public partial class Sink(
 
             await collection.Indexes.CreateOneAsync(indexModel);
         }
+    }
+
+    async Task EnsureGenerationIndexes()
+    {
+        var collection = Collection;
+        List<BsonDocument> existing;
+        try
+        {
+            using var cursor = await collection.Indexes.ListAsync();
+            existing = await cursor.ToListAsync();
+        }
+        catch (MongoCommandException error) when (error.Code == 26)
+        {
+            existing = [];
+        }
+        var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
+        foreach (var index in readModel.Indexes)
+            await EnsureGenerationIndex(collection, existing, index, collation);
+    }
+
+    async Task EnsureGenerationIndex(IMongoCollection<BsonDocument> collection, List<BsonDocument> existing, IndexDefinition index, Lazy<Task<BsonValue>> collation)
+    {
+        ReadModelIndexKeys.Validate(index, readModel.GetSchemaForLatestGeneration());
+        var name = ReadModelIndexKeys.Name(index);
+        var keys = ReadModelIndexKeys.For(index);
+        var previous = existing.FirstOrDefault(document => document["name"].AsString == name);
+        if (previous is not null)
+        {
+            if (!HasMatchingKeyAndOptions(previous, keys)) throw new GenerationIndexConflict(name);
+            if (previous.GetValue("hidden", false).ToBoolean()) throw new GenerationIndexConflict(name);
+            if (!GetCollation(previous).Equals(await collation.Value)) throw new GenerationIndexConflict(name);
+            return;
+        }
+        try
+        {
+            await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(keys, new CreateIndexOptions { Name = name, Background = true }));
+        }
+        catch (MongoCommandException error) when (error.Code is 85 or 86)
+        {
+            throw new GenerationIndexConflict(name, error);
+        }
+    }
+
+    void RefuseGenerationLifecycle()
+    {
+        if (GenerationIndexDdl is not null) throw new Cratis.Chronicle.Storage.Generations.Bindings.MaterializationBindingsNotSupported();
     }
 
     static async Task<bool> IsIndexPresent(List<BsonDocument> candidates, string indexName, Lazy<Task<BsonValue>> collation)

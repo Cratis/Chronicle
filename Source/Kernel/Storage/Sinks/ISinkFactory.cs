@@ -25,4 +25,15 @@ public interface ISinkFactory
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to create for.</param>
     /// <returns>A new instance of <see cref="ISink"/> for the <see cref="ReadModelDefinition"/>.</returns>
     ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel);
+
+    /// <summary>
+    /// Creates a generation writer from immutable execution and a fixed grant, or refuses before allocation.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="context">The generation execution and admission.</param>
+    /// <returns>The generation sink.</returns>
+    /// <exception cref="Generations.Bindings.MaterializationBindingsNotSupported">This provider cannot create generation writers.</exception>
+    ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, GenerationSinkContext context) =>
+        throw new Generations.Bindings.MaterializationBindingsNotSupported();
 }

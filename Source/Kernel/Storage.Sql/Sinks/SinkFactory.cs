@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 /// <remarks>
 /// Takes <see cref="IServiceProvider"/> and resolves <see cref="IDatabase"/> lazily on
-/// <see cref="CreateFor"/> rather than eagerly via the constructor. This lets the factory
+/// <see cref="CreateFor(EventStoreName, EventStoreNamespaceName, ReadModelDefinition)"/> rather than eagerly via the constructor. This lets the factory
 /// be instantiated even in modes where SQL is not the active backend (e.g. MongoDB
 /// integration tests load both Storage.MongoDB and Storage.Sql assemblies, and
 /// <c language="csharp">IInstancesOf&lt;ISinkFactory&gt;</c> enumerates every implementation). Construction
@@ -29,6 +29,10 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
 {
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
+
+    /// <inheritdoc/>
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, GenerationSinkContext context) =>
+        throw new Cratis.Chronicle.Storage.Generations.Bindings.MaterializationBindingsNotSupported();
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)

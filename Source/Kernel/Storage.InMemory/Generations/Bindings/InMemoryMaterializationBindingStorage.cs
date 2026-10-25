@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 /// Represents the in memory materialization binding storage.
 /// </summary>
 /// <param name="timeProvider">The clock used for lifecycle stamps.</param>
-public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage
+public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly object _lock = new();
@@ -25,6 +25,26 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), MaterializationExecutionSpecification> _executions = [];
     readonly Dictionary<(EventStoreName Store, string Scope, GenerationBuildOperationId Operation), (GenerationBuildRequest Request, GenerationReservation Reservation)> _operations = [];
     readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), GenerationObserverBinding> _observers = [];
+    readonly Dictionary<(EventStoreName Store, string Gate), Sinks.InMemorySink> _destinations = [];
+
+    /// <inheritdoc/>
+    public Task<GenerationWriterGrant?> TryAcquire(EventStoreName store, GenerationObserverBinding binding, GenerationBuildOperationId attempt, long expectedEpoch)
+    {
+        lock (_lock)
+        {
+            var identity = (store, binding.Key.Value, binding.Identity.Generation);
+            var gate = new GenerationGateId(binding.Key, binding.Identity.Generation);
+            if (expectedEpoch < 0) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (attempt.Value == Guid.Empty) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (!_observers.TryGetValue(identity, out var recorded)) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (recorded != binding) return Task.FromResult<GenerationWriterGrant?>(null);
+            var record = _bindings[(store, binding.Key.Value)].Generations.Single(_ => _.Identity == binding.Identity);
+            if (record.State == MaterializationGenerationState.Abandoned) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (_gates.GetValueOrDefault((store, gate.Value)) != expectedEpoch) return Task.FromResult<GenerationWriterGrant?>(null);
+            var epoch = Revoke(store, gate);
+            return Task.FromResult<GenerationWriterGrant?>(new(store, binding, attempt, epoch));
+        }
+    }
 
     /// <inheritdoc/>
     /// <exception cref="GenerationBuildConflict">An immutable reservation claim conflicts.</exception>
@@ -196,6 +216,37 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
             return Task.FromResult<IReadOnlyCollection<GenerationContainerClaim>>(_bindings.Where(_ => _.Key.Store == store && _.Value.Key.Namespace == ns).SelectMany(_ => _.Value.Generations).Where(_ => _.Identity.Destination == container).Select(_ => new GenerationContainerClaim(_.Identity.Destination, _.Identity.Generation, _.State)).ToArray());
         }
     }
+
+    /// <summary>
+    /// Executes a synchronous in-memory operation under the same lock as admission and publication.
+    /// </summary>
+    /// <typeparam name="T">The type the operation returns.</typeparam>
+    /// <param name="grant">The fixed admission.</param>
+    /// <param name="operation">The synchronous operation (in-memory sink tasks are already completed).</param>
+    /// <returns>The operation result.</returns>
+    /// <exception cref="GenerationWriterGrantRevoked">The grant's epoch is no longer current.</exception>
+    internal T WithGrant<T>(GenerationWriterGrant grant, Func<T> operation)
+    {
+        lock (_lock)
+        {
+            if (_gates.GetValueOrDefault((grant.Store, grant.Gate.Value)) != grant.Epoch || grant.Epoch <= 0)
+                throw new GenerationWriterGrantRevoked();
+            return operation();
+        }
+    }
+
+    /// <summary>
+    /// Reuses destination data independently of sink wrappers and grant refresh.
+    /// </summary>
+    /// <param name="grant">The fixed admission.</param>
+    /// <param name="create">Creates a destination only when it has never been opened.</param>
+    /// <returns>The shared destination.</returns>
+    internal Sinks.InMemorySink GetDestination(GenerationWriterGrant grant, Func<Sinks.InMemorySink> create) => WithGrant(grant, () =>
+    {
+        var key = (grant.Store, grant.Gate.Value);
+        if (!_destinations.TryGetValue(key, out var sink)) _destinations.Add(key, sink = create());
+        return sink;
+    });
 
     static void EnsureGenerationUnclaimed(MaterializationBinding binding, MaterializationKey key, MaterializationGenerationIdentity identity)
     {
