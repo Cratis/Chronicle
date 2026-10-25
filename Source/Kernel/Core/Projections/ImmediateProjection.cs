@@ -115,7 +115,7 @@ public class ImmediateProjection(
                 lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
-            if (!state.Exists)
+            if (!HasInitializedModel(state))
             {
                 return ProjectionResult.Empty with
                 {
@@ -146,6 +146,8 @@ public class ImmediateProjection(
     /// </summary>
     /// <returns>The observer reference for this grain.</returns>
     protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
+
+    static bool HasInitializedModel(SingleReadModelProjectionState state) => state.Exists && state.IsInitialized;
 
     SingleReadModelProjectionState GetInitialState()
     {

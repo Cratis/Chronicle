@@ -482,7 +482,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     {
         var containerName = QueriedTableNameFor(occurrence);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-        var totalCount = await scope.DbContext.Entries.CountAsync();
+        var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking()).CountAsync();
         var entries = await ReadOrderedPage(scope.DbContext, skip, take);
         return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
     }
@@ -498,7 +498,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         {
             var containerName = QueriedTableNameFor(occurrence);
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-            var totalCount = await scope.DbContext.Entries.CountAsync();
+            var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking()).CountAsync();
             var entries = (await ReadOrderedPage(scope.DbContext, skip, take)).ToArray();
             return [new ObservedPage(totalCount, entries)];
         }
@@ -522,15 +522,19 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// </remarks>
     string QueriedTableNameFor(ReadModelContainerName? occurrence) => occurrence?.Value ?? _tableName;
 
+    static IQueryable<DynamicReadModelEntity> VisibleInstances(IQueryable<DynamicReadModelEntity> entries) =>
+        entries.Where(entity => EF.Property<bool>(entity, WellKnownProperties.ReadModelInstanceInitialized));
+
     async Task<List<DynamicReadModelEntity>> ReadOrderedPage(ReadModelDbContext context, int skip, int take)
     {
         var key = _columns.First(column => column.IsKey);
-        if (!UsesDecimalSortKey(context, key)) return await OrderByKey(context.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
+        if (!UsesDecimalSortKey(context, key)) return await OrderByKey(VisibleInstances(context.Entries.AsNoTracking())).Skip(skip).Take(take).ToListAsync();
         var shadow = SqliteDecimalSortKey.ColumnNameFor(key.Name);
         var helper = context.GetService<ISqlGenerationHelper>();
-        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
-#pragma warning disable EF1002 // Provider-delimited identifiers only; page limits are parameters.
-        return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip).AsNoTracking().ToListAsync());
+        var initialized = helper.DelimitIdentifier(WellKnownProperties.ReadModelInstanceInitialized);
+        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{initialized} = {{2}} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
+#pragma warning disable EF1002 // Provider-delimited identifiers only; page limits and the visibility flag are parameters.
+        return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip, true).AsNoTracking().ToListAsync());
 #pragma warning restore EF1002
     }
 

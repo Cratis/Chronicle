@@ -29,4 +29,11 @@ public static class CalendarPropertyExtensions
     /// <param name="dateTimeOffset">The <see cref="DateTimeOffset"/> value to derive from.</param>
     /// <returns>The ISO 8601 week-of-year number.</returns>
     public static int Week(this DateTimeOffset dateTimeOffset) => System.Globalization.ISOWeek.GetWeekOfYear(dateTimeOffset.DateTime);
+
+    /// <summary>
+    /// Gets the ISO 8601 week-numbering year associated with <see cref="Week"/>.
+    /// </summary>
+    /// <param name="dateTimeOffset">The <see cref="DateTimeOffset"/> value to derive from.</param>
+    /// <returns>The ISO 8601 week-numbering year, which can differ from the calendar year.</returns>
+    public static int WeekYear(this DateTimeOffset dateTimeOffset) => System.Globalization.ISOWeek.GetYear(dateTimeOffset.DateTime);
 }

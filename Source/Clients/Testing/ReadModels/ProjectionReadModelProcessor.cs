@@ -326,7 +326,10 @@ internal static partial class ProjectionReadModelProcessor
                 continue;
             }
 
-            instances[new EventSourceId(keyValue.ToString()!)] = instance;
+            var key = keyValue is IComparable comparable
+                ? EventSourceId<IComparable>.ConvertToString(comparable)
+                : keyValue.ToString()!;
+            instances[new EventSourceId(key)] = instance;
         }
 
         return instances;

@@ -1201,7 +1201,7 @@ public partial class Sink(
     {
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
         var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
-        var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter());
         var instances = await ReadPage(collection, skip, take, CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
@@ -1289,10 +1289,16 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() => new BsonDocument("$expr", new BsonDocument("$ne", new BsonArray
+    {
+        new BsonDocument("$ifNull", new BsonArray { $"${WellKnownProperties.ReadModelInstanceInitialized}", true }),
+        false
+    }));
+
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
         var documents = await collection
-            .Find(FilterDefinition<BsonDocument>.Empty)
+            .Find(VisibleInstancesFilter())
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)

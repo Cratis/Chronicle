@@ -225,6 +225,8 @@ public class ProjectionObserverSubscriber(
         }
     }
 
+    bool CanNotify(ExpandoObject state) => _definition.IsActive && !ReadModelInitialization.IsUninitialized(state);
+
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {
         // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
@@ -319,7 +321,7 @@ public class ProjectionObserverSubscriber(
             }
 
             // Note: We don't want to send changesets if the projection is not active
-            if (changeset?.HasChanges == true && _definition.IsActive)
+            if (changeset?.HasChanges == true && CanNotify(changeset.CurrentState))
             {
                 var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
 
