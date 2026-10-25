@@ -83,7 +83,9 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
     readonly DatabaseNameResolver _databaseNames = new(
-        SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+        SqlConnectionStrings.WithPooling(
+            SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+            options.Value.Storage.PostgreSqlPooling),
         SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
@@ -206,7 +208,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
         var schema = _resolution.SchemaFor(resolved);
         var target = new SqlTarget(
-            SqlConnectionStrings.WithSchema(connectionString, schema),
+            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, ConnectionPurpose.Runtime) : null);
         return OptionsFor(_jobsOptions, $"jobs:{eventStore}:{@namespace}", target);
