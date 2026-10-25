@@ -24,6 +24,8 @@ public class and_a_child_with_a_guid_shaped_string_identity_is_removed : given.a
     AppendedEvent[] _storedEvents;
     ExpandoObject _result;
     ExpandoObject _storedResult;
+    SingleReadModelProjectionState _foldedState;
+    SingleReadModelProjectionState _storedFoldedState;
 
     async Task Establish()
     {
@@ -84,9 +86,13 @@ public class and_a_child_with_a_guid_shaped_string_identity_is_removed : given.a
     {
         _result = await Fold(_events);
         _storedResult = await Fold(_storedEvents);
+        _foldedState = await _grain.FoldForSingleReadModel(EventStoreNamespaceName.Default, SingleReadModelProjectionState.Empty, _events);
+        _storedFoldedState = await _grain.FoldForSingleReadModel(EventStoreNamespaceName.Default, SingleReadModelProjectionState.Empty, _storedEvents);
     }
 
     [Fact] void should_keep_only_the_remaining_child() => AssociationsOf(_result).Select(_ => _["id"]).ShouldContainOnly(Remaining);
     [Fact] void should_preserve_string_keys_through_mongodb_event_content() => _storedEvents.Select(_ => ((IDictionary<string, object?>)_.Content)["comment"]).ShouldEqual([Remaining, RemovedChild, RemovedChild]);
     [Fact] void should_keep_only_the_remaining_child_after_the_mongodb_round_trip() => AssociationsOf(_storedResult).Select(_ => _["id"]).ShouldContainOnly(Remaining);
+    [Fact] void should_keep_only_the_remaining_child_when_folding_from_empty_state() => AssociationsOf(_foldedState.Model).Select(_ => _["id"]).ShouldContainOnly(Remaining);
+    [Fact] void should_keep_only_the_remaining_child_when_folding_stored_events_from_empty_state() => AssociationsOf(_storedFoldedState.Model).Select(_ => _["id"]).ShouldContainOnly(Remaining);
 }
