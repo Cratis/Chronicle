@@ -549,10 +549,27 @@ public partial class Observer
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
         var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
-        await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
+        var jobId = await _jobsManager.StartOrResumeObserverJobReportingDrops<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
-            request,
-            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
+            () => request,
+            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId,
+            onAlreadyRunningJob: null,
+            onResume: null,
+            onStartNew: null,
+            onResumeRefused: null,
+            concludedJobs: null,
+            maxJobsToDrop: RetryJobDropsAvailable,
+            onJobsDropped: ConsumeRetryJobDrops);
+
+        // The retry reminder was unregistered when it fired. Without a job nothing would retry this partition again.
+        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        {
+            await RegisterRetryReminderAfterNoJob(failedPartition);
+        }
+        else
+        {
+            _retriesWithoutJob.Remove(failedPartition.Id);
+        }
     }
 
     /// <summary>

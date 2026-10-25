@@ -3,72 +3,54 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.InMemory.EventSequences;
 using Cratis.Chronicle.Storage.Keys;
 
 namespace Cratis.Chronicle.Storage.InMemory.Keys;
 
 /// <summary>
-/// Represents an in-memory implementation of <see cref="IObserverKeyIndex"/>.
+/// Represents an in-memory implementation of <see cref="IObserverKeyIndex"/> that reads event sources from events.
 /// </summary>
-/// <remarks>
-/// Backed by an in-memory ordered collection of distinct keys. Unlike the event-store-derived
-/// implementations, the in-memory index has no per-key <see cref="EventSequenceNumber"/>, so
-/// <see cref="GetKeys"/> returns every added key in insertion order.
-/// </remarks>
-public sealed class ObserverKeyIndex : IObserverKeyIndex
+/// <param name="eventSequence">The event sequence to read.</param>
+/// <param name="scope">The reader scope to enumerate keys for.</param>
+public sealed class ObserverKeyIndex(EventSequenceStorage eventSequence, ObserverReaderScope scope) : IObserverKeyIndex
 {
-    readonly List<Key> _keys = [];
-    readonly HashSet<Key> _seen = [];
-    readonly object _lock = new();
+    /// <inheritdoc/>
+    public IObserverKeys GetKeys(EventSequenceNumber fromEventSequenceNumber) =>
+        new ObserverKeys(eventSequence, scope, fromEventSequenceNumber);
 
     /// <inheritdoc/>
-    public IObserverKeys GetKeys(EventSequenceNumber fromEventSequenceNumber)
-    {
-        lock (_lock)
-        {
-            return new ObserverKeys(_keys.ToArray());
-        }
-    }
+    public Task Add(Key key) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Add(Key key)
-    {
-        lock (_lock)
-        {
-            if (_seen.Add(key))
-            {
-                _keys.Add(key);
-            }
-        }
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task Rebuild()
-    {
-        lock (_lock)
-        {
-            _keys.Clear();
-            _seen.Clear();
-        }
-
-        return Task.CompletedTask;
-    }
+    public Task Rebuild() => Task.CompletedTask;
 
     /// <summary>
-    /// Represents an in-memory implementation of <see cref="IObserverKeys"/>.
+    /// Represents keys read lazily from an in-memory event sequence.
     /// </summary>
-    /// <param name="keys">The snapshot of keys to enumerate.</param>
-    sealed class ObserverKeys(IReadOnlyList<Key> keys) : IObserverKeys
+    /// <param name="eventSequence">The event sequence to read when enumerated.</param>
+    /// <param name="scope">The reader scope to enumerate keys for.</param>
+    /// <param name="fromEventSequenceNumber">The inclusive position to read from.</param>
+    sealed class ObserverKeys(
+        EventSequenceStorage eventSequence,
+        ObserverReaderScope scope,
+        EventSequenceNumber fromEventSequenceNumber) : IObserverKeys
     {
         /// <inheritdoc/>
         public async IAsyncEnumerator<Key> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            foreach (var key in keys)
+            var eventTypes = scope.EventTypes.Select(_ => _.Id).ToHashSet();
+            var eventSourceIds = eventSequence.Events
+                .Where(_ => _.Context.SequenceNumber >= fromEventSequenceNumber &&
+                    (scope.IsWildcard || eventTypes.Contains(_.Context.EventType.Id)))
+                .Select(_ => _.Context.EventSourceId)
+                .Distinct();
+            foreach (var eventSourceId in eventSourceIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                yield return key;
+                yield return new Key(eventSourceId.Value, ArrayIndexers.NoIndexers);
             }
 
             await Task.CompletedTask;
