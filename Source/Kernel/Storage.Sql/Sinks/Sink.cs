@@ -532,9 +532,12 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         var shadow = SqliteDecimalSortKey.ColumnNameFor(key.Name);
         var helper = context.GetService<ISqlGenerationHelper>();
         var initialized = helper.DelimitIdentifier(WellKnownProperties.ReadModelInstanceInitialized);
-        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{initialized} = {{2}} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
-#pragma warning disable EF1002 // Provider-delimited identifiers only; page limits and the visibility flag are parameters.
-        return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip, true).AsNoTracking().ToListAsync());
+
+        // A bare boolean term, like EF's own translation, keeps SQLite on the ordering index; an equality term
+        // would select the initialized-marker index and sort every visible row before taking one page.
+        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{initialized} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
+#pragma warning disable EF1002 // Provider-delimited identifiers only; page limits are parameters.
+        return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip).AsNoTracking().ToListAsync());
 #pragma warning restore EF1002
     }
 

@@ -41,7 +41,7 @@ public class and_a_postgresql_shadow_index_is_invalid(PostgreSqlFixture fixture)
             await DatabaseSchemaLock.Run(_context, () => ShadowColumnIndexes.Ensure(_context));
         }
         _invalidIndexes = await _context.Database.SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_index x WHERE x.indrelid='shadow_repair'::regclass AND NOT x.indisvalid").SingleAsync();
-        _validIndexes = await _context.Database.SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_index x WHERE x.indrelid='shadow_repair'::regclass AND x.indisvalid AND NOT x.indisunique").SingleAsync();
+        _validIndexes = await _context.Database.SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid=x.indexrelid WHERE x.indrelid='shadow_repair'::regclass AND x.indisvalid AND NOT x.indisunique AND i.relname NOT LIKE 'chronicle_imx_%'").SingleAsync();
         _oldIndexes = await _context.Database.SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND indexname={_failedIndex}").SingleAsync();
     }
 
@@ -72,7 +72,7 @@ public class and_a_postgresql_shadow_index_is_invalid(PostgreSqlFixture fixture)
         _context = new ReadModelDbContext(options, "shadow_repair", ProjectedColumns.ForSchema(schema), migrator);
         await _context.EnsureTableExists();
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO shadow_repair (id, \"__compositeKey\") VALUES ('legacy', '')");
-        var validName = await _context.Database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid=x.indexrelid WHERE x.indrelid='shadow_repair'::regclass AND x.indisvalid AND NOT x.indisunique").SingleAsync();
+        var validName = await _context.Database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid=x.indexrelid WHERE x.indrelid='shadow_repair'::regclass AND x.indisvalid AND NOT x.indisunique AND i.relname NOT LIKE 'chronicle_imx_%'").SingleAsync();
         await ReadModelIndexOperations.Drop(_context, _context.TableName, validName, online: true);
     }
 

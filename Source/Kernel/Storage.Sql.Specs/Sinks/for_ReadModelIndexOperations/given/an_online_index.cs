@@ -58,7 +58,8 @@ public abstract class an_online_index : Specification
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) || command.CommandText.StartsWith("DROP INDEX", StringComparison.Ordinal))
+            if ((command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) || command.CommandText.StartsWith("DROP INDEX", StringComparison.Ordinal)) &&
+                !command.CommandText.Contains("chronicle_imx_", StringComparison.Ordinal))
             {
                 Sql.Add(command.CommandText);
                 TransactionalIndex |= command.Transaction is not null;

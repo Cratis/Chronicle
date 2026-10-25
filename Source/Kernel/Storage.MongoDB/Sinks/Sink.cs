@@ -1160,7 +1160,11 @@ public partial class Sink(
         var existingIndexes = await cursor.ToListAsync();
         var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-        foreach (var indexDefinition in readModel.Indexes)
+        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+            ? readModel.Indexes
+            : readModel.Indexes.Append(initializedIndex);
+        foreach (var indexDefinition in indexes)
         {
             ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
             var indexName = ReadModelIndexKeys.Name(indexDefinition);
@@ -1289,11 +1293,13 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
-    static FilterDefinition<BsonDocument> VisibleInstancesFilter() => new BsonDocument("$expr", new BsonDocument("$ne", new BsonArray
-    {
-        new BsonDocument("$ifNull", new BsonArray { $"${WellKnownProperties.ReadModelInstanceInitialized}", true }),
-        false
-    }));
+    /// <summary>
+    /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
+    /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
+    /// </summary>
+    /// <returns>The visible-root filter.</returns>
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
