@@ -30,6 +30,7 @@ jobs:
       all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
+      rolling-upgrade-enabled: ${{ steps.exclusions.outputs.rolling-upgrade-enabled }}
 
     steps:
       - name: Checkout code
@@ -40,6 +41,10 @@ jobs:
       # second and run before anything is discovered.
       - name: Verify the integration matrix generator
         run: python3 .github/scripts/test-generate-integration-matrix.py
+
+      - name: Report explicitly skipped integration lanes
+        id: exclusions
+        run: python3 .github/scripts/integration_lane_exclusions.py
 
       # Each client namespace runs against the selected infrastructure configs;
       # large namespaces are additionally split into parallel shards so the
@@ -345,11 +350,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # RollingUpgrade starts the cluster on the latest release and replaces its nodes with this build one at a
-        # time under load, so silos of both releases call each other's grains (#5272). It runs on PostgreSQL.
-        provider: [PostgreSql, SqlServer, RollingUpgrade]
+        provider: [PostgreSql, SqlServer]
 
-    steps:
+    # Shared verbatim with the separately gated RollingUpgrade lane below.
+    steps: &sql-clustering-steps
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -464,3 +468,18 @@ jobs:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/
           retention-days: 7
+
+  # A job-level condition (not a successful zero-spec run) makes the excluded lane visibly skipped.
+  # Its reason and issue links are in discovery's summary; remove only the declaration to re-enable.
+  sql-clustering-rolling-upgrade:
+    name: SQL clustering (RollingUpgrade)
+    needs: [discover]
+    if: needs.discover.outputs.rolling-upgrade-enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
+        provider: [RollingUpgrade]
+    steps: *sql-clustering-steps
