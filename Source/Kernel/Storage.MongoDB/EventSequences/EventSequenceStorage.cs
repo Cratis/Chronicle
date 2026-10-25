@@ -176,9 +176,15 @@ public partial class EventSequenceStorage(
             eventStreamType,
             EventTypes: eventTypes,
             Tags: tags);
+        if (from.Value > long.MaxValue || from > until)
+        {
+            return new MaterializedEventCursor([]);
+        }
+
+        var upper = (EventSequenceNumber)Math.Min(until.Value, long.MaxValue);
         var filter = CreateFilterFor(criteria) &
             Builders<Event>.Filter.Gte(_ => _.SequenceNumber, from) &
-            Builders<Event>.Filter.Lte(_ => _.SequenceNumber, until);
+            Builders<Event>.Filter.Lte(_ => _.SequenceNumber, upper);
         if (eventStreamId is { Value.Length: > 0, IsDefault: false })
         {
             filter &= Builders<Event>.Filter.Eq(_ => _.EventStreamId, eventStreamId);

@@ -888,6 +888,11 @@ public partial class EventSequenceStorage(
             throw new InvalidEventSequenceWindowLimit(limit);
         }
 
+        if (from.Value > long.MaxValue || from > until)
+        {
+            return new MaterializedEventCursor([]);
+        }
+
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         var criteria = new EventSequenceQueryCriteria(
             eventSourceId,
@@ -896,13 +901,9 @@ public partial class EventSequenceStorage(
             EventTypes: eventTypes,
             Tags: tags);
         var first = from.Value;
+        var last = Math.Min(until.Value, long.MaxValue);
         var query = ApplyCriteria(scope.DbContext, eventSequenceId.Value, criteria)
-            .Where(e => e.SequenceNumber >= first);
-        if (until != EventSequenceNumber.Max)
-        {
-            var last = until.Value;
-            query = query.Where(e => e.SequenceNumber <= last);
-        }
+            .Where(e => e.SequenceNumber >= first && e.SequenceNumber <= last);
         if (eventStreamId is { Value.Length: > 0, IsDefault: false })
         {
             var streamId = eventStreamId.Value;

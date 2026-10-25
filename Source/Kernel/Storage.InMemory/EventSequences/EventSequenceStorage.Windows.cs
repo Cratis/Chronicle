@@ -34,6 +34,12 @@ public partial class EventSequenceStorage
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (from.Value > long.MaxValue || from > until)
+        {
+            return Task.FromResult<IEventCursor>(new MaterializedEventCursor([]));
+        }
+
+        var upper = Math.Min(until.Value, long.MaxValue);
         var criteria = new EventSequenceQueryCriteria(
             eventSourceId,
             eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
@@ -42,8 +48,8 @@ public partial class EventSequenceStorage
             Tags: tags?.ToArray());
         lock (_lock)
         {
-            var start = descending ? WindowPosition(until.Value, true) - 1 : WindowPosition(from.Value, false);
-            var positions = WindowPositions(start, from.Value, until.Value, descending);
+            var start = descending ? WindowPosition(upper, true) - 1 : WindowPosition(from.Value, false);
+            var positions = WindowPositions(start, from.Value, upper, descending);
             var matching = positions.Select(position => _events[_sequencePositions.Values[position]])
                 .Where(@event => criteria.Matches(@event.Context) && MatchesStream(@event, eventStreamId));
             var page = new List<AppendedEvent>();

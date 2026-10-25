@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Schemas;
@@ -44,7 +44,7 @@ public class MongoEventSequenceWindowHarness : IEventSequenceWindowHarness
             new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.None, EventTypeSource.Unknown, new JsonSchema()));
         var identities = Substitute.For<IIdentityStorage>();
         identities.GetFor(Arg.Any<IEnumerable<IdentityId>>()).Returns(Identity.System);
-        var converter = new ExpandoObjectConverter(new TypeFormats());
+        var converter = new Json.ExpandoObjectConverter(new TypeFormats());
         return Task.FromResult<IEventSequenceStorage>(new EventSequenceStorage(
             "window-store",
             "window-namespace",

@@ -40,7 +40,7 @@ public record EventSequencePage(IEnumerable<AppendedEvent> Events, ulong? Next)
     /// <param name="eventTypeIds">Optional comma separated event type identifiers.</param>
     /// <param name="tags">Optional comma separated tags to match any of.</param>
     /// <returns>The page with a continuation only when another matching event exists.</returns>
-    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000.</exception>
+    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000 or a supplied bound is a special sequence number.</exception>
     public static Task<EventSequencePage> Page(
         IStorage storage,
         IEventCompliance eventCompliance,

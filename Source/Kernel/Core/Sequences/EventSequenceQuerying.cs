@@ -213,7 +213,7 @@ internal static class EventSequenceQuerying
     /// <param name="criteria">The filters applied in storage.</param>
     /// <param name="eventStreamId">The optional event stream identifier.</param>
     /// <returns>The page in read order and the next inclusive start when more matching events exist.</returns>
-    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000.</exception>
+    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000 or a supplied bound is a special sequence number.</exception>
     internal static async Task<EventSequencePage> ReadWindow(
         IStorage storage,
         IEventCompliance eventCompliance,
@@ -233,8 +233,14 @@ internal static class EventSequenceQuerying
             throw new InvalidEventSequencePage("The page count must be between 1 and 1000.");
         }
 
+        if ((from is { } start && !((Concepts.Events.EventSequenceNumber)start).IsActualValue) ||
+            (until is { } stop && !((Concepts.Events.EventSequenceNumber)stop).IsActualValue))
+        {
+            throw new InvalidEventSequencePage("The page bounds must be actual event sequence numbers.");
+        }
+
         var lower = backward ? until ?? Concepts.Events.EventSequenceNumber.First.Value : from ?? Concepts.Events.EventSequenceNumber.First.Value;
-        var upper = backward ? from ?? Concepts.Events.EventSequenceNumber.Max.Value : until ?? Concepts.Events.EventSequenceNumber.Max.Value;
+        var upper = backward ? from ?? long.MaxValue : until ?? long.MaxValue;
         var sequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
         using var cursor = await sequence.GetWindow(
             lower,
