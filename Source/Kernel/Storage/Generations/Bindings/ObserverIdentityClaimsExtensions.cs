@@ -32,7 +32,7 @@ public static class ObserverIdentityClaimsExtensions
         GenerationReservation reservation)
     {
         var record = reservation.Record;
-        if (reservation.Result != GenerationReservationResult.ReservationCreated || record is null || record.Identity.Generation.IsFirst) return reservation;
+        if (reservation.Result != GenerationReservationResult.ReservationCreated || record?.Identity.Generation.IsFirst != false) return reservation;
 
         var current = (await bindings.Get(store, key))?.Generations.FirstOrDefault(_ => _.Identity.Generation == record.Identity.Generation);
         if (current?.State == MaterializationGenerationState.Abandoned) return reservation;

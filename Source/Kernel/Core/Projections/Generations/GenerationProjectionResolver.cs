@@ -26,6 +26,7 @@ namespace Cratis.Chronicle.Projections.Generations;
 /// <param name="bindings">The <see cref="IMaterializationBindingStorage"/> holding the generation catalog.</param>
 /// <param name="projectionFactory">The <see cref="IProjectionFactory"/> building engine projections from snapshots.</param>
 /// <param name="specifications">The <see cref="GenerationExecutionSpecifications"/> restoring snapshots.</param>
+/// <param name="claims">Optional <see cref="IObserverIdentityClaims"/> deciding whether a later-generation binding still owns its observer.</param>
 /// <remarks>
 /// Registered explicitly with the generation catalog, never by convention: providers without a catalog must not see it.
 /// </remarks>
@@ -37,13 +38,14 @@ public sealed class GenerationProjectionResolver(
     IMaterializationKeys keys,
     IMaterializationBindingStorage bindings,
     IProjectionFactory projectionFactory,
-    GenerationExecutionSpecifications specifications) : IGenerationProjectionResolver
+    GenerationExecutionSpecifications specifications,
+    IObserverIdentityClaims? claims = null) : IGenerationProjectionResolver
 {
     /// <inheritdoc/>
     public async Task<GenerationExecution?> Resolve(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId)
     {
         if (!enablement.Enabled) return null;
-        var binding = await builds.ResolveObserver(store, ns, eventSequence, observerId);
+        var binding = await builds.ResolveOwnedObserver(claims, store, ns, eventSequence, observerId);
         if (binding?.Identity.Generation.IsFirst != false) return null;
         var snapshot = await builds.GetExecution(store, binding.Key, binding.Identity.Generation) ?? throw new InvalidMaterializationExecution();
         GenerationObserverBindings.Verify(binding, snapshot, ns, eventSequence, observerId);
@@ -89,7 +91,7 @@ public sealed class GenerationProjectionResolver(
 
     /// <inheritdoc/>
     public async Task<bool> IsGenerationObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId) =>
-        enablement.Enabled && await builds.ResolveObserver(store, ns, eventSequence, observerId) is { } binding && !binding.Identity.Generation.IsFirst;
+        enablement.Enabled && await builds.ResolveOwnedObserver(claims, store, ns, eventSequence, observerId) is { } binding && !binding.Identity.Generation.IsFirst;
 
     static bool IsFollowed(MaterializationGenerationRecord record) =>
         !record.Identity.Generation.IsFirst

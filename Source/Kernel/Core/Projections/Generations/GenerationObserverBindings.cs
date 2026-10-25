@@ -13,13 +13,14 @@ namespace Cratis.Chronicle.Projections.Generations;
 /// Verifies generation observer bindings without interpreting observer name suffixes.
 /// </summary>
 /// <param name="storage">The authoritative execution and observer storage.</param>
-public sealed class GenerationObserverBindings(IGenerationBuildStorage storage) : IGenerationObserverBindings
+/// <param name="claims">Optional <see cref="IObserverIdentityClaims"/> deciding whether a later-generation binding still owns its observer.</param>
+public sealed class GenerationObserverBindings(IGenerationBuildStorage storage, IObserverIdentityClaims? claims = null) : IGenerationObserverBindings
 {
     /// <inheritdoc/>
     /// <exception cref="InvalidMaterializationExecution">A claimed observer has no valid execution document.</exception>
     public async Task<GenerationObserverBinding?> ResolveObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId)
     {
-        var binding = await storage.ResolveObserver(store, ns, eventSequence, observerId);
+        var binding = await storage.ResolveOwnedObserver(claims, store, ns, eventSequence, observerId);
         if (binding is null) return null;
         var execution = await storage.GetExecution(store, binding.Key, binding.Identity.Generation) ?? throw new InvalidMaterializationExecution();
         Verify(binding, execution, ns, eventSequence, observerId);

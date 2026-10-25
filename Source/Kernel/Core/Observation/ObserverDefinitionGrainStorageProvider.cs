@@ -66,7 +66,7 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage, IGeneratio
         if (enablement?.Enabled != true || claims is null || builds is null) return;
 
         var binding = definition.Type == ObserverType.Projection
-            ? await builds.ResolveObserver(observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, observerKey.ObserverId)
+            ? await builds.ResolveOwnedObserver(claims, observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, observerKey.ObserverId)
             : null;
         if (binding is not null && !binding.Identity.Generation.IsFirst)
         {
