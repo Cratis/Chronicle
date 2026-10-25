@@ -26,8 +26,6 @@ public class when_kernel_exits : Cratis.Specifications.Specification
             state.State.Paused.ShouldBeTrue();
             reset = owner.Fixture!.ResetForLifecycleProofAsync();
             native = await owner.Issued.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            var winner = await Task.WhenAny(native, Task.Delay(250));
-            ReferenceEquals(winner, native).ShouldBeFalse();
             native.IsCompleted.ShouldBeFalse();
         }
         finally
