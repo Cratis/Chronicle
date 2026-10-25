@@ -214,9 +214,10 @@ internal sealed class ReactorDispatcher(
             }
             else
             {
-                var targetEventSourceCount = invocationResult.SideEffectFailure?.GetTargetEventSourceIds().Count() ?? 0;
-                logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, targetEventSourceCount);
-                logger.ReactorSideEffectAppendFailureDetails(handler.Id, string.Join(Environment.NewLine, exceptionMessages));
+                var targetEventSourceIds = invocationResult.SideEffectFailure is not null
+                    ? string.Join(", ", invocationResult.SideEffectFailure.GetTargetEventSourceIds())
+                    : string.Empty;
+                logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, targetEventSourceIds, string.Join(Environment.NewLine, exceptionMessages));
             }
         }
 

@@ -41,7 +41,7 @@ Use the same key in the kernel and clients when you need the same id to have the
 
 ## Metrics do not carry event source ids
 
-Chronicle's append counters retain event name, store, and namespace dimensions, but never add `EventSourceId`. Observer failure counters exclude partition and event source id dimensions while retaining observer scope dimensions. The connected-clients gauge has no runtime-instance dimension.
+Chronicle's append counters retain event name, store, and namespace dimensions, but never add `EventSourceId`. Observer failure counters exclude partition and event source id dimensions while retaining observer scope dimensions.
 
 Hashes do not fix metric cardinality: one hash per id still creates one series per id. These exclusions apply in every tracing mode, including `Raw`; changing trace configuration cannot add these metric dimensions back. Instrument names are unchanged. The [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459) is separate.
 
@@ -51,11 +51,8 @@ Identifier tracing controls spans, not log redaction. Logs can still contain raw
 
 | Level | Observer behavior |
 | --- | --- |
-| Information | Client connection/disconnection and reactor/reducer registration remain visible. |
-| Warning | The first failure in a partition episode reports partition, sequence number, and a low-cardinality failure kind. Quarantine transitions remain warnings. A failed subscriber batch reports its count, first event type, and sequence range. |
+| Warning | The first failure in a partition episode reports partition, sequence number, and a low-cardinality failure kind. Quarantine transitions remain warnings. |
 | Debug | Repeated failures report partition, sequence number, and attempt. Exception messages and stack traces are emitted separately at this level. |
-
-Subscribers no longer log every received event in a successful batch. Side-effect append warnings report the number of target event sources rather than their raw ids; details remain at Debug.
 
 For a local investigation, enable Debug for the observer category only, then turn it off again:
 
