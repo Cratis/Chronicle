@@ -14,7 +14,9 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
+import integration_lane_exclusions as exclusions
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
@@ -316,13 +318,36 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         run = next(step["run"] for step in steps if step["name"] == "Run SQL specs with coverage")
         self.assertIn("set -euo pipefail", run)
         self.assertIn("sql-spec-filter.py '${{ matrix.shard }}'", run)
-        self.assertIn('Storage.Sql.Specs.csproj --no-build', run)
+        self.assertIn('run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj', run)
+        self.assertIn('--coverage', run)
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertIn("&FullyQualifiedName!~Cratis.Chronicle.Storage.Sql.", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        selection = subprocess.run(
+            ["node", "--input-type=module", "-e", """
+                import { ordinaryProjects, v3Projects, shippingProjects }
+                    from './.github/scripts/mixed-specs-selection.mjs';
+                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
+                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+            """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
+        projects = json.loads(selection.stdout)
+        self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
+        self.assertEqual(24, len(set(projects)))
+        self.assertIn("Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", projects)
+        self.assertIn("Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj", projects)
+        self.assertIn("Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj", projects)
+        self.assertEqual("ubuntu-latest", jobs["specs-other"]["runs-on"])
+        prepare = next(step["run"] for step in jobs["specs-other"]["steps"]
+                       if step["name"] == "Build Azure Key Vault specs when absent from solution")
+        self.assertIn('if [ "$listed" = false ]; then', prepare)
+        self.assertIn("dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release", prepare)
+        self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
+        self.assertFalse(any(project.startswith("Integration/") for project in projects))
+        self.assertIn('--coverage', run)
         download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
@@ -510,7 +535,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
-                    fake = path / "dotnet"
+                    fake = path / "node"
                     fake.write_text("""#!/usr/bin/env python3
 import json, os, pathlib, sys
 args = sys.argv[1:]
@@ -520,11 +545,10 @@ calls.append(args)
 log.write_text(json.dumps(calls))
 if os.environ['MISSING'] == '1':
     sys.exit(1)
-logger = next(arg for arg in args if arg.startswith('trx;LogFileName='))
 results = pathlib.Path(args[args.index('--results-directory') + 1])
 results.mkdir(parents=True, exist_ok=True)
 failed = len(calls) < 3
-(results / logger.split('=', 1)[1]).write_text(
+(results / 'results.trx').write_text(
     '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
     '<UnitTestResult testName="Example.A.should_work" outcome="' +
     ('Failed' if failed else 'Passed') + '" /></TestRun>')
@@ -551,17 +575,70 @@ sys.exit(1 if failed else 0)
     def assert_test_arguments(self, lane, calls, expected_filter):
         project = "SqlClustering" if lane == "sql-clustering" else lane.title()
         for index, args in enumerate(calls):
-            self.assertEqual(["test", f"Integration/{project}/{project}.csproj"], args[:2])
-            self.assertIn("--no-build", args)
-            # --no-build implies --no-restore; the wrapper is explicit as well.
-            if lane != "sql-clustering":
-                self.assertIn("--no-restore", args)
-            configuration = "--configuration" if "--configuration" in args else "-c"
-            self.assertEqual("Release", args[args.index(configuration) + 1])
-            if lane in ("client", "sql-clustering"):
-                self.assertIn("-p:DisableDockerBuild=true", args)
+            self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
+            self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            self.assertIn("--results-directory", args)
             self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
                              args[args.index("--filter") + 1])
+
+    def test_only_rolling_upgrade_is_gated_and_other_sql_lanes_are_unchanged(self):
+        jobs = workflow("integration.yml")["jobs"]
+        ordinary = jobs["sql-clustering-integration-specs"]
+        rolling = jobs["sql-clustering-rolling-upgrade"]
+        self.assertEqual(["PostgreSql", "SqlServer"], ordinary["strategy"]["matrix"]["provider"])
+        self.assertNotIn("if", ordinary)
+        self.assertEqual(["RollingUpgrade"], rolling["strategy"]["matrix"]["provider"])
+        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true'", rolling["if"])
+        self.assertEqual(["discover"], rolling["needs"])
+        self.assertEqual(ordinary["steps"], rolling["steps"])
+        self.assertEqual(ordinary["timeout-minutes"], rolling["timeout-minutes"])
+        self.assertEqual("${{ steps.exclusions.outputs.rolling-upgrade-enabled }}",
+                         jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
+        report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
+        self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
+        for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):
+            with self.subTest(declarations=declarations), tempfile.TemporaryDirectory() as directory:
+                summary, output = Path(directory) / "summary", Path(directory) / "output"
+                with patch.dict(exclusions.EXCLUDED_LANES, declarations, clear=True), \
+                        patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), GITHUB_OUTPUT=str(output)):
+                    exclusions.main()
+                self.assertEqual(f"rolling-upgrade-enabled={str('RollingUpgrade' not in declarations).lower()}\n",
+                                 output.read_text())
+                for lane, reason in declarations.items():
+                    self.assertIn(f"Skipped integration lane {lane} (explicitly excluded): {reason}",
+                                  summary.read_text())
+                    for issue in (5300, 5350):
+                        self.assertIn(f"https://github.com/Cratis/Chronicle/issues/{issue}", reason)
+
+    def test_declaration_must_be_removed_when_its_specs_are_reenabled(self):
+        self.assertLessEqual(set(exclusions.EXCLUDED_LANES), {"RollingUpgrade"})
+        for lane in exclusions.EXCLUDED_LANES:
+            files = (WORKFLOWS.parents[1] / "Integration/SqlClustering" / lane).glob("*.cs")
+            attributes = [attribute for file in files for attribute in
+                          re.findall(r"\[(?:Fact|Theory)([^\]]*)\]", file.read_text())]
+            self.assertTrue(attributes, "An exclusion must still refer to actual specs")
+            self.assertTrue(all(re.search(r'Skip\s*=\s*"[^\"]+"', attribute) for attribute in attributes),
+                            "Remove the lane exclusion when its specs are re-enabled")
+
+    def test_undeclared_zero_execution_still_fails_for_every_sql_lane(self):
+        root = WORKFLOWS.parents[1]
+        for lane in ("PostgreSql", "SqlServer", "RollingUpgrade"):
+            for executed in (0, 1):
+                with self.subTest(lane=lane, executed=executed):
+                    outcome = "Passed" if executed else "NotExecuted"
+                    trx = ('<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
+                           f'<UnitTestResult testId="1" testName="{lane}.should_work" outcome="{outcome}" />'
+                           f'<Counters total="1" executed="{executed}" passed="{executed}" failed="0" error="0" />'
+                           f'<UnitTest id="1"><TestMethod className="{lane}" name="should_work" /></UnitTest></TestRun>')
+                    result = subprocess.run(["node", "--input-type=module", "-e",
+                                             "import { validateTrx } from './.github/scripts/mixed-specs-results.mjs';"
+                                             "validateTrx(process.argv[1]);", trx],
+                                            cwd=root, capture_output=True, text=True, check=False)
+                    self.assertEqual(0 if executed else 1, result.returncode, result.stderr)
+                    if not executed:
+                        self.assertIn("TRX executed no tests", result.stderr)
 
 
 if __name__ == "__main__":
