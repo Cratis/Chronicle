@@ -22,6 +22,21 @@ internal static class ShadowColumnIndexes
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new();
 
     /// <summary>
+    /// Checks whether shadow-index reconciliation would issue DDL, without taking the schema lock.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="cancellationToken">The cancellation token for reading existing indexes.</param>
+    /// <returns>Whether an index needs to be dropped or created.</returns>
+    internal static async Task<bool> NeedsReconciliation(ReadModelDbContext context, CancellationToken cancellationToken = default)
+    {
+        if (ShadowColumns.For(context).Count == 0) return false;
+        var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
+        var indexes = await Existing(context).ToArrayAsync(cancellationToken);
+        return indexes.Any(index => !index.IsValid || !expected.Contains(index.Column)) ||
+            expected.Any(column => !indexes.Any(index => index.IsValid && index.Column == column));
+    }
+
+    /// <summary>
     /// Ensures the registry's shadow indexes on the physical table and removes obsolete shadow indexes.
     /// </summary>
     /// <param name="context">The read-model context.</param>
