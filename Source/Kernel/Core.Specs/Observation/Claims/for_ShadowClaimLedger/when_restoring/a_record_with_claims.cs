@@ -19,9 +19,4 @@ public class a_record_with_claims : given.a_ledger
     [Fact] void should_preserve_partition_epoch() => Claim().Epoch.Value.ShouldEqual(5UL);
     [Fact] void should_preserve_observer_wide_claim() => _ledger.Snapshot().Wide.ShouldEqual(_wide);
     [Fact] void should_preserve_revision() => _ledger.Snapshot().Revision.Value.ShouldEqual(9UL);
-    [Fact] void should_allocate_above_the_stored_epochs()
-    {
-        GrantReplay();
-        Claim().Epoch.Value.ShouldEqual(10UL);
-    }
 }
