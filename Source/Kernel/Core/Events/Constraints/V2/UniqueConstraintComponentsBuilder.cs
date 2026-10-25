@@ -64,7 +64,8 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
     object? Convert(JsonNode value, JsonSchema? propertySchema, JsonSchema root)
     {
         var scalarSchema = propertySchema?.IsArray == true ? EffectiveSchema(propertySchema.Item) : propertySchema;
-        if (scalarSchema?.Format is "guid" or "uuid" or "guid?" or "uuid?")
+        var format = scalarSchema?.Format?.TrimEnd('?');
+        if (string.Equals(format, "guid", StringComparison.Ordinal) || string.Equals(format, "uuid", StringComparison.Ordinal))
         {
             // Persisted GUID strings need parsing, not JsonValue.GetValue<Guid>() CLR casting.
             return value is JsonArray array
