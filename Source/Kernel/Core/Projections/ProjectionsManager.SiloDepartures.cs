@@ -9,9 +9,17 @@ namespace Cratis.Chronicle.Projections;
 public partial class ProjectionsManager
 {
     /// <summary>
-    /// How often the in-memory cluster membership is checked for silos that have died.
+    /// The in-memory cluster membership is checked every ten seconds for silos that have died. The check keeps the
+    /// manager active: a manager collected while idle would stop watching, and nothing would reconcile the
+    /// subscriptions lost with a silo that dies afterwards.
     /// </summary>
-    static readonly TimeSpan _siloDepartureCheckInterval = TimeSpan.FromSeconds(10);
+    internal static readonly GrainTimerCreationOptions SiloDepartureTimerOptions = new()
+    {
+        DueTime = TimeSpan.FromSeconds(10),
+        Period = TimeSpan.FromSeconds(10),
+        Interleave = false,
+        KeepAlive = true
+    };
 
     HashSet<SiloAddress> _liveSilos = [];
     IGrainTimer? _siloDepartureTimer;
@@ -30,7 +38,7 @@ public partial class ProjectionsManager
                 CheckForDepartedSilos();
                 return Task.CompletedTask;
             },
-            new GrainTimerCreationOptions { DueTime = _siloDepartureCheckInterval, Period = _siloDepartureCheckInterval, Interleave = false });
+            SiloDepartureTimerOptions);
     }
 
     /// <summary>
