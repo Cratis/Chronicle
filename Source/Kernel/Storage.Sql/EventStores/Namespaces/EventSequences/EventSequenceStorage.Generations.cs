@@ -35,7 +35,7 @@ public partial class EventSequenceStorage
             stored.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null,
             content.ToDictionary(_ => new EventTypeGeneration(uint.Parse(_.Key)), _ => _.Value.GetRawText()),
             revisions.Count,
-            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes, stored.Revisions }),
+            JsonSerializer.Serialize(new[] { stored.Content, stored.ContentHashes, stored.Type == GlobalEventTypes.Redaction ? null : stored.Revisions }),
             revisedContent is null ? null : new EventTypeGeneration(revised!.Value),
             revisedContent);
     }

@@ -28,4 +28,5 @@ public class and_an_older_node_redacted_a_revised_event : given.a_storage_with_s
     [Fact] void should_report_no_revisions() => _snapshot.RevisionCount.ShouldEqual(0);
     [Fact] void should_not_expose_the_revised_content() => _snapshot.RevisedContent.ShouldBeNull();
     [Fact] void should_not_report_a_revised_generation() => _snapshot.RevisedGeneration.ShouldBeNull();
+    [Fact] void should_not_carry_the_revised_content_in_the_concurrency_token() => _snapshot.ConcurrencyToken.Contains("personal").ShouldBeFalse();
 }
