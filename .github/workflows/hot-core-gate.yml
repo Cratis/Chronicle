@@ -65,7 +65,8 @@ jobs:
 
           python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # Manual dispatch retains its original full hot-core matrix; ordinary pushes do not build it.
+  # Manual dispatch retains its all-provider hot-core matrix; ordinary pushes do not build it.
+  # integration.yml applies reviewed lane exclusions visibly; the gate also reports their reasons.
   build:
     needs: [detect]
     if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
