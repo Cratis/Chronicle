@@ -6,6 +6,7 @@ extern alias KernelGrpc;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -70,6 +71,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     /// <inheritdoc/>
     protected override bool RegistersOwnChronicleClient => true;
 
+    Assembly? SharedHostTestAssembly => _fixture.DatabaseNamePrefix.Length == 0 ? typeof(TStartup).Assembly : null;
+
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {
@@ -100,7 +103,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
-            .UseServiceProviderFactory(new FallbackServiceProviderFactory())
+            .UseServiceProviderFactory(new FallbackServiceProviderFactory(SharedHostTestAssembly))
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();

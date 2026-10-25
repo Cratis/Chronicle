@@ -20,11 +20,25 @@ namespace Cratis.Chronicle.XUnit.Integration;
 internal class MutableServiceRegistry
 {
     readonly ConcurrentDictionary<Type, Func<IServiceProvider, object>> _factories = new();
+    volatile HashSet<Type> _rejectedContainerFallbacks = [];
 
     /// <summary>
     /// Gets the service types currently registered in the registry.
     /// </summary>
     public IEnumerable<Type> RegisteredTypes => [.. _factories.Keys];
+
+    /// <summary>
+    /// Records the service types that must not be resolved from the built container when the current context has no registration for them.
+    /// </summary>
+    /// <param name="serviceTypes">The service types to reject. Retained across <see cref="Clear"/>.</param>
+    public void RejectContainerFallbackFor(IEnumerable<Type> serviceTypes) => _rejectedContainerFallbacks = [.. serviceTypes];
+
+    /// <summary>
+    /// Returns a value indicating whether <paramref name="serviceType"/> must not be resolved from the built container.
+    /// </summary>
+    /// <param name="serviceType">The service type to check.</param>
+    /// <returns><see langword="true"/> if the container fallback is rejected; otherwise <see langword="false"/>.</returns>
+    public bool IsContainerFallbackRejected(Type serviceType) => _rejectedContainerFallbacks.Contains(serviceType);
 
     /// <summary>
     /// Removes all factories from the registry so the next test starts with a clean slate.
