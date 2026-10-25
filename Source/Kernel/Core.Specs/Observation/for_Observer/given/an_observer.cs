@@ -255,8 +255,15 @@ public class an_observer : Specification
     /// <param name="jobs">The jobs to list.</param>
     protected void HasOutstandingJobs(params JobState[] jobs)
     {
-        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(jobs)));
-        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList.Create(jobs))));
+        // A deleted job is gone from the next listing.
+        var listed = jobs.ToList();
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(listed.ToImmutableList()));
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(listed.ToImmutableList())));
+        _jobsManager.Delete(Arg.Any<JobId>()).Returns(call =>
+        {
+            listed.RemoveAll(_ => _.Id == call.Arg<JobId>());
+            return Task.CompletedTask;
+        });
     }
 
     protected void ApplyAlertReports() => _observerAlerts.Configure().Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(call =>
