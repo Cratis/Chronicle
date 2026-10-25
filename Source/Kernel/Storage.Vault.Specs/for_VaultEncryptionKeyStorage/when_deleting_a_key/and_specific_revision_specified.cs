@@ -18,7 +18,7 @@ public class and_specific_revision_specified(context ctx) : IClassFixture<contex
         public bool HasRevisionOneAfterDelete;
         public bool HasRevisionTwoAfterDelete;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Identifier = Guid.NewGuid().ToString();

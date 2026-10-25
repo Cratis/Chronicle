@@ -28,7 +28,20 @@ internal static class GrainDeferralExtensions
     /// hand the work a token that is already cancelled by the time it starts.
     /// </para>
     /// </remarks>
-    public static void ScheduleInSeparateTurn(this IGrainBase grain, Func<Task> work)
+    public static void ScheduleInSeparateTurn(this IGrainBase grain, Func<Task> work) =>
+        grain.ScheduleInSeparateTurn(work, TimeSpan.Zero);
+
+    /// <summary>
+    /// Schedule work to run exactly once in a separate grain turn, after a delay.
+    /// </summary>
+    /// <param name="grain"><see cref="IGrainBase"/> to schedule the work on.</param>
+    /// <param name="work">The work to run.</param>
+    /// <param name="dueTime">How long to wait before running the work.</param>
+    /// <remarks>
+    /// Behaves like <see cref="ScheduleInSeparateTurn(IGrainBase, Func{Task})"/>. A delayed timer also keeps
+    /// the activation alive while it waits, so the grain is not collected before the work has run.
+    /// </remarks>
+    public static void ScheduleInSeparateTurn(this IGrainBase grain, Func<Task> work, TimeSpan dueTime)
     {
         IGrainTimer? timer = null;
         timer = grain.RegisterGrainTimer(
@@ -37,6 +50,11 @@ internal static class GrainDeferralExtensions
                 timer?.Dispose();
                 await work();
             },
-            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+            new GrainTimerCreationOptions
+            {
+                DueTime = dueTime,
+                Period = Timeout.InfiniteTimeSpan,
+                KeepAlive = dueTime > TimeSpan.Zero
+            });
     }
 }

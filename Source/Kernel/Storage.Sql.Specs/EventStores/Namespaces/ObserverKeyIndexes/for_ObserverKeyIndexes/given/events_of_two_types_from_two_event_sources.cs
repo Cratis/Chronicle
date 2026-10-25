@@ -35,7 +35,7 @@ public class events_of_two_types_from_two_event_sources : an_event_sequence_stor
     protected static async Task<IEnumerable<string>> KeysOf(IObserverKeyIndex index)
     {
         var keys = new List<string>();
-        await foreach (var key in index.GetKeys(EventSequenceNumber.First))
+        await foreach (var key in index.GetKeys(EventSequenceNumber.First).WithCancellation(TestContext.Current.CancellationToken))
         {
             keys.Add(key.ToString());
         }
