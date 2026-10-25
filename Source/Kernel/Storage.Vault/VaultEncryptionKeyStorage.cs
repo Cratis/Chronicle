@@ -224,6 +224,10 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
     public async Task<EncryptionKeyErasure?> GetErasureFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

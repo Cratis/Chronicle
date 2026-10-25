@@ -33,6 +33,11 @@ public class SchemaMetadataActionFailed(string action, string propertyPath, stri
     /// </summary>
     public const string ApplyAction = "apply";
 
+    /// <summary>
+    /// Gets the path of the property whose metadata action failed, without its value.
+    /// </summary>
+    public string PropertyPath { get; } = propertyPath;
+
     static string BuildMessage(string action, string propertyPath, string identifier, Exception error) =>
         $"Failed to {action} schema metadata for property '{propertyPath}' of '{identifier}'.{IdentifierMismatchHint(action, identifier, error)}";
 

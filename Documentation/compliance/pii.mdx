@@ -160,3 +160,11 @@ When you need per-element encryption, model the collection as its own person-sco
 The `details` parameter is a free-text description stored in the event schema. It is never used for encryption — it exists solely to record *why* a value is classified as PII for compliance documentation and auditing purposes.
 
 <ChronicleClientTabs snippet="compliance/pii/legal-name-details" />
+
+In .NET, non-empty `[ComplianceDetails]` text takes precedence over the text in `[PII("…")]`. Otherwise Chronicle uses the first non-empty PII details on the property, its matching constructor parameter, its declaring type, or its property type, in that order.
+
+## Strict compliance release
+
+The compliance gRPC `Release` operation remains best-effort by default. Set `ReleaseRequest.Strict` to `true` to fail the entire release when a protected value cannot be decrypted or its subject's key is missing without a recorded erasure. A failed strict release returns `HasError = true`, an empty `Payload`, and the failing property path in `FailedProperties` — never the value or a partially decrypted document. Traversal stops at the first failure, so this list is not an exhaustive inventory. Intentionally erased subjects still release to empty values without an error.
+
+Check that `ReleaseResponse.Strict` is `true` before accepting a strict result. An older server ignores the new request field and does not echo it; a false echo means strict release was not confirmed, even if `HasError` is false.

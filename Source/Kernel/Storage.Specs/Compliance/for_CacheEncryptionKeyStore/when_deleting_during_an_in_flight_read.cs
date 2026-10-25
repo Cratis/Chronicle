@@ -25,12 +25,12 @@ public class when_deleting_during_an_in_flight_read : given.a_cache_encryption_k
         var inFlightRead = _store.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         await _readStarted.Task;
         await _store.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
-        _releaseRead.SetResult();
-        await inFlightRead;
-
         _actualStore
             .TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier)
             .Returns(Task.FromResult<EncryptionKey?>(null));
+        _releaseRead.SetResult();
+        await inFlightRead;
+
         _afterDeletion = await _store.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
     }
 

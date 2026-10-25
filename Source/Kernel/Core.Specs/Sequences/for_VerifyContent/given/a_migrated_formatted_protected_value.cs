@@ -26,6 +26,7 @@ public class a_migrated_formatted_protected_value : a_stored_event
         var key = encryption.GenerateKey();
         var keys = Substitute.For<IEncryptionKeyStorage>();
         keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
         provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);

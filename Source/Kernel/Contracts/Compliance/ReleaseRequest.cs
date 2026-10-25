@@ -38,4 +38,11 @@ public class ReleaseRequest
     /// </summary>
     [ProtoMember(5)]
     public string Payload { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether unavailable protected values must fail the entire release.
+    /// Defaults to best-effort release for existing callers.
+    /// </summary>
+    [ProtoMember(6)]
+    public bool Strict { get; set; }
 }

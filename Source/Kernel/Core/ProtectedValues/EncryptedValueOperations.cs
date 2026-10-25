@@ -89,7 +89,9 @@ static class EncryptedValueOperations
             return value;
         }
 
-        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, keyIdentifier);
+        var key = strict
+            ? await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier)
+            : await ReleaseKeys.TryGetForReleaseOrEmpty(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier);
 
         // Unlike PII, an [Encrypted] key is never deleted, so a missing key here is not an erasure outcome - it
         // means the value was encrypted by a process this store has no record of (a restored backup pointed at a
