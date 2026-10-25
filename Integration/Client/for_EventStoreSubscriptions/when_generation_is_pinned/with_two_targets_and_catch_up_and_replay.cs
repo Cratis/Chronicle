@@ -35,7 +35,13 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
         public override IEnumerable<Type> EventTypes => [typeof(SubscriptionPersonRegistered), typeof(SubscriptionPersonRegisteredV1)];
         public override IEnumerable<Type> EventTypeMigrators => [typeof(SubscriptionPersonMigration)];
 
-        protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton(_tracker);
+        protected override void ConfigureServices(IServiceCollection services)
+        {
+            // The host is shared across spec classes: register the reactor instance too, so it does not
+            // fall through to a host-built CurrentInboxReactor with its own tracker.
+            services.AddSingleton(_tracker);
+            services.AddSingleton(new CurrentInboxReactor(_tracker));
+        }
 
         async Task Because()
         {
