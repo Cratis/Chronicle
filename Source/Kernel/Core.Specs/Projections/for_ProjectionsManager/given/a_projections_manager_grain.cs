@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using System.Net;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -45,6 +47,9 @@ public class a_projections_manager_grain : Specification
     protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
+    protected IClusterMembershipService _clusterMembership;
+    protected ClusterMembershipSnapshot _membership;
+    protected static readonly SiloAddress _otherSilo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11112), 1);
 
     async Task Establish()
     {
@@ -93,6 +98,15 @@ public class a_projections_manager_grain : Specification
         siloDetails.SiloAddress.Returns(SiloAddress.Zero);
         _silo.AddService(siloDetails);
 
+        _clusterMembership = Substitute.For<IClusterMembershipService>();
+        _membership = new ClusterMembershipSnapshot(
+            ImmutableDictionary<SiloAddress, ClusterMember>.Empty
+                .Add(SiloAddress.Zero, new ClusterMember(SiloAddress.Zero, SiloStatus.Active, "zero"))
+                .Add(_otherSilo, new ClusterMember(_otherSilo, SiloStatus.Active, "other")),
+            new MembershipVersion(1));
+        _clusterMembership.CurrentSnapshot.Returns(_ => _membership);
+        _silo.AddService(_clusterMembership);
+
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => _namespaces);
@@ -124,6 +138,16 @@ public class a_projections_manager_grain : Specification
 
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Changes the status of a silo in the membership the manager sees.
+    /// </summary>
+    /// <param name="silo">The silo whose status changes.</param>
+    /// <param name="status">The new status.</param>
+    protected void SiloChanged(SiloAddress silo, SiloStatus status) =>
+        _membership = new ClusterMembershipSnapshot(
+            _membership.Members.SetItem(silo, new ClusterMember(silo, status, silo.ToString())),
+            new MembershipVersion(_membership.Version.Value + 1));
 
     internal static ProjectionDefinition CreateDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(
         ProjectionOwner.Client,
