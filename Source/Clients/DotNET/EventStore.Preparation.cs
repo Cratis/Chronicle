@@ -70,6 +70,19 @@ public partial class EventStore
 
     Task ValidateManualPreparation() => EventTypes is EventTypes native ? native.ValidatePreparation() : Task.CompletedTask;
 
+    Task DiscoverInlineOnlyArtifacts()
+    {
+        if (_registrationMode != RegistrationMode.Inline)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Task.WhenAll(
+            Reactors.Discover(),
+            Seeding.Discover(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+    }
+
     async Task DiscoverAllLocal()
     {
         _logger.DiscoverAllArtifacts();
@@ -82,16 +95,13 @@ public partial class EventStore
         }
 
         // Reads and constraint violation messages depend on local discovery of everything except client-hosted observers.
-        var discoverObservers = _registrationMode == RegistrationMode.Inline;
         await EventTypes.Discover();
         await EventSources.Discover();
         await Task.WhenAll(
             Constraints.Discover(),
-            discoverObservers ? Reactors.Discover() : Task.CompletedTask,
             Reducers.Discover(),
             Projections.Discover(),
-            discoverObservers ? Seeding.Discover() : Task.CompletedTask,
-            discoverObservers && Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+            DiscoverInlineOnlyArtifacts());
         var report = BuildDiscoveryReport();
         if (report is not null)
         {

@@ -459,7 +459,7 @@ public partial class Reducers : IReducers
     {
         if (handler.EventTypes.Any())
         {
-            RegisterReducer(handler);
+            RegisterReducerWhenHostable(handler);
             return;
         }
 
@@ -468,9 +468,14 @@ public partial class Reducers : IReducers
             SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
     }
 
-    void RegisterReducer(IReducerHandler handler)
+    void RegisterReducerWhenHostable(IReducerHandler handler)
     {
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
+        RegisterReducer(handler);
+    }
+
+    void RegisterReducer(IReducerHandler handler)
+    {
         if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
         {
             GenerationDeliveryValidation.Validate(handler.EventTypes);
@@ -572,7 +577,7 @@ public partial class Reducers : IReducers
                             await scheduler.DrainAndDispose();
                             await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
                             _logger.ReconnectingReducer(handler.Id);
-                            RegisterReducer(handler);
+                            RegisterReducerWhenHostable(handler);
                         }
                         catch (OperationCanceledException) { }
                     });

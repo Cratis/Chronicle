@@ -799,14 +799,7 @@ public partial class EventStore : IEventStore
         }
 
         var hostsClientObservers = ClientObserverHosting.IsAvailable(Connection);
-        if (!hostsClientObservers)
-        {
-            var skipped = _clientArtifactsProvider.Reactors.Count() + _clientArtifactsProvider.Reducers.Count();
-            if (skipped > 0)
-            {
-                _logger.ClientObserversNotRegistered(skipped);
-            }
-        }
+        LogSkippedClientObservers(hostsClientObservers);
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
@@ -818,22 +811,10 @@ public partial class EventStore : IEventStore
         // seeded events arrive at the kernel before observers are registered
         await Task.WhenAll(
             Constraints.Register(),
-            hostsClientObservers ? Reactors.Register() : Task.CompletedTask,
-            hostsClientObservers ? Reducers.Register() : Task.CompletedTask,
-            Projections.Register(),
-            hostsClientObservers && Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
+            RegisterClientHostedObservers(hostsClientObservers),
+            Projections.Register());
 
-        // Auto-subscribe to any external event stores referenced by observers. Server-hosted projections need their
-        // subscriptions even when this client hosts no observers of its own.
-        await (hostsClientObservers
-            ? RegisterExternalEventStoreSubscriptionsAsync()
-            : RegisterProjectionExternalEventStoreSubscriptionsAsync());
-
-        if (hostsClientObservers)
-        {
-            // Start watching read models for any registered read model reactors
-            ReadModelReactors.Start();
-        }
+        await RegisterExternalSubscriptions(hostsClientObservers);
 
         // Seed events only after all observers are registered
         if (Seeding is EventSeeding nativeSeeding)
@@ -844,6 +825,49 @@ public partial class EventStore : IEventStore
         {
             await Seeding.Register();
         }
+    }
+
+    void LogSkippedClientObservers(bool hostsClientObservers)
+    {
+        if (hostsClientObservers)
+        {
+            return;
+        }
+
+        var skipped = _clientArtifactsProvider.Reactors.Count() + _clientArtifactsProvider.Reducers.Count();
+        if (skipped > 0)
+        {
+            _logger.ClientObserversNotRegistered(skipped);
+        }
+    }
+
+    Task RegisterClientHostedObservers(bool hostsClientObservers)
+    {
+        if (!hostsClientObservers)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Task.WhenAll(
+            Reactors.Register(),
+            Reducers.Register(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
+    }
+
+    async Task RegisterExternalSubscriptions(bool hostsClientObservers)
+    {
+        // Auto-subscribe to any external event stores referenced by observers. Server-hosted projections need their
+        // subscriptions even when this client hosts no observers of its own.
+        if (!hostsClientObservers)
+        {
+            await RegisterProjectionExternalEventStoreSubscriptionsAsync();
+            return;
+        }
+
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
+        // Start watching read models for any registered read model reactors
+        ReadModelReactors.Start();
     }
 
     Task RegisterExternalEventStoreSubscriptionsAsync() =>
@@ -860,19 +884,7 @@ public partial class EventStore : IEventStore
             allByStore[kvp.Key] = [.. kvp.Value];
         }
 
-        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
-        {
-            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
-            {
-                existing = [];
-                allByStore[subscription.EventStoreName] = existing;
-            }
-
-            foreach (var id in subscription.EventTypeIds)
-            {
-                existing.Add(id);
-            }
-        }
+        MergeProjectionSubscriptions(allByStore);
 
         // Register a subscription for each external event store
         foreach (var kvp in allByStore)
@@ -887,6 +899,20 @@ public partial class EventStore : IEventStore
                         builder.WithEventType(id);
                     }
                 });
+        }
+    }
+
+    void MergeProjectionSubscriptions(Dictionary<string, HashSet<EventTypeId>> allByStore)
+    {
+        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
+        {
+            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
+            {
+                existing = [];
+                allByStore[subscription.EventStoreName] = existing;
+            }
+
+            existing.UnionWith(subscription.EventTypeIds);
         }
     }
 

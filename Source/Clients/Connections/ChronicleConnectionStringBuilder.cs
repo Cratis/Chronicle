@@ -47,6 +47,24 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     static readonly string[] _sensitiveKeyFragments = ["password", "secret", "token", "key", "credential"];
 
+    static readonly HashSet<string> _keysWithDedicatedRendering =
+    [
+        HostKey,
+        PortKey,
+        ServersKey,
+        UsernameKey,
+        PasswordKey,
+        SchemeKey,
+        ApiKeyKey,
+        SkipTlsValidationKey,
+        SkipCompatibilityCheckKey,
+        SkipKeepAliveKey,
+        LoadBalancerKey,
+        SrvNameServerKey,
+        CertificatePathKey,
+        CertificatePasswordKey
+    ];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionStringBuilder"/> class.
     /// </summary>
@@ -425,10 +443,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipCompatibilityCheck=true");
         }
 
-        if (SkipKeepAlive)
-        {
-            queryParams.Add("skipKeepAlive=true");
-        }
+        AddSkipKeepAlive(queryParams);
 
         if (ContainsKey(LoadBalancerKey))
         {
@@ -454,21 +469,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         foreach (var key in Keys)
         {
             var keyStr = key.ToString();
-            if (keyStr != null &&
-                keyStr != HostKey &&
-                keyStr != PortKey &&
-                keyStr != ServersKey &&
-                keyStr != UsernameKey &&
-                keyStr != PasswordKey &&
-                keyStr != SchemeKey &&
-                keyStr != ApiKeyKey &&
-                keyStr != SkipTlsValidationKey &&
-                keyStr != SkipCompatibilityCheckKey &&
-                keyStr != SkipKeepAliveKey &&
-                keyStr != LoadBalancerKey &&
-                keyStr != SrvNameServerKey &&
-                keyStr != CertificatePathKey &&
-                keyStr != CertificatePasswordKey)
+            if (keyStr != null && !_keysWithDedicatedRendering.Contains(keyStr))
             {
                 queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
             }
@@ -573,6 +574,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         {
             // Fall back to standard key=value parsing
             ConnectionString = connectionString;
+        }
+    }
+
+    void AddSkipKeepAlive(List<string> queryParams)
+    {
+        if (SkipKeepAlive)
+        {
+            queryParams.Add("skipKeepAlive=true");
         }
     }
 
