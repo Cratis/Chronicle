@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -98,11 +99,46 @@ public class Routing(
 
         logger.TailEventSequenceNumbers(_tailEventSequenceNumber, _nextUnhandledEventSequenceNumber);
 
-        // We should not be having any partitions to catch up or replay at this point, routing will figure out if we need to catch up the observer
-        state.CatchingUpPartitions.Clear();
-        state.ReplayingPartitions.Clear();
+        // A partition's own outstanding job keeps its hold, including while draining (#5379).
+        // Ownerless holds are released; re-issuing them needs a claim resume position (DR0018 increment 4).
+        state = await KeepOwnedPartitionHolds(state);
 
         return await EvaluateState(state);
+    }
+
+    async Task<ObserverState> KeepOwnedPartitionHolds(ObserverState state)
+    {
+        if (state.CatchingUpPartitions.Count == 0 && state.ReplayingPartitions.Count == 0) return state;
+
+        var catchingUp = state.CatchingUpPartitions.ToArray();
+        var replaying = state.ReplayingPartitions.ToArray();
+        var heldCount = catchingUp.Length + replaying.Length;
+        try
+        {
+            var result = await storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Jobs.GetOutstandingJobs();
+            if (!result.TryGetResult(out var jobs))
+            {
+                logger.KeepingPartitionHoldsJobLookupFailed(heldCount);
+                return state;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var ownedCatchUp = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, now);
+            var ownedReplay = jobs.PartitionsHeldBy<ReplayObserverPartitionRequest>(observerKey, now);
+            var ownerlessCatchUp = catchingUp.Where(partition => !ownedCatchUp.Contains(partition)).ToArray();
+            var ownerlessReplay = replaying.Where(partition => !ownedReplay.Contains(partition)).ToArray();
+            var released = ownerlessCatchUp.Count(state.CatchingUpPartitions.Remove) +
+                ownerlessReplay.Count(state.ReplayingPartitions.Remove);
+
+            if (released > 0) logger.ReleasedPartitionHolds(released);
+            if (heldCount > released) logger.KeptOwnedPartitionHolds(heldCount - released);
+        }
+        catch (Exception)
+        {
+            logger.KeepingPartitionHoldsJobLookupFailed(heldCount);
+        }
+
+        return state;
     }
 
     async Task<ObserverState> FindNextUnhandledEvent(ObserverState state)

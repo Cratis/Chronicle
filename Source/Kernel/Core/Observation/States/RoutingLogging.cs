@@ -20,6 +20,15 @@ internal static partial class RoutingLogMessages
     [LoggerMessage(LogLevel.Trace, "Tail sequence numbers for observer is {TailEventSequenceNumber} and {TailEventSequenceNumberForEventTypes}")]
     internal static partial void TailEventSequenceNumbers(this ILogger<Routing> logger, EventSequenceNumber tailEventSequenceNumber, EventSequenceNumber tailEventSequenceNumberForEventTypes);
 
+    [LoggerMessage(LogLevel.Warning, "Keeping {HeldCount} partition holds because the job lookup failed")]
+    internal static partial void KeepingPartitionHoldsJobLookupFailed(this ILogger<Routing> logger, int heldCount);
+
+    [LoggerMessage(LogLevel.Debug, "Released {Released} partition holds without outstanding jobs")]
+    internal static partial void ReleasedPartitionHolds(this ILogger<Routing> logger, int released);
+
+    [LoggerMessage(LogLevel.Debug, "Kept {Kept} partition holds owned by outstanding jobs")]
+    internal static partial void KeptOwnedPartitionHolds(this ILogger<Routing> logger, int kept);
+
     [LoggerMessage(LogLevel.Debug, "Observer is not subscribed. Transitioning to disconnected state.")]
     internal static partial void NotSubscribed(this ILogger<Routing> logger);
 
