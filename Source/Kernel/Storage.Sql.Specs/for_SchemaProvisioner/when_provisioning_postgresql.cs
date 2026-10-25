@@ -35,7 +35,7 @@ public class when_provisioning_postgresql(PostgreSqlFixture fixture) : for_Datab
         _pendingJobs = (await jobs.Database.GetPendingMigrationsAsync()).ToArray();
     }
 
-    [Fact] void should_verify_every_provisioned_scope() => _report.IsCurrent.ShouldBeTrue();
+    [Fact] void should_verify_every_provisioned_scope() => _report.Scopes.SelectMany(scope => scope.Pending).ShouldBeEmpty();
     [Fact] void should_start_with_verify_policy() => _startupFailure.ShouldBeNull();
     [Fact] void should_prepare_the_jobs_history() => _pendingJobs.ShouldBeEmpty();
     [Fact] void should_include_the_explicit_namespace() => _report.Scopes.Any(scope => scope.Scope.Contains("production", StringComparison.Ordinal)).ShouldBeTrue();

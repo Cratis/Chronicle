@@ -4,6 +4,7 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -36,9 +37,13 @@ internal static class DynamicTableShape
             {
                 differences.Add($"column '{table.Name}.{expected.Name}' is missing");
             }
-            else if (!Compatible(expected.ColumnType ?? context.GetService<IRelationalTypeMappingSource>().FindMapping(expected.ClrType)!.StoreType, found.StoreType) || (found.Nullable && !expected.IsNullable))
+            else
             {
-                differences.Add($"column '{table.Name}.{expected.Name}' expected {expected.ColumnType} nullable={expected.IsNullable}, found {found.StoreType} nullable={found.Nullable}");
+                var storeType = ExpectedStoreType(context, table, expected);
+                if (!Compatible(storeType, found.StoreType) || (found.Nullable && !expected.IsNullable))
+                {
+                    differences.Add($"column '{table.Name}.{expected.Name}' expected {storeType} nullable={expected.IsNullable}, found {found.StoreType} nullable={found.Nullable}");
+                }
             }
         }
         var expectedKeys = table.PrimaryKey?.Columns ?? [];
@@ -96,6 +101,12 @@ internal static class DynamicTableShape
               "WHERE c.object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0}))";
         return await context.Database.SqlQueryRaw<Column>(sql, table).ToListAsync();
     }
+
+    static string ExpectedStoreType(DbContext context, CreateTableOperation table, AddColumnOperation column) =>
+        column.ColumnType
+        ?? context.GetService<IDesignTimeModel>().Model.GetRelationalModel().FindTable(table.Name, table.Schema)?.FindColumn(column.Name)?.StoreType
+        ?? context.GetService<IRelationalTypeMappingSource>().FindMapping(column.ClrType, null, false, column.IsUnicode, column.MaxLength, column.IsRowVersion, column.IsFixedLength, column.Precision, column.Scale)?.StoreType
+        ?? string.Empty;
 
     static bool Compatible(string expected, string actual) =>
         string.Equals(Normalize(expected), Normalize(actual), StringComparison.Ordinal);

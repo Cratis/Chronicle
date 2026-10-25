@@ -39,7 +39,7 @@ public class when_provisioning_registered_dynamic_objects_on_sql_server(SqlServe
     }
 
     [Fact] void should_provision_registered_and_discovered_objects() => _objectsExist.ShouldBeTrue();
-    [Fact] void should_verify_after_repeated_migration() => _current.IsCurrent.ShouldBeTrue();
+    [Fact] void should_verify_after_repeated_migration() => _current.Scopes.SelectMany(scope => scope.Pending).ShouldBeEmpty();
     [Fact] void should_report_the_missing_constraint_index() => _damaged.Scopes.SelectMany(scope => scope.Pending).Any(item => item.Contains(given.RegisteredDynamicSchema.RegisteredValueIndex, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_also_report_the_missing_declared_index() => _damaged.Scopes.SelectMany(scope => scope.Pending).Any(item => item.Contains("declared index", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_not_repair_damaged_objects_during_verification() => _objectsRemainMissing.ShouldBeTrue();

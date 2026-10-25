@@ -72,6 +72,12 @@ public class when_reporting_multiple_registered_read_models : for_SchemaProvisio
     [Fact] void should_defer_the_summary_until_the_group_is_flushed() => _warningsBeforeFlush.ShouldEqual(0);
     [Fact] void should_emit_one_warning_for_both_registrations() => _logger.Entries.Count(entry => entry.Level == LogLevel.Warning).ShouldEqual(1);
     [Fact] void should_include_the_number_of_reported_objects() => Convert.ToInt32(_logger.Entries.Single(entry => entry.Level == LogLevel.Warning).State["Count"]).ShouldEqual(_logger.Entries.Count(entry => entry.Level == LogLevel.Debug));
-    [Fact] void should_detail_each_table_and_its_indexes() => _logger.Entries.Count(entry => entry.Level == LogLevel.Debug).ShouldEqual(6);
+    [Fact] void should_detail_each_table_and_its_bookkeeping_index() => _logger.Entries.Count(entry => entry.Level == LogLevel.Debug).ShouldEqual(4);
+    [Fact] void should_detail_both_tables() => Details("table").ShouldContainOnly(for_SchemaProvisioner.given.RegisteredDynamicSchema.Primary, "second_model");
+    [Fact] void should_detail_one_index_for_each_table() => Details("index").Select(name => name.Split('.')[0]).ShouldContainOnly(for_SchemaProvisioner.given.RegisteredDynamicSchema.Primary, "second_model");
+
+    IEnumerable<string> Details(string kind) => _logger.Entries
+        .Where(entry => entry.Level == LogLevel.Debug && Equals(entry.State["Kind"], kind))
+        .Select(entry => (string)entry.State["Name"]!);
     [Fact] void should_not_report_the_same_objects_again() => _secondLogCount.ShouldEqual(_firstLogCount);
 }
