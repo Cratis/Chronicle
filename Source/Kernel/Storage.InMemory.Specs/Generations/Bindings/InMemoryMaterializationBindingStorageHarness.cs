@@ -23,6 +23,6 @@ public sealed class InMemoryMaterializationBindingStorageHarness : IMaterializat
 
     public IObserverIdentityClaims Claims { get; }
     public IMaterializationBindingStorage Create(TimeProvider? timeProvider = null) => new InMemoryMaterializationBindingStorage(timeProvider, Claims);
-    public Task SaveObserverDefinition(EventStoreName store, ObserverId observerId) => _definitions.Save(new Storage.Observation.ObserverDefinition { Identifier = observerId });
+    public Task SaveObserverDefinition(EventStoreName store, ObserverId observerId) => _definitions.Save(new Cratis.Chronicle.Storage.Observation.ObserverDefinition { Identifier = observerId });
     public void Dispose() { }
 }
