@@ -22,6 +22,14 @@ public class TestableImmediateProjection(
     /// <inheritdoc/>
     public Type GrainType => typeof(IImmediateProjection);
 
+    /// <summary>
+    /// Gets whether session deactivation was requested.
+    /// </summary>
+    public bool SessionDeactivated { get; private set; }
+
+    /// <inheritdoc/>
+    protected override void DeactivateSession() => SessionDeactivated = true;
+
     /// <inheritdoc/>
     protected override INotifyProjectionDefinitionsChanged GetSelfGrainReference() => _selfReference;
 }

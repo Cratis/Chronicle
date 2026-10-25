@@ -41,6 +41,28 @@ public partial class EventSequence
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            var result = await AppendManyValidatedCore(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt, legacyScopes);
+            span?.Activity?.RecordAppendOutcome(result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            span?.Activity?.RecordFailure(ex);
+            throw;
+        }
+    }
+
+    async Task<AppendManyResult> AppendManyValidatedCore(
+        IEnumerable<EventToAppend> events,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        ConcurrencyScopeConjunctions concurrencyScopes,
+        Occurrences.EffectReceipt? effectReceipt,
+        ConcurrencyScopes? legacyScopes)
+    {
+        try
+        {
             if (effectReceipt is not null)
             {
                 var existing = await FindEffectReceipt(effectReceipt, correlationId);
@@ -90,6 +112,7 @@ public partial class EventSequence
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Activity.Current?.RecordFailure(ex);
             logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);
             return new AppendManyResult
             {

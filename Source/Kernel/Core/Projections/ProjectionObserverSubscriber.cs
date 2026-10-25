@@ -86,6 +86,13 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+        {
+            // The projection grain is deactivating with the silo too, so the call could not complete.
+            logger.SkippingDefinitionUnsubscribeDuringShutdown(_key);
+            return;
+        }
+
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
     }

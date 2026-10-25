@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.ReadModels;
 public sealed partial class DecisionReads : IDecisionReads
 {
     static readonly ConditionalWeakTable<IEventStore, IDecisionReads> _instances = new();
+    static readonly TimeSpan _dehydrateTimeout = TimeSpan.FromSeconds(10);
     readonly IEventStore _eventStore;
     readonly Projections.Projections _projections;
     readonly IJsonSchemaGenerator _schemas;
@@ -199,8 +200,11 @@ public sealed partial class DecisionReads : IDecisionReads
             var probeTask = services.Sequences.TailSequenceNumber(
                 new()
                 {
-                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log,
-                    EventSourceId = source.Value, EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
+                    EventStore = _eventStore.Name,
+                    Namespace = _eventStore.Namespace,
+                    EventSequenceId = EventSequenceId.Log,
+                    EventSourceId = source.Value,
+                    EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
                     EventSourceType = streamScope?.EventSourceType?.Value ?? string.Empty,
                     EventStreamType = streamScope?.EventStreamType.Value ?? string.Empty,
                     EventStreamId = streamScope?.EventStreamId.Value ?? string.Empty
@@ -233,7 +237,7 @@ public sealed partial class DecisionReads : IDecisionReads
             {
                 // Cleanup is advisory and must not mask the read result. Observe errors even when
                 // the server has already deactivated the session.
-                _ = Dehydrate(session, type, key, streamScope, cancellationToken);
+                _ = Dehydrate(session, type, key, streamScope);
             }
             if (streamScoped && !result.StreamScoped)
             {
@@ -326,8 +330,10 @@ public sealed partial class DecisionReads : IDecisionReads
 
     bool IsReducer(Type model) => _eventStore.Reducers.HasFor(model);
 
-    async Task Dehydrate(Guid session, Type type, ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken)
+    async Task Dehydrate(Guid session, Type type, ReadModelKey key, DecisionReadStreamScope? streamScope)
     {
+        using var cancellation = new CancellationTokenSource(_dehydrateTimeout);
+        var cancellationToken = cancellation.Token;
         try
         {
             var services = await ((IChronicleServicesAccessor)_eventStore.Connection).GetServices(cancellationToken);

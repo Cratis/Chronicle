@@ -9,12 +9,12 @@ using Orleans.CodeGeneration;
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Defines the per-projection grain that fans projection changesets out to the subscriber grains of
+/// Defines the per-observer grain that fans projection or reducer changesets out to the subscriber grains of
 /// watching clients.
 /// </summary>
 /// <remarks>
-/// The grain is keyed by the projection identifier and has a single activation cluster-wide, so it is the
-/// topology-correct rendezvous between the shared projection observer (which may run on any silo) and the
+/// The grain is keyed by the projection or reducer identifier and has a single activation cluster-wide, so it is the
+/// topology-correct rendezvous between the shared projection or reducer observer (which may run on any silo) and the
 /// per-connection watch subscribers (each pinned to the silo terminating its client connection). Fan-out
 /// is to <see cref="IReadModelChangesetSubscriber"/> grain references — reliably routed by Orleans — which
 /// replaces the previous <c language="csharp">CreateObjectReference</c> grain-observer callback whose one-way dispatch was

@@ -6,7 +6,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation.Placement;
+using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -55,6 +57,7 @@ public class ReducerObserverSubscriber(
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
+    IProjectionChangesetNotifier _changesetNotifier = default!;
     DateTimeOffset _pipelineBuiltAt = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
@@ -64,6 +67,7 @@ public class ReducerObserverSubscriber(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
         await HandlePipeline();
     }
 
@@ -99,9 +103,8 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            await (_pipeline?.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs)) ?? Task.CompletedTask);
-
-            return await tcs.Task;
+            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
+            return await NotifyChange(await tcs.Task, notification);
         }
         catch (AbandonedDeliveryDiscarded)
         {
@@ -134,6 +137,22 @@ public class ReducerObserverSubscriber(
         result.State == ObserverSubscriberState.Failed
             ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
             : result;
+
+    async Task<ObserverSubscriberResult> NotifyChange(ObserverSubscriberResult result, ReadModelChangeNotification? notification)
+    {
+        if (result.State != ObserverSubscriberState.Ok || notification is null) return result;
+
+        try
+        {
+            await _changesetNotifier.Notify(_key.Namespace, notification.ReadModelKey, notification.ReadModel, notification.Change);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.NotificationFailed(ex, _key.ObserverId, _key.EventStore, _key.Namespace);
+            return result;
+        }
+    }
 
     async Task<bool> PrepareDelivery(ClientDeliveryWait deliveryWait, ObserverSubscriberContext context)
     {
