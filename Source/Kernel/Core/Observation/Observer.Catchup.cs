@@ -24,7 +24,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task CatchUp()
     {
-        if (IsRetired || _removed) return;
+        if (CannotAcquireCatchUpJob()) return;
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
@@ -200,7 +200,7 @@ public partial class Observer
         {
             if (settleInObserving)
             {
-                await TransitionTo<Observing>();
+                await SettleCatchUpInObserving();
             }
             else
             {
