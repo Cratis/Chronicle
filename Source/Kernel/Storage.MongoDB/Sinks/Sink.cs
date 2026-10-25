@@ -1293,8 +1293,11 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
-    // Answered from the marker index alone: missing, null and every non-Boolean scalar stay visible. Only Boolean false, or an
-    // array containing it (which kernel writers never store), is hidden.
+    /// <summary>
+    /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
+    /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
+    /// </summary>
+    /// <returns>The visible-root filter.</returns>
     static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
         new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
 
