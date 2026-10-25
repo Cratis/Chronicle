@@ -19,17 +19,6 @@ public partial class Observer
     int _liveHandOversInFlight;
 
     /// <summary>
-    /// Gets the partition holds version that hold reconciliation compares before and after its job lookup.
-    /// </summary>
-    /// <returns>The current version.</returns>
-    /// <remarks>
-    /// A live batch hand-over holds its partition before its job is started and listed, so a lookup overlapping
-    /// that window would find the hold ownerless and release it from under the job. While one is in flight every
-    /// read changes the version, so such a lookup looks again and, if the window outlasts its attempts, keeps every hold.
-    /// </remarks>
-    int CurrentPartitionHoldsVersion() => _liveHandOversInFlight > 0 ? ++_partitionHoldsVersion : _partitionHoldsVersion;
-
-    /// <summary>
     /// Bounds a live subscriber wait to leave time for persisting the observer's result before Orleans times out.
     /// </summary>
     /// <param name="subscriberTimeout">The configured subscriber timeout; zero or less waits indefinitely.</param>
@@ -55,6 +44,17 @@ public partial class Observer
 
     [LoggerMessage(LogLevel.Warning, "Clamping live subscriber timeout from {ConfiguredTimeout} to {LiveTimeout} to leave Orleans response headroom")]
     static partial void LogLiveTimeoutClamped(ILogger logger, TimeSpan configuredTimeout, TimeSpan liveTimeout);
+
+    /// <summary>
+    /// Gets the partition holds version that hold reconciliation compares before and after its job lookup.
+    /// </summary>
+    /// <returns>The current version.</returns>
+    /// <remarks>
+    /// A live batch hand-over holds its partition before its job is started and listed, so a lookup overlapping
+    /// that window would find the hold ownerless and release it from under the job. While one is in flight every
+    /// read changes the version, so such a lookup looks again and, if the window outlasts its attempts, keeps every hold.
+    /// </remarks>
+    int CurrentPartitionHoldsVersion() => _liveHandOversInFlight > 0 ? ++_partitionHoldsVersion : _partitionHoldsVersion;
 
     async Task<bool> ExceedsLiveBudget(int eventCount)
     {
