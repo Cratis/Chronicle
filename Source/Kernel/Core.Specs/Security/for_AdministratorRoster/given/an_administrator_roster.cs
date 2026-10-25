@@ -154,7 +154,6 @@ public class an_administrator_roster : Specification
 
     async Task<AppendManyResult> AppendBatch(EventToAppend[] events, ConcurrencyScopes scopes)
     {
-        await Task.Yield();
         if (_synchronizeNextAppends)
         {
             if (Interlocked.Increment(ref _waitingAppends) == 2) _appendGate.TrySetResult(true);
