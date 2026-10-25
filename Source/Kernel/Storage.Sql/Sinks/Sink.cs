@@ -503,7 +503,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return [new ObservedPage(totalCount, entries)];
         }
 
-        return LiveQuery.Observe(ReadPage, _database.LiveQueryPollingInterval, ObservedPageComparer.Instance)
+        return LiveQuery.Observe(ReadPage, _database, "read-model-instances", ObservedPageComparer.Instance)
             .Select(pages => pages.Single().Entries.Select(MaterializeInstance).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
                 Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, QueriedTableNameFor(occurrence), error)));

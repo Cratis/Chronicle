@@ -24,7 +24,8 @@ public class FailedPartitionStorage(
     public ISubject<IEnumerable<Concepts.Observation.FailedPartition>> ObserveAllFor(ObserverId? observerId = default) =>
         LiveQuery.Observe(
             async () => (await GetFor(observerId)).Partitions.OrderBy(_ => _.Id.Value),
-            database.LiveQueryPollingInterval,
+            database,
+            "failed-partitions",
             FailedPartitionEqualityComparer.Instance);
 
     /// <inheritdoc/>
