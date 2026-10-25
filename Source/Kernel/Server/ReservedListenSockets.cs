@@ -20,16 +20,16 @@ namespace Cratis.Chronicle.Server;
 /// </remarks>
 internal sealed class ReservedListenSockets : IDisposable
 {
-    readonly ConcurrentDictionary<int, Socket> _sockets = new();
+    readonly ConcurrentDictionary<IPEndPoint, Socket> _sockets = new();
 
     /// <summary>
     /// Releases every socket Kestrel did not take.
     /// </summary>
     public void Dispose()
     {
-        foreach (var port in _sockets.Keys)
+        foreach (var endpoint in _sockets.Keys)
         {
-            if (_sockets.TryRemove(port, out var socket))
+            if (_sockets.TryRemove(endpoint, out var socket))
             {
                 socket.Dispose();
             }
@@ -37,7 +37,8 @@ internal sealed class ReservedListenSockets : IDisposable
     }
 
     /// <summary>
-    /// Binds every given port on the IPv6 any-address, the endpoint Kestrel binds for a listen-any-IP listener.
+    /// Binds every given port on the IPv6 any-address, the endpoint Kestrel binds for a listen-any-IP listener,
+    /// or on the IPv4 any-address where IPv6 is unsupported, matching Kestrel's own fallback.
     /// </summary>
     /// <param name="ports">The listener ports.</param>
     /// <returns>The reserved sockets.</returns>
@@ -57,7 +58,11 @@ internal sealed class ReservedListenSockets : IDisposable
         {
             try
             {
-                reserved._sockets[port] = createSocket(new IPEndPoint(IPAddress.IPv6Any, port));
+                reserved.Bind(createSocket, new IPEndPoint(IPAddress.IPv6Any, port));
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode == SocketError.AddressFamilyNotSupported)
+            {
+                reserved.TryBind(createSocket, new IPEndPoint(IPAddress.Any, port));
             }
             catch (SocketException)
             {
@@ -75,7 +80,19 @@ internal sealed class ReservedListenSockets : IDisposable
     /// <param name="endpoint">The endpoint Kestrel is binding.</param>
     /// <returns>The reserved socket, or null when none was reserved for the endpoint.</returns>
     internal Socket? Take(EndPoint endpoint) =>
-        endpoint is IPEndPoint ipEndPoint &&
-        ipEndPoint.Address.Equals(IPAddress.IPv6Any) &&
-        _sockets.TryRemove(ipEndPoint.Port, out var socket) ? socket : null;
+        endpoint is IPEndPoint ipEndPoint && _sockets.TryRemove(ipEndPoint, out var socket) ? socket : null;
+
+    void Bind(Func<EndPoint, Socket> createSocket, IPEndPoint endpoint) => _sockets[endpoint] = createSocket(endpoint);
+
+    void TryBind(Func<EndPoint, Socket> createSocket, IPEndPoint endpoint)
+    {
+        try
+        {
+            Bind(createSocket, endpoint);
+        }
+        catch (SocketException)
+        {
+            // Not reserved: Kestrel binds this port through its regular path.
+        }
+    }
 }
