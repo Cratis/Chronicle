@@ -87,6 +87,10 @@ public sealed class GenerationProjectionResolver(
         return executions;
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> IsGenerationObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId) =>
+        enablement.Enabled && await builds.ResolveObserver(store, ns, eventSequence, observerId) is { } binding && !binding.Identity.Generation.IsFirst;
+
     static bool IsFollowed(MaterializationGenerationRecord record) =>
         !record.Identity.Generation.IsFirst
         && record.State is MaterializationGenerationState.Following or MaterializationGenerationState.Active or MaterializationGenerationState.Retired;

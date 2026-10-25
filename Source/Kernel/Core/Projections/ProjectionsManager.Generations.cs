@@ -37,6 +37,17 @@ public partial class ProjectionsManager
         }
     }
 
+    async Task<bool> CollidesWithGeneration(ProjectionDefinition definition, EventStoreNamespaceName @namespace)
+    {
+        if (generations is null || !await generations.IsGenerationObserver(_eventStoreName, @namespace, definition.EventSequenceId, definition.Identifier))
+        {
+            return false;
+        }
+
+        logger.RefusedGenerationObserverCollision(definition.Identifier, @namespace);
+        return true;
+    }
+
     async Task SubscribeGeneration(EventStoreNamespaceName @namespace, GenerationExecution execution)
     {
         var definition = execution.Inputs.Projection;

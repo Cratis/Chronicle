@@ -41,4 +41,14 @@ public interface IGenerationProjectionResolver
     /// <param name="projection">The projection.</param>
     /// <returns>The executions to follow; empty when generations are disabled or the generation floor is not established.</returns>
     Task<IReadOnlyCollection<GenerationExecution>> ResolveCataloged(EventStoreName store, EventStoreNamespaceName ns, ProjectionId projection);
+
+    /// <summary>
+    /// Gets whether an observer identity belongs to a later generation.
+    /// </summary>
+    /// <param name="store">The event store.</param>
+    /// <param name="ns">The namespace.</param>
+    /// <param name="eventSequence">The source event sequence.</param>
+    /// <param name="observerId">The opaque observer identity.</param>
+    /// <returns>True when generations are enabled and the observer is bound to a later generation.</returns>
+    Task<bool> IsGenerationObserver(EventStoreName store, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId);
 }

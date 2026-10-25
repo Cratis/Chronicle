@@ -19,7 +19,7 @@ public abstract class a_bound_materialization<THarness> : Specification
     protected IMaterializationBindingStorage _storage;
     protected PublicationReceiptId _receipt = new(Guid.NewGuid());
     protected MaterializationGeneration _candidate;
-    THarness _harness;
+    protected THarness _harness;
 
     async Task Establish()
     {

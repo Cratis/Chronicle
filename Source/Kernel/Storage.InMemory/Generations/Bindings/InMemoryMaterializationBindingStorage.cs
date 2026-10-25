@@ -15,7 +15,8 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 /// Represents the in memory materialization binding storage.
 /// </summary>
 /// <param name="timeProvider">The clock used for lifecycle stamps.</param>
-public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
+/// <param name="claims">The observer identity claims; without them reservations make no identity claim.</param>
+public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null, IObserverIdentityClaims? claims = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly object _lock = new();
@@ -66,34 +67,10 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     /// <inheritdoc/>
     /// <exception cref="GenerationBuildConflict">An immutable reservation claim conflicts.</exception>
     /// <exception cref="InvalidMaterializationExecution">The adopted execution is missing.</exception>
-    public Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
+    public async Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
     {
-        execution.EnsureValid();
-        lock (_lock)
-        {
-            var request = new GenerationBuildRequest(key, execution, operationId, at);
-            var operationKey = (store, $"{key.Incarnation.Value:N}/{Uri.EscapeDataString(key.Namespace.Value)}", operationId);
-            if (_operations.TryGetValue(operationKey, out var previous))
-            {
-                if (previous.Request != request) throw new GenerationBuildConflict();
-                if (!previous.Request.At.EqualsExact(request.At)) throw new GenerationBuildConflict();
-                return Task.FromResult(previous.Reservation);
-            }
-            if (!_bindings.TryGetValue((store, key.Value), out var binding)) return Task.FromResult(new GenerationReservation(GenerationReservationResult.UnknownMaterialization));
-            if (binding.Epoch == ServingEpoch.Unset) return Task.FromResult(new GenerationReservation(GenerationReservationResult.NotBound));
-            if (!_executions.ContainsKey((store, key.Value, MaterializationGeneration.First))) throw new InvalidMaterializationExecution();
-            var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
-            if (candidate is not null) return Task.FromResult(new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate));
-            var identity = MaterializationGenerationIdentity.For(key.Projection, binding.Next.Next(), binding.Container);
-            EnsureUnclaimed(store, key, identity);
-            var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
-            var reservation = new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
-            _bindings[(store, key.Value)] = binding with { Next = identity.Generation, Generations = Array.AsReadOnly(binding.Generations.Append(record).ToArray()) };
-            _executions.Add((store, key.Value, identity.Generation), execution);
-            _observers.Add((store, key.Value, identity.Generation), new(key, identity, execution.EventSequence, execution.Revision));
-            _operations.Add(operationKey, (request, reservation));
-            return Task.FromResult(reservation);
-        }
+        var reservation = Reserve(store, key, execution, operationId, at);
+        return claims is null ? reservation : await claims.ClaimFor(this, store, key, execution, reservation);
     }
 
     /// <inheritdoc/>
@@ -281,6 +258,36 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
                 if (!_executions.TryGetValue((store, binding.Key.Value, generation.Identity.Generation), out var execution)) throw new InvalidMaterializationExecution();
                 if (execution.EventSequence == eventSequence) throw new InvalidMaterializationExecution();
             }
+        }
+    }
+
+    GenerationReservation Reserve(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
+    {
+        execution.EnsureValid();
+        lock (_lock)
+        {
+            var request = new GenerationBuildRequest(key, execution, operationId, at);
+            var operationKey = (store, $"{key.Incarnation.Value:N}/{Uri.EscapeDataString(key.Namespace.Value)}", operationId);
+            if (_operations.TryGetValue(operationKey, out var previous))
+            {
+                if (previous.Request != request) throw new GenerationBuildConflict();
+                if (!previous.Request.At.EqualsExact(request.At)) throw new GenerationBuildConflict();
+                return previous.Reservation;
+            }
+            if (!_bindings.TryGetValue((store, key.Value), out var binding)) return new GenerationReservation(GenerationReservationResult.UnknownMaterialization);
+            if (binding.Epoch == ServingEpoch.Unset) return new GenerationReservation(GenerationReservationResult.NotBound);
+            if (!_executions.ContainsKey((store, key.Value, MaterializationGeneration.First))) throw new InvalidMaterializationExecution();
+            var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
+            if (candidate is not null) return new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate);
+            var identity = MaterializationGenerationIdentity.For(key.Projection, binding.Next.Next(), binding.Container);
+            EnsureUnclaimed(store, key, identity);
+            var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
+            var reservation = new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
+            _bindings[(store, key.Value)] = binding with { Next = identity.Generation, Generations = Array.AsReadOnly(binding.Generations.Append(record).ToArray()) };
+            _executions.Add((store, key.Value, identity.Generation), execution);
+            _observers.Add((store, key.Value, identity.Generation), new(key, identity, execution.EventSequence, execution.Revision));
+            _operations.Add(operationKey, (request, reservation));
+            return reservation;
         }
     }
 

@@ -439,6 +439,11 @@ public partial class ProjectionsManager(
             return;
         }
 
+        if (await CollidesWithGeneration(definition, namespaceName))
+        {
+            return;
+        }
+
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
 
         logger.Subscribing(definition.Identifier, namespaceName);

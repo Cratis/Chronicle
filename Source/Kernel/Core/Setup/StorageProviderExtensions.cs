@@ -34,9 +34,11 @@ public static class StorageProviderExtensions
             context.EnableReloads<ResilientStorageOptions>();
             var options = context.GetOptions<ResilientStorageOptions>();
 
-            // A refusal below the observer downgrade floor is a property of this kernel, so retrying cannot change it.
+            // A refusal below the observer downgrade floor is a property of this kernel, so retrying cannot change it; a refused observer identity claim is just as deterministic.
             options.Retry.ShouldHandle = new PredicateBuilder().Handle<Exception>(exception =>
-                exception is not OperationCanceledException and not ObserverKernelBelowDowngradeFloor);
+                exception is not OperationCanceledException and not ObserverKernelBelowDowngradeFloor
+                    and not Cratis.Chronicle.Storage.Generations.Bindings.ObserverIdentityClaimedByGeneration
+                    and not Cratis.Chronicle.Concepts.Projections.Generations.GenerationBuildConflict);
             builder.AddRetry(options.Retry);
             builder.AddTimeout(options.Timeout);
 

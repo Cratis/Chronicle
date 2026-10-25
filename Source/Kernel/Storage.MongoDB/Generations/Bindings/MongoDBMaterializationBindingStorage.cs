@@ -19,11 +19,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 /// <param name="database">The read-model database resolver.</param>
 /// <param name="gates">The gate writes joining publication.</param>
 /// <param name="timeProvider">The clock used for lifecycle stamps.</param>
-public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
+/// <param name="claims">The observer identity claims; defaults to the MongoDB claims over <paramref name="database"/>.</param>
+public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null, IObserverIdentityClaims? claims = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
     static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
     static readonly UpdateDefinitionBuilder<BsonDocument> _update = Builders<BsonDocument>.Update;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    readonly IObserverIdentityClaims _claims = claims ?? new MongoDBObserverIdentityClaims(database);
 
     /// <inheritdoc/>
     public async Task<GenerationWriterGrant?> TryAcquire(EventStoreName store, GenerationObserverBinding binding, GenerationBuildOperationId attempt, long expectedEpoch)
@@ -79,7 +81,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     {
         execution.EnsureValid();
         var db = await PreparedBuilds(store, key);
-        return await BuildTransaction(db, async session =>
+        var reservation = await BuildTransaction(db, async session =>
         {
             var operation = new BsonDocument { { "_id", $"{key.Incarnation.Value:N}/{operationId.Value:N}" }, { "key", key.Value }, { "execution", MaterializationBindingDocuments.Execution(execution) }, { "at", MaterializationBindingDocuments.Timestamp(at) } };
             var operations = db.GetCollection<BsonDocument>(MaterializationBindingCollections.Operations);
@@ -105,6 +107,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
             await operations.InsertOneAsync(session, operation);
             return new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
         });
+        return await _claims.ClaimFor(this, store, key, execution, reservation);
     }
 
     /// <inheritdoc/>
@@ -320,7 +323,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
 
     async Task EnsureBuildClaims((EventStoreName Store, IMongoDatabase Database, IClientSessionHandle Session) scope, GenerationObserverBinding claim, bool adopting)
     {
-        var (store, db, session) = scope;
+        var (_, db, session) = scope;
         var key = claim.Key;
         var identity = claim.Identity;
         var name = identity.Destination.Value;
@@ -332,7 +335,6 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         {
             using var names = await db.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = new BsonDocument("name", name) });
             if (await names.AnyAsync()) throw new GenerationBuildConflict();
-            if (await new Observation.ObserverDefinitionsStorage(database.GetEventStoreDatabase(store)).Has(identity.ObserverId)) throw new GenerationBuildConflict();
         }
     }
 
