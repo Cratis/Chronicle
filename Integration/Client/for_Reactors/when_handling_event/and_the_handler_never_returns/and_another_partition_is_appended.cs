@@ -22,7 +22,7 @@ public class and_another_partition_is_appended(context context) : Given<context>
         public EventSourceId HandledSource;
         public TimeSpan TimeToFailure;
         public bool HandlerStillHanging;
-        public static readonly TimeSpan Deadline = TimeSpan.FromSeconds(60);
+        public static readonly TimeSpan Deadline = RetryWaits.Timeout;
         readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public override IEnumerable<Type> Reactors => [typeof(ReactorWithHangingHandler)];

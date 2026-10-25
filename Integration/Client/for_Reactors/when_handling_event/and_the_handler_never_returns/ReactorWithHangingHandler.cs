@@ -17,7 +17,7 @@ public class ReactorWithHangingHandler(EventSourceId hangingSource, Task release
     {
         if (context.EventSourceId == hangingSource)
         {
-            HangingHandler = Task.WhenAny(Task.Delay(Timeout.Infinite), release);
+            HangingHandler = release;
             HandlerEntered.TrySetResult();
             return HangingHandler;
         }
