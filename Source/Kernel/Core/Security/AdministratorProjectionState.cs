@@ -39,6 +39,13 @@ internal class AdministratorProjectionState(IStorage storage, IEventSerializer s
         return await HasBeenRemoved(userId) ? null : administrator;
     }
 
+    static Administrator? Apply(Administrator? current, UserId userId, object content) => content switch
+    {
+        UserGrantedAdministrator grant when grant.UserId == userId => new Administrator(userId, grant.Reason, grant.Evidence),
+        UserRevokedAdministrator revoke when revoke.UserId == userId => null,
+        _ => current
+    };
+
     async Task<Administrator?> Replay(UserId userId, EventSequenceNumber tail)
     {
         Administrator? administrator = null;
@@ -52,13 +59,6 @@ internal class AdministratorProjectionState(IStorage storage, IEventSerializer s
 
         return administrator;
     }
-
-    static Administrator? Apply(Administrator? current, UserId userId, object content) => content switch
-    {
-        UserGrantedAdministrator grant when grant.UserId == userId => new Administrator(userId, grant.Reason, grant.Evidence),
-        UserRevokedAdministrator revoke when revoke.UserId == userId => null,
-        _ => current
-    };
 
     async Task<bool> HasBeenRemoved(UserId userId)
     {
