@@ -85,7 +85,9 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
         silo.AddService(new JsonSerializerOptions());
         silo.AddService(jobTypes);
         silo.AddService(_loggerFactory);
-        silo.AddService<ILogger<IJob>>(new Logger<IJob>(_loggerFactory));
+        // Job resolves its closed generic category, not ILogger<IJob>, when it activates.
+        silo.AddService<ILogger<Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>>>(
+            new Logger<Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>>(_loggerFactory));
         silo.AddService(NullLogger<ObserverManager<IJobObserver>>.Instance);
 
         var observer = Substitute.For<IObserver>();
