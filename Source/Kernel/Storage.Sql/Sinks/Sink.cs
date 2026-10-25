@@ -532,6 +532,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         var shadow = SqliteDecimalSortKey.ColumnNameFor(key.Name);
         var helper = context.GetService<ISqlGenerationHelper>();
         var initialized = helper.DelimitIdentifier(WellKnownProperties.ReadModelInstanceInitialized);
+
         // A bare boolean term, like EF's own translation, keeps SQLite on the ordering index; an equality term
         // would select the initialized-marker index and sort every visible row before taking one page.
         var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{initialized} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
