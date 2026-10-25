@@ -50,6 +50,8 @@ public partial class Observer
             return;
         }
 
+        if (await RelinquishOwnershipIfMoved()) return;
+
         if (_webhookProbe is not null || _armWebhookProbe) await ReconcileWebhookProbe();
         await CheckConnectedClient();
         await RecoverIfStuck();

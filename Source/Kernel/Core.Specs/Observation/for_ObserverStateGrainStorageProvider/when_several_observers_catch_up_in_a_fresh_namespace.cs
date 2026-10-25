@@ -28,10 +28,12 @@ public class when_several_observers_catch_up_in_a_fresh_namespace : given.the_pr
         // The same instance for every observer: what any storage answers for an observer it has never stored.
         var nothingStored = new ObserverState();
         observerStateStorage.Get(Arg.Any<ObserverId>()).Returns(Task.FromResult(nothingStored));
-        observerStateStorage.Save(Arg.Do<ObserverState>(state => _saved.Add(state with
-        {
-            CatchingUpPartitions = new HashSet<Key>(state.CatchingUpPartitions)
-        })));
+        observerStateStorage.Save(
+            Arg.Do<ObserverState>(state => _saved.Add(state with
+            {
+                CatchingUpPartitions = new HashSet<Key>(state.CatchingUpPartitions)
+            })),
+            Arg.Any<Concepts.EventSequences.EventSequenceId>());
 
         _reactorState = new GrainState<ObserverState> { State = new() };
         _reducerState = new GrainState<ObserverState> { State = new() };

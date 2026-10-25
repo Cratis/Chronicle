@@ -249,25 +249,7 @@ public class Projections(
         RegisterExplicit<TReadModel>(new ModelBoundExplicitProjection(typeof(TReadModel)));
 
     /// <inheritdoc/>
-    public async Task Register()
-    {
-        await _servicesAccessor.Services.Projections.Register(new()
-        {
-            EventStore = eventStore.Name,
-            Owner = ProjectionOwner.Client,
-            Projections = [.. Definitions],
-
-            // The registration only claims to be the client's full set when discovery has run and every discovered
-            // artifact produced a definition. An artifact whose definition could not be built is excluded from the
-            // batch, and claiming a full set then would make the kernel retire a projection that still exists in
-            // the client.
-            Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
-            Version = SoftwareVersion,
-            ConnectionId = CurrentConnectionId,
-            FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
-        });
-        Registered?.Invoke();
-    }
+    public async Task Register() => await RegisterPrepared(PrepareRegistration());
 
     /// <inheritdoc/>
     public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
@@ -298,6 +280,37 @@ public class Projections(
     /// <inheritdoc/>
     string? IKnowReadModelContainerNames.GetContainerNameOverride(Type readModelType) =>
         _containerNames.GetValueOrDefault(readModelType);
+
+    /// <summary>
+    /// Builds the complete projection registration payload before any effects.
+    /// </summary>
+    /// <returns>The prepared registration payload.</returns>
+    internal RegisterRequest PrepareRegistration() => new()
+    {
+        EventStore = eventStore.Name,
+        Owner = ProjectionOwner.Client,
+        Projections = [.. Definitions],
+
+        // The registration only claims to be the client's full set when discovery has run and every discovered
+        // artifact produced a definition. An artifact whose definition could not be built is excluded from the
+        // batch, and claiming a full set then would make the kernel retire a projection that still exists in
+        // the client.
+        Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+        Version = SoftwareVersion,
+        ConnectionId = CurrentConnectionId,
+        FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
+    };
+
+    /// <summary>
+    /// Sends a prepared projection payload and notifies registration listeners.
+    /// </summary>
+    /// <param name="request">The prepared payload.</param>
+    /// <returns>The registration operation.</returns>
+    internal async Task RegisterPrepared(RegisterRequest request)
+    {
+        await _servicesAccessor.Services.Projections.Register(request);
+        Registered?.Invoke();
+    }
 
     /// <summary>
     /// Add an explicit projection that is built by the next <see cref="Discover"/> rather than immediately.
@@ -356,10 +369,6 @@ public class Projections(
     {
         var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
-        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
-            kvp => kvp.Key,
-            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-
         var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
@@ -379,9 +388,11 @@ public class Projections(
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
-                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+                kvp => CreateHandler(kvp.Value, kvp.Key.GetReadModelType(), containerNames.GetValueOrDefault(kvp.Key.GetReadModelType())) as IProjectionHandler);
 
-        _modelBoundHandlers = modelBoundHandlers;
+        _modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => CreateHandler(kvp.Value, kvp.Key, containerNames.GetValueOrDefault(kvp.Key)) as IProjectionHandler);
 
         // The read model index holds one handler per read model, and asking for a projection by the model it maintains
         // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
@@ -561,9 +572,12 @@ public class Projections(
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         WarnAboutRootRemovalViaJoin(projection.ReadModelType, definition);
-        var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
+        var handler = CreateHandler(definition, projection.ReadModelType, projection.ContainerNameOverride);
         return new(definition, handler, projection.ContainerNameOverride);
     }
+
+    ProjectionHandler CreateHandler(ProjectionDefinition definition, Type readModelType, string? containerName) =>
+        new(eventStore, definition.Identifier, readModelType, containerName ?? namingPolicy.GetReadModelName(readModelType), definition.EventSequenceId);
 
     /// <summary>
     /// Compose what discovery found with what was registered explicitly into the state everything else reads.
