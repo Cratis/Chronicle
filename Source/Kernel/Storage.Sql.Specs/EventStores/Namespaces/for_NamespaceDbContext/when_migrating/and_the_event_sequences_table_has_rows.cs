@@ -22,7 +22,7 @@ public class and_the_event_sequences_table_has_rows : given.a_migrated_namespace
             await context.Database.ExecuteSqlRawAsync(command.CommandText);
         }
         await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-EventSequences-v19_79_1"));
-        await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-EventSequences-v19_112_0"));
+        await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-EventSequences-v19_112_0_3"));
         await context.Database.ExecuteSqlRawAsync("INSERT INTO EventSequences (EventSequenceId, SequenceNumber, TailSequenceNumberPerEventType) VALUES ('event-log', 42, '{{}}')");
     }
 
