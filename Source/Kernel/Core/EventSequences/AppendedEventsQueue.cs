@@ -494,7 +494,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return;
         }
 
-        _queueTask = _taskFactory.Run(QueueHandler);
+        _queueTask = DetachedExecution.Start(() => _taskFactory.Run(QueueHandler));
     }
 
     async Task QueueHandler()
