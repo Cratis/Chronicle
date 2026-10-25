@@ -5,8 +5,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
-using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
@@ -18,16 +16,7 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
 
     async Task Establish()
     {
-        // Seed a stranded preparation so the watchdog's rescue, not a direct catch-up call, starts the real jobs.
-        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
-            .Returns(Task.FromResult(Result<JobId, StartJobError>.Failed(StartJobError.Unknown)));
-        await _observer.CatchUp();
-        (await _observer.IsPreparingCatchup()).ShouldBeTrue();
-        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
-            .Returns(call => StartZeroKeyJob(call.Arg<CatchUpObserverRequest>()));
-        await _observer.RunWatchdogAsync();
-        await CompletePendingJobs();
-        await CompletePendingJobs();
+        await SettleAfterZeroKeyJobs();
         _jobsBeforeWatchdog = _jobsManager.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(_jobsManager.Start));
         _warningsBeforeWatchdog = NoStepsWarnings;
         _preparedJobs.Count.ShouldEqual(2);
@@ -63,6 +52,4 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
     [Fact] void should_rescue_the_initial_stranded_preparation_only_once() => _observer.CatchupRecoveryAttempts.ShouldEqual(1);
     [Fact] async Task should_deliver_a_live_event() =>
         await _subscriber.Received(1).OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-
-    int NoStepsWarnings => _recordedLogs.Warnings.Count(_ => _.Contains("NoJobStepsToStart", StringComparison.Ordinal));
 }

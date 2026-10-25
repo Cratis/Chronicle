@@ -25,11 +25,30 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
 {
     protected readonly for_Observer.given.RecordingObserverLogger _recordedLogs = new();
     protected readonly List<TestableCatchUpObserver> _preparedJobs = [];
+    protected readonly CatchUpClock _clock = new();
     readonly Queue<(TestKitSilo Silo, TestableCatchUpObserver Job)> _pendingJobs = new();
     readonly Queue<(JobId Id, EventSequenceNumber Handled, EventSequenceNumber Scanned)> _completions = new();
     protected bool _queued = true;
 
     protected override ILogger<Observer> CreateLogger() => _recordedLogs;
+
+    protected override TimeProvider CreateTimeProvider() => _clock;
+
+    protected int NoStepsWarnings => _recordedLogs.Warnings.Count(_ => _.Contains("NoJobStepsToStart", StringComparison.Ordinal));
+
+    protected async Task SettleAfterZeroKeyJobs()
+    {
+        // Seed a stranded preparation so the watchdog's rescue, not a direct catch-up call, starts the real jobs.
+        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Failed(StartJobError.Unknown)));
+        await _observer.CatchUp();
+        (await _observer.IsPreparingCatchup()).ShouldBeTrue();
+        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
+            .Returns(call => StartZeroKeyJob(call.Arg<CatchUpObserverRequest>()));
+        await _observer.RunWatchdogAsync();
+        await CompletePendingJobs();
+        await CompletePendingJobs();
+    }
 
     void Establish()
     {

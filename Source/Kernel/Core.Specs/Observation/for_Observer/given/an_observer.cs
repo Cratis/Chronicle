@@ -81,6 +81,8 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    protected virtual TimeProvider CreateTimeProvider() => TimeProvider.System;
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -88,7 +90,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(CreateTimeProvider());
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
