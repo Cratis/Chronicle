@@ -98,14 +98,7 @@ public class a_projections_manager_grain : Specification
         siloDetails.SiloAddress.Returns(SiloAddress.Zero);
         _silo.AddService(siloDetails);
 
-        _clusterMembership = Substitute.For<IClusterMembershipService>();
-        _membership = new ClusterMembershipSnapshot(
-            ImmutableDictionary<SiloAddress, ClusterMember>.Empty
-                .Add(SiloAddress.Zero, new ClusterMember(SiloAddress.Zero, SiloStatus.Active, "zero"))
-                .Add(_otherSilo, new ClusterMember(_otherSilo, SiloStatus.Active, "other")),
-            new MembershipVersion(1));
-        _clusterMembership.CurrentSnapshot.Returns(_ => _membership);
-        _silo.AddService(_clusterMembership);
+        AddClusterMembership();
 
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
@@ -176,4 +169,16 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    void AddClusterMembership()
+    {
+        _clusterMembership = Substitute.For<IClusterMembershipService>();
+        _membership = new ClusterMembershipSnapshot(
+            ImmutableDictionary<SiloAddress, ClusterMember>.Empty
+                .Add(SiloAddress.Zero, new ClusterMember(SiloAddress.Zero, SiloStatus.Active, "zero"))
+                .Add(_otherSilo, new ClusterMember(_otherSilo, SiloStatus.Active, "other")),
+            new MembershipVersion(1));
+        _clusterMembership.CurrentSnapshot.Returns(_ => _membership);
+        _silo.AddService(_clusterMembership);
+    }
 }
