@@ -69,6 +69,7 @@ public class ProjectionPipelineManager(
             return pipeline.Pipeline;
         }
 
+        pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
         // A projection is observed per namespace whatever its scope - the events it reacts to only exist there.
@@ -103,6 +104,7 @@ public class ProjectionPipelineManager(
             return pipeline.Pipeline;
         }
 
+        pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
         // The generation addresses its destination explicitly; it never goes through the read model's own container
@@ -128,7 +130,7 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, MaterializationGenerationIdentity generation)
     {
-        _pipelines.TryRemove(GenerationKey(eventStore, @namespace, generation), out _);
+        Evict(GenerationKey(eventStore, @namespace, generation));
         foreach (var context in _generationPipelines.Keys.Where(context => context.Grant.Store == eventStore && context.Binding.Key.Namespace == @namespace && context.Binding.Identity == generation))
             _generationPipelines.TryRemove(context, out _);
     }
@@ -187,6 +189,11 @@ public class ProjectionPipelineManager(
         // an explicit generation 1 shares the legacy projection's handle lock, because both write the same container.
         var lockKey = GenerationKey(eventStore, @namespace, context.Binding.Identity);
         return Build(eventStore, @namespace, projection, namespaceStorage, sink, futures, lockKey, context.Binding.Identity);
+    }
+
+    void Evict(string key)
+    {
+        if (_pipelines.TryRemove(key, out var pipeline)) pipeline.Pipeline.ClearPreparedPage();
     }
 
     ProjectionPipeline Build(

@@ -34,7 +34,7 @@ public class a_registered_unmarked_target<TTarget> : for_ReadModels.given.all_de
 
     protected async Task RegisterBoth()
     {
-        _bulkError = await Catch.Exception(() => _readModels.Register());
-        _genericError = await Catch.Exception(() => _readModels.Register<TTarget>());
+        _bulkError = await Catch.Exception(_readModels.Register);
+        _genericError = await Catch.Exception(_readModels.Register<TTarget>);
     }
 }
