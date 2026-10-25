@@ -61,10 +61,14 @@ public class an_occurrence_storage : Specification, IDisposable
 
     NamespaceDbContext CreateContext()
     {
+        if (_provider == "PostgreSQL")
+        {
+            return new NamespaceDbContext(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
+        }
+
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
         switch (_provider)
         {
-            case "PostgreSQL": builder.UseNpgsql(_connectionString); break;
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default:
                 builder.UseSqlite(_connectionString, sqlite =>

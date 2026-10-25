@@ -67,7 +67,7 @@ public class and_a_postgresql_shadow_index_is_invalid(PostgreSqlFixture fixture)
         _harness = new PostgreSqlSinkHarness { Fixture = fixture };
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"object","properties":{"part":{"type":"string"}}}}}""");
         _harness.CreateSink(new ReadModelDefinition("repair", "shadow_repair", "Repair", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "repair", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseNpgsql(_harness.ConnectionString).Options;
+        var options = SpecDbContextOptions.Kernel<ReadModelDbContext>(_harness.ConnectionString);
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), _logger);
         _context = new ReadModelDbContext(options, "shadow_repair", ProjectedColumns.ForSchema(schema), migrator);
         await _context.EnsureTableExists();
