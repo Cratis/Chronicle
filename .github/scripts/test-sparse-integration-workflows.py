@@ -387,7 +387,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(8, len(steps))
+        self.assertEqual(9, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
@@ -397,6 +397,25 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
         self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
                          jobs["integration"]["with"]["chronicle-image"])
+
+    def test_ci_builds_are_stamped_before_their_first_dotnet_build(self):
+        build_jobs = {
+            "dotnet-build": self.build["jobs"]["dotnet-build"],
+            "dotnet-build-development": self.build["jobs"]["dotnet-build-development"],
+            "dotnet-build-development-requested": self.build["jobs"]["dotnet-build-development-requested"],
+            "hot-core build": self.hot_core["jobs"]["build"],
+        }
+        for name, job in build_jobs.items():
+            with self.subTest(job=name):
+                steps = job["steps"]
+                stamp = next(i for i, step in enumerate(steps) if step.get("name") == "Stamp the build version")
+                first_build = next(i for i, step in enumerate(steps) if "dotnet build" in step.get("run", ""))
+                self.assertLess(stamp, first_build)
+                self.assertEqual('python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"',
+                                 steps[stamp]["run"])
+        steps = build_jobs["dotnet-build"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertLess(names.index("Build"), names.index("Assert the build carries the stamped version"))
 
     def test_development_eligibility_for_specs_success_failure_cancel_and_skip(self):
         jobs = self.build["jobs"]
