@@ -14,7 +14,9 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
+import integration_lane_exclusions as exclusions
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
@@ -578,6 +580,65 @@ sys.exit(1 if failed else 0)
             self.assertIn("--results-directory", args)
             self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
                              args[args.index("--filter") + 1])
+
+    def test_only_rolling_upgrade_is_gated_and_other_sql_lanes_are_unchanged(self):
+        jobs = workflow("integration.yml")["jobs"]
+        ordinary = jobs["sql-clustering-integration-specs"]
+        rolling = jobs["sql-clustering-rolling-upgrade"]
+        self.assertEqual(["PostgreSql", "SqlServer"], ordinary["strategy"]["matrix"]["provider"])
+        self.assertNotIn("if", ordinary)
+        self.assertEqual(["RollingUpgrade"], rolling["strategy"]["matrix"]["provider"])
+        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true'", rolling["if"])
+        self.assertEqual(["discover"], rolling["needs"])
+        self.assertEqual(ordinary["steps"], rolling["steps"])
+        self.assertEqual(ordinary["timeout-minutes"], rolling["timeout-minutes"])
+        self.assertEqual("${{ steps.exclusions.outputs.rolling-upgrade-enabled }}",
+                         jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
+        report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
+        self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
+        for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):
+            with self.subTest(declarations=declarations), tempfile.TemporaryDirectory() as directory:
+                summary, output = Path(directory) / "summary", Path(directory) / "output"
+                with patch.dict(exclusions.EXCLUDED_LANES, declarations, clear=True), \
+                        patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), GITHUB_OUTPUT=str(output)):
+                    exclusions.main()
+                self.assertEqual(f"rolling-upgrade-enabled={str('RollingUpgrade' not in declarations).lower()}\n",
+                                 output.read_text())
+                for lane, reason in declarations.items():
+                    self.assertIn(f"Skipped integration lane {lane} (explicitly excluded): {reason}",
+                                  summary.read_text())
+                    for issue in (5300, 5350):
+                        self.assertIn(f"https://github.com/Cratis/Chronicle/issues/{issue}", reason)
+
+    def test_declaration_must_be_removed_when_its_specs_are_reenabled(self):
+        self.assertLessEqual(set(exclusions.EXCLUDED_LANES), {"RollingUpgrade"})
+        for lane in exclusions.EXCLUDED_LANES:
+            files = (WORKFLOWS.parents[1] / "Integration/SqlClustering" / lane).glob("*.cs")
+            attributes = [attribute for file in files for attribute in
+                          re.findall(r"\[(?:Fact|Theory)([^\]]*)\]", file.read_text())]
+            self.assertTrue(attributes, "An exclusion must still refer to actual specs")
+            self.assertTrue(all(re.search(r'Skip\s*=\s*"[^\"]+"', attribute) for attribute in attributes),
+                            "Remove the lane exclusion when its specs are re-enabled")
+
+    def test_undeclared_zero_execution_still_fails_for_every_sql_lane(self):
+        root = WORKFLOWS.parents[1]
+        for lane in ("PostgreSql", "SqlServer", "RollingUpgrade"):
+            for executed in (0, 1):
+                with self.subTest(lane=lane, executed=executed):
+                    outcome = "Passed" if executed else "NotExecuted"
+                    trx = ('<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
+                           f'<UnitTestResult testId="1" testName="{lane}.should_work" outcome="{outcome}" />'
+                           f'<Counters total="1" executed="{executed}" passed="{executed}" failed="0" error="0" />'
+                           f'<UnitTest id="1"><TestMethod className="{lane}" name="should_work" /></UnitTest></TestRun>')
+                    result = subprocess.run(["node", "--input-type=module", "-e",
+                                             "import { validateTrx } from './.github/scripts/mixed-specs-results.mjs';"
+                                             "validateTrx(process.argv[1]);", trx],
+                                            cwd=root, capture_output=True, text=True, check=False)
+                    self.assertEqual(0 if executed else 1, result.returncode, result.stderr)
+                    if not executed:
+                        self.assertIn("TRX executed no tests", result.stderr)
 
 
 if __name__ == "__main__":
