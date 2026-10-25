@@ -27,9 +27,7 @@ public class when_inventorying_store_scoped_surfaces : Specification
             .ToArray();
         _queries = _types
             .Where(type => type.IsDefined(typeof(ReadModelAttribute), false))
-            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                .Where(method => method.GetParameters().Any(parameter => string.Equals(parameter.Name, "eventStore", StringComparison.OrdinalIgnoreCase)))
-                .Select(method => $"{type.FullName}.{method.Name}"))
+            .SelectMany(given.store_scoped_query_inventory.For)
             .Distinct()
             .ToArray();
     }
