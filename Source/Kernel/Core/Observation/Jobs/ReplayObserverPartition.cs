@@ -110,6 +110,8 @@ public class ReplayObserverPartition(
 
         // A selected-type replay cannot prove that it handled the event which failed for this partition.
         var replayedEventTypes = State.HandledAllEvents && Request.ReplaysAllEventTypes ? Request.EventTypes.ToArray() : [];
+        lastScanned = ScannedBelowHeldBackDeliveryWhenNothingWasRead(lastScanned, replayedEventTypes);
+
         var (handled, scanned) = await CoverageHeldBelowLiveDelivery(observer, State.LastHandledEventSequenceNumber, lastScanned);
         await observer.PartitionReplayed(Request.Key, handled, scanned, replayedEventTypes);
     }
@@ -158,6 +160,20 @@ public class ReplayObserverPartition(
         }
 
         return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
+    }
+
+    /// <summary>
+    /// An empty replay that did not prove every event type replayed must catch up from where live delivery was held
+    /// back, not from First or from nowhere, so the events held back while it ran are still delivered.
+    /// </summary>
+    /// <param name="lastScanned">The last scanned position the replay can vouch for.</param>
+    /// <param name="replayedEventTypes">The event types the replay proved it replayed.</param>
+    /// <returns>The scanned position to report.</returns>
+    EventSequenceNumber ScannedBelowHeldBackDeliveryWhenNothingWasRead(EventSequenceNumber lastScanned, EventType[] replayedEventTypes)
+    {
+        var readNothing = !FurthestOf(State.LastHandledEventSequenceNumber, lastScanned).IsActualValue;
+        var heldBackAfterFirst = Request.HeldBackFrom.IsActualValue && Request.HeldBackFrom > EventSequenceNumber.First;
+        return readNothing && replayedEventTypes.Length == 0 && heldBackAfterFirst ? Request.HeldBackFrom - 1UL : lastScanned;
     }
 
     async Task<(EventSequenceNumber Handled, EventSequenceNumber Scanned)> CoverageHeldBelowLiveDelivery(IObserver observer, EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
