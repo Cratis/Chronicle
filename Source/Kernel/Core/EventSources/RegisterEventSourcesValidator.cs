@@ -18,9 +18,36 @@ internal class RegisterEventSourcesValidator : CommandValidator<RegisterEventSou
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.Sources).NotNull().WithMessage("Event source definitions are required.");
+        RuleFor(_ => _.Sources).Custom((sources, context) =>
+        {
+            if (sources is null)
+            {
+                return;
+            }
+
+            var duplicates = sources
+                .Where(_ => !string.IsNullOrWhiteSpace(_.Name))
+                .GroupBy(_ => _.Name, StringComparer.Ordinal)
+                .Where(_ => _.Count() > 1);
+            foreach (var duplicate in duplicates)
+            {
+                context.AddFailure(nameof(RegisterEventSources.Sources), $"The event source name '{duplicate.Key}' is registered more than once.");
+            }
+        });
         RuleForEach(_ => _.Sources).ChildRules(source =>
         {
             source.RuleFor(_ => _.Name).NotEmpty().WithMessage("Event source name is required.");
+            source.RuleFor(_ => _).Custom((definition, context) =>
+            {
+                var duplicates = (definition.Streams ?? [])
+                    .Where(_ => !string.IsNullOrWhiteSpace(_.Name))
+                    .GroupBy(_ => _.Name, StringComparer.Ordinal)
+                    .Where(_ => _.Count() > 1);
+                foreach (var duplicate in duplicates)
+                {
+                    context.AddFailure(nameof(RegisterEventSources.Sources), $"The event source '{definition.Name}' declares the event stream '{duplicate.Key}' more than once.");
+                }
+            });
             source.RuleForEach(_ => _.Streams).ChildRules(stream =>
                 stream.RuleFor(_ => _.Name).NotEmpty().WithMessage("Event stream name is required."));
         });

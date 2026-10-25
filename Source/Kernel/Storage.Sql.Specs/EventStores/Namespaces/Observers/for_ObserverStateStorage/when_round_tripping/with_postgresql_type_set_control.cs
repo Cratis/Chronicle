@@ -51,7 +51,7 @@ public class with_postgresql_type_set_control(PostgreSqlFixture fixture) : Speci
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
         await using var context = CreateContext();
         await context.Database.OpenConnectionAsync();

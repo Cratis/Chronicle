@@ -79,6 +79,8 @@ public partial class Observer
         ObserverFilters? filters = default)
         where TObserverSubscriber : IObserverSubscriber
     {
+        if (await RelinquishOwnershipIfMoved()) return;
+
         // Unlike explicit registration, this serialized operation has no authority to release quarantine,
         // replace recovery owed to an operator clearance, or reload a stored cursor over live progress.
         if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
@@ -133,8 +135,17 @@ public partial class Observer
         _subscriptionSetupFailed = await GetCurrentState() is CatchingUpInFlight;
     }
 
+    /// <summary>
+    /// Gets whether kernel-initiated reconciliation must leave the subscription alone.
+    /// </summary>
+    /// <param name="allowQuarantinedWebhook">Whether a quarantined webhook observer may still be reconciled.</param>
+    /// <returns>True when reconciliation must not run.</returns>
+    /// <remarks>
+    /// Reconciling sets the definition's event sequence to this key's, so an activation whose definition lives on
+    /// another event sequence would otherwise move the definition back to itself.
+    /// </remarks>
     bool CannotReconcileSubscription(bool allowQuarantinedWebhook = false) =>
-        _removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired ||
+        _removed || IsRetired || !KeyOwnsDefinition || State.AlertDisposition == AlertDisposition.Retired ||
         (!allowQuarantinedWebhook && (IsQuarantined || State.RunningState == ObserverRunningState.Quarantined)) ||
         _recoverSubscriptionAfterQuarantine || _retryRecoveryAfterQuarantine;
 

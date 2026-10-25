@@ -36,7 +36,7 @@ public class with_postgresql_handled_counts(PostgreSqlFixture fixture) : Specifi
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", HandledEventCount = 7, HandledEventCountPerEventType = new Dictionary<EventTypeId, EventCount> { ["event-a"] = 4, ["event-b"] = 3 } });
+        await _storage.Save(new() { Identifier = "observer", HandledEventCount = 7, HandledEventCountPerEventType = new Dictionary<EventTypeId, EventCount> { ["event-a"] = 4, ["event-b"] = 3 } }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
         await using var context = CreateContext();
         await context.Database.OpenConnectionAsync();

@@ -88,6 +88,11 @@ public class ProjectionFactory(
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
+        if (readModelDefinition?.Sink is null)
+        {
+            throw new ReadModels.ReadModelNotFound(definition.ReadModel);
+        }
+
         readModelDefinition.Sink.EnsureReadModelSupported();
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&

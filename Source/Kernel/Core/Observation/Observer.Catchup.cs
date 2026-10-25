@@ -18,6 +18,8 @@ public partial class Observer
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
 
+    int _partitionHoldsVersion;
+
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
     /// <inheritdoc/>
@@ -150,6 +152,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Remove(partition);
+        _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
@@ -166,6 +169,32 @@ public partial class Observer
         return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
     }
 
+    async Task<ISet<Key>> PartitionHoldsReleasableAfterCatchUp()
+    {
+        if (State.CatchingUpPartitions.Count == 0) return new HashSet<Key>();
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var partitions = State.CatchingUpPartitions.ToArray();
+            var version = _partitionHoldsVersion;
+            try
+            {
+                var result = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs.GetOutstandingJobs();
+                if (!result.TryGetResult(out var jobs)) return new HashSet<Key>();
+                if (version != _partitionHoldsVersion) continue;
+
+                var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow);
+                return partitions.Where(partition => !owned.Contains(partition)).ToHashSet();
+            }
+            catch (Exception)
+            {
+                return new HashSet<Key>();
+            }
+        }
+
+        return new HashSet<Key>();
+    }
+
     async Task HandOverCaughtUpJob(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         // The job reports back before it is finalized, so it is still listed as running while routing decides
@@ -176,9 +205,13 @@ public partial class Observer
         // interleaving with this call already sees it.
         RememberConcludedCatchUpJob(jobId);
 
+        // The observer-wide job only owned the partitions it registered. A partition's own catch-up
+        // keeps its hold until it reports PartitionCaughtUp (#5379).
+        var releasable = await PartitionHoldsReleasableAfterCatchUp();
+
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        State.CatchingUpPartitions.Clear();
+        State.CatchingUpPartitions.ExceptWith(releasable);
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
         {
@@ -386,6 +419,7 @@ public partial class Observer
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
+        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();

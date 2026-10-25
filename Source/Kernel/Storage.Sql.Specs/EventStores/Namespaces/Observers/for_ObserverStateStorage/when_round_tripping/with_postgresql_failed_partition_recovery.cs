@@ -49,7 +49,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition], Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job", "unsettled handover"]) });
+        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition], Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job", "unsettled handover"]) }, Concepts.EventSequences.EventSequenceId.Log);
         var saved = await _storage.Get("observer");
         _restored = saved.FailedPartitions.Single();
         _initialization = saved.Initialization;
