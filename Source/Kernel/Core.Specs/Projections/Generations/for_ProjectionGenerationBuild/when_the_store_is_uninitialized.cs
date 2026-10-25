@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
 using Cratis.Chronicle.Generations.Bindings;
 
 namespace Cratis.Chronicle.Projections.Generations.for_ProjectionGenerationBuild;
@@ -9,7 +10,7 @@ namespace Cratis.Chronicle.Projections.Generations.for_ProjectionGenerationBuild
 public class when_the_store_is_uninitialized : given.a_generation_build_owner
 {
     /// <summary>Models a store whose generation floor is not established.</summary>
-    void Establish() => _keys.For(Store, _key.Namespace, _key.Projection).Returns(_ => throw new GenerationFloorNotEstablished(Store));
+    void Establish() => _keys.For(Store, _key.Namespace, _key.Projection).Returns(Task<MaterializationKey> (_) => throw new GenerationFloorNotEstablished(Store));
 
     /// <summary>Attempts owner admission.</summary>
     async Task Because() => _result = await Start();

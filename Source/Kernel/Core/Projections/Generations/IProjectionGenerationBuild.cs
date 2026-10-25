@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Generations;
 namespace Cratis.Chronicle.Projections.Generations;
 
 /// <summary>
-/// Serializes candidate admission under the key <c>{store}/{key.Value}</c> without dispatching work.
+/// Serializes candidate admission under the key made of the event store and the materialization key, separated by a slash, without dispatching work.
 /// </summary>
 public interface IProjectionGenerationBuild : IGrainWithStringKey
 {

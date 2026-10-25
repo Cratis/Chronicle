@@ -12,7 +12,7 @@ public class when_storage_cannot_bind_generations : given.a_generation_build_own
     void Establish()
     {
         _builds = Substitute.For<IGenerationBuildStorage>();
-        _builds.ReserveNext(Store, _key, _request.Execution, _request.Operation, _request.At).Returns(_ => throw new MaterializationBindingsNotSupported());
+        _builds.ReserveNext(Store, _key, _request.Execution, _request.Operation, _request.At).Returns(Task<GenerationReservation> (_) => throw new MaterializationBindingsNotSupported());
     }
 
     /// <summary>Attempts owner admission.</summary>

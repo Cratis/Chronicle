@@ -16,7 +16,7 @@ public class when_the_projection_is_global : given.a_generation_build_owner
         var content = JsonNode.Parse(_request.Execution.CanonicalContent)!.AsObject();
         var projection = content.Single(_ => string.Equals(_.Key, "projection", StringComparison.OrdinalIgnoreCase)).Value!.AsObject();
         var scope = projection.FirstOrDefault(_ => string.Equals(_.Key, "scope", StringComparison.OrdinalIgnoreCase)).Key ?? "scope";
-        projection[scope] = ProjectionScope.Global.ToString();
+        projection[scope] = nameof(ProjectionScope.Global);
         var execution = MaterializationExecutionSpecification.Capture(_request.Execution.EventSequence, GenerationExecutionSpecifications.Canonicalize(content.ToJsonString()));
         _request = _request with { Execution = execution };
     }
