@@ -73,6 +73,11 @@ public class HandleEventsForPartition(
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
 
+    /// <summary>
+    /// Gets or sets the most events one subscriber call may carry. Exposed for testing.
+    /// </summary>
+    internal int MaxEventsPerBatch { get; set; } = BoundedEventCursor.DefaultMaximumEventsPerBatch;
+
     /// <inheritdoc/>
     /// <remarks>
     /// A projection that collapses several event sources onto one read model document is deliberately written out
@@ -206,7 +211,7 @@ public class HandleEventsForPartition(
             _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
-            using var events = await eventSequenceStorage.GetRange(
+            var storageEvents = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
                     ? currentState.StartEventSequenceNumber
                     : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
@@ -214,6 +219,10 @@ public class HandleEventsForPartition(
                 _eventSourceId,
                 eventTypesToRead,
                 cancellationToken: cancellationToken);
+            var maximumEventsPerCall = _subscriber is IUnpartitionedObserverSubscriber
+                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
+                : MaxEventsPerBatch;
+            using var events = new BoundedEventCursor(storageEvents, maximumEventsPerCall);
 
             var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
@@ -448,7 +457,7 @@ public class HandleEventsForPartition(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
-    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
     {
         foreach (var @event in events.Current)
         {
@@ -520,7 +529,7 @@ public class HandleEventsForPartition(
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
-        IEventCursor events,
+        BoundedEventCursor events,
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
         HashSet<EventTypeId> nonRedactionEventTypeIds,
