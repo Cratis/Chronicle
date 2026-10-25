@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Storage.Generations.Bindings.for_MaterializationBindi
 public abstract class when_building_in_another_namespace<THarness> : given.a_build_storage<THarness>
     where THarness : IMaterializationBindingStorageHarness, new()
 {
+    readonly DateTimeOffset _otherAt = DateTimeOffset.UnixEpoch.AddTicks(7654321).ToOffset(TimeSpan.FromHours(-4));
     GenerationReservation _result;
     async Task Establish()
     {
@@ -18,7 +19,12 @@ public abstract class when_building_in_another_namespace<THarness> : given.a_bui
         await _storage.TrySetBindingEpoch(_store, other, ServingEpoch.Unset, ServingEpoch.Initial);
         await _builds.TryAdoptExecution(_store, other, _execution);
     }
-    async Task Because() => _result = await _builds.ReserveNext(_store, _key with { Namespace = "other" }, _execution, _operation, DateTimeOffset.UnixEpoch);
+    async Task Because() => _result = await _builds.ReserveNext(_store, _key with { Namespace = "other" }, _execution, _operation, _otherAt);
+    [Fact] public async Task should_recover_only_the_original_namespace_intent() => (await _builds.GetBuildRequest(_store, _key, _result.Record!.Identity.Generation))!.At.EqualsExact(DateTimeOffset.UnixEpoch).ShouldBeTrue();
+    [Fact] public async Task should_recover_the_other_namespace_intent() => (await _builds.GetBuildRequest(_store, _key with { Namespace = "other" }, _result.Record!.Identity.Generation))!.At.EqualsExact(_otherAt).ShouldBeTrue();
+    [Fact] public async Task should_isolate_intent_by_store() => (await _builds.GetBuildRequest("another-store", _key, _result.Record!.Identity.Generation)).ShouldBeNull();
+    [Fact] public async Task should_isolate_intent_by_incarnation() => (await _builds.GetBuildRequest(_store, _key with { Incarnation = new(Guid.NewGuid()) }, _result.Record!.Identity.Generation)).ShouldBeNull();
+    [Fact] public async Task should_not_fall_back_to_another_namespace_intent() => (await _builds.GetBuildRequest(_store, _key with { Namespace = "missing" }, _result.Record!.Identity.Generation)).ShouldBeNull();
     [Fact] public void should_isolate_operations_and_claims() => _result.Result.ShouldEqual(GenerationReservationResult.ReservationCreated);
     [Fact] public void should_share_the_number_of_the_same_revision() => _result.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(2));
     [Fact] public async Task should_isolate_execution_by_incarnation() => (await _builds.GetExecution(_store, _key with { Incarnation = new(Guid.NewGuid()) }, new(2))).ShouldBeNull();

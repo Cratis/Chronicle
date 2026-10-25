@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -99,6 +100,43 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
             if (reservation is not null) return await _claims.ClaimFor(this, store, key, execution, reservation);
         }
         throw new GenerationBuildConflict();
+    }
+
+    /// <inheritdoc/>
+    public async Task<GenerationBuildRequest?> GetBuildRequest(EventStoreName store, MaterializationKey key, MaterializationGeneration generation)
+    {
+        var db = database.GetReadModelDatabase(store, key.Namespace);
+        try
+        {
+            return await BuildTransaction<GenerationBuildRequest?>(db, async session =>
+            {
+                var operations = await db.GetCollection<BsonDocument>(MaterializationBindingCollections.Operations)
+                    .Find(session, _filter.Eq("key", key.Value) & _filter.Eq("record.generation", checked((int)generation.Value))).Limit(2).ToListAsync();
+                if (operations.Count == 0)
+                {
+                    if (!generation.IsFirst && await Executions(db).Find(session, ExecutionId(key, generation)).AnyAsync()) throw new GenerationBuildConflict();
+                    return null;
+                }
+                if (operations.Count != 1) throw new GenerationBuildConflict();
+                var operation = operations[0];
+                var request = BuildRequest(operation, key);
+                var reserved = ReadBuildOperation(operation, OperationDocument(key, request.Operation, request.Execution, request.At), key).Record!;
+                var document = await Bindings(db).Find(session, Id(key)).FirstOrDefaultAsync();
+                var binding = document is null ? null : MaterializationBindingDocuments.Binding(document);
+                var records = binding?.Generations.Where(_ => _.Identity.Generation == generation).ToArray();
+                if (binding is null || binding.Key != key || records is not { Length: 1 }) throw new GenerationBuildConflict();
+                var record = records[0];
+                if (reserved != new MaterializationGenerationRecord(reserved.Identity, MaterializationGenerationState.Building, request.Execution.Revision, request.At)) throw new GenerationBuildConflict();
+                if (!reserved.CreatedAt.EqualsExact(request.At) || record.Identity != reserved.Identity || record.Revision != reserved.Revision || !record.CreatedAt.EqualsExact(reserved.CreatedAt)) throw new GenerationBuildConflict();
+                var execution = await Executions(db).Find(session, ExecutionId(key, generation)).FirstOrDefaultAsync();
+                if (execution is null || MaterializationBindingDocuments.Execution(execution["execution"].AsBsonDocument) != request.Execution) throw new GenerationBuildConflict();
+                return request;
+            });
+        }
+        catch (Exception error) when (error is FormatException or InvalidCastException or KeyNotFoundException or OverflowException)
+        {
+            throw new GenerationBuildConflict();
+        }
     }
 
     /// <inheritdoc/>
@@ -270,6 +308,16 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         if (previous["execution"] != requested["execution"]) throw new GenerationBuildConflict();
         if (previous["at"] != requested["at"]) throw new GenerationBuildConflict();
         return new(GenerationReservationResult.ReservationCreated, MaterializationBindingDocuments.Generation(previous["record"].AsBsonDocument, key.Projection));
+    }
+
+    static GenerationBuildRequest BuildRequest(BsonDocument operation, MaterializationKey key)
+    {
+        var prefix = $"{key.Incarnation.Value:N}/";
+        var id = operation["_id"].AsString;
+        if (!id.StartsWith(prefix, StringComparison.Ordinal) || !Guid.TryParseExact(id[prefix.Length..], "N", out var operationId)) throw new GenerationBuildConflict();
+        var request = new GenerationBuildRequest(key, MaterializationBindingDocuments.Execution(operation["execution"].AsBsonDocument), new(operationId), DateTimeOffset.Parse(operation["at"].AsString, CultureInfo.InvariantCulture));
+        if (operation["_id"] != OperationDocument(key, request.Operation, request.Execution, request.At)["_id"]) throw new GenerationBuildConflict();
+        return request;
     }
 
     static async Task InsertExecution(IMongoDatabase db, IClientSessionHandle session, GenerationObserverBinding claim, MaterializationExecutionSpecification execution)

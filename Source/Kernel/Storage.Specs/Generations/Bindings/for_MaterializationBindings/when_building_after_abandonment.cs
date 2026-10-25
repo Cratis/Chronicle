@@ -19,4 +19,14 @@ public abstract class when_building_after_abandonment<THarness> : given.a_build_
     [Fact] public void should_never_reuse_the_generation() => _next.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(3));
     [Fact] public async Task should_preserve_the_abandoned_execution() => (await _builds.GetExecution(_store, _key, _firstReservation.Record!.Identity.Generation)).ShouldEqual(_execution);
     [Fact] public async Task should_preserve_the_original_retry() => (await Build()).ShouldEqual(_firstReservation);
+    [Fact] public async Task should_recover_the_abandoned_intent_without_resurrecting_it()
+    {
+        var generation = _firstReservation.Record!.Identity.Generation;
+        var before = await _storage.Get(_store, _key);
+        var request = await _builds.GetBuildRequest(_store, _key, generation);
+        request.ShouldEqual(new GenerationBuildRequest(_key, _execution, _operation, DateTimeOffset.UnixEpoch));
+        var after = await _storage.Get(_store, _key);
+        after.ShouldEqual(before);
+        after!.Generations.Single(_ => _.Identity.Generation == generation).State.ShouldEqual(MaterializationGenerationState.Abandoned);
+    }
 }

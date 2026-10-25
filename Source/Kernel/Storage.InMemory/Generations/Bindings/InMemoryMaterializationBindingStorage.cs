@@ -85,6 +85,32 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     }
 
     /// <inheritdoc/>
+    public Task<GenerationBuildRequest?> GetBuildRequest(EventStoreName store, MaterializationKey key, MaterializationGeneration generation)
+    {
+        lock (_lock)
+        {
+            var matches = _operations.Where(_ => _.Key.Store == store && _.Value.Request.Key == key && _.Value.Reservation.Record?.Identity.Generation == generation).ToArray();
+            if (matches.Length == 0)
+            {
+                if (!generation.IsFirst && _executions.ContainsKey((store, key.Value, generation))) throw new GenerationBuildConflict();
+                return Task.FromResult<GenerationBuildRequest?>(null);
+            }
+            if (matches.Length != 1) throw new GenerationBuildConflict();
+            var (operation, (request, reservation)) = matches[0];
+            var reserved = reservation.Record!;
+            var binding = _bindings.GetValueOrDefault((store, key.Value));
+            var records = binding?.Generations.Where(_ => _.Identity.Generation == generation).ToArray();
+            if (binding is null || binding.Key != key || records is not { Length: 1 }) throw new GenerationBuildConflict();
+            var record = records[0];
+            if (operation.Scope != $"{key.Incarnation.Value:N}/{Uri.EscapeDataString(key.Namespace.Value)}" || operation.Operation != request.Operation) throw new GenerationBuildConflict();
+            if (reservation.Result != GenerationReservationResult.ReservationCreated || reserved != new MaterializationGenerationRecord(reserved.Identity, MaterializationGenerationState.Building, request.Execution.Revision, request.At)) throw new GenerationBuildConflict();
+            if (!reserved.CreatedAt.EqualsExact(request.At) || record.Identity != reserved.Identity || record.Revision != reserved.Revision || !record.CreatedAt.EqualsExact(reserved.CreatedAt)) throw new GenerationBuildConflict();
+            if (_executions.GetValueOrDefault((store, key.Value, generation)) != request.Execution) throw new GenerationBuildConflict();
+            return Task.FromResult<GenerationBuildRequest?>(request);
+        }
+    }
+
+    /// <inheritdoc/>
     /// <exception cref="GenerationBuildConflict">The first generation already has different execution inputs.</exception>
     public Task<bool> TryAdoptExecution(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution)
     {
