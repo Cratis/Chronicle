@@ -36,9 +36,12 @@ public class ProjectionReplayHandler(
     ILogger<ProjectionReplayHandler> logger,
     IGenerationProjectionResolver? generations = null) : ICanHandleReplayForObserver
 {
+    readonly GenerationBulkWindows? _windows = generations is null ? null : new(generations, projectionPipelineManager);
+
     /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayFor(ObserverDetails observerDetails) => await WithGeneration(
         observerDetails,
+        true,
         async pipeline =>
         {
             await pipeline.BeginBulk();
@@ -66,6 +69,7 @@ public class ProjectionReplayHandler(
     /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> ResumeReplayFor(ObserverDetails observerDetails) => await WithGeneration(
         observerDetails,
+        true,
         async pipeline =>
         {
             await pipeline.ResumeBulk();
@@ -88,6 +92,7 @@ public class ProjectionReplayHandler(
     /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> EndReplayFor(ObserverDetails observerDetails) => await WithGeneration(
         observerDetails,
+        false,
         pipeline => EndGenerationBulk(observerDetails, pipeline),
         () => DoWorkOnPipeline(
             observerDetails,
@@ -167,11 +172,11 @@ public class ProjectionReplayHandler(
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) =>
-        WithGeneration(observerDetails, _ => Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success()), () => CheckPartitionReplay(observerDetails));
+        WithGeneration(observerDetails, false, _ => Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success()), () => CheckPartitionReplay(observerDetails));
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) =>
-        WithGeneration(observerDetails, _ => Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success()), () => CheckPartitionReplay(observerDetails));
+        WithGeneration(observerDetails, false, _ => Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success()), () => CheckPartitionReplay(observerDetails));
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
@@ -201,7 +206,14 @@ public class ProjectionReplayHandler(
         var generation = await GetGenerationPipeline(observerDetails);
         if (generation is not null)
         {
-            return await generation.EndBulk(cancellationToken);
+            try
+            {
+                return await generation.EndBulk(cancellationToken);
+            }
+            finally
+            {
+                _windows?.End(observerDetails.Key);
+            }
         }
 
         if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
@@ -216,36 +228,29 @@ public class ProjectionReplayHandler(
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
-    async Task<IProjectionPipeline?> GetGenerationPipeline(ObserverDetails observerDetails)
+    async Task<IProjectionPipeline?> GetGenerationPipeline(ObserverDetails observerDetails, bool beginsWindow = false)
     {
         // A bound generation never touches replay contexts, the replay manager or the legacy definition: it
         // builds into its own destination and is only ever bulk loaded. Failing to resolve or admit it must
         // not fall back to the legacy path, so it throws to the caller.
-        if (generations is null || !CanHandle(observerDetails))
+        if (_windows is null || !CanHandle(observerDetails))
         {
             return null;
         }
 
-        var key = observerDetails.Key;
-        var execution = await generations.Resolve(key.EventStore, key.Namespace, key.EventSequenceId, key.ObserverId);
-        if (execution is null)
-        {
-            return null;
-        }
-
-        var context = await generations.Admit(key.EventStore, execution);
-        return await projectionPipelineManager.GetFor(key.EventStore, key.Namespace, execution.Projection, context);
+        return await _windows.GetPipeline(observerDetails.Key, beginsWindow);
     }
 
     async Task<Result<ICanHandleReplayForObserver.Error>> WithGeneration(
         ObserverDetails observerDetails,
+        bool beginsWindow,
         Func<IProjectionPipeline, Task<Result<ICanHandleReplayForObserver.Error>>> generation,
         Func<Task<Result<ICanHandleReplayForObserver.Error>>> legacy)
     {
         IProjectionPipeline? pipeline;
         try
         {
-            pipeline = await GetGenerationPipeline(observerDetails);
+            pipeline = await GetGenerationPipeline(observerDetails, beginsWindow);
             if (pipeline is not null)
             {
                 return await generation(pipeline);
@@ -262,11 +267,18 @@ public class ProjectionReplayHandler(
 
     async Task<Result<ICanHandleReplayForObserver.Error>> EndGenerationBulk(ObserverDetails observerDetails, IProjectionPipeline pipeline)
     {
-        var failedPartitions = (await pipeline.EndBulk()).ToArray();
-        await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
-        return failedPartitions.Length > 0
-            ? ICanHandleReplayForObserver.Error.Unknown
-            : Result<ICanHandleReplayForObserver.Error>.Success();
+        try
+        {
+            var failedPartitions = (await pipeline.EndBulk()).ToArray();
+            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return failedPartitions.Length > 0
+                ? ICanHandleReplayForObserver.Error.Unknown
+                : Result<ICanHandleReplayForObserver.Error>.Success();
+        }
+        finally
+        {
+            _windows?.End(observerDetails.Key);
+        }
     }
 
     async Task<int> VersionsToKeepFor(ObserverDetails observerDetails) =>

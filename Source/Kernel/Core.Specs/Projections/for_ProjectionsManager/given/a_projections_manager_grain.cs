@@ -46,13 +46,12 @@ public class a_projections_manager_grain : Specification
     protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
-    readonly IGenerationProjectionResolver _noGenerations = CreateNoGenerations();
 
     /// <summary>
     /// Gets the generation resolver the grain is activated with; by default one that catalogs no later generations,
     /// because the test silo would otherwise hand the grain a loose mock whose lookup yields no collection.
     /// </summary>
-    protected virtual IGenerationProjectionResolver GenerationResolver => _noGenerations;
+    protected virtual IGenerationProjectionResolver GenerationResolver { get; } = CreateNoGenerations();
 
     async Task Establish()
     {
@@ -166,7 +165,7 @@ public class a_projections_manager_grain : Specification
     static IGenerationProjectionResolver CreateNoGenerations()
     {
         var resolver = Substitute.For<IGenerationProjectionResolver>();
-        resolver.ResolveCataloged(default, default, default).ReturnsForAnyArgs(Task.FromResult<IReadOnlyCollection<GenerationExecution>>([]));
+        resolver.ResolveCataloged(default!, default!, default!).ReturnsForAnyArgs(Task.FromResult<IReadOnlyCollection<GenerationExecution>>([]));
         return resolver;
     }
 }

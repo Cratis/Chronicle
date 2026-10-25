@@ -56,7 +56,8 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     /// <inheritdoc/>
     public async Task<GenerationWriterGrant?> GetAdmitted(EventStoreName store, GenerationObserverBinding binding)
     {
-        var db = await PreparedBuilds(store, binding.Key);
+        // A read: it must not create the build collections or indexes that the writers ensure.
+        var db = database.GetReadModelDatabase(store, binding.Key.Namespace);
         return await BuildTransaction<GenerationWriterGrant?>(db, async session =>
         {
             var gate = new GenerationGateId(binding.Key, binding.Identity.Generation);
