@@ -70,6 +70,7 @@ json Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScope
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   expectsNoMatchingEvent: bool
   isIncomplete: bool
+  mutationEpoch: Cratis.Chronicle.Concepts.EventSequences.EventSequenceMutationEpoch
   sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   shouldBeValidated: bool
 json Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions
@@ -80,6 +81,7 @@ json Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScopes
   scopes: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventSourceId,Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScope>
   shouldAllBeValidated: bool
 concept Cratis.Chronicle.Concepts.EventSequences.EventSequenceId : string
+concept Cratis.Chronicle.Concepts.EventSequences.EventSequenceMutationEpoch : ulong
 concept Cratis.Chronicle.Concepts.EventSequences.IdempotencyKey : string
 concept Cratis.Chronicle.Concepts.EventStoreName : string
 concept Cratis.Chronicle.Concepts.EventStoreNamespaceName : string
@@ -621,6 +623,8 @@ json Cratis.Chronicle.Concepts.ReadModels.ReadModelType
   identifier: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
 concept Cratis.Chronicle.Concepts.Recommendations.RecommendationDescription : string
 concept Cratis.Chronicle.Concepts.Recommendations.RecommendationId : System.Guid
+concept Cratis.Chronicle.Concepts.Registrations.ArtifactFingerprint : string
+concept Cratis.Chronicle.Concepts.Registrations.DeploymentGeneration : ulong
 concept Cratis.Chronicle.Concepts.Security.Authority : string
 json Cratis.Chronicle.Concepts.Security.BasicAuthorization
   password: Cratis.Chronicle.Concepts.Security.Password
@@ -629,6 +633,11 @@ json Cratis.Chronicle.Concepts.Security.BearerTokenAuthorization
   token: Cratis.Chronicle.Concepts.Security.Token
 concept Cratis.Chronicle.Concepts.Security.ClientId : string
 concept Cratis.Chronicle.Concepts.Security.ClientSecret : string
+enum Cratis.Chronicle.Concepts.Security.GrantReason : int
+  AdministratorGrant = 3
+  Bootstrap = 0
+  OperatorRecovery = 2
+  UpgradeProvenance = 1
 json Cratis.Chronicle.Concepts.Security.ManagedIdentityAuthorization
   clientId: Cratis.Chronicle.Concepts.Security.ManagedIdentityClientId
   scope: Cratis.Chronicle.Concepts.Security.OAuthScope
@@ -641,6 +650,7 @@ json Cratis.Chronicle.Concepts.Security.OAuthAuthorization
 concept Cratis.Chronicle.Concepts.Security.OAuthScope : string
 concept Cratis.Chronicle.Concepts.Security.Password : string
 concept Cratis.Chronicle.Concepts.Security.Token : string
+concept Cratis.Chronicle.Concepts.Security.UserId : System.Guid
 concept Cratis.Chronicle.Concepts.Security.Username : string
 json Cratis.Chronicle.Concepts.Servers.ServerInstanceMetrics
   cpuUsagePercentage: double
@@ -785,6 +795,16 @@ json Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeStep
   status: Cratis.Orleans.Jobs.JobStepStatus
   statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
   type: Cratis.Orleans.Jobs.JobStepType
+orleans Cratis.Chronicle.EventStores.DeploymentDecision
+  [Id(0)] Accepted: bool
+  [Id(1)] Stored: Cratis.Chronicle.EventStores.DeploymentState
+  [Id(2)] ToRecord: Cratis.Chronicle.EventStores.DeploymentState
+orleans Cratis.Chronicle.EventStores.DeploymentState
+  [Id(0)] Generation: Cratis.Chronicle.Concepts.Registrations.DeploymentGeneration
+  [Id(1)] Fingerprint: Cratis.Chronicle.Concepts.Registrations.ArtifactFingerprint
+json Cratis.Chronicle.Events.Constraints.ConstraintCollisionSample
+  sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  valueHash: string
 json Cratis.Chronicle.Events.Constraints.ConstraintDefinitionChange
   changeTypes: System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintChangeType>
   name: Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName
@@ -802,6 +822,9 @@ json Cratis.Chronicle.Events.Constraints.ReindexConstraintsRequest
 json Cratis.Chronicle.Events.Constraints.ReindexConstraintsStepState
   attempt: int
   changes: System.Collections.Generic.IList<Cratis.Chronicle.Events.Constraints.ConstraintDefinitionChange>
+  collisionCounts: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName,long>
+  collisionSampleOverflowCounts: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName,long>
+  collisionSamples: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName,System.Collections.Generic.IList<Cratis.Chronicle.Events.Constraints.ConstraintCollisionSample>>
   eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
   id: Cratis.Orleans.Jobs.JobStepIdentifier
   isPrepared: bool
@@ -1045,6 +1068,7 @@ json Cratis.Chronicle.Sequences.ConcurrencyScope
   eventStreamType: string
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.EventType>
   expectsNoMatchingEvent: bool
+  mutationEpoch: ulong?
   sequenceNumber: ulong
 json Cratis.Chronicle.Sequences.EventType
   generation: uint
@@ -1054,6 +1078,14 @@ enum Cratis.Chronicle.Sequences.ReopenStreamScopeError : int
   ClosedByEvent = 2
   None = 0
   NotCompleted = 1
+concept Cratis.Chronicle.Storage.Observation.ClaimEpoch : ulong
+enum Cratis.Chronicle.Storage.Observation.ClaimHolderKind : int
+  FailureRecovery = 3
+  None = 0
+  ObserverCatchUp = 4
+  ObserverReplay = 5
+  PartitionCatchUp = 2
+  PartitionReplay = 1
 json Cratis.Chronicle.Storage.Observation.DeliveryFenceState
   partition: Cratis.Chronicle.Concepts.Keys.Key
   releaseBy: System.DateTimeOffset
@@ -1112,6 +1144,10 @@ json Cratis.Chronicle.Storage.Observation.ObserverState
   isReplaying: bool
   lastHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   nextEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  observerWideClaim: Cratis.Chronicle.Storage.Observation.ObserverWideClaim
+  owner: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  ownershipRevision: Cratis.Chronicle.Storage.Observation.OwnershipRevision
+  partitionClaims: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Observation.PartitionClaim>
   quarantineEpisodeId: System.Guid?
   replayingPartitions: System.Collections.Generic.ISet<Cratis.Chronicle.Concepts.Keys.Key>
   runningState: Cratis.Chronicle.Concepts.Observation.ObserverRunningState
@@ -1136,6 +1172,25 @@ json Cratis.Chronicle.Storage.Observation.ObserverTypeSetMember
   incarnation: Cratis.Chronicle.Storage.Observation.ObserverTypeSetRevision
   joinFence: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 concept Cratis.Chronicle.Storage.Observation.ObserverTypeSetRevision : long
+json Cratis.Chronicle.Storage.Observation.ObserverWideClaim
+  epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
+  holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind
+  job: Cratis.Orleans.Jobs.JobId
+  pendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
+  resumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+concept Cratis.Chronicle.Storage.Observation.OwnershipRevision : ulong
+json Cratis.Chronicle.Storage.Observation.PartitionClaim
+  epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
+  holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind
+  job: Cratis.Orleans.Jobs.JobId
+  partition: Cratis.Chronicle.Concepts.Keys.Key
+  pendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
+  resumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+json Cratis.Chronicle.Storage.Observation.PendingPartitionWork
+  from: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind
+  partition: Cratis.Chronicle.Concepts.Keys.Key
+  requestedAt: System.DateTimeOffset
 json Cratis.Chronicle.Storage.Observation.WebhookProbePartitionCount
   count: Cratis.Chronicle.Concepts.Events.EventCount
   eventTypeId: Cratis.Chronicle.Concepts.Events.EventTypeId
