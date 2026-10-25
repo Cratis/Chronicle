@@ -356,10 +356,6 @@ public class Projections(
     {
         var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
-        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
-            kvp => kvp.Key,
-            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-
         var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
@@ -379,9 +375,11 @@ public class Projections(
 
         _handlersByType = _definitionsByType.ToDictionary(
                 kvp => kvp.Key,
-                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+                kvp => CreateHandler(kvp.Value, kvp.Key.GetReadModelType(), containerNames.GetValueOrDefault(kvp.Key.GetReadModelType())) as IProjectionHandler);
 
-        _modelBoundHandlers = modelBoundHandlers;
+        _modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => CreateHandler(kvp.Value, kvp.Key, containerNames.GetValueOrDefault(kvp.Key)) as IProjectionHandler);
 
         // The read model index holds one handler per read model, and asking for a projection by the model it maintains
         // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
@@ -561,9 +559,12 @@ public class Projections(
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         WarnAboutRootRemovalViaJoin(projection.ReadModelType, definition);
-        var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
+        var handler = CreateHandler(definition, projection.ReadModelType, projection.ContainerNameOverride);
         return new(definition, handler, projection.ContainerNameOverride);
     }
+
+    ProjectionHandler CreateHandler(ProjectionDefinition definition, Type readModelType, string? containerName) =>
+        new(eventStore, definition.Identifier, readModelType, containerName ?? namingPolicy.GetReadModelName(readModelType), definition.EventSequenceId);
 
     /// <summary>
     /// Compose what discovery found with what was registered explicitly into the state everything else reads.
