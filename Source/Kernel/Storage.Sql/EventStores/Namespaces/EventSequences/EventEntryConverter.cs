@@ -663,8 +663,13 @@ public static class EventEntryConverter
     /// Get the revisions recorded on an event entry, oldest first.
     /// </summary>
     /// <param name="entry">The event entry.</param>
-    /// <returns>The revisions - empty when the event was never revised through revision tracking.</returns>
-    internal static IReadOnlyList<EventRevisionEntry> GetRevisions(EventEntry entry) => ParseRevisions(entry.Revisions);
+    /// <returns>The revisions - empty when the event was never revised through revision tracking, or when it is redacted.</returns>
+    /// <remarks>
+    /// A redacted row never exposes revisions, even when the column still holds some: a node running a version from
+    /// before revision tracking redacts without knowing the column, and its revisions carry the content redaction removed.
+    /// </remarks>
+    internal static IReadOnlyList<EventRevisionEntry> GetRevisions(EventEntry entry) =>
+        entry.Type == GlobalEventTypes.Redaction ? [] : ParseRevisions(entry.Revisions);
 
     /// <summary>
     /// Parse the stored revisions JSON array.

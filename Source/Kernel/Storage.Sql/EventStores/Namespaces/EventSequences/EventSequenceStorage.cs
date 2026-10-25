@@ -357,6 +357,15 @@ public partial class EventSequenceStorage(
         // already triggered its own rewind, producing duplicate EventRedacted notifications.
         if (eventEntry.Type == GlobalEventTypes.Redaction)
         {
+            // A node from before revision tracking redacts without knowing the Revisions column, so the revised
+            // content can still be stored on the row. Remove it while handling the same redaction here.
+            if (eventEntry.Revisions is not null)
+            {
+                eventEntry.Revisions = null;
+                scope.DbContext.Events.Update(eventEntry);
+                await scope.DbContext.SaveChangesAsync();
+            }
+
             return await BuildAppendedEventFromRedactionEntry(eventEntry, scope);
         }
 
@@ -433,6 +442,13 @@ public partial class EventSequenceStorage(
         {
             if (eventEntry.Type == GlobalEventTypes.Redaction)
             {
+                // Remove revisions a node from before revision tracking left on a row it redacted.
+                if (eventEntry.Revisions is not null)
+                {
+                    eventEntry.Revisions = null;
+                    scope.DbContext.Events.Update(eventEntry);
+                }
+
                 continue;
             }
 
