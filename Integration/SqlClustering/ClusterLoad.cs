@@ -19,7 +19,8 @@ namespace Cratis.Chronicle.Integration.SqlClustering;
 /// How many nodes the scenario takes down. The attempt budget grows with each transition. Returned failures and
 /// other uncertain appends count immediately; departed-incarnation appends count only after the departure window.
 /// </param>
-public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
+/// <param name="timeProvider">The clock used to bound the departed-incarnation exemption.</param>
+public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeProvider = null) : IAsyncDisposable
 {
     const int FailureBudgetPerTransition = 30;
 
@@ -29,6 +30,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
     readonly ConcurrentQueue<Task> _outstanding = new();
     readonly ConcurrentDictionary<(string Address, int Generation), long> _departedSilos = new();
     readonly CancellationTokenSource _stop = new();
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
     ChronicleClient _client = null!;
     IEventStore _store = null!;
@@ -43,7 +45,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
     /// while the cluster has not yet noticed can be told apart from any other connection failure.
     /// </summary>
     /// <param name="silo">The membership entry of the silo incarnation that is going away.</param>
-    public void SiloDeparting(MembershipEntry silo) => _departedSilos[(silo.Address, silo.Generation)] = TimeProvider.System.GetTimestamp();
+    public void SiloDeparting(MembershipEntry silo) => _departedSilos[(silo.Address, silo.Generation)] = _timeProvider.GetTimestamp();
 
     public async Task Start(SqlCluster cluster)
     {
@@ -149,10 +151,16 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         {
             if (IsAppendToDepartedSilo(exception.GetType().FullName, exception.Message, [departure.Key]))
             {
-                return CountsAgainstBudget(true, TimeProvider.System.GetElapsedTime(departure.Value));
+                return CountsAgainstBudget(true, _timeProvider.GetElapsedTime(departure.Value));
             }
         }
         return CountsAgainstBudget(false, TimeSpan.Zero);
+    }
+
+    internal void RecordFailedAppend(Guid id, Exception exception)
+    {
+        _unknown.Enqueue(id);
+        Failed($"{id}: {exception.GetType().Name}: {exception.Message}", CountsAgainstBudget(exception));
     }
 
     void RecordFailedAppend(Guid id, AppendResult result)
@@ -213,7 +221,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
             {
                 var append = _store.EventLog.Append(_source, new ClusterEventAppended(id));
                 _outstanding.Enqueue(append);
-                var result = await append.WaitAsync(TimeSpan.FromSeconds(30));
+                var result = await append.WaitAsync(TimeSpan.FromSeconds(30), _timeProvider);
                 if (result.IsSuccess)
                 {
                     _acknowledged.Enqueue((id, result.SequenceNumber));
@@ -228,8 +236,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
                 // The request may still complete or may have been stored before the connection broke.
                 // An in-flight append to a dead silo has the same uncertain outcome:
                 // https://github.com/Cratis/Chronicle/issues/5231.
-                _unknown.Enqueue(id);
-                Failed($"{id}: {exception.GetType().Name}: {exception.Message}", CountsAgainstBudget(exception));
+                RecordFailedAppend(id, exception);
             }
 
             if (!_stop.IsCancellationRequested)
@@ -247,7 +254,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         var outstanding = Task.WhenAll(_outstanding.Select(append => append.ContinueWith(_ => { }, TaskScheduler.Default)));
         try
         {
-            await outstanding.WaitAsync(TimeSpan.FromMinutes(2));
+            await outstanding.WaitAsync(TimeSpan.FromMinutes(2), _timeProvider);
         }
         catch (TimeoutException)
         {
