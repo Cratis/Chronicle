@@ -1663,13 +1663,13 @@ public partial class Sink(
             catch (MongoBulkWriteException ex)
             {
                 var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
-                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, ex.WriteConcernError is not null);
                 break;
             }
         }
 
         return batch.FailedPartitions
-            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
+            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason, OutcomeUnknown = partition.Value.OutcomeUnknown })
             .ToArray();
     }
 
@@ -1698,7 +1698,7 @@ public partial class Sink(
 
         if (!CanResumeAfter(exception, remaining))
         {
-            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, exception.WriteConcernError is not null);
             return null;
         }
 
@@ -1747,21 +1747,33 @@ public partial class Sink(
     static void AddFailedPartitions(
         IEnumerable<int> indexes,
         Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions,
-        BulkWriteFailureReasons reasons)
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions,
+        BulkWriteFailureReasons reasons,
+        bool outcomeUnknown = false)
     {
         foreach (var index in indexes)
         {
-            if (metadata.TryGetValue(index, out var operationMetadata) && IsEarliestFailure(operationMetadata, failedPartitions))
+            if (!metadata.TryGetValue(index, out var operationMetadata))
             {
-                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index));
+                continue;
+            }
+
+            var hasExisting = failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var existing);
+            var unknown = outcomeUnknown || (hasExisting && existing.OutcomeUnknown);
+            if (IsEarliestFailure(operationMetadata, failedPartitions))
+            {
+                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index), unknown);
+            }
+            else if (unknown && hasExisting)
+            {
+                failedPartitions[operationMetadata.EventSourceId] = existing with { OutcomeUnknown = true };
             }
         }
     }
 
     static bool IsEarliestFailure(
         (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber) operationMetadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions) =>
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions) =>
         !failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
         operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value;
 
@@ -1995,7 +2007,7 @@ public partial class Sink(
         Task[] Predecessors,
         IReadOnlySet<WriteModel<BsonDocument>> GuardedUpserts)
     {
-        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> FailedPartitions { get; } = [];
+        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> FailedPartitions { get; } = [];
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool HasOutcome { get; set; }
     }
