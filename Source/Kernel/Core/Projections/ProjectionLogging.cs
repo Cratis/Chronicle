@@ -24,6 +24,12 @@ internal static partial class ProjectionLogging
     [LoggerMessage(LogLevel.Debug, "Registering projection '{Identifier}' has changed its definition")]
     internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier);
 
+    [LoggerMessage(LogLevel.Warning, "Projection '{Identifier}' stores composite keys in a legacy key format in namespace '{Namespace}'. A replay rebuilds them in the current format")]
+    internal static partial void KeyFormatMigrationRequired(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Information, "Full replay - projection '{Identifier}' in namespace '{Namespace}' is rebuilding composite keys in the current key format")]
+    internal static partial void AutoReplayingProjectionForKeyFormat(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Information, "Full replay - projection '{Identifier}' in namespace '{Namespace}' changed in a way that may affect existing read models")]
     internal static partial void AutoReplayingProjection(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 

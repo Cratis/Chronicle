@@ -15,13 +15,13 @@ public partial class Sink
 {
     async Task<IEnumerable<FailedPartition>> ApplyGuardedUpsert(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber sequenceNumber)
     {
-        var id = GetIdString(key);
         var incoming = checked((long)sequenceNumber.Value);
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
         var joinsApplied = false;
         while (true)
         {
             await using var scope = await OpenActiveScope();
+            var id = await IdForWrite(scope, ActiveTableName, key);
             var rows = scope.DbContext.Entries.Where(BuildIdPredicate(id));
             if (changeset.HasBeenRemoved())
             {

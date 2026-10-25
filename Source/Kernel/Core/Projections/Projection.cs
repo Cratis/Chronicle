@@ -25,6 +25,7 @@ using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -111,6 +112,11 @@ public class Projection(
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             await EvolveForAllNamespaces(key, namespaceNames, previousDefinition, definition);
+        }
+        else if (readModelDefinition is not null)
+        {
+            // The definition is unchanged, but the storage may still hold composite keys in a legacy key format.
+            await EnsureKeyFormatMigrated(key, definition, readModelDefinition);
         }
     }
 
@@ -635,6 +641,67 @@ public class Projection(
                     break;
             }
         }
+    }
+
+    async Task EnsureKeyFormatMigrated(ProjectionKey key, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    {
+        var allNamespaces = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
+        var policy = options.Value.Observers.DefinitionEvolution;
+        IEnumerable<EventStoreNamespaceName> namespacesToCheck = definition.Scope switch
+        {
+            ProjectionScope.Global => [EventStoreNamespaceName.NotSet],
+            ProjectionScope.Both => [.. allNamespaces, EventStoreNamespaceName.NotSet],
+            _ => allNamespaces
+        };
+
+        foreach (var @namespace in namespacesToCheck)
+        {
+            if (!await ReadModelKeyFormatMigration.IsRequired(storage, key.EventStore, @namespace, readModelDefinition))
+            {
+                continue;
+            }
+
+            logger.KeyFormatMigrationRequired(key.ProjectionId, @namespace);
+            var isGlobalSink = @namespace.Equals(EventStoreNamespaceName.NotSet);
+            if (ReadModelKeyFormatMigration.CanReplay(policy, isGlobalSink ? ProjectionScope.Global : ProjectionScope.Namespaced))
+            {
+                this.ScheduleInSeparateTurn(() => ReplayForKeyFormat(key, @namespace));
+                continue;
+            }
+
+            // The shared global sink is not owned by one namespace, so every namespace observer is told about it.
+            foreach (var recommendationNamespace in isGlobalSink ? allNamespaces : [@namespace])
+            {
+                await AddKeyFormatRecommendation(key, recommendationNamespace, isGlobalSink);
+            }
+        }
+    }
+
+    async Task ReplayForKeyFormat(ProjectionKey key, EventStoreNamespaceName @namespace)
+    {
+        logger.AutoReplayingProjectionForKeyFormat(key.ProjectionId, @namespace);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+        if (await observer.Replay() == JobId.NotSet)
+        {
+            // A retired or non-replayable observer cannot be replayed, so the operator is told instead.
+            await AddKeyFormatRecommendation(key, @namespace, false);
+        }
+    }
+
+    async Task AddKeyFormatRecommendation(ProjectionKey key, EventStoreNamespaceName @namespace, bool isGlobalSink)
+    {
+        var description = isGlobalSink
+            ? GlobalProjectionReplay.RefusalReason
+            : "Composite keys are stored in a legacy key format. A replay rebuilds them in the current format.";
+        var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
+        await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+            description,
+            new()
+            {
+                ObserverId = key.ProjectionId,
+                ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                Reasons = [new ReadModelKeyFormatChangedReplayCandidateReason()]
+            });
     }
 
     async Task ReplayProjection(ProjectionKey key, EventStoreNamespaceName @namespace)

@@ -24,6 +24,13 @@ public interface IReadModelMigrator
     Task EnsureReplayPromotions(ReadModelDbContext context);
 
     /// <summary>
+    /// Ensures the Chronicle-owned read-model key format table exists in the read-model database.
+    /// </summary>
+    /// <param name="context">The context whose connection is used.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureReadModelKeyFormats(ReadModelDbContext context);
+
+    /// <summary>
     /// Clears cached migration state for all tables whose connection string starts with the given prefix.
     /// </summary>
     /// <param name="connectionStringPrefix">

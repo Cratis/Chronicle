@@ -34,6 +34,9 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
+        // The format table is created first, under its own schema lock and transaction. Creating it later,
+        // inside another table's creation or a promotion transaction, would end that transaction on SQLite.
+        await EnsureReadModelKeyFormats(context);
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }
@@ -50,6 +53,21 @@ public class ReadModelMigrator(
             // Another silo may have created the shared marker table. Recheck through the migrator;
             // do not cache success merely because a CREATE failed.
             await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReplayPromotions, context, CreateReplayPromotions);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureReadModelKeyFormats(ReadModelDbContext context)
+    {
+        try
+        {
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReadModelKeyFormats, context, CreateReadModelKeyFormats);
+        }
+        catch (Exception exception) when (IsDuplicateTable(exception))
+        {
+            // Another silo may have created the shared table. Recheck through the migrator;
+            // do not cache success merely because a CREATE failed.
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReadModelKeyFormats, context, CreateReadModelKeyFormats);
         }
     }
 
@@ -76,6 +94,21 @@ public class ReadModelMigrator(
                 BackupTableName = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", promotion => promotion.Id));
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+    }
+
+    async Task CreateReadModelKeyFormats(ReadModelDbContext context, string tableName)
+    {
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                Id = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
+                TableName = table.StringColumn(migrationBuilder, nullable: false),
+                Format = table.StringColumn(migrationBuilder, nullable: false)
+            },
+            constraints: table => table.PrimaryKey($"PK_{tableName}", entry => entry.Id));
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
@@ -195,6 +228,10 @@ public class ReadModelMigrator(
     {
         logger.CreatingReadModelTable(tableName);
 
+        // The format is recorded before the table exists. A crash between the two leaves a row without a table, which the
+        // next create overwrites; an existing table without a row is a legacy table by definition.
+        await RecordKeyFormat(context, tableName);
+
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
         var databaseType = migrationBuilder.GetDatabaseType();
 
@@ -228,6 +265,22 @@ public class ReadModelMigrator(
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
+    async Task RecordKeyFormat(ReadModelDbContext context, string tableName)
+    {
+        var format = ReplayTableName.IsReplayTable(tableName) ? ReadModelKeyFormat.BuildingK1 : ReadModelKeyFormat.K1;
+        var entry = ReadModelKeyFormatEntry.For(tableName, format);
+        await context.ReadModelKeyFormats.Where(existing => existing.Id == entry.Id).ExecuteDeleteAsync();
+        context.ReadModelKeyFormats.Add(entry);
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        finally
+        {
+            context.Entry(entry).State = EntityState.Detached;
+        }
+    }
+
     static AddColumnOperation BuildAddColumnOperation(ProjectedColumn column, DatabaseType databaseType, string tableName)
     {
         var op = new AddColumnOperation
@@ -249,6 +302,17 @@ public class ReadModelMigrator(
         if (column.IsJson)
         {
             op.AddAnnotation(JsonColumnMigrationExtensions.CratisColumnTypeAnnotation, JsonColumnMigrationExtensions.JsonColumnType);
+        }
+
+        if (column.IsCompositeKey)
+        {
+            // The ~k1: encoding is compared byte for byte; a case- or accent-insensitive collation would merge distinct keys.
+            op.Collation = databaseType switch
+            {
+                DatabaseType.PostgreSql => "C",
+                DatabaseType.SqlServer => "Latin1_General_100_BIN2",
+                _ => null
+            };
         }
 
         return op;
@@ -284,7 +348,9 @@ public class ReadModelMigrator(
         {
             return databaseType switch
             {
-                DatabaseType.PostgreSql => column.IsKey ? "VARCHAR(200)" : "TEXT",
+                DatabaseType.PostgreSql when column.IsCompositeKey => "VARCHAR(450)",
+                DatabaseType.PostgreSql when column.IsKey => "VARCHAR(200)",
+                DatabaseType.PostgreSql => "TEXT",
                 DatabaseType.SqlServer => column.SqlServerStringType,
                 _ => "TEXT"
             };

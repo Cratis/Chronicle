@@ -51,15 +51,16 @@ public partial class Sink
         return await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             scope.DbContext.ChangeTracker.Clear();
+            var id = await IdForWrite(scope, _tableName, key);
 
             // Serialize both existing rows and missing-key decisions. A competing insert/update/delete
             // either precedes this snapshot, waits for it, or forces a serialization/deadlock retry.
             await using var transaction = await scope.DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-            var rows = scope.DbContext.Entries.Where(BuildIdPredicate(GetIdString(key)));
+            var rows = scope.DbContext.Entries.Where(BuildIdPredicate(id));
             var eligible = rows.Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == null || EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) <= bound);
             var result = state is null
                 ? await RemoveIsolated(rows, eligible)
-                : await WriteIsolated(scope.DbContext, rows, eligible, ReplacementEntity(key, state, bound));
+                : await WriteIsolated(scope.DbContext, rows, eligible, ReplacementEntity(key, id, state, bound));
             await transaction.CommitAsync();
             return result;
         });
@@ -80,7 +81,7 @@ public partial class Sink
         return IsolatedReplaceResult.Replaced;
     }
 
-    DynamicReadModelEntity ReplacementEntity(Key key, ExpandoObject state, long watermark)
+    DynamicReadModelEntity ReplacementEntity(Key key, string id, ExpandoObject state, long watermark)
     {
         var replacement = new DynamicReadModelEntity();
         SeedDefaults(replacement);
@@ -89,7 +90,7 @@ public partial class Sink
         {
             if (column.IsKey)
             {
-                replacement[column.Name] = CoerceForColumn(column, key.Value is ExpandoObject ? GetIdString(key) : key.Value);
+                replacement[column.Name] = CoerceForColumn(column, key.Value is ExpandoObject ? id : key.Value);
             }
             else if (values.TryGetValue(column.Name, out var value))
             {

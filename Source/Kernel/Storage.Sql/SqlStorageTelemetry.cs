@@ -41,4 +41,26 @@ internal sealed class SqlStorageTelemetry
     /// <param name="operation">The bounded storage operation name.</param>
     /// <param name="count">The number of collision retries recovered by the operation.</param>
     internal static void RecoveredCollision(string operation, int count = 1) => _meter.UpsertCollisionRecovered(operation, count);
+
+    /// <summary>
+    /// Counts a write that was refused because of the composite key format.
+    /// </summary>
+    /// <param name="reason">The bounded reason, "legacy-format" or "too-long".</param>
+    internal static void CompositeKeyWriteRefused(string reason) => _meter.CompositeKeyWriteRefused(reason, 1);
+
+    /// <summary>
+    /// Counts a write made in the legacy composite key format.
+    /// </summary>
+    /// <param name="scope">The bounded projection scope, "global".</param>
+    internal static void CompositeKeyWriteLegacy(string scope) => _meter.CompositeKeyWriteLegacy(scope, 1);
+
+    /// <summary>
+    /// Counts a legacy-format composite key id found in a table that uses the current key format.
+    /// </summary>
+    internal static void LegacyCompositeKeyInK1Table() => _meter.LegacyCompositeKeyInK1Table(1);
+
+    /// <summary>
+    /// Counts a read of a composite-key table that is still in the legacy key format.
+    /// </summary>
+    internal static void LegacyCompositeKeyRead() => _meter.LegacyCompositeKeyRead(1);
 }

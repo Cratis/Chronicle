@@ -159,6 +159,11 @@ public static class WellKnownTableNames
     public const string ReplayPromotions = "chronicle_replay_promotions";
 
     /// <summary>
+    /// The read-model database table that records the composite-key format of each physical read-model table.
+    /// </summary>
+    public const string ReadModelKeyFormats = "chronicle_read_model_key_formats";
+
+    /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModelDefinitions";

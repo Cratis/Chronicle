@@ -17,6 +17,12 @@ internal static partial class ReducerLogMessages
     [LoggerMessage(LogLevel.Debug, "Client with connection id {connectionId} has disconnected - unsubscribing reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
     internal static partial void ClientDisconnected(this ILogger<Reducer> logger, ConnectionId connectionId, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
+    [LoggerMessage(LogLevel.Warning, "Reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} stores composite keys in a legacy key format in namespace {@namespace}. A replay rebuilds them in the current format")]
+    internal static partial void KeyFormatMigrationRequired(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Information, "Full replay - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} is rebuilding composite keys in the current key format")]
+    internal static partial void AutoReplayingReducerForKeyFormat(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Information, "Full replay - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} changed in a way that may affect existing read models")]
     internal static partial void AutoReplayingReducer(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 

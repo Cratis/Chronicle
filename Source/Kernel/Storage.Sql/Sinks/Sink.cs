@@ -66,6 +66,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
+    readonly bool _compositeKey;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
 
@@ -119,6 +120,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
         _columns = ProjectedColumns.ForSchema(_schema, _indexes);
+        _compositeKey = _columns.Any(column => column.IsKey && column.IsCompositeKey);
     }
 
     /// <inheritdoc/>
@@ -144,8 +146,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
-        var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
+        var id = await IdForRead(scope, ActiveTableName, key);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeExpando(entity);
     }
@@ -153,8 +155,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
     {
-        var id = GetIdString(key);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        var id = await IdForRead(scope, _tableName, key);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeExpando(entity);
     }
@@ -187,8 +189,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
             return await ApplyGuardedUpsert(key, changeset, eventSequenceNumber);
         }
 
-        var id = GetIdString(key);
         await using var scope = await OpenActiveScope();
+        var id = await IdForWrite(scope, ActiveTableName, key);
 
         if (changeset.HasBeenRemoved())
         {
@@ -334,6 +336,8 @@ public partial class Sink : ISink, ICanReconcileIndexes
         // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
         // resolves to the replay name.
         await NamePrimaryKeyAfterPrimaryTable();
+        await DropLegacyReplayTable();
+        ClearFormatCaches();
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await PrepareInitialRun();
         await EnsureIndexes();
@@ -345,6 +349,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
     {
         // Re-enter replay mode after an interruption without wiping the replay table — it
         // already contains the work the previous run produced before it was paused.
+        ClearFormatCaches();
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
         await EnsureIndexes();
         await BeginBulk();
@@ -363,6 +368,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         finally
         {
             _replayingTables.End(_eventStoreName, _namespace, _tableName);
+            ClearFormatCaches();
         }
 
         return failedPartitions;
@@ -412,7 +418,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         await scope.DbContext.SaveChangesAsync();
     }
 
-    static string ReplayTableNameFor(string baseName) => $"replay-{baseName}";
+    static string ReplayTableNameFor(string baseName) => ReplayTableName.For(baseName);
 
     /// <summary>
     /// Opens a fresh scope routed at <see cref="ActiveTableName"/>. Caller owns the scope and
@@ -474,6 +480,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
         var entries = await OrderByKey(scope.DbContext.Entries.AsNoTracking()).Skip(skip).Take(take).ToListAsync();
+        await NoteKeyFormatOfInstances(scope, containerName, entries);
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
     }
 
@@ -621,10 +628,10 @@ public partial class Sink : ISink, ICanReconcileIndexes
         var keyColumn = _columns.FirstOrDefault(c => c.IsKey);
         if (keyColumn is not null)
         {
-            // Composite keys arrive as an ExpandoObject; the table's key column is a single typed
-            // value, so use the GetIdString representation that BuildIdPredicate searches by — the
-            // raw ExpandoObject can't be coerced and EF would fail with InvalidCastException at
-            // INSERT.
+            // Composite keys arrive as an ExpandoObject; the table key column is a single typed
+            // value, so use the id the caller resolved for this physical table, in the key format
+            // the table uses. The raw ExpandoObject can't be coerced and EF would fail with
+            // InvalidCastException at INSERT.
             var keyValue = key.Value is ExpandoObject ? id : key.Value;
             fresh[keyColumn.Name] = CoerceForColumn(keyColumn, keyValue);
         }
@@ -779,19 +786,6 @@ public partial class Sink : ISink, ICanReconcileIndexes
         return _uniqueViolations.Any(violation =>
             inner.EndsWith(violation.ExceptionSuffix, StringComparison.Ordinal) &&
             violation.MessageFragments.Any(fragment => message.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    static string GetIdString(Key key)
-    {
-        if (key.Value is ExpandoObject expandoKey)
-        {
-            var parts = expandoKey
-                .OrderBy(kv => kv.Key)
-                .Select(kv => kv.Value?.ToString() ?? string.Empty);
-            return string.Join('_', parts);
-        }
-
-        return key.Value?.ToString() ?? string.Empty;
     }
 
     sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);

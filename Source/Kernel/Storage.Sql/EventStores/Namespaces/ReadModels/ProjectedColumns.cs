@@ -134,12 +134,13 @@ public static class ProjectedColumns
         if (isKey)
         {
             var keyClrType = property.GetTargetTypeForJsonSchemaProperty(_typeFormats) ?? typeof(string);
-            if (IsJsonShape(property))
+            var isCompositeKey = IsJsonShape(property);
+            if (isCompositeKey)
             {
                 keyClrType = typeof(string);
             }
 
-            return new ProjectedColumn(name, keyClrType, IsKey: true, IsJson: false, IsArray: false, IsNullable: false);
+            return new ProjectedColumn(name, keyClrType, IsKey: true, IsJson: false, IsArray: false, IsNullable: false) { IsCompositeKey = isCompositeKey };
         }
 
         // Every non-key column is stored as nullable. The projection engine treats "not yet

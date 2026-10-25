@@ -84,6 +84,11 @@ public class ReadModelDbContext(
     /// </summary>
     internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();
 
+    /// <summary>
+    /// Gets the per-table key formats sharing this context's connection and transactions.
+    /// </summary>
+    internal DbSet<ReadModelKeyFormatEntry> ReadModelKeyFormats => Set<ReadModelKeyFormatEntry>();
+
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
@@ -95,6 +100,12 @@ public class ReadModelDbContext(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
+
+    /// <summary>
+    /// Creates the shared key format table before reading or writing a format.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task EnsureReadModelKeyFormats() => migrator.EnsureReadModelKeyFormats(this);
 
     /// <inheritdoc/>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -120,6 +131,12 @@ public class ReadModelDbContext(
             entity.ToTable(WellKnownTableNames.ReplayPromotions);
             entity.HasKey(promotion => promotion.Id).HasName($"PK_{WellKnownTableNames.ReplayPromotions}");
             entity.Property(promotion => promotion.Id).HasMaxLength(64);
+        })
+        .Entity<ReadModelKeyFormatEntry>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.ReadModelKeyFormats);
+            entity.HasKey(format => format.Id).HasName($"PK_{WellKnownTableNames.ReadModelKeyFormats}");
+            entity.Property(format => format.Id).HasMaxLength(64);
         })
         .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {

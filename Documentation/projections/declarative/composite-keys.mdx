@@ -64,6 +64,21 @@ Projection declarations that specify a composite key type require Chronicle kern
 
 When generating a declaration from an untyped fluent composite-key expression, Chronicle infers the type from the read model's `Id` property (including nullable object types) or the child item's `Id` for a child collection. The .NET client now includes the CLR key type name in the generated schema, so declarations generated from these fluent projections can be compiled again. Fluent expressions remain untyped for compatibility with older kernels. For a manually supplied schema without a key type name, generation still uses `CompositeKey` as a best-effort placeholder; that declaration cannot recompile unless the schema defines a `CompositeKey` object with the mapped properties.
 
+## Upgrading SQL read models to the collision-free key format
+
+SQL read models store a composite key in a single key column. Earlier kernels joined the key parts with an underscore, so two different keys such as `a_b` + `c` and `a` + `b_c` produced the same id and overwrote each other. The kernel now stores a prefixed encoding (`~k1:`) that cannot collide, and records the format of every table.
+
+A table created by an earlier kernel keeps the legacy format until a replay rebuilds it. The replay writes a new table in the current format and swaps it in, table by table:
+
+- **Namespaced read models** are replayed automatically when the observers definition evolution policy is `Automatic`. With any other policy the kernel logs a warning and adds a replay recommendation, and writes to the legacy table are refused until you replay. Reads keep working in the meantime.
+- **Global read models** (projections with global scope) keep writing in the legacy format until a coordinated global replay exists. The kernel logs a warning, adds a replay recommendation to each namespace and counts every legacy write in the `chronicle-sql-composite-key-writes-legacy` metric tagged `scope=global`. The collision risk remains for those tables.
+
+Composite keys that encode to more than 450 characters are refused, because the key column is limited to 450 characters on every provider. The key column of a composite key uses a binary collation (`C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server) so that keys differing only in case or accents stay distinct.
+
+Watch the `chronicle-sql-composite-key-writes-refused`, `chronicle-sql-legacy-composite-key-reads` and `chronicle-sql-legacy-composite-key-in-k1-table` metrics during the upgrade. The last one counts legacy-format ids found in a table that already uses the new format, which happens when a node that still runs the old kernel keeps writing.
+
+Do not run old and new kernels side by side during this upgrade. The format is not understood by earlier kernels, so follow the rule *To a new major: stop every node* in [Rolling deploy](../../hosting/rolling-deploy.md), then start the new version.
+
 ## Performance considerations
 
 - **Index efficiency**: Composite keys create complex indexes in the underlying storage

@@ -34,7 +34,12 @@ public partial class Sink
         var revertName = context.RevertContainerName.Value;
         var physicalRevert = PrimaryKeyNames.TableIdentifier(databaseType, revertName);
         var marker = new ReplayPromotion(ReplayPromotion.IdentifierFor(_tableName, revertName), _tableName, revertName, physicalRevert);
-        var promotion = new ReplayTablePromotion(replayName, revertName, physicalRevert, databaseType, replayHasRows, marker);
+        var (primaryIsLegacy, primaryHasRows) = replayHasRows ? (false, false) : await DescribeCompositePrimary();
+        var promotion = new ReplayTablePromotion(replayName, revertName, physicalRevert, databaseType, replayHasRows, marker)
+        {
+            ReplacesEmptyLegacyPrimary = primaryIsLegacy && !primaryHasRows,
+            KeepsPopulatedLegacyPrimary = primaryIsLegacy && primaryHasRows
+        };
         var recoveryName = $"chronicle_replay_backup_{Guid.NewGuid():N}";
         var preservedLegacyBackup = false;
 
@@ -60,6 +65,11 @@ public partial class Sink
 
             () => SwapHasCommitted(scope.DbContext, marker)));
 
+        if (promotion.KeepsPopulatedLegacyPrimary)
+        {
+            _logger.LegacyCompositeKeyTableNotMigrated(_eventStoreName.Value, _namespace.Value, _tableName);
+        }
+
         if (preservedLegacyBackup)
         {
             _logger.PreservedLegacyReplayBackup(_eventStoreName.Value, _namespace.Value, _tableName, physicalRevert, recoveryName);
@@ -78,16 +88,19 @@ public partial class Sink
     async Task<bool> PromoteReplayTable(DbContextScope<ReadModelDbContext> scope, ReplayTablePromotion promotion, string recoveryName)
     {
         var (replayName, revertName, physicalRevert, databaseType, replayHasRows, marker) = promotion;
-        if (!replayHasRows)
+        if (!replayHasRows && !promotion.ReplacesEmptyLegacyPrimary)
         {
             // No backup is touched on this path, so its ownership cannot block an empty replay.
+            // A populated legacy composite primary is kept as it is, and stays legacy.
             await ExecuteDdl(scope, BuildDropSql(scope, replayName));
+            await DeleteKeyFormat(scope.DbContext, replayName);
             return false;
         }
 
         // Re-check on every attempt before touching the backup. A reader can recreate an empty
         // replay table after a committed swap; it must never replace the rebuilt primary.
-        if (!await scope.DbContext.Entries.AsNoTracking().AnyAsync())
+        // Replacing an empty legacy composite primary with an empty table in the current format is harmless.
+        if (replayHasRows && !await scope.DbContext.Entries.AsNoTracking().AnyAsync())
         {
             throw new ReplayTableBecameEmpty(replayName);
         }
@@ -112,6 +125,7 @@ public partial class Sink
         await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
         await ReadModelIndexes.NameAfterTable(scope.DbContext, revertName);
         await ReadModelIndexes.NameAfterTable(scope.DbContext, _tableName);
+        await MoveKeyFormats(scope.DbContext, promotion, recoveryName, preservedLegacyBackup);
         await RecordPromotion(scope.DbContext, marker);
         return preservedLegacyBackup;
     }
@@ -230,5 +244,16 @@ public partial class Sink
         string PhysicalRevert,
         DatabaseType DatabaseType,
         bool ReplayHasRows,
-        ReplayPromotion Marker);
+        ReplayPromotion Marker)
+    {
+        /// <summary>
+        /// Gets whether an empty replay may replace a legacy composite primary that has no rows.
+        /// </summary>
+        public bool ReplacesEmptyLegacyPrimary { get; init; }
+
+        /// <summary>
+        /// Gets whether an empty replay leaves a populated legacy composite primary in place.
+        /// </summary>
+        public bool KeepsPopulatedLegacyPrimary { get; init; }
+    }
 }

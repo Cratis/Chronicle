@@ -25,16 +25,17 @@ public class a_projection_grain_with_replay_on_definition_change : Specification
     protected ProjectionDefinition _definition;
     protected Storage.IStorage _storage;
     protected INamespaces _namespaces;
+    protected IProjectionDefinitionComparer _comparer;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
 
-        var definitionComparer = Substitute.For<IProjectionDefinitionComparer>();
-        definitionComparer
+        _comparer = Substitute.For<IProjectionDefinitionComparer>();
+        _comparer
             .Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>())
             .Returns(ProjectionDefinitionCompareResult.Different);
-        _silo.AddService(definitionComparer);
+        _silo.AddService(_comparer);
 
         _silo.AddService(Substitute.For<IProjectionFactory>());
         _silo.AddService(Substitute.For<IObjectComparer>());

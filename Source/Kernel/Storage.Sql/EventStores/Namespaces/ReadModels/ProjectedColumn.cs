@@ -27,12 +27,19 @@ public record ProjectedColumn(string Name, Type ClrType, bool IsKey, bool IsJson
     public bool IsIndexed { get; init; }
 
     /// <summary>
+    /// Gets whether this is the primary-key column of a read model whose key is a composite (object-shaped) key.
+    /// The column stores the collision-free "~k1:" encoding and is sized and collated accordingly.
+    /// </summary>
+    public bool IsCompositeKey { get; init; }
+
+    /// <summary>
     /// Gets the SQL Server string storage type, including scalar-index key sizing.
     /// </summary>
     internal string SqlServerStringType
     {
         get
         {
+            if (IsCompositeKey) return "NVARCHAR(450)";
             if (IsKey) return "NVARCHAR(200)";
             if (!IsIndexed && MaxLength is null) return "NVARCHAR(MAX)";
             return MaxLength switch

@@ -50,6 +50,11 @@ public record ReplayCandidateReasonType(string Value) : ConceptAs<string>(Value)
     public static readonly ReplayCandidateReasonType RetiredProjectionSharedContainer = "RetiredProjectionSharedContainer";
 
     /// <summary>
+    /// Gets the <see cref="ReplayCandidateReasonType"/> for when the read model storage needs a replay to rebuild its keys in the current key format.
+    /// </summary>
+    public static readonly ReplayCandidateReasonType ReadModelKeyFormatChanged = "ReadModelKeyFormatChanged";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ReplayCandidateReasonType"/>.
     /// </summary>
     /// <param name="value">String to convert from.</param>

@@ -7,11 +7,14 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Placement;
@@ -107,6 +110,12 @@ public class Reducer(
         {
             await _observer!.Unsubscribe();
             _subscribed = false;
+        }
+
+        if (compareResult != ReducerDefinitionCompareResult.Different && definition.IsActive)
+        {
+            // The definition is unchanged, but the storage may still hold composite keys in a legacy key format.
+            await EnsureKeyFormatMigrated(key, definition);
         }
     }
 
@@ -215,6 +224,50 @@ public class Reducer(
                     break;
             }
         }
+    }
+
+    async Task EnsureKeyFormatMigrated(ReducerKey key, ReducerDefinition definition)
+    {
+        var readModels = await storage.GetEventStore(key.EventStore).ReadModels.GetAll();
+        var readModelDefinition = readModels.FirstOrDefault(readModel => readModel.Identifier == definition.ReadModel);
+        if (readModelDefinition is null || !await ReadModelKeyFormatMigration.IsRequired(storage, key.EventStore, key.Namespace, readModelDefinition))
+        {
+            return;
+        }
+
+        logger.KeyFormatMigrationRequired(key.EventStore, key.ReducerId, key.EventSequenceId, key.Namespace);
+        if (ReadModelKeyFormatMigration.CanReplay(options.Value.Observers.DefinitionEvolution, ProjectionScope.Namespaced))
+        {
+            this.ScheduleInSeparateTurn(() => ReplayReducerForKeyFormat(key));
+            return;
+        }
+
+        await AddKeyFormatRecommendation(key);
+    }
+
+    async Task ReplayReducerForKeyFormat(ReducerKey key)
+    {
+        logger.AutoReplayingReducerForKeyFormat(key.EventStore, key.ReducerId, key.EventSequenceId, key.Namespace);
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
+        if (await observer.Replay() == JobId.NotSet)
+        {
+            // A retired or non-replayable observer cannot be replayed, so the operator is told instead.
+            await AddKeyFormatRecommendation(key);
+        }
+    }
+
+    async Task AddKeyFormatRecommendation(ReducerKey key)
+    {
+        var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, key.Namespace));
+        await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
+            "Composite keys are stored in a legacy key format. A replay rebuilds them in the current format.",
+            new()
+            {
+                ObserverId = key.ReducerId,
+                ObserverKey = new(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId),
+                ObserverType = ObserverType.Reducer,
+                Reasons = [new ReadModelKeyFormatChangedReplayCandidateReason()]
+            });
     }
 
     async Task ReplayReducer(ReducerKey key, EventStoreNamespaceName @namespace)

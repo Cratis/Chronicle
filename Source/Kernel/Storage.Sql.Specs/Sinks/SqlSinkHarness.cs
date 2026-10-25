@@ -54,6 +54,11 @@ public class SqlSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets the namespace the sink is created for. <see cref="EventStoreNamespaceName.NotSet"/> is the global scope.
+    /// </summary>
+    public EventStoreNamespaceName Namespace { get; init; } = "test-namespace";
+
+    /// <summary>
     /// Gets the logger for sink diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
@@ -85,7 +90,7 @@ public class SqlSinkHarness : ISqlSinkHarness
 
         return new SqlSink(
             "test-event-store",
-            "test-namespace",
+            Namespace,
             definition,
             database,
             new ExpandoObjectConverter(new TypeFormats()),
@@ -111,6 +116,27 @@ public class SqlSinkHarness : ISqlSinkHarness
     {
         await using var context = await CreateContext(_definition!.ContainerName.Value);
         return await context.Entries.AsNoTracking().ToArrayAsync();
+    }
+
+    /// <summary>
+    /// Forgets the recorded key format of every table, which makes the existing tables legacy tables the way a database
+    /// created by an earlier release looks.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    public async Task MakeTablesLegacy()
+    {
+        await using var context = await CreateContext(_definition!.ContainerName.Value);
+        await context.ReadModelKeyFormats.ExecuteDeleteAsync();
+    }
+
+    /// <summary>
+    /// Reads the recorded key format of every table, keyed by the physical table name.
+    /// </summary>
+    /// <returns>The stored format value, "building-k1" or "k1", per table. A table without a row is legacy.</returns>
+    public async Task<IReadOnlyDictionary<string, string>> ReadKeyFormats()
+    {
+        await using var context = await CreateContext(_definition!.ContainerName.Value);
+        return await context.ReadModelKeyFormats.AsNoTracking().ToDictionaryAsync(entry => entry.TableName, entry => entry.Format);
     }
 
     /// <inheritdoc/>
