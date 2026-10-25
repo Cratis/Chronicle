@@ -172,8 +172,11 @@ public class Webhooks(
         }
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        await SetDefinitionAndSubscribe(namespaces, definition);
-        await RemoveReminder(reminderName);
+        var retryDelay = TimeSpan.FromMinutes(Math.Clamp(status.Period.TotalMinutes * 2, 1, 10));
+        if (await SetDefinitionAndSubscribe(namespaces, definition, automatic: true, retryDelay: retryDelay))
+        {
+            await RemoveReminder(reminderName);
+        }
     }
 
     /// <inheritdoc/>
@@ -194,7 +197,7 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SetDefinitionAndSubscribe(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition, bool automatic = false)
+    async Task<bool> SetDefinitionAndSubscribe(IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition, bool automatic = false, TimeSpan? retryDelay = null)
     {
         logger.SettingDefinition(definition.Identifier);
         var key = new WebhookKey(definition.Identifier, _eventStoreName);
@@ -204,11 +207,11 @@ public class Webhooks(
         if (!definition.IsActive)
         {
             logger.NotActive(definition.Identifier);
-            return;
+            return true;
         }
 
-        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName, automatic));
-        await Task.WhenAll(tasks);
+        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName, automatic, retryDelay));
+        return (await Task.WhenAll(tasks)).All(established => established);
     }
 
     async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, WebhookId webhookId)
@@ -222,11 +225,11 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName, bool automatic = false)
+    async Task<bool> SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName, bool automatic = false, TimeSpan? retryDelay = null)
     {
         if (!definition.IsActive)
         {
-            return;
+            return true;
         }
 
         var observer = GetObserver(definition, namespaceName);
@@ -254,6 +257,11 @@ public class Webhooks(
                 reactivateRetired: !automatic,
                 automatic: automatic);
         }
+
+        if (!await observer.NeedsSubscriptionRecovery(definition.EventTypes)) return true;
+        var delay = retryDelay ?? TimeSpan.FromMinutes(1);
+        await this.RegisterOrUpdateReminder($"{SubscriptionReminderPrefix}{definition.Identifier}", delay, delay);
+        return false;
     }
 
     async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
