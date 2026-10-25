@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -21,7 +22,7 @@ public class and_the_database_changes_outside_the_storage_instance : given.a_fai
     {
         var initial = new TaskCompletionSource();
         var completion = new TaskCompletionSource<IEnumerable<Concepts.Observation.FailedPartition>>();
-        _subscription = _storage.ObserveAllFor().Subscribe(partitions =>
+        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(partitions =>
         {
             if (!partitions.Any()) initial.TrySetResult();
             if (partitions.Any()) completion.TrySetResult(partitions);
