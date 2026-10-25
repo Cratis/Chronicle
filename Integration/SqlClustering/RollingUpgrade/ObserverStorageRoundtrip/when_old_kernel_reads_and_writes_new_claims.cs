@@ -59,7 +59,8 @@ public class when_old_kernel_reads_and_writes_new_claims : Specification
             PartitionClaims = [new("shadow-partition", ClaimHolderKind.PartitionCatchUp, new(Guid.NewGuid()), new(3), 42, [])],
             ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, new(Guid.NewGuid()), new(7), 50, []),
             OwnershipRevision = new(7)
-        }, new(selected.Owner));
+        },
+        new(selected.Owner));
         _rowBefore = await Row();
         await ReleasedObserverDatabase.WitnessUpdates(_connectionString);
     }
