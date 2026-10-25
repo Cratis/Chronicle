@@ -31,6 +31,6 @@ public class and_observers_require_different_replay_scopes : given.a_content_mut
     [Fact] void should_leave_non_replayable_observers_untouched() => ShouldLeaveUntouched("non-replayable");
     [Fact] Task should_select_observers_using_the_original_event_type() => _observerDefinitions.Received(1)
         .GetReplayableObserversForEventTypes(Arg.Is<IEnumerable<EventType>>(types => types.SequenceEqual(new[] { _eventType })));
-    [Fact] void should_read_each_projection_definition_once() => ShouldReadOnlyProjectionDefinitions();
+    [Fact] void should_list_projection_definitions_once() => ShouldListProjectionDefinitionsOnce();
     [Fact] void should_read_definitions_in_the_mutated_event_store() => ShouldUseEventStoreScope();
 }

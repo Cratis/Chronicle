@@ -29,6 +29,7 @@ public class a_content_mutation_with_observers : an_event_sequence
     protected IProjectionDefinitionsStorage _projectionDefinitions;
     protected readonly Dictionary<string, IObserver> _observers = [];
     protected readonly List<ObserverDefinition> _definitions = [];
+    protected readonly Dictionary<string, ProjectionDefinition> _storedProjectionDefinitions = [];
     protected EventType _secondEventType = new("second-mutated-type", EventTypeGeneration.First);
     protected EventType _unchangedEventType = new("unchanged-type", EventTypeGeneration.First);
     protected AppendedEvent _originalEvent;
@@ -69,6 +70,7 @@ public class a_content_mutation_with_observers : an_event_sequence
 
         _observerDefinitions = Substitute.For<IObserverDefinitionsStorage>();
         _projectionDefinitions = Substitute.For<IProjectionDefinitionsStorage>();
+        _projectionDefinitions.GetAll().Returns(_ => _storedProjectionDefinitions.Values.ToArray());
         _eventStoreStorage.Observers.Returns(_observerDefinitions);
         _eventStoreStorage.Projections.Returns(_projectionDefinitions);
         _observerDefinitions.GetReplayableObserversForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(call =>
@@ -110,7 +112,7 @@ public class a_content_mutation_with_observers : an_event_sequence
         AddProjection("legacy", Definition("legacy") with { HasLegacyStorageFields = true });
         AddProjection("unknown", Definition("unknown") with { From = null! });
         AddObserver("missing", ObserverType.Projection);
-        _projectionDefinitions.Get((ProjectionId)"missing").Returns(Task.FromResult<ProjectionDefinition>(null!));
+        _projectionDefinitions.Get((ProjectionId)"missing").Returns(Task.FromException<ProjectionDefinition>(new InvalidOperationException("Sequence contains no elements")));
         AddObserver("reducer", ObserverType.Reducer);
         AddObserver("reactor", ObserverType.Reactor);
         AddObserver("external", ObserverType.External);
@@ -141,9 +143,8 @@ public class a_content_mutation_with_observers : an_event_sequence
 
     protected void ShouldLeaveUntouched(string id) => _observers[id].ReceivedCalls().ShouldBeEmpty();
 
-    protected void ShouldReadOnlyProjectionDefinitions() => _projectionDefinitions.ReceivedCalls()
-        .Select(call => call.GetArguments()[0]?.ToString()).Order().ShouldEqual(
-            new[] { "arbitrary", "children", "derived", "explicit", "implicit", "joined", "legacy", "missing", "parent", "unknown" }.Order());
+    protected void ShouldListProjectionDefinitionsOnce() => _projectionDefinitions.ReceivedCalls()
+        .Select(call => call.GetMethodInfo().Name).ShouldEqual([nameof(IProjectionDefinitionsStorage.GetAll)]);
 
     protected void ShouldUseEventStoreScope() => _storage.ReceivedCalls()
         .Where(call => call.GetMethodInfo().Name == nameof(_storage.GetEventStore))
@@ -152,6 +153,7 @@ public class a_content_mutation_with_observers : an_event_sequence
     void AddProjection(string id, ProjectionDefinition definition)
     {
         AddObserver(id, ObserverType.Projection);
+        _storedProjectionDefinitions[id] = definition;
         _projectionDefinitions.Get((ProjectionId)id).Returns(definition);
     }
 

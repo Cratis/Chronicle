@@ -3,7 +3,6 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_revising;
@@ -16,7 +15,7 @@ public class and_projection_definition_cannot_be_read : given.a_content_mutation
     readonly Exception _failure = new InvalidOperationException("Definition storage unavailable");
     Exception _error;
 
-    void Establish() => _projectionDefinitions.Get(Arg.Any<ProjectionId>()).Returns(Task.FromException<ProjectionDefinition>(_failure));
+    void Establish() => _projectionDefinitions.GetAll().Returns(Task.FromException<IEnumerable<ProjectionDefinition>>(_failure));
 
     async Task Because() => _error = await Catch.Exception(() => _eventSequence.Revise(42UL, _eventType, new JsonObject(), CorrelationId.New(), [], Identity.System));
 

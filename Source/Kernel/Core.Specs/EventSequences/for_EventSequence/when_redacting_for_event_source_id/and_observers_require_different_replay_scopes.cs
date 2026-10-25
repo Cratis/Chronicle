@@ -27,6 +27,6 @@ public class and_observers_require_different_replay_scopes : given.a_content_mut
     [Fact] Task should_keep_external_partition_replay() => ShouldReplayPartition("external");
     [Fact] void should_leave_unrelated_observers_untouched() => ShouldLeaveUntouched("unrelated");
     [Fact] void should_leave_non_replayable_observers_untouched() => ShouldLeaveUntouched("non-replayable");
-    [Fact] void should_read_each_projection_definition_once() => ShouldReadOnlyProjectionDefinitions();
+    [Fact] void should_list_projection_definitions_once() => ShouldListProjectionDefinitionsOnce();
     [Fact] void should_read_definitions_in_the_mutated_event_store() => ShouldUseEventStoreScope();
 }

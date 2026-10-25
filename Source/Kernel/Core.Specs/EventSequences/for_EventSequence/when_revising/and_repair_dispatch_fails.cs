@@ -21,7 +21,7 @@ public class and_repair_dispatch_fails : given.a_content_mutation_with_observers
     void Establish()
     {
         _definitions.RemoveAll(definition => definition.Identifier.Value != "arbitrary");
-        _projectionDefinitions.Get((ProjectionId)"arbitrary").Returns(Definition("arbitrary") with { Scope = ProjectionScope.Global });
+        _storedProjectionDefinitions["arbitrary"] = Definition("arbitrary") with { Scope = ProjectionScope.Global };
         _observers["arbitrary"].Replay().Returns(Task.FromException<JobId>(_failure));
     }
 
