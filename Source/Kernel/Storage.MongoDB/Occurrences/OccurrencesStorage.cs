@@ -18,6 +18,15 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
     readonly IMongoCollection<BsonDocument> _occurrences = database.GetCollection<BsonDocument>("occurrences");
     readonly IMongoCollection<BsonDocument> _fences = database.GetCollection<BsonDocument>("occurrence-claim-fences");
 
+    /// <summary>
+    /// Gets the occurrence indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> Indexes { get; } =
+    [
+        new(Builders<BsonDocument>.IndexKeys.Ascending("trigger").Ascending("state"), new CreateIndexOptions { Name = "trigger-state" }),
+        new(Builders<BsonDocument>.IndexKeys.Ascending("schedule").Ascending("state"), new CreateIndexOptions { Name = "schedule-state" })
+    ];
+
     /// <inheritdoc/>
     public async Task<OccurrenceRecordResult> Record(Occurrence occurrence)
     {
@@ -143,10 +152,7 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
         return result.MatchedCount == 1 ? OccurrenceLeaseResult.Updated : OccurrenceLeaseResult.OccurrenceLeaseLost;
     }
 
-    Task EnsureIndexes() => _occurrences.EnsureIndexesOnceAsync(
-        _ensuredIndexes,
-        new(Builders<BsonDocument>.IndexKeys.Ascending("trigger").Ascending("state"), new CreateIndexOptions { Name = "trigger-state" }),
-        new(Builders<BsonDocument>.IndexKeys.Ascending("schedule").Ascending("state"), new CreateIndexOptions { Name = "schedule-state" }));
+    Task EnsureIndexes() => _occurrences.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 
     async Task EnsureFence(TriggerId trigger)
     {

@@ -107,10 +107,10 @@ catch (Exception exception) when (exception is ArgumentException or InvalidOpera
 
 if (schemaAction != SchemaAction.None)
 {
-    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction);
+    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction, builder.Configuration);
 }
 
-if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && !SchemaCommandRunner.IsSql(chronicleOptions.Storage.Type))
+if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase))
 {
     SchemaProvisionerLogging.SchemaModeIgnored(logger, chronicleOptions.Storage.Type);
 }
@@ -145,8 +145,13 @@ KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocol
     listeners.Add((port, protocols, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
 
+// Bind the listener ports before the host is built: building and starting it opens outgoing connections
+// (MongoDB among them), and one of those can be given a listener port as its ephemeral source port. (#5399)
+using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port));
+
 builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
-    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
+    options.CreateBoundListenSocket = endpoint => reservedListenSockets.Take(endpoint)
+        ?? ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
 
 builder.WebHost.UseKestrel(options =>
 {

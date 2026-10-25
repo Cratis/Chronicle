@@ -19,7 +19,22 @@ namespace Cratis.Compliance.MongoDB;
 /// <param name="database"><see cref="IEventStoreDatabase"/> to use for accessing database.</param>
 public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
 {
+    /// <summary>
+    /// The encryption key collection name.
+    /// </summary>
+    internal const string CollectionName = "encryption-keys";
+
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
+    /// <summary>
+    /// Gets the encryption key indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<EncryptionKeyForIdentifier>> Indexes { get; } =
+    [
+        new(
+            Builders<EncryptionKeyForIdentifier>.IndexKeys.Ascending(_ => _.Id.Identifier).Descending(_ => _.Id.Revision),
+            new CreateIndexOptions { Name = "id_identifier_id_revision", Background = true })
+    ];
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -233,14 +248,8 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     async Task<IMongoCollection<EncryptionKeyForIdentifier>> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
     {
         var eventStoreDatabase = database.GetEventStoreDatabase(eventStore).GetNamespaceDatabase(eventStoreNamespace);
-        var collection = eventStoreDatabase.GetCollection<EncryptionKeyForIdentifier>("encryption-keys");
-        await collection.EnsureIndexesOnceAsync(
-            _ensuredIndexes,
-            new CreateIndexModel<EncryptionKeyForIdentifier>(
-                Builders<EncryptionKeyForIdentifier>.IndexKeys
-                    .Ascending(_ => _.Id.Identifier)
-                    .Descending(_ => _.Id.Revision),
-                new CreateIndexOptions { Name = "id_identifier_id_revision", Background = true })).ConfigureAwait(false);
+        var collection = eventStoreDatabase.GetCollection<EncryptionKeyForIdentifier>(CollectionName);
+        await collection.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray()).ConfigureAwait(false);
         return collection;
     }
 }

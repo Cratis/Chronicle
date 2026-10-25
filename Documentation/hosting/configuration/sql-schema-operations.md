@@ -55,7 +55,7 @@ export Cratis__Chronicle__Storage__SchemaMode=Verify
 
 `SchemaMode` defaults to `Migrate`, preserving migration-on-access behavior. `Verify` disables database and schema creation regardless of `CreateIfMissing`. Before accepting traffic, startup checks the cluster, System event-store, Default namespace and jobs schemas. Later versioned-schema accesses also fail if migrations are pending, including jobs initialization. Dynamic DDL still runs when needed. Newly encountered objects are logged once per process at Debug, with a Warning summary per flush giving the count and recommending `--migrate-only`. This is not a blanket DDL prohibition; runtime refusal is planned for the next major release.
 
-Do not set `SchemaAction` on normal replicas: any non-`None` action exits instead of running the server. MongoDB and InMemory schema actions are successful no-ops; normal startup warns when `SchemaMode=Verify` is configured for them.
+Do not set `SchemaAction` on normal replicas: any non-`None` action exits instead of running the server. MongoDB supports these actions for [index provisioning and verification](mongodb-index-operations.md); its startup `Verify` check only warns and does not fail startup. InMemory schema actions remain successful no-ops, and normal startup warns when `SchemaMode=Verify` is configured for InMemory.
 
 ## Exit codes
 

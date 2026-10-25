@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -28,6 +29,17 @@ public class UniqueConstraintsStorage(
     const string ValueIndexName = "value";
     const string SubjectIndexName = "subject";
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
+
+    /// <summary>
+    /// Gets the pattern matching existing uniqueness claim collections.
+    /// </summary>
+    internal static string CollectionNamePattern => @"^.+\+.+\+constraint$";
+
+    /// <summary>
+    /// Gets the per-value owner lookup index.
+    /// </summary>
+    internal static CreateIndexModel<UniqueConstraintValueIndex> OwnerIndex { get; } =
+        new(Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId), new CreateIndexOptions { Name = "owner" });
 
     /// <inheritdoc/>
     public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
@@ -179,6 +191,29 @@ public class UniqueConstraintsStorage(
         await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
     /// <inheritdoc/>
+    public async Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
+    {
+        var database = eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+constraint").Database;
+        var collections = new BsonDocument("name", new BsonRegularExpression($"^{Regex.Escape(eventSequenceId.Value)}\\+.+\\+constraint$"));
+        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = collections }, cancellationToken);
+        var hash = new BsonRegularExpression("\\A[0-9a-f]{64}\\z");
+
+        // Collection names cannot tell the claim modes apart (a constraint or scope may be named "values"),
+        // so each delete only matches documents of its own shape: per-event-source rows store the value in a
+        // field and the owner in _id, retained per-value rows store the owner in a field and the value in _id.
+        var sourceFilter = Builders<UniqueConstraintIndex>.Filter.Exists(row => row.Value) & !Builders<UniqueConstraintIndex>.Filter.Regex(row => row.Value, hash);
+        var valueFilter = Builders<UniqueConstraintValueIndex>.Filter.Exists(row => row.EventSourceId) & !Builders<UniqueConstraintValueIndex>.Filter.Regex(row => row.Value, hash);
+        long sources = 0;
+        long values = 0;
+        foreach (var name in await names.ToListAsync(cancellationToken))
+        {
+            sources += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(sourceFilter, cancellationToken)).DeletedCount;
+            values += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(name).DeleteManyAsync(valueFilter, cancellationToken)).DeletedCount;
+        }
+        return (sources, values);
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
     {
         // Both claim shapes store the subject under the same element, so one typed filter serves every collection.
@@ -191,12 +226,76 @@ public class UniqueConstraintsStorage(
         }
     }
 
-    static Task<string> CreateSubjectIndex<TRow>(IMongoCollection<TRow> collection, System.Linq.Expressions.Expression<Func<TRow, object?>> subject, CancellationToken cancellationToken) =>
-        collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<TRow>(
-                Builders<TRow>.IndexKeys.Ascending(subject),
-                new CreateIndexOptions { Name = SubjectIndexName, Sparse = true }),
-            cancellationToken: cancellationToken);
+    /// <summary>
+    /// Creates a subject lookup index for either claim shape.
+    /// </summary>
+    /// <typeparam name="TRow">The claim document type.</typeparam>
+    /// <param name="subject">The subject field.</param>
+    /// <returns>The named subject index.</returns>
+    internal static CreateIndexModel<TRow> SubjectIndex<TRow>(System.Linq.Expressions.Expression<Func<TRow, object?>> subject) =>
+        new(Builders<TRow>.IndexKeys.Ascending(subject), new CreateIndexOptions { Name = SubjectIndexName, Sparse = true });
+
+    /// <summary>
+    /// Creates the value lookup index for a per-event-source claim.
+    /// </summary>
+    /// <param name="unique">Whether existing data permits uniqueness.</param>
+    /// <returns>The named value index.</returns>
+    internal static CreateIndexModel<UniqueConstraintIndex> ValueIndex(bool unique) =>
+        new(
+            Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
+            new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true });
+
+    /// <summary>
+    /// Ensures indexes for a retained per-value claim collection.
+    /// </summary>
+    /// <param name="collection">The collection.</param>
+    /// <param name="cancellationToken">Cancellation of the operation.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task EnsureOwnerIndexes(IMongoCollection<UniqueConstraintValueIndex> collection, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await collection.EnsureIndexesAsync(OwnerIndex);
+        await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken);
+    }
+
+    /// <summary>
+    /// Ensures per-event-source indexes, preserving the legacy duplicate-value fallback.
+    /// </summary>
+    /// <param name="collection">The collection.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="cancellationToken">Cancellation of the operation.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task EnsureValueIndexes(IMongoCollection<UniqueConstraintIndex> collection, ILogger<UniqueConstraintsStorage> logger, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var existing = await collection.GetIndexNamesAsync().ConfigureAwait(false);
+        if (!existing.Contains(ValueIndexName))
+        {
+            try
+            {
+                await CreateValueIndex(collection, unique: true, cancellationToken).ConfigureAwait(false);
+            }
+            catch (MongoCommandException ex) when (ex.Code == 11000 || ex.Message.Contains("E11000", StringComparison.Ordinal))
+            {
+                // The collection already contains duplicate values from before the unique index existed, so the
+                // unique index cannot be built. Fall back to a non-unique index so lookups are still fast; the
+                // stored duplicates need to be reconciled before uniqueness can be enforced again.
+                logger.FallingBackToNonUniqueIndex(collection.CollectionNamespace.FullName);
+                await CreateValueIndex(collection, unique: false, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (!existing.Contains(SubjectIndexName))
+        {
+            await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    static Task CreateSubjectIndex<TRow>(IMongoCollection<TRow> collection, System.Linq.Expressions.Expression<Func<TRow, object?>> subject, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return collection.EnsureIndexesAsync(SubjectIndex(subject));
+    }
 
     static async IAsyncEnumerable<UniqueConstraintValue> Drain<TRow>(IAsyncCursor<TRow> cursor, Func<TRow, UniqueConstraintValue> value, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -209,12 +308,11 @@ public class UniqueConstraintsStorage(
         }
     }
 
-    static Task<string> CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique, CancellationToken cancellationToken) =>
-        collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<UniqueConstraintIndex>(
-                Builders<UniqueConstraintIndex>.IndexKeys.Ascending(_ => _.Value),
-                new CreateIndexOptions { Name = ValueIndexName, Unique = unique, Background = true }),
-            cancellationToken: cancellationToken);
+    static Task CreateValueIndex(IMongoCollection<UniqueConstraintIndex> collection, bool unique, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return collection.EnsureIndexesAsync(ValueIndex(unique));
+    }
 
     async IAsyncEnumerable<UniqueConstraintValue> StreamPerValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, string scopeKey, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -258,13 +356,20 @@ public class UniqueConstraintsStorage(
             return;
         }
 
-        await collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<UniqueConstraintValueIndex>(
-                Builders<UniqueConstraintValueIndex>.IndexKeys.Ascending(_ => _.EventSourceId),
-                new CreateIndexOptions { Name = "owner" }),
-            cancellationToken: cancellationToken);
-        await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken);
-        _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
+        try
+        {
+            await EnsureOwnerIndexes(collection, cancellationToken);
+            _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
+        }
+        catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
+        {
+            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
+            {
+                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            }
+
+            throw;
+        }
     }
 
     IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName, string scopeKey = "")
@@ -282,35 +387,19 @@ public class UniqueConstraintsStorage(
             return;
         }
 
-        var existing = new HashSet<string>(StringComparer.Ordinal);
-        using var indexes = await collection.Indexes.ListAsync(cancellationToken).ConfigureAwait(false);
-        await indexes.ForEachAsync(
-            index =>
-            {
-                if (index.TryGetValue("name", out var name)) existing.Add(name.AsString);
-            },
-            cancellationToken).ConfigureAwait(false);
-        if (!existing.Contains(ValueIndexName))
+        try
         {
-            try
-            {
-                await CreateValueIndex(collection, unique: true, cancellationToken).ConfigureAwait(false);
-            }
-            catch (MongoCommandException ex) when (ex.Code == 11000 || ex.Message.Contains("E11000", StringComparison.Ordinal))
-            {
-                // The collection already contains duplicate values from before the unique index existed, so the
-                // unique index cannot be built. Fall back to a non-unique index so lookups are still fast; the
-                // stored duplicates need to be reconciled before uniqueness can be enforced again.
-                logger.FallingBackToNonUniqueIndex(collection.CollectionNamespace.FullName);
-                await CreateValueIndex(collection, unique: false, cancellationToken).ConfigureAwait(false);
-            }
+            await EnsureValueIndexes(collection, logger, cancellationToken);
+            _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
         }
-
-        if (!existing.Contains(SubjectIndexName))
+        catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
         {
-            await CreateSubjectIndex(collection, _ => _.Subject, cancellationToken).ConfigureAwait(false);
-        }
+            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
+            {
+                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            }
 
-        _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
+            throw;
+        }
     }
 }
