@@ -13,6 +13,22 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class EventSequenceMetrics
 {
+    /// <summary>
+    /// Records the number of constraints held as rebuilding and refusing governed appends.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="count">The number of held constraints.</param>
+    [Gauge<long>("chronicle-event-sequences-constraint-indexes-rebuilding", "Constraints whose index is held as rebuilding and refuses governed appends")]
+    internal static partial void ConstraintIndexesRebuilding(this IMeterScope<EventSequence> scope, long count);
+
+    /// <summary>
+    /// Records a rebuild ending with its handoff reason.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="reason">The handoff reason.</param>
+    [Counter<int>("chronicle-event-sequences-constraint-index-rebuild-ends", "Ended constraint index rebuilds by handoff reason")]
+    internal static partial void ConstraintIndexRebuildEnded(this IMeterScope<EventSequence> scope, string reason);
+
     [Counter<int>("chronicle-event-sequences-appended-events", "Number of events appended to the event sequence")]
     internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
 
