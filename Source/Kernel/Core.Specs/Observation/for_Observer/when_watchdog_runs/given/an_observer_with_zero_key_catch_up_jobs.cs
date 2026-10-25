@@ -17,6 +17,7 @@ using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
+using Orleans.Utilities;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs.given;
 

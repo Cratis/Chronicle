@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
 public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero_key_catch_up_jobs
 {
-    const int watchdog_passes = 5;
+    const int WatchdogPasses = 5;
     int _jobsBeforeWatchdog;
     int _warningsBeforeWatchdog;
 
@@ -38,7 +38,7 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
 
     async Task Because()
     {
-        for (var pass = 0; pass < watchdog_passes; pass++)
+        for (var pass = 0; pass < WatchdogPasses; pass++)
         {
             await _observer.RunWatchdogAsync();
             await CompletePendingJobs();
