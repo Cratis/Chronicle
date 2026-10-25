@@ -1,6 +1,6 @@
 ---
 title: Security
-description: Protect operational secrets at rest with plain-confidentiality encryption, deliberately separate from GDPR compliance.
+description: Protect operational secrets at rest with plain-confidentiality encryption, and understand what an authenticated application may do on a shared kernel.
 ---
 
 Some values in an event log are sensitive without being personal data — an API key exchanged with a partner, a webhook signing secret, a third-party access token. They need to be unreadable in storage. They have no data subject, and there is no lawful erasure request that could ever be about them.
@@ -29,6 +29,42 @@ Without a dedicated mechanism, a team reaches for one of two wrong tools:
 
 The two attributes cannot both apply to the same value — see [Encrypting operational secrets](encrypted-values) and [CHR0053](/chronicle/code-analysis/CHR0053/).
 
+## Trust model
+
+Chronicle authenticates every client, but it does not yet limit what an authenticated application may do to particular event stores. Any application with valid credentials is trusted with every event store on the kernel.
+
+### Who this affects
+
+This matters when one kernel serves parties that should not trust each other:
+
+- a shared kernel that hosts applications owned by different teams or customers;
+- Workbench users who should see only some event stores;
+- multi-tenant hosting where one tenant must not reach another tenant's store.
+
+If one kernel serves one application, or applications that already trust each other, nothing changes for you.
+
+### What an authenticated application can do today
+
+On any event store on the kernel, an authenticated application can:
+
+- append events;
+- read events, including personal data that Chronicle decrypts when it releases `[PII]` and `[Encrypted]` values;
+- register a deployment generation and fingerprint;
+- create and use namespaces;
+- subscribe one event store to another. The subscription forwards events into the target store and copies their encryption keys with them.
+
+Namespaces isolate data; they do not authorize the caller. See [Tenancy](/chronicle/tenancy/).
+
+### Mitigations
+
+Until per-application entitlements are available, isolate untrusted parties through deployment:
+
+- Run a separate kernel for each trust boundary, each with its own storage and credentials.
+- Restrict who can reach the kernel with network isolation or mutual TLS, so only the applications of one trust boundary can connect.
+- Set `Authentication.EnforceAdministratorPolicyForOperations=true` so administrative operations refuse non-administrators instead of logging a warning. See [Authentication](/chronicle/hosting/configuration/authentication/#audit-mode-for-existing-operations). This does not scope ordinary store work.
+
+Per-application entitlements are proposed in [decision 0022](https://github.com/Cratis/Chronicle/blob/main/decisions/0022-per-application-event-store-entitlements.md) and tracked in [#5410](https://github.com/Cratis/Chronicle/issues/5410).
+
 ## Related topics
 
 | Topic | Description |
@@ -36,3 +72,4 @@ The two attributes cannot both apply to the same value — see [Encrypting opera
 | [Encrypting operational secrets](encrypted-values) | The `[Encrypted]` attribute — rules, usage, and constraints |
 | [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | How an `[Encrypted]` value is decrypted for you automatically, and how to release one manually |
 | [Compliance](/chronicle/compliance/) | `[PII]` and GDPR right-to-erasure — the mechanism `[Encrypted]` deliberately does not share |
+| [Production hosting](/chronicle/hosting/production/) | Network, TLS and access-control considerations for a production kernel |

@@ -135,7 +135,7 @@ Removing a tenant removes its namespace. Chronicle drops the events and observer
 
 ## Checklist
 
-- Authorize the caller for the tenant before selecting it. Namespaces isolate; they do not authenticate.
+- Authorize the caller for the tenant before selecting it. Namespaces isolate; they do not authenticate. Any authenticated application can reach every event store on the kernel; see [Trust model](../security/index.mdx#trust-model).
 - Decide how the tenant id becomes a valid database name. Display-style ids such as `Hive Consulting` are rejected by MongoDB.
 - Decide placement before storing data. Changing a resolution moves Chronicle to the new location and does not move existing data.
 - Test an unset tenant, the default tenant and two named tenants, including concurrent requests.

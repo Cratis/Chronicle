@@ -222,6 +222,7 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 - **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
 - **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
+- **Trust boundaries**: Any authenticated application can act on every event store on the kernel, including reading decrypted personal data. Run a separate kernel for each group of applications that should not trust each other. See [Trust model](../security/index.mdx#trust-model)
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated
 - **TLS Certificates**: Configure valid TLS certificates for production (see [TLS Configuration](configuration/tls.md))
