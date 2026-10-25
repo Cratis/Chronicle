@@ -70,6 +70,7 @@ public class an_event_sequence : Specification
     protected List<IConstraintDefinition> _registeredConstraints;
     protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
 
+    protected virtual Telemetry Telemetry => new();
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
@@ -207,6 +208,7 @@ public class an_event_sequence : Specification
         _silo.AddService(_eventHashCalculator);
         _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
         {
+            Telemetry = Telemetry,
             Events = new Configuration.Events
             {
                 StatePersistenceInterval = StatePersistenceInterval,

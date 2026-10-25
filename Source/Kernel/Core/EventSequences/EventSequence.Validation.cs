@@ -48,7 +48,8 @@ public partial class EventSequence
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
-        span?.Activity?.Tag(eventSourceType, eventSourceId);
+        span?.Activity?.Tag(eventSourceType);
+        span?.Activity?.Tag(eventSourceId, _spanIdentifiers);
         span?.Activity?.Tag(eventType);
         try
         {

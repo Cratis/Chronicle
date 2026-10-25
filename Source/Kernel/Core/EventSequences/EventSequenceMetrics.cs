@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -14,16 +13,16 @@ namespace Cratis.Chronicle.EventSequences;
 internal static partial class EventSequenceMetrics
 {
     [Counter<int>("chronicle-event-sequences-appended-events", "Number of events appended to the event sequence")]
-    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-duplicate-event-sequence-numbers", "Number of duplicate event sequence numbers")]
-    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence")]
-    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-constraint-violations", "Number of constraint violations")]
-    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-constraint-index-update-failures", "Number of failed constraint index attempts")]
     internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);
