@@ -13,5 +13,5 @@ public class and_a_running_job_makes_progress : given.an_observer_with_a_stalled
         await _observer.NudgeStalledJobs();
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

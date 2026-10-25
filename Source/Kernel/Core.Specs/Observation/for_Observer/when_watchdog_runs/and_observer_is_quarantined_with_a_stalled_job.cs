@@ -15,5 +15,5 @@ public class and_observer_is_quarantined_with_a_stalled_job : for_Observer.given
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

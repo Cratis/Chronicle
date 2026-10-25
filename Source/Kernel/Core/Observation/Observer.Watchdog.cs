@@ -55,7 +55,7 @@ public partial class Observer
 
         if (_webhookProbe is not null || _armWebhookProbe) await ReconcileWebhookProbe();
         await CheckConnectedClient();
-        await RecoverIfStuck();
+        if (!await RecoverIfStuck()) await NudgeStalledJobs();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();
     }
@@ -63,7 +63,7 @@ public partial class Observer
     /// <summary>
     /// Runs the recovery checks, stopping at the first one that acts on the observer.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>True when a check recovered the observer; otherwise false.</returns>
     /// <remarks>
     /// Every check here recovers by re-routing the observer, and routing re-evaluates everything the later checks
     /// look at - including starting a fresh catch-up. Running on past the first recovery therefore reads the
@@ -72,17 +72,19 @@ public partial class Observer
     /// catch-up attempts and the queue unsubscribe/subscribe cycles in a single tick. One tick, one recovery; the
     /// next tick re-evaluates from a settled state.
     /// </remarks>
-    async Task RecoverIfStuck()
+    async Task<bool> RecoverIfStuck()
     {
         if (await RecoveredBySettlingChecks())
         {
-            return;
+            return true;
         }
 
         if (await CheckNextSequenceNumber())
         {
             await CheckStrandedSubscription();
         }
+
+        return false;
     }
 
     async Task<bool> RecoveredBySettlingChecks() =>

@@ -18,5 +18,5 @@ public class and_listing_jobs_fails : given.an_observer_with_a_stalled_job
     }
 
     [Fact] void should_keep_the_observer_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

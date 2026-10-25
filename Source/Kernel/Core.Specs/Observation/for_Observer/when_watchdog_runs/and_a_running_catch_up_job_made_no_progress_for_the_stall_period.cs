@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
@@ -20,6 +21,7 @@ public class and_a_running_catch_up_job_made_no_progress_for_the_stall_period : 
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).Resume(_job.Id);
+    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).ResumeIfRunning(_job.Id);
+    [Fact] void should_never_call_the_unconditional_resume() => _jobsManager.DidNotReceive().Resume(Arg.Any<JobId>());
     [Fact] void should_not_route_the_observer() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
 }

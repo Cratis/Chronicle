@@ -23,5 +23,5 @@ public class and_a_running_retry_job_for_a_failed_partition_made_no_progress : f
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).Resume(_job.Id);
+    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).ResumeIfRunning(_job.Id);
 }
