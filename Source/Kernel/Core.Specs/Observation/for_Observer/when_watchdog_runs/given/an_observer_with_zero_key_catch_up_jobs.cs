@@ -33,7 +33,7 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
     void Establish()
     {
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
-            .Returns(ObserverSubscriberResult.Ok(1UL));
+            .Returns(ObserverSubscriberResult.Ok(_nextSequenceNumber));
         _appendedEventsQueues.IsSubscribed(_observerKey).Returns(_ => _queued);
         _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
             .Returns(_ =>
@@ -42,8 +42,6 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
                 return new AppendedEventsQueueSubscription(_observerKey, 0);
             });
         _appendedEventsQueues.When(_ => _.Unsubscribe(Arg.Any<AppendedEventsQueueSubscription>())).Do(_ => _queued = false);
-        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
-            .Returns(call => StartZeroKeyJob(call.Arg<CatchUpObserverRequest>()));
     }
 
     protected async Task CompletePendingJobs()
@@ -64,7 +62,7 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
         }
     }
 
-    protected async Task<JobId> StartZeroKeyJob(CatchUpObserverRequest request)
+    protected async Task<Result<JobId, StartJobError>> StartZeroKeyJob(CatchUpObserverRequest request)
     {
         request.ObserverType.ShouldEqual(ObserverType.Reactor);
         var silo = new TestKitSilo();
@@ -76,7 +74,7 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
 
         var steps = Substitute.For<IJobStepStorage>();
         steps.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>())
-            .Returns(Catch<IImmutableList<JobStepState>>.Success(ImmutableList<JobStepState>.Empty));
+            .Returns(Cratis.Monads.Catch<IImmutableList<JobStepState>>.Success(ImmutableList<JobStepState>.Empty));
         _eventStoreNamespaceStorage.JobSteps.Returns(steps);
         var jobTypes = Substitute.For<IJobTypes>();
         jobTypes.GetFor(Arg.Any<Type>()).Returns(Result<JobType, IJobTypes.GetForError>.Success(new JobType("CatchUpObserver")));
@@ -103,8 +101,9 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
 
         var id = JobId.New();
         var job = await silo.CreateGrainAsync<TestableCatchUpObserver>(id, new JobKey(_observerKey.EventStore, _observerKey.Namespace));
-        await job.Start(request);
+        var startResult = await job.Start(request);
+        startResult.TryGetError(out _).ShouldBeFalse();
         _pendingJobs.Enqueue((silo, job));
-        return id;
+        return Result<JobId, StartJobError>.Success(id);
     }
 }

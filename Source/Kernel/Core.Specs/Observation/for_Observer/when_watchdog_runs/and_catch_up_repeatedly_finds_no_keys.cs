@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
@@ -19,7 +20,7 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
     {
         // Seed a stranded preparation so the watchdog's rescue, not a direct catch-up call, starts the real jobs.
         _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
-            .Returns(Task.FromResult(JobId.NotSet));
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Failed(StartJobError.Unknown)));
         await _observer.CatchUp();
         (await _observer.IsPreparingCatchup()).ShouldBeTrue();
         _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
@@ -30,7 +31,8 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
         _jobsBeforeWatchdog = _jobsManager.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(_jobsManager.Start));
         _warningsBeforeWatchdog = NoStepsWarnings;
         _preparedJobs.Count.ShouldEqual(2);
-        _warningsBeforeWatchdog.ShouldBeGreaterThan(0);
+        _warningsBeforeWatchdog.ShouldEqual(2);
+        _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_nextSequenceNumber);
         (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
     }
 
@@ -45,7 +47,7 @@ public class and_catch_up_repeatedly_finds_no_keys : given.an_observer_with_zero
         // Live delivery must still work after settling; a logical subscription alone would hide a stuck observer.
         if (_queued)
         {
-            await _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 10UL)]);
+            await _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _nextSequenceNumber)]);
         }
     }
 
