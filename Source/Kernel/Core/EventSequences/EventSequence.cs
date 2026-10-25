@@ -14,8 +14,8 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -42,7 +42,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
-using IObserver = Cratis.Chronicle.Observation.IObserver;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -85,6 +84,7 @@ public partial class EventSequence(
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
@@ -387,6 +387,7 @@ public partial class EventSequence(
         var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
+        await PrepareConstraintIndexesForRevision(@event);
         await EventSequenceStorage.Revise(
             sequenceNumber,
             eventType,
@@ -397,7 +398,7 @@ public partial class EventSequence(
             contentAsExpandoObject,
             hash);
 
-        await RewindPartitionForAffectedObservers(@event.Context.EventSourceId, [@event.Context.EventType]);
+        await ReplayForContentMutation(@event.Context.EventSourceId, [@event.Context.EventType]);
     }
 
     /// <inheritdoc/>
@@ -434,7 +435,7 @@ public partial class EventSequence(
             return;
         }
 
-        await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
+        await ReplayForContentMutation(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 
     /// <inheritdoc/>
@@ -461,7 +462,7 @@ public partial class EventSequence(
             CausationForStorage(causation),
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
-        await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
+        await ReplayForContentMutation(eventSourceId, affectedEventTypes);
     }
 
     /// <inheritdoc/>
@@ -767,12 +768,6 @@ public partial class EventSequence(
         EventSourceName? eventSource,
         EventPublication? publication)
     {
-        using var span = activitySource.Append();
-        span?.Activity?.Tag(_eventSequenceKey.EventStore);
-        span?.Activity?.Tag(_eventSequenceKey.Namespace);
-        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
-        span?.Activity?.Tag(eventType);
-        span?.Activity?.Tag(eventSourceType, eventSourceId);
         AppendedEvent committed;
         try
         {
@@ -1037,8 +1032,9 @@ public partial class EventSequence(
         EventStreamId eventStreamId,
         CorrelationId correlationId)
     {
+        Activity.Current?.RecordFailure(ex);
         if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
-        _metrics?.FailedAppending(eventSourceId, eventType.Id);
+        _metrics?.FailedAppending(eventType.Id);
         logger.ErrorAppending(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -1099,7 +1095,7 @@ public partial class EventSequence(
         {
             return constraintContext;
         }
-        _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
+        _metrics?.ConstraintViolation(eventType.Id);
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
@@ -1164,7 +1160,7 @@ public partial class EventSequence(
             eventType,
             eventSourceId,
             State.SequenceNumber);
-        _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        _metrics?.DuplicateEventSequenceNumber(eventName);
         if (nextAvailableSequenceNumber > State.SequenceNumber) MarkConstraintIndexGap(State.SequenceNumber);
         State.SequenceNumber = nextAvailableSequenceNumber;
         return Task.CompletedTask;
@@ -1195,7 +1191,7 @@ public partial class EventSequence(
 
         foreach (var eventToAppend in eventsToAppend)
         {
-            _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
+            _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventType.Id.Value);
         }
 
         // Re-number the whole batch from the next available sequence number so the resubmission no longer
@@ -1360,18 +1356,6 @@ public partial class EventSequence(
         catch (Exception exception)
         {
             logger.FailedReconcilingNamespaceSubscriptions(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        }
-    }
-
-    async Task RewindPartitionForAffectedObservers(
-        EventSourceId eventSourceId,
-        IEnumerable<EventType> affectedEventTypes)
-    {
-        var observers = await ObserverStorage.GetReplayableObserversForEventTypes(affectedEventTypes);
-        foreach (var observer in observers)
-        {
-            var key = new ObserverKey(observer.Identifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
-            await GrainFactory.GetGrain<IObserver>(key).ReplayPartition(eventSourceId);
         }
     }
 }

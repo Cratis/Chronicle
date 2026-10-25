@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.EventSources;
@@ -17,6 +18,7 @@ internal class RegisterEventSourcesValidator : CommandValidator<RegisterEventSou
     public RegisterEventSourcesValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Sources).NotNull().WithMessage("Event source definitions are required.");
         RuleFor(_ => _.Sources).Custom((sources, context) =>
         {

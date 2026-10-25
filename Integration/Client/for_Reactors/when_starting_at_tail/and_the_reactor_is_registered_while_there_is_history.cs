@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.for_Reactors.when_starting_at_tail.and_the_reactor_is_registered_while_there_is_history.context;
 

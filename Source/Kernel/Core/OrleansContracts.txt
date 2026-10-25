@@ -146,7 +146,13 @@ class [GrainType("migrateexistingeventsfortype")] Cratis.Chronicle.EventSequence
 
 class [GrainType("migrateexistingeventsfortypestep")] Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeStep
 
+class [GrainType("eventstoredeploymentregistry")] Cratis.Chronicle.EventStores.EventStoreDeploymentRegistry
+
 class [GrainType("eventstoreinitializer")] Cratis.Chronicle.EventStores.EventStoreInitializer
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventStores.IEventStoreDeploymentRegistry")] Cratis.Chronicle.EventStores.IEventStoreDeploymentRegistry [Version(0)]
+  CADCFD8A: Get() -> Task<Cratis.Chronicle.EventStores.DeploymentState>
+  34F7B19D: Register(Cratis.Chronicle.Concepts.Registrations.DeploymentGeneration, Cratis.Chronicle.Concepts.Registrations.ArtifactFingerprint) -> Task<Cratis.Chronicle.EventStores.DeploymentDecision>
 
 interface [GrainInterfaceType("Cratis.Chronicle.EventStores.IEventStoreInitializer")] Cratis.Chronicle.EventStores.IEventStoreInitializer [Version(0)]
   D2DD4ADD: Ensure() -> Task

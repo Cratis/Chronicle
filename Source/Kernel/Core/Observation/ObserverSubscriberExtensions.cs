@@ -112,6 +112,63 @@ public static class ObserverSubscriberExtensions
     }
 
     /// <summary>
+    /// Hands events to a webhook subscriber, cancelling and draining the HTTP call once the delivery deadline elapses.
+    /// </summary>
+    /// <param name="subscriber">The <see cref="IWebhookObserverSubscriber"/> to hand the events to.</param>
+    /// <param name="deliveryDeadline">The <see cref="WebhookDeliveryDeadline"/> bounding the call; a timeout at or below zero waits indefinitely.</param>
+    /// <param name="partition">The <see cref="Key">partition</see> the events belong to.</param>
+    /// <param name="events">The <see cref="AppendedEvent">events</see> to hand over.</param>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> for the call.</param>
+    /// <param name="cancellationToken">Cancellation of the wait.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> the subscriber answered with.</returns>
+    /// <exception cref="SubscriberCallTimedOut">Thrown when the subscriber does not answer before the deadline.</exception>
+    internal static async Task<ObserverSubscriberResult> OnNextWebhook(
+        IWebhookObserverSubscriber subscriber,
+        WebhookDeliveryDeadline deliveryDeadline,
+        Key partition,
+        IEnumerable<AppendedEvent> events,
+        ObserverSubscriberContext context,
+        CancellationToken cancellationToken)
+    {
+        using var timeoutCancellation = new CancellationTokenSource(deliveryDeadline.Timeout > TimeSpan.Zero ? deliveryDeadline.Timeout : Timeout.InfiniteTimeSpan, deliveryDeadline.Clock);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
+
+        // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
+        // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
+        // until it has crossed the barrier.
+        ObserverSubscriberResult result;
+        try
+        {
+            result = await subscriber.OnNext(partition, events, context, deadline.Token);
+        }
+        catch (Exception exception)
+        {
+            var timedOut = deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+            await deadline.CancelAsync();
+            await subscriber.Drain();
+            if (exception is OperationCanceledException && timedOut)
+            {
+                throw new SubscriberCallTimedOut(partition, deliveryDeadline.Timeout);
+            }
+
+            throw;
+        }
+
+        if (deadline.IsCancellationRequested)
+        {
+            await subscriber.Drain();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (deadline.IsCancellationRequested)
+        {
+            throw new SubscriberCallTimedOut(partition, deliveryDeadline.Timeout);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Hands the events to an unpartitioned subscriber a bounded chunk at a time, one caller at a time per silo.
     /// </summary>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/> to hand the events to.</param>
@@ -180,7 +237,7 @@ public static class ObserverSubscriberExtensions
     {
         if (subscriber is IWebhookObserverSubscriber webhook)
         {
-            return await OnNextWebhook(webhook, timeout, partition, events, context, cancellationToken);
+            return await OnNextWebhook(webhook, new(timeout, TimeProvider.System), partition, events, context, cancellationToken);
         }
 
         var call = subscriber.OnNext(partition, events, context);
@@ -201,54 +258,5 @@ public static class ObserverSubscriberExtensions
             _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
             throw new SubscriberCallTimedOut(partition, timeout);
         }
-    }
-
-    static async Task<ObserverSubscriberResult> OnNextWebhook(
-        IWebhookObserverSubscriber subscriber,
-        TimeSpan timeout,
-        Key partition,
-        IEnumerable<AppendedEvent> events,
-        ObserverSubscriberContext context,
-        CancellationToken cancellationToken)
-    {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout > TimeSpan.Zero)
-        {
-            deadline.CancelAfter(timeout);
-        }
-
-        // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
-        // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
-        // until it has crossed the barrier.
-        ObserverSubscriberResult result;
-        try
-        {
-            result = await subscriber.OnNext(partition, events, context, deadline.Token);
-        }
-        catch (Exception exception)
-        {
-            var timedOut = deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
-            await deadline.CancelAsync();
-            await subscriber.Drain();
-            if (exception is OperationCanceledException && timedOut)
-            {
-                throw new SubscriberCallTimedOut(partition, timeout);
-            }
-
-            throw;
-        }
-
-        if (deadline.IsCancellationRequested)
-        {
-            await subscriber.Drain();
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (deadline.IsCancellationRequested)
-        {
-            throw new SubscriberCallTimedOut(partition, timeout);
-        }
-
-        return result;
     }
 }

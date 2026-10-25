@@ -41,7 +41,7 @@ public class MaterializedReadModelStore(
     {
         var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
         var instance = await binding.Sink.FindInPrimaryOrDefault(key);
-        if (instance is null)
+        if (instance is null || ReadModelInitialization.IsUninitialized(instance))
         {
             return null;
         }

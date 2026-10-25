@@ -80,5 +80,5 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<NamespaceState>> ObserveAll() => LiveQuery.Observe(GetAll, database.LiveQueryPollingInterval);
+    public ISubject<IEnumerable<NamespaceState>> ObserveAll() => LiveQuery.Observe(GetAll, database, "namespaces");
 }

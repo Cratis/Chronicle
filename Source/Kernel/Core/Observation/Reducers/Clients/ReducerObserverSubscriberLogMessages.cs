@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
 internal static partial class ReducerObserverSubscriberLogMessages
 {
+    [LoggerMessage(LogLevel.Error, "Failed to notify watchers of committed changes for reducer {ReducerId} in event store {EventStore} for namespace {Namespace}")]
+    internal static partial void NotificationFailed(this ILogger<ReducerObserverSubscriber> logger, Exception exception, ObserverId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Trace, "Reducer {ReducerId} in event store {EventStore} for namespace {Namespace} received event of type {EventTypeId} in sequence {EventSequenceId} with sequence number {EventSequenceNumber}")]
     internal static partial void EventReceived(this ILogger<ReducerObserverSubscriber> logger, ObserverId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventTypeId eventTypeId, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 }

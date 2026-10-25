@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Strings;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -86,12 +87,17 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public BsonValue ToBsonValue(Key key)
     {
+        if (key.Value is null)
+        {
+            throw new ReadModelKeyHasNoValue(readModel.Identifier);
+        }
+
         var schema = readModel.GetSchemaForLatestGeneration();
         var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
 
         if (string.IsNullOrWhiteSpace(idPropertyName))
         {
-            return new BsonString(key.Value?.ToString() ?? string.Empty);
+            return new BsonString(key.Value.ToString() ?? string.Empty);
         }
 
         var bsonValue = key.Value is ExpandoObject ?
@@ -99,7 +105,7 @@ public class MongoDBConverter(
             ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
-        return bsonValue == BsonNull.Value ? new BsonString(key.Value?.ToString() ?? string.Empty) : bsonValue;
+        return bsonValue == BsonNull.Value ? new BsonString(key.Value.ToString() ?? string.Empty) : bsonValue;
     }
 
     /// <inheritdoc/>

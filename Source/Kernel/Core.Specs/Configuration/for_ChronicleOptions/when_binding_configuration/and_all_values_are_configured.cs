@@ -28,6 +28,9 @@ public class and_all_values_are_configured : Specification
                 ["Cratis:Chronicle:Sql:LiveQueryPollIntervalSeconds"] = "6",
                 ["Cratis:Chronicle:Storage:PostgreSqlEntra:Enabled"] = "true",
                 ["Cratis:Chronicle:Storage:PostgreSqlEntra:ManagedIdentityClientId"] = "managed-identity-client-id",
+                ["Cratis:Chronicle:Storage:PostgreSqlPooling:MaxPoolSize"] = "12",
+                ["Cratis:Chronicle:Storage:PostgreSqlPooling:ConnectionIdleLifetimeSeconds"] = "25",
+                ["Cratis:Chronicle:Storage:PostgreSqlPooling:ConnectionPruningIntervalSeconds"] = "4",
                 ["Cratis:Chronicle:Observers:SubscriptionReadyTimeout"] = "8",
                 ["Cratis:Chronicle:Events:QueueDepletionWaitTimeoutMilliseconds"] = "750",
                 ["Cratis:Chronicle:Events:CausationPropertyRetention"] = "Omit",
@@ -52,6 +55,9 @@ public class and_all_values_are_configured : Specification
     [Fact] void should_bind_the_webhook_test_timeout() => _options.Webhooks.TestTimeoutSeconds.ShouldEqual(15);
     [Fact] void should_enable_native_postgresql_entra_authentication() => _options.Storage.PostgreSqlEntra.Enabled.ShouldBeTrue();
     [Fact] void should_bind_the_postgresql_managed_identity_client_id() => _options.Storage.PostgreSqlEntra.ManagedIdentityClientId.ShouldEqual("managed-identity-client-id");
+    [Fact] void should_bind_the_postgresql_max_pool_size() => _options.Storage.PostgreSqlPooling.MaxPoolSize.ShouldEqual(12);
+    [Fact] void should_bind_the_postgresql_connection_idle_lifetime() => _options.Storage.PostgreSqlPooling.ConnectionIdleLifetimeSeconds.ShouldEqual(25);
+    [Fact] void should_bind_the_postgresql_connection_pruning_interval() => _options.Storage.PostgreSqlPooling.ConnectionPruningIntervalSeconds.ShouldEqual(4);
     [Fact] void should_bind_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(6);
     [Fact] void should_bind_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(8);
     [Fact] void should_bind_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(750);

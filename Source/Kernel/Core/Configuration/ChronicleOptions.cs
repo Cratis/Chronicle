@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -104,6 +105,11 @@ public class ChronicleOptions : IValidatableObject
     /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
     /// </summary>
     public Compliance Compliance { get; init; } = new Compliance();
+
+    /// <summary>
+    /// Gets the telemetry configuration.
+    /// </summary>
+    public Telemetry Telemetry { get; init; } = new();
 
     /// <summary>
     /// Gets the observers configuration.
@@ -221,6 +227,14 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        {
+            yield return new ValidationResult(
+                "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
+                [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(

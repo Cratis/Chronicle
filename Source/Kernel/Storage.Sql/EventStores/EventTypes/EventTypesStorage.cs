@@ -145,7 +145,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => LiveQuery.Observe(GetLatestForAllEventTypes, database.LiveQueryPollingInterval);
+    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => LiveQuery.Observe(GetLatestForAllEventTypes, database, "event-types");
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
