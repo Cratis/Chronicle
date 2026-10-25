@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.Identifiers;
 
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 
@@ -26,17 +27,27 @@ public static class TagExtensions
     const string EventTypeId = "cratis.eventtype.id";
 
     /// <summary>
-    /// Tag <see cref="EventSourceId"/>.
+    /// Tag <see cref="EventSourceType"/>.
     /// </summary>
     /// <param name="activity">The <see cref="Activity"/>.</param>
     /// <param name="eventSourceType">The <see cref="EventSourceType"/>.</param>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
     /// <returns>The <see cref="Activity"/> with the tag.</returns>
-    public static Activity Tag(this Activity activity, EventSourceType eventSourceType, EventSourceId eventSourceId)
+    public static Activity Tag(this Activity activity, EventSourceType eventSourceType)
     {
-        activity
-            .SetTag(EventSourceType, eventSourceType.Value)
-            .SetTag(EventSourceId, eventSourceId.Value);
+        activity.SetTag(EventSourceType, eventSourceType.Value);
+        return activity;
+    }
+
+    /// <summary>
+    /// Tag <see cref="EventSourceId"/> according to the identifier exposure configuration.
+    /// </summary>
+    /// <param name="activity">The <see cref="Activity"/>.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
+    /// <param name="identifiers">The identifier exposure policy.</param>
+    /// <returns>The <see cref="Activity"/> with the tag.</returns>
+    public static Activity Tag(this Activity activity, EventSourceId eventSourceId, IdentifierTelemetry identifiers)
+    {
+        if (identifiers.ForSpan(eventSourceId.Value) is { } value) activity.SetTag(EventSourceId, value);
         return activity;
     }
 

@@ -97,7 +97,7 @@ public partial class EventSequence
             }
             await CompleteDurableAppend(events, updates);
             logger.AppendManyReceived(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, events.Count);
-            foreach (var @event in events) _metrics?.AppendedEvent(@event.Context.EventSourceId, @event.Context.EventType.Id);
+            foreach (var @event in events) _metrics?.AppendedEvent(@event.Context.EventType.Id);
         }
         catch (Exception error)
         {

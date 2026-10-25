@@ -116,6 +116,13 @@ internal static partial class ObserverMetrics
         var tags = default(TagList);
         foreach (var (key, tag) in meter.Tags)
         {
+            if (key.Equals("Partition", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("EventSourceId", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("cratis.eventsource.id", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             tags.Add(key, tag);
         }
 

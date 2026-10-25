@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -83,6 +84,7 @@ public partial class EventSequence(
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
@@ -1032,7 +1034,7 @@ public partial class EventSequence(
     {
         Activity.Current?.RecordFailure(ex);
         if (_constraintIndexPosition < State.SequenceNumber) MarkConstraintIndexGap(_constraintIndexPosition);
-        _metrics?.FailedAppending(eventSourceId, eventType.Id);
+        _metrics?.FailedAppending(eventType.Id);
         logger.ErrorAppending(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -1093,7 +1095,7 @@ public partial class EventSequence(
         {
             return constraintContext;
         }
-        _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
+        _metrics?.ConstraintViolation(eventType.Id);
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
     }
 
@@ -1158,7 +1160,7 @@ public partial class EventSequence(
             eventType,
             eventSourceId,
             State.SequenceNumber);
-        _metrics?.DuplicateEventSequenceNumber(eventSourceId, eventName);
+        _metrics?.DuplicateEventSequenceNumber(eventName);
         if (nextAvailableSequenceNumber > State.SequenceNumber) MarkConstraintIndexGap(State.SequenceNumber);
         State.SequenceNumber = nextAvailableSequenceNumber;
         return Task.CompletedTask;
@@ -1189,7 +1191,7 @@ public partial class EventSequence(
 
         foreach (var eventToAppend in eventsToAppend)
         {
-            _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventSourceId, eventToAppend.EventType.Id.Value);
+            _metrics?.DuplicateEventSequenceNumber(eventToAppend.EventType.Id.Value);
         }
 
         // Re-number the whole batch from the next available sequence number so the resubmission no longer

@@ -84,10 +84,22 @@ Chronicle gives no warning when the source is not registered, so check these in 
 
 The spans Chronicle creates identify what happened and where, not what the event said. Two tags can still hold values you care about:
 
-- `event_source_id` is the event source id exactly as you appended it. If you use an email address, a national id or another personal value as the event source id, that value is sent to your tracing backend. Use an opaque id, or treat the backend as holding personal data.
+- `event_source_id` is the client event source id exactly as you appended it by default (`Raw`). Kernel spans use `cratis.eventsource.id`. If you use an email address, a national id or another personal value, that value reaches your tracing backend unless you opt into `Hashed` or `Omitted`.
 - `correlation_id` is the correlation id of the unit of work. It is meant to be searched for, so do not derive it from anything private.
 
 When you add your own tags or enrich these spans, do the same: ids and counts are fine, while credentials, tokens and event or read model content are not.
+
+## Choose how event source ids appear
+
+The client defaults to `EventSourceIdTracing.Raw`. Opt into `Hashed` to send a keyed pseudonym, or `Omitted` to leave out `event_source_id`. Both modes keep the original id in append requests and storage. Client spans use `event_source_id`; kernel spans use `cratis.eventsource.id`.
+
+Supply a key of at least 32 characters from your secret store before starting the host. This worker example reads it from deployment configuration; the same `WithTelemetry` callback works with the ASP.NET Core Chronicle builder:
+
+<ChronicleClientTabs snippet="hosting/client-tracing/identifier-tracing" variants="csharp" />
+
+`Hashed` fails validation without a sufficiently long key. `Raw` and `Omitted` do not require one. The hash is HMAC-SHA256 truncated to 128 bits, encoded as 32 lowercase hexadecimal characters. Use the same key in clients and the kernel to correlate ids across processes. Rotating the key changes the hashes and breaks correlation with earlier traces.
+
+For local development you can explicitly select `EventSourceIdTracing.Raw`. It exposes the id to exporters; do not use it with personal ids unless your tracing backend is allowed to hold that data. These options do not redact logs. See [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) for kernel configuration, metric exclusions, and log levels.
 
 ## Correlating spans
 

@@ -28,6 +28,10 @@ Telemetry is configured using standard OpenTelemetry environment variables:
 
 When `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, Chronicle does not export telemetry but the instrumentation is still active.
 
+## Event source ids and log levels
+
+Event source ids are `Raw` in traces by default. Opt into `Hashed` or `Omitted` separately in the kernel and clients. Orleans grain-instance ids are always removed before span export, and Chronicle append metrics do not use event source ids as dimensions. These settings do not redact logs. See [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) for configuration, key rotation, metric dimensions, and observer log levels.
+
 ## Local development with .NET Aspire Dashboard
 
 The Kernel ships with a `docker-compose.yml` that starts the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) as a lightweight all-in-one OTLP receiver and telemetry viewer.
