@@ -17,14 +17,14 @@ public class a_vault_encryption_key_storage(VaultFixture fixture) : IAsyncLifeti
     protected EventStoreNamespaceName _namespace = default!;
 
     /// <inheritdoc/>
-    public virtual Task InitializeAsync()
+    public virtual ValueTask InitializeAsync()
     {
         _eventStore = $"test-store-{Guid.NewGuid():N}";
         _namespace = "default";
         _storage = new VaultEncryptionKeyStorage(fixture.VaultAddress);
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public virtual Task DisposeAsync() => Task.CompletedTask;
+    public virtual ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

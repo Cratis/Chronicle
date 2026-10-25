@@ -134,7 +134,7 @@ public partial class Sink
                     _logger.IndexNotCreated(_tableName, path.Path, rejection);
                     continue;
                 }
-                await ReadModelIndexes.Ensure(context, table, plan, online);
+                await ProjectedColumnIndexes.Ensure(context, table, plan, online);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

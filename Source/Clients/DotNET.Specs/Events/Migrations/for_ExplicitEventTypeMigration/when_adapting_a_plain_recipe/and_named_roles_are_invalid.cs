@@ -15,7 +15,7 @@ public class and_named_roles_are_invalid : given.a_plain_migration
 
     void Establish() => _recipes = Enumerable.Range(0, 17).Select(EmitRecipe).ToArray();
 
-    void Because() => _errors = _recipes.Select(_ => Catch.Exception(() => ExplicitMigrationMethods.For(_))).ToArray();
+    void Because() => _errors = _recipes.Select(_ => Catch.Exception(() => ExplicitMigrationMethods.For(_))!).ToArray();
 
     [Fact] void should_reject_static_roles() => _errors[0].ShouldBeOfExactType<InvalidExplicitArtifact>();
     [Fact] void should_reject_asynchronous_roles() => _errors[1].ShouldBeOfExactType<InvalidExplicitArtifact>();

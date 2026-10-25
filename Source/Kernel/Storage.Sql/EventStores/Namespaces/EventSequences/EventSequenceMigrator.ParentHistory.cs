@@ -65,10 +65,7 @@ public partial class EventSequenceMigrator
 
     async Task EnsureParentHistoryIndex(EventSequenceDbContext context, string tableName)
     {
-        // Partial legacy schemas cannot support event reads until their source/type columns exist.
-        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.EventSourceId)) ||
-            !await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Type)) ||
-            await ParentHistoryIndexExists(context, tableName))
+        if (!await HasParentHistoryColumns(context, tableName) || await ParentHistoryIndexExists(context, tableName))
         {
             return;
         }
@@ -76,5 +73,12 @@ public partial class EventSequenceMigrator
         var migration = new MigrationBuilder(context.Database.ProviderName);
         AddParentHistoryIndex(migration, tableName);
         await tableMigrator.ExecuteMigrationOperations(context, migration);
+    }
+
+    async Task<bool> HasParentHistoryColumns(EventSequenceDbContext context, string tableName)
+    {
+        // Partial legacy schemas cannot support event reads until their source/type columns exist.
+        return await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.EventSourceId)) &&
+            await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Type));
     }
 }

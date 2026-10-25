@@ -27,7 +27,7 @@ public class and_a_failed_store_is_detached_while_retrying_in_the_background : g
     async Task Because()
     {
         await _projections.Discover();
-        await Catch.Exception(() => _eventStore.RegisterAll());
+        await Catch.Exception(_eventStore.RegisterAll);
         var retry = _eventStore.PendingBackgroundRegistrationRetry!;
 
         _eventStore.DetachAutomaticRegistration();

@@ -15,6 +15,7 @@ public class and_table_exists_with_missing_columns : given.a_read_model_migrator
 
     IReadOnlyList<ProjectedColumn> _inventoryColumns;
     IReadOnlySet<string> _actualColumns;
+    int _schemaLockCalls;
 
     async Task Establish()
     {
@@ -41,10 +42,11 @@ public class and_table_exists_with_missing_columns : given.a_read_model_migrator
     async Task Because()
     {
         await using var inventoryContext = CreateContext(TableName, _inventoryColumns);
-        await _migrator.EnsureTableMigrated(TableName, inventoryContext);
+        _schemaLockCalls = await EnsureTableMigratedAndCountSchemaLocks(inventoryContext);
         _actualColumns = await GetActualColumnNamesAsync(TableName);
     }
 
+    [Fact] void should_enter_the_schema_lock_once() => _schemaLockCalls.ShouldEqual(1);
     [Fact] void should_add_the_missing_title_column() => _actualColumns.Contains("Title").ShouldBeTrue();
     [Fact] void should_preserve_the_id_column() => _actualColumns.Contains("Id").ShouldBeTrue();
     [Fact] void should_preserve_the_pre_existing_available_column() => _actualColumns.Contains("Available").ShouldBeTrue();

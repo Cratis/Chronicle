@@ -27,6 +27,11 @@ public record ProjectedColumn(string Name, Type ClrType, bool IsKey, bool IsJson
     public bool IsIndexed { get; init; }
 
     /// <summary>
+    /// Gets whether the key schema is object-shaped, while its SQL column remains the legacy scalar key.
+    /// </summary>
+    internal bool IsCompositeKey { get; init; }
+
+    /// <summary>
     /// Gets the SQL Server string storage type, including scalar-index key sizing.
     /// </summary>
     internal string SqlServerStringType

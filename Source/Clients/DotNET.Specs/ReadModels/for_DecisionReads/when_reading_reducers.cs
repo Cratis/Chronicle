@@ -21,6 +21,7 @@ using EventType = Cratis.Chronicle.Events.EventType;
 
 namespace Cratis.Chronicle.ReadModels.for_DecisionReads;
 
+[PerFactSpecificationLifecycle]
 public class when_reading_reducers : given.a_decision_reader
 {
     static readonly AsyncLocal<Action?> _callback = new();

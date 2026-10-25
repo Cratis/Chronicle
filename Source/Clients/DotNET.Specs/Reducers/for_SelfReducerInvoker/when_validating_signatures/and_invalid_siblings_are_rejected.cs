@@ -49,7 +49,7 @@ public class and_invalid_siblings_are_rejected : given.emitted_methods
             method.GetILGenerator().Emit(OpCodes.Ret);
         });
         _ = new SelfReducerInvoker(Registry(typeof(Joined)), model, "state");
-    })).ToArray();
+    })!).ToArray();
 
     [Fact] void should_reject_every_invalid_sibling_after_structural_detection() => _failures.All(failure => failure is InvalidSelfReducerSignature).ShouldBeTrue();
 }

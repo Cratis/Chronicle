@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Projections;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering_full_set;
 
+[PerFactSpecificationLifecycle]
 public class and_the_retired_observer_is_quarantined : given.a_projections_manager_grain
 {
     void Establish()

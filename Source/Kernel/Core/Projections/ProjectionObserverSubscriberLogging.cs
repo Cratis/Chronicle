@@ -32,4 +32,7 @@ internal static partial class ProjectionObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Information, "Skipping event {EventType} at {EventSequenceNumber} for key {Key} - the current projection definition does not take part in it")]
     internal static partial void SkippedEventNotInProjection(this ILogger<ProjectionObserverSubscriber> logger, EventType eventType, ulong eventSequenceNumber, ObserverSubscriberKey key);
+
+    [LoggerMessage(LogLevel.Information, "Refreshing stale projection pipeline for key {Key} - the engine holds a newer definition than the cached one")]
+    internal static partial void RefreshingStalePipeline(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
 }

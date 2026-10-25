@@ -5,5 +5,5 @@ namespace Cratis.Chronicle.Storage.Generations.Bindings;
 
 public interface IMaterializationBindingStorageHarness : IDisposable
 {
-    IMaterializationBindingStorage Create();
+    IMaterializationBindingStorage Create(TimeProvider? timeProvider = null);
 }

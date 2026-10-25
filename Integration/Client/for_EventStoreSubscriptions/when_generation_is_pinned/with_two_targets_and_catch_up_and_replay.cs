@@ -37,6 +37,8 @@ public class with_two_targets_and_catch_up_and_replay(context context) : Given<c
 
         protected override void ConfigureServices(IServiceCollection services)
         {
+            // The host is shared across spec classes: register the reactor instance too, so it does not
+            // fall through to a host-built CurrentInboxReactor with its own tracker.
             services.AddSingleton(_tracker);
             services.AddSingleton(new CurrentInboxReactor(_tracker));
         }

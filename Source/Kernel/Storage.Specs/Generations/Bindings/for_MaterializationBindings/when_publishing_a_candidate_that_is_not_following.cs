@@ -14,7 +14,7 @@ public abstract class when_publishing_a_candidate_that_is_not_following<THarness
     {
         await Reserve();
     }
-    async Task Because() { _result = await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Initial, _candidate, _receipt); }
+    async Task Because() { _result = await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Initial, _candidate, _rollbackWindow, _receipt); }
     [Fact] public async Task should_observe_the_contract()
     {
         _result.Result.ShouldEqual(MaterializationPublicationResult.CandidateNotFollowing);

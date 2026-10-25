@@ -16,7 +16,7 @@ public class and_recovery_fails : given.a_captures_manager
         _subscriptions.Recover(_eventStore, Arg.Any<CaptureDefinition>()).Returns<Task>(_ => throw new TimeoutException());
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+    async Task Because() => _exception = await Catch.Exception(_silo.TimerRegistry.FireAllAsync);
 
     [Fact] void should_try_again_on_the_next_tick() => _exception.ShouldBeNull();
     [Fact] void should_have_attempted_recovery() => _subscriptions.Received(1).Recover(Arg.Any<EventStoreName>(), Arg.Any<CaptureDefinition>());

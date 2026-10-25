@@ -54,6 +54,22 @@ public class MaterializedReadModelStore(
     }
 
     /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        ReadModelDefinition definition,
+        Key key)
+    {
+        if (!IsMaterialized(definition)) return CompositeKeyLookupResult.NotSupported;
+        var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        if (binding.Sink is not ISinkCompositeKeyLookup lookup) return CompositeKeyLookupResult.NotSupported;
+        var result = await lookup.FindByCompositeKey(key);
+        if (result.Outcome != CompositeKeyLookupOutcome.Found) return result;
+        var instance = await compliance.Release(eventStore, eventStoreNamespace, definition.GetSchemaForLatestGeneration(), result.Instance!);
+        return result with { Instance = instance };
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ExpandoObject>> GetAllInstances(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,

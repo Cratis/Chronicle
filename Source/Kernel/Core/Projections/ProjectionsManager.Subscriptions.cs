@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 
@@ -14,8 +15,17 @@ namespace Cratis.Chronicle.Projections;
 public partial class ProjectionsManager
 {
     /// <inheritdoc/>
-    public Task EnsureSubscribedIn(EventStoreNamespaceName @namespace)
+    public Task EnsureSubscribedIn(EventStoreNamespaceName @namespace) => SubscribeInNamespace(@namespace);
+
+    Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
     {
+        // A fresh pass (namespace added, activation) subscribes even quarantined observers, which a reconciling
+        // pass leaves alone. Joining a pending reconciling pass would lose that, so a fresh pass always runs.
+        if (!reconcile)
+        {
+            return RunNamespaceSubscriptionPass(@namespace, reconcile);
+        }
+
         if (_namespaceSubscriptions.TryGetValue(@namespace, out var pending))
         {
             return pending;
@@ -25,28 +35,35 @@ public partial class ProjectionsManager
         // not leave a completed pass in the map. Explicit callers join, rather than skip, pending work.
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _namespaceSubscriptions.Add(@namespace, completion.Task);
-        _ = CompleteNamespaceSubscriptions(@namespace, completion);
+        _ = CompleteNamespaceSubscriptions(@namespace, reconcile, completion);
         return completion.Task;
     }
 
-    async Task CompleteNamespaceSubscriptions(EventStoreNamespaceName @namespace, TaskCompletionSource completion)
+    async Task CompleteNamespaceSubscriptions(EventStoreNamespaceName @namespace, bool reconcile, TaskCompletionSource completion)
     {
-        try
+        Exception? failure = null;
+        do
         {
-            await SubscribeInNamespace(@namespace);
-            completion.TrySetResult();
+            _namespaceReruns.Remove(@namespace);
+            try
+            {
+                await RunNamespaceSubscriptionPass(@namespace, reconcile);
+            }
+            catch (Exception exception)
+            {
+                failure ??= exception;
+            }
         }
-        catch (Exception exception)
-        {
-            completion.TrySetException(exception);
-        }
-        finally
-        {
-            _namespaceSubscriptions.Remove(@namespace);
-        }
+        while (_namespaceReruns.Contains(@namespace));
+
+        // All joiners await requested reruns too. Remove the promise before completing it so a new
+        // caller cannot join finished work. A failed pass still honors a retry requested while it ran.
+        _namespaceSubscriptions.Remove(@namespace);
+        if (failure is null) completion.TrySetResult();
+        else completion.TrySetException(failure);
     }
 
-    async Task SubscribeInNamespace(EventStoreNamespaceName @namespace, bool reconcile = true)
+    async Task RunNamespaceSubscriptionPass(EventStoreNamespaceName @namespace, bool reconcile)
     {
         var pass = SubscribeInNamespaceCore(@namespace, reconcile);
         _subscriptionPasses.Add(pass);
@@ -158,8 +175,67 @@ public partial class ProjectionsManager
         }));
     }
 
+    /// <summary>
+    /// Repairs registration subscriptions using the activation-local cache. Only namespace-local
+    /// triggers check real observer state, so idle tenants do not cause a whole-store observer sweep.
+    /// </summary>
+    /// <returns>A task representing the subscription repair.</returns>
+    async Task ResubscribeProjectionsThatAreNotSubscribed()
+    {
+        if (_resubscribeRunning)
+        {
+            _resubscribeRequested = true;
+            return;
+        }
+
+        _resubscribeRunning = true;
+        try
+        {
+            do
+            {
+                _resubscribeRequested = false;
+                await ResubscribeMissingProjections();
+            }
+            while (_resubscribeRequested);
+        }
+        finally
+        {
+            _resubscribeRunning = false;
+
+            // Even a failed pass cannot consume a request that arrived while it was awaiting storage.
+            if (_resubscribeRequested) ScheduleResubscribeProjectionsThatAreNotSubscribed();
+        }
+    }
+
+    async Task ResubscribeMissingProjections()
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
+        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
+            activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
+        await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
+        {
+            try
+            {
+                await EnsureSubscribedIn(namespaceName);
+            }
+            catch (Exception exception)
+            {
+                // The namespace pass logs individual failures; this scheduled repair has no caller to fail.
+                logger.FailedEnsuringSubscriptionsInNamespace(exception, namespaceName);
+            }
+        }));
+    }
+
     bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
-        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition);
+        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
+
+    bool IsBeingReplaced(ProjectionDefinition definition)
+    {
+        var replaced = _registeringDefinitions.TryGetValue(definition.Identifier, out var registering) && registering != definition;
+        if (replaced) _skippedWhileRegistering = true;
+        return replaced;
+    }
 
     async Task SetProjectionDefinition(ProjectionDefinition definition)
     {

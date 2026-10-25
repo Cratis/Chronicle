@@ -37,7 +37,7 @@ public class when_public_completion_races_a_failed_plain_action : Specification
             Substitute.For<ILogger<UnitOfWorkMiddleware>>());
 
         var error = await Record.ExceptionAsync(() => middleware.InvokeAsync(context, manager, correlationIds));
-        return (error, unit.CompletionHappened && unit.IsCompleted && completionCount == 1 &&
+        return (error!, unit.CompletionHappened && unit.IsCompleted && completionCount == 1 &&
             context.Features.Get<IUnitOfWorkCompletionFeature>() is null);
     }
 

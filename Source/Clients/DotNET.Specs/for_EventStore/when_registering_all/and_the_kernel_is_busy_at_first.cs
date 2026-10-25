@@ -33,7 +33,7 @@ public class and_the_kernel_is_busy_at_first : given.an_event_store_with_a_proje
     async Task Because()
     {
         await _projections.Discover();
-        _thrown = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrown = await Catch.Exception(_eventStore.RegisterAll);
         _outcome = _eventStore.Registration;
     }
 

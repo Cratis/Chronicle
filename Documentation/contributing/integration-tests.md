@@ -5,6 +5,8 @@ description: "Run Chronicle's client integration tests in-process or out-of-proc
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.
 
+To attribute an existing CI invocation without changing its test selection or lifecycle, see [Interpreting Integration Timings](integration-timings.md).
+
 When you provide no runtime arguments, the suite defaults to:
 
 - mode: `outofprocess`

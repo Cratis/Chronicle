@@ -15,10 +15,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 /// <summary>Stores bindings with receipt-first, majority-committed publication.</summary>
 /// <param name="database">The read-model database resolver.</param>
 /// <param name="gates">The gate writes joining publication.</param>
-public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates) : IMaterializationBindingStorage
+/// <param name="timeProvider">The clock used for lifecycle stamps.</param>
+public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null) : IMaterializationBindingStorage
 {
     static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
     static readonly UpdateDefinitionBuilder<BsonDocument> _update = Builders<BsonDocument>.Update;
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc/>
     public async Task<MaterializationBinding?> Get(EventStoreName store, MaterializationKey key)
@@ -96,30 +98,48 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     public Task<GenerationTransitionResult> TryAbandon(EventStoreName store, MaterializationKey key, MaterializationGeneration generation) => Transition(store, key, generation, MaterializationGenerationState.Abandoned);
 
     /// <inheritdoc/>
-    public async Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
+    public Task<MaterializationPublication> TryPublish(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) =>
+        Activate(store, new(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, false));
+
+    /// <inheritdoc/>
+    public Task<MaterializationPublication> TryRestore(EventStoreName store, MaterializationKey key, MaterializationGeneration expectedActive, ServingEpoch expectedEpoch, MaterializationGeneration candidate, TimeSpan rollbackWindow, PublicationReceiptId receipt) =>
+        Activate(store, new(key, expectedActive, expectedEpoch, candidate, rollbackWindow, receipt, true));
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<GenerationContainerClaim>> GetClaims(EventStoreName store, EventStoreNamespaceName ns, ReadModelContainerName container) =>
+        await new MongoDBGenerationContainerClaims(database.GetReadModelDatabase(store, ns)).For(container.Value);
+
+    static IMongoCollection<BsonDocument> Bindings(IMongoDatabase db) => db.GetCollection<BsonDocument>(MaterializationBindingCollections.Bindings).WithWriteConcern(WriteConcern.WMajority).WithReadConcern(ReadConcern.Majority);
+    static IMongoCollection<BsonDocument> Receipts(IMongoDatabase db) => db.GetCollection<BsonDocument>(MaterializationBindingCollections.Receipts);
+    static FilterDefinition<BsonDocument> Id(MaterializationKey key) => _filter.Eq("_id", key.Value);
+    static FilterDefinition<BsonDocument> ReceiptId(PublicationReceiptId receipt) => _filter.Eq("_id", receipt.Value.ToString("N"));
+    static Task Abort(IClientSessionHandle session) => session.IsInTransaction ? session.AbortTransactionAsync() : Task.CompletedTask;
+
+    async Task<MaterializationPublication> Activate(EventStoreName store, MaterializationPublicationRequest request)
     {
-        var db = await Prepared(store, key);
+        var db = await Prepared(store, request.Key);
         for (var attempt = 0; ; attempt++)
         {
             using var session = await db.Client.StartSessionAsync();
             try
             {
                 session.StartTransaction(new(ReadConcern.Snapshot, ReadPreference.Primary, WriteConcern.WMajority));
-                var previous = await Receipts(db).Find(session, ReceiptId(receipt)).FirstOrDefaultAsync();
+                var previous = await Receipts(db).Find(session, ReceiptId(request.Receipt)).FirstOrDefaultAsync();
                 if (previous is not null)
                 {
                     await session.AbortTransactionAsync();
-                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate);
+                    return MaterializationBindingDocuments.Outcome(previous, request);
                 }
-                var doc = await Bindings(db).Find(session, Id(key)).FirstOrDefaultAsync();
+                var doc = await Bindings(db).Find(session, Id(request.Key)).FirstOrDefaultAsync();
                 if (doc is null)
                 {
                     await session.AbortTransactionAsync();
                     return new(MaterializationPublicationResult.UnknownMaterialization, MaterializationGeneration.Unspecified, ServingEpoch.Unset);
                 }
                 var binding = MaterializationBindingDocuments.Binding(doc);
-                var outcome = Decide(binding, expectedActive, expectedEpoch, candidate);
-                if (outcome.Result == MaterializationPublicationResult.Published && !await Publish(db, session, binding, expectedActive, expectedEpoch, candidate, receipt))
+                var now = _timeProvider.GetUtcNow();
+                var outcome = request.Decide(binding, now);
+                if (outcome.Result == MaterializationPublicationResult.Published && !await Publish(db, session, binding, request, now))
                 {
                     await session.AbortTransactionAsync();
                     if (attempt >= 4)
@@ -128,7 +148,7 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                     }
                     continue;
                 }
-                await Receipts(db).InsertOneAsync(session, MaterializationBindingDocuments.Receipt(key, expectedActive, expectedEpoch, candidate, receipt, outcome));
+                await Receipts(db).InsertOneAsync(session, MaterializationBindingDocuments.Receipt(request, outcome, now));
                 await session.CommitTransactionAsync();
                 return outcome;
             }
@@ -139,10 +159,10 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
             catch (MongoWriteException error) when (error.WriteError.Category == ServerErrorCategory.DuplicateKey)
             {
                 await Abort(session);
-                var previous = await Receipts(db).WithReadConcern(ReadConcern.Majority).Find(ReceiptId(receipt)).FirstOrDefaultAsync();
+                var previous = await Receipts(db).WithReadConcern(ReadConcern.Majority).Find(ReceiptId(request.Receipt)).FirstOrDefaultAsync();
                 if (previous is not null)
                 {
-                    return MaterializationBindingDocuments.Outcome(previous, key, expectedActive, expectedEpoch, candidate);
+                    return MaterializationBindingDocuments.Outcome(previous, request);
                 }
                 if (attempt >= 4) throw;
             }
@@ -158,37 +178,25 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         }
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<GenerationContainerClaim>> GetClaims(EventStoreName store, EventStoreNamespaceName ns, ReadModelContainerName container) =>
-        await new MongoDBGenerationContainerClaims(database.GetReadModelDatabase(store, ns)).For(container.Value);
-
-    static IMongoCollection<BsonDocument> Bindings(IMongoDatabase db) => db.GetCollection<BsonDocument>(MaterializationBindingCollections.Bindings).WithWriteConcern(WriteConcern.WMajority).WithReadConcern(ReadConcern.Majority);
-    static IMongoCollection<BsonDocument> Receipts(IMongoDatabase db) => db.GetCollection<BsonDocument>(MaterializationBindingCollections.Receipts);
-    static FilterDefinition<BsonDocument> Id(MaterializationKey key) => _filter.Eq("_id", key.Value);
-    static FilterDefinition<BsonDocument> ReceiptId(PublicationReceiptId receipt) => _filter.Eq("_id", receipt.Value.ToString("N"));
-    static Task Abort(IClientSessionHandle session) => session.IsInTransaction ? session.AbortTransactionAsync() : Task.CompletedTask;
-
-    static MaterializationPublication Decide(MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate)
+    async Task<bool> Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationPublicationRequest request, DateTimeOffset now)
     {
-        if (binding.Active != active || binding.Epoch != epoch)
-        {
-            return new(MaterializationPublicationResult.StaleBinding, binding.Active, binding.Epoch);
-        }
-        if (!binding.Generations.Any(_ => _.Identity.Generation == candidate && _.State == MaterializationGenerationState.Following))
-        {
-            return new(MaterializationPublicationResult.CandidateNotFollowing, binding.Active, binding.Epoch);
-        }
-        return new(MaterializationPublicationResult.Published, candidate, epoch.Next());
-    }
-
-    async Task<bool> Publish(IMongoDatabase db, IClientSessionHandle session, MaterializationBinding binding, MaterializationGeneration active, ServingEpoch epoch, MaterializationGeneration candidate, PublicationReceiptId receipt)
-    {
-        var filter = Id(binding.Key) & _filter.Eq("active", (int)active.Value) & _filter.Eq("epoch", (long)epoch.Value)
-            & _filter.ElemMatch("generations", _filter.Eq("generation", (int)candidate.Value) & _filter.Eq("state", (int)MaterializationGenerationState.Following));
-        var update = _update.Set("active", (int)candidate.Value).Set("epoch", (long)epoch.Next().Value)
+        var candidate = request.Candidate;
+        var active = request.Active;
+        var requiredState = request.Restore ? MaterializationGenerationState.Retired : MaterializationGenerationState.Following;
+        var filter = Id(binding.Key) & _filter.Eq("active", (int)active.Value) & _filter.Eq("epoch", (long)request.Epoch.Value)
+            & _filter.ElemMatch("generations", _filter.Eq("generation", (int)candidate.Value) & _filter.Eq("state", (int)requiredState));
+        var update = _update.Set("active", (int)candidate.Value).Set("epoch", (long)request.Epoch.Next().Value)
             .Set("destination", binding.Generations.Single(_ => _.Identity.Generation == candidate).Identity.Destination.Value)
-            .Set("lastReceipt", receipt.Value.ToString("N")).Set("generations.$[candidate].state", (int)MaterializationGenerationState.Active)
-            .Set("generations.$[old].state", (int)MaterializationGenerationState.Retired).Set("generations.$[old].supersededBy", (int)candidate.Value);
+            .Set("lastReceipt", request.Receipt.Value.ToString("N")).Set("generations.$[candidate].state", (int)MaterializationGenerationState.Active)
+            .Set("generations.$[candidate].promotedAt", MaterializationBindingDocuments.Timestamp(now))
+            .Set("generations.$[old].state", (int)MaterializationGenerationState.Retired).Set("generations.$[old].supersededBy", (int)candidate.Value)
+            .Set("generations.$[old].retiredAt", MaterializationBindingDocuments.Timestamp(now))
+            .Set("generations.$[old].rollbackDeadline", MaterializationBindingDocuments.Timestamp(now + request.RollbackWindow));
+        if (request.Restore)
+        {
+            update = update.Set("generations.$[candidate].rolledBackFrom", (int)active.Value)
+                .Set("generations.$[candidate].retiredAt", BsonNull.Value).Set("generations.$[candidate].rollbackDeadline", BsonNull.Value);
+        }
         var result = await Bindings(db).UpdateOneAsync(session, filter, update, new UpdateOptions
         {
             ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new("candidate.generation", (int)candidate.Value)), new BsonDocumentArrayFilterDefinition<BsonDocument>(new("old.generation", (int)active.Value))]

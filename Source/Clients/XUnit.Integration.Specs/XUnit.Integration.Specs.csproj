@@ -7,6 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../XUnit.Integration/XUnit.Integration.csproj" />
+        <!-- The v3 harness compiles the shared harness sources, so the specs cover that logic once, on xUnit v3. -->
+        <ProjectReference Include="../XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 </Project>

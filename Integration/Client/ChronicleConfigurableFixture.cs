@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -350,6 +351,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("Logging__LogLevel__Default", "Information")
             .WithEnvironment("Logging__LogLevel__Cratis", "Debug");
 
+        builder = WithTimingOutput(builder);
+
         // SQL backends (especially MSSQL) run EF Core migrations against a freshly-started
         // database container on startup. Give the health endpoint 5 minutes to respond.
         var waitStrategy = Wait.ForUnixContainer()
@@ -360,6 +363,24 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         var kernelContainer = WithReservedKernelPorts(builder).WithWaitStrategy(waitStrategy).Build();
         _outOfProcessKernelContainer = kernelContainer;
         return kernelContainer;
+    }
+
+    static ContainerBuilder WithTimingOutput(ContainerBuilder builder)
+    {
+        if (!IntegrationTimings.Enabled) return builder;
+
+        // Never forward the host sidecar path or any connection details as timing metadata.
+        builder = builder.WithEnvironment("CHRONICLE_INTEGRATION_TIMINGS", "1")
+            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(
+                new XUnit.Integration.IntegrationTimingOutput(), new XUnit.Integration.IntegrationTimingOutput()));
+        foreach (var name in new[] { "CHRONICLE_INTEGRATION_RUN_ID", "GITHUB_SHA", "GITHUB_RUN_ATTEMPT", "CHRONICLE_INTEGRATION_FILTER", "CHRONICLE_RUNTIME_MODE", "CHRONICLE_STORAGE_PROVIDER" })
+        {
+            if (Environment.GetEnvironmentVariable(name) is { } value)
+            {
+                builder = builder.WithEnvironment(name, value);
+            }
+        }
+        return builder;
     }
 
     /// <summary>
@@ -402,6 +423,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     string BuildAndStartMongoDB(INetwork network)
     {
+        using var timing = IntegrationTimings.BeginCurrent("auxiliary-mongo-start");
+        timing?.Failure();
+
         // Initiate the replica set using the docker-network hostname as the member name so
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
@@ -430,6 +454,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
 
+        timing?.Success();
         return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
     }
 
@@ -441,6 +466,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
+        using var timing = IntegrationTimings.BeginCurrent("auxiliary-postgresql-start");
+        timing?.Failure();
+
         // The module waits for TCP pg_isready, which the temporary init server cannot satisfy.
         _databaseContainer = new PostgreSqlBuilder("postgres:16")
             .WithHostname(PostgreSqlHostName)
@@ -451,6 +479,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
 
+        timing?.Success();
         return $"Host={PostgreSqlHostName};Port=5432;Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
     }
 
@@ -462,6 +491,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
+        using var timing = IntegrationTimings.BeginCurrent("auxiliary-mssql-start");
+        timing?.Failure();
         var builder = new ContainerBuilder(SqlServerContainerImage.Name)
             .WithImage(SqlServerContainerImage.Name)
             .WithHostname(MsSqlHostName)
@@ -501,6 +532,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         }
         catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
         {
+            timing?.Retry();
+
             // Only a process that exited during startup warrants another attempt. Build a new
             // container so Testcontainers does not reuse the failed instance or its host port.
             _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -508,6 +541,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             _databaseContainer.StartAsync().GetAwaiter().GetResult();
         }
 
+        timing?.Success();
         return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
     }
 
@@ -526,6 +560,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
+        using var timing = IntegrationTimings.BeginCurrent("oop-reset-total");
+        timing?.Failure();
+
         // skipTlsValidation because the container serves a self-signed development certificate.
         var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?skipTlsValidation=true");
         var options = new ChronicleClientOptions
@@ -548,29 +585,42 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         {
             try
             {
+                using var attempt = IntegrationTimings.BeginCurrent("oop-reset-attempt");
+                attempt?.Failure();
+                timing?.Poll();
                 using var resetClient = new ChronicleClient(options);
                 var eventStore = await resetClient.GetEventStore("Testing");
                 var services = ((Contracts.IChronicleServicesAccessor)eventStore.Connection).Services;
                 await services.Server.ResetKernelState();
+                attempt?.Success();
+                timing?.Success();
                 return;
             }
             catch (Exception) when (DateTime.UtcNow < deadline)
             {
+                timing?.Retry();
+                using var delay = IntegrationTimings.BeginCurrent("oop-reset-retry-delay");
+                delay?.Failure();
                 await Task.Delay(500);
+                delay?.Success();
             }
         }
     }
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
     {
+        using var timing = IntegrationTimings.BeginCurrent("mongo-primary-readiness");
+        timing?.Failure();
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (DateTime.UtcNow < deadline)
         {
             try
             {
+                timing?.Poll();
                 var result = await container.ExecAsync(["/bin/sh", "-c", "mongosh --quiet --eval \"rs.status().members.filter(m=>m.stateStr==='PRIMARY').length\" 2>/dev/null"]);
                 if (result.ExitCode == 0 && result.Stdout.Trim() == "1")
                 {
+                    timing?.Success();
                     return;
                 }
             }

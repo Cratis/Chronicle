@@ -55,7 +55,7 @@ public sealed class OldKernelFixture : IAsyncLifetime
     public IEventStore EventStore { get; private set; } = null!;
     public HttpRpcObservation Requests => _requests!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         if (!Enabled) return;
         Assert.True(Contracts.ProtocolVersion.Current.StartsWith("19.", StringComparison.Ordinal),
@@ -79,7 +79,7 @@ public sealed class OldKernelFixture : IAsyncLifetime
         capabilities.Capabilities.ShouldNotContain("effect-receipts");
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _client?.Dispose();
         _requests?.Dispose();

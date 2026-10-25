@@ -29,7 +29,7 @@ public sealed class VaultFixture : IAsyncLifetime
     public string VaultAddress => $"http://localhost:{_container!.GetMappedPublicPort(VaultPort)}";
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder("hashicorp/vault:latest")
             .WithCommand(
@@ -57,7 +57,7 @@ public sealed class VaultFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {

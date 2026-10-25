@@ -25,7 +25,7 @@ public class when_connected_and_a_handler_throws : Specification
         };
     }
 
-    async Task Because() => _error = await Catch.Exception(async () => await _lifecycle.Connected());
+    async Task Because() => _error = await Catch.Exception(_lifecycle.Connected);
 
     [Fact] void should_not_mark_as_connected() => _lifecycle.IsConnected.ShouldBeFalse();
     [Fact] void should_still_invoke_subsequent_handlers() => _subsequentHandlerCalled.ShouldBeTrue();

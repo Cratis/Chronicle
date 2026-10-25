@@ -17,8 +17,15 @@ namespace Cratis.Chronicle.Compatibility;
 /// able to make (#4058).
 /// <para>
 /// Both sides already report the same release-stamped protocol version string - <c language="csharp">Cratis.Chronicle.Contracts.ProtocolVersion.Current</c>
-/// on the kernel, the equivalent client SDK property on the way in - so ordering by that is enough to pick
-/// the right direction without any new information changing hands or any change on the client's part.
+/// on the kernel, the equivalent client SDK property on the way in - so when both versions are known,
+/// ordering by that is enough to pick the right direction without any new information changing hands.
+/// </para>
+/// <para>
+/// Unstamped builds report 1.0.0, and missing or unparseable versions also leave the ordering unknown.
+/// In that case, check both directions and accept if either is compatible: one of the two orderings is
+/// the real one, so accepting when a consistent ordering exists is sound. Treating an unstamped client
+/// as the oldest instead refused connections for purely additive differences (#5353). If neither direction
+/// is compatible, keep the client-as-older report to preserve the existing diagnostics.
 /// </para>
 /// </remarks>
 public static class ConnectCompatibility
@@ -30,13 +37,26 @@ public static class ConnectCompatibility
     /// <param name="clientProtocolVersion">The client's protocol version.</param>
     /// <param name="kernelContract">The wire contract the kernel currently serves.</param>
     /// <param name="kernelProtocolVersion">The kernel's protocol version.</param>
-    /// <returns>A <see cref="WireCompatibilityReport"/> naming what the older of the two would lose.</returns>
+    /// <returns>A compatible report if the known or either possible ordering is compatible; otherwise the known-order or client-as-older incompatibilities.</returns>
     public static WireCompatibilityReport Check(
         WireContract clientContract,
         string clientProtocolVersion,
         WireContract kernelContract,
-        string kernelProtocolVersion) =>
-        ProtocolVersionOrder.Compare(clientProtocolVersion, kernelProtocolVersion) > 0
+        string kernelProtocolVersion)
+    {
+        if (!ProtocolVersionOrder.IsKnown(clientProtocolVersion) || !ProtocolVersionOrder.IsKnown(kernelProtocolVersion))
+        {
+            var clientAsOlder = WireCompatibilityChecker.Check(clientContract, kernelContract);
+            if (clientAsOlder.IsCompatible)
+            {
+                return clientAsOlder;
+            }
+
+            var kernelAsOlder = WireCompatibilityChecker.Check(kernelContract, clientContract);
+            return kernelAsOlder.IsCompatible ? kernelAsOlder : clientAsOlder;
+        }
+
+        return ProtocolVersionOrder.Compare(clientProtocolVersion, kernelProtocolVersion) > 0
 
             // The client is newer than the kernel: the kernel is the older side, so ask whether the client
             // still serves what the kernel expects. This is the direction the incident needed and the
@@ -47,4 +67,5 @@ public static class ConnectCompatibility
             // older side (or ties don't matter), so ask whether the kernel still serves what the client
             // expects. This is the direction Chronicle has always checked.
             : WireCompatibilityChecker.Check(clientContract, kernelContract);
+    }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Grpc.Core;
@@ -27,8 +28,11 @@ public static class AppendResultWaitForCompletionExtensions
     /// </remarks>
     public static async Task<AppendResultWaitForCompletionResult> WaitForCompletion(this IAppendResultForObserverCompletion appendResult, TimeSpan? timeout = default)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-observer-completion");
+        timing?.Failure();
         if (appendResult.TailSequenceNumber.IsUnavailable)
         {
+            timing?.Success();
             return new(true, []);
         }
 
@@ -59,6 +63,7 @@ public static class AppendResultWaitForCompletionExtensions
 
         try
         {
+            timing?.Poll();
             var response = await observers.WaitForCompletion(
                 new Contracts.Observation.WaitForObserverCompletionRequest
                 {
@@ -76,6 +81,7 @@ public static class AppendResultWaitForCompletionExtensions
                 },
                 new CallContext(new CallOptions(cancellationToken: cts.Token)));
 
+            timing?.SuccessUnlessIncomplete(response.IsSuccess, response.TimedOut);
             return new(response.IsSuccess, response.FailedPartitions.ToClient())
             {
                 TimedOut = response.TimedOut,

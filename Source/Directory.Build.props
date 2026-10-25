@@ -76,17 +76,35 @@
 
     <ItemGroup Condition="'$(IsTestProject)'=='true'">
         <PackageReference Include="coverlet.collector" />
-        <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="NSubstitute" />
         <!-- NSubstitute reaches Castle.Core transitively, and a PackageVersion only binds a direct PackageReference -
              so the Castle.Core pin in Directory.Packages.props is inert without this line and NuGet floats to whatever
              the graph offers. Castle.Core 5.2.1 cannot proxy an interface carrying a default implementation: mapping
              the member yields a null declaring type and the substitute throws on first access. Chronicle's client
-             artifact interfaces use default interface members, so the difference is not theoretical. -->
-        <PackageReference Include="Castle.Core" />
-        <PackageReference Include="xunit" />
+             artifact interfaces use default interface members, so the difference is not theoretical.
+             NoWarn="NU1605" lets this one deliberate downgrade through; every other downgrade still fails restore. -->
+        <PackageReference Include="Castle.Core" NoWarn="NU1605" />
         <PackageReference Include="xunit.runner.visualstudio" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <Compile Include="$(MSBuildThisFileDirectory)/GlobalUsings.Specs.cs" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <!-- CRSPECEXP01: the type-discovery generator emits typeof() for Specifications' experimental resource types (see the 5.0 upgrade guide).
+             Applied to every project because IsTestProject is only set after this file evaluates.
+             xUnit1051: cancellation-token propagation in existing specs is adopted incrementally, not as part of this migration. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
+        <!-- Keep the original display names; the shared per-class lifecycle stays on. -->
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'!='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit.v3" />
+        <PackageReference Include="xunit.v3.mtp-off" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsTestProject)'=='true' and '$(UseXunitV2)'=='true'">
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="xunit" />
     </ItemGroup>
 </Project>

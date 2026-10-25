@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverTypeSetContro
 public class with_other_update_operators : Specification
 {
     ObserverTypeSetControl _control;
-    Exception[] _errors;
+    Exception?[] _errors;
 
     void Establish() => _control = new(new(1), new("reactor-subscriber", Concepts.Observation.ObserverFilters.None), new Dictionary<EventTypeId, ObserverTypeSetMember>(), []);
 

@@ -94,6 +94,11 @@ public static class WellKnownServices
     public const string ReadModelExplorer = "ReadModelExplorer";
 
     /// <summary>
+    /// The name of the structured composite-key read service.
+    /// </summary>
+    public const string ReadModelLookups = "ReadModelLookups";
+
+    /// <summary>
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.
     /// </summary>
     /// <remarks>

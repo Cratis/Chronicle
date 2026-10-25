@@ -38,6 +38,6 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
             .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
-        return new NamespaceDbContext(options);
+        return fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new NamespaceDbContext(options)));
     }
 }

@@ -6,9 +6,11 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.Data.Sqlite;
@@ -29,6 +31,8 @@ public class SqlSinkHarness : ISqlSinkHarness
         Substitute.For<ILogger<ReadModelMigrator>>());
     readonly ReplayingTables _replayingTables = new();
     readonly string _path = Path.Combine(Path.GetTempPath(), $"chronicle-sink-{Guid.NewGuid():N}.db");
+    readonly IntegrationTimings _timings = new(nameof(SqlSinkHarness), "sql-specs", "sqlite");
+    SqlCommandTimings? _commandTimings;
     IReadOnlyList<ProjectedColumn> _columns = [];
     SqliteConnection? _connection;
     ReadModelDefinition? _definition;
@@ -116,10 +120,21 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// <inheritdoc/>
     public virtual void Dispose()
     {
-        _connection?.Dispose();
-        File.Delete(_path);
-        File.Delete($"{_path}-wal");
-        File.Delete($"{_path}-shm");
+        try
+        {
+            using var timing = _timings.Begin("sql-harness-disposal");
+            timing?.Failure();
+            _connection?.Dispose();
+            File.Delete(_path);
+            File.Delete($"{_path}-wal");
+            File.Delete($"{_path}-shm");
+            timing?.Success();
+        }
+        finally
+        {
+            _commandTimings?.Dispose();
+            _timings.Complete();
+        }
     }
 
     async Task<ReadModelDbContext> CreateContext(string containerName)
@@ -130,8 +145,17 @@ public class SqlSinkHarness : ISqlSinkHarness
             .AddInterceptors(Interceptors)
             .Options;
 
-        var context = new ReadModelDbContext(options, containerName, _columns, _migrator);
-        await context.EnsureTableExists();
+        if (IntegrationTimings.Enabled && _commandTimings is null)
+        {
+            _commandTimings = new(_timings);
+            _commandTimings.Start();
+        }
+        var context = _timings.Measure("ef-context-construction", () =>
+        {
+            var created = new ReadModelDbContext(options, containerName, _columns, _migrator);
+            return _commandTimings?.Track(created) ?? created;
+        });
+        await _timings.Run("ef-table-ensure", context.EnsureTableExists);
         return context;
     }
 }
