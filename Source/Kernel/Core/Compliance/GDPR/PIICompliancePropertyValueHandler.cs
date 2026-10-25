@@ -69,6 +69,35 @@ public class PIICompliancePropertyValueHandler(
         ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value);
 
     /// <inheritdoc/>
+    public async Task<ReleasedProtectedValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    {
+        if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
+        {
+            return new(value, ProtectedValueReleaseStatus.Plain);
+        }
+
+        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        if (key is null)
+        {
+            return await ReleaseMissingKeyWithStatus(eventStore, eventStoreNamespace, identifier, value);
+        }
+
+        try
+        {
+            return new(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted);
+        }
+        catch (EncryptionKeyUnwrapFailed)
+        {
+            if (await HasRecordedErasure(eventStore, eventStoreNamespace, identifier))
+            {
+                return new(value, ProtectedValueReleaseStatus.Erased);
+            }
+
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// Ciphertext that cannot be unwrapped with the current key is unrecoverable either way. For a subject
     /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
@@ -141,4 +170,28 @@ public class PIICompliancePropertyValueHandler(
 
         return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
     }
+
+    /// <summary>
+    /// Confirms whether the original subject has a recorded erasure.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The original subject.</param>
+    /// <returns>Whether an erasure record exists.</returns>
+    async Task<bool> HasRecordedErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier) =>
+        await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null;
+
+    /// <summary>
+    /// Distinguishes an erased subject from an unexpectedly missing key without replacing ciphertext.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The original subject.</param>
+    /// <param name="value">The original ciphertext.</param>
+    /// <returns>The ciphertext with erased status.</returns>
+    /// <exception cref="MissingEncryptionKey">The key is missing without an erasure record.</exception>
+    async Task<ReleasedProtectedValue> ReleaseMissingKeyWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        await HasRecordedErasure(eventStore, eventStoreNamespace, identifier)
+            ? new(value, ProtectedValueReleaseStatus.Erased)
+            : throw new MissingEncryptionKey(identifier);
 }

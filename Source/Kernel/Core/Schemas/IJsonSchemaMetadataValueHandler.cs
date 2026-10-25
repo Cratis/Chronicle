@@ -78,6 +78,18 @@ public interface IJsonSchemaMetadataValueHandler
     Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) => Task.FromResult<JsonNode?>(null);
 
     /// <summary>
+    /// Releases a value with an explicit outcome, retaining ciphertext when erasure is confirmed.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The event store namespace.</param>
+    /// <param name="identifier">The protection key identifier.</param>
+    /// <param name="value">The value to release.</param>
+    /// <returns>The released value and its status.</returns>
+    /// <exception cref="StrictSchemaMetadataReleaseNotSupported">The handler cannot report release status.</exception>
+    Task<ReleasedProtectedValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        throw new StrictSchemaMetadataReleaseNotSupported();
+
+    /// <summary>
     /// Releases a stored value without treating an unconfirmed missing key as erasure.
     /// </summary>
     /// <param name="eventStore">The event store.</param>

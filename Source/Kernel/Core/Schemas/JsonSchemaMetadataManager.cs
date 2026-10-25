@@ -52,7 +52,7 @@ public class JsonSchemaMetadataManager(
             return (result, uses);
         }
 
-        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, handlers, subject, value) =>
+        await HandleActionFor(schema, identifier, result, SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, _, handlers, subject, value) =>
         {
             ProtectionLocation(path, handlers, subject);
             var plaintext = value.DeepClone();
@@ -73,7 +73,7 @@ public class JsonSchemaMetadataManager(
             return locations;
         }
 
-        await HandleActionFor(schema, identifier, (JsonObject)json.DeepClone(), SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: (path, handlers, subject, value) =>
+        await HandleActionFor(schema, identifier, (JsonObject)json.DeepClone(), SchemaMetadataActionFailed.ApplyAction, (_, _, value) => Task.FromResult(value), boundaryTransform: (path, _, handlers, subject, value) =>
         {
             var location = ProtectionLocation(path, handlers, subject);
             locations.Add(new(path, location.Kind, location.Identifier, value.DeepClone()));
@@ -228,6 +228,106 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
+    /// <inheritdoc/>
+    public async Task<StatusedRelease> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
+    {
+        var content = (JsonObject)json.DeepClone();
+        var statuses = new Dictionary<string, ProtectedValueReleaseStatus>(StringComparer.Ordinal);
+        if (schema.HasSchemaMetadata())
+        {
+            await HandleActionFor(schema, identifier, content, SchemaMetadataActionFailed.ReleaseAction, (_, _, value) => Task.FromResult(value), boundaryTransform: async (path, boundary, handlers, subject, value) =>
+            {
+                if (handlers.Length != 1)
+                {
+                    throw new ProtectedBoundaryUnsupported(path);
+                }
+
+                var released = await handlers[0].ReleaseWithStatus(eventStore, eventStoreNamespace, subject, value);
+                statuses.Add(path, released.Status);
+                return released.Status == ProtectedValueReleaseStatus.Decrypted
+                    ? RestoreStatusedValue(boundary, released.Value)
+                    : released.Value;
+            });
+        }
+
+        return new(content, statuses);
+    }
+
+    /// <summary>
+    /// Restores a decrypted boundary's declared JSON kind without erased-value fallbacks.
+    /// </summary>
+    /// <param name="schema">The boundary schema.</param>
+    /// <param name="released">The decrypted value.</param>
+    /// <returns>The value with its declared JSON kind.</returns>
+    /// <exception cref="StrictSchemaMetadataReleaseNotSupported">The declared kind cannot be restored.</exception>
+    static JsonNode RestoreStatusedValue(JsonSchema schema, JsonNode released)
+    {
+        if (!StrictJsonSchemaRelease.HasSupportedType(schema))
+        {
+            throw new StrictSchemaMetadataReleaseNotSupported();
+        }
+
+        var type = StatusedValueType(schema);
+        var restored = type == JsonObjectType.String ? released : ParseStatusedValue(released);
+        return HasStatusedValueKind(type, restored) ? restored : throw new StrictSchemaMetadataReleaseNotSupported();
+    }
+
+    /// <summary>
+    /// Resolves a protected type, including nullable union branches as in strict comparison release.
+    /// </summary>
+    /// <param name="schema">The protected boundary schema.</param>
+    /// <returns>The combined non-null declared type.</returns>
+    static JsonObjectType StatusedValueType(JsonSchema schema)
+    {
+        var actual = schema.ActualTypeSchema;
+        return actual.OneOf.Concat(actual.AnyOf).Aggregate(actual.Type & ~JsonObjectType.Null, (type, branch) => type | (branch.ActualTypeSchema.Type & ~JsonObjectType.Null));
+    }
+
+    /// <summary>
+    /// Parses decrypted non-string JSON without leaking its text in parsing errors.
+    /// </summary>
+    /// <param name="released">The decrypted value.</param>
+    /// <returns>The parsed JSON value.</returns>
+    /// <exception cref="StrictSchemaMetadataReleaseNotSupported">The JSON cannot be parsed.</exception>
+    static JsonNode ParseStatusedValue(JsonNode released)
+    {
+        if (released is not JsonValue scalar)
+        {
+            return released;
+        }
+
+        if (!scalar.TryGetValue<string>(out var text))
+        {
+            return released;
+        }
+
+        try
+        {
+            return JsonNode.Parse(text) ?? throw new StrictSchemaMetadataReleaseNotSupported();
+        }
+        catch (JsonException)
+        {
+            throw new StrictSchemaMetadataReleaseNotSupported();
+        }
+    }
+
+    /// <summary>
+    /// Checks that a decrypted value retains its declared JSON kind.
+    /// </summary>
+    /// <param name="type">The declared kind.</param>
+    /// <param name="released">The restored value.</param>
+    /// <returns>Whether the kinds agree.</returns>
+    static bool HasStatusedValueKind(JsonObjectType type, JsonNode released) =>
+        type switch
+        {
+            JsonObjectType.String => released.GetValueKind() == JsonValueKind.String,
+            JsonObjectType.Boolean => released.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+            JsonObjectType.Integer or JsonObjectType.Number => released.GetValueKind() == JsonValueKind.Number,
+            JsonObjectType.Array => released is JsonArray,
+            JsonObjectType.Object => released is JsonObject,
+            _ => false
+        };
+
     static ProtectionKeyLocation ProtectionLocation(string path, IJsonSchemaMetadataValueHandler[] handlers, string identifier)
     {
         if (handlers.Length != 1 || handlers[0].KeyLocationFor(identifier) is not { } location)
@@ -357,7 +457,7 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+        Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
     {
         var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
         foreach (var (property, value) in json.ToArray())
@@ -381,7 +481,7 @@ public class JsonSchemaMetadataManager(
 
                 if (boundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
                 {
-                    json[property] = await boundaryTransform(propertyPath, handlers, identifier, value);
+                    json[property] = await boundaryTransform(propertyPath, propertySchema, handlers, identifier, value);
                     continue;
                 }
 
@@ -453,7 +553,7 @@ public class JsonSchemaMetadataManager(
         string path,
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+        Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -487,7 +587,7 @@ public class JsonSchemaMetadataManager(
 
             if (boundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
             {
-                var transformed = await boundaryTransform(elementPath, handlers, identifier, element);
+                var transformed = await boundaryTransform(elementPath, itemSchema, handlers, identifier, element);
                 if (!ReferenceEquals(transformed, element))
                 {
                     array[i] = transformed;

@@ -110,6 +110,19 @@ public interface IJsonSchemaMetadataManager
         Func<int, JsonSchema, JsonNode, JsonNode?>? convertProtectedValue = null) => Task.FromResult<IReadOnlyDictionary<int, JsonObject>?>(null);
 
     /// <summary>
+    /// Releases content with an explicit status per protected property path, retaining erased ciphertext.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The event store namespace.</param>
+    /// <param name="schema">The content schema.</param>
+    /// <param name="identifier">The original subject identifier.</param>
+    /// <param name="json">The protected content.</param>
+    /// <returns>The released content and statuses keyed by property path.</returns>
+    /// <exception cref="StrictSchemaMetadataReleaseNotSupported">The implementation cannot report release status.</exception>
+    Task<StatusedRelease> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) =>
+        throw new StrictSchemaMetadataReleaseNotSupported();
+
+    /// <summary>
     /// Releases stored content for persistence, failing on operational errors rather than substituting erased values.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
