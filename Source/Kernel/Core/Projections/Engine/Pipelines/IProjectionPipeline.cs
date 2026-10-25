@@ -82,6 +82,13 @@ public interface IProjectionPipeline
     Task PreparePage(IReadOnlyList<AppendedEvent> events) => Task.CompletedTask;
 
     /// <summary>
+    /// Discards optional read preparation owned by the completed page, without discarding pending writes.
+    /// </summary>
+    void ClearPreparedPage()
+    {
+    }
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
