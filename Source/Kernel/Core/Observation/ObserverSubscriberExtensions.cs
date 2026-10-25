@@ -180,7 +180,7 @@ public static class ObserverSubscriberExtensions
     {
         if (subscriber is IWebhookObserverSubscriber webhook)
         {
-            return await OnNextWebhook(webhook, timeout, partition, events, context, cancellationToken);
+            return await OnNextWebhook(webhook, new(timeout, TimeProvider.System), partition, events, context, cancellationToken);
         }
 
         var call = subscriber.OnNext(partition, events, context);
@@ -203,19 +203,16 @@ public static class ObserverSubscriberExtensions
         }
     }
 
-    static async Task<ObserverSubscriberResult> OnNextWebhook(
+    internal static async Task<ObserverSubscriberResult> OnNextWebhook(
         IWebhookObserverSubscriber subscriber,
-        TimeSpan timeout,
+        WebhookDeliveryDeadline deliveryDeadline,
         Key partition,
         IEnumerable<AppendedEvent> events,
         ObserverSubscriberContext context,
         CancellationToken cancellationToken)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout > TimeSpan.Zero)
-        {
-            deadline.CancelAfter(timeout);
-        }
+        using var timeoutCancellation = new CancellationTokenSource(deliveryDeadline.Timeout > TimeSpan.Zero ? deliveryDeadline.Timeout : Timeout.InfiniteTimeSpan, deliveryDeadline.Clock);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
 
         // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
         // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
