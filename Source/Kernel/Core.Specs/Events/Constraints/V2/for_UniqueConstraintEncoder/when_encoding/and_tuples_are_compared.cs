@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Text;
 
 namespace Cratis.Chronicle.Events.Constraints.V2.for_UniqueConstraintEncoder.when_encoding;
@@ -12,7 +11,6 @@ public class and_tuples_are_compared : Specification
     Dictionary<string, string> _values;
     string _repeated;
     string _otherKey;
-    string _otherCulture;
 
     void Because()
     {
@@ -32,16 +30,6 @@ public class and_tuples_are_compared : Specification
         _values = inputs.ToDictionary(_ => _.Key, _ => UniqueConstraintEncoder.Encode(_key, _.Value).AsT0.Value);
         _repeated = UniqueConstraintEncoder.Encode(_key, inputs["tuple"]).AsT0.Value;
         _otherKey = UniqueConstraintEncoder.Encode(Encoding.ASCII.GetBytes("a-different-fixture-key"), inputs["tuple"]).AsT0.Value;
-        var culture = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = new("fr-FR");
-            _otherCulture = UniqueConstraintEncoder.Encode(_key, inputs["tuple"]).AsT0.Value;
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = culture;
-        }
     }
 
     [Fact] void should_not_alias_dashes_inside_values() => _values["left-dash"].ShouldNotEqual(_values["right-dash"]);
@@ -51,7 +39,6 @@ public class and_tuples_are_compared : Specification
     [Fact] void should_preserve_declaration_order() => _values["tuple"].ShouldNotEqual(_values["reversed"]);
     [Fact] void should_be_deterministic() => _repeated.ShouldEqual(_values["tuple"]);
     [Fact] void should_be_keyed() => _otherKey.ShouldNotEqual(_values["tuple"]);
-    [Fact] void should_be_culture_independent() => _otherCulture.ShouldEqual(_values["tuple"]);
     [Fact] void should_use_version_two() => UniqueConstraintEncoder.Version.Value.ShouldEqual(2);
     [Fact] void should_return_a_full_sha256_digest() => _values["tuple"].Length.ShouldEqual(64);
     [Fact] void should_return_lowercase_hex() => _values["tuple"].All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();

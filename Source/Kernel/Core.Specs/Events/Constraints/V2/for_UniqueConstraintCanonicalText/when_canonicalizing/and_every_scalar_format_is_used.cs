@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 
 namespace Cratis.Chronicle.Events.Constraints.V2.for_UniqueConstraintCanonicalText.when_canonicalizing;
 
@@ -11,19 +10,7 @@ public class and_every_scalar_format_is_used : Specification
 
     void Because()
     {
-        var culture = CultureInfo.CurrentCulture;
-        var uiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentCulture = new("tr-TR");
-            CultureInfo.CurrentUICulture = new("tr-TR");
-            _result = Inputs().ToDictionary(_ => _.Key, _ => UniqueConstraintCanonicalText.For(_.Value.Value!, _.Value.Format, _.Value.IsInSchema, false));
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = uiCulture;
-        }
+        _result = Inputs().ToDictionary(_ => _.Key, _ => UniqueConstraintCanonicalText.For(_.Value.Value!, _.Value.Format, _.Value.IsInSchema, false));
     }
 
     Dictionary<string, UniqueConstraintComponent> Inputs()

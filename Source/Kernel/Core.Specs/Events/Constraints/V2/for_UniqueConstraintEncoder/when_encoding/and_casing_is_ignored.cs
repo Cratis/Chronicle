@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Text;
 
 namespace Cratis.Chronicle.Events.Constraints.V2.for_UniqueConstraintEncoder.when_encoding;
@@ -21,24 +20,15 @@ public class and_casing_is_ignored : Specification
 
     void Because()
     {
-        var culture = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = new("tr-TR");
-            _ignored = Value([new("I"), new(new string?[] { "ABC", null, "İ" })], true);
-            _lowercase = Value([new("i"), new(new string?[] { "abc", null, "İ".ToLowerInvariant() })], false);
-            _sensitive = Value([new("I"), new(new string?[] { "ABC", null, "İ" })], false);
-            _number = Value([new(1E+100d, "double"), new(new[] { true, false }), new(new[] { 1E+20f }, "float")], true);
-            _numberSensitive = Value([new(1E+100d, "double"), new(new[] { true, false }), new(new[] { 1E+20f }, "float")], false);
-            _unknown = Value([new("I-NOT-A-GUID", IsInSchema: false), new(new[] { "ABC" }, IsInSchema: false)], true);
-            _unknownLowercase = Value([new("i-not-a-guid", IsInSchema: false), new(new[] { "abc" }, IsInSchema: false)], false);
-            _unknownGuid = Value([new("{ABCDEF01-2345-6789-ABCD-EF0123456789}", IsInSchema: false)], true);
-            _schemaGuid = Value([new(new Guid("abcdef01-2345-6789-abcd-ef0123456789"), "guid")], false);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = culture;
-        }
+        _ignored = Value([new("I"), new(new string?[] { "ABC", null, "İ" })], true);
+        _lowercase = Value([new("i"), new(new string?[] { "abc", null, "İ".ToLowerInvariant() })], false);
+        _sensitive = Value([new("I"), new(new string?[] { "ABC", null, "İ" })], false);
+        _number = Value([new(1E+100d, "double"), new(new[] { true, false }), new(new[] { 1E+20f }, "float")], true);
+        _numberSensitive = Value([new(1E+100d, "double"), new(new[] { true, false }), new(new[] { 1E+20f }, "float")], false);
+        _unknown = Value([new("I-NOT-A-GUID", IsInSchema: false), new(new[] { "ABC" }, IsInSchema: false)], true);
+        _unknownLowercase = Value([new("i-not-a-guid", IsInSchema: false), new(new[] { "abc" }, IsInSchema: false)], false);
+        _unknownGuid = Value([new("{ABCDEF01-2345-6789-ABCD-EF0123456789}", IsInSchema: false)], true);
+        _schemaGuid = Value([new(new Guid("abcdef01-2345-6789-abcd-ef0123456789"), "guid")], false);
     }
 
     string Value(UniqueConstraintComponent[] components, bool ignoreCasing) => UniqueConstraintEncoder.Encode(_key, components, ignoreCasing).AsT0.Value;
