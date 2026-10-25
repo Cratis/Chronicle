@@ -3,12 +3,13 @@
 
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Sequences.for_VerifyContent.when_comparing;
 
 public class and_release_fails : given.a_protected_event
 {
-    void Establish() => _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(_encryption.GenerateKey());
+    void Establish() => _keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(_encryption.GenerateKey(), EncryptionKeyRevision.Initial));
 
     async Task Because() => _result = await Verify();
 

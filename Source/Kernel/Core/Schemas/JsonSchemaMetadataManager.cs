@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.DependencyInjection;
 using Cratis.Types;
@@ -110,6 +111,7 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return json;
@@ -123,6 +125,7 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return (JsonObject)json.DeepClone();
@@ -218,6 +221,7 @@ public class JsonSchemaMetadataManager(
     /// <inheritdoc/>
     public async Task<JsonObject> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (!schema.HasSchemaMetadata())
         {
             return json;

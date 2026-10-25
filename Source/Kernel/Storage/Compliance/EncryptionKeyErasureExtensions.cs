@@ -17,6 +17,16 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public static class EncryptionKeyErasureExtensions
 {
     /// <summary>
+    /// Check whether the revision or material was covered by an erasure.
+    /// </summary>
+    /// <param name="erasure">The current fence.</param>
+    /// <param name="pair">The key and its revision.</param>
+    /// <returns>Whether the key must not be used.</returns>
+    public static bool Refuses(this EncryptionKeyErasure? erasure, EncryptionKeyAtRevision pair) =>
+        erasure is not null && (pair.Revision.Value <= erasure.ErasedThrough.Value ||
+            erasure.ErasedKeyFingerprints.Contains(pair.Key.Fingerprint, StringComparer.Ordinal));
+
+    /// <summary>
     /// Ensure a key may be written at a revision.
     /// </summary>
     /// <param name="erasure">The <see cref="EncryptionKeyErasure"/> recorded for the identifier, or <see langword="null"/> when it was never erased.</param>
