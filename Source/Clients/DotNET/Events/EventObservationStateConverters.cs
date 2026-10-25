@@ -18,6 +18,7 @@ internal static class EventObservationStateConverters
         EventObservationState.None => Contracts.Events.EventObservationState.None,
         EventObservationState.Initial => Contracts.Events.EventObservationState.Initial,
         EventObservationState.Replay => Contracts.Events.EventObservationState.Replay,
+        EventObservationState.Initial | EventObservationState.Replay => (Contracts.Events.EventObservationState)(EventObservationState.Initial | EventObservationState.Replay),
         _ => Contracts.Events.EventObservationState.None
     };
 
@@ -31,6 +32,7 @@ internal static class EventObservationStateConverters
         Contracts.Events.EventObservationState.None => EventObservationState.None,
         Contracts.Events.EventObservationState.Initial => EventObservationState.Initial,
         Contracts.Events.EventObservationState.Replay => EventObservationState.Replay,
+        (Contracts.Events.EventObservationState)(EventObservationState.Initial | EventObservationState.Replay) => EventObservationState.Initial | EventObservationState.Replay,
         _ => EventObservationState.None
     };
 }
