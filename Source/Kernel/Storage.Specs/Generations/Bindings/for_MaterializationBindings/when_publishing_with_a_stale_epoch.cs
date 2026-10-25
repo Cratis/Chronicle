@@ -14,7 +14,7 @@ public abstract class when_publishing_with_a_stale_epoch<THarness> : given.a_bou
     {
         await Reserve(true);
     }
-    async Task Because() { _result = await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Unset, _candidate, _receipt); }
+    async Task Because() { _result = await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Unset, _candidate, _rollbackWindow, _receipt); }
     [Fact] public async Task should_observe_the_contract()
     {
         _result.Result.ShouldEqual(MaterializationPublicationResult.StaleBinding);

@@ -15,7 +15,7 @@ public class when_deleting_a_key(context ctx) : IClassFixture<context>
         public bool DefaultStorageHasIt;
         public EncryptionKey? ThroughTheComposite;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             await _composite.GetOrAddFor(_eventStore, _namespace, _identifier, new EncryptionKey([1, 2, 3], [4, 5, 6]));

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
+
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
@@ -21,13 +23,17 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task<IEnumerable<Job>> WaitForThereToBeJobs(this IJobs jobs, TimeSpan? timeout = default)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-present");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
+            timing?.Poll();
             var currentJobs = await jobs.GetJobs();
             if (currentJobs.Any())
             {
+                timing?.Success();
                 return currentJobs;
             }
 
@@ -50,20 +56,25 @@ public static class JobsWaitHelpers
     /// </remarks>
     public static async Task<IEnumerable<Job>> TryFindJobsOfType(this IJobs jobs, string typeSubstring, TimeSpan? timeout = default)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-try-find");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var deadline = DateTimeOffset.UtcNow + timeout.Value;
         while (DateTimeOffset.UtcNow < deadline)
         {
+            timing?.Poll();
             var currentJobs = await jobs.GetJobs();
             var matching = currentJobs.Where(job => job.Type.Value.Contains(typeSubstring, StringComparison.Ordinal)).ToArray();
             if (matching.Length != 0)
             {
+                timing?.Success();
                 return matching;
             }
 
             await Task.Delay(DefaultDelay);
         }
 
+        timing?.Success();
         return [];
     }
 
@@ -76,11 +87,14 @@ public static class JobsWaitHelpers
     /// <returns>The matching jobs.</returns>
     public static async Task<IEnumerable<Job>> WaitForThereToBeJobOfType(this IJobs jobs, string typeSubstring, TimeSpan? timeout = default)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-of-type");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var matching = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (!matching.Any())
         {
+            timing?.Poll();
             var currentJobs = await jobs.GetJobs();
             matching = currentJobs.Where(j => j.Type.Value.Contains(typeSubstring, StringComparison.Ordinal));
             if (!matching.Any())
@@ -89,6 +103,7 @@ public static class JobsWaitHelpers
             }
         }
 
+        timing?.Success();
         return matching;
     }
 
@@ -101,13 +116,17 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-empty");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
+            timing?.Poll();
             var currentJobs = await jobs.GetJobs();
             if (!currentJobs.Any() || currentJobs.All(_ => includeStatuses.Contains(_.Status)))
             {
+                timing?.Success();
                 return currentJobs;
             }
 
@@ -147,18 +166,23 @@ public static class JobsWaitHelpers
     /// </returns>
     public static async Task<Job?> WaitTillJobCompletesOrIsDeleted(this IJobs jobs, JobId jobId, TimeSpan? timeout = null)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-job-terminal-or-deleted");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
+            timing?.Poll();
             var currentJob = await jobs.GetJob(jobId);
             if (currentJob is null)
             {
+                timing?.Success();
                 return null;
             }
 
             if (currentJob.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
             {
+                timing?.Success();
                 return currentJob;
             }
 
@@ -175,13 +199,17 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task WaitTillJobIsDeleted(this IJobs jobs, JobId jobId, TimeSpan? timeout = null)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-job-deleted");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
+            timing?.Poll();
             var currentJobs = await jobs.GetJobs();
             if (!currentJobs.Any(_ => _.Id == jobId))
             {
+                timing?.Success();
                 return;
             }
 
@@ -199,13 +227,17 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task<Job> WaitTillJobMeetsPredicate(this IJobs jobs, JobId jobId, Func<Job, bool> predicate, TimeSpan? timeout = null)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-job-predicate");
+        timing?.Failure();
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
         while (true)
         {
+            timing?.Poll();
             var currentJob = await jobs.GetJob(jobId);
             if (currentJob is not null && predicate(currentJob))
             {
+                timing?.Success();
                 return currentJob;
             }
 
