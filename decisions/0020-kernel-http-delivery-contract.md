@@ -91,6 +91,24 @@ A function host cannot hold a gRPC stream, so HTTP is its only delivery path. On
 
 Each receiver built against today's body binds to an internal record, so every one of these fixes becomes a breaking change later. That is why the contract is fixed before [#5119](https://github.com/Cratis/Chronicle/issues/5119), [#5120](https://github.com/Cratis/Chronicle/issues/5120) and [#5121](https://github.com/Cratis/Chronicle/issues/5121) ship.
 
+### Serverless architecture fit
+
+Serverless platforms deliver events in three ways: a platform trigger polls a broker ([Lambda and Kinesis](https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html), [Azure Event Hubs](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reliable-event-processing)); a service pushes to an HTTPS endpoint ([Pub/Sub push](https://cloud.google.com/pubsub/docs/push), [Event Grid](https://learn.microsoft.com/en-us/azure/event-grid/delivery-and-retry)); or a consumer pulls. This record is the push model, with the kernel as the broker. Broker sinks ([#5134](https://github.com/Cratis/Chronicle/issues/5134), [#5135](https://github.com/Cratis/Chronicle/issues/5135)) cover the first model and pull mode ([#5125](https://github.com/Cratis/Chronicle/issues/5125)) the third.
+
+The contract follows established practice:
+
+- One request in flight per partition is the rule Pub/Sub push applies per ordering key ([ordering](https://cloud.google.com/pubsub/docs/ordering)).
+- Partial acknowledgement up to `lastSuccessfulObservation` is the Kinesis checkpoint rule of `ReportBatchItemFailures`, and Lambda also reports a partial batch as a successful invocation ([batch failures](https://docs.aws.amazon.com/lambda/latest/dg/services-kinesis-batchfailurereporting.html)).
+- `413` halving is `BisectBatchOnFunctionError` narrowed to size errors.
+
+Three deviations are deliberate:
+
+- Acknowledgement means "processed". A receiver cannot answer `202` and queue the work without losing per-partition order. Teams that want a queue use a broker sink.
+- Vendor authentication is deferred. Lambda function URLs (`AWS_IAM`), private Cloud Run services (Google ID token) and Azure function keys are platform mechanisms the kernel does not speak in `v1`. Receivers are reachable endpoints that verify the signature.
+- There is no external dead-letter destination. Parked partitions stay in the kernel and alerts come from kernel metrics.
+
+The kernel is not serverless. On an empty store it opened its port after 15.2 s and used 515 MB ([#5104](https://github.com/Cratis/Chronicle/issues/5104) measurements). The fit is "functions for the app tier, an always-on kernel". Platform cold starts were not measured on real platforms ([#5114](https://github.com/Cratis/Chronicle/issues/5114)).
+
 ## Decision
 
 The kernel delivers events to Cratis HTTP receivers as `POST` requests with the content type `application/vnd.cratis.chronicle.delivery+json; v=1`, whose body is a versioned envelope of kind `events`, `replay-started`, `replay-ended` or `ping`, carrying the observer, event store, namespace, event sequence, partition, delivery id and events in a pinned public shape. Delivery is at least once and ordered per (observer, namespace, partition), with at most one request in flight per partition from the kernel's side (the kernel bounds its own dispatch and wait, not how long a receiver keeps executing an abandoned request), and with per-target concurrency caps that include replay. Each request carries a deterministic `webhook-id` that is identical across retries of the same batch and different for each replay operation over the same range, together with `webhook-timestamp`, a `webhook-signature` per the Standard Webhooks specification (Ed25519 `v1a` by default, HMAC `v1` where a receiver only supports shared secrets), a deadline header and `traceparent`. Retry, deferral, park and quarantine follow the policy shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108), extended with partial acknowledgement and payload limits. A replay is bracketed by `replay-started` and `replay-ended`, and the kernel dispatches no replayed partition before the receiver has acknowledged `replay-started`. Within this major release generic webhooks keep today's body until they opt in.
@@ -103,10 +121,14 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 - Unknown fields are ignored by receivers; adding a field is not a version change. Removing or renaming a field, or changing a semantic, is.
 - Receivers also ignore an unknown `kind` and answer `2xx`, so a new kind (for example per-partition replay boundaries) is an additive change, not a new version.
 
+**Open point:** this rule is the one part of the envelope that cannot be fixed after receivers exist. An old receiver that ignores an unknown kind and answers `2xx` acknowledges events it never read, so any later event-carrying kind (for example a multi-partition batch) would lose data on it silently. [Q16](#q16-unknown-data-kinds) proposes that the kernel sends a new event-carrying kind only to targets that declared support for it.
+
 ### Ordering and concurrency
 
 - One request in flight per (observer, namespace, partition). The kernel never starts a retry while its previous request for the partition is awaited. After a timeout the kernel does not retry immediately: the job yields and the observer owns recovery after the backoff delay (today's webhook behavior). That bounds the kernel's own dispatch and waiting only. A receiver that ignores cancellation can keep executing an abandoned request beyond the deadline plus backoff, and the kernel's abandoned-delivery hold and delivery fences do not cover webhooks today. Remote overlap is therefore unbounded unless the receiver enforces execution ownership itself ([Q14](#q14-receiver-enforced-fencing)); receivers must treat overlap as possible.
 - Partitions run in parallel up to a per-observer limit, and a per-target-authority limit applies across live delivery, catch-up, retries and replay. Proposed defaults are 8 and 16 ([#5116](https://github.com/Cratis/Chronicle/issues/5116)).
+
+**Open points:** live delivery is serial per observer today. `Observers.MaxConcurrentPartitions` states that "live delivery never processes partitions of one observer concurrently" (`Source/Kernel/Core/Configuration/Observers.cs` L17-L18), and the appended-events queue awaits every observer for one partition before the next (`Source/Kernel/Core/EventSequences/AppendedEventsQueue.cs` L471-L506). Parallel live delivery is therefore new kernel work, not a setting ([Q15](#q15-live-path-concurrency)). Replay and catch-up concurrency is a different limit: it follows the kernel's CPU count, `Math.Max(1, Environment.ProcessorCount - 1)` unless `MaxParallelSteps` is set (`Source/Kernel/Core/Configuration/Jobs.cs` L69), so the proposed per-observer cap of 8 is not reached on a small kernel unless the two are decoupled.
 - No order is promised across partitions or across observers.
 - Ordering and identity are scoped to the full observer key (observer id, event store, namespace and event sequence) plus partition, never to a subset of it.
 - An HTTP delivery is a writer in the sense of [decision 0018](0018-partition-ownership-protocol.md): it delivers only while it holds the partition claim. If [decision 0004](0004-ordered-lanes-observer-delivery.md) (proposed) is accepted, its sequencing key replaces the partition as the ordering unit without changing the envelope.
@@ -116,8 +138,9 @@ The kernel delivers events to Cratis HTTP receivers as `POST` requests with the 
 - `webhook-id` is a deterministic hash of (event store, namespace, observer id, event sequence id, partition, first sequence number, last sequence number, kind, replay epoch). The replay epoch identifies one replay operation (see Replay below) and is empty for ordinary deliveries, so a replay is never deduplicated against the original delivery. The same batch on retry carries the same id.
 - Receivers deduplicate side effects per event on (event store, namespace, observer id, event sequence id, sequence number), not per request, because a partial acknowledgement or a halved batch changes batch boundaries. Reactor side-effect appends are keyed `{observerId}:{sourceSequenceNumber}` once the client exposes keyed appends (epic decision 1; [decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md)).
 - Two receipt kinds are kept apart. A persistent once-only side-effect receipt (an email sent, a payment made) is keyed without the replay epoch and survives replays, so a replay does not repeat an external effect. A replay-scoped rebuild receipt (reducer or projection-like state) includes the replay epoch, so a replay rebuilds state instead of being suppressed; the spike for [#5104](https://github.com/Cratis/Chronicle/issues/5104) reported a ledger suppressing all replayed effects. Which kind applies is the receiver's choice per effect, and the `Replay` flag and `replayEpoch` let it decide.
-- `2xx` with an empty body or `204` acknowledges the whole batch. `200` with a JSON result `{state, lastSuccessfulObservation, exceptionMessages, exceptionStackTrace, readModelState}` acknowledges up to `lastSuccessfulObservation` and fails from the next event.
+- `2xx` with an empty body or `204` acknowledges the whole batch. `200` with a JSON result `{state, lastSuccessfulObservation, exceptionMessages, exceptionStackTrace, readModelState}` acknowledges up to `lastSuccessfulObservation` and fails from the next event. The kernel ignores unknown fields in that result, so per-partition results can be added later without a version change. The kernel reads no response body today (`WebhookMediator.cs` L59-L65), so this is a requirement on the new result parser.
 - `413` halves the batch instead of pausing the observer; a single event over the size limit parks the partition with reason `PayloadTooLarge`. Batches are bounded by an event count and a byte size (proposed 100 events and 4 MiB).
+- `429`, and `503` with `Retry-After`, defer the partition that got the answer today (`WebhookMediator.cs` L123-L127). Platforms throttle per function, not per partition: a Lambda function URL answers `429` when the function exceeds its reserved concurrency ([function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html)), and the CloudEvents webhook specification requires the sender to "refrain from sending further requests until the indicated time" ([spec](https://github.com/cloudevents/spec/blob/main/cloudevents/http-webhook.md)). **Open point:** whether such an answer makes the whole target back off, not one partition ([Q17](#q17-target-wide-back-off)).
 - All other classifications, the retry schedule, the 24-hour budget, park and quarantine stay as shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108) and documented in `Documentation/webhooks/index.mdx`.
 - A `Cratis-Delivery-Deadline` header (UTC) tells the receiver when the kernel abandons the request. The function's execution timeout (Azure Functions `functionTimeout`, the Lambda function timeout) must be at most the delivery timeout. An HTTP front's timeout is not enough: the Azure Functions load balancer answers `502` after 230 seconds while the function keeps running, and an API Gateway HTTP API answers after 30 seconds while the Lambda runs on. The kernel classifies both as transient failures and retries while the first execution is still running.
 
@@ -267,6 +290,28 @@ HTTP receivers keep receiving the serialization of `Concepts.Events.AppendedEven
 
 **Foreclosed:** sending the kernel's internal event record over HTTP to Cratis receivers; fire-and-forget replay notification over HTTP; unsigned envelope deliveries unless an operator explicitly allows them.
 
+## Performance and capacity model
+
+Live delivery today runs one request at a time per observer: the appended-events queue awaits every observer for one partition before the next (`Source/Kernel/Core/EventSequences/AppendedEventsQueue.cs` L471-L506), the webhook subscriber awaits the HTTP call (`Source/Kernel/Core/Observation/Webhooks/WebhookObserverSubscriber.cs` L76), and `Observers.MaxConcurrentPartitions` says so (`Source/Kernel/Core/Configuration/Observers.cs` L17-L18). A slow HTTP receiver therefore also delays every other observer on its queue until the queue spills to catch-up (`QueueBoundedCapacity`, `Source/Kernel/Core/Configuration/Events.cs`).
+
+Catch-up and replay run one job step per partition, capped at the smaller of `Observers.MaxConcurrentPartitions` (32) and `ProcessorCount - 1` (`Source/Kernel/Core/Configuration/Jobs.cs` L69). On a 2-vCPU kernel that is one request in flight.
+
+With request latency `L`, events per request `b` and effective concurrency `c`, throughput is about `c × b / L`. Replay time is the larger of `N / (c × b) × L` and the longest partition's own sequential time.
+
+| Scenario (L = 50 ms live, 300 ms per 100-event batch; assumptions, not measurements) | Today | This decision (caps 8/16) |
+| --- | --- | --- |
+| Live, distinct entities, 1 event each | about 18 events/s per observer | about 160 per observer, 320 per target |
+| Replay, 10 M events over 100,000 entities, 2-vCPU kernel | about 8.3 h (`c` = 1) | about 62 min (`c` = 8), 31 min (`c` = 16), only with the cap decoupled from CPU count |
+| Replay, one entity with 1 M events | about 50 min, whatever the cap | same |
+
+Function cost is not the constraint. 10 M single-event deliveries at 512 MB and 50 ms cost about $5 on Lambda arm64 ([pricing](https://aws.amazon.com/lambda/pricing/)) and about $10.50 on Azure Flex Consumption on demand ([retail prices](https://prices.azure.com/api/retail/prices?$filter=serviceName%20eq%20%27Functions%27%20and%20armRegionName%20eq%20%27eastus%27)). Batching replays by 100 cuts that by about 25 times. The always-on kernel, its database and the observer-state writes per delivery are the larger costs; neither was measured.
+
+## Relation to webhook observers
+
+Webhook observers and HTTP reactors share the transport (`WebhookMediator.cs`), the observer machinery and the live-path limits above. Fixing live concurrency for one fixes the other. The per-target cap counts both kinds of delivery to the same authority, because they draw on the same function's concurrency.
+
+Within this major, webhooks keep today's body ([Q3](#q3-generic-webhooks)). At the next major, one HTTP target concept with a `format` setting is proposed: `chronicle-v1` (default), `legacy` (deprecated), and later `cloudevents`. That leaves one delivery path, one classification table and one place for capability negotiation (see the open point on unknown kinds under [Envelope](#envelope)).
+
 ## Questions for the decider
 
 Each question has a recommendation; the record can be accepted with the recommendations unchanged.
@@ -355,6 +400,50 @@ Adding a field or a `kind` is not a version change; changing a meaning is.
 | Q12 catch-up and redaction flags | No |
 | Q13 deadline header | Name and format no; adding a relative header yes |
 | Q14 fencing token | Adding the field yes; weakening its monotonicity no |
+| Q15 live-path concurrency | Yes; no wire change |
+| Q16 unknown data kinds | No once receivers ignore unknown kinds; adding capability declarations yes |
+| Q17 target-wide back-off | Yes |
+| Q18 multi-partition batches | Adding a kind yes, if Q16 holds |
+| Q19 CloudEvents identity | Yes while text only |
+| Q20 real-platform measurement | Yes |
+| Q21 canonical event identity | No for the encoding once receivers and sinks store it |
+
+## Open questions before acceptance
+
+These were raised after the questions above and must be answered before the record is accepted. They do not change the recommendations in Q1-Q14.
+
+### Q15. Live-path concurrency
+
+Live delivery to HTTP targets is serial per observer today and holds the queue loop. Does this decision require [#5116](https://github.com/Cratis/Chronicle/issues/5116) to move HTTP live delivery out of the queue loop, so partitions run in parallel under the per-observer and per-target caps, or does `v1` ship with serial live delivery and document about `1 / L` events per second per observer? The cap for HTTP targets should not be bound by `Jobs.MaxParallelSteps`, because HTTP delivery is I/O-bound. **Recommendation:** require it; make it an acceptance criterion of [#5116](https://github.com/Cratis/Chronicle/issues/5116), measured by a benchmark with a 50 ms receiver and an in-process projection on the same queue.
+
+### Q16. Unknown data kinds
+
+Replace "ignore any unknown kind and answer `2xx`" with: receivers ignore an unknown control kind; the kernel sends a new data kind (one that carries events) only to a target that declared support for it, in its target configuration or its answer to `ping`; a receiver that gets an unknown data kind answers `415`. **Recommendation:** yes. It is the only part of the envelope that cannot be fixed after receivers exist.
+
+### Q17. Target-wide back-off
+
+Make `429` and `503` with `Retry-After` defer every partition of the target authority, not only the partition that got the answer? Without `Retry-After` the kernel backs off exponentially, and these deferrals never count toward parking. **Recommendation:** yes.
+
+### Q18. Multi-partition batches
+
+Add a multi-partition kind in `v1`, like Kinesis and Event Hubs batches? **Recommendation:** no. With Q16 it can be added later for targets that opt in. It would also add head-of-line blocking on failure, which Lambda handles for SQS FIFO by stopping at the first failure ([SQS](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html)).
+
+### Q19. CloudEvents identity
+
+Document now how a future CloudEvents format maps `id`, `source`, `subject` and `type` to the dedupe key (Q21), event store, namespace, sequence, partition and event type, so receivers never hold two dedupe keys? **Recommendation:** yes, text only.
+
+### Q20. Real-platform measurement
+
+Accept the decision before one paid cold-start and throttle run on Lambda, Azure Flex and Cloud Run? **Recommendation:** accept the contract; do not call serverless delivery supported until that run meets first delivery p50 under 2 s and p99 under 5 s.
+
+### Q21. Canonical per-event identity
+
+Define one key per event: (event store, namespace, observer id, event sequence id, sequence number), with one fixed encoding. HTTP receivers deduplicate side effects on it (see Idempotency above), broker sinks use it as `MessageId` (Service Bus, [#5134](https://github.com/Cratis/Chronicle/issues/5134)) and `MessageDeduplicationId` (SQS FIFO, [#5135](https://github.com/Cratis/Chronicle/issues/5135)), and keyed side-effect appends relate to it (they are keyed `{observerId}:{sourceSequenceNumber}` today, within one store). The two sink issues do not match it:
+
+- [#5134](https://github.com/Cratis/Chronicle/issues/5134) derives `MessageId` from event store, namespace, observer and event sequence number. It omits the event sequence id.
+- [#5135](https://github.com/Cratis/Chronicle/issues/5135) contradicts itself. Its summary says `MessageDeduplicationId` is the event sequence number alone; its publishing section says a stable id from event store, namespace, observer and event sequence number. Neither includes the event sequence id.
+
+Without the event sequence id, two event sequences of one store with the same sequence number collide. **Recommendation:** pin the five-part key and its encoding in this record, and correct both issues to use it.
 
 ## Unknowns
 
