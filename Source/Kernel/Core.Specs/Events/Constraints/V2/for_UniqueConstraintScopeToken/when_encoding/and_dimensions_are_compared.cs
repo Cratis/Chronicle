@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Text;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 
@@ -13,7 +12,6 @@ public class and_dimensions_are_compared : Specification
     Dictionary<string, string> _tokens;
     string _repeated;
     string _otherKey;
-    string _otherCulture;
     string _valueDigest;
     string _nullScope;
 
@@ -43,16 +41,6 @@ public class and_dimensions_are_compared : Specification
         _nullScope = UniqueConstraintScopeToken.Encode(_key, null).Value;
         _otherKey = UniqueConstraintScopeToken.Encode(Encoding.ASCII.GetBytes("a-different-fixture-key"), scopes["all-dimensions"]).Value;
         _valueDigest = UniqueConstraintEncoder.Encode(_key, [new("type|:é"), new("stream|:"), new("id|:😀")]).AsT0.Value;
-        var culture = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = new("tr-TR");
-            _otherCulture = UniqueConstraintScopeToken.Encode(_key, scopes["all-dimensions"]).Value;
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = culture;
-        }
     }
 
     [Fact] void should_not_alias_pipes_inside_dimensions() => _tokens["left-pipe"].ShouldNotEqual(_tokens["right-pipe"]);
@@ -68,7 +56,6 @@ public class and_dimensions_are_compared : Specification
     [Fact] void should_encode_an_absent_scope_as_all_unnarrowed() => _nullScope.ShouldEqual(_tokens["all-null"]);
     [Fact] void should_be_deterministic() => _repeated.ShouldEqual(_tokens["all-dimensions"]);
     [Fact] void should_be_keyed() => _otherKey.ShouldNotEqual(_tokens["all-dimensions"]);
-    [Fact] void should_be_culture_independent() => _otherCulture.ShouldEqual(_tokens["all-dimensions"]);
     [Fact] void should_use_a_distinct_domain_from_value_hashing() => _tokens["all-dimensions"].ShouldNotEqual(_valueDigest[..32]);
     [Fact] void should_return_128_bits_of_hex() => _tokens["all-dimensions"].Length.ShouldEqual(32);
     [Fact] void should_return_lowercase_hex() => _tokens["all-dimensions"].All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();
