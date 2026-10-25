@@ -16,7 +16,7 @@ public class and_provisioners_race_for_it(and_provisioners_race_for_it.context c
         public EncryptionKeyAtRevision[] Results = [];
         public EncryptionKeyAtRevision? Stored;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             EncryptionKeyIdentifier identifier = Guid.NewGuid().ToString();

@@ -17,7 +17,7 @@ public abstract class when_namespaces_differ<THarness> : given.a_bound_materiali
         await _storage.TrySetBindingEpoch(_store, _other, ServingEpoch.Unset, ServingEpoch.Initial);
         await Reserve(true);
     }
-    async Task Because() { await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Initial, _candidate, _receipt); }
+    async Task Because() { await _storage.TryPublish(_store, _key, MaterializationGeneration.First, ServingEpoch.Initial, _candidate, _rollbackWindow, _receipt); }
     [Fact] public async Task should_observe_the_contract()
     {
         (await _storage.Get(_store, _other))!.Active.ShouldEqual(MaterializationGeneration.First);
