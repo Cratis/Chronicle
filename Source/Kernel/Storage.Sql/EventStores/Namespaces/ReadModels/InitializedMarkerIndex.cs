@@ -67,7 +67,7 @@ internal static class InitializedMarkerIndex
     static IQueryable<StoredIndex> Existing(ReadModelDbContext context)
     {
         var table = PrimaryKeyNames.TableIdentifier(context.Database.GetDatabaseType(), context.TableName);
-        var column = WellKnownProperties.ReadModelInstanceInitialized;
+        const string column = WellKnownProperties.ReadModelInstanceInitialized;
         return context.Database.GetDatabaseType() switch
         {
             DatabaseType.PostgreSql => context.Database.SqlQuery<StoredIndex>($"SELECT i.relname AS \"Name\", x.indisvalid AS \"IsValid\" FROM pg_index x JOIN pg_class t ON t.oid = x.indrelid JOIN pg_namespace n ON n.oid = t.relnamespace JOIN pg_class i ON i.oid = x.indexrelid JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = x.indkey[0] WHERE t.relname = {table} AND n.nspname = current_schema() AND x.indnatts = 1 AND NOT x.indisunique AND a.attname = {column} AND left(i.relname, 14) = {Prefix}"),
