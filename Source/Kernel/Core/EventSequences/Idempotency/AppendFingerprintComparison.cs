@@ -64,7 +64,12 @@ internal static class AppendFingerprintComparison
                 key = await keys.TryGetFor(store, ns, identifier, part.Revision);
             }
 
-            if (key is not null)
+            var fence = await keys.GetErasureForRelease(store, ns, identifier);
+            if (IsErased(part, fence, key))
+            {
+                erased = true;
+            }
+            else if (key is not null)
             {
                 if (key.Fingerprint != part.KeyReference)
                 {
@@ -77,25 +82,34 @@ internal static class AppendFingerprintComparison
                     return new FingerprintComparisonResult(FingerprintComparisonStatus.Conflict, stored.EventType, FingerprintConflictReason.Content);
                 }
             }
-            else if (IsErased(part, await keys.GetErasureFor(store, ns, identifier)))
-            {
-                erased = true;
-            }
             else
             {
                 unverifiable ??= part.Kind;
             }
         }
 
-        var status = (unverifiable.HasValue, erased) switch
-        {
-            (true, _) => FingerprintComparisonStatus.Unverifiable,
-            (false, true) => FingerprintComparisonStatus.VerifiedAfterErasure,
-            _ => FingerprintComparisonStatus.Verified
-        };
-        return new FingerprintComparisonResult(status, stored.EventType, UnverifiableKind: unverifiable);
+        return new FingerprintComparisonResult(StatusFor(unverifiable, erased), stored.EventType, UnverifiableKind: unverifiable);
     }
 
-    static bool IsErased(ProtectedFingerprintPart part, EncryptionKeyErasure? erasure) =>
-        erasure is not null && (part.Revision.Value <= erasure.ErasedThrough.Value || erasure.ErasedKeyFingerprints.Contains(part.KeyReference, StringComparer.Ordinal));
+    static FingerprintComparisonStatus StatusFor(ProtectionKind? unverifiable, bool erased) => (unverifiable.HasValue, erased) switch
+    {
+        (true, _) => FingerprintComparisonStatus.Unverifiable,
+        (false, true) => FingerprintComparisonStatus.VerifiedAfterErasure,
+        _ => FingerprintComparisonStatus.Verified
+    };
+
+    static bool IsErased(ProtectedFingerprintPart part, EncryptionKeyErasure? erasure, EncryptionKey? key)
+    {
+        if (erasure is null)
+        {
+            return false;
+        }
+
+        if (key is not null && erasure.Refuses(new(key, part.Revision)))
+        {
+            return true;
+        }
+
+        return part.Revision.Value <= erasure.ErasedThrough.Value || erasure.ErasedKeyFingerprints.Contains(part.KeyReference, StringComparer.Ordinal);
+    }
 }

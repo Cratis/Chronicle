@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -157,6 +158,7 @@ public class ReadModelsCompliance(
         JsonSchema schema,
         IEnumerable<ExpandoObject> instances)
     {
+        using var scope = ReleaseKeys.BeginScope();
         var result = new List<ExpandoObject>();
         foreach (var instance in instances)
         {
@@ -172,6 +174,7 @@ public class ReadModelsCompliance(
         Dictionary<string, string> subjects,
         Func<string, JsonObject, Task<JsonObject>> action)
     {
+        using var scope = ReleaseKeys.BeginScope();
         if (subjects.Count == 0)
         {
             return string.IsNullOrEmpty(defaultSubject)

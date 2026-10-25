@@ -82,7 +82,8 @@ public class PIICompliancePropertyValueHandler(
             return value;
         }
 
-        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        using var scope = ReleaseKeys.BeginScope();
+        var key = await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
         if (key is not null)
         {
             try
@@ -91,7 +92,7 @@ public class PIICompliancePropertyValueHandler(
             }
             catch (EncryptionKeyUnwrapFailed)
             {
-                if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is null)
+                if (await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier) is null)
                 {
                     throw;
                 }
@@ -101,7 +102,7 @@ public class PIICompliancePropertyValueHandler(
             }
         }
 
-        if (await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null)
+        if (await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier) is not null)
         {
             return JsonValue.Create(string.Empty);
         }
@@ -129,7 +130,7 @@ public class PIICompliancePropertyValueHandler(
             return value;
         }
 
-        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        var key = await ReleaseKeys.TryGetForReleaseOrEmpty(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
 
         // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
         // the PII is permanently unreadable. Surface it as empty rather than throwing so that

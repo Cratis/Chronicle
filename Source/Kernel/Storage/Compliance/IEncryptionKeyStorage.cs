@@ -162,6 +162,16 @@ public interface IEncryptionKeyStorage
         Task.FromResult<EncryptionKeyErasure?>(null);
 
     /// <summary>
+    /// Read the erasure fence freshly for release or provisioning, never from a cache.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The key identifier.</param>
+    /// <returns>The current fence, or null when no erasure has been recorded.</returns>
+    Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        GetErasureFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <summary>
     /// Record that an <see cref="EncryptionKeyIdentifier"/> has been erased, fencing off every revision and every
     /// piece of key material that exists for it right now.
     /// </summary>
