@@ -59,7 +59,7 @@ public static class ChronicleHostApplicationBuilderExtensions
 
         configure?.Invoke(chronicleBuilder);
 
-        builder.Services.AddCratisChronicleClient(chronicleBuilder);
+        builder.Services.AddStandaloneChronicleClient(chronicleBuilder);
 
         return builder;
     }

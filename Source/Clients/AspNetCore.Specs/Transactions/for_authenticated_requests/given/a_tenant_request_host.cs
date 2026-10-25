@@ -40,6 +40,7 @@ public class a_tenant_request_host : Specification
             return (EventStoreNamespaceName)tenant;
         });
         var client = Substitute.For<IChronicleClient>();
+        client.Options.Returns(new ChronicleClientOptions());
         _causation = Substitute.For<ICausationManager>();
         client.CausationManager.Returns(_causation);
         var defaultStore = CreateStore(EventStoreNamespaceName.Default);

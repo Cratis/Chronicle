@@ -16,7 +16,7 @@ public class with_convention_registered_handlers : Specification
     {
         var services = new ServiceCollection();
         services.AddTypeDiscovery();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSelfBindings();
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _discoveredTypes = TypeUniverse.For(_provider).FindMultiple<IReactorSideEffectHandler>().ToArray();

@@ -100,3 +100,25 @@ When serverless mode is off and the process looks like a function host (for exam
 ## Authenticating to the kernel
 
 Prefer an API key in the connection string. The OAuth token cache lives on the local file system, which is ephemeral in a function, so every cold start would fetch a new token. A kernel on a private network must be reachable from the function, for example through a VPC and NAT.
+
+## Receiving deliveries (preview)
+
+In an ASP.NET Core host configured with `AddCratisChronicle`, map the receiver before starting the application:
+
+```csharp
+app.MapChronicleReceiver().RequireAuthorization();
+```
+
+The receiver accepts today's kernel webhook body, containing `partition` and `events`, and dispatches it to the discovered reactor or active reducer through the same dispatcher as stream delivery. It is available regardless of `Serverless:Mode`.
+
+The provisional POST route is `{ReceiverPath}/{eventStore}/{namespace}/{reactor|reducer}/{observerId}`. With the default path, a reactor delivery uses a URL such as `/chronicle/deliveries/orders/production/reactor/order-handler`. The store and namespace come from that URL, not the event context. Pass a base path to `app.MapChronicleReceiver("/hooks")` to replace `ReceiverPath`.
+
+Set `Cratis:Chronicle:Serverless:Delivery:MaximumBodySize` to limit how many bytes the receiver reads. The default is 16 MiB. ASP.NET Core's server limit applies first; Kestrel defaults to approximately 30 MB. Oversized bodies are refused before any handler runs.
+
+:::caution
+The preview receiver does not verify who sent a delivery or check a delivery signature. Configure host authentication and authorization before using `.RequireAuthorization()`, and protect the endpoint with network rules. The route and status codes can change when the HTTP delivery contract is settled.
+:::
+
+Successful batches return 200, failed batches 500, and cancelled batches 503. Unknown observers return 404, malformed bodies 400, and oversized bodies 413. The response has no acknowledgment body or reducer state. Reducers over HTTP therefore are not usable end to end yet.
+
+This receiver does not register HTTP observers: an observer that resolves to HTTP delivery still fails at startup with `HttpDeliveryNotAvailable`. It is a preview entry point for existing webhooks and hosts whose handlers are discovered without opening observer streams. Avoid receiving the same events over both streams and webhooks.

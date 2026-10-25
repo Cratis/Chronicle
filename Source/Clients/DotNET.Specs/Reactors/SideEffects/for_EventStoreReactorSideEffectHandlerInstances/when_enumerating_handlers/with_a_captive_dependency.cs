@@ -15,7 +15,7 @@ public class with_a_captive_dependency : Specification
     {
         var services = new ServiceCollection();
         services.AddTypeDiscovery();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSelfBindings();
         services.AddScoped<ScopedDependency>();
         services.Replace(ServiceDescriptor.Singleton<EventForEventSourceIdResultHandler>(provider =>

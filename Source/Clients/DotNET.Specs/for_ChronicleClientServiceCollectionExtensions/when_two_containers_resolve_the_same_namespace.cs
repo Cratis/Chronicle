@@ -51,7 +51,7 @@ public class when_two_containers_resolve_the_same_namespace : Specification
         var services = new ServiceCollection();
         services.AddSingleton(Options.Create(new ChronicleClientOptions()));
         services.AddLogging();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSingleton(namespaceResolver);
         services.AddSingleton(client);
 

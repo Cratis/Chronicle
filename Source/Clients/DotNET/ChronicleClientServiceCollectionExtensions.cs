@@ -31,7 +31,7 @@ internal static class ChronicleClientServiceCollectionExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="chronicleBuilder">Optional <see cref="IChronicleBuilder"/> providing structural dependencies. When omitted, defaults are used.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services, IChronicleBuilder? chronicleBuilder = null)
+    public static IServiceCollection AddStandaloneChronicleClient(this IServiceCollection services, IChronicleBuilder? chronicleBuilder = null)
     {
         RegisterDefaultDependencies(services);
         services.AddEventSerializer();

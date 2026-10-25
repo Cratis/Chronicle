@@ -16,6 +16,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Receivers;
 using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
@@ -27,7 +28,7 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducers"/>.
 /// </summary>
-public partial class Reducers : IReducers
+public partial class Reducers : IReducers, IReceiveReducerDeliveries
 {
     static readonly ConcurrentDictionary<Type, Lazy<string>> _fingerprints = new();
     readonly IChronicleServicesAccessor _servicesAccessor;
@@ -340,6 +341,17 @@ public partial class Reducers : IReducers
             }
         }
 
+        return result;
+    }
+
+    /// <inheritdoc/>
+    async Task<ReducerResult?> IReceiveReducerDeliveries.Deliver(ReducerId id, ReduceOperationMessage operation)
+    {
+        var handler = _handlersByModelType.Values.SingleOrDefault(_ => _.Id == id && _.IsActive);
+        ReducerDoesNotExist.ThrowIfDoesNotExist(id, handler);
+
+        ReducerResult? result = null;
+        await _dispatcher.Dispatch(handler!, operation, _eventStore.Namespace, published => result = published);
         return result;
     }
 

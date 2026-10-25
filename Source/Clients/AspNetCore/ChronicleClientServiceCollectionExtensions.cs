@@ -4,14 +4,17 @@
 using System.Diagnostics;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
+using Cratis.Chronicle.AspNetCore.Receivers;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Receivers;
 using Cratis.Execution;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -34,6 +37,8 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddReactorSideEffectHandlers();
         services.AddChronicleOccurrenceLifecycle();
         services.AddHttpContextAccessor();
+        services.AddChronicleReceiver(provider => provider.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value);
+        services.TryAddSingleton<IDeliveryTargetResolver, RouteValuesDeliveryTargetResolver>();
 
         services.AddSingleton(sp =>
         {

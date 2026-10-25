@@ -36,7 +36,7 @@ public class when_resolving_event_sources : Specification
         var services = new ServiceCollection();
         services.AddSingleton(Options.Create(new ChronicleClientOptions()));
         services.AddLogging();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSingleton(namespaceResolver);
         services.AddSingleton(_client);
 

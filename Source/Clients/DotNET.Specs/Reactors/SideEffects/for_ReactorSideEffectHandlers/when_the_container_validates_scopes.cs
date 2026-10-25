@@ -41,7 +41,7 @@ public class when_the_container_validates_scopes : Specification
     {
         var services = new ServiceCollection();
         services.AddTypeDiscovery();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSelfBindings();
 
         var registryNumber = 0;

@@ -14,7 +14,7 @@ public class when_validating_convention_registered_handlers : Specification
     {
         var services = new ServiceCollection();
         services.AddTypeDiscovery();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSelfBindings();
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _ = new EventStoreReactorSideEffectHandlerInstances(provider).ToArray();

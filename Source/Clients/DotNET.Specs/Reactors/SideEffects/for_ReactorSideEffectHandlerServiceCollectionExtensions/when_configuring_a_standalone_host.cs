@@ -17,7 +17,7 @@ public class when_configuring_a_standalone_host : Specification
     void Because()
     {
         var services = new ServiceCollection();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         _registeredHandlerTypes = services.Select(descriptor => descriptor.ServiceType).ToArray();
         _provider = services.BuildServiceProvider();
         var assemblyTypes = typeof(ReactorSideEffectHandlers).Assembly.GetTypes();

@@ -40,6 +40,11 @@ public class ChronicleServerlessOptions
     public ServerlessAuthOptions Auth { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the local delivery limits, bound from <c language="json">Cratis:Chronicle:Serverless:Delivery</c>.
+    /// </summary>
+    public ServerlessDeliveryLimits Delivery { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the delivery used by observers that declare none. Defaults to <see cref="ObserverDelivery.Http"/>.
     /// </summary>
     /// <remarks>

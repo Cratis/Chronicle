@@ -22,6 +22,7 @@ public class a_registered_delegate : all_dependencies
     protected ReactorDefinition _definition;
     protected readonly List<ReactorDefinition> _definitions = [];
     protected IReactorHandler _handler;
+    protected virtual IEnumerable<EventType> RegisteredEventTypes => [new("orders", 1), new("orders", 2)];
 
     void Establish()
     {
@@ -48,7 +49,15 @@ public class a_registered_delegate : all_dependencies
             });
         _handler = _reactors.Register(
             "bridge",
-            builder => builder.WithEventType(new EventType("orders", 1)).WithEventType(new EventType("orders", 2)).NotReplayable(),
+            builder =>
+            {
+                foreach (var eventType in RegisteredEventTypes)
+                {
+                    builder.WithEventType(eventType);
+                }
+
+                builder.NotReplayable();
+            },
             async (@event, _) =>
             {
                 _received.TrySetResult(@event);

@@ -42,7 +42,7 @@ public class when_resolving_the_event_store_after_a_failed_first_attempt : Speci
         var services = new ServiceCollection();
         services.AddSingleton(Options.Create(new ChronicleClientOptions()));
         services.AddLogging();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
 
         // Registered after the extension, because the extension registers its own of both and the last
         // registration is the one that resolves.

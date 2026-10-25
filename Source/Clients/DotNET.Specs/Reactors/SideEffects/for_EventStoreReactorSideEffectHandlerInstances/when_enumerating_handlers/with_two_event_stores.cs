@@ -19,7 +19,7 @@ public class with_two_event_stores : Specification
     {
         var services = new ServiceCollection();
         services.AddTypeDiscovery();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
         services.AddSelfBindings();
         _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }

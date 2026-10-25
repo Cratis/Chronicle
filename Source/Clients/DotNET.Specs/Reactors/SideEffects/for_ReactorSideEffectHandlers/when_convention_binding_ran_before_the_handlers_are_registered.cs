@@ -36,7 +36,7 @@ public class when_convention_binding_ran_before_the_handlers_are_registered : Sp
         services.AddTypeDiscovery();
         services.AddSelfBindings();
         services.AddBindingsByConvention();
-        services.AddCratisChronicleClient();
+        services.AddStandaloneChronicleClient();
 
         var registryNumber = 0;
         services.Replace(ServiceDescriptor.Scoped<Events.IEventTypes>(_ =>

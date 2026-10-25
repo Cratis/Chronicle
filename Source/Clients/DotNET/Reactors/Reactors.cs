@@ -15,6 +15,7 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Chronicle.Receivers;
 using Cratis.Chronicle.Serverless;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents an implementation of <see cref="IReactors"/>.
 /// </summary>
-public partial class Reactors : IReactors, IReactorPartitionRecovery
+public partial class Reactors : IReactors, IReactorPartitionRecovery, IReceiveReactorDeliveries
 {
 #if NET8_0
     static readonly object _registerLock = new();
@@ -393,6 +394,19 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public Task<FastForwardResult> FastForward(ReactorId reactorId) =>
         ObserverFastForwarder.FastForward(_servicesAccessor.Services.Observers, _eventStore.Name, _eventStore.Namespace, reactorId);
+
+    /// <inheritdoc/>
+    async Task<ReactorResult?> IReceiveReactorDeliveries.Deliver(ReactorId id, EventsToObserve events, CancellationToken cancellationToken)
+    {
+        if (!_handlers.TryGetValue(id, out var registration))
+        {
+            throw new UnknownReactorId(id);
+        }
+
+        ReactorResult? result = null;
+        await _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, published => result = published, cancellationToken);
+        return result;
+    }
 
     /// <summary>
     /// Add a fluent reactor definition that is built and registered by the next <see cref="Discover"/>.
