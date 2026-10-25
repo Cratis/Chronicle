@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,8 @@ public static partial class JobsManagerExtensions
         JobStatus.Stopped
     ];
 
+    static readonly JobStatus[] _outstandingStatuses = [.. _unfinishedStatuses, JobStatus.Removing];
+
     /// <summary>
     /// Gets the jobs that have not finished - the only ones an observer can pause, resume, stop or wait on.
     /// </summary>
@@ -38,6 +43,23 @@ public static partial class JobsManagerExtensions
     /// </remarks>
     public static Task<IImmutableList<JobState>> GetUnfinishedJobs(this IJobsManager jobsManager) =>
         jobsManager.GetJobs(new JobQuery { Statuses = _unfinishedStatuses, Take = 0 });
+
+    /// <summary>
+    /// Gets jobs that still own work, including jobs draining during removal.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <returns>The outstanding jobs.</returns>
+    public static Task<IImmutableList<JobState>> GetOutstandingJobs(this IJobsManager jobsManager) =>
+        jobsManager.GetJobs(new JobQuery { Statuses = _outstandingStatuses, Take = 0 });
+
+    /// <summary>
+    /// Gets outstanding jobs, preserving lookup failures so they cannot be mistaken for no jobs,
+    /// unlike the jobs manager lookup which returns an empty list on failure.
+    /// </summary>
+    /// <param name="jobStorage">The job storage.</param>
+    /// <returns>The outstanding jobs or the lookup failure.</returns>
+    public static Task<Catch<IImmutableList<JobState>>> GetOutstandingJobs(this IJobStorage jobStorage) =>
+        jobStorage.GetJobs(new JobQuery { Statuses = _outstandingStatuses, Take = 0 });
 
     /// <summary>
     /// Starts or resumes an observer job.
@@ -114,7 +136,7 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var jobs = await jobsManager.GetUnfinishedJobs();
+        var jobs = await jobsManager.GetOutstandingJobs();
         var request = createRequest();
 
         // The exclusion is read after the lookup, so it covers jobs that concluded while it was in flight. A listing is no
@@ -172,7 +194,8 @@ public static partial class JobsManagerExtensions
     }
 
     /// <summary>
-    /// Gets whether a job is alive: preparing or running with work still in flight, not merely recorded as running.
+    /// Gets whether a job is alive: preparing, running or removing with work still in flight.
+    /// A removing job still drains and reports back when its workers stop, so it still owns its work.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
     /// <param name="now">The current time.</param>
@@ -183,14 +206,32 @@ public static partial class JobsManagerExtensions
     /// a hung completion. Treating it as running told an operator a replay had started while nothing was created.
     /// </remarks>
     internal static bool IsLive(this JobState job, DateTimeOffset now) =>
-        job.IsPreparingOrRunning && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
+        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
-    /// Gets whether a job with the given status has finished for good - the statuses <see cref="GetUnfinishedJobs"/> never lists.
+    /// Gets whether a job with the given status has finished for good - excluding jobs still draining during removal.
     /// </summary>
     /// <param name="status">The <see cref="JobStatus"/> to check.</param>
-    /// <returns>True if the job has finished; false if it is preparing, running or stopped.</returns>
-    internal static bool HasFinished(this JobStatus status) => !_unfinishedStatuses.Contains(status);
+    /// <returns>True if the job has finished; false if it is preparing, running, stopped or removing.</returns>
+    internal static bool HasFinished(this JobStatus status) => !_outstandingStatuses.Contains(status);
+
+    /// <summary>
+    /// Finds partitions still owned by outstanding jobs of the requested kind and observer.
+    /// </summary>
+    /// <param name="jobs">The jobs to inspect.</param>
+    /// <param name="observerKey">The observer that owns the work.</param>
+    /// <param name="now">The current time.</param>
+    /// <typeparam name="TRequest">The partition job request kind.</typeparam>
+    /// <returns>The held partition keys.</returns>
+    internal static ISet<Key> PartitionsHeldBy<TRequest>(this IEnumerable<JobState> jobs, ObserverKey observerKey, DateTimeOffset now)
+        where TRequest : ObserverPartitionedJobRequest =>
+        jobs.Where(job =>
+            job.Request is TRequest request &&
+            request.ObserverKey == observerKey &&
+            !job.Status.HasFinished() &&
+            !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
+            .Select(job => ((TRequest)job.Request).Key)
+            .ToHashSet();
 
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);

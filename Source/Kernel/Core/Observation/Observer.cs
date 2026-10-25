@@ -479,6 +479,7 @@ public partial class Observer(
             observerDefinition,
             _eventSequence,
             storage,
+            () => _partitionHoldsVersion,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
