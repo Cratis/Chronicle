@@ -317,7 +317,8 @@ public partial class Observer
     {
         await ForgetFinishedConcludedCatchUpJobs();
         var subscription = await GetSubscription();
-        return await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
+        var foundRunningJob = false;
+        var jobId = await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
 
             // Created after the lookup: a job concluding while it is in flight is excluded and has moved the position on.
@@ -325,6 +326,7 @@ public partial class Observer
             requestPredicate: null,
             () =>
             {
+                foundRunningJob = true;
                 logger.FinishingExistingCatchUpJob();
                 return Task.CompletedTask;
             },
@@ -352,6 +354,25 @@ public partial class Observer
                 return Task.CompletedTask;
             },
             concludedJobs: _concludedCatchUpJobs);
+
+        if (foundRunningJob && jobId != JobId.NotSet)
+        {
+            AskRunningCatchUpJobToRegisterItsPartitions(jobId);
+        }
+
+        return jobId;
+    }
+
+    /// <summary>
+    /// A job that is already running may have been resumed before this activation knew about it, and holding the
+    /// partitions it owns is its job. It is asked without waiting: it may be waiting for this observer, and whatever
+    /// it answers, the registration reaches this observer as a call of its own that lowers the preparing flag.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the running catch-up job.</param>
+    void AskRunningCatchUpJobToRegisterItsPartitions(JobId jobId)
+    {
+        var jobKey = new JobKey(_observerKey.EventStore.Value, _observerKey.Namespace.Value);
+        _ = GrainFactory.GetGrain<ICatchUpObserver>(jobId.Value, jobKey).RegisterPartitionOwnership();
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)

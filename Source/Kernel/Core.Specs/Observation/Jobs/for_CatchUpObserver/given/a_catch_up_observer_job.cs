@@ -10,8 +10,10 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Json;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Jobs.Stages;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -29,6 +31,8 @@ public class a_catch_up_observer_job : Specification
     protected TestKitSilo _silo = new();
     protected TestableCatchUpObserver _job;
     protected IObserver _observer;
+    protected ICatchUpObserver _self;
+    protected JsonSerializerOptions _serializerOptions;
     protected IObserverServiceClient _catchupServiceClient;
     protected IChronicleStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
@@ -42,6 +46,24 @@ public class a_catch_up_observer_job : Specification
     protected JobKey _jobKey;
     protected CatchUpObserverRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
+
+    protected PlannedJobStep PlannedPartitionStep(Key partition)
+    {
+        var arguments = new HandleEventsForPartitionArguments(
+            _request.ObserverKey,
+            ObserverType.Reactor,
+            partition,
+            EventSequenceNumber.First,
+            EventSequenceNumber.Max,
+            EventObservationState.None,
+            []);
+        return new(
+            JobStepId.New(),
+            new(nameof(HandleEventsForPartition)),
+            JobStepStage.First,
+            typeof(HandleEventsForPartitionArguments).AssemblyQualifiedName!,
+            JsonSerializer.Serialize(arguments, _serializerOptions));
+    }
 
     protected static IObserverKeys CreateKeys(params Key[] keys) => new TestObserverKeys(keys);
 
@@ -95,7 +117,9 @@ public class a_catch_up_observer_job : Specification
         _jobTypes.GetFor(Arg.Any<Type>())
             .Returns(Result<JobType, IJobTypes.GetForError>.Success(new JobType("CatchUpObserver")));
 
-        _silo.AddService(new JsonSerializerOptions());
+        _serializerOptions = new JsonSerializerOptions(Globals.JsonSerializerOptions);
+        _serializerOptions.Converters.Add(new KeyJsonConverter());
+        _silo.AddService(_serializerOptions);
         _silo.AddService(_catchupServiceClient);
         _silo.AddService(_storage);
         _silo.AddService(_jobTypes);
@@ -109,6 +133,8 @@ public class a_catch_up_observer_job : Specification
         _observer = Substitute.For<IObserver>();
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult(Enumerable.Empty<Key>()));
         _silo.AddProbe(_ => _observer);
+        _self = Substitute.For<ICatchUpObserver>();
+        _silo.AddProbe(_ => _self);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableCatchUpObserver).FullName);

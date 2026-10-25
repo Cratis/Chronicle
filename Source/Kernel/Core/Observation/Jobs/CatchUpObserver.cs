@@ -36,6 +36,38 @@ public class CatchUpObserver(
     /// </remarks>
     protected override bool StartStepsInBackground => true;
 
+    bool IsRunningWithSteps =>
+        State.Request is not null &&
+        State.Status is JobStatus.Running or JobStatus.StartingSteps &&
+        !State.Progress.IsCompleted;
+
+    /// <inheritdoc/>
+    public async Task RegisterPartitionOwnership()
+    {
+        if (!IsRunningWithSteps) return;
+
+        try
+        {
+            var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+            var failedPartitions = (await observer.GetFailedPartitionKeys()).ToHashSet();
+            var partitions = Request.ObserverType == ObserverType.Projection
+                ? await KeysToCatchUp(Request, failedPartitions)
+                : PlannedPartitions(failedPartitions);
+            if (partitions is null)
+            {
+                logger.NoStepPlanToRegisterPartitionsFrom();
+                return;
+            }
+
+            await observer.RegisterResumedCatchingUpPartitions(JobId, partitions);
+        }
+        catch (Exception exception)
+        {
+            // The blanket hold stays up, which is what a resume without registration has always meant.
+            logger.FailedToRegisterPartitionOwnership(exception);
+        }
+    }
+
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
@@ -45,7 +77,11 @@ public class CatchUpObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeResumingJobSteps()
     {
+        // Ownership is asserted before any step resumes: the blanket hold goes up synchronously, and the exact
+        // partitions are registered in this grain's next turn so enumerating them is not billed to the caller.
+        await GrainFactory.GetGrain<IObserver>(Request.ObserverKey).ResumingCatchUp(JobId);
         await catchupServiceClient.ResumeCatchupFor(State.ObserverDetails);
+        _ = GrainFactory.GetGrain<ICatchUpObserver>(JobId.Value, JobKey).RegisterPartitionOwnership();
     }
 
     /// <inheritdoc/>
@@ -131,6 +167,24 @@ public class CatchUpObserver(
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
 
+        var keysToCatchUp = await KeysToCatchUp(request, failedPartitionSet);
+
+        // The keys are registered whichever shape the steps take: live delivery is held back per partition while
+        // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
+        var steps = CreateStepsFor(request, keysToCatchUp);
+        if (steps.Count == 0)
+        {
+            // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
+            using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
+            logger.NoJobStepsPrepared(nameof(CatchUpObserver));
+        }
+
+        await observer.RegisterCatchingUpPartitions(keysToCatchUp);
+        return steps;
+    }
+
+    async Task<List<Key>> KeysToCatchUp(CatchUpObserverRequest request, HashSet<Key> failedPartitionSet)
+    {
         var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
         var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
 
@@ -152,18 +206,18 @@ public class CatchUpObserver(
             keysToCatchUp.Add(key);
         }
 
-        // The keys are registered whichever shape the steps take: live delivery is held back per partition while
-        // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
-        var steps = CreateStepsFor(request, keysToCatchUp);
-        if (steps.Count == 0)
-        {
-            // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
-            using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
-            logger.NoJobStepsPrepared(nameof(CatchUpObserver));
-        }
+        return keysToCatchUp;
+    }
 
-        await observer.RegisterCatchingUpPartitions(keysToCatchUp);
-        return steps;
+    List<Key>? PlannedPartitions(HashSet<Key> failedPartitionSet)
+    {
+        if (State.StepPlan is null) return null;
+
+        return State.StepPlan
+            .Where(step => step.RequestType == typeof(HandleEventsForPartitionArguments).AssemblyQualifiedName)
+            .Select(step => JsonSerializer.Deserialize<HandleEventsForPartitionArguments>(step.RequestJson, jsonSerializerOptions)!.Partition)
+            .Where(partition => !failedPartitionSet.Contains(partition))
+            .ToList();
     }
 
     ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys)

@@ -206,7 +206,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(3)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(4)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   DD5E028F: CaughtUp(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -249,6 +249,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   A1B6D3B8: ReconcileSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, bool, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task
   D7E5FB10: RecoverStalledSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
   A652D659: RegisterCatchingUpPartitions(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>) -> Task
+  622A8A15: RegisterResumedCatchingUpPartitions(Cratis.Orleans.Jobs.JobId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>) -> Task
   4D12BA79: ReleaseDeliveryFence(Cratis.Chronicle.Concepts.Keys.Key, System.DateTimeOffset) -> Task
   B1F1D3A7: ReleaseRefusedPartitionReplay(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   8F78556C: ReleaseRefusedReplay() -> Task
@@ -262,6 +263,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   1AEDA21E: ReportHandledEvents(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId, Cratis.Chronicle.Concepts.Events.EventCount>, Cratis.Orleans.Jobs.JobStepId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   B95DED3E: ReportHandledEventsBatch(Cratis.Orleans.Jobs.JobStepId, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.Jobs.HandledEventsReport>) -> Task
   318C290F: RestoreClientSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Clients.ConnectedClient, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters?, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery) -> Task
+  CDBDCA3D: ResumingCatchUp(Cratis.Orleans.Jobs.JobId) -> Task
   2CE6A3A4: Retire() -> Task
   A635A9CE: SetHandledStats(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   1502B9F9: StartAtTailWhenNew() -> Task<bool>
@@ -305,7 +307,8 @@ class [GrainType("handleeventsforobserver")] Cratis.Chronicle.Observation.Jobs.H
 
 class [GrainType("handleeventsforpartition")] Cratis.Chronicle.Observation.Jobs.HandleEventsForPartition
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.ICatchUpObserver")] Cratis.Chronicle.Observation.Jobs.ICatchUpObserver [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.ICatchUpObserver")] Cratis.Chronicle.Observation.Jobs.ICatchUpObserver [Version(1)]
+  5792E21F: RegisterPartitionOwnership() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.ICatchUpObserverPartition")] Cratis.Chronicle.Observation.Jobs.ICatchUpObserverPartition [Version(0)]
 

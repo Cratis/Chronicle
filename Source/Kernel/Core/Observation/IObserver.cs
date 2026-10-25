@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(3)]
+[Version(4)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -634,6 +634,23 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
     Task RegisterCatchingUpPartitions(IEnumerable<Key> partitions);
+
+    /// <summary>
+    /// Notify the observer that a catch-up job it did not just start is resuming its work, so live delivery is held back until the partitions the job owns are registered.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the resuming catch-up job.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task ResumingCatchUp(JobId jobId);
+
+    /// <summary>
+    /// Register the partitions a resumed or already running catch-up job owns. Unlike <see cref="RegisterCatchingUpPartitions"/>, this is not forward progress and does not reset the catch-up recovery attempts.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the catch-up job that owns the partitions.</param>
+    /// <param name="partitions">Collection of <see cref="Key">partitions</see>.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task RegisterResumedCatchingUpPartitions(JobId jobId, IEnumerable<Key> partitions);
 
     /// <summary>
     /// Notify that the observer has been caught up.
