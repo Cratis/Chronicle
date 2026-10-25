@@ -310,19 +310,24 @@ public partial class Observer
             return true;
         }
 
-        // A partition catch-up job owns the partitions it was started for, just as an observer catch-up job does.
-        return catchupJobs.Any(job =>
-            IsCatchUpJobFor(job.Request) &&
-            job.IsLive(DateTimeOffset.UtcNow) &&
-            !_concludedCatchUpJobs.Contains(job.Id));
-    }
+        var now = DateTimeOffset.UtcNow;
+        var liveRequests = catchupJobs
+            .Where(job => job.IsLive(now) && !_concludedCatchUpJobs.Contains(job.Id))
+            .Select(job => job.Request)
+            .ToArray();
+        if (liveRequests.Any(request => request is CatchUpObserverRequest observerRequest && observerRequest.ObserverKey == _observerKey))
+        {
+            return true;
+        }
 
-    bool IsCatchUpJobFor(object? request) => request switch
-    {
-        CatchUpObserverRequest observerRequest => observerRequest.ObserverKey == _observerKey,
-        CatchUpObserverPartitionRequest partitionRequest => partitionRequest.ObserverKey == _observerKey,
-        _ => false
-    };
+        // A partition catch-up job owns only the partition it was started for, so every catching-up partition needs one.
+        var ownedPartitions = liveRequests
+            .OfType<CatchUpObserverPartitionRequest>()
+            .Where(request => request.ObserverKey == _observerKey)
+            .Select(request => request.Key)
+            .ToHashSet();
+        return ownedPartitions.Count > 0 && State.CatchingUpPartitions.All(ownedPartitions.Contains);
+    }
 
     bool HasCatchupOwnershipInFlight() => _catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null;
 
