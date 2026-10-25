@@ -13,6 +13,7 @@ public class when_an_unexpected_failure_occurs : given.a_compliance_service
     ILogger _logger;
     object?[] _logArguments;
     Dictionary<string, object?> _properties;
+    string _message;
 
     void Establish()
     {
@@ -21,6 +22,13 @@ public class when_an_unexpected_failure_occurs : given.a_compliance_service
             .Returns<Task<JsonObject>>(_ => throw new InvalidOperationException($"{SensitiveValue}: {request.Payload}"));
         _logger = Substitute.For<ILogger>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _logger.WhenForAnyArgs(logger => logger.Log(default, default, default(object)!, default, default!))
+            .Do(call =>
+            {
+                var state = call.ArgAt<IEnumerable<KeyValuePair<string, object?>>>(2);
+                _properties = state.ToDictionary(_ => _.Key, _ => _.Value);
+                _message = (string)call.ArgAt<Delegate>(4).DynamicInvoke(state, call.ArgAt<Exception?>(3))!;
+            });
         var loggerFactory = Substitute.For<ILoggerFactory>();
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
         service = new ComplianceService(Substitute.For<IGrainFactory>(), manager, new Logger<ComplianceService>(loggerFactory));
@@ -30,7 +38,6 @@ public class when_an_unexpected_failure_occurs : given.a_compliance_service
     {
         result = await service.Release(request);
         _logArguments = _logger.ReceivedCalls().Single(_ => _.GetMethodInfo().Name == nameof(ILogger.Log)).GetArguments();
-        _properties = ((IEnumerable<KeyValuePair<string, object?>>)_logArguments[2]!).ToDictionary(_ => _.Key, _ => _.Value);
     }
 
     [Fact] void should_fail_the_release() => result.HasError.ShouldBeTrue();
@@ -43,5 +50,5 @@ public class when_an_unexpected_failure_occurs : given.a_compliance_service
     [Fact] void should_log_an_empty_path_when_unknown() => _properties["PropertyPath"].ShouldEqual(string.Empty);
     [Fact] void should_log_only_type_and_path_properties() => _properties.Keys.ShouldContainOnly("ExceptionType", "PropertyPath", "{OriginalFormat}");
     [Fact] void should_not_attach_the_exception() => _logArguments[3].ShouldBeNull();
-    [Fact] void should_not_log_values_or_payload() => _logArguments[2]!.ToString().ShouldEqual("Failed to strictly release compliance with exception type 'InvalidOperationException' for property ''");
+    [Fact] void should_not_log_values_or_payload() => _message.ShouldEqual("Failed to strictly release compliance with exception type 'InvalidOperationException' for property ''");
 }
