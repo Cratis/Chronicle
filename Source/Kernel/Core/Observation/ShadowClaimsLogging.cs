@@ -38,4 +38,13 @@ internal static partial class ShadowClaimsLogging
     /// <param name="exception">The diagnostic failure.</param>
     [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} shadow claims failed; delivery is unchanged")]
     internal static partial void ShadowClaimsFailed(this ILogger<Observer> logger, ObserverId observerId, Exception exception);
+
+    /// <summary>
+    /// Logs that persisted shadow claims could not be restored, so the shadow ledger starts empty.
+    /// </summary>
+    /// <param name="logger">The observer logger.</param>
+    /// <param name="observerId">The observer identifier.</param>
+    /// <param name="exception">The restore failure.</param>
+    [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} could not restore its shadow claims; the shadow ledger starts empty and delivery is unchanged")]
+    internal static partial void ShadowClaimsRestoreFailed(this ILogger<Observer> logger, ObserverId observerId, Exception exception);
 }

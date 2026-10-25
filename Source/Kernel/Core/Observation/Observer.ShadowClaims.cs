@@ -16,7 +16,9 @@ public partial class Observer
 {
     ShadowClaimLedger _shadowClaims = new();
 
-    void RestoreShadowClaims() => GuardShadowClaims(() =>
+    void RestoreShadowClaims() => GuardShadowClaims(RestoreShadowLedger, ShadowRestoreFailed);
+
+    void RestoreShadowLedger()
     {
         _shadowClaims = ShadowClaimLedger.Restore(State.PartitionClaims, State.ObserverWideClaim, State.OwnershipRevision, out var legacy);
         if (legacy)
@@ -30,7 +32,14 @@ public partial class Observer
 
         // Compare already reported stale claims. Reconciliation on activation must not count them a second time.
         _shadowClaims.Reconcile(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying(), ShadowResumePosition());
-    });
+    }
+
+    void ShadowRestoreFailed(Exception exception)
+    {
+        // Acceptable while claims are a shadow; the enforcing increment must not start from an empty ledger (DR0018).
+        _shadowClaims = new();
+        logger.ShadowClaimsRestoreFailed(_observerId, exception);
+    }
 
     (IEnumerable<PartitionClaim>? Claims, ObserverWideClaim? Wide, OwnershipRevision? Revision) ShadowClaimsSnapshot()
     {
@@ -75,11 +84,12 @@ public partial class Observer
     /// Isolates shadow diagnostics from delivery, including failures in diagnostic logging itself.
     /// </summary>
     /// <param name="action">The shadow-only operation.</param>
+    /// <param name="reportFailure">Reports the failure; when omitted, the generic shadow failure is logged.</param>
     /// <remarks>
     /// Shadow claims have no effect boundary: they are diagnostics only, never authority for delivery.
     /// This deliberate exception to effect-boundary error handling must not change observer behavior.
     /// </remarks>
-    void GuardShadowClaims(Action action)
+    void GuardShadowClaims(Action action, Action<Exception>? reportFailure = null)
     {
         try
         {
@@ -89,7 +99,14 @@ public partial class Observer
         {
             try
             {
-                logger.ShadowClaimsFailed(_observerId, exception);
+                if (reportFailure is null)
+                {
+                    logger.ShadowClaimsFailed(_observerId, exception);
+                }
+                else
+                {
+                    reportFailure(exception);
+                }
             }
             catch (Exception)
             {
