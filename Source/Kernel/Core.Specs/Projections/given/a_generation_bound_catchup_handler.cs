@@ -27,6 +27,7 @@ public class a_generation_bound_catchup_handler : Specification
     protected Engine.IProjection _generationProjection;
     protected GenerationExecution _execution;
     protected GenerationSinkContext _context;
+    protected GenerationBulkWindowStore _windowStore;
 
     void Establish()
     {
@@ -48,11 +49,17 @@ public class a_generation_bound_catchup_handler : Specification
 
         _projections = Substitute.For<Engine.IProjectionsManager>();
         _legacyPipelines = Substitute.For<IProjectionPipelineManager>();
-        _handler = new(
-            _projections,
-            new ForwardingPipelineManager(_legacyPipelines, _generationPipelines),
-            Substitute.For<IGrainFactory>(),
-            NullLogger<ProjectionCatchupHandler>.Instance,
-            _generations);
+        _windowStore = new();
+        _handler = CreateHandler();
     }
+
+    /// <summary>Creates another transient handler sharing the silo's window store.</summary>
+    /// <returns>The handler.</returns>
+    protected ProjectionCatchupHandler CreateHandler() => new(
+        _projections,
+        new ForwardingPipelineManager(_legacyPipelines, _generationPipelines),
+        Substitute.For<IGrainFactory>(),
+        NullLogger<ProjectionCatchupHandler>.Instance,
+        _generations,
+        _windowStore);
 }

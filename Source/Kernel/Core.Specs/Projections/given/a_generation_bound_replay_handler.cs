@@ -24,6 +24,7 @@ public class a_generation_bound_replay_handler : a_projection_replay_handler
     protected Engine.IProjection _generationProjection;
     protected GenerationExecution _execution;
     protected GenerationSinkContext _context;
+    protected GenerationBulkWindowStore _windowStore;
 
     void Establish()
     {
@@ -44,15 +45,21 @@ public class a_generation_bound_replay_handler : a_projection_replay_handler
             .GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Engine.IProjection>(), Arg.Any<GenerationSinkContext>())
             .Returns(_generationPipeline);
 
-        _handler = new ProjectionReplayHandler(
-            _projections,
-            _grainFactory,
-            _storage,
-            new ForwardingPipelineManager(_projectionPipelineManager, _generationPipelines),
-            Options.Create(new Configuration.ChronicleOptions()),
-            NullLogger<ProjectionReplayHandler>.Instance,
-            _generations);
+        _windowStore = new();
+        _handler = CreateHandler();
     }
+
+    /// <summary>Creates another transient handler sharing the silo's window store.</summary>
+    /// <returns>The handler.</returns>
+    protected ProjectionReplayHandler CreateHandler() => new(
+        _projections,
+        _grainFactory,
+        _storage,
+        new ForwardingPipelineManager(_projectionPipelineManager, _generationPipelines),
+        Options.Create(new Configuration.ChronicleOptions()),
+        NullLogger<ProjectionReplayHandler>.Instance,
+        _generations,
+        _windowStore);
 
     protected void Unbind() => _generations
         .Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EventSequenceId>(), Arg.Any<ObserverId>())

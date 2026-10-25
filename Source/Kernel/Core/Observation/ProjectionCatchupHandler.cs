@@ -19,18 +19,20 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="grainFactory">The grain factory used to record failed partitions.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="generations">Optional <see cref="IGenerationProjectionResolver"/> that routes observers of a later generation to their immutable execution; absent when the storage provider has no generation catalog.</param>
+/// <param name="windowStore">Optional silo-wide <see cref="GenerationBulkWindowStore"/> that keeps a bulk window's grant between lifecycle calls; generation routing is only active when it and the resolver are both supplied.</param>
 public class ProjectionCatchupHandler(
     IProjectionsManager projections,
     IProjectionPipelineManager projectionPipelineManager,
     IGrainFactory grainFactory,
     ILogger<ProjectionCatchupHandler> logger,
-    IGenerationProjectionResolver? generations = null) : ICanHandleCatchupForObserver
+    IGenerationProjectionResolver? generations = null,
+    GenerationBulkWindowStore? windowStore = null) : ICanHandleCatchupForObserver
 {
-    readonly GenerationBulkWindows? _windows = generations is null ? null : new(generations, projectionPipelineManager);
+    readonly GenerationBulkWindows? _windows = generations is null || windowStore is null ? null : new(GenerationBulkKind.CatchUp, windowStore, generations, projectionPipelineManager);
 
     /// <inheritdoc/>
     public Task<Result<ICanHandleCatchupForObserver.Error>> BeginCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, true, async pipeline =>
+        DoWork(observerDetails, GenerationBulkCall.Begin, async pipeline =>
         {
             await pipeline.BeginBulk();
             return Result<ICanHandleCatchupForObserver.Error>.Success();
@@ -42,26 +44,34 @@ public class ProjectionCatchupHandler(
     /// window here discarded the writes they had queued (#5340), so resuming joins the open window instead.
     /// </remarks>
     public Task<Result<ICanHandleCatchupForObserver.Error>> ResumeCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, true, async pipeline =>
+        DoWork(observerDetails, GenerationBulkCall.Resume, async pipeline =>
         {
             await pipeline.ResumeBulk();
             return Result<ICanHandleCatchupForObserver.Error>.Success();
         });
 
     /// <inheritdoc/>
-    public Task<Result<ICanHandleCatchupForObserver.Error>> EndCatchupFor(ObserverDetails observerDetails) =>
-        DoWork(observerDetails, false, async pipeline =>
+    public async Task<Result<ICanHandleCatchupForObserver.Error>> EndCatchupFor(ObserverDetails observerDetails)
+    {
+        try
         {
-            var failedPartitions = (await pipeline.EndBulk()).ToArray();
-            _windows?.End(observerDetails.Key);
-            await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
+            return await DoWork(observerDetails, GenerationBulkCall.Use, async pipeline =>
+            {
+                var failedPartitions = (await pipeline.EndBulk()).ToArray();
+                await ProjectionBulkFailures.Record(grainFactory, observerDetails, failedPartitions);
 
-            // An ordinary write failure is recorded and retried from the event that failed, so catch-up still completes.
-            // Only a final flush whose outcome is unknown fails it: writes before the failure may have been lost.
-            return failedPartitions.Any(partition => partition.OutcomeUnknown)
-                ? ICanHandleCatchupForObserver.Error.Unknown
-                : Result<ICanHandleCatchupForObserver.Error>.Success();
-        });
+                // An ordinary write failure is recorded and retried from the event that failed, so catch-up still completes.
+                // Only a final flush whose outcome is unknown fails it: writes before the failure may have been lost.
+                return failedPartitions.Any(partition => partition.OutcomeUnknown)
+                    ? ICanHandleCatchupForObserver.Error.Unknown
+                    : Result<ICanHandleCatchupForObserver.Error>.Success();
+            });
+        }
+        finally
+        {
+            _windows?.End(observerDetails.Key);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
@@ -88,31 +98,31 @@ public class ProjectionCatchupHandler(
     /// <inheritdoc/>
     public async Task<IEnumerable<Storage.Sinks.FailedPartition>> EndBulkFor(ObserverDetails observerDetails, CancellationToken cancellationToken)
     {
-        var generation = await GetGenerationPipeline(observerDetails);
-        if (generation is not null)
+        try
         {
-            try
+            var generation = await GetGenerationPipeline(observerDetails);
+            if (generation is not null)
             {
                 return await generation.EndBulk(cancellationToken);
             }
-            finally
+
+            if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
             {
-                _windows?.End(observerDetails.Key);
+                return [];
             }
-        }
 
-        if (!CanHandle(observerDetails) || !projections.TryGet(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId, out var projection))
+            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+            return await pipeline.EndBulk(cancellationToken);
+        }
+        finally
         {
-            return [];
+            _windows?.End(observerDetails.Key);
         }
-
-        var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
-        return await pipeline.EndBulk(cancellationToken);
     }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 
-    async Task<IProjectionPipeline?> GetGenerationPipeline(ObserverDetails observerDetails, bool beginsWindow = false)
+    async Task<IProjectionPipeline?> GetGenerationPipeline(ObserverDetails observerDetails, GenerationBulkCall call = GenerationBulkCall.Use)
     {
         // A bound generation builds into its own destination from its own immutable execution. Failing to
         // resolve or admit it must not fall back to the current projection, so it throws to the caller.
@@ -121,12 +131,12 @@ public class ProjectionCatchupHandler(
             return null;
         }
 
-        return await _windows.GetPipeline(observerDetails.Key, beginsWindow);
+        return await _windows.GetPipeline(observerDetails.Key, call);
     }
 
     async Task<Result<ICanHandleCatchupForObserver.Error>> DoWork(
         ObserverDetails observerDetails,
-        bool beginsWindow,
+        GenerationBulkCall call,
         Func<IProjectionPipeline, Task<Result<ICanHandleCatchupForObserver.Error>>> doWork)
     {
         try
@@ -136,7 +146,7 @@ public class ProjectionCatchupHandler(
                 return ICanHandleCatchupForObserver.Error.CannotHandle;
             }
 
-            var generation = await GetGenerationPipeline(observerDetails, beginsWindow);
+            var generation = await GetGenerationPipeline(observerDetails, call);
             if (generation is not null)
             {
                 return await doWork(generation);

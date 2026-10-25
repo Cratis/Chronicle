@@ -21,8 +21,9 @@ public class and_the_grant_is_reissued_during_the_replay : given.a_generation_bo
 
     async Task Because()
     {
-        await _handler.FlushFor(_observerDetails);
-        await _handler.EndReplayFor(_observerDetails);
+        var nextHandler = CreateHandler();
+        await nextHandler.FlushFor(_observerDetails);
+        await nextHandler.EndReplayFor(_observerDetails);
     }
 
     [Fact] void should_not_switch_to_the_reissued_grant() => _generationPipelines.DidNotReceive().GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Engine.IProjection>(), _reissued);

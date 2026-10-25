@@ -21,8 +21,9 @@ public class and_the_grant_is_reissued_during_catchup : given.a_generation_bound
 
     async Task Because()
     {
-        await _handler.FlushFor(_details);
-        await _handler.EndCatchupFor(_details);
+        var nextHandler = CreateHandler();
+        await nextHandler.FlushFor(_details);
+        await nextHandler.EndCatchupFor(_details);
     }
 
     [Fact] void should_not_switch_to_the_reissued_grant() => _generationPipelines.DidNotReceive().GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Engine.IProjection>(), _reissued);

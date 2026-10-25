@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Generations.Bindings;
 using Cratis.Chronicle.Generations.Enablement;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.Storage.Generations.Bindings;
 using Cratis.Json;
@@ -26,6 +27,7 @@ public static class GenerationCatalogServiceExtensions
         services.TryAddSingleton<IGenerationObserverBindings, GenerationObserverBindings>();
         services.TryAddSingleton(new GenerationExecutionSpecifications(Globals.JsonSerializerOptions));
         services.TryAddSingleton<IGenerationProjectionResolver, GenerationProjectionResolver>();
+        services.TryAddSingleton<GenerationBulkWindowStore>();
         return services;
     }
 }
