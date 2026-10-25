@@ -152,7 +152,7 @@ jobs:
 
       - name: Check the payload inventory matches Core
         if: steps.baseline.outputs.skip == 'false'
-        run: dotnet test Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release --no-build --settings specs.runsettings
+        run: node .github/scripts/run-spec-project.mjs --project Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj --settings specs.runsettings --results-directory "$RUNNER_TEMP/grain-compatibility-specs"
 
       - name: Compare payload contracts with the baseline release
         if: steps.baseline.outputs.skip == 'false'
