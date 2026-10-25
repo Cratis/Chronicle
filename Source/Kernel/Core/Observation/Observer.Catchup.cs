@@ -199,7 +199,7 @@ public partial class Observer
         {
             if (settleInObserving)
             {
-                await TransitionTo<Observing>();
+                await SettleCatchUpInObserving();
             }
             else
             {
