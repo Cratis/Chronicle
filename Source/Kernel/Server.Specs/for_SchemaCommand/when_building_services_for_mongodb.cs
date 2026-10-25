@@ -13,15 +13,21 @@ public class when_building_services_for_mongodb : Specification
 {
     ServiceProvider _provider;
     IMongoDBIndexProvisioner _provisioner;
+    IConfiguration _configuration;
+
+    void Establish() => _configuration = new ConfigurationBuilder().Build();
 
     void Because()
     {
         _provider = SchemaCommandRunner.BuildServices(
             new ChronicleOptions { Storage = new() { Type = StorageType.MongoDB, ConnectionDetails = "mongodb://localhost:27017" } },
-            new ConfigurationBuilder().Build(),
+            _configuration,
             _ => { });
         _provisioner = _provider.GetRequiredService<IMongoDBIndexProvisioner>();
     }
 
+    void Destroy() => _provider.Dispose();
+
     [Fact] void should_resolve_the_index_provisioner_without_a_host() => _provisioner.ShouldNotBeNull();
+    [Fact] void should_retain_the_supplied_configuration() => _provider.GetRequiredService<IConfiguration>().ShouldBeSame(_configuration);
 }
