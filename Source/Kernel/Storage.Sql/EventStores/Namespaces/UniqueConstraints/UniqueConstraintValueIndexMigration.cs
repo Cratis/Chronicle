@@ -41,7 +41,7 @@ internal static class UniqueConstraintValueIndexMigration
             return;
         }
 
-        var canIndex = !context.Database.IsSqlServer() || await EnsureSqlServerValueLength(context, tableName, table, index, logger);
+        var canIndex = !context.Database.IsSqlServer() || await EnsureSqlServerValueLength(context, tableName, logger);
         indexState = await ReadIndexState(context, tableName);
         var duplicates = await Scalar(context, $"SELECT COUNT(*) FROM (SELECT {sql.DelimitIdentifier("Value")} FROM {table} GROUP BY {sql.DelimitIdentifier("Value")} HAVING COUNT(*) > 1) AS duplicate_values");
         if (canIndex && (duplicates == 0 || indexState < 0))
@@ -92,8 +92,11 @@ internal static class UniqueConstraintValueIndexMigration
 
     static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
 
-    static async Task<bool> EnsureSqlServerValueLength(DbContext context, string tableName, string table, string index, ILogger<UniqueConstraintMigrator> logger)
+    static async Task<bool> EnsureSqlServerValueLength(DbContext context, string tableName, ILogger<UniqueConstraintMigrator> logger)
     {
+        var sql = context.GetService<ISqlGenerationHelper>();
+        var table = sql.DelimitIdentifier(tableName);
+        var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
         var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = 'Value'", tableName);
         if (length == 200)
         {
