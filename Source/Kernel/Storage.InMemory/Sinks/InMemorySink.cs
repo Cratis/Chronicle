@@ -68,6 +68,7 @@ public partial class InMemorySink(
     /// </summary>
     /// <param name="key">The <see cref="Key"/> to resolve.</param>
     /// <returns>The value the document for <paramref name="key"/> is stored under in <see cref="Collection"/>.</returns>
+    /// <exception cref="ReadModelKeyHasNoValue">The key has no value.</exception>
     /// <remarks>
     /// Two <see cref="Key"/> instances addressing the same document — a concept and its underlying primitive,
     /// say — resolve to the same value here. Callers that keep per-document state beside the sink must derive
@@ -75,6 +76,11 @@ public partial class InMemorySink(
     /// </remarks>
     public object GetKeyValue(Key key)
     {
+        if (key.Value is null)
+        {
+            throw new ReadModelKeyHasNoValue(readModel.Identifier);
+        }
+
         if (key.Value is ExpandoObject expandoKey)
         {
             return CompositeKeyEncoding.Encode(expandoKey);

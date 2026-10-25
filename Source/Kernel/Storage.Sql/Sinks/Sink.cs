@@ -781,8 +781,13 @@ public partial class Sink : ISink, ICanReconcileIndexes
             violation.MessageFragments.Any(fragment => message.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
     }
 
-    static string GetIdString(Key key)
+    string GetIdString(Key key)
     {
+        if (key.Value is null)
+        {
+            throw new ReadModelKeyHasNoValue(_readModelIdentifier);
+        }
+
         if (key.Value is ExpandoObject expandoKey)
         {
             var parts = expandoKey
@@ -791,7 +796,7 @@ public partial class Sink : ISink, ICanReconcileIndexes
             return string.Join('_', parts);
         }
 
-        return key.Value?.ToString() ?? string.Empty;
+        return key.Value.ToString() ?? string.Empty;
     }
 
     sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);
