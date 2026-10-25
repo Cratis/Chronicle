@@ -24,6 +24,25 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
     internal IReadOnlyList<UniqueConstraintComponent> Build(UniqueConstraintEventDefinition definition, JsonObject content, JsonSchema schema) =>
         definition.Properties.Select(property => Build(property, content, schema)).ToArray();
 
+    static (JsonNode? Value, JsonSchema? Schema) Resolve(string path, JsonObject content, JsonSchema schema)
+    {
+        var value = (JsonNode?)content;
+        var currentSchema = (JsonSchema?)schema;
+        foreach (var segment in path.Split('.'))
+        {
+            value = (value as JsonObject)?.FirstOrDefault(property => property.Key.Equals(segment, StringComparison.OrdinalIgnoreCase)).Value;
+            currentSchema = EffectiveSchema(currentSchema)?.GetFlattenedProperties()
+                .FirstOrDefault(property => property.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
+        }
+        return (value, currentSchema);
+    }
+
+    static JsonSchema? EffectiveSchema(JsonSchema? schema)
+    {
+        var actual = schema?.ActualTypeSchema;
+        return actual?.OneOf.FirstOrDefault(option => option.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
+    }
+
     UniqueConstraintComponent Build(string path, JsonObject content, JsonSchema schema)
     {
         var (value, propertySchema) = Resolve(path, content, schema);
@@ -43,7 +62,7 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
         // Convert only this present property: whole-event conversion creates defaults and touches unrelated ciphertext.
         var conversionSchema = new JsonSchema();
         var conversionProperty = new JsonSchemaProperty(
-            "value", (JsonObject)(propertySchema?.Node.DeepClone() ?? new JsonObject()), root);
+            "value", propertySchema is null ? new JsonObject() : JsonNode.Parse(propertySchema.ToJson())!.AsObject(), root);
         if (propertySchema?.IsArray == true)
         {
             conversionProperty.Item = EffectiveSchema(propertySchema.Item);
@@ -52,24 +71,5 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
         var source = new JsonObject { ["value"] = value.DeepClone() };
         var converted = (IDictionary<string, object?>)converter.ToExpandoObject(source, conversionSchema);
         return converted["value"];
-    }
-
-    static (JsonNode? Value, JsonSchema? Schema) Resolve(string path, JsonObject content, JsonSchema schema)
-    {
-        JsonNode? value = content;
-        JsonSchema? currentSchema = schema;
-        foreach (var segment in path.Split('.'))
-        {
-            value = (value as JsonObject)?.FirstOrDefault(property => property.Key.Equals(segment, StringComparison.OrdinalIgnoreCase)).Value;
-            currentSchema = EffectiveSchema(currentSchema)?.GetFlattenedProperties()
-                .FirstOrDefault(property => property.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
-        }
-        return (value, currentSchema);
-    }
-
-    static JsonSchema? EffectiveSchema(JsonSchema? schema)
-    {
-        var actual = schema?.ActualTypeSchema;
-        return actual?.OneOf.FirstOrDefault(option => option.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
     }
 }

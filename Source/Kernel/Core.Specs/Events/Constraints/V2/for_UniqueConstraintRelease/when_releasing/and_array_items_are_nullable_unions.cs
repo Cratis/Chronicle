@@ -28,7 +28,7 @@ public class and_array_items_are_nullable_unions : Specification
                 "nullableDays":{"type":"array","items":{"oneOf":[{"type":"null"},{"type":"string","format":"date?"}]}}}}
             """);
         _content = JsonNode.Parse("""{"days":["2025-02-03",null,"2026-10-25"],"nullableDays":[null,"2025-02-03"]}""")!.AsObject();
-        _originalSchema = _schema.Node.ToJsonString();
+        _originalSchema = _schema.ToJson();
         _originalContent = _content.ToJsonString();
     }
 
@@ -50,6 +50,6 @@ public class and_array_items_are_nullable_unions : Specification
     [Fact] void should_preserve_the_last_date() => ((object?[])_components[0].Value!)[2].ShouldEqual(new DateOnly(2026, 10, 25));
     [Fact] void should_resolve_a_union_with_null_first_and_a_nullable_format() => _components[1].Format.ShouldEqual("date");
     [Fact] void should_match_the_actual_encoder_for_typed_date_arrays() => _encoded.ShouldEqual(_expected);
-    [Fact] void should_not_modify_the_original_item_schema() => _schema.Node.ToJsonString().ShouldEqual(_originalSchema);
+    [Fact] void should_not_modify_the_original_item_schema() => _schema.ToJson().ShouldEqual(_originalSchema);
     [Fact] void should_not_modify_source_content() => _content.ToJsonString().ShouldEqual(_originalContent);
 }

@@ -31,7 +31,7 @@ public class and_nullable_formats_are_used : Specification
                 "emptyNumbers":{"type":"array","items":{"type":"integer","format":"int32?"}}}}
             """);
         _content = JsonNode.Parse("""{"number":7,"nil":null,"numbers":[7,null],"nullNumbers":null,"emptyNumbers":[]}""")!.AsObject();
-        _originalSchema = _schema.Node.ToJsonString();
+        _originalSchema = _schema.ToJson();
     }
 
     void Because()
@@ -52,5 +52,5 @@ public class and_nullable_formats_are_used : Specification
     [Fact] void should_allow_the_encoder_to_decline_a_missing_scalar() => UniqueConstraintEncoder.Encode(_key, [_components[2]]).HasValue.ShouldBeFalse();
     [Fact] void should_allow_the_encoder_to_decline_a_null_array() => UniqueConstraintEncoder.Encode(_key, [_components[4]]).HasValue.ShouldBeFalse();
     [Fact] void should_allow_the_encoder_to_claim_an_empty_array() => UniqueConstraintEncoder.Encode(_key, [_components[5]]).HasValue.ShouldBeTrue();
-    [Fact] void should_not_modify_declared_schema_formats() => _schema.Node.ToJsonString().ShouldEqual(_originalSchema);
+    [Fact] void should_not_modify_declared_schema_formats() => _schema.ToJson().ShouldEqual(_originalSchema);
 }
