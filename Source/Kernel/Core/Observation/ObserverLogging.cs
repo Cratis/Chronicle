@@ -57,6 +57,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 
+    [LoggerMessage(LogLevel.Information, "Recovery job for partition {Partition} did not start: {Reason}")]
+    internal static partial void FailedPartitionRetryDidNotStart(this ILogger<Observer> logger, Key partition, string reason);
+
     [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
     internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
 

@@ -134,8 +134,28 @@ public partial class Observer
             _alertMutationLock.Release();
         }
 
-        await StartRecoverJobForFailedPartition(failure);
+        var startAttempted = false;
+        var jobId = await StartRecoverJobForFailedPartition(failure, () => startAttempted = true);
+        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        {
+            ReportJobNotStarted();
+        }
         return PartitionRecoveryOutcome.Started;
+
+        void ReportJobNotStarted()
+        {
+            var observerNotActive = IsRetired || _removed || !KeyOwnsDefinition;
+            if (observerNotActive)
+            {
+                logger.FailedPartitionRetryDidNotStart(partition, "ObserverNotActive");
+                return;
+            }
+            if (startAttempted)
+            {
+                throw new InvalidOperationException($"Could not start or resume recovery for failed partition '{partition}' on observer '{_observerKey}'.");
+            }
+            logger.FailedPartitionRetryDidNotStart(partition, "RetryScheduled");
+        }
     }
 
     /// <inheritdoc/>
@@ -529,13 +549,13 @@ public partial class Observer
         }
     }
 
-    async Task StartRecoverJobForFailedPartition(FailedPartition failedPartition)
+    async Task<Cratis.Orleans.Jobs.JobId> StartRecoverJobForFailedPartition(FailedPartition failedPartition, Action? onStartAttempted = null)
     {
-        if (IsRetired || _removed) return;
+        if (IsRetired || _removed) return Cratis.Orleans.Jobs.JobId.NotSet;
         if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return;
+            return Cratis.Orleans.Jobs.JobId.NotSet;
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -543,7 +563,7 @@ public partial class Observer
             await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
             !await IsDeferralDue(failedPartition))
         {
-            return;
+            return Cratis.Orleans.Jobs.JobId.NotSet;
         }
 
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
@@ -554,8 +574,8 @@ public partial class Observer
             () => request,
             requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId,
             onAlreadyRunningJob: null,
-            onResume: null,
-            onStartNew: null,
+            onResume: RecordStartAttempt,
+            onStartNew: RecordStartAttempt,
             onResumeRefused: null,
             concludedJobs: null,
             maxJobsToDrop: RetryJobDropsAvailable,
@@ -569,6 +589,13 @@ public partial class Observer
         else
         {
             _retriesWithoutJob.Remove(failedPartition.Id);
+        }
+        return jobId;
+
+        Task RecordStartAttempt()
+        {
+            onStartAttempted?.Invoke();
+            return Task.CompletedTask;
         }
     }
 
