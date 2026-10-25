@@ -128,6 +128,20 @@ Here only `dateOfBirth.dateOfBirth` is encrypted. `verifiedBy` sits beside it in
 
 This is what makes concept-level `[PII]` worth reaching for: you declare the rule once on the type, and it holds no matter how the value is later composed into events and read models.
 
+## PII on referenced schema definitions
+
+When a property's schema is a `$ref` to a shared definition, a `[PII]` marker on that definition applies to the property. Chronicle uses the definition's compliance metadata when it writes, releases and compares values.
+
+Pointer references such as `#/$defs/Name` resolve exactly as before. Only when a reference does not resolve that way does Chronicle look for an embedded `$id` resource or a `$anchor` in the same schema document. An anchor is scoped to the resource that declares it, so identically named anchors in different resources do not collide.
+
+Chronicle never fetches external or remote references. A reference that does not resolve inside the document is left unresolved, and an unresolved reference is not treated as protected: only metadata on the property itself applies.
+
+The referenced definition must have a single supported type. If it does not, Chronicle logs a warning, ignores the metadata on the definition and keeps the existing handling. It does not refuse the append.
+
+:::caution[Values written before this release]
+Values written as plaintext under a referenced definition before this release stay readable unchanged. Chronicle does not reject them retroactively and does not re-encrypt them. New writes are encrypted. When comparing, plaintext written earlier and ciphertext written now compare as the same value.
+:::
+
 ## Constraints
 
 ### EventSourceId is not supported
