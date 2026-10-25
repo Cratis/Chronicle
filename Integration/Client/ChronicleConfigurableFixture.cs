@@ -626,7 +626,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 container.Id,
                 cancellationToken => InspectKernel(container, cancellationToken),
                 cancellationToken => ReadKernelTail(container, cancellationToken),
-                cancellationToken => Task.Delay(500, cancellationToken));
+                cancellationToken => WaitForKernelExit(container, cancellationToken));
         }
         await guard.ThrowIfFailed();
         var deadline = DateTime.UtcNow.AddMinutes(2);
@@ -656,10 +656,27 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             timing?.Retry();
             using var delay = IntegrationTimings.BeginCurrent("oop-reset-retry-delay");
             delay?.Failure();
+
+            // Infrastructure backoff between failed reset RPC attempts, bounded by the reset deadline.
             await Task.Delay(500);
             delay?.Success();
         });
         timing?.Success();
+    }
+
+    // The guard's monitor wakes when Docker reports the container stopped, instead of polling on a clock.
+    // An unavailable Docker endpoint is not evidence of exit, so the monitor then waits only for cancellation.
+    static async Task WaitForKernelExit(IContainer container, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
+            await client.Containers.WaitContainerAsync(container.Id, cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(cancellationToken);
+        }
     }
 
     static async Task<long?> InspectKernel(IContainer container, CancellationToken cancellationToken)
