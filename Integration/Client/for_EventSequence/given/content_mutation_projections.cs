@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 
@@ -51,7 +50,7 @@ public class content_mutation_projections(ChronicleFixture fixture) : Specificat
 
         CoupledDocuments.Single(model => model.Id == SharedDocument).Total.ShouldEqual(33);
         ChildrenDocuments.Single(model => model.Id == SharedDocument).Items.Select(child => (child.Id, child.Amount))
-            .OrderBy(child => child.Id).ShouldEqual(new[] { (FirstSource, 3), (SecondSource, 20) });
+            .OrderBy(child => child.Id).ShouldEqual([(FirstSource, 3), (SecondSource, 20)]);
         IsolatedDocuments.Single(model => model.Id == FirstSource).Total.ShouldEqual(13);
     }
 

@@ -29,11 +29,11 @@ public class and_the_last_contributor_is_removed(context context) : Given<contex
         }
     }
 
-    [Fact] void should_remove_the_empty_document() => Context.CoupledDocuments.Select(model => model.Id).ShouldEqual(new[] { content_mutation_projections.SharedDocument });
+    [Fact] void should_remove_the_empty_document() => Context.CoupledDocuments.Select(model => model.Id).ShouldEqual([content_mutation_projections.SharedDocument]);
     [Fact] void should_preserve_the_other_contributions() => Context.CoupledDocuments.Single().Total.ShouldEqual(33);
-    [Fact] void should_remove_the_empty_parent() => Context.ChildrenDocuments.Select(model => model.Id).ShouldEqual(new[] { content_mutation_projections.SharedDocument });
-    [Fact] void should_preserve_the_other_children() => Context.ChildrenDocuments.Single().Items.Select(child => (child.Id, child.Amount)).OrderBy(child => child.Id).ShouldEqual(new[] { (content_mutation_projections.FirstSource, 3), (content_mutation_projections.SecondSource, 20) });
-    [Fact] void should_remove_the_empty_isolated_document() => Context.IsolatedDocuments.Select(model => model.Id).Order().ShouldEqual(new[] { content_mutation_projections.FirstSource, content_mutation_projections.SecondSource });
+    [Fact] void should_remove_the_empty_parent() => Context.ChildrenDocuments.Select(model => model.Id).ShouldEqual([content_mutation_projections.SharedDocument]);
+    [Fact] void should_preserve_the_other_children() => Context.ChildrenDocuments.Single().Items.Select(child => (child.Id, child.Amount)).OrderBy(child => child.Id).ShouldEqual([(content_mutation_projections.FirstSource, 3), (content_mutation_projections.SecondSource, 20)]);
+    [Fact] void should_remove_the_empty_isolated_document() => Context.IsolatedDocuments.Select(model => model.Id).Order().ShouldEqual([content_mutation_projections.FirstSource, content_mutation_projections.SecondSource]);
     [Fact] void should_preserve_the_first_isolated_total() => Context.IsolatedDocuments.Single(model => model.Id == content_mutation_projections.FirstSource).Total.ShouldEqual(13);
     [Fact] void should_preserve_the_second_isolated_total() => Context.IsolatedDocuments.Single(model => model.Id == content_mutation_projections.SecondSource).Total.ShouldEqual(20);
 }

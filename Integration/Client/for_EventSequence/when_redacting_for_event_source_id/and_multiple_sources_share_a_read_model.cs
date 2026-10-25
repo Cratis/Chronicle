@@ -28,12 +28,12 @@ public class and_multiple_sources_share_a_read_model(context context) : Given<co
 
     [Fact] void should_rebuild_the_shared_total() => Context.CoupledDocuments.Single(model => model.Id == content_mutation_projections.SharedDocument).Total.ShouldEqual(20);
     [Fact] void should_preserve_the_neighbor_total() => Context.CoupledDocuments.Single(model => model.Id == content_mutation_projections.NeighborDocument).Total.ShouldEqual(7);
-    [Fact] void should_not_create_a_document_for_the_source() => Context.CoupledDocuments.Select(model => model.Id).Order().ShouldEqual(new[] { content_mutation_projections.NeighborDocument, content_mutation_projections.SharedDocument });
-    [Fact] void should_keep_only_the_other_source_in_the_shared_parent() => Context.ChildrenDocuments.Single(model => model.Id == content_mutation_projections.SharedDocument).Items.Select(child => (child.Id, child.Amount)).ShouldEqual(new[] { (content_mutation_projections.SecondSource, 20) });
-    [Fact] void should_preserve_neighbor_children() => Context.ChildrenDocuments.Single(model => model.Id == content_mutation_projections.NeighborDocument).Items.Select(child => (child.Id, child.Amount)).ShouldEqual(new[] { (content_mutation_projections.NeighborSource, 7) });
-    [Fact] void should_not_create_a_parent_for_the_source() => Context.ChildrenDocuments.Select(model => model.Id).Order().ShouldEqual(new[] { content_mutation_projections.NeighborDocument, content_mutation_projections.SharedDocument });
+    [Fact] void should_not_create_a_document_for_the_source() => Context.CoupledDocuments.Select(model => model.Id).Order().ShouldEqual([content_mutation_projections.NeighborDocument, content_mutation_projections.SharedDocument]);
+    [Fact] void should_keep_only_the_other_source_in_the_shared_parent() => Context.ChildrenDocuments.Single(model => model.Id == content_mutation_projections.SharedDocument).Items.Select(child => (child.Id, child.Amount)).ShouldEqual([(content_mutation_projections.SecondSource, 20)]);
+    [Fact] void should_preserve_neighbor_children() => Context.ChildrenDocuments.Single(model => model.Id == content_mutation_projections.NeighborDocument).Items.Select(child => (child.Id, child.Amount)).ShouldEqual([(content_mutation_projections.NeighborSource, 7)]);
+    [Fact] void should_not_create_a_parent_for_the_source() => Context.ChildrenDocuments.Select(model => model.Id).Order().ShouldEqual([content_mutation_projections.NeighborDocument, content_mutation_projections.SharedDocument]);
     [Fact] void should_remove_the_isolated_source_document() => Context.IsolatedDocuments.Select(model => model.Id).ShouldNotContain(content_mutation_projections.FirstSource);
     [Fact] void should_leave_the_other_isolated_source_unchanged() => Context.IsolatedDocuments.Single(model => model.Id == content_mutation_projections.SecondSource).Total.ShouldEqual(20);
     [Fact] void should_leave_the_isolated_neighbor_unchanged() => Context.IsolatedDocuments.Single(model => model.Id == content_mutation_projections.NeighborSource).Total.ShouldEqual(7);
-    [Fact] void should_keep_exactly_the_remaining_isolated_documents() => Context.IsolatedDocuments.Select(model => model.Id).Order().ShouldEqual(new[] { content_mutation_projections.NeighborSource, content_mutation_projections.SecondSource });
+    [Fact] void should_keep_exactly_the_remaining_isolated_documents() => Context.IsolatedDocuments.Select(model => model.Id).Order().ShouldEqual([content_mutation_projections.NeighborSource, content_mutation_projections.SecondSource]);
 }
