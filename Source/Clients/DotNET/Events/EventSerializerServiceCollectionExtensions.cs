@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -25,12 +23,13 @@ internal static class EventSerializerServiceCollectionExtensions
         // leave the serializer consuming the scoped IEventTypes registry from a longer-lived lifetime.
         services.RemoveAll<EventSerializer>();
         services.RemoveAll<IEventSerializer>();
-        // The serializer takes the host's JsonSerializerOptions when it registered some (Arc does), and otherwise
-        // Chronicle's own options. Chronicle never registers JsonSerializerOptions itself, as that would hand its
-        // options to every other service in the host that resolves them.
+
+        // Chronicle serializes with its own options - the ones its event stores use, with Chronicle's converters and
+        // naming policy applied - never with whatever JsonSerializerOptions the host registered. Chronicle does not
+        // register JsonSerializerOptions itself either, as that would hand its options to every service in the host.
         services.AddScoped(serviceProvider => ActivatorUtilities.CreateInstance<EventSerializer>(
             serviceProvider,
-            serviceProvider.GetService<JsonSerializerOptions>() ?? serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions));
+            serviceProvider.GetRequiredService<IChronicleClient>().Options.JsonSerializerOptions));
         services.AddScoped<IEventSerializer>(serviceProvider => serviceProvider.GetRequiredService<EventSerializer>());
 
         return services;
