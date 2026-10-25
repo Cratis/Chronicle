@@ -18,7 +18,7 @@ public class and_resuming_the_job_is_refused : given.an_observer_with_a_failed_p
         _jobsManager.Resume(_job.Id).Returns(false);
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.TryStartRecoverJobForFailedPartition(Partition));
+    async Task Because() => _error = await Cratis.Specifications.Catch.Exception(() => _observer.TryStartRecoverJobForFailedPartition(Partition));
 
     [Fact] void should_report_an_error_instead_of_started() => _error.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] async Task should_try_to_resume_the_existing_job() => await _jobsManager.Received(1).Resume(_job.Id);

@@ -15,7 +15,7 @@ public class and_starting_the_job_fails : given.an_observer_with_a_failed_partit
     void Establish() => _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
         .Returns(Task.FromResult(Result<JobId, StartJobError>.Failed(StartJobError.NoJobStepsToStart)));
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.TryStartRecoverJobForFailedPartition(Partition));
+    async Task Because() => _error = await Cratis.Specifications.Catch.Exception(() => _observer.TryStartRecoverJobForFailedPartition(Partition));
 
     [Fact] void should_report_an_error_instead_of_started() => _error.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_identify_the_partition() => _error!.Message.ShouldContain(Partition);
