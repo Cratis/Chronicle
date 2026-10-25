@@ -13,7 +13,7 @@ public class and_the_marker_index_has_a_legacy_name(MongoDBFixture fixture) : Co
     MongoSinkHarness _harness;
     string[] _indexNames;
 
-    protected override MongoSinkHarness CreateHarness() => _harness = new(fixture);
+    protected override MongoSinkHarness CreateHarness() => _harness = new() { Fixture = fixture };
 
     Task Establish() => _harness.Database.GetCollection<BsonDocument>("paged_read_models").Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
         new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, 1),

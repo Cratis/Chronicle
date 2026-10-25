@@ -14,7 +14,7 @@ public class and_no_indexes_are_declared(MongoDBFixture fixture) : Contract.give
     BsonDocument[] _indexes;
     BsonDocument _markerIndex;
 
-    protected override MongoSinkHarness CreateHarness() => _harness = new(fixture);
+    protected override MongoSinkHarness CreateHarness() => _harness = new() { Fixture = fixture };
 
     async Task Because()
     {
