@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Registering Reactor '{Id}'")]
+    [LoggerMessage(LogLevel.Information, "Registering Reactor '{Id}'")]
     internal static partial void RegisteringReactor(this ILogger<Reactors> logger, ReactorId id);
 
     [LoggerMessage(LogLevel.Trace, "Discover all Reactors")]
@@ -24,8 +24,17 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Debug, "Handling event of type {EventTypeId} for Reactor {ReactorId} stopped because the reactor is shutting down")]
     internal static partial void HandlingEventInterruptedByShutdown(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
-    [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} side-effect append failed while handling event of type {EventTypeId}, targeting event source id(s) {TargetEventSourceIds}: {Details}")]
-    internal static partial void ReactorSideEffectAppendFailed(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId, string targetEventSourceIds, string details);
+    [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} side-effect append failed while handling event of type {EventTypeId}, targeting {TargetEventSourceCount} event sources")]
+    internal static partial void ReactorSideEffectAppendFailed(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId, int targetEventSourceCount);
+
+    /// <summary>
+    /// Logs side-effect failure details separately from the warning summary.
+    /// </summary>
+    /// <param name="logger">The reactor logger.</param>
+    /// <param name="reactorId">The reactor that failed.</param>
+    /// <param name="details">The exception messages for debugging.</param>
+    [LoggerMessage(LogLevel.Debug, "Reactor {ReactorId} side-effect append failure details: {Details}")]
+    internal static partial void ReactorSideEffectAppendFailureDetails(this ILogger<Reactors> logger, ReactorId reactorId, string details);
 
     [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
     internal static partial void EventHandlingCompleted(this ILogger<Reactors> logger, ReactorId reactorId);

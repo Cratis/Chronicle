@@ -9,6 +9,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -51,6 +52,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 /// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
+/// <param name="telemetry">Optional event source id tracing configuration.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -67,7 +69,8 @@ public class EventSequence(
     JsonSerializerOptions jsonSerializerOptions,
     IActivitySource<EventSequence>? activitySource = null,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
-    IEventSources? eventSources = null) : IEventSequence, IEventSequenceWithReadProtection, IEventSequenceWithEffectReceipts
+    IEventSources? eventSources = null,
+    ChronicleTelemetryOptions? telemetry = null) : IEventSequence, IEventSequenceWithReadProtection, IEventSequenceWithEffectReceipts
 {
     /// <summary>
     /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
@@ -75,6 +78,7 @@ public class EventSequence(
     internal static readonly IActivitySource<EventSequence> DefaultActivitySource =
         new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
 
+    readonly EventSourceIdTagging _eventSourceIdTagging = new(telemetry ?? new());
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
@@ -923,8 +927,11 @@ public class EventSequence(
             eventStoreName.Value,
             @namespace.Value,
             eventSequenceId.Value,
-            resolvedEventSourceType.Value,
-            eventSourceId.Value);
+            resolvedEventSourceType.Value);
+        if (_eventSourceIdTagging.ForSpan(eventSourceId.Value) is { } tracedEventSourceId)
+        {
+            span?.Activity?.SetTag("cratis.eventsource.id", tracedEventSourceId);
+        }
 
         try
         {
