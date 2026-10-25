@@ -71,6 +71,8 @@ public static class ObserverIdentityClaimsExtensions
     /// Probes upward from the number after the binding's next one. A number already claimed for the same revision is shared,
     /// because the identity is store-wide. A number claimed for another revision, by a registration, or holding a legacy definition is skipped.
     /// The observer identity is formatted from the number, never parsed from an identifier.
+    /// A successful claim is never released: the claim cannot tell its inserter from another namespace sharing the same revision,
+    /// and the definition provider claims before it saves, so a definition appearing after the claim can only belong to the same owner.
     /// </remarks>
     /// <exception cref="GenerationBuildConflict">No free number was found within the probe limit.</exception>
     public static async Task<MaterializationGeneration> AllocateGeneration(
@@ -88,9 +90,7 @@ public static class ObserverIdentityClaimsExtensions
             var stored = await claims.Get(store, observerId);
             if (stored == ours) return generation;
             if (stored is not null || await claims.HasDefinition(store, observerId)) continue;
-            if (await claims.Claim(store, ours) != ours) continue;
-            if (!await claims.HasDefinition(store, observerId)) return generation;
-            await claims.Release(store, ours);
+            if (await claims.Claim(store, ours) == ours) return generation;
         }
 
         throw new GenerationBuildConflict();
