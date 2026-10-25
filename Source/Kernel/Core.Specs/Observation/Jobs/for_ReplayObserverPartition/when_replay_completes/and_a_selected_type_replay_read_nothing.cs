@@ -20,5 +20,5 @@ public class and_a_selected_type_replay_read_nothing : given.a_partition_replay_
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_notify_observer_without_proving_any_event_type_replayed() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable, Arg.Is<EventType[]>(_ => _.Length == 0));
+    [Fact] void should_notify_observer_without_proving_any_event_type_replayed() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, 44UL, Arg.Is<EventType[]>(_ => _.Length == 0));
 }
