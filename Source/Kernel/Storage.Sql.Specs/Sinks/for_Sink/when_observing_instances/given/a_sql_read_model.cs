@@ -4,7 +4,6 @@
 using System.Data.Common;
 using System.Dynamic;
 using Cratis.Arc.Connections;
-using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
@@ -138,7 +137,7 @@ public abstract class a_sql_read_model : Specification
 
     ReadModelDbContext CreateContext()
     {
-        var postgreSql = _connection.ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql;
+        var postgreSql = _connection is Npgsql.NpgsqlConnection;
         var options = postgreSql
             ? new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(_connection.ConnectionString))
             : new DbContextOptionsBuilder<ReadModelDbContext>();
