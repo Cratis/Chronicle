@@ -48,8 +48,9 @@ internal static partial class AppendedEventsQueueMetrics
     /// <param name="numberOfEvents">The number of events whose dispatch to the observer failed.</param>
     /// <param name="observerId">The <see cref="ObserverId"/> of the observer.</param>
     /// <remarks>
-    /// Written by hand rather than with the counter attribute for the same reason as the observer failure counters:
-    /// the generator would emit the description as the unit (Cratis/Fundamentals#1138).
+    /// The generator fix from Cratis/Fundamentals#1138 is consumed in Cratis.Metrics.Roslyn 7.25.0.
+    /// Keep this implementation's observer tagging and failure-path initialization unchanged until the
+    /// convention-name migration in Cratis/Chronicle#4459, alongside the observer failure counters.
     /// </remarks>
     internal static void EventsSuspectedUndelivered(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents, ObserverId observerId)
     {

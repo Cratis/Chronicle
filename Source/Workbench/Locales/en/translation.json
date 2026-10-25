@@ -727,6 +727,11 @@
             "closedStreams": {
                 "title": "Closed Streams",
                 "empty": "No closed streams",
+                "anyEventSource": "Any event source",
+                "anyEventSourceType": "Any event source type",
+                "unspecifiedDimension": "Unspecified dimensions cover all values.",
+                "closedManually": "—, closed manually",
+                "noClosingConstraint": "—",
                 "columns": {
                     "eventSourceId": "Event Source Id",
                     "eventSourceType": "Event Source Type",

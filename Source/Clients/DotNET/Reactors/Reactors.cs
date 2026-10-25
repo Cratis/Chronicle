@@ -16,7 +16,6 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Traces;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -34,18 +33,12 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
-    readonly IServiceProvider _serviceProvider;
-    readonly IClientArtifactsActivator _artifactActivator;
-    readonly IActivateReactorMiddlewares _middlewaresActivator;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
-    readonly IActivitySource<Reactors> _activitySource;
     readonly IReactorSideEffectHandlers _sideEffectHandlers;
-    readonly IReactorContextValuesBuilder _reactorContextValuesBuilder;
-    readonly IReactorMethodArgumentsResolver _argumentsResolver;
     readonly ILogger<Reactors> _logger;
-    readonly ILoggerFactory _loggerFactory;
+    readonly ReactorDispatcher _dispatcher;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _pendingDefinitions = [];
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
@@ -91,18 +84,24 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventTypes = eventTypes;
         _clientArtifactsProvider = clientArtifactsProvider;
-        _serviceProvider = serviceProvider;
-        _artifactActivator = artifactActivator;
-        _middlewaresActivator = middlewaresActivator;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
-        _activitySource = activitySource;
         _sideEffectHandlers = sideEffectHandlers;
-        _reactorContextValuesBuilder = reactorContextValuesBuilder;
-        _argumentsResolver = argumentsResolver;
         _logger = logger;
-        _loggerFactory = loggerFactory;
+        _dispatcher = new ReactorDispatcher(
+            eventStore,
+            eventTypes,
+            serviceProvider,
+            artifactActivator,
+            middlewaresActivator,
+            eventSerializer,
+            activitySource,
+            sideEffectHandlers,
+            reactorContextValuesBuilder,
+            argumentsResolver,
+            logger,
+            loggerFactory);
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             lock (_registerLock)
@@ -589,7 +588,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var cancellationToken = handler.CancellationToken;
-        #pragma warning disable CA2000 // Dispose objects before losing scope
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
@@ -686,240 +685,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 });
     }
 
-    async Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken)
-    {
-        var handler = registration.Handler;
-        if (events.ReplayState != ReplayState.None)
-        {
-            if (registration.Handle is null)
-            {
-                await HandleReplayNotification(handler, events.ReplayState, events.Partition);
-            }
-            return;
-        }
-
-        using var span = _activitySource.Handle(
-            _eventStore.Name,
-            _eventStore.Namespace,
-            handler.EventSequenceId,
-            handler.Id);
-
-        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var state = ObservationState.Success;
-
-        if (registration.Handle is not null)
-        {
-            foreach (var @event in events.Events)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
-                try
-                {
-                    var delivered = new ReactorEvent(
-                        @event.Context.ToClient(),
-                        JsonNode.Parse(@event.Content)!.AsObject(),
-                        new Dictionary<int, string>(@event.GenerationalContent));
-                    using (handler.BeginHandlingScope(delivered.Context))
-                    {
-                        try
-                        {
-                            await registration.Handle(delivered, cancellationToken);
-                        }
-                        finally
-                        {
-                            handler.EndHandling();
-                        }
-                    }
-                    lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
-                    break;
-                }
-            }
-
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                PublishResult();
-            }
-            return;
-        }
-
-        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
-        if (activatedReactorResult.TryGetException(out var exception))
-        {
-            FailedActivatingReactor(exception);
-            PublishResult();
-            return;
-        }
-
-        await using var activatedReactor = activatedReactorResult.AsT0;
-        await using var middlewares = _middlewaresActivator.Activate(serviceProviderScope.ServiceProvider);
-        var reactorInvoker = new ReactorInvoker(
-            _eventTypes,
-            middlewares,
-            handler.ReactorType,
-            activatedReactor,
-            _loggerFactory.CreateLogger<ReactorInvoker>(),
-            _sideEffectHandlers,
-            _eventStore,
-            _reactorContextValuesBuilder,
-            _argumentsResolver,
-            serviceProviderScope.ServiceProvider)
-        {
-            StoppingToken = cancellationToken,
-            RegisteredId = handler.Id,
-            RegisteredEventSequenceId = handler.EventSequenceId
-        };
-
-        foreach (var @event in events.Events)
-        {
-            _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
-
-            try
-            {
-                var context = @event.Context.ToClient();
-
-                var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
-                var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
-                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
-
-                string contentJson;
-                if (targetGeneration != context.EventType.Generation &&
-                    @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
-                {
-                    contentJson = genContent;
-                    context = context with { EventType = context.EventType with { Generation = targetGeneration } };
-                }
-                else
-                {
-                    contentJson = @event.Content;
-                }
-
-                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
-
-                var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.IsFailed)
-                {
-                    FailedToHandleEvent(handleResult, @event.Context.EventType.Id);
-                    break;
-                }
-                lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
-            }
-            catch (Exception ex)
-            {
-                FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
-                break;
-            }
-        }
-
-        PublishResult();
-
-        void FailedToHandleEvent(ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
-        {
-            var failureDetails = invocationResult.GetFailureDetails();
-            exceptionMessages = failureDetails.Messages.ToArray();
-            exceptionStackTrace = failureDetails.StackTrace;
-            state = ObservationState.Failed;
-
-            if (invocationResult.ExceptionResult.TryGetException(out var ex))
-            {
-                LogErrorWhileHandlingEvent(ex, eventTypeId);
-            }
-            else
-            {
-                var targetEventSourceIds = invocationResult.SideEffectFailure is not null
-                    ? string.Join(", ", invocationResult.SideEffectFailure.GetTargetEventSourceIds())
-                    : string.Empty;
-                _logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, targetEventSourceIds, string.Join(Environment.NewLine, exceptionMessages));
-            }
-        }
-
-        void LogErrorWhileHandlingEvent(Exception ex, EventTypeId eventTypeId)
-        {
-            if (ex.IsInterruptedByShutdown(cancellationToken))
-            {
-                _logger.HandlingEventInterruptedByShutdown(ex, eventTypeId, handler.Id);
-            }
-            else
-            {
-                _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
-            }
-        }
-
-        void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
-        {
-            LogErrorWhileHandlingEvent(ex, eventTypeId);
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
-        }
-
-        void FailedActivatingReactor(Exception ex)
-        {
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
-        }
-
-        void PublishResult()
-        {
-            var result = new ReactorResult
-            {
-                Partition = events.Partition,
-                DeliveryId = events.DeliveryId,
-                State = state,
-                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-                ExceptionMessages = exceptionMessages.ToList(),
-                ExceptionStackTrace = exceptionStackTrace
-            };
-
-            messages.Publish(new(new(result)));
-        }
-    }
-
-    async Task HandleReplayNotification(ReactorHandler handler, ReplayState replayState, string partition)
-    {
-        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
-        if (activatedReactorResult.TryGetException(out var ex))
-        {
-            _logger.FailedActivatingReactorForReplayNotification(ex, handler.Id, replayState);
-            return;
-        }
-
-        await using var activatedReactor = activatedReactorResult.AsT0;
-        switch (replayState)
-        {
-            case ReplayState.BeginReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
-                await notifiable.BeginReplay();
-                break;
-
-            case ReplayState.EndReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
-                await notifiable.EndReplay();
-                break;
-
-            case ReplayState.BeginReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
-                await notifiable.BeginReplayPartition(partition);
-                break;
-
-            case ReplayState.EndReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
-                await notifiable.EndReplayPartition(partition);
-                break;
-        }
-    }
+    Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken) =>
+        _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
 
     sealed record ReactorRegistration(
         ReactorHandler Handler,

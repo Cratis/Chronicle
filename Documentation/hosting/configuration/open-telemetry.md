@@ -74,6 +74,12 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
 OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 ```
 
+## Generated instrument names
+
+Chronicle consumes `Cratis.Metrics.Roslyn` 7.25.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation exposes `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name.
+
+The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+
 ## Metrics instrumented
 
 Chronicle instruments the following meters:
@@ -195,6 +201,8 @@ To be alerted when an observer's partitions keep failing or run out of retries, 
 ## Traces instrumented
 
 These are the server's sources. The Chronicle client in your application emits its own spans on the `Cratis.Chronicle.Client` source, which you register yourself; see [Trace Chronicle client operations with OpenTelemetry](../client-tracing).
+
+Failed append and observer handle operations set Error status and `error.type` to an exception type or a low-cardinality failure code, without recording exception messages. Append spans also carry `cratis.chronicle.append.outcome`: `success`, `error`, `concurrency_violation`, or `constraint_violation`.
 
 Chronicle traces the following activity sources:
 
