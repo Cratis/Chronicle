@@ -55,6 +55,7 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
     /// <summary>
     /// Gets the persisted old-kernel observer selected by the readiness signal.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The old kernel is not ready.</exception>
     public (string Database, string Identifier, EventSequenceId Owner) Observer => _ready.Observer ?? throw new InvalidOperationException("Old kernel is not ready.");
 
     /// <summary>

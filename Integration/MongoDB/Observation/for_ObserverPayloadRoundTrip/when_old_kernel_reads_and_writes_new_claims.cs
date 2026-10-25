@@ -37,7 +37,9 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
     {
         BsonSerializer.RegisterSerializationProvider(new ConceptSerializationProvider());
         BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
-        ConventionRegistry.Register("ReleasedObserverClaims", new ConventionPack { new CamelCaseElementNameConvention(_ => true) },
+        ConventionRegistry.Register(
+            "ReleasedObserverClaims",
+            new ConventionPack { new CamelCaseElementNameConvention(_ => true) },
             type => type.Namespace?.StartsWith("Cratis.Chronicle.Storage", StringComparison.Ordinal) == true || type.Namespace?.StartsWith("Cratis.Chronicle.Concepts", StringComparison.Ordinal) == true);
         _fixture = new();
         await _fixture.Start();
@@ -54,8 +56,10 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
             PartitionClaims = [new("shadow-partition", ClaimHolderKind.PartitionCatchUp, new(Guid.NewGuid()), new(3), 42, [])],
             ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, new(Guid.NewGuid()), new(7), 50, []),
             OwnershipRevision = new(7)
-        }, selected.Owner);
+        },
+        selected.Owner);
         _documentBefore = await Document();
+
         // Database profiling witnesses the old process's actual update of this exact row after restart.
         await _database.RunCommandAsync<BsonDocument>(new BsonDocument { { "profile", 2 }, { "slowms", 0 } });
     }
@@ -69,8 +73,10 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
             Builders<BsonDocument>.Filter.Eq("o2._id", _documentBefore["_id"]);
         try
         {
-            using var updates = await _database.GetCollection<BsonDocument>("system.profile").FindAsync(filter,
-                new FindOptions<BsonDocument> { CursorType = CursorType.TailableAwait, MaxAwaitTime = TimeSpan.FromSeconds(1) }, deadline.Token);
+            using var updates = await _database.GetCollection<BsonDocument>("system.profile").FindAsync(
+                filter,
+                new FindOptions<BsonDocument> { CursorType = CursorType.TailableAwait, MaxAwaitTime = TimeSpan.FromSeconds(1) },
+                deadline.Token);
             while (await updates.MoveNextAsync(deadline.Token))
             {
                 if (updates.Current.Any())
@@ -111,5 +117,4 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
         .Find(Builders<BsonDocument>.Filter.Eq("_id", _identifier)).SingleAsync();
 
     static byte[] ShadowBytes(BsonDocument document, string property) => new BsonDocument("value", document[BsonClassMap.LookupClassMap(typeof(MongoObserverState)).GetMemberMap(property).ElementName]).ToBson();
-
 }

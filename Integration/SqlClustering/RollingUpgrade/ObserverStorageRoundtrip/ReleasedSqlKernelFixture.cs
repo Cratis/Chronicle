@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStor
 public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
 {
     readonly INetwork _network = new NetworkBuilder().Build();
-    readonly SqlClusterDatabase _database;
     readonly IContainer _kernel;
     readonly ReleasedSqlObserverReadyWait _ready;
 
@@ -22,13 +21,13 @@ public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
     /// </summary>
     public ReleasedSqlKernelFixture()
     {
-        _database = new(true, _network);
-        _ready = new(_database);
+        Database = new(true, _network);
+        _ready = new(Database);
         _kernel = new ContainerBuilder("cratis/chronicle:19.106.2-development-slim")
             .WithNetwork(_network)
             .WithEnvironment("CHRONICLE_HEALTH_PORT", "8080")
             .WithEnvironment("Cratis__Chronicle__Storage__Type", "PostgreSql")
-            .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", _database.KernelConnection)
+            .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", Database.KernelConnection)
             .WithEnvironment("Cratis__Chronicle__Clustering__Type", "Sql")
             .WithPortBinding(8080, true)
             .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(new HttpsHealthWait(8080)).AddCustomWaitStrategy(_ready))
@@ -38,11 +37,12 @@ public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
     /// <summary>
     /// Gets the isolated test database.
     /// </summary>
-    public SqlClusterDatabase Database => _database;
+    public SqlClusterDatabase Database { get; }
 
     /// <summary>
     /// Gets the persisted old-kernel observer selected by the readiness signal.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The old kernel is not ready.</exception>
     public (string ConnectionString, string Identifier, string Owner) Observer => _ready.Observer ?? throw new InvalidOperationException("Old kernel is not ready.");
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
     public async Task Start()
     {
         await _network.CreateAsync();
-        await _database.Start(CancellationToken.None);
+        await Database.Start(CancellationToken.None);
         await _kernel.StartAsync();
     }
 
@@ -72,7 +72,7 @@ public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _kernel.DisposeAsync();
-        await _database.DisposeAsync();
+        await Database.DisposeAsync();
         await _network.DisposeAsync();
     }
 }
