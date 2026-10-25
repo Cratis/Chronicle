@@ -171,15 +171,14 @@ public partial class Observer
     /// </summary>
     /// <param name="partition">The partition that was replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The last event the replay handled, or <see cref="EventSequenceNumber.Unavailable"/>.</param>
-    /// <param name="replayedEventTypes">The event types the replay proves it handled; non-empty only when the replay completed over every event type.</param>
+    /// <param name="replayedEventTypes">The event types the replay proves it handled; non-empty only proves a complete all-type replay. Stopped or selected-type replays that read nothing report HeldBackFrom - 1 as the scanned position when known. When no read or held-back boundary is known (legacy jobs or HeldBackFrom at <see cref="EventSequenceNumber.First"/>), catch-up falls back to the partition's start.</param>
     /// <param name="lastScannedEventSequenceNumber">The last event the replay read, handled or excluded by the observer's filters.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Live delivery holds back a partition while it is replaying, so the replay marker must come down however the
     /// replay ended - including a replay that read only events the observer's filters exclude and so handled nothing.
     /// Events held back while it replayed are handed to catch-up from the furthest event the replay read.
-    /// A replay that read nothing catches up from the start only when it completed over every event type,
-    /// as proved by non-empty <paramref name="replayedEventTypes"/>.
+    /// If no read or held-back boundary is known (including legacy jobs), catch-up falls back to the partition's start.
     /// </remarks>
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
     {
@@ -212,9 +211,8 @@ public partial class Observer
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
 
-        // A stopped, failed or selected-type replay has not read the whole partition, so restarting would redeliver handled events.
-        var replayCoveredEveryEventType = replayedEventTypes.Length > 0;
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: replayCoveredEveryEventType);
+        // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
         EvaluateSuspectedSkips();
     }
 
