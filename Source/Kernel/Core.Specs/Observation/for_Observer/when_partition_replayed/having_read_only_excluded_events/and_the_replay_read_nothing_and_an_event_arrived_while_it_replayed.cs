@@ -19,7 +19,8 @@ public class and_the_replay_read_nothing_and_an_event_arrived_while_it_replayed 
     async Task Because() => await _observer.PartitionReplayed(_partition, EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable, [EventType.Unknown]);
 
     [Fact] void should_stop_holding_back_the_partition() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);
-    [Fact] void should_start_catchup_job_from_the_start_of_the_partition() => _jobsManager.Received(1)
+    [Fact]
+    void should_start_catchup_job_from_the_start_of_the_partition() => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
             Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == _partition && _.FromSequenceNumber == EventSequenceNumber.First));
 }
