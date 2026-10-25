@@ -65,8 +65,9 @@ For environment-variable configuration, use `Cratis__Chronicle__Storage__Databas
 
 ### Connection pooling
 
-Chronicle keeps one PostgreSQL connection pool per database: the cluster database, each event store,
-each namespace, and the read-model databases. Idle connections across these pools can reach the
+Chronicle keeps a PostgreSQL connection pool per database it uses: the cluster database, each event store,
+each namespace, and the read-model databases. With connection resolution configured, the runtime and schema
+identities of a database each get their own pool. Idle connections across these pools can reach the
 server's `max_connections` limit even when no pool is full. Chronicle bounds each pool and prunes idle
 connections sooner than Npgsql's defaults.
 
@@ -93,8 +94,11 @@ replicas, or other clients of the same server. The peak connection count is roug
 multiplied by `maxPoolSize`, per kernel. Keep
 `max_connections` above the expected concurrent demand. When serving many event stores or namespaces,
 lower `maxPoolSize` or the idle lifetime to reduce the connections held across their pools. A lower
-maximum means operations can wait for a connection during bursts; increase it for workloads that need
-more concurrent connections per database.
+maximum means operations can wait for a connection during bursts, and fail with `The connection pool has
+been exhausted` only when the wait exceeds the connection `Timeout` (15 seconds by default). Each
+operation holds a connection only for its own commands, so 20 serves a typical namespace. Increase
+`maxPoolSize` for a namespace with many active observers (more than about 30), heavy replays, or a slow
+database server, and raise `max_connections` to match.
 
 Values in `connectionDetails`, or a resolved connection string, take precedence over these settings.
 The keys `Maximum Pool Size`, `Connection Idle Lifetime`, `Connection Pruning Interval`, and
