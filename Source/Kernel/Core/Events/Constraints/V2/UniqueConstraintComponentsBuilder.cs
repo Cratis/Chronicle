@@ -43,6 +43,10 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
         return actual?.OneOf.FirstOrDefault(option => option.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
     }
 
+    static Guid ReadGuid(JsonNode value) => value.AsValue().TryGetValue<Guid>(out var guid)
+        ? guid
+        : Guid.Parse(value.GetValue<string>());
+
     UniqueConstraintComponent Build(string path, JsonObject content, JsonSchema schema)
     {
         var (value, propertySchema) = Resolve(path, content, schema);
@@ -59,6 +63,15 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
 
     object? Convert(JsonNode value, JsonSchema? propertySchema, JsonSchema root)
     {
+        var scalarSchema = propertySchema?.IsArray == true ? EffectiveSchema(propertySchema.Item) : propertySchema;
+        if (scalarSchema?.Format is "guid" or "uuid" or "guid?" or "uuid?")
+        {
+            // Persisted GUID strings need parsing, not JsonValue.GetValue<Guid>() CLR casting.
+            return value is JsonArray array
+                ? array.Select(item => item is null ? null : (object?)ReadGuid(item)).ToArray()
+                : ReadGuid(value);
+        }
+
         // Convert only this present property: whole-event conversion creates defaults and touches unrelated ciphertext.
         var conversionSchema = new JsonSchema();
         var conversionProperty = new JsonSchemaProperty(
