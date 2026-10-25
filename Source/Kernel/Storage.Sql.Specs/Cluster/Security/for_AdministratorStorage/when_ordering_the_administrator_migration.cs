@@ -9,10 +9,10 @@ public class when_ordering_the_administrator_migration : Specification
 
     void Because() => _ordered = new[]
     {
-        "Cluster-AdministratorPrivileges-v19_113_0",
+        "Cluster-AdministratorPrivileges-v19_112_0_2",
         "Cluster-SingleWriterLease-v19_105_0",
         "Cluster-OpenIddictApplications-v19_93_0"
     }.Order(MigrationReleaseOrder.Instance).ToArray();
 
-    [Fact] void should_follow_the_single_writer_lease_migration() => _ordered[^1].ShouldEqual("Cluster-AdministratorPrivileges-v19_113_0");
+    [Fact] void should_follow_the_single_writer_lease_migration() => _ordered[^1].ShouldEqual("Cluster-AdministratorPrivileges-v19_112_0_2");
 }

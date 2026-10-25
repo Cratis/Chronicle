@@ -21,5 +21,10 @@ public enum GrantReason
     /// <summary>
     /// An operator requested audited, server-local recovery.
     /// </summary>
-    OperatorRecovery = 2
+    OperatorRecovery = 2,
+
+    /// <summary>
+    /// An authenticated administrator granted the privilege through the management API.
+    /// </summary>
+    AdministratorGrant = 3
 }
