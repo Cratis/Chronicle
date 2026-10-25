@@ -64,8 +64,9 @@ public class content_mutation_projections(ChronicleFixture fixture) : Specificat
             (sourceRemoved ? child is null && first is null : child?.Amount == childAmount && first?.Total == isolatedTotal);
     });
 
-    protected async Task CaptureWhen(Func<bool> completed)
+    protected async Task CaptureWhen(Func<bool> completed, EventSequenceNumber? lastHandledEvent = default)
     {
+        var reached = lastHandledEvent ?? Tail;
         await EventStore.Jobs.WaitForThereToBeNoJobs(_timeout);
         var coupled = EventStore.Projections.GetHandlerFor<CoupledContentMutationProjection>();
         var children = EventStore.Projections.GetHandlerFor<ContentMutationChildrenProjection>();
@@ -73,9 +74,9 @@ public class content_mutation_projections(ChronicleFixture fixture) : Specificat
         await coupled.WaitTillActive(_timeout);
         await children.WaitTillActive(_timeout);
         await isolated.WaitTillActive(_timeout);
-        await coupled.WaitTillReachesEventSequenceNumber(Tail, _timeout);
-        await children.WaitTillReachesEventSequenceNumber(Tail, _timeout);
-        await isolated.WaitTillReachesEventSequenceNumber(Tail, _timeout);
+        await coupled.WaitTillReachesEventSequenceNumber(reached, _timeout);
+        await children.WaitTillReachesEventSequenceNumber(reached, _timeout);
+        await isolated.WaitTillReachesEventSequenceNumber(reached, _timeout);
 
         using var cancellation = new CancellationTokenSource(_timeout);
         while (true)

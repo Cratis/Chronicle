@@ -22,10 +22,14 @@ public class and_the_last_contributor_is_removed(context context) : Given<contex
         async Task Because()
         {
             await this.RedactEvent(Tail, "remove the only contributor");
-            await CaptureWhen(() =>
-                CoupledDocuments.All(model => model.Id != NeighborDocument) &&
-                ChildrenDocuments.All(model => model.Id != NeighborDocument) &&
-                IsolatedDocuments.All(model => model.Id != NeighborSource));
+
+            // The redacted tail is no longer an event the projections handle, so a full replay ends on the last surviving contribution.
+            await CaptureWhen(
+                () =>
+                    CoupledDocuments.All(model => model.Id != NeighborDocument) &&
+                    ChildrenDocuments.All(model => model.Id != NeighborDocument) &&
+                    IsolatedDocuments.All(model => model.Id != NeighborSource),
+                MutatedSequenceNumber);
         }
     }
 
