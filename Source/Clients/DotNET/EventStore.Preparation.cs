@@ -116,9 +116,10 @@ public partial class EventStore
     void PlanObserverDeliveries()
     {
         var observers = _clientArtifactsProvider.Reactors
-            .Select(_ => (Id: RegisteredObserverMetadata.ReactorIdFor(_clientArtifactsProvider, _).Value, Type: _))
+            .Select(_ => (Id: RegisteredObserverMetadata.ReactorIdFor(_clientArtifactsProvider, _).Value, Type: (Type?)_))
             .Concat(_clientArtifactsProvider.Reducers
-                .Select(_ => (Id: RegisteredObserverMetadata.ReducerIdFor(_clientArtifactsProvider, _).Value, Type: _)));
+                .Select(_ => (Id: RegisteredObserverMetadata.ReducerIdFor(_clientArtifactsProvider, _).Value, Type: (Type?)_)))
+            .Concat(_storeArtifacts?.ExplicitReactorIds.Select(_ => (Id: _.Value, Type: (Type?)null)) ?? []);
         DeliveryPlan = ObserverDeliveryPlan.Create(Deliveries, observers);
         DeliveryPlan.ThrowIfNotDeliverable(_chronicleOptions);
     }

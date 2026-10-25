@@ -20,9 +20,9 @@ internal sealed record ObserverDeliveryPlan(
     /// Creates a plan for the observers.
     /// </summary>
     /// <param name="deliveries">The <see cref="ObserverDeliveries"/> to resolve with.</param>
-    /// <param name="observers">The identifiers and CLR types of the discovered observers.</param>
+    /// <param name="observers">The identifiers and optional CLR types of the discovered observers.</param>
     /// <returns>The <see cref="ObserverDeliveryPlan"/>.</returns>
-    internal static ObserverDeliveryPlan Create(ObserverDeliveries deliveries, IEnumerable<(string Id, Type Type)> observers)
+    internal static ObserverDeliveryPlan Create(ObserverDeliveries deliveries, IEnumerable<(string Id, Type? Type)> observers)
     {
         var all = observers.ToArray();
         var http = new List<string>();
