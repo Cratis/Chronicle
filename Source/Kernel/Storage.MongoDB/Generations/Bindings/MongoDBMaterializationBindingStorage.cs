@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 /// <param name="claims">The observer identity claims; defaults to the MongoDB claims over <paramref name="database"/>.</param>
 public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGenerationGateWrites gates, TimeProvider? timeProvider = null, IObserverIdentityClaims? claims = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
+    const int MaxReserveAttempts = 5;
     static readonly FilterDefinitionBuilder<BsonDocument> _filter = Builders<BsonDocument>.Filter;
     static readonly UpdateDefinitionBuilder<BsonDocument> _update = Builders<BsonDocument>.Update;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
@@ -76,38 +77,28 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     }
 
     /// <inheritdoc/>
+    /// <exception cref="GenerationBuildConflict">The reservation kept losing to concurrent writers of the binding.</exception>
     /// <exception cref="InvalidMaterializationExecution">The adopted execution is missing.</exception>
     public async Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
     {
         execution.EnsureValid();
         var db = await PreparedBuilds(store, key);
-        var reservation = await BuildTransaction(db, async session =>
+        for (var attempt = 0; attempt < MaxReserveAttempts; attempt++)
         {
-            var operation = new BsonDocument { { "_id", $"{key.Incarnation.Value:N}/{operationId.Value:N}" }, { "key", key.Value }, { "execution", MaterializationBindingDocuments.Execution(execution) }, { "at", MaterializationBindingDocuments.Timestamp(at) } };
-            var operations = db.GetCollection<BsonDocument>(MaterializationBindingCollections.Operations);
-            var previous = await operations.Find(session, _filter.Eq("_id", operation["_id"])).FirstOrDefaultAsync();
-            if (previous is not null)
-            {
-                return ReadBuildOperation(previous, operation, key);
-            }
-            var document = await Bindings(db).Find(session, Id(key)).FirstOrDefaultAsync();
-            if (document is null) return new GenerationReservation(GenerationReservationResult.UnknownMaterialization);
-            var binding = MaterializationBindingDocuments.Binding(document);
-            if (binding.Epoch == ServingEpoch.Unset) return new GenerationReservation(GenerationReservationResult.NotBound);
-            if (!await Executions(db).Find(session, ExecutionId(key, MaterializationGeneration.First)).AnyAsync()) throw new InvalidMaterializationExecution();
-            var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
-            if (candidate is not null) return new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate);
-            var identity = MaterializationGenerationIdentity.For(key.Projection, binding.Next.Next(), binding.Container);
-            var claim = new GenerationObserverBinding(key, identity, execution.EventSequence, execution.Revision);
-            await EnsureBuildClaims((store, db, session), claim, false);
-            var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
-            await Bindings(db).UpdateOneAsync(session, Id(key), _update.Set("next", checked((int)identity.Generation.Value)).Push("generations", MaterializationBindingDocuments.Encode(record)));
-            await InsertExecution(db, session, claim, execution);
-            operation.Add("record", MaterializationBindingDocuments.Encode(record));
-            await operations.InsertOneAsync(session, operation);
-            return new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
-        });
-        return await _claims.ClaimFor(this, store, key, execution, reservation);
+            // Inspect outside the transaction so a retry never allocates and a doomed attempt claims nothing.
+            var requested = OperationDocument(key, operationId, execution, at);
+            var previous = await db.GetCollection<BsonDocument>(MaterializationBindingCollections.Operations).Find(_filter.Eq("_id", requested["_id"])).FirstOrDefaultAsync();
+            if (previous is not null) return await _claims.ClaimFor(this, store, key, execution, ReadBuildOperation(previous, requested, key));
+            var binding = await Get(store, key);
+            var refusal = Refusal(binding);
+            if (refusal is not null) return refusal;
+            if (!await Executions(db).Find(ExecutionId(key, MaterializationGeneration.First)).AnyAsync()) throw new InvalidMaterializationExecution();
+            var floor = binding!.Next;
+            var generation = await _claims.AllocateGeneration(store, binding, execution.Revision);
+            var reservation = await BuildTransaction<GenerationReservation?>(db, session => ReserveAllocated(store, db, session, (key, operationId, execution, at), floor, generation));
+            if (reservation is not null) return await _claims.ClaimFor(this, store, key, execution, reservation);
+        }
+        throw new GenerationBuildConflict();
     }
 
     /// <inheritdoc/>
@@ -321,6 +312,17 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
     static FilterDefinition<BsonDocument> ReceiptId(PublicationReceiptId receipt) => _filter.Eq("_id", receipt.Value.ToString("N"));
     static Task Abort(IClientSessionHandle session) => session.IsInTransaction ? session.AbortTransactionAsync() : Task.CompletedTask;
 
+    static BsonDocument OperationDocument(MaterializationKey key, GenerationBuildOperationId operationId, MaterializationExecutionSpecification execution, DateTimeOffset at) =>
+        new() { { "_id", $"{key.Incarnation.Value:N}/{operationId.Value:N}" }, { "key", key.Value }, { "execution", MaterializationBindingDocuments.Execution(execution) }, { "at", MaterializationBindingDocuments.Timestamp(at) } };
+
+    static GenerationReservation? Refusal(MaterializationBinding? binding)
+    {
+        if (binding is null) return new GenerationReservation(GenerationReservationResult.UnknownMaterialization);
+        if (binding.Epoch == ServingEpoch.Unset) return new GenerationReservation(GenerationReservationResult.NotBound);
+        var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
+        return candidate is null ? null : new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate);
+    }
+
     async Task EnsureBuildClaims((EventStoreName Store, IMongoDatabase Database, IClientSessionHandle Session) scope, GenerationObserverBinding claim, bool adopting)
     {
         var (_, db, session) = scope;
@@ -336,6 +338,36 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
             using var names = await db.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = new BsonDocument("name", name) });
             if (await names.AnyAsync()) throw new GenerationBuildConflict();
         }
+    }
+
+    async Task<GenerationReservation?> ReserveAllocated(
+        EventStoreName store,
+        IMongoDatabase db,
+        IClientSessionHandle session,
+        (MaterializationKey Key, GenerationBuildOperationId OperationId, MaterializationExecutionSpecification Execution, DateTimeOffset At) request,
+        MaterializationGeneration floor,
+        MaterializationGeneration generation)
+    {
+        var (key, operationId, execution, at) = request;
+        var operation = OperationDocument(key, operationId, execution, at);
+        var operations = db.GetCollection<BsonDocument>(MaterializationBindingCollections.Operations);
+        var previous = await operations.Find(session, _filter.Eq("_id", operation["_id"])).FirstOrDefaultAsync();
+        if (previous is not null) return ReadBuildOperation(previous, operation, key);
+        var document = await Bindings(db).Find(session, Id(key)).FirstOrDefaultAsync();
+        var binding = document is null ? null : MaterializationBindingDocuments.Binding(document);
+        var refusal = Refusal(binding);
+        if (refusal is not null) return refusal;
+        if (!await Executions(db).Find(session, ExecutionId(key, MaterializationGeneration.First)).AnyAsync()) throw new InvalidMaterializationExecution();
+        if (binding!.Next != floor) return null;
+        var identity = MaterializationGenerationIdentity.For(key.Projection, generation, binding.Container);
+        var claim = new GenerationObserverBinding(key, identity, execution.EventSequence, execution.Revision);
+        await EnsureBuildClaims((store, db, session), claim, false);
+        var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
+        await Bindings(db).UpdateOneAsync(session, Id(key), _update.Set("next", checked((int)identity.Generation.Value)).Push("generations", MaterializationBindingDocuments.Encode(record)));
+        await InsertExecution(db, session, claim, execution);
+        operation.Add("record", MaterializationBindingDocuments.Encode(record));
+        await operations.InsertOneAsync(session, operation);
+        return new GenerationReservation(GenerationReservationResult.ReservationCreated, record);
     }
 
     async Task<IMongoDatabase> PreparedBuilds(EventStoreName store, MaterializationKey key)

@@ -8,15 +8,10 @@ namespace Cratis.Chronicle.Storage.Generations.Bindings.for_MaterializationBindi
 public abstract class when_a_registration_claimed_the_generated_identity<THarness> : given.a_build_storage<THarness>
     where THarness : IMaterializationBindingStorageHarness, new()
 {
-    Exception _error;
-    GenerationReservation _next;
+    GenerationReservation _result;
     async Task Establish() => await _harness.Claims.Claim(_store, ObserverIdentityClaim.ForRegistration(MaterializationGenerationIdentity.For(_key.Projection, new(2), "models").ObserverId));
-    async Task Because()
-    {
-        _error = await Catch.Exception(async () => await Build());
-        _next = await Build(new(Guid.NewGuid()));
-    }
-    [Fact] public void should_refuse_the_generated_observer_collision() => _error.ShouldBeOfExactType<GenerationBuildConflict>();
-    [Fact] public async Task should_abandon_the_colliding_generation() => (await _storage.Get(_store, _key))!.Generations.Single(_ => _.Identity.Generation == new MaterializationGeneration(2)).State.ShouldEqual(MaterializationGenerationState.Abandoned);
-    [Fact] public void should_reserve_the_next_generation_for_the_next_build() => _next.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(3));
+    async Task Because() => _result = await Build();
+    [Fact] public void should_skip_the_claimed_identity() => _result.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(3));
+    [Fact] public async Task should_not_record_the_skipped_number() => (await _storage.Get(_store, _key))!.Generations.Any(_ => _.Identity.Generation == new MaterializationGeneration(2)).ShouldBeFalse();
+    [Fact] public async Task should_keep_the_registration_claim() => (await _harness.Claims.Get(_store, MaterializationGenerationIdentity.For(_key.Projection, new(2), "models").ObserverId)).ShouldEqual(ObserverIdentityClaim.ForRegistration(MaterializationGenerationIdentity.For(_key.Projection, new(2), "models").ObserverId));
 }

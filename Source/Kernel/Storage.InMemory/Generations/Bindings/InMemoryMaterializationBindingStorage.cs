@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Generations.Bindings;
 /// <param name="claims">The observer identity claims; without them reservations make no identity claim.</param>
 public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProvider = null, IObserverIdentityClaims? claims = null) : IMaterializationBindingStorage, IGenerationBuildStorage, IGenerationWriterGrants
 {
+    const int MaxReserveAttempts = 5;
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly object _lock = new();
     readonly Dictionary<(EventStoreName Store, string Key), MaterializationBinding> _bindings = [];
@@ -65,12 +66,22 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     }
 
     /// <inheritdoc/>
-    /// <exception cref="GenerationBuildConflict">An immutable reservation claim conflicts.</exception>
+    /// <exception cref="GenerationBuildConflict">An immutable reservation claim conflicts, or the reservation kept losing to concurrent writers of the binding.</exception>
     /// <exception cref="InvalidMaterializationExecution">The adopted execution is missing.</exception>
     public async Task<GenerationReservation> ReserveNext(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
     {
-        var reservation = Reserve(store, key, execution, operationId, at);
-        return claims is null ? reservation : await claims.ClaimFor(this, store, key, execution, reservation);
+        for (var attempt = 0; attempt < MaxReserveAttempts; attempt++)
+        {
+            var reservation = Reserve(store, key, execution, operationId, at, null, MaterializationGeneration.Unspecified, out var binding);
+            if (reservation is null)
+            {
+                var generation = claims is null ? binding!.Next.Next() : await claims.AllocateGeneration(store, binding!, execution.Revision);
+                reservation = Reserve(store, key, execution, operationId, at, binding!.Next, generation, out _);
+            }
+            if (reservation is null) continue;
+            return claims is null ? reservation : await claims.ClaimFor(this, store, key, execution, reservation);
+        }
+        throw new GenerationBuildConflict();
     }
 
     /// <inheritdoc/>
@@ -261,9 +272,10 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
         }
     }
 
-    GenerationReservation Reserve(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at)
+    GenerationReservation? Reserve(EventStoreName store, MaterializationKey key, MaterializationExecutionSpecification execution, GenerationBuildOperationId operationId, DateTimeOffset at, MaterializationGeneration? floor, MaterializationGeneration generation, out MaterializationBinding? snapshot)
     {
         execution.EnsureValid();
+        snapshot = null;
         lock (_lock)
         {
             var request = new GenerationBuildRequest(key, execution, operationId, at);
@@ -279,7 +291,9 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
             if (!_executions.ContainsKey((store, key.Value, MaterializationGeneration.First))) throw new InvalidMaterializationExecution();
             var candidate = binding.Generations.FirstOrDefault(_ => _.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following);
             if (candidate is not null) return new GenerationReservation(GenerationReservationResult.CandidateInFlight, candidate);
-            var identity = MaterializationGenerationIdentity.For(key.Projection, binding.Next.Next(), binding.Container);
+            snapshot = binding;
+            if (floor is null || binding.Next != floor) return null;
+            var identity = MaterializationGenerationIdentity.For(key.Projection, generation, binding.Container);
             EnsureUnclaimed(store, key, identity);
             var record = new MaterializationGenerationRecord(identity, MaterializationGenerationState.Building, execution.Revision, at);
             var reservation = new GenerationReservation(GenerationReservationResult.ReservationCreated, record);

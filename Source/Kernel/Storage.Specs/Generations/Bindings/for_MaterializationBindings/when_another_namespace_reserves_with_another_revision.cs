@@ -7,12 +7,11 @@ using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
 
 namespace Cratis.Chronicle.Storage.Generations.Bindings.for_MaterializationBindings;
 
-public abstract class when_another_namespace_reserves_the_same_generation_with_another_revision<THarness> : given.a_build_storage<THarness>
+public abstract class when_another_namespace_reserves_with_another_revision<THarness> : given.a_build_storage<THarness>
     where THarness : IMaterializationBindingStorageHarness, new()
 {
     MaterializationKey _other;
     MaterializationExecutionSpecification _otherExecution = MaterializationExecutionSpecification.Capture(EventSequenceId.Log, "{\"projection\":\"another\",\"schema\":{\"type\":\"object\"}}");
-    Exception _error;
     GenerationReservation _next;
     async Task Establish()
     {
@@ -22,13 +21,9 @@ public abstract class when_another_namespace_reserves_the_same_generation_with_a
         await _storage.TrySetBindingEpoch(_store, _other, ServingEpoch.Unset, ServingEpoch.Initial);
         await _builds.TryAdoptExecution(_store, _other, _otherExecution);
     }
-    async Task Because()
-    {
-        _error = await Catch.Exception(async () => await _builds.ReserveNext(_store, _other, _otherExecution, _operation, DateTimeOffset.UnixEpoch));
-        _next = await _builds.ReserveNext(_store, _other, _otherExecution, new(Guid.NewGuid()), DateTimeOffset.UnixEpoch);
-    }
-    [Fact] public void should_refuse_the_generated_observer_collision() => _error.ShouldBeOfExactType<GenerationBuildConflict>();
-    [Fact] public async Task should_abandon_the_colliding_generation_in_that_namespace() => (await _storage.Get(_store, _other))!.Generations.Single(_ => _.Identity.Generation == new MaterializationGeneration(2)).State.ShouldEqual(MaterializationGenerationState.Abandoned);
-    [Fact] public void should_reserve_the_next_generation_in_that_namespace() => _next.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(3));
+    async Task Because() => _next = await _builds.ReserveNext(_store, _other, _otherExecution, _operation, DateTimeOffset.UnixEpoch);
+    [Fact] public void should_reserve_a_new_generation_number() => _next.Record!.Identity.Generation.ShouldEqual(new MaterializationGeneration(3));
+    [Fact] public async Task should_bind_the_number_to_its_revision() => (await _harness.Claims.Get(_store, _next.Record!.Identity.ObserverId))!.Revision.ShouldEqual(_otherExecution.Revision);
+    [Fact] public async Task should_not_abandon_anything_in_that_namespace() => (await _storage.Get(_store, _other))!.Generations.Any(_ => _.State == MaterializationGenerationState.Abandoned).ShouldBeFalse();
     [Fact] public async Task should_keep_the_first_namespace_candidate() => (await _storage.Get(_store, _key))!.Generations.Single(_ => _.Identity.Generation == new MaterializationGeneration(2)).State.ShouldNotEqual(MaterializationGenerationState.Abandoned);
 }

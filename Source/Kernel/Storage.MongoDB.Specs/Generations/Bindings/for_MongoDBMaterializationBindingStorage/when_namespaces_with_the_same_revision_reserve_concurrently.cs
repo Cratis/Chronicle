@@ -7,7 +7,7 @@ using Contract = Cratis.Chronicle.Storage.Generations.Bindings.for_Materializati
 namespace Cratis.Chronicle.Storage.MongoDB.Generations.Bindings.for_MongoDBMaterializationBindingStorage;
 
 [Collection(ReplicaSetMongoDBCollection.Name)]
-public class when_another_namespace_reserves_the_same_generation_with_another_revision(ReplicaSetMongoDBFixture fixture) : Contract.when_another_namespace_reserves_the_same_generation_with_another_revision<MongoMaterializationBindingStorageHarness>
+public class when_namespaces_with_the_same_revision_reserve_concurrently(ReplicaSetMongoDBFixture fixture) : Contract.when_namespaces_with_the_same_revision_reserve_concurrently<MongoMaterializationBindingStorageHarness>
 {
     protected override MongoMaterializationBindingStorageHarness CreateHarness() => new() { ConnectionString = fixture.ConnectionString };
 }
