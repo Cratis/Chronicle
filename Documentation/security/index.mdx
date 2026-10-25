@@ -31,7 +31,7 @@ The two attributes cannot both apply to the same value — see [Encrypting opera
 
 ## Trust model
 
-Chronicle authenticates every client, but it does not yet limit what an authenticated application may do to particular event stores. Any application with valid credentials is trusted with every event store on the kernel.
+When authentication is enabled, Chronicle authenticates every client, but it does not yet limit what an authenticated application may do to particular event stores. Any application with valid credentials is trusted with every event store on the kernel.
 
 ### Who this affects
 
@@ -61,7 +61,7 @@ Until per-application entitlements are available, isolate untrusted parties thro
 
 - Run a separate kernel for each trust boundary, each with its own storage and credentials.
 - Restrict who can reach the kernel with network isolation or mutual TLS, so only the applications of one trust boundary can connect.
-- Set `Authentication.EnforceAdministratorPolicyForOperations=true` so administrative operations refuse non-administrators instead of logging a warning. See [Authentication](/chronicle/hosting/configuration/authentication/#audit-mode-for-existing-operations). This does not scope ordinary store work.
+- Set `Authentication.EnforceAdministratorPolicyForOperations=true` so operational recovery on the `System` event store, security management and kernel reset refuse non-administrators instead of logging a warning. See [Authentication](/chronicle/hosting/configuration/authentication/#audit-mode-for-existing-operations). Operations on application event stores stay available to every authenticated application, and ordinary store work is not scoped.
 
 Per-application entitlements are proposed in [decision 0022](https://github.com/Cratis/Chronicle/blob/main/decisions/0022-per-application-event-store-entitlements.md) and tracked in [#5410](https://github.com/Cratis/Chronicle/issues/5410).
 
