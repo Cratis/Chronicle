@@ -3,7 +3,6 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Security;
@@ -17,14 +16,20 @@ namespace Cratis.Chronicle.Security;
 public record RemoveUser(UserId UserId)
 {
     /// <summary>
-    /// Handles the command by appending a <see cref="UserRemoved"/> event to the event log.
+    /// Handles the command by removing the user through the <see cref="IAdministratorRoster"/>, which refuses to remove the last active administrator.
     /// </summary>
-    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the administrator roster with.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="LastAdministratorCannotBeRemoved">Thrown when the user is the last active administrator.</exception>
+    /// <remarks>
+    /// The handler returns no value so the command keeps its existing wire contract; the refusal surfaces as a failed command result.
+    /// </remarks>
     public async Task Handle(IGrainFactory grainFactory)
     {
-        var @event = new UserRemoved();
-        var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(UserId, @event);
+        var removed = await grainFactory.GetGrain<IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key).RemoveUser(UserId);
+        if (!removed)
+        {
+            throw new LastAdministratorCannotBeRemoved();
+        }
     }
 }

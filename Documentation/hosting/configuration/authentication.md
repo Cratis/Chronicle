@@ -74,6 +74,47 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
 
+### Administrator privileges and recovery
+
+Administrator privilege is stored separately from user documents. Creating or logging in as a user named `admin` does not confer it. New bootstrap grants privilege to the deterministic initial administrator. User replay and stale user-document updates do not overwrite privileges.
+
+On upgrade, Chronicle runs a one-time provenance migration. It reads the lowest-sequence `InitialAdminUserAdded` in the system event log, checks that event's username against the configured administrator username case-insensitively, requires an existing active user for its event source, and rejects provenance if that source has a later `UserRemoved`. This preserves proven legacy administrators with random identifiers. It does not choose a later matching bootstrap event or infer privilege from a username, deterministic identifier, or successful login alone.
+
+The migration records either a proven outcome (granting `UpgradeProvenance` only if no grant history exists), or an unproven outcome with no grant and a warning. An unproven outcome is not retried automatically. Existing grants and revocations remain authoritative across restarts.
+
+To recover an unproven deployment or one without an active administrator:
+
+1. Identify an existing active user. Recovery does not create or reactivate users.
+2. Configure `authentication.administratorRecovery` consistently on all silos, using a new nonce for this request:
+
+   ```json
+   {
+     "authentication": {
+       "administratorRecovery": {
+         "username": "operator",
+         "nonce": "recovery-2026-10-28-unique-request",
+         "force": false
+       }
+     }
+   }
+   ```
+
+3. Restart the servers. Recovery runs through the roster coordinator, not through a login or HTTP request. By default it refuses to grant when any active administrator already exists. Set `force` to `true` only when deliberately granting despite an existing active administrator.
+4. Confirm the `OperatorRecovery` grant in the system event log. Its evidence includes the nonce, executing host, configuration source, and force flag. Recovery also logs a warning.
+5. Remove the recovery configuration from every silo. A consumed nonce never grants again, including after revocation; a later recovery requires a new nonce.
+
+Environment variables use the same configuration path:
+
+```shell
+Cratis__Chronicle__Authentication__AdministratorRecovery__Username=operator
+Cratis__Chronicle__Authentication__AdministratorRecovery__Nonce=recovery-2026-10-28-unique-request
+Cratis__Chronicle__Authentication__AdministratorRecovery__Force=false
+```
+
+Updated nodes serialize administrator removals and revocations through one guarded roster. Removing the last active administrator fails the command with the error "The last active administrator cannot be removed." Removing another administrator appends its privilege revocation and user removal in one guarded batch. A legacy `UserRemoved` is also interpreted as revocation, but older nodes do not enforce the last-administrator guard: upgrade every writer before relying on it.
+
+This roster does not itself add administrator-only HTTP or gRPC authorization policies. Continue to restrict management access at the deployment boundary; authentication alone is not an administrator permission check.
+
 ### Configuration file
 
 ```json

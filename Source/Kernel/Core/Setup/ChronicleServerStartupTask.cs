@@ -215,11 +215,17 @@ internal sealed class ChronicleServerStartupTask(
             });
         }
 
-        await Step(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser);
+        await EnsureAdministrator(cancellationToken);
         await Step(nameof(IAuthenticationService.EnsureBootstrapClients), authenticationService.EnsureBootstrapClients);
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    async Task EnsureAdministrator(CancellationToken cancellationToken)
+    {
+        await RunStep(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser, cancellationToken);
+        await RunStep(nameof(Cratis.Chronicle.Security.IAdministratorRoster.EnsureAdministratorPrivilege), () => grainFactory.GetGrain<Cratis.Chronicle.Security.IAdministratorRoster>(Cratis.Chronicle.Concepts.Security.AdministratorRoster.Key).EnsureAdministratorPrivilege(), cancellationToken);
     }
 
     /// <summary>

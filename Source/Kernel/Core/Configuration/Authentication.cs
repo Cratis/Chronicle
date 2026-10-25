@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
+    /// Gets the server-local, single-use administrator recovery request.
+    /// </summary>
+    public AdministratorRecoveryOptions AdministratorRecovery { get; init; } = new();
+
+    /// <summary>
     /// Gets whether authentication is enforced. Defaults to <see langword="true"/>.
     /// </summary>
     /// <remarks>
