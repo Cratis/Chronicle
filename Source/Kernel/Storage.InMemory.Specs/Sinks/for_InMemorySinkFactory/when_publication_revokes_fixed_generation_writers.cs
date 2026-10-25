@@ -69,5 +69,5 @@ public class when_publication_revokes_fixed_generation_writers : Specification
     [Fact] async Task should_keep_candidate_data_across_owner_and_factory_refresh() => ((IDictionary<string, object?>)(await _fresh.FindOrDefault(_key))!)["name"].ShouldEqual("candidate");
     [Fact] async Task should_keep_the_old_active_destination_isolated() => ((IDictionary<string, object?>)(await _active.FindOrDefault(_key))!)["name"].ShouldEqual("active");
     [Fact] async Task should_refuse_a_delayed_original_owner_transition() => (await _bindings.TryAcquire("store", _second.Binding, new(Guid.NewGuid()), 0)).ShouldBeNull();
-    [Fact] async Task should_refuse_legacy_destructive_replay_on_a_generation_writer() => (await Catch.Exception(() => _fresh.PrepareInitialRun())).ShouldBeOfExactType<MaterializationBindingsNotSupported>();
+    [Fact] async Task should_refuse_legacy_destructive_replay_on_a_generation_writer() => (await Catch.Exception(_fresh.PrepareInitialRun)).ShouldBeOfExactType<MaterializationBindingsNotSupported>();
 }

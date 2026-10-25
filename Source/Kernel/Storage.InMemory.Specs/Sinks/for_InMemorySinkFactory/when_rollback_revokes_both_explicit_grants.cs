@@ -49,7 +49,7 @@ public class when_rollback_revokes_both_explicit_grants : Specification
     async Task Because() => _result = await _storage.TryRestore("store", _first.Binding.Key, _second.Binding.Identity.Generation, _published.Epoch, MaterializationGeneration.First, TimeSpan.FromHours(1), new(Guid.NewGuid()));
 
     [Fact] void should_restore() => _result.Result.ShouldEqual(MaterializationPublicationResult.Published);
-    [Fact] async Task should_revoke_the_old_active_admission() => (await Catch.Exception(() => _active.EnsureIndexes())).ShouldBeOfExactType<GenerationWriterGrantRevoked>();
-    [Fact] async Task should_revoke_the_rollback_validator_admission() => (await Catch.Exception(() => _rollbackTarget.EnsureIndexes())).ShouldBeOfExactType<GenerationWriterGrantRevoked>();
+    [Fact] async Task should_revoke_the_old_active_admission() => (await Catch.Exception(_active.EnsureIndexes)).ShouldBeOfExactType<GenerationWriterGrantRevoked>();
+    [Fact] async Task should_revoke_the_rollback_validator_admission() => (await Catch.Exception(_rollbackTarget.EnsureIndexes)).ShouldBeOfExactType<GenerationWriterGrantRevoked>();
     [Fact] async Task should_record_the_exact_target_gate_used_by_the_sink() => (await _storage.Get("store", _first.Binding.Key))!.Fence!.Gate.ShouldEqual(_first.Grant.Gate);
 }

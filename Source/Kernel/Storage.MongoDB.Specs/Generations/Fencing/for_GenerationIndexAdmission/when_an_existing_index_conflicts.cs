@@ -19,7 +19,7 @@ public class when_an_existing_index_conflicts : Sinks.for_Sink.given.a_sink_with
         _indexCursor.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(true), Task.FromResult(false));
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _sink.EnsureIndexes());
+    async Task Because() => _error = await Catch.Exception(_sink.EnsureIndexes);
 
     [Fact] void should_report_a_typed_conflict() => _error.ShouldBeOfExactType<GenerationIndexConflict>();
     [Fact] void should_never_drop_the_conflicting_index() => _indexManager.DidNotReceive().DropOneAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
