@@ -16,6 +16,19 @@ public partial class Observer
 {
     static int _liveTimeoutClampLogged;
 
+    int _liveHandOversInFlight;
+
+    /// <summary>
+    /// Gets the partition holds version that hold reconciliation compares before and after its job lookup.
+    /// </summary>
+    /// <returns>The current version.</returns>
+    /// <remarks>
+    /// A live batch hand-over holds its partition before its job is started and listed, so a lookup overlapping
+    /// that window would find the hold ownerless and release it from under the job. While one is in flight every
+    /// read changes the version, so such a lookup looks again and, if the window outlasts its attempts, keeps every hold.
+    /// </remarks>
+    int CurrentPartitionHoldsVersion() => _liveHandOversInFlight > 0 ? ++_partitionHoldsVersion : _partitionHoldsVersion;
+
     /// <summary>
     /// Bounds a live subscriber wait to leave time for persisting the observer's result before Orleans times out.
     /// </summary>
@@ -67,6 +80,8 @@ public partial class Observer
         _catchUpHandoversInFlight++;
         _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
+        _liveHandOversInFlight++;
+        _partitionHoldsVersion++;
         var sequenceNumber = events[0].Context.SequenceNumber;
         try
         {
@@ -104,6 +119,9 @@ public partial class Observer
         }
         finally
         {
+            // A lookup that began before the job was listed must not act on that listing.
+            _liveHandOversInFlight--;
+            _partitionHoldsVersion++;
             if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
             {
                 _catchUpHandoversSettled = null;
