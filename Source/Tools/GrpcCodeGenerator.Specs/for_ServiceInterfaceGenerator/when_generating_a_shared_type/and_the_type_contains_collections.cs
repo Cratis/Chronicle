@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceInterfaceGenerator.when_generating_a_shared_type;
 
 [Collection(SharedTypeRegistryCollection.Name)]
+[PerFactSpecificationLifecycle]
 public class and_the_type_contains_collections : given.a_shared_type_generator
 {
     IReadOnlyList<Diagnostic> _errors;
@@ -35,7 +36,7 @@ public class and_the_type_contains_collections : given.a_shared_type_generator
         {
             var value = property.GetValue(_message);
             value.ShouldNotBeNull();
-            ((IEnumerable)value!).ShouldBeEmpty();
+            ((IEnumerable)value).ShouldBeEmpty();
         }
     }
 

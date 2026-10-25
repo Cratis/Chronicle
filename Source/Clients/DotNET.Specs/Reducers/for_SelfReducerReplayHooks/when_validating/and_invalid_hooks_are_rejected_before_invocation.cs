@@ -56,7 +56,7 @@ public class and_invalid_hooks_are_rejected_before_invocation : emitted_methods
             hook.GetILGenerator().Emit(OpCodes.Ret);
         });
         _ = new SelfReducerInvoker(Registry(typeof(Joined)), model, "state");
-    })).ToArray();
+    })!).ToArray();
 
     [Fact] void should_validate_every_invalid_shape_before_model_or_service_activation() => _failures.All(failure => failure is InvalidSelfReducerLifecycleHook).ShouldBeTrue();
 }

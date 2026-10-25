@@ -6,9 +6,10 @@
   <ItemGroup>
     <!-- System -->
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
-    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0.0 transitively, but the SDK
-         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types. -->
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
+    <!-- net8.0 only: the client compiles against System.Collections.Immutable 10.0 transitively, but the SDK
+         prunes it from declared dependencies. Declare it explicitly so consumers do not hit missing types.
+         10.0.1 is the minimum Microsoft.CodeAnalysis.Workspaces.Common 5.9.0 declares. -->
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.1" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.13" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
@@ -19,19 +20,19 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- 7.22.0 is the minimum Cratis.Orleans 1.15.2 declares; NU1605 is suppressed, so a lower pin would silently downgrade it. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.25.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.25.0" />
+    <!-- Cratis.Orleans 1.27.4 requires at least 7.26.1; a lower pin fails restore with NU1605. -->
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.26.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.26.1" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
-    <PackageVersion Include="Cratis.Arc" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.136.4" />
+    <PackageVersion Include="Cratis.Arc" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.137.0" />
     <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.136.4" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.136.4" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.137.0" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.137.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.149.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
@@ -83,10 +84,10 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.0" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <PackageVersion Include="Cratis.Orleans" Version="1.27.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.27.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.27.2" />
-    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.27.2" />
+    <PackageVersion Include="Cratis.Orleans" Version="1.27.4" />
+    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.27.4" />
+    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.27.4" />
+    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.27.4" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
@@ -112,8 +113,9 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
+    <PackageVersion Include="Cratis.Specifications" Version="5.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
+    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.0.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
@@ -124,13 +126,14 @@
     -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
     <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.2" />
@@ -164,7 +167,7 @@
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
-    <PackageVersion Include="SharpCompress" Version="0.50.5" />
+    <PackageVersion Include="SharpCompress" Version="0.50.7" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
