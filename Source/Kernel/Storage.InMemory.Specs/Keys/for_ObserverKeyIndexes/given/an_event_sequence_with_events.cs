@@ -50,7 +50,7 @@ public class an_event_sequence_with_events : Specification
     protected static async Task<List<Key>> Enumerate(IObserverKeys keys)
     {
         var result = new List<Key>();
-        await foreach (var key in keys)
+        await foreach (var key in keys.WithCancellation(TestContext.Current.CancellationToken))
         {
             result.Add(key);
         }

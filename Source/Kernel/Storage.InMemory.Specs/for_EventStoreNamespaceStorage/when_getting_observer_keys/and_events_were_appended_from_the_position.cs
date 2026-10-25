@@ -33,7 +33,7 @@ public class and_events_were_appended_from_the_position : given.a_namespace_stor
             new ObserverKey("reactor", "some-store", "some-namespace", EventSequenceId.Log),
             ObserverReaderScope.Explicit([_typeA]));
         _keys = [];
-        await foreach (var key in index.GetKeys(1UL))
+        await foreach (var key in index.GetKeys(1UL).WithCancellation(TestContext.Current.CancellationToken))
         {
             _keys.Add(key);
         }
