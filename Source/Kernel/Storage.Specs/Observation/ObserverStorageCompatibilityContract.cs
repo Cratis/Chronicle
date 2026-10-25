@@ -59,6 +59,40 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         (await OpenObservers().GetAll()).ShouldBeEmpty();
     }
     [Fact] public async Task should_allow_a_missing_legacy_observer() => (await Check()).ShouldBeNull();
+    [Fact] public async Task should_not_treat_shadow_claims_as_a_downgrade_floor()
+    {
+        await OpenObservers().Save(
+            new()
+            {
+                Identifier = "observer",
+                PartitionClaims = [new("partition", ClaimHolderKind.PartitionCatchUp, null, new(3), 42, [])],
+                ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, null, new(7), 50, []),
+                OwnershipRevision = new(7)
+            },
+            EventSequenceId.Log);
+        (await Check()).ShouldBeNull();
+        var stored = await OpenObservers().Get("observer");
+        stored.PartitionClaims.Single().Epoch.ShouldEqual(new ClaimEpoch(3));
+        stored.ObserverWideClaim.Epoch.ShouldEqual(new ClaimEpoch(7));
+        stored.OwnershipRevision.ShouldEqual(new OwnershipRevision(7));
+    }
+    [Fact] public async Task should_preserve_shadow_claims_when_claiming_the_sequence_owner()
+    {
+        await OpenObservers().Save(
+            new()
+            {
+                Identifier = "observer",
+                PartitionClaims = [new("partition", ClaimHolderKind.PartitionCatchUp, null, new(3), 42, [])],
+                ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, null, new(7), 50, []),
+                OwnershipRevision = new(7)
+            },
+            EventSequenceId.Log);
+        await OpenObservers().ClaimOwnership("observer", "another-sequence");
+        var stored = await OpenObservers().Get("observer");
+        stored.PartitionClaims.Single().Epoch.ShouldEqual(new ClaimEpoch(3));
+        stored.ObserverWideClaim.Epoch.ShouldEqual(new ClaimEpoch(7));
+        stored.OwnershipRevision.ShouldEqual(new OwnershipRevision(7));
+    }
     [Fact] public async Task should_allow_store_setup_before_observer_enablement()
     {
         await OpenStore().MarkInitialized();

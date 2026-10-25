@@ -18,6 +18,9 @@ public static class ObserverStateConverters
         {
             Id = state.Identifier,
             Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -60,6 +63,9 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -95,6 +101,9 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,

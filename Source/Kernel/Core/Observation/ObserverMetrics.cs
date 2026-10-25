@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Claims;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Observation;
@@ -89,6 +90,14 @@ internal static partial class ObserverMetrics
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
     internal static void ZeroWorkCatchUp(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ZeroWorkCatchUp);
 
+    /// <summary>
+    /// Records a diagnostic disagreement between shadow claims and authoritative sets.
+    /// </summary>
+    /// <param name="meter">The observer meter scope.</param>
+    /// <param name="divergence">The bounded disagreement kind.</param>
+    internal static void ClaimDivergence(this IMeterScope<Observer> meter, ShadowClaimDivergence divergence) =>
+        meter.Increment(_ => _.ClaimDivergence, divergence: divergence);
+
     internal static void WebhookProbeScheduled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeScheduled);
 
     internal static void WebhookProbeAttempt(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeAttempt);
@@ -105,7 +114,7 @@ internal static partial class ObserverMetrics
 
     internal static void WebhookProbeCancelled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeCancelled);
 
-    static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int count = 1)
+    static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int count = 1, ShadowClaimDivergence? divergence = null)
     {
         var counters = GetFailureCounters(meter);
         if (counters is null)
@@ -124,6 +133,11 @@ internal static partial class ObserverMetrics
             }
 
             tags.Add(key, tag);
+        }
+
+        if (divergence is not null)
+        {
+            tags.Add("divergence", divergence.Value.ToString());
         }
 
         counter(counters).Add(count, tags);
@@ -150,6 +164,9 @@ internal static partial class ObserverMetrics
 
     sealed class FailureCounters(Meter meter)
     {
+        public Counter<int> ClaimDivergence { get; } = meter.CreateCounter<int>(
+            "chronicle-observer-claim-divergences", unit: null, description: "Shadow partition-claim divergences from replaying/catching-up sets");
+
         public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-deferred");
 
         public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-skipped");
