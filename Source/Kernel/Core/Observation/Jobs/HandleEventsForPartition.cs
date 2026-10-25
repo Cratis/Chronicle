@@ -331,10 +331,11 @@ public partial class HandleEventsForPartition(
                 if (failed)
                 {
                     var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-                    if (failureKind == FailureKind.Timeout)
+                    if (failureKind == FailureKind.Timeout && _subscriber is not IWebhookObserverSubscriber)
                     {
                         // The observer is not told yet: it is the grain that was too busy to answer, and the job runs the
-                        // step again before it reports the partition.
+                        // step again before it reports the partition. A webhook timeout is different: it is a delivery
+                        // failure, so it is reported below and retried only by the webhook retry policy.
                         logger.StepTimedOut(exceptionMessages[0]);
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                             CreateResult(lastSuccessfullyHandledEventSequenceNumber) with

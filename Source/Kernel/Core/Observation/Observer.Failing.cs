@@ -9,6 +9,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -68,6 +69,7 @@ public partial class Observer
     {
         if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
         if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        ForgetRecoveryStart(partition);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionNotRecovered(partition);
         await RegisterRetryReminder(failure);
@@ -81,6 +83,7 @@ public partial class Observer
         try
         {
             if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            ForgetRecoveryStart(partition);
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
             Skips.Delivered(partition, lastHandledEventSequenceNumber);
@@ -134,6 +137,7 @@ public partial class Observer
             _alertMutationLock.Release();
         }
 
+        ForgetRecoveryStart(partition);
         await StartRecoverJobForFailedPartition(failure);
         return PartitionRecoveryOutcome.Started;
     }
@@ -487,6 +491,7 @@ public partial class Observer
                 _alertEndings[partition.Id] = reason;
                 await RemoveReminder(partition);
                 failures.State.Remove(partition.Partition);
+                ForgetRecoveryStart(partition.Partition);
             }
 
             State = State with { FailedPartitionCount = 0 };
@@ -515,6 +520,7 @@ public partial class Observer
             {
                 _alertEndings[failure.Id] = AlertClearedReason.Recovered;
                 failures.State.Remove(partition);
+                ForgetRecoveryStart(partition);
                 State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
             }
 
@@ -546,13 +552,34 @@ public partial class Observer
             return;
         }
 
-        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
+        if (usesDeferrals && await RecoveryInFlight(failedPartition)) return;
+
+        logger.TryingToRecoverFailedPartition(failedPartition.Partition);
+        var request = CreateRetryFailedPartitionRequest(failedPartition, usesDeferrals);
+        if (usesDeferrals)
+        {
+            await StartTrackedRecoveryJob(failedPartition, request);
+            return;
+        }
+
+        await StartRecoveryJob(failedPartition, request);
+    }
+
+    RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
+        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes)
+        {
+            ReaderScope = ReaderScope,
+            EpisodeId = usesDeferrals ? failedPartition.Id : null,
+            DeferralId = failedPartition.Deferral?.Id
+        };
+
+    async Task<JobId> StartRecoveryJob(FailedPartition failedPartition, RetryFailedPartitionRequest request)
+    {
         var jobId = await _jobsManager.StartOrResumeObserverJobReportingDrops<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
             () => request,
-            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId,
+            requestPredicate: r => r.Key == request.Key && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId,
             onAlreadyRunningJob: null,
             onResume: null,
             onStartNew: null,
@@ -562,7 +589,7 @@ public partial class Observer
             onJobsDropped: ConsumeRetryJobDrops);
 
         // The retry reminder was unregistered when it fired. Without a job nothing would retry this partition again.
-        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        if (jobId == JobId.NotSet)
         {
             await RegisterRetryReminderAfterNoJob(failedPartition);
         }
@@ -570,6 +597,8 @@ public partial class Observer
         {
             _retriesWithoutJob.Remove(failedPartition.Id);
         }
+
+        return jobId;
     }
 
     /// <summary>
