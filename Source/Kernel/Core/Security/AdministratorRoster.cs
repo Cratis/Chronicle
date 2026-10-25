@@ -85,6 +85,19 @@ public class AdministratorRoster(
     public async Task EnsureAdministratorPrivilege()
     {
         if (!options.Value.Authentication.Enabled) return;
+        try
+        {
+            await InitializeAdministratorPrivilege();
+        }
+        catch (Exception exception)
+        {
+            logger.AdministratorInitializationFailed(exception.Message, exception);
+            throw;
+        }
+    }
+
+    async Task InitializeAdministratorPrivilege()
+    {
         await Mutate(Migration, migration: true);
         var recovery = options.Value.Authentication.AdministratorRecovery;
         if (string.IsNullOrWhiteSpace(recovery.Username) && string.IsNullOrWhiteSpace(recovery.Nonce)) return;
@@ -184,6 +197,7 @@ public class AdministratorRoster(
             if (result.HasConcurrencyViolations) continue;
             if (!result.IsSuccess || !result.ConcurrencyCheckPerformed)
             {
+                logger.AdministratorAppendFailed(result.ConcurrencyCheckPerformed, string.Join("; ", result.Errors));
                 throw new InvalidOperationException("The guarded administrator roster change could not be appended.");
             }
             return true;

@@ -2,37 +2,29 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor;
 
-public class when_user_documents_are_replayed : Specification
+public class when_user_documents_are_replayed : given.an_administrators_reactor
 {
-    IStorage _storage;
-    AdministratorsReactor _administrators;
     UsersReactor _users;
     EventContext _context;
-    UserId _userId;
+    EventContext _grantContext;
     Administrator[] _privileges;
 
     void Establish()
     {
-        _userId = Guid.NewGuid();
-        _context = EventContext.Empty with { EventSourceId = _userId };
-        _storage = Substitute.For<IStorage>();
-        _storage.System.Returns(new Storage.InMemory.SystemStorage());
-        _administrators = new AdministratorsReactor(_storage);
+        _grantContext = SeedGrant();
+        _context = _grantContext with { EventSourceId = _userId };
         _users = new UsersReactor(_storage.System.Users, NullLogger<UsersReactor>.Instance);
     }
 
     async Task Because()
     {
-        var granted = new UserGrantedAdministrator(_userId, GrantReason.Bootstrap, "spec");
-        await _administrators.Granted(granted, _context);
-        await _administrators.Granted(granted, _context);
+        await _reactor.Granted(_grant, _grantContext);
+        await _reactor.Granted(_grant, _grantContext);
         await _users.Added(new UserAdded("ordinary", "user@example.com", "hash"), _context);
         var stale = await _storage.System.Users.GetById(_userId);
         await _storage.System.Users.Update(stale!);

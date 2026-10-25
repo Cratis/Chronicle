@@ -82,6 +82,8 @@ On upgrade, Chronicle runs a one-time provenance migration. It reads the lowest-
 
 The migration records either a proven outcome (granting `UpgradeProvenance` only if no grant history exists), or an unproven outcome with no grant and a warning. An unproven outcome is not retried automatically. Existing grants and revocations remain authoritative across restarts.
 
+If the guarded roster append fails, startup stops rather than running without a durable administrator decision. Concurrency conflicts trigger retries, with at most eight append attempts; exhausting those attempts also stops startup. The `AdministratorInitializationFailed` error records the cause and recovery action. Check the System event-log storage connection, availability, and write permissions. If the roster keeps changing, stop competing roster writers before restarting the servers. Do not bypass the concurrency guard or edit the administrator projection directly. After storage is healthy, restart with the same configuration; persisted migration outcomes and consumed recovery nonces remain authoritative. If there is still no active administrator, follow the server-local recovery procedure below with a new nonce.
+
 To recover an unproven deployment or one without an active administrator:
 
 1. Identify an existing active user. Recovery does not create or reactivate users.

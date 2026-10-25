@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Security;
 
 namespace Cratis.Chronicle.Security;
 
@@ -14,31 +15,59 @@ namespace Cratis.Chronicle.Security;
 /// Projects separately stored administrator privileges without replacing user documents.
 /// </summary>
 /// <param name="storage">The system storage.</param>
-public class AdministratorsReactor(IStorage storage) : Reactor
+/// <param name="serializer">The event serializer.</param>
+[Reactor(systemEventStoreOnly: true, defaultNamespaceOnly: true)]
+public class AdministratorsReactor(IStorage storage, IEventSerializer serializer) : Reactor
 {
+    readonly AdministratorProjectionState _state = new(storage, serializer);
+
     /// <summary>
-    /// Projects a privilege grant.
+    /// Reconciles a privilege grant with the authoritative roster.
     /// </summary>
     /// <param name="event">The grant.</param>
-    /// <returns>Awaitable task.</returns>
     /// <param name="context">The event context.</param>
+    /// <returns>Awaitable task.</returns>
     public Task Granted(UserGrantedAdministrator @event, EventContext context) =>
-        storage.System.Administrators.Save(new Administrator(@event.UserId, @event.Reason, @event.Evidence));
+        AdministratorEventScope.IsRosterEvent(context) ? Reconcile(@event.UserId) : Task.CompletedTask;
 
     /// <summary>
-    /// Projects a privilege revocation.
+    /// Reconciles a privilege revocation with the authoritative roster.
     /// </summary>
     /// <param name="event">The revocation.</param>
-    /// <returns>Awaitable task.</returns>
     /// <param name="context">The event context.</param>
-    public Task Revoked(UserRevokedAdministrator @event, EventContext context) => storage.System.Administrators.Delete(@event.UserId);
+    /// <returns>Awaitable task.</returns>
+    public Task Revoked(UserRevokedAdministrator @event, EventContext context) =>
+        AdministratorEventScope.IsRosterEvent(context) ? Reconcile(@event.UserId) : Task.CompletedTask;
 
     /// <summary>
-    /// Treats removal by an older node as an implicit revocation.
+    /// Treats removal on a system user stream by an older node as an implicit revocation.
     /// </summary>
     /// <param name="event">The removal.</param>
     /// <param name="context">The user event context.</param>
     /// <returns>Awaitable task.</returns>
     public Task Removed(UserRemoved @event, EventContext context) =>
-        storage.System.Administrators.Delete(context.EventSourceId);
+        AdministratorEventScope.IsSystemEvent(context) && Guid.TryParse(context.EventSourceId.Value, out var userId)
+            ? Reconcile(userId)
+            : Task.CompletedTask;
+
+    async Task Reconcile(UserId userId)
+    {
+        var administrator = await _state.Get(userId);
+        while (true)
+        {
+            if (administrator is null)
+            {
+                await storage.System.Administrators.Delete(userId);
+            }
+            else
+            {
+                await storage.System.Administrators.Save(administrator);
+            }
+
+            // User removals and roster events are delivered on different partitions and can race this write.
+            var current = await _state.Get(userId);
+            if (current == administrator) return;
+            administrator = current;
+        }
+    }
 }
