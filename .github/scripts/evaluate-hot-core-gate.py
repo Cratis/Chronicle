@@ -11,6 +11,8 @@ import re
 import subprocess
 import time
 
+from integration_lane_exclusions import with_exclusion_summary
+
 EVIDENCE_WORKFLOW = "requested-integration.yml"
 EVIDENCE_JOB = "hot-core-gate-requested-run-integration"
 GATE_WORKFLOW = "hot-core-gate.yml"
@@ -170,7 +172,7 @@ def gate(arguments):
             state["evidence"] = green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
         else:
             state["latest"] = latest_requested(state["repo"], state["head_sha"], arguments.runs_json)
-    return decide(**state)
+    return with_exclusion_summary(decide(**state))
 
 
 def current_pr(repo, head_sha, pr_json):
