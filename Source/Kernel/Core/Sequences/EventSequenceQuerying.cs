@@ -198,6 +198,74 @@ internal static class EventSequenceQuerying
     }
 
     /// <summary>
+    /// Reads a bounded window with one lookahead event and releases only the returned page's content.
+    /// </summary>
+    /// <param name="storage">The storage provider.</param>
+    /// <param name="eventCompliance">The compliance release service.</param>
+    /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The sequence.</param>
+    /// <param name="from">The inclusive start in read order, or null for the beginning or tail.</param>
+    /// <param name="count">The page size, between 1 and 1000.</param>
+    /// <param name="backward">Whether to read newest first.</param>
+    /// <param name="until">The inclusive stop in read order, or null for no bound.</param>
+    /// <param name="criteria">The filters applied in storage.</param>
+    /// <param name="eventStreamId">The optional event stream identifier.</param>
+    /// <returns>The page in read order and the next inclusive start when more matching events exist.</returns>
+    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000.</exception>
+    internal static async Task<EventSequencePage> ReadWindow(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        ulong? from,
+        int count,
+        bool backward,
+        ulong? until,
+        EventSequenceQueryCriteria criteria,
+        string? eventStreamId)
+    {
+        if (count is < 1 or > 1000)
+        {
+            throw new InvalidEventSequencePage("The page count must be between 1 and 1000.");
+        }
+
+        var lower = backward ? until ?? Concepts.Events.EventSequenceNumber.First.Value : from ?? Concepts.Events.EventSequenceNumber.First.Value;
+        var upper = backward ? from ?? Concepts.Events.EventSequenceNumber.Max.Value : until ?? Concepts.Events.EventSequenceNumber.Max.Value;
+        var sequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+        using var cursor = await sequence.GetWindow(
+            lower,
+            upper,
+            count + 1,
+            backward,
+            criteria.EventSourceId,
+            criteria.EventSourceType,
+            criteria.EventStreamType,
+            eventStreamId is null ? null : (Concepts.Events.EventStreamId)eventStreamId,
+            criteria.EventTypes,
+            criteria.Tags);
+        var window = new List<Concepts.Events.AppendedEvent>(count + 1);
+        while (window.Count <= count && await cursor.MoveNext())
+        {
+            window.AddRange(cursor.Current.Take(count + 1 - window.Count));
+        }
+
+        var returned = window.Take(count).ToArray();
+        var released = await ReleaseCompliance(returned, storage, eventStore, eventCompliance);
+        ulong? next = null;
+        if (window.Count > count)
+        {
+            var last = returned[^1].Context.SequenceNumber.Value;
+            next = backward ? last - 1 : last + 1;
+        }
+
+        return new(released.ToApi(jsonSerializerOptions), next);
+    }
+
+    /// <summary>
     /// Releases PII content in a collection of events, using each event's own schema.
     /// </summary>
     /// <param name="events">The events to release.</param>
