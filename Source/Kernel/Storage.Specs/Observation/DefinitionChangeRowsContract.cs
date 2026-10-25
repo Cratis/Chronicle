@@ -9,6 +9,8 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <summary>
 /// Provider-independent row behaviors. Each fact exercises one contract, on fresh provider storage.
 /// </summary>
+// Each fact writes different rows into the same provider storage and needs a fresh database.
+[PerFactSpecificationLifecycle]
 public abstract partial class DefinitionChangeRowsContract : Specification
 {
     readonly ObserverKey _observer = new("observer", "store", "namespace", "event-log");

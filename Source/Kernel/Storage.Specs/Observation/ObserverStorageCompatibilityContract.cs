@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <summary>
 /// Provider-independent downgrade checks over persisted event-store and namespace observer state.
 /// </summary>
+// Each fact persists a different observer initialization state and needs fresh provider storage.
+[PerFactSpecificationLifecycle]
 public abstract class ObserverStorageCompatibilityContract : Specification
 {
     /// <summary>

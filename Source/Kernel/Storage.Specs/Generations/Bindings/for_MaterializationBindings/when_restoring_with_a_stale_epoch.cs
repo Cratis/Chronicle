@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Generations.Bindings;
 
 namespace Cratis.Chronicle.Storage.Generations.Bindings.for_MaterializationBindings;
 
+[PerFactSpecificationLifecycle] // The refusal fact retries a restore against storage that the other facts inspect.
 public abstract class when_restoring_with_a_stale_epoch<THarness> : given.a_published_materialization<THarness>
     where THarness : IMaterializationBindingStorageHarness, new()
 {
