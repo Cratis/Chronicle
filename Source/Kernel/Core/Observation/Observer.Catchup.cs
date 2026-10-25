@@ -18,7 +18,7 @@ public partial class Observer
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
 
-    bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
+    bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && _clock.GetUtcNow() < _catchUpBackoffUntil;
 
     /// <inheritdoc/>
     public async Task CatchUp()
@@ -250,7 +250,7 @@ public partial class Observer
 
         var exponent = Math.Min(_zeroWorkCatchUps - MinimumZeroWorkLapsBeforeBackingOff, 10);
         var backoff = TimeSpan.FromTicks(Math.Min(_catchUpBackoffBase.Ticks << exponent, _catchUpBackoffCap.Ticks));
-        _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
+        _catchUpBackoffUntil = _clock.GetUtcNow() + backoff;
         return true;
     }
 

@@ -47,7 +47,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="optionsMonitor">The webhook retry configuration.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
-/// <param name="timeProvider">The delivery fence clock.</param>
+/// <param name="timeProvider">The delivery fence and catch-up backoff clock.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
