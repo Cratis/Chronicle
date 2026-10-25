@@ -29,7 +29,7 @@ public class when_upgrading_sqlite : Specification, IDisposable
 
     async Task Because()
     {
-        var migration = new Migrations.v19_113_0 { ActiveProvider = _context.Database.ProviderName };
+        var migration = new Migrations.v19_112_0_1 { ActiveProvider = _context.Database.ProviderName };
         foreach (var command in _context.GetService<IMigrationsSqlGenerator>().Generate(migration.UpOperations))
         {
             await _context.Database.ExecuteSqlRawAsync(command.CommandText);

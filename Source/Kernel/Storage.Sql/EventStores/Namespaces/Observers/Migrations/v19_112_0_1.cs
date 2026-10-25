@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.Migratio
 /// Adds nullable shadow ownership metadata without backfilling legacy observers.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_113_0)}")]
-public class v19_113_0 : Migration
+[Migration($"NS-{WellKnownTableNames.Observers}-{nameof(v19_112_0_1)}")]
+public class v19_112_0_1 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)

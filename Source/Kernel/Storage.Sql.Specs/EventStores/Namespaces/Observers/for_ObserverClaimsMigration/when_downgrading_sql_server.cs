@@ -23,7 +23,7 @@ public class when_downgrading_sql_server : Specification, IDisposable
 
     void Because()
     {
-        _operations = new Migrations.v19_113_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.SqlServer" }.DownOperations;
+        _operations = new Migrations.v19_112_0_1 { ActiveProvider = "Microsoft.EntityFrameworkCore.SqlServer" }.DownOperations;
         _sql = string.Join('\n', _context.GetService<IMigrationsSqlGenerator>().Generate(_operations).Select(command => command.CommandText));
     }
 

@@ -12,7 +12,7 @@ public class when_upgrading_an_existing_schema : Specification
 
     void Because()
     {
-        _operations = new Migrations.v19_113_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
+        _operations = new Migrations.v19_112_0_1 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
         _columns = _operations.OfType<AddColumnOperation>().ToDictionary(column => column.Name);
     }
 

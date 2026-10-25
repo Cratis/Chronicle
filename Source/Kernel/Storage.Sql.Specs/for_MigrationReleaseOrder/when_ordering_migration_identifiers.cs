@@ -11,7 +11,7 @@ public class when_ordering_migration_identifiers : Specification
     [
         .. new[]
         {
-            "NS-Observers-v19_113_0",
+            "NS-Observers-v19_112_0_1",
             "NS-Observers-v19_110_0",
             "NS-Observers-v19_83_1_3",
             "NS-Observers-v19_104_0_0",
@@ -41,6 +41,6 @@ public class when_ordering_migration_identifiers : Specification
         "NS-ObserverHandledCounts-v19_93_0",
         "NS-Observers-v19_104_0_0",
         "NS-Observers-v19_110_0",
-        "NS-Observers-v19_113_0",
+        "NS-Observers-v19_112_0_1",
     ]);
 }
