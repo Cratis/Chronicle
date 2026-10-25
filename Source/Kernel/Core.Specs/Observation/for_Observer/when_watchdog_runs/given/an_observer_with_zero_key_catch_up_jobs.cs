@@ -33,8 +33,11 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
 
     void Establish()
     {
+        var clientSubscriber = Substitute.For<IClientOwnedObserverSubscriber>();
+        _subscriber = clientSubscriber;
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(ObserverSubscriberResult.Ok(_nextSequenceNumber));
+        _silo.AddProbe(_ => clientSubscriber);
         _appendedEventsQueues.IsSubscribed(_observerKey).Returns(_ => _queued);
         _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
             .Returns(_ =>
@@ -85,6 +88,7 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
         silo.AddService(new JsonSerializerOptions());
         silo.AddService(jobTypes);
         silo.AddService(_loggerFactory);
+
         // Job resolves its closed generic category, not ILogger<IJob>, when it activates.
         silo.AddService<ILogger<Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>>>(
             new Logger<Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>>(_loggerFactory));
