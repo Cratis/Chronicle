@@ -88,7 +88,7 @@ public abstract class a_sink_over_roots_with_members(MongoDBFixture fixture) : I
     protected abstract object? JoinIdentifier { get; }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _databaseName = MongoDBSpecDatabaseNames.New();
         _client = new MongoClient(fixture.ConnectionString);
@@ -124,7 +124,18 @@ public abstract class a_sink_over_roots_with_members(MongoDBFixture fixture) : I
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync() => await _client.DropDatabaseAsync(_databaseName);
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await _client.DropDatabaseAsync(_databaseName);
+        }
+        finally
+        {
+            _sink.Dispose();
+            _client.Dispose();
+        }
+    }
 
     /// <summary>
     /// Determine whether a root is unchanged by the join.

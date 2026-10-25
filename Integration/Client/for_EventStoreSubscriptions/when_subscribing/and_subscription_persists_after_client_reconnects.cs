@@ -19,7 +19,7 @@ public class and_subscription_persists_after_client_reconnects(context context) 
         public async Task Because()
         {
             await Subscribe((SubscriptionId, SourceEventStore, default));
-            StoredSubscriptionsAfterReconnect = await EventStore.Subscriptions.GetAll();
+            StoredSubscriptionsAfterReconnect = await GetOwnStoredSubscriptions();
         }
     }
 

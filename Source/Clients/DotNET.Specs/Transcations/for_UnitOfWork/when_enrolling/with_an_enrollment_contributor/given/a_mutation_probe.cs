@@ -25,6 +25,6 @@ public class a_mutation_probe : a_contributed_unit
             () => _unitOfWork.ClaimDecisionReadCommitOwnership(),
             () => _unitOfWork.OnCompleted(_ => { })
         ];
-        _mutationErrors.AddRange(mutations.Select(_ => Catch.Exception(_)));
+        _mutationErrors.AddRange(mutations.Select(mutation => Catch.Exception(mutation)!));
     }
 }

@@ -8,9 +8,9 @@
 # job still goes red.
 #
 # Usage:
-#   run-tests-with-retry.sh <project> <test-filter> [extra dotnet test args...]
+#   run-tests-with-retry.sh <project> <test-filter> [executable runner options...]
 #
-# <test-filter> is passed verbatim to `dotnet test --filter` for the first run,
+# <test-filter> is passed verbatim to the executable's -filterVSTest for the first run,
 # so it can be a bare namespace expression (FullyQualifiedName~Ns) or a sharded
 # OR-expression (FullyQualifiedName~Ns.A.|FullyQualifiedName~Ns.B.).
 #
@@ -37,10 +37,8 @@ EXTRA_ARGS=("$@")
 
 MAX_ATTEMPTS="${TEST_MAX_ATTEMPTS:-3}"
 MAX_RETRY_TESTS="${TEST_MAX_RETRY_TESTS:-20}"
-# This script owns --results-directory (TRX files are read back to find failed tests on retry).
-# Callers that also want coverage collected into a known location set TEST_RESULTS_DIR so both the
-# TRX files and the coverage results land there — passing a second --results-directory as an extra
-# arg would make `dotnet test` fail with "expects a single argument but 2 were provided".
+# This script owns --results-directory. Every attempt gets a fresh subdirectory containing
+# results.trx and (with --coverage) coverage.cobertura.xml. TRX drives failed-test retries.
 RESULTS_DIR="${TEST_RESULTS_DIR:-$(mktemp -d)}"
 # Ledger of tests a retry rescued. Lives in RESULTS_DIR so it rides along with the
 # coverage artifact CI already uploads.
@@ -70,7 +68,7 @@ PY
 failed_up_to() {
     local last="$1" i
     for ((i = 1; i <= last; i++)); do
-        extract_failed "${RESULTS_DIR}/attempt-${i}.trx"
+        extract_failed "${RESULTS_DIR}/attempt-${i}/results.trx"
     done | sort -u
 }
 
@@ -100,20 +98,17 @@ record_flaky() {
 
 run() {
     local filter="$1"
-    local trx="$2"
-    dotnet test "$PROJECT" \
-        --no-restore \
+    local attempt_directory="$2"
+    node .github/scripts/run-spec-project.mjs \
+        --project "$PROJECT" \
         --filter "$filter" \
-        --logger "console;verbosity=normal" \
-        --logger "trx;LogFileName=$trx" \
-        --results-directory "$RESULTS_DIR" \
-        --configuration Release \
+        --results-directory "${RESULTS_DIR}/${attempt_directory}" \
         "${EXTRA_ARGS[@]}"
 }
 
 attempt=1
 echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (full filter)"
-run "${TEST_FILTER}" "attempt-${attempt}.trx"
+run "${TEST_FILTER}" "attempt-${attempt}"
 status=$?
 echo "::endgroup::"
 
@@ -126,7 +121,7 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
     failed=()
     while IFS= read -r line; do
         [ -n "$line" ] && failed+=("$line")
-    done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}.trx")
+    done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}/results.trx")
 
     if [ "${#failed[@]}" -eq 0 ]; then
         # Test run failed but no individual failed test was recorded (e.g. a
@@ -155,7 +150,7 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
         filter+="FullyQualifiedName=${name}"
     done
 
-    run "$filter" "attempt-${attempt}.trx"
+    run "$filter" "attempt-${attempt}"
     status=$?
     echo "::endgroup::"
 
