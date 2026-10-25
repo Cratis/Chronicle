@@ -9,7 +9,13 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_spilled_to_catch_up;
 
 public class and_zero_work_settles_after_queue_removal : given.an_observer_settling_after_zero_work
 {
-    void Establish() => _queued = false;
+    void Establish()
+    {
+        _queued = false;
+        _eventSequence.GetTailSequenceNumber().Returns((EventSequenceNumber)100UL);
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
+            .Returns((EventSequenceNumber)1UL);
+    }
 
     Task Because() => _observer.CaughtUp(_jobId, 0UL);
 

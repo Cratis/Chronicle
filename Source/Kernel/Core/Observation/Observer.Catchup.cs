@@ -24,7 +24,8 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task CatchUp()
     {
-        if (CannotAcquireCatchUpJob()) return;
+        if (IsRetired || _removed) return;
+        if (IsRejoiningQueueDuringBackoff) return;
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
@@ -39,25 +40,7 @@ public partial class Observer
             return;
         }
 
-        // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
-        var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingCatchUpAcquisition = acquisition.Task;
-        _catchUpOwnershipEpoch++;
-        var jobId = JobId.NotSet;
-        try
-        {
-            jobId = await AcquireCatchUpJob();
-        }
-        finally
-        {
-            if (_pendingCatchUpAcquisition == acquisition.Task)
-            {
-                _pendingCatchUpAcquisition = null;
-            }
-
-            // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
-            acquisition.SetResult(jobId);
-        }
+        await AcquireCatchUpJobWithPendingOwnership();
     }
 
     /// <inheritdoc/>
@@ -345,6 +328,29 @@ public partial class Observer
         }
 
         return false;
+    }
+
+    async Task AcquireCatchUpJobWithPendingOwnership()
+    {
+        // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
+        var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingCatchUpAcquisition = acquisition.Task;
+        _catchUpOwnershipEpoch++;
+        var jobId = JobId.NotSet;
+        try
+        {
+            jobId = await AcquireCatchUpJob();
+        }
+        finally
+        {
+            if (_pendingCatchUpAcquisition == acquisition.Task)
+            {
+                _pendingCatchUpAcquisition = null;
+            }
+
+            // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
+            acquisition.SetResult(jobId);
+        }
     }
 
     async Task<JobId> AcquireCatchUpJob()

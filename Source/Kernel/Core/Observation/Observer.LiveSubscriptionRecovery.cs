@@ -8,11 +8,9 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    bool CannotAcquireCatchUpJob()
-    {
-        if (IsBackingOffCatchUp) return true;
-        return IsRetired || _removed;
-    }
+    bool _rejoiningQueueAfterZeroWork;
+
+    bool IsRejoiningQueueDuringBackoff => _rejoiningQueueAfterZeroWork && IsBackingOffCatchUp;
 
     async Task SettleCatchUpInObserving()
     {
@@ -21,6 +19,14 @@ public partial class Observer
         if (await _appendedEventsQueues.IsSubscribed(_observerKey)) return;
 
         // Observing ignores a transition to itself; routing re-enters it and restores the queue subscription.
-        await TransitionTo<Routing>();
+        _rejoiningQueueAfterZeroWork = true;
+        try
+        {
+            await TransitionTo<Routing>();
+        }
+        finally
+        {
+            _rejoiningQueueAfterZeroWork = false;
+        }
     }
 }
