@@ -29,6 +29,7 @@ public class OnlineIndexGate : DbCommandInterceptor
         var sql = command.CommandText;
         if (ForceOffline && _onlineRequested && sql.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase)) UsedOfflineBuild = !sql.Contains("ONLINE = ON", StringComparison.OrdinalIgnoreCase);
         if (sql.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase) &&
+            !sql.Contains(WellKnownProperties.ReadModelInstanceInitialized, StringComparison.Ordinal) &&
             ((ForceOffline && _onlineRequested) || sql.Contains("CONCURRENTLY", StringComparison.OrdinalIgnoreCase) || sql.Contains("ONLINE = ON", StringComparison.OrdinalIgnoreCase)) &&
             Interlocked.Exchange(ref _paused, 1) == 0)
         {
