@@ -663,7 +663,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
 
     ExpandoObject MaterializeInstance(DynamicReadModelEntity entity) => Materialize(entity, rebuildCompositeKey: true);
 
-    ExpandoObject Materialize(DynamicReadModelEntity entity, bool rebuildCompositeKey)
+    ExpandoObject Materialize(DynamicReadModelEntity entity, bool rebuildCompositeKey, ExpandoObject? knownKey = null)
     {
         // Build a JsonObject from the row's column values so that the schema-aware
         // IExpandoObjectConverter can reconstitute concept-typed identifiers (e.g. UserId =>
@@ -673,7 +673,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         // raw column values through JsonSerializer to get a JsonNode-shaped JSON document that
         // matches what the converter expects to parse.
         var dict = ToJsonNodeValues(entity);
-        if (rebuildCompositeKey)
+        if (knownKey is not null)
+        {
+            dict[_columns.First(c => c.IsKey).Name] = JsonSerializer.SerializeToNode(knownKey, ReadModelDbContext.JsonSerializerOptions);
+        }
+        else if (rebuildCompositeKey)
         {
             RebuildCompositeKey(dict);
         }

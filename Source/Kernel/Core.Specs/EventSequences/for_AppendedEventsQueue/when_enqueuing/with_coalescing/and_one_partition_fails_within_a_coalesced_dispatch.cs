@@ -7,8 +7,9 @@ using Cratis.Chronicle.Concepts.Keys;
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing.with_coalescing;
 
 /// <summary>
-/// A coalesced dispatch may hold several partitions. If delivery fails, later partitions must not advance that
-/// observer past the hole; catch-up recovers the gap instead.
+/// A coalesced dispatch may hold several partitions. If one partition's delivery fails, the failure is contained to
+/// that partition group so the remaining partitions in the same dispatch still deliver — the failed one is recovered
+/// through the observer's own partition-failure and catch-up machinery.
 /// </summary>
 public class and_one_partition_fails_within_a_coalesced_dispatch : given.a_single_subscriber_with_queue_telemetry
 {
@@ -55,10 +56,8 @@ public class and_one_partition_fails_within_a_coalesced_dispatch : given.a_singl
     [Fact] void should_attempt_the_failing_partition() =>
         _observer.Received().Handle(Arg.Is<Key>(key => key == (Key)_failingPartition), Arg.Any<IEnumerable<AppendedEvent>>());
 
-    [Fact] void should_not_deliver_later_partitions_to_the_spilled_observer() =>
-        _handledEventsPerPartition.ContainsKey(_healthyPartition).ShouldBeFalse();
-
-    [Fact] void should_trigger_catch_up() => _observer.Received(1).CatchUp();
+    [Fact] void should_still_deliver_the_healthy_partition() =>
+        _handledEventsPerPartition.ContainsKey(_healthyPartition).ShouldBeTrue();
 
     [Fact] void should_count_only_the_failed_partitions_events_as_suspected_undelivered() => _suspectedUndelivered.ShouldEqual(1);
 }
