@@ -917,6 +917,7 @@ public partial class Observer(
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
+        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
@@ -970,11 +971,7 @@ public partial class Observer(
             if (webhookSubscription)
             {
                 await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-                if (!await ValidateStoredWebhookTarget())
-                {
-                    _subscriptionSetupFailed = false;
-                    return;
-                }
+                if (!await ValidateStoredWebhookTarget()) return;
             }
 
             if (recovering)

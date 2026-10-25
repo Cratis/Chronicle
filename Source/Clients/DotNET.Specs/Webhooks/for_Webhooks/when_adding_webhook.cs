@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -29,6 +30,7 @@ public class when_adding_webhook : Specification
         _serviceAccessor = _chronicleConnection as IChronicleServicesAccessor;
         _serviceAccessor.Services.Returns(Substitute.For<IServices>());
         _serviceAccessor.Services.Webhooks.Returns(Substitute.For<IWebhooks>());
+        _serviceAccessor.Services.Webhooks.AddWebhooks(Arg.Any<AddWebhooksRequest>()).Returns(CommandResult.Success(Guid.Empty));
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.Name.Returns(new EventStoreName("some-event-store"));
         _eventStore.Connection.Returns(_chronicleConnection);
