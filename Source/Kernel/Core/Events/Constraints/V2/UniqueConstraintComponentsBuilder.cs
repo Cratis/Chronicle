@@ -30,6 +30,10 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
         var actualSchema = EffectiveSchema(propertySchema);
         var scalarSchema = actualSchema?.IsArray == true ? EffectiveSchema(actualSchema.Item) : actualSchema;
         var format = scalarSchema?.Format;
+        if (format?.EndsWith('?') == true)
+        {
+            format = format[..^1];
+        }
         var converted = value is null ? null : Convert(value, actualSchema, schema);
         return new(converted, format, propertySchema is not null);
     }
@@ -38,8 +42,13 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
     {
         // Convert only this present property: whole-event conversion creates defaults and touches unrelated ciphertext.
         var conversionSchema = new JsonSchema();
-        conversionSchema.Properties["value"] = new JsonSchemaProperty(
+        var conversionProperty = new JsonSchemaProperty(
             "value", (JsonObject)(propertySchema?.Node.DeepClone() ?? new JsonObject()), root);
+        if (propertySchema?.IsArray == true)
+        {
+            conversionProperty.Item = EffectiveSchema(propertySchema.Item);
+        }
+        conversionSchema.Properties["value"] = conversionProperty;
         var source = new JsonObject { ["value"] = value.DeepClone() };
         var converted = (IDictionary<string, object?>)converter.ToExpandoObject(source, conversionSchema);
         return converted["value"];
