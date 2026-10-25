@@ -44,7 +44,7 @@ internal sealed class FallbackServiceProviderFactory(Assembly? sharedHostTestAss
     static Type[] FindDependencyTakingFallbacks(IServiceCollection services, Assembly testAssembly)
     {
         var effective = new Dictionary<Type, ServiceDescriptor>();
-        foreach (var descriptor in services.Where(descriptor => !descriptor.IsKeyedService && !descriptor.ServiceType.IsGenericTypeDefinition))
+        foreach (var descriptor in services.Where(descriptor => !descriptor.IsKeyedService))
         {
             effective[descriptor.ServiceType] = descriptor;
         }

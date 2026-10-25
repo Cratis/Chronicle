@@ -38,7 +38,21 @@ internal class MutableServiceRegistry
     /// </summary>
     /// <param name="serviceType">The service type to check.</param>
     /// <returns><see langword="true"/> if the container fallback is rejected; otherwise <see langword="false"/>.</returns>
-    public bool IsContainerFallbackRejected(Type serviceType) => _rejectedContainerFallbacks.Contains(serviceType);
+    public bool IsContainerFallbackRejected(Type serviceType)
+    {
+        var rejected = _rejectedContainerFallbacks;
+        if (rejected.Contains(serviceType))
+        {
+            return true;
+        }
+
+        if (serviceType.IsGenericType && rejected.Contains(serviceType.GetGenericTypeDefinition()))
+        {
+            return true;
+        }
+
+        return IsEnumerableOfRejectedService(serviceType);
+    }
 
     /// <summary>
     /// Removes all factories from the registry so the next test starts with a clean slate.
@@ -96,4 +110,15 @@ internal class MutableServiceRegistry
     /// <returns>The resolved service instance or <see langword="null"/>.</returns>
     public object? TryGet(Type serviceType, IServiceProvider serviceProvider) =>
         _factories.TryGetValue(serviceType, out var factory) ? factory(serviceProvider) : null;
+
+    bool IsEnumerableOfRejectedService(Type serviceType)
+    {
+        if (!serviceType.IsGenericType || serviceType.GetGenericTypeDefinition() != typeof(IEnumerable<>))
+        {
+            return false;
+        }
+
+        var element = serviceType.GetGenericArguments()[0];
+        return !_factories.ContainsKey(element) && IsContainerFallbackRejected(element);
+    }
 }
