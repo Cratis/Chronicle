@@ -39,6 +39,13 @@ jobs:
           script: |
             const STREAK_LENGTH = 3;
             const RUNS_TO_INSPECT = 20;   // Plenty of headroom to find 3 decisive runs; no pagination needed.
+            // Only recent runs say anything about health today. Without a window, a workflow that
+            // stopped running on the default branch stays "red" forever on runs from months ago.
+            const MAX_RUN_AGE_DAYS = 30;
+            const oldestRelevant = Date.now() - MAX_RUN_AGE_DAYS * 24 * 60 * 60 * 1000;
+            // Workflows that never run on the default branch itself, because a merged pull request
+            // triggers them on its own head branch. Their runs are judged on every branch.
+            const JUDGED_ON_ALL_BRANCHES = ['.github/workflows/publish.yml'];
 
             const { owner, repo } = context.repo;
             const { data: repository } = await github.rest.repos.get({ owner, repo });
@@ -60,11 +67,13 @@ jobs:
                 continue;
               }
 
+              const allBranches = JUDGED_ON_ALL_BRANCHES.includes(workflow.path);
+              const scope = allBranches ? 'all branches' : defaultBranch;
               const { data: runs } = await github.rest.actions.listWorkflowRuns({
                 owner,
                 repo,
                 workflow_id: workflow.id,
-                branch: defaultBranch,
+                ...(allBranches ? {} : { branch: defaultBranch }),
                 status: 'completed',
                 per_page: RUNS_TO_INSPECT
               });
@@ -74,10 +83,11 @@ jobs:
               // than counted as a pass — otherwise a cancellation would silently reset a real streak.
               const decisive = runs.workflow_runs
                 .filter(run => run.conclusion === 'success' || run.conclusion === 'failure')
+                .filter(run => Date.parse(run.created_at) >= oldestRelevant)
                 .slice(0, STREAK_LENGTH);
 
               if (decisive.length < STREAK_LENGTH) {
-                core.info(`${workflow.name} -> skipped (only ${decisive.length} decisive run(s) on ${defaultBranch})`);
+                core.info(`${workflow.name} -> skipped (only ${decisive.length} decisive run(s) on ${scope} in the last ${MAX_RUN_AGE_DAYS} days)`);
                 continue;
               }
 
@@ -96,7 +106,7 @@ jobs:
               }
 
               const body = [
-                `\`${workflow.path}\` has failed its last ${STREAK_LENGTH} completed runs on \`${defaultBranch}\`.`,
+                `\`${workflow.path}\` has failed its last ${STREAK_LENGTH} completed runs on ${allBranches ? 'any branch' : `\`${defaultBranch}\``}.`,
                 ``,
                 `Failing since **${streakStart.created_at}**:`,
                 ``,
