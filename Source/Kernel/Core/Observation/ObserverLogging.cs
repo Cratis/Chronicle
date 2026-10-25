@@ -286,6 +286,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' was activated on event sequence '{KeyEventSequenceId}', but it observes event sequence '{DefinitionEventSequenceId}'. The activation stays inert and persists nothing")]
     internal static partial void ActivatedOnAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
+    internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed")]
+    internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed")]
+    internal static partial void ResumingStalledObserverJobFailed(this ILogger<Observer> logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
+    internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
 }
 
 internal static class ObserverScopes
