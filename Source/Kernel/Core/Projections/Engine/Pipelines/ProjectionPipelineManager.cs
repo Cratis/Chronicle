@@ -41,6 +41,7 @@ public class ProjectionPipelineManager(
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
     readonly ConcurrentDictionary<string, CachedPipeline> _pipelines = new();
+    readonly ConcurrentDictionary<GenerationSinkContext, Lazy<Task<IProjectionPipeline>>> _generationPipelines = new();
 
     /// <summary>
     /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
@@ -117,15 +118,47 @@ public class ProjectionPipelineManager(
     }
 
     /// <inheritdoc/>
-    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
+    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id)
+    {
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+        foreach (var context in _generationPipelines.Keys.Where(context => context.Grant.Store == eventStore && context.Binding.Key.Namespace == @namespace && context.Binding.Key.Projection == id))
+            _generationPipelines.TryRemove(context, out _);
+    }
 
     /// <inheritdoc/>
-    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, MaterializationGenerationIdentity generation) =>
+    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, MaterializationGenerationIdentity generation)
+    {
         _pipelines.TryRemove(GenerationKey(eventStore, @namespace, generation), out _);
+        foreach (var context in _generationPipelines.Keys.Where(context => context.Grant.Store == eventStore && context.Binding.Key.Namespace == @namespace && context.Binding.Identity == generation))
+            _generationPipelines.TryRemove(context, out _);
+    }
 
     /// <inheritdoc/>
-    public void Clear() => _pipelines.Clear();
+    /// <exception cref="InvalidMaterializationExecution">The projection does not match the explicit execution.</exception>
+    public async Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, GenerationSinkContext context)
+    {
+        context.GetReadModel(eventStore, @namespace);
+        MaterializationGenerationCapabilities.ThrowIfCannotBuild(projection, context.Binding.Identity);
+        if (projection.Identifier != context.Binding.Key.Projection || projection.EventSequenceId != context.Binding.EventSequence)
+            throw new InvalidMaterializationExecution();
+        var pending = _generationPipelines.GetOrAdd(context, static (key, state) => new Lazy<Task<IProjectionPipeline>>(() => state.Owner.BuildGeneration(state.Store, state.Namespace, state.Projection, key)), (Owner: this, Store: eventStore, Namespace: @namespace, Projection: projection));
+        try
+        {
+            return await pending.Value;
+        }
+        catch
+        {
+            _generationPipelines.TryRemove(new KeyValuePair<GenerationSinkContext, Lazy<Task<IProjectionPipeline>>>(context, pending));
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Clear()
+    {
+        _pipelines.Clear();
+        _generationPipelines.Clear();
+    }
 
     /// <summary>
     /// Gets the cache and handle lock key of a generation.
@@ -143,6 +176,15 @@ public class ProjectionPipelineManager(
         generation.Generation.IsFirst
             ? KeyHelper.Combine(eventStore, @namespace, generation.ProjectionId)
             : KeyHelper.Combine(eventStore, @namespace, generation.ProjectionId, generation.Generation);
+
+    async Task<IProjectionPipeline> BuildGeneration(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, GenerationSinkContext context)
+    {
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+        var sink = await namespaceStorage.Sinks.GetFor(context);
+        var futures = grainFactory.GetProjectionFutures(eventStore, @namespace, context.Binding.Identity.ObserverId);
+        var key = KeyHelper.Combine(eventStore, @namespace, "execution", context.Grant.Gate.Value, context.Binding.Revision, context.Grant.Epoch, context.Grant.Attempt);
+        return Build(eventStore, @namespace, projection, namespaceStorage, sink, futures, key, context.Binding.Identity);
+    }
 
     ProjectionPipeline Build(
         EventStoreName eventStore,

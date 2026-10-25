@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Storage.Sinks;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -35,6 +36,18 @@ public interface IProjectionPipelineManager
     /// the generation's destination explicitly. It never uses the sink's replay mode.
     /// </remarks>
     Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, MaterializationGenerationIdentity generation);
+
+    /// <summary>
+    /// Gets a pipeline bound to immutable execution and an explicit fixed writer grant.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="projection">The projection reconstructed for this execution.</param>
+    /// <param name="context">The immutable execution and owner-issued admission.</param>
+    /// <returns>The generation pipeline, isolated from legacy and other grant caches.</returns>
+    /// <exception cref="Cratis.Chronicle.Storage.Generations.Bindings.MaterializationBindingsNotSupported">This manager cannot create generation writers.</exception>
+    Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection, GenerationSinkContext context) =>
+        throw new Cratis.Chronicle.Storage.Generations.Bindings.MaterializationBindingsNotSupported();
 
     /// <summary>
     /// Evict any projection pipeline for a specific projection identifier.
