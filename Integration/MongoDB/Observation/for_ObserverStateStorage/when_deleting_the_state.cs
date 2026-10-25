@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using context = Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverStateStorage.when_deleting_the_state.context;
 using KernelObserverState = Cratis.Chronicle.Storage.Observation.ObserverState;
@@ -26,8 +27,8 @@ public class when_deleting_the_state(context context) : MongoDBGiven<context>(co
 
         async Task Because()
         {
-            await _storage.Save(CreateState(TheObserver));
-            await _storage.Save(CreateState(AnotherObserver));
+            await _storage.Save(CreateState(TheObserver), EventSequenceId.Log);
+            await _storage.Save(CreateState(AnotherObserver), EventSequenceId.Log);
 
             await _storage.Delete(TheObserver);
 
