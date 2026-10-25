@@ -588,7 +588,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var cancellationToken = handler.CancellationToken;
-        #pragma warning disable CA2000 // Dispose objects before losing scope
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);

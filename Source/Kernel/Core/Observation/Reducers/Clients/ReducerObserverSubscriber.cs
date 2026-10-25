@@ -149,7 +149,8 @@ public class ReducerObserverSubscriber(
         }
         catch (Exception ex)
         {
-            return new ObserverSubscriberResult(ObserverSubscriberState.Failed, EventSequenceNumber.Unavailable, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
+            logger.NotificationFailed(ex, _key.ObserverId, _key.EventStore, _key.Namespace);
+            return result;
         }
     }
 

@@ -200,8 +200,11 @@ public sealed partial class DecisionReads : IDecisionReads
             var probeTask = services.Sequences.TailSequenceNumber(
                 new()
                 {
-                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log,
-                    EventSourceId = source.Value, EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
+                    EventStore = _eventStore.Name,
+                    Namespace = _eventStore.Namespace,
+                    EventSequenceId = EventSequenceId.Log,
+                    EventSourceId = source.Value,
+                    EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
                     EventSourceType = streamScope?.EventSourceType?.Value ?? string.Empty,
                     EventStreamType = streamScope?.EventStreamType.Value ?? string.Empty,
                     EventStreamId = streamScope?.EventStreamId.Value ?? string.Empty
