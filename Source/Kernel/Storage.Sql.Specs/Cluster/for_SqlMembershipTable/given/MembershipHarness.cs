@@ -33,10 +33,10 @@ public sealed class MembershipHarness(Func<Task<string>> createDatabase, Func<st
 
     public ClusterDbContext CreateContext(params IInterceptor[] interceptors)
     {
-        var builder = new DbContextOptionsBuilder<ClusterDbContext>()
-            .EnableServiceProviderCaching(false)
-            .AddConceptAsSupport()
-            .AddInterceptors(interceptors);
+        var builder = sqlServer
+            ? new DbContextOptionsBuilder<ClusterDbContext>().EnableServiceProviderCaching(false).AddConceptAsSupport()
+            : new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(_connectionString));
+        builder.AddInterceptors(interceptors);
         if (sqlServer)
         {
             builder.UseSqlServer(_connectionString, options => options.EnableRetryOnFailure(2, TimeSpan.Zero, null));

@@ -10,5 +10,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 </Project>

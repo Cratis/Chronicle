@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle;
 
@@ -56,6 +57,20 @@ public static class ChronicleBuilderExtensions
     public static IChronicleBuilder WithNamespaceResolver(this IChronicleBuilder builder, IEventStoreNamespaceResolver resolver)
     {
         builder.NamespaceResolver = resolver;
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures event source id tracing for both worker and ASP.NET Core hosts.
+    /// </summary>
+    /// <param name="builder">The Chronicle builder to configure.</param>
+    /// <param name="configure">The telemetry options callback.</param>
+    /// <returns>The same builder for continuation.</returns>
+    public static IChronicleBuilder WithTelemetry(this IChronicleBuilder builder, Action<ChronicleTelemetryOptions> configure)
+    {
+        builder.Services.AddSingleton(new ChronicleTelemetryConfiguration(configure));
+        builder.Services.Configure<ChronicleClientOptions>(options => configure(options.Telemetry));
+        builder.Services.Configure<ChronicleOptions>(options => configure(options.Telemetry));
         return builder;
     }
 

@@ -230,6 +230,11 @@ public partial class Observer(
                 return;
             }
 
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
+            }
+
             await DrainWebhookProbe();
             await FlushDebouncedProgressState();
             if (!_observerExists)
@@ -479,7 +484,7 @@ public partial class Observer(
             observerDefinition,
             _eventSequence,
             storage,
-            () => _partitionHoldsVersion,
+            CurrentPartitionHoldsVersion,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
@@ -513,6 +518,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        using (logger.BeginObserverScope(_observerId, _observerKey))
+        {
+            logger.Unsubscribed();
+        }
+
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
@@ -534,12 +544,14 @@ public partial class Observer(
                 .ToArray();
             if (remaining.Length == _subscription.Targets.Count)
             {
+                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
                 DropSupersededRegistration(connectionId);
                 return;
             }
 
             if (remaining.Length > 0)
             {
+                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
                 _subscription = _subscription with
                 {
                     SiloAddress = remaining[0].SiloAddress,
@@ -549,6 +561,7 @@ public partial class Observer(
                 return;
             }
 
+            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
             await PromoteSupersededRegistrationOrUnsubscribe();
             return;
         }
@@ -557,10 +570,12 @@ public partial class Observer(
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
         {
+            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
             DropSupersededRegistration(connectionId);
             return;
         }
 
+        LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
 
@@ -917,6 +932,7 @@ public partial class Observer(
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
+        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
@@ -970,11 +986,7 @@ public partial class Observer(
             if (webhookSubscription)
             {
                 await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-                if (!await ValidateStoredWebhookTarget())
-                {
-                    _subscriptionSetupFailed = false;
-                    return;
-                }
+                if (!await ValidateStoredWebhookTarget()) return;
             }
 
             if (recovering)

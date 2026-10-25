@@ -42,7 +42,8 @@ public class when_a_shadow_index_build_times_out : for_ReadModelMigrator.given.a
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal))
+            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) &&
+                !command.CommandText.Contains("__initialized", StringComparison.Ordinal))
             {
                 Attempts++;
                 if (command.CommandTimeout != 600)

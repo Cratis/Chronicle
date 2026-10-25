@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
@@ -59,6 +58,5 @@ public class when_migrating_a_legacy_postgresql_row(PostgreSqlFixture fixture) :
     [Fact] void should_read_manual_owner() => _rows.Single().Owner.ShouldEqual(ClosedStreamOwner.Manual);
     [Fact] void should_read_unavailable_sequence_number() => _rows.Single().SequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
 
-    NamespaceDbContext CreateContext() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
+    NamespaceDbContext CreateContext() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
 }

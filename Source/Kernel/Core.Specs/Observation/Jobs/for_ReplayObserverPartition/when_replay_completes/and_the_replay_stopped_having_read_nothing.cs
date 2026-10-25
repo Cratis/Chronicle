@@ -16,5 +16,5 @@ public class and_the_replay_stopped_having_read_nothing : given.a_partition_repl
         await _job.CompleteForTesting();
     }
 
-    [Fact] void should_notify_observer_without_proving_any_event_type_replayed() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable, Arg.Is<EventType[]>(_ => _.Length == 0));
+    [Fact] void should_notify_observer_without_proving_any_event_type_replayed() => _observer.Received(1).PartitionReplayed((Key)"some-partition", EventSequenceNumber.Unavailable, 44UL, Arg.Is<EventType[]>(_ => _.Length == 0));
 }

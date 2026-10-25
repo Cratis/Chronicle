@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -29,7 +28,7 @@ public class on_postgresql(PostgreSqlFixture fixture) : given.a_postgresql_provi
     async Task Because()
     {
         await Admit();
-        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseNpgsql(_eventStoreConnection).AddConceptAsSupport().Options);
+        await using var context = new EventStores.EventStoreDbContext(SpecDbContextOptions.Kernel<EventStores.EventStoreDbContext>(_eventStoreConnection));
         _after = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

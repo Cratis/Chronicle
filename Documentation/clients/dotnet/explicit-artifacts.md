@@ -62,9 +62,30 @@ Numeric `Generation(n)` does not mean “historical type.” Exact-dispatch excl
 
 Each store captures all explicit recipes together when it is constructed. Later options changes affect only subsequently created stores. Reconnect reuses that snapshot. Explicit `DiscoverAll()` can refresh the discovered provider while retaining the original recipes.
 
-`AutoDiscoverAndRegister = false` stays manual: call `DiscoverAll()` to apply options recipes, then `RegisterAll()` when connected. An untouched manual store does not silently acquire those recipes. This differs from a fixture's `AutoDiscoverArtifacts = false`, which disables assembly discovery but does not disable its client's registration process.
+`AutoDiscoverAndRegister = false` stays manual: call `DiscoverAll()` to apply options recipes, then `RegisterAll()` when connected. For a separate deployment step, use [Register definitions as a deployment step](#register-definitions-as-a-deployment-step). An untouched manual store does not silently acquire those recipes. This differs from a fixture's `AutoDiscoverArtifacts = false`, which disables assembly discovery but does not disable its client's registration process.
 
 An empty explicit snapshot leaves the supplied provider untouched. With nominations, the store merges a local catalog without mutating the provider. Attribute-derived Unique, property-Unique, RemoveConstraint and ClosesStream entries are added only for explicitly nominated events and unioned without duplicates. For discovered-only events, a custom provider's own derived lists remain authoritative, including intentional omissions.
+
+## Register definitions as a deployment step
+
+A CI/CD job or init container can register definitions before the application starts its observers:
+
+```csharp
+using Cratis.Chronicle.Registrations;
+
+var result = await eventStore.RegisterDefinitions(new DeploymentGeneration(buildNumber));
+Console.WriteLine(result.Fingerprint);
+```
+
+`buildNumber` is a monotonic `ulong` assigned by your deployment pipeline. The call registers event types, event sources, read models, constraints and projections. It does not start reactors, reducers, read-model reactors, external subscriptions or seeding; those register when the application connects through its normal registration flow. It reuses discovery with the same rules as `DiscoverAll()`, including explicit recipes and completed preparation.
+
+The fingerprint is a deterministic, lowercase hex SHA-256 value, independent of the event store name, discovery order and projection update timestamps. Compare fingerprints between environments to check that the same definitions were prepared. Custom, non-native artifact registries still register, but their definitions do not contribute to the fingerprint.
+
+The optional generation defaults to zero, meaning no generation is sent. An older generation than the one stored by the kernel is refused with `DeploymentGenerationIsStale`. A value above `long.MaxValue` throws `DeploymentGenerationOutOfRange` locally. Use a kernel that supports `RegisterDeployment`; an older kernel without that RPC cannot perform this step.
+
+Every payload is prepared before registration effects. An unbuildable projection throws `ArtifactDefinitionsIncomplete` before anything is sent. Unsupported closing-stream constraints throw `ClosesStreamConstraintsNotSupported` under the same capability check as ordinary constraint registration, also before any RPC. The call does not retry failures or start background registration.
+
+The prepared fingerprint is reported on `Registration.Fingerprint`, including when sending definitions fails after the deployment was recorded. A concurrent `RegisterAll()` can replace that outcome and reset the fingerprint to `NotSet`, so the returned `DefinitionsRegistration` is the authoritative result of a successful call. Cancellation covers waiting for services and checks between steps, not an RPC already in flight.
 
 ## Plain observers and constraint definers
 

@@ -29,7 +29,7 @@ public class an_immediate_projection : Specification
     protected const string ReadModel = "the-read-model";
     protected const string ReadModelKey = "the-read-model-key";
 
-    protected ImmediateProjection _grain;
+    protected TestableImmediateProjection _grain;
     protected TestKitSilo _silo;
     protected IProjection _projection;
     protected IReadModel _readModel;
@@ -39,6 +39,8 @@ public class an_immediate_projection : Specification
     protected ILogger<ImmediateProjection> _logger;
 
     protected virtual ImmediateProjectionStreamScope? StreamScope => null;
+    protected virtual ProjectionSessionId? SessionId => null;
+    protected virtual ProjectionDefinition DefinitionAtActivation => CreateProjectionDefinition();
 
     async Task Establish()
     {
@@ -70,7 +72,7 @@ public class an_immediate_projection : Specification
         _silo.AddProbe(_ => _eventSequence);
 
         var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
-        stateStorage.State = CreateProjectionDefinition();
+        stateStorage.State = DefinitionAtActivation;
         _silo.Options.StorageFactory = _ => stateStorage;
 
         var key = new ImmediateProjectionKey(
@@ -79,6 +81,7 @@ public class an_immediate_projection : Specification
             EventStoreNamespaceName.Default,
             EventSequenceId.Log,
             ReadModelKey,
+            SessionId: SessionId,
             StreamScope: StreamScope);
         _grain = await _silo.CreateGrainAsync<TestableImmediateProjection>(key.ToString());
     }

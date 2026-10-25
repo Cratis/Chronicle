@@ -38,5 +38,35 @@ public enum ContractBreakKind
     /// A grain class of the baseline is gone or retired, or its grain type changed, so grains the baseline activates
     /// or persists under that identity can no longer be found.
     /// </summary>
-    GrainClassRemoved = 5
+    GrainClassRemoved = 5,
+
+    /// <summary>
+    /// A payload type is gone or moved, so a silo of the previous release can no longer resolve its wire name.
+    /// </summary>
+    PayloadTypeRemoved = 6,
+
+    /// <summary>
+    /// A payload changed codec or underlying type, so silos no longer agree on its serialized representation.
+    /// </summary>
+    PayloadKindChanged = 7,
+
+    /// <summary>
+    /// A payload member is gone or renamed, so a silo of the previous release loses a value it relies on.
+    /// </summary>
+    PayloadPropertyRemoved = 8,
+
+    /// <summary>
+    /// A payload member changed type, so a silo of the previous release cannot decode its value reliably.
+    /// </summary>
+    PayloadPropertyTypeChanged = 9,
+
+    /// <summary>
+    /// An enum member is gone, so a silo of the previous release can still send a value no longer understood.
+    /// </summary>
+    EnumMemberRemoved = 10,
+
+    /// <summary>
+    /// An enum member changed value, so silos interpret the same serialized value differently.
+    /// </summary>
+    EnumValueChanged = 11
 }

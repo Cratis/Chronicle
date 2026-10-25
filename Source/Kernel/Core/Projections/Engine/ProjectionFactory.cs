@@ -101,7 +101,16 @@ public class ProjectionFactory(
             throw new EventGenerationDeliveryNotSupported();
         }
 
+        // The fingerprint identifies the stored definition; ProjectionsManager compares it against the stored definition.
         var fingerprint = DefinitionFingerprintFor(definition);
+        var schemas = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? [.. eventTypeSchemas];
+        var rewrittenEventTypes = new List<EventType>();
+        definition = LegacyEventSourceIdKeys.Normalize(definition, schemas, rewrittenEventTypes);
+        foreach (var eventType in rewrittenEventTypes.Distinct())
+        {
+            LegacyEventSourceIdKeys.LogRewritten(logger, definition.Identifier.Value, eventType.Id.Value);
+        }
+
         var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
         foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
         {
@@ -115,10 +124,11 @@ public class ProjectionFactory(
         var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
         var projection = (Projection)await CreateProjectionFrom(
             eventStore,
-            new(eventSequenceStorage, eventTypesStorage, eventTypeSchemas, readModelDefinition),
+            new(eventSequenceStorage, eventTypesStorage, schemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
+        WarnUnsupportedRootJoinKey(projection, definition);
         projection.DefinitionFingerprint = fingerprint;
         return projection;
     }
@@ -1165,21 +1175,46 @@ public class ProjectionFactory(
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, PropertyPath joinOnProperty)
     {
-        // For a ROOT-level join, resolve the join source's key as its raw event source id — never coerced to
-        // the read model's key type. The join value is the join-ON value (e.g. a string organization number),
-        // not the root's key (e.g. a Guid); routing it through the read-model-key-typed resolver would
-        // Guid.Parse a non-Guid string and permanently freeze the partition. ForJoin matches it against
-        // existing roots (and defers to the row-creation-time ResolveJoin backfill when none exists yet).
+        // A ROOT join resolves its declared event property (or defaults to the event source id) without
+        // coercion to the read model's key type: the join-ON value can be a string while the root key is a Guid.
+        // ForJoin matches it against existing roots, leaving row-creation-time ResolveJoin backfill unchanged.
         // A CHILD join keeps the key-expression resolver: its resolved value becomes the child's array-indexer
         // identifier, which must be typed to the child's identified-by property to locate the child.
         var keyResolver = projection.HasParent
             ? GetKeyResolverFor(projection, key, actualIdentifiedByProperty).Resolver
-            : keyResolvers.FromEventSourceId;
+            : GetRootJoinKeyResolver(key);
         keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty, joinOnProperty);
 
         // A join matches the event against existing roots by a joined value, collapsing distinct event sources onto
         // one document, so it is never purely event-source-keyed.
         return new EventTypeWithKeyResolver(eventType, keyResolver);
+    }
+
+    KeyResolver GetRootJoinKeyResolver(PropertyExpression key)
+    {
+        if (!CanResolveKey(key) || !new EventContentExpressionResolver().CanResolve(key))
+        {
+            return keyResolvers.FromEventSourceId;
+        }
+
+        // A missing property falls back to the event source id, as a root join did before it honored its key.
+        return keyResolvers.FromEventValueProviderWithFallbackToEventSourceId(new EventContentExpressionResolver().Resolve(key));
+    }
+
+    void WarnUnsupportedRootJoinKey(Projection projection, ProjectionDefinition definition)
+    {
+        if (FindUnsupportedRootJoinKey(definition) is { } key)
+        {
+            logger.UnsupportedRootJoinKey(projection.Identifier.Value, key.Value);
+        }
+
+        static PropertyExpression? FindUnsupportedRootJoinKey(ProjectionDefinition definition)
+        {
+            var unsupportedKey = definition.Join.Values.Select(join => join.Key).FirstOrDefault(key =>
+                !string.IsNullOrEmpty(key.Value) && key != WellKnownExpressions.EventSourceId &&
+                !new EventContentExpressionResolver().CanResolve(key));
+            return unsupportedKey ?? definition.Nested?.Values.Select(FindUnsupportedRootJoinKey).FirstOrDefault(key => key is not null);
+        }
     }
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolver(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, bool hasParent, PropertyExpression? parentKey)

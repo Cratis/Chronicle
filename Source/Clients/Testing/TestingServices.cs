@@ -292,7 +292,7 @@ internal sealed class TestingServices : IServices
         _server = new(() => new KernelServerService(null!));
 
         _eventStores = new(() =>
-            new KernelEventStoresService(commandPipeline.Value, storage, NullLogger<KernelEventStoresService>.Instance));
+            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, NullLogger<KernelEventStoresService>.Instance));
 
         var readBindings = new KernelReadModelReadBindings(storage);
         _readModels = new(() =>

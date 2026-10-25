@@ -1160,7 +1160,11 @@ public partial class Sink(
         var existingIndexes = await cursor.ToListAsync();
         var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-        foreach (var indexDefinition in readModel.Indexes)
+        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+            ? readModel.Indexes
+            : readModel.Indexes.Append(initializedIndex);
+        foreach (var indexDefinition in indexes)
         {
             ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
             var indexName = ReadModelIndexKeys.Name(indexDefinition);
@@ -1201,7 +1205,7 @@ public partial class Sink(
     {
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
         var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
-        var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter());
         var instances = await ReadPage(collection, skip, take, CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
@@ -1289,10 +1293,18 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
+    /// <summary>
+    /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
+    /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
+    /// </summary>
+    /// <returns>The visible-root filter.</returns>
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
+
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
         var documents = await collection
-            .Find(FilterDefinition<BsonDocument>.Empty)
+            .Find(VisibleInstancesFilter())
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
             .Skip(skip)
             .Limit(take)

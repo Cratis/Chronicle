@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_failing_partition;
@@ -14,8 +15,16 @@ public class first_time : given.an_observer
     const string StackTrace = "This is the stack trace";
     const string Message = "Something went wrong";
 
+    readonly given.RecordingObserverLogger _logger = new();
+
+    protected override ILogger<Observer> CreateLogger() => _logger;
+
     async Task Because() => await _observer.PartitionFailed(EventSourceId, 42UL, [Message], StackTrace);
 
+    [Fact] void should_log_one_warning() => _logger.Warnings.Count().ShouldEqual(1);
+    [Fact] void should_not_include_the_exception_message_in_the_warning() => _logger.Warnings.Single().Contains(Message, StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_not_include_the_stack_trace_in_the_warning() => _logger.Warnings.Single().Contains(StackTrace, StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_log_the_details_at_debug() => _logger.Debugs.Any(_ => _.Contains(Message, StringComparison.Ordinal) && _.Contains(StackTrace, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_have_only_one_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
     [Fact] void should_update_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);
     [Fact] void should_have_the_correct_partition() => _failedPartitionsState.Partitions.First().Partition.ShouldEqual((Key)EventSourceId);

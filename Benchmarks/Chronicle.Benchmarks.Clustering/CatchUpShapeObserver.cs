@@ -60,18 +60,22 @@ internal sealed class CatchUpShapeObserver(KernelObservation.IObserver observer,
     }
 
     /// <summary>
-    /// Verifies the observer is disconnected at the marker.
+    /// Reads how far behind the tail the observer is after the backlog was seeded.
     /// </summary>
-    /// <param name="marker">The expected last handled sequence number.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the observer did not stay at the marker.</exception>
-    public async Task VerifyBehind(ulong marker)
+    /// <param name="marker">The last handled sequence number when the observer was disconnected.</param>
+    /// <param name="tail">The tail sequence number after seeding.</param>
+    /// <returns>The observer's backlog.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the observer already handled the whole backlog, leaving nothing to measure.</exception>
+    public async Task<CatchUpShapeBacklog> VerifyBehind(ulong marker, ulong tail)
     {
         var state = await observer.GetState();
-        if (await observer.IsSubscribed() || state.LastHandledEventSequenceNumber.Value != marker)
+        var lastHandled = state.LastHandledEventSequenceNumber.IsActualValue ? Math.Max(state.LastHandledEventSequenceNumber.Value, marker) : marker;
+        if (lastHandled >= tail)
         {
-            throw new InvalidOperationException("Observer did not remain disconnected at the marker while the backlog was seeded.");
+            throw new InvalidOperationException("Observer handled the whole backlog while it was seeded; nothing is left to catch up.");
         }
+
+        return new(await observer.IsSubscribed(), lastHandled, tail - lastHandled);
     }
 
     /// <summary>

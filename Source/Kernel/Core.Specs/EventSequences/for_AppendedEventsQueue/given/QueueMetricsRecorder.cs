@@ -21,22 +21,38 @@ public sealed class QueueMetricsRecorder : IDisposable
     public const string SuspectedUndelivered = "chronicle-appended-events-queue-suspected-undelivered-events";
 
     /// <summary>
+    /// The name of the instrument counting observers moved from live delivery to catch-up.
+    /// </summary>
+    public const string ObserversSpilled = "chronicle-appended-events-queue-observers-spilled-to-catchup";
+
+    /// <summary>
     /// The <see cref="Meter"/> shared by every recorder.
     /// </summary>
     public static readonly Meter SharedMeter = new("Cratis.Chronicle.Core.Specs.AppendedEventsQueue");
 
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<int> _measurements = new();
+    readonly ConcurrentQueue<string> _reasons = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueMetricsRecorder"/> class and starts listening.
     /// </summary>
     public QueueMetricsRecorder()
+        : this(SuspectedUndelivered)
     {
-        ObserverId = Guid.NewGuid().ToString();
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QueueMetricsRecorder"/> class for another instrument and starts listening.
+    /// </summary>
+    /// <param name="instrumentName">The name of the instrument to record.</param>
+    /// <param name="observerId">Optional id of the observer to record for; a new one when not given.</param>
+    public QueueMetricsRecorder(string instrumentName, string? observerId = null)
+    {
+        ObserverId = observerId ?? Guid.NewGuid().ToString();
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (ReferenceEquals(instrument.Meter, SharedMeter) && instrument.Name == SuspectedUndelivered)
+            if (ReferenceEquals(instrument.Meter, SharedMeter) && instrument.Name == instrumentName)
             {
                 listener.EnableMeasurementEvents(instrument);
             }
@@ -60,6 +76,11 @@ public sealed class QueueMetricsRecorder : IDisposable
     /// </summary>
     public IEnumerable<int> Measurements => _measurements;
 
+    /// <summary>
+    /// Gets the value of the <c language="csharp">Reason</c> tag of every recorded measurement that carried one.
+    /// </summary>
+    public IEnumerable<string> Reasons => _reasons;
+
     /// <inheritdoc/>
     public void Dispose() => _listener.Dispose();
 
@@ -70,6 +91,14 @@ public sealed class QueueMetricsRecorder : IDisposable
             if (tag.Key == "ObserverId" && ObserverId.Equals(tag.Value?.ToString(), StringComparison.Ordinal))
             {
                 _measurements.Enqueue(measurement);
+                foreach (var reason in tags)
+                {
+                    if (reason.Key == "Reason" && reason.Value is not null)
+                    {
+                        _reasons.Enqueue(reason.Value.ToString()!);
+                    }
+                }
+
                 if (Throws)
                 {
                     throw new InvalidOperationException("The measurement listener failed");

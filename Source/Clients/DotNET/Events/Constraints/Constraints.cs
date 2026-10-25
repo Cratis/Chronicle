@@ -48,22 +48,7 @@ public class Constraints(
     public bool HasFor(ConstraintName constraintName) => _constraints.Exists(_ => _.Name == constraintName);
 
     /// <inheritdoc/>
-    public Task Register()
-    {
-        if (_constraints.Exists(_ => _ is ClosesStreamConstraintDefinition) &&
-            eventStore.Connection is IKernelCapabilities { CapabilitiesAreKnown: true } capabilities &&
-            !capabilities.Capabilities.Contains(KernelCapabilities.ClosesStreamConstraints))
-        {
-            throw new ClosesStreamConstraintsNotSupported("The connected kernel does not support closing stream constraints. Upgrade the kernel before registering closing declarations.");
-        }
-
-        var request = new RegisterConstraintsRequest
-        {
-            EventStore = eventStore.Name,
-            Constraints = _constraints.ConvertAll(_ => _.ToContract())
-        };
-        return _servicesAccessor.Services.Constraints.Register(request);
-    }
+    public Task Register() => RegisterPrepared(PrepareRegistration());
 
     /// <inheritdoc/>
     public ConstraintViolation ResolveMessageFor(ConstraintViolation violation)
@@ -89,6 +74,34 @@ public class Constraints(
 
         return violation with { Message = message };
     }
+
+    /// <summary>
+    /// Builds the constraint payload, preserving capability validation before any effects.
+    /// </summary>
+    /// <returns>The complete constraint registration payload.</returns>
+    /// <exception cref="ClosesStreamConstraintsNotSupported">The kernel does not support closing-stream constraints.</exception>
+    internal RegisterConstraintsRequest PrepareRegistration()
+    {
+        if (_constraints.Exists(_ => _ is ClosesStreamConstraintDefinition) &&
+            eventStore.Connection is IKernelCapabilities { CapabilitiesAreKnown: true } capabilities &&
+            !capabilities.Capabilities.Contains(KernelCapabilities.ClosesStreamConstraints))
+        {
+            throw new ClosesStreamConstraintsNotSupported("The connected kernel does not support closing stream constraints. Upgrade the kernel before registering closing declarations.");
+        }
+
+        return new RegisterConstraintsRequest
+        {
+            EventStore = eventStore.Name,
+            Constraints = _constraints.ConvertAll(_ => _.ToContract())
+        };
+    }
+
+    /// <summary>
+    /// Sends a prepared constraint registration payload.
+    /// </summary>
+    /// <param name="request">The prepared payload.</param>
+    /// <returns>The wire registration operation.</returns>
+    internal Task RegisterPrepared(RegisterConstraintsRequest request) => _servicesAccessor.Services.Constraints.Register(request);
 
     void ThrowIfUnknownConstraint(ConstraintName constraintName)
     {

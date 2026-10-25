@@ -65,7 +65,8 @@ public class when_the_shadow_ddl_deadline_expires : for_ReadModelMigrator.given.
 
         public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) && ++Attempts == 1)
+            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) &&
+                !command.CommandText.Contains("__initialized", StringComparison.Ordinal) && ++Attempts == 1)
             {
                 Timeout = command.CommandTimeout;
                 IndexName = command.CommandText.Split('"')[1];

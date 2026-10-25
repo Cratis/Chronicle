@@ -49,6 +49,13 @@ Identifiers and property paths must match their registered spelling and casing e
 error; when a title, short type name, or differently cased name matches a known identifier or
 property, the diagnostic suggests the registered spelling. Ambiguous matches list the candidates.
 
+## Child-level `every` mappings
+
+An `every` block inside `children` includes descendant events unless it declares `exclude children`.
+After upgrading, re-save the original PDL declarations that use `every` inside `children` to apply
+the corrected behavior, then replay if recommended. A kernel upgrade or replay alone does not
+recompile stored definitions.
+
 ## What remains here
 
 Chronicle-specific client APIs that consume PDL declarations are documented in this section:

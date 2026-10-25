@@ -25,8 +25,9 @@ public class and_a_silo_flushed_with_failed_partitions : Specification
 
     async Task Because() => _exception = await Catch.Exception(() => ObserverServiceClient.FinalizeProjectionReplay([_cleanSilo, _failingSilo], _observerDetails));
 
-    [Fact] void should_still_finalize_the_replay_on_the_clean_silo() => _cleanSilo.Received(1).TryFinalizeReplayFor(_observerDetails);
-    [Fact] void should_still_finalize_the_replay_on_the_failing_silo() => _failingSilo.Received(1).TryFinalizeReplayFor(_observerDetails);
-
-    [Fact] void should_report_that_the_replay_did_not_finalize_cleanly() => _exception.ShouldBeOfExactType<ReplayFinalizationFailed>();
+    [Fact] void should_not_finalize_the_replay_on_the_clean_silo() => _cleanSilo.DidNotReceive().TryFinalizeReplayFor(_observerDetails);
+    [Fact] void should_not_finalize_the_replay_on_the_failing_silo() => _failingSilo.DidNotReceive().TryFinalizeReplayFor(_observerDetails);
+    [Fact] void should_abandon_the_replay_on_the_clean_silo() => _cleanSilo.Received(1).AbandonReplayFor(_observerDetails);
+    [Fact] void should_abandon_the_replay_on_the_failing_silo() => _failingSilo.Received(1).AbandonReplayFor(_observerDetails);
+    [Fact] void should_report_that_the_replay_was_abandoned() => _exception.ShouldBeOfExactType<ReplayAbandoned>();
 }
