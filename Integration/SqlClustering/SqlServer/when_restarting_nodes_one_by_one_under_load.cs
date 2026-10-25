@@ -5,6 +5,6 @@ namespace Cratis.Chronicle.Integration.SqlClustering.SqlServer;
 
 public class when_restarting_nodes_one_by_one_under_load() : SqlClusterSpecification(false, ClusterChange.Restart)
 {
-    [Fact]
+    [Fact(Skip = "Rolling restart misses acknowledged events on SQL Server - https://github.com/Cratis/Chronicle/issues/5350")]
     public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
 }

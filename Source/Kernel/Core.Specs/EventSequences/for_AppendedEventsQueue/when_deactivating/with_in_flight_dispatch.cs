@@ -12,7 +12,7 @@ public class with_in_flight_dispatch : given.a_queue_with_a_gated_worker
         var stop = _queue.OnDeactivateAsync(default, CancellationToken.None);
         _completedBeforeWorker = stop.IsCompleted;
         _worker.SetResult();
-        await stop.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await stop.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_join_the_queue_worker() => _completedBeforeWorker.ShouldBeFalse();
