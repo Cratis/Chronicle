@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
+using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -45,6 +46,13 @@ public class a_projections_manager_grain : Specification
     protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
+    readonly IGenerationProjectionResolver _noGenerations = CreateNoGenerations();
+
+    /// <summary>
+    /// Gets the generation resolver the grain is activated with; by default one that catalogs no later generations,
+    /// because the test silo would otherwise hand the grain a loose mock whose lookup yields no collection.
+    /// </summary>
+    protected virtual IGenerationProjectionResolver GenerationResolver => _noGenerations;
 
     async Task Establish()
     {
@@ -122,6 +130,8 @@ public class a_projections_manager_grain : Specification
         _stateStorage.State = _state;
         _silo.Options.StorageFactory = _ => _stateStorage;
 
+        _silo.AddService(GenerationResolver);
+
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
 
@@ -152,4 +162,11 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    static IGenerationProjectionResolver CreateNoGenerations()
+    {
+        var resolver = Substitute.For<IGenerationProjectionResolver>();
+        resolver.ResolveCataloged(default, default, default).ReturnsForAnyArgs(Task.FromResult<IReadOnlyCollection<GenerationExecution>>([]));
+        return resolver;
+    }
 }

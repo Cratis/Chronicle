@@ -27,6 +27,9 @@ internal static partial class ProjectionObserverSubscriberLogging
     [LoggerMessage(LogLevel.Warning, "Preparing a page of events for projection pipeline for key {Key} failed — the page is handled without preparation")]
     internal static partial void FailedPreparingPage(this ILogger<ProjectionObserverSubscriber> logger, Exception ex, ObserverSubscriberKey key);
 
+    [LoggerMessage(LogLevel.Information, "Projection observer {Key} runs the immutable execution of generation {Generation}")]
+    internal static partial void BoundToGeneration(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key, uint generation);
+
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for projection pipeline for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<ProjectionObserverSubscriber> logger, ObserverSubscriberKey key);
 

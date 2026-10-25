@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
@@ -13,6 +14,7 @@ using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 
 namespace Cratis.Chronicle.Projections.Generations;
@@ -24,6 +26,7 @@ namespace Cratis.Chronicle.Projections.Generations;
 public sealed class GenerationExecutionSpecifications(JsonSerializerOptions options)
 {
     readonly JsonSerializerOptions _options = CreateOptions(options);
+    readonly JsonSerializerOptions _restoreOptions = CreateRestoreOptions(CreateOptions(options));
 
     /// <summary>
     /// Canonicalizes JSON recursively using ordinal property ordering while preserving array order.
@@ -59,6 +62,49 @@ public sealed class GenerationExecutionSpecifications(JsonSerializerOptions opti
         var sourceSchemas = CaptureEventSchemas(eventSchemas);
         var content = JsonSerializer.Serialize(new { CanonicalizationVersion = 1, InterpretationVersion = 1, Projection = projection, ReadModel = model, EventSchemas = sourceSchemas, SemanticSinkRevision = semanticSinkRevision }, _options);
         return MaterializationExecutionSpecification.Capture(projection.EventSequenceId, Canonicalize(content), projection.Version);
+    }
+
+    /// <summary>
+    /// Restores the typed inputs of a persisted execution and proves the restore is lossless.
+    /// </summary>
+    /// <param name="execution">The persisted execution snapshot.</param>
+    /// <returns>The inputs that were captured.</returns>
+    /// <exception cref="InvalidMaterializationExecution">The snapshot is invalid, cannot be parsed or does not recapture byte-equal.</exception>
+    public MaterializationExecutionInputs Restore(MaterializationExecutionSpecification execution)
+    {
+        execution.EnsureValid();
+        try
+        {
+            using var document = JsonDocument.Parse(execution.CanonicalContent);
+            var root = document.RootElement;
+            var projection = Property(root, "Projection").Deserialize<ProjectionDefinition>(_restoreOptions) ?? throw new InvalidMaterializationExecution();
+            var readModel = Property(root, "ReadModel").Deserialize<ReadModelDefinition>(_restoreOptions) ?? throw new InvalidMaterializationExecution();
+            var revision = Property(root, "SemanticSinkRevision").Deserialize<MaterializationRevision>(_restoreOptions) ?? throw new InvalidMaterializationExecution();
+            var schemas = Property(root, "EventSchemas").EnumerateArray()
+                .Select(_ => _.Deserialize<EventSchemaSnapshot>(_restoreOptions) ?? throw new InvalidMaterializationExecution())
+                .Select(_ => new EventTypeSchema(_.Type, _.Owner, _.Source, JsonSchema.FromJson(_.Schema.GetRawText()), _.Visibility, _.Origin ?? string.Empty))
+                .ToArray();
+            var inputs = new MaterializationExecutionInputs(projection, readModel, schemas, revision);
+            var recaptured = Capture(inputs.Projection, inputs.ReadModel, inputs.EventSchemas, inputs.SemanticSinkRevision);
+            if (!string.Equals(recaptured.CanonicalContent, execution.CanonicalContent, StringComparison.Ordinal)) throw new InvalidMaterializationExecution();
+            return inputs;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException or FormatException or KeyNotFoundException or NotSupportedException)
+        {
+            throw new InvalidMaterializationExecution();
+        }
+    }
+
+    static JsonElement Property(JsonElement root, string name) =>
+        root.EnumerateObject().Single(_ => string.Equals(_.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
+
+    static JsonSerializerOptions CreateRestoreOptions(JsonSerializerOptions captured)
+    {
+        captured.PropertyNameCaseInsensitive = true;
+        captured.Converters.Insert(0, new SchemaDictionaryConverter());
+        captured.Converters.Add(new ConceptAsJsonConverterFactory());
+        captured.Converters.Add(new JsonStringEnumConverter());
+        return captured;
     }
 
     static JsonSerializerOptions CreateOptions(JsonSerializerOptions options)
@@ -118,6 +164,21 @@ public sealed class GenerationExecutionSpecifications(JsonSerializerOptions opti
         .Select(schema => JsonSerializer.SerializeToNode(new { schema.Type, schema.Owner, schema.Source, Schema = JsonNode.Parse(schema.Schema.ToJson()), schema.Visibility, schema.Origin }, _options)!)
         .OrderBy(schema => Canonicalize(schema.ToJsonString()), StringComparer.Ordinal)
         .ToArray();
+
+    sealed record EventSchemaSnapshot(EventType Type, EventTypeOwner Owner, EventTypeSource Source, JsonElement Schema, EventTypeVisibility Visibility, string? Origin);
+
+    sealed class SchemaDictionaryConverter : JsonConverter<IDictionary<ReadModelGeneration, JsonSchema>>
+    {
+        public override IDictionary<ReadModelGeneration, JsonSchema> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using var document = JsonDocument.ParseValue(ref reader);
+            return document.RootElement.EnumerateObject().ToDictionary(
+                property => new ReadModelGeneration(uint.Parse(property.Name, CultureInfo.InvariantCulture)),
+                property => JsonSchema.FromJson(property.Value.GetRawText()));
+        }
+
+        public override void Write(Utf8JsonWriter writer, IDictionary<ReadModelGeneration, JsonSchema> value, JsonSerializerOptions options) => throw new NotSupportedException();
+    }
 
     sealed class ExactEventDictionary<TDefinition> : DictionaryJsonConverter<EventType, TDefinition>
     {

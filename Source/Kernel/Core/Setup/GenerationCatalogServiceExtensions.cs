@@ -3,6 +3,9 @@
 
 using Cratis.Chronicle.Generations.Bindings;
 using Cratis.Chronicle.Generations.Enablement;
+using Cratis.Chronicle.Projections.Generations;
+using Cratis.Chronicle.Storage.Generations.Bindings;
+using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,6 +21,11 @@ public static class GenerationCatalogServiceExtensions
     {
         services.TryAddTransient<IMaterializationKeys, MaterializationKeys>();
         services.TryAddTransient<IGenerationCatalogSeam, GenerationCatalog>();
+        services.TryAddSingleton(sp => (IGenerationBuildStorage)sp.GetRequiredService<IMaterializationBindingStorage>());
+        services.TryAddSingleton(sp => (IGenerationWriterGrants)sp.GetRequiredService<IMaterializationBindingStorage>());
+        services.TryAddSingleton<IGenerationObserverBindings, GenerationObserverBindings>();
+        services.TryAddSingleton(new GenerationExecutionSpecifications(Globals.JsonSerializerOptions));
+        services.TryAddSingleton<IGenerationProjectionResolver, GenerationProjectionResolver>();
         return services;
     }
 }

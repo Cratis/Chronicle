@@ -15,6 +15,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -48,13 +49,15 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="engineProjectionsManager">The silo-local engine <see cref="EngineProjectionsManager"/>, whose projection fingerprint reveals a definition change this subscriber was not notified about.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="generations">Optional <see cref="IGenerationProjectionResolver"/> that binds an observer of a later generation to its immutable execution; absent when the storage provider has no generation catalog.</param>
 public class ProjectionObserverSubscriber(
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
     IStorage storage,
     EngineProjectionsManager engineProjectionsManager,
-    ILogger<ProjectionObserverSubscriber> logger) : Grain, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
+    ILogger<ProjectionObserverSubscriber> logger,
+    IGenerationProjectionResolver? generations = null) : Grain, IProjectionObserverSubscriber, ICollapsingProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
@@ -63,6 +66,7 @@ public class ProjectionObserverSubscriber(
     JsonSchema? _schema;
     Exception? _pipelineBuildFailure;
     ProjectionDefinition _definition = null!;
+    bool _generationBound;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -73,6 +77,12 @@ public class ProjectionObserverSubscriber(
         // propagated subscribers to the producer's PullingAgent on a periodic refresh that
         // could lag the first publish and silently drop it under load.
         _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
+
+        // A later generation runs its immutable execution snapshot and never reads the current definition.
+        if (generations is not null && await ActivateGeneration(generations))
+        {
+            return;
+        }
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
@@ -85,6 +95,11 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (_generationBound)
+        {
+            return;
+        }
+
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
     }
@@ -92,6 +107,12 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
+        // A generation is immutable; the current definition has no say in what it runs.
+        if (_generationBound)
+        {
+            return;
+        }
+
         _definition = definition;
 
         // Pipeline caches are silo-local; a definition notification must evict this subscriber's cache too.
@@ -379,6 +400,11 @@ public class ProjectionObserverSubscriber(
 
     async Task<ObserverSubscriberResult?> RefreshWhenEngineHasNewerDefinition()
     {
+        if (_generationBound)
+        {
+            return null;
+        }
+
         // The definition notification from the Projection grain is best effort (the grain may have been
         // deactivated or re-placed, losing its registrations). The engine on this silo is registered with a
         // changed definition before any replay starts, so its fingerprint is the cheap, authoritative signal.
@@ -397,6 +423,11 @@ public class ProjectionObserverSubscriber(
 
     async Task<ObserverSubscriberResult?> RefreshFromStoredDefinition(AppendedEvent? lastSuccessfullyObservedEvent)
     {
+        if (_generationBound)
+        {
+            return null;
+        }
+
         // SetDefinition waits for this subscriber's notification. Calling that grain here
         // could deadlock, so re-check shared storage directly.
         var definitions = storage.GetEventStore(_key.EventStore).Projections;
@@ -433,9 +464,43 @@ public class ProjectionObserverSubscriber(
             string.Empty);
     }
 
+    async Task<bool> ActivateGeneration(IGenerationProjectionResolver resolver)
+    {
+        // Once the resolver has been asked, a failure must fail closed: falling back to the legacy path would
+        // run the current definition against a generation that never meant to see it. Nothing is retried
+        // inside an activation, so a revoked or missing grant stays failed until the grain reactivates.
+        try
+        {
+            var execution = await resolver.Resolve(_key.EventStore, _key.Namespace, _key.EventSequenceId, _key.ObserverId);
+            if (execution is null)
+            {
+                return false;
+            }
+
+            _generationBound = true;
+            var context = await resolver.Admit(_key.EventStore, execution);
+            _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, execution.Projection, context);
+            _definition = execution.Inputs.Projection;
+            _projection = execution.Projection;
+            _schema = execution.Inputs.ReadModel.GetSchemaForLatestGeneration();
+            _pipelineBuildFailure = null;
+            logger.BoundToGeneration(_key, execution.Binding.Identity.Generation.Value);
+        }
+        catch (Exception exception)
+        {
+            _generationBound = true;
+            _pipeline = null;
+            _projection = null;
+            _pipelineBuildFailure = exception;
+            logger.FailedBuildingPipeline(exception, _key);
+        }
+
+        return true;
+    }
+
     async Task HandlePipeline()
     {
-        if (_definition.ReadModel is null)
+        if (_generationBound || _definition.ReadModel is null)
         {
             return;
         }

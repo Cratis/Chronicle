@@ -12,6 +12,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
+using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="generations">Optional <see cref="IGenerationProjectionResolver"/> used to recover the observers of cataloged later generations; absent when the storage provider has no generation catalog.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public partial class ProjectionsManager(
@@ -39,7 +41,8 @@ public partial class ProjectionsManager(
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
-    ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
+    ILogger<ProjectionsManager> logger,
+    IGenerationProjectionResolver? generations = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
     /// <summary>
     /// Maximum number of observer subscribe operations this grain lets run concurrently.

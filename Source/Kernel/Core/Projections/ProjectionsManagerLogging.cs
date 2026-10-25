@@ -22,6 +22,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Debug, "Setting definition for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<ProjectionsManager> logger, ProjectionId identifier);
 
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing cataloged generation of projection '{Identifier}' in namespace '{Namespace}'")]
+    internal static partial void FailedSubscribingCatalogedGeneration(this ILogger<ProjectionsManager> logger, Exception exception, ProjectionId identifier, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Debug, "Subscribing projection '{Identifier}' in namespace '{Namespace}'")]
     internal static partial void Subscribing(this ILogger<ProjectionsManager> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 

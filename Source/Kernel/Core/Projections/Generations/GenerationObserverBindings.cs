@@ -22,10 +22,24 @@ public sealed class GenerationObserverBindings(IGenerationBuildStorage storage) 
         var binding = await storage.ResolveObserver(store, ns, eventSequence, observerId);
         if (binding is null) return null;
         var execution = await storage.GetExecution(store, binding.Key, binding.Identity.Generation) ?? throw new InvalidMaterializationExecution();
+        Verify(binding, execution, ns, eventSequence, observerId);
+        return binding;
+    }
+
+    /// <summary>
+    /// Verifies that a resolved binding and its execution snapshot describe the requested observer.
+    /// </summary>
+    /// <param name="binding">The resolved binding.</param>
+    /// <param name="execution">The binding's execution snapshot.</param>
+    /// <param name="ns">The requested namespace.</param>
+    /// <param name="eventSequence">The requested event sequence.</param>
+    /// <param name="observerId">The requested observer.</param>
+    /// <exception cref="InvalidMaterializationExecution">The binding and execution do not agree.</exception>
+    internal static void Verify(GenerationObserverBinding binding, MaterializationExecutionSpecification execution, EventStoreNamespaceName ns, EventSequenceId eventSequence, ObserverId observerId)
+    {
         VerifyExecution(binding, execution, eventSequence);
         VerifyIdentity(binding, ns, observerId);
         execution.EnsureValid();
-        return binding;
     }
 
     static void VerifyExecution(GenerationObserverBinding binding, MaterializationExecutionSpecification execution, EventSequenceId eventSequence)

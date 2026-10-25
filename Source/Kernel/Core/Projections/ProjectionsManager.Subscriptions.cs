@@ -117,6 +117,8 @@ public partial class ProjectionsManager
         {
             await SubscribeMissingInNamespace(@namespace, missing, reconcile);
         }
+
+        await SubscribeCatalogedGenerations(@namespace, definitions);
     }
 
     async Task EnsureEngineNamespace(EventStoreNamespaceName @namespace)

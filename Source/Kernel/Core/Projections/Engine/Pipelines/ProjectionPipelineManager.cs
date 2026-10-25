@@ -146,7 +146,9 @@ public class ProjectionPipelineManager(
         var pending = _generationPipelines.GetOrAdd(context, static (key, state) => new Lazy<Task<IProjectionPipeline>>(() => state.Owner.BuildGeneration(state.Store, state.Namespace, state.Projection, key)), (Owner: this, Store: eventStore, Namespace: @namespace, Projection: projection));
         try
         {
-            return await pending.Value;
+            var pipeline = await pending.Value;
+            EvictSuperseded(context);
+            return pipeline;
         }
         catch
         {
@@ -189,6 +191,13 @@ public class ProjectionPipelineManager(
         // an explicit generation 1 shares the legacy projection's handle lock, because both write the same container.
         var lockKey = GenerationKey(eventStore, @namespace, context.Binding.Identity);
         return Build(eventStore, @namespace, projection, namespaceStorage, sink, futures, lockKey, context.Binding.Identity);
+    }
+
+    void EvictSuperseded(GenerationSinkContext context)
+    {
+        // Cache entries only: a superseded pipeline is never disposed, cleared or dropped here.
+        foreach (var other in _generationPipelines.Keys.Where(_ => _.Grant.Store == context.Grant.Store && _.Binding.Key == context.Binding.Key && _.Binding.Identity == context.Binding.Identity && _.Grant.Epoch < context.Grant.Epoch))
+            _generationPipelines.TryRemove(other, out _);
     }
 
     void Evict(string key)
