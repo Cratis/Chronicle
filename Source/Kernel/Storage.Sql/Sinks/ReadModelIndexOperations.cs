@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -54,7 +55,8 @@ internal static class ReadModelIndexOperations
         var method = gin ? " USING GIN" : string.Empty;
         var create = $"CREATE INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}{method} ({keys})";
         var exists = databaseType == DatabaseType.SqlServer && await database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.indexes WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND name = {name}").AnyAsync(execution.CancellationToken);
-        if (exists)
+        if (exists || (databaseType != DatabaseType.SqlServer && DynamicSchemaGuard.PolicyFor(context) != DynamicSchemaPolicy.Allow &&
+            await ExistsAndIsValid(context, name, execution.CancellationToken)))
         {
             return;
         }
@@ -68,6 +70,9 @@ internal static class ReadModelIndexOperations
             create = $"CREATE INDEX {(execution.Online && databaseType == DatabaseType.PostgreSql ? "CONCURRENTLY " : string.Empty)}IF NOT EXISTS {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}{method} ({keys})";
         }
 
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(context, "index", $"{table}.{name}");
         if (await TryBuildOnline(context, (create, name), execution))
         {
             return;
@@ -103,8 +108,21 @@ internal static class ReadModelIndexOperations
             DatabaseType.SqlServer => $"DROP INDEX {helper.DelimitIdentifier(name)} ON {helper.DelimitIdentifier(table)}",
             _ => $"DROP INDEX IF EXISTS {helper.DelimitIdentifier(name)}"
         };
-        return Execute(context, (drop, name, execution));
+        return DropGuarded(context, table, name, drop, execution);
     }
+
+    static async Task DropGuarded(ReadModelDbContext context, string table, string name, string sql, Execution execution)
+    {
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(context, "index", $"{table}.{name}");
+        await Execute(context, (sql, name, execution));
+    }
+
+    static Task<bool> ExistsAndIsValid(ReadModelDbContext context, string name, CancellationToken cancellationToken) =>
+        context.Database.IsNpgsql()
+            ? context.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_index x JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=i.relnamespace WHERE i.relname={name} AND n.nspname=current_schema() AND x.indisvalid").AnyAsync(cancellationToken)
+            : context.Database.SqlQuery<int>($"SELECT 1 AS Value FROM sqlite_master WHERE type='index' AND name={name}").AnyAsync(cancellationToken);
 
     static async Task<bool> TryBuildOnline(ReadModelDbContext context, (string Sql, string Name) create, Execution execution)
     {

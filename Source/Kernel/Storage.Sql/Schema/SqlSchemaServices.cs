@@ -25,6 +25,7 @@ public static class SqlSchemaServices
     {
         services.AddStorageConnectionResolution(SqlConnectionResolution.StorageFor(options.Storage.ConnectionDetails), options.Storage.ConnectionResolution);
         services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp.GetRequiredService<IStorageConnectionResolution>()));
+        services.AddSingleton<DynamicSchemaGuard>();
         services.AddSingleton<Database>();
         services.AddSingleton<IDatabase>(sp => sp.GetRequiredService<Database>());
         services.AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>));

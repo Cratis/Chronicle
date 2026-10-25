@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -34,11 +35,22 @@ internal static class ReadModelIndexes
     /// <param name="plan">The complete provider index plan.</param>
     /// <param name="online">Whether an online build is required.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, bool online)
+    internal static Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, bool online) =>
+        Ensure(context, table, plan, new ReadModelIndexOperations.Execution(online, null));
+
+    /// <summary>
+    /// Ensures a declared index using the supplied DDL execution settings.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="table">The table name.</param>
+    /// <param name="plan">The resolved index plan.</param>
+    /// <param name="execution">The DDL timeout and cancellation settings.</param>
+    /// <returns>The index preparation task.</returns>
+    internal static async Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, ReadModelIndexOperations.Execution execution)
     {
         var type = context.Database.GetDatabaseType();
         if (type == DatabaseType.SqlServer) await SqlServerIndexColumns.Ensure(context, table, plan.Targets);
-        await EnsureIndex(context, table, plan.Name(type, table), plan.Keys(type, context.GetService<ISqlGenerationHelper>()), plan.IsGin, online);
+        await ReadModelIndexOperations.EnsureIndex(context, (table, plan.Name(type, table), plan.Keys(type, context.GetService<ISqlGenerationHelper>()), plan.IsGin), execution);
     }
 
     /// <summary>
@@ -99,6 +111,9 @@ internal static class ReadModelIndexes
 
     static async Task Rename(ReadModelDbContext context, string table, StoredIndex index, string expected)
     {
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(context, "index", $"{table}.{index.Name}");
         var helper = context.GetService<ISqlGenerationHelper>();
         switch (context.Database.GetDatabaseType())
         {

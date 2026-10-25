@@ -114,7 +114,7 @@ public partial class Database
             builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
         }
 
-        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode));
+        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode, serviceProvider.GetService<DynamicSchemaGuard>()));
 
         // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
         // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall

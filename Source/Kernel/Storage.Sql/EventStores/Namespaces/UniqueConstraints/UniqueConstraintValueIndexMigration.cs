@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -27,6 +28,8 @@ internal static class UniqueConstraintValueIndexMigration
     /// <returns>The migration task.</returns>
     internal static async Task EnsureValueIndexIsUnique(string tableName, UniqueConstraintDbContext context, ILogger<UniqueConstraintMigrator> logger)
     {
+        using var warnings = DynamicSchemaGuard.For(context).FlushOnDispose();
+
         // Hold off writers across the guards and DDL, including writers in other silos.
         await using var transaction = await context.Database.BeginTransactionAsync();
         var sql = context.GetService<ISqlGenerationHelper>();
@@ -46,6 +49,7 @@ internal static class UniqueConstraintValueIndexMigration
         var duplicates = await Scalar(context, $"SELECT COUNT(*) FROM (SELECT {sql.DelimitIdentifier("Value")} FROM {table} GROUP BY {sql.DelimitIdentifier("Value")} HAVING COUNT(*) > 1) AS duplicate_values");
         if (canIndex && (duplicates == 0 || indexState < 0))
         {
+            DynamicSchemaGuard.For(context).Require(context, "index", $"{tableName}.IX_{tableName}_Value");
             if (indexState == 0)
             {
                 await DropIndex(context, table, index);
@@ -92,6 +96,8 @@ internal static class UniqueConstraintValueIndexMigration
             logger.SkippingValueColumnNarrowing(tableName, oversized, legacy);
             return false;
         }
+
+        DynamicSchemaGuard.For(context).Require(context, "column", $"{tableName}.Value");
 
         // The pre-check and ALTER share the same transaction and exclusive table lock.
         await DropIndex(context, table, index);

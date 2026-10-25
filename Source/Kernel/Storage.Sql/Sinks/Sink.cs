@@ -402,7 +402,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
                 .AnyAsync(promotion => promotion.BackupTableName == physicalName && promotion.RevertContainerName != revertName);
             if (!belongsToAnotherReplay)
             {
-                await ExecuteDdl(scope, BuildDropSql(scope, containerName.Value));
+                await ExecuteDdl(scope, BuildDropSql(scope, containerName.Value), physicalName, drop: true);
             }
 
             // Retention calls Remove for each unique logical revert name, even after the read model's

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,11 @@ public class UniqueConstraintMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context)
     {
+        if (DynamicSchemaVerification.IsActive)
+        {
+            await CreateTable(context, tableName);
+            return;
+        }
         var cacheKey = $"{context.Database.GetConnectionString()}:{tableName}:value-unique";
         if (_indexMigrations.ContainsKey(cacheKey))
         {

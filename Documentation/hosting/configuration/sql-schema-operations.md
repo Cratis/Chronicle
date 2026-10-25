@@ -23,7 +23,9 @@ The operation visits:
 - Every registered event store and namespace, plus Default for each store.
 - Additional stores supplied with repeatable `--event-store` flags. Repeatable `--namespace` flags apply to each explicitly supplied store.
 - Namespace and jobs migrations, the event-log, system, outbox and shared named-tag tables, and existing sequence tables, including inboxes.
-- Read-model databases, without creating arbitrary read-model tables.
+- Registered read-model tables and their projected columns, shadow and initialized-marker indexes, replay-promotion metadata, and declared indexes. Declared index builds finish before the command succeeds, using the configured DDL timeout.
+- Unscoped unique-constraint tables from registered definitions, plus upgrades of existing scoped claim and values tables. Scope keys first encountered after provisioning still need runtime DDL.
+- Existing replay and backup read-model tables. SQL read-model generations remain unsupported.
 
 Explicit stores and namespaces are registered so subsequent kernel boots can discover them. Re-running the operation is supported. Applied migration identifiers unknown to the current build are reported but do not cause verification to fail.
 
@@ -38,7 +40,11 @@ Run a read-only schema probe:
   --event-store orders --namespace production
 ```
 
-Or set `Cratis__Chronicle__Storage__SchemaAction=VerifyAndExit`. Verification reads history and table metadata; it does not register stores, acquire schema migration locks, create databases or schemas, or apply migrations. It checks versioned EF schemas and the presence of well-known sequence tables, not future dynamically shaped read-model or constraint tables.
+Or set `Cratis__Chronicle__Storage__SchemaAction=VerifyAndExit`. Verification reads history and table metadata; it does not register stores, acquire schema migration locks, create databases or schemas, or apply migrations. Dynamic table checks compare required columns, types and lengths, required nullability, and ordered primary keys. Migration-defined index checks compare uniqueness and ordered column keys; PostgreSQL also checks validity and readiness. Missing tables, columns and indexes are collected within each dynamic verification group.
+
+Initialized-marker and shadow index readiness uses the same catalog checks as runtime reconciliation, not their generated names. These checks do not establish a full index-shape match on every provider. Declared read-model indexes are checked by generated name only: expression SQL, ordered keys, direction, uniqueness, method, collation, filters and included columns are not compared. A same-named but incompatible declared index can therefore pass verification. Keep declared indexes under Chronicle's control; this probe is not a complete schema-drift audit.
+
+Sequence discovery uses built-in sequences, namespace registrations and existing sequence tables. Subscription definitions are not yet used to discover additional sequence names; provision those sequences through namespace registration before relying on this probe.
 
 After a successful migration job, configure normal replicas with:
 
@@ -47,7 +53,7 @@ export Cratis__Chronicle__Storage__SchemaMode=Verify
 ./Cratis.Chronicle.Server
 ```
 
-`SchemaMode` defaults to `Migrate`, preserving migration-on-access behavior. `Verify` disables database and schema creation regardless of `CreateIfMissing`. Before accepting traffic, startup checks the cluster, System event-store, Default namespace and jobs schemas. Later versioned-schema accesses also fail if migrations are pending, including jobs initialization. Dynamically shaped tables still use their existing per-table path; this is not a blanket DDL prohibition.
+`SchemaMode` defaults to `Migrate`, preserving migration-on-access behavior. `Verify` disables database and schema creation regardless of `CreateIfMissing`. Before accepting traffic, startup checks the cluster, System event-store, Default namespace and jobs schemas. Later versioned-schema accesses also fail if migrations are pending, including jobs initialization. Dynamic DDL still runs when needed. Newly encountered objects are logged once per process at Debug, with a Warning summary per flush giving the count and recommending `--migrate-only`. This is not a blanket DDL prohibition; runtime refusal is planned for the next major release.
 
 Do not set `SchemaAction` on normal replicas: any non-`None` action exits instead of running the server. MongoDB and InMemory schema actions are successful no-ops; normal startup warns when `SchemaMode=Verify` is configured for them.
 
@@ -56,10 +62,12 @@ Do not set `SchemaAction` on normal replicas: any non-`None` action exits instea
 | Code | Meaning |
 | --- | --- |
 | `0` | Migration completed, verification is current, or storage has no versioned schema. |
-| `2` | Verification found a missing database, schema, required table or pending migration. |
+| `2` | Verification found a missing database, schema, required dynamic object, incompatible column or index, or pending migration. |
 | `3` | A database schema lock could not be acquired before its timeout. |
 | `4` | Configuration is invalid, or migration needs a database that creation policy does not permit Chronicle to create. |
 | `1` | An unexpected error occurred. |
+
+CI checks that previously passed can now exit `2` for missing or incompatible dynamic objects. Run `--migrate-only` with the upgrading build before running `--verify-schema`.
 
 Structured logs identify the logical scope, database, pending migrations, elapsed time and final exit code. Correct the reported configuration or run the migration job before retrying; do not treat a timeout as success.
 
@@ -102,9 +110,9 @@ env:
 The runtime identity still needs permissions for Chronicle's dynamic per-table operations. In Verify mode, these tables are still created when first used:
 
 - Event-sequence tables for sequences that did not exist when `--migrate-only` ran.
-- Unique-constraint tables.
-- Read-model tables, including the per-generation tables created when a projection is rebuilt.
+- Scoped unique-constraint tables for scope keys not yet encountered.
+- Read-model tables and indexes registered after provisioning, including replay tables first needed by a later rebuild.
 
-Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
+Run provisioning again when registrations change. Versioned schema objects still come from migrations, which `--migrate-only` applies and Verify checks.
 
 Replicas from the previous release keep running against the migrated schema during a rollout. They ignore migrations they do not know, so a rollout stays safe as long as each release only adds tables, columns and indexes. Keep schema connection resolution consistent with the [storage connection resolution configuration](storage-connection-resolution.md).

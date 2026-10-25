@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -77,6 +78,9 @@ internal static class PrimaryKeyConstraints
 
     static async Task Rename(DbContextScope<ReadModelDbContext> scope, DatabaseType databaseType, string table, string from, string to)
     {
+        var guard = DynamicSchemaGuard.For(scope.DbContext);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(scope.DbContext, "constraint", $"{table}.{from}");
         var database = scope.DbContext.Database;
         if (databaseType == DatabaseType.SqlServer)
         {

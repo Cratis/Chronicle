@@ -5,6 +5,7 @@ using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -81,7 +82,7 @@ public partial class Sink
         if (!replayHasRows)
         {
             // No backup is touched on this path, so its ownership cannot block an empty replay.
-            await ExecuteDdl(scope, BuildDropSql(scope, replayName));
+            await ExecuteDdl(scope, BuildDropSql(scope, replayName), replayName, drop: true);
             return false;
         }
 
@@ -103,9 +104,9 @@ public partial class Sink
         var preservedLegacyBackup = await PreserveLegacyBackup(scope, promotion, recoveryName);
 
         // The old backup is absent, safely preserved, or owned by an earlier identified replay.
-        await ExecuteDdl(scope, BuildDropSql(scope, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+        await ExecuteDdl(scope, BuildDropSql(scope, revertName), revertName, drop: true);
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName), _tableName);
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName), replayName);
 
         // Constraint names must move in the same transaction, before the next replay is created.
         await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
@@ -134,7 +135,7 @@ public partial class Sink
             throw new UnverifiedReplayBackup(_tableName, physicalRevert);
         }
 
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, physicalRevert, recoveryName));
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, physicalRevert, recoveryName), physicalRevert);
         await PrimaryKeyConstraints.NameAfterTable(scope, recoveryName);
         return true;
     }
@@ -196,8 +197,13 @@ public partial class Sink
         await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
     }
 
-    static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
+    static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql, string table, bool drop = false)
     {
+        var context = scope.DbContext;
+        if (drop && DynamicSchemaGuard.PolicyFor(context) != DynamicSchemaPolicy.Allow && !await TableExists(context.Database, context.Database.GetDatabaseType(), table)) return;
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(context, "table", table);
 #pragma warning disable EF1002 // sql is built from delimited identifiers via ISqlGenerationHelper.
         await scope.DbContext.Database.ExecuteSqlRawAsync(sql);
 #pragma warning restore EF1002

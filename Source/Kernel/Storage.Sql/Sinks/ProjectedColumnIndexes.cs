@@ -19,14 +19,25 @@ internal static class ProjectedColumnIndexes
     /// <param name="plan">The resolved index plan.</param>
     /// <param name="online">Whether the provider should build a native index online.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, bool online)
+    internal static Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, bool online) =>
+        Ensure(context, table, plan, new ReadModelIndexOperations.Execution(online, null));
+
+    /// <summary>
+    /// Ensures a declared index with bounded execution settings during explicit provisioning.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="table">The table name.</param>
+    /// <param name="plan">The resolved index plan.</param>
+    /// <param name="execution">The DDL timeout and cancellation settings.</param>
+    /// <returns>The index preparation task.</returns>
+    internal static async Task Ensure(ReadModelDbContext context, string table, ReadModelIndexPlan plan, ReadModelIndexOperations.Execution execution)
     {
         if (context.Database.IsSqlite() && plan.IsLegacy && SqliteDecimalSortKey.IsDecimal(plan.Targets[0].Column))
         {
             await EnsureDecimalShadow(context, plan.Targets[0].Column);
             return;
         }
-        await ReadModelIndexes.Ensure(context, table, plan, online);
+        await ReadModelIndexes.Ensure(context, table, plan, execution);
     }
 
     static async Task EnsureDecimalShadow(ReadModelDbContext context, ProjectedColumn column)

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -47,9 +48,9 @@ public partial class Sink
         await context.EnsureTableExists();
         var online = context.Database.GetDatabaseType() != DatabaseType.Sqlite &&
             table == _tableName && await context.Entries.AnyAsync();
-        if (!online)
+        if (!online || DynamicSchemaGuard.PolicyFor(context) == DynamicSchemaPolicy.Refuse)
         {
-            await BuildIndexes(table, reconcile, online: false);
+            await BuildIndexes(table, reconcile, online);
             return;
         }
         lock (_indexGate)
@@ -69,7 +70,7 @@ public partial class Sink
         {
             await BuildIndexes(table, reconcile, online: true);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException and not DynamicSchemaObjectNotProvisioned)
         {
             _logger.IndexCreationFailed(exception, table, "background index connection could not be opened");
         }
@@ -110,7 +111,7 @@ public partial class Sink
         {
             // Another kernel is already building this table's indexes. A later ensure can retry.
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException and not DynamicSchemaObjectNotProvisioned)
         {
             _logger.IndexCreationFailed(exception, table, "index reconciliation");
         }
@@ -136,7 +137,7 @@ public partial class Sink
                 }
                 await ProjectedColumnIndexes.Ensure(context, table, plan, online);
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (exception is not OperationCanceledException and not DynamicSchemaObjectNotProvisioned)
             {
                 complete = false;
                 _logger.IndexCreationFailed(exception, table, path.Path);

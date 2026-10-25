@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,16 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
+        if (DynamicSchemaVerification.IsActive)
+        {
+            await CreateTable(context, tableName);
+            if ((await SchemaTables.Read(context)).ContainsKey(tableName))
+            {
+                if (await ShadowColumnIndexes.NeedsReconciliation(context)) DynamicSchemaVerification.Report($"table '{tableName}' has missing or invalid shadow indexes");
+                if (await InitializedMarkerIndex.NeedsIndex(context)) DynamicSchemaVerification.Report($"table '{tableName}' has a missing or invalid initialized-marker index");
+            }
+            return;
+        }
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }

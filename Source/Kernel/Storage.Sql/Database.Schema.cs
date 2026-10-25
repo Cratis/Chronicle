@@ -111,14 +111,17 @@ public partial class Database
     /// </summary>
     /// <param name="identity">The namespace identity.</param>
     /// <param name="names">The sequence names.</param>
+    /// <param name="verify">Whether to inspect without executing DDL.</param>
     /// <returns>The preparation task.</returns>
-    internal async Task PrepareSequences(DatabaseIdentity identity, IEnumerable<string> names)
+    internal async Task PrepareSequences(DatabaseIdentity identity, IEnumerable<string> names, bool verify = false)
     {
-        var target = await Target(identity, ConnectionPurpose.Schema);
+        using var inspection = verify ? DynamicSchemaVerification.Begin() : null;
+        var target = await Target(identity, ConnectionPurpose.Schema, verify);
         foreach (var name in names)
         {
             await using var context = new EventSequenceDbContext(BuildOptions<EventSequenceDbContext>(target), name, eventSequenceMigrator);
-            await EnsureTableMigrated(context, target);
+            if (verify) await context.EnsureTableExists();
+            else await EnsureTableMigrated(context, target);
         }
     }
 

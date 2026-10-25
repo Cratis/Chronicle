@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -25,6 +26,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction, Func<TContext, string, Task>? upgradeTableAction = null)
     {
+        if (DynamicSchemaVerification.IsActive)
+        {
+            await createTableAction(context, tableName);
+            return;
+        }
         var key = $"{context.Database.GetConnectionString()}:{tableName}";
 
         if (_migratedTables.ContainsKey(key))
@@ -92,7 +98,29 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     /// <inheritdoc/>
     public async Task ExecuteMigrationOperations(TContext context, MigrationBuilder migrationBuilder)
     {
+        if (DynamicSchemaVerification.IsActive)
+        {
+            await DynamicSchemaVerification.Verify(context, migrationBuilder);
+            return;
+        }
         var operations = migrationBuilder.Operations;
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        foreach (var operation in operations)
+        {
+            switch (operation)
+            {
+                case Microsoft.EntityFrameworkCore.Migrations.Operations.CreateTableOperation table:
+                    guard.Require(context, "table", table.Name);
+                    break;
+                case Microsoft.EntityFrameworkCore.Migrations.Operations.ColumnOperation column:
+                    guard.Require(context, "column", $"{column.Table}.{column.Name}");
+                    break;
+                case Microsoft.EntityFrameworkCore.Migrations.Operations.CreateIndexOperation index:
+                    guard.Require(context, "index", $"{index.Table}.{index.Name}");
+                    break;
+            }
+        }
         var sqlGenerator = context.Database.GetService<IMigrationsSqlGenerator>();
         var commands = sqlGenerator.Generate(operations, context.Model);
 
@@ -160,6 +188,9 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
     static async Task<bool> TryCreateTable(string tableName, TContext context, Func<TContext, string, Task> createTableAction)
     {
+        var guard = DynamicSchemaGuard.For(context);
+        using var warnings = guard.FlushOnDispose();
+        guard.Require(context, "table", tableName);
         try
         {
             await createTableAction(context, tableName);

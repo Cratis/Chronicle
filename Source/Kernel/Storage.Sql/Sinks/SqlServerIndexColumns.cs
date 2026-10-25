@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -45,6 +46,9 @@ internal static class SqlServerIndexColumns
             var exists = await context.Database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.computed_columns WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({table})) AND name={name}").AnyAsync();
             if (!exists)
             {
+                using var warnings = DynamicSchemaGuard.For(context).FlushOnDispose();
+                DynamicSchemaGuard.For(context).Require(context, "column", $"{table}.{name}");
+
                 // NON-persisted: column creation is metadata-only, even on a populated primary.
                 await Execute(context, $"ALTER TABLE {helper.DelimitIdentifier(table)} ADD {helper.DelimitIdentifier(name)} AS ({ReadModelIndexPlan.SqlServerExpression(target, helper)})");
             }
@@ -63,6 +67,8 @@ internal static class SqlServerIndexColumns
         var helper = context.GetService<ISqlGenerationHelper>();
         foreach (var name in names.Where(name => name.StartsWith(Prefix, StringComparison.Ordinal)))
         {
+            using var warnings = DynamicSchemaGuard.For(context).FlushOnDispose();
+            DynamicSchemaGuard.For(context).Require(context, "column", $"{table}.{name}");
             await Execute(context, $"ALTER TABLE {helper.DelimitIdentifier(table)} DROP COLUMN {helper.DelimitIdentifier(name)}");
         }
     }
