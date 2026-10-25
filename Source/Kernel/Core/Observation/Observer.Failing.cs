@@ -264,9 +264,17 @@ public partial class Observer
             var config = await GetRetryConfiguration();
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
-            logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            if (partitionWasAlreadyFailed)
+            {
+                logger.PartitionFailedAgain(partition, sequenceNumber, failure.AttemptsInCurrentBudget);
+            }
+            else
+            {
+                logger.PartitionFailed(partition, sequenceNumber, FailureKindCode(kind));
+            }
+            logger.PartitionFailureDetails(partition, exceptionMessages, exceptionStackTrace);
             await RecordAbandonedDeliveryFence(failure, kind, context.DeliveryFence);
             if (!partitionWasAlreadyFailed)
             {

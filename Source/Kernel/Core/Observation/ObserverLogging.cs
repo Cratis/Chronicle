@@ -41,8 +41,14 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Subscribing observer to all event types")]
     internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
-    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
+    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed at {SequenceNumber} ({ErrorType})")]
+    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber sequenceNumber, string errorType);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} failed again at {SequenceNumber}, attempt {Attempt}")]
+    internal static partial void PartitionFailedAgain(this ILogger<Observer> logger, Key partition, EventSequenceNumber sequenceNumber, int attempt);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} failure details: {ExceptionMessages}. StackTrace: {StackTrace}")]
+    internal static partial void PartitionFailureDetails(this ILogger<Observer> logger, Key partition, IEnumerable<string> exceptionMessages, string stackTrace);
 
     [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
     internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
@@ -55,9 +61,6 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
-
-    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
-    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
 
     [LoggerMessage(LogLevel.Warning, "Skipping recovery of partition {Partition} — already exceeded max retry attempts ({AttemptCount}/{MaxRetryAttempts}). Partition requires manual intervention or server restart to retry")]
     internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
