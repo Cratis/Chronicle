@@ -19,6 +19,9 @@ namespace Cratis.Chronicle.EventTypes;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/> for managing kernel event types.
 /// </summary>
+/// <remarks>
+/// Event types resolve on demand because grains can deserialize System events before the Active-stage startup task has registered them (#4643).
+/// </remarks>
 [Singleton]
 public class EventTypes : IEventTypes
 {
@@ -65,10 +68,10 @@ public class EventTypes : IEventTypes
     }
 
     /// <inheritdoc/>
-    public JsonSchema GetJsonSchema(Type eventType) => _schemaByType[eventType];
+    public JsonSchema GetJsonSchema(Type eventType) => _schemaByType.GetOrAdd(eventType, GenerateSchema);
 
     /// <inheritdoc/>
-    public Type GetClrTypeFor(EventTypeId eventTypeId) => _typeByEventTypeId[eventTypeId];
+    public Type GetClrTypeFor(EventTypeId eventTypeId) => _typeByEventTypeId.GetOrAdd(eventTypeId, ResolveKernelEventType);
 
     /// <inheritdoc/>
     public async Task DiscoverAndRegister(EventStoreName eventStore)
@@ -96,13 +99,21 @@ public class EventTypes : IEventTypes
                 continue;
             }
 
-            var schemaNode = _serializerOptions.GetJsonSchemaAsNode(eventType, _exporterOptions);
-            var schema = new JsonSchema(schemaNode.AsObject());
+            var schema = GenerateSchema(eventType);
             _schemaByType[eventType] = schema;
             _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
             await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
         }
     }
+
+    JsonSchema GenerateSchema(Type eventType)
+    {
+        var schemaNode = _serializerOptions.GetJsonSchemaAsNode(eventType, _exporterOptions);
+        return new JsonSchema(schemaNode.AsObject());
+    }
+
+    Type ResolveKernelEventType(EventTypeId eventTypeId) => _types.All
+        .LastOrDefault(t => t.IsEventType() && t.GetEventType().Id == eventTypeId) ?? throw new UnknownKernelEventType(eventTypeId);
 
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {

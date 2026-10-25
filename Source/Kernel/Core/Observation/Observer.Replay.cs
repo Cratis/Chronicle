@@ -159,6 +159,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
         {
@@ -171,13 +172,15 @@ public partial class Observer
     /// </summary>
     /// <param name="partition">The partition that was replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The last event the replay handled, or <see cref="EventSequenceNumber.Unavailable"/>.</param>
-    /// <param name="replayedEventTypes">The event types the replay proves it handled, or empty.</param>
+    /// <param name="replayedEventTypes">The event types the replay proves it handled; non-empty only when the replay completed over every event type.</param>
     /// <param name="lastScannedEventSequenceNumber">The last event the replay read, handled or excluded by the observer's filters.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Live delivery holds back a partition while it is replaying, so the replay marker must come down however the
     /// replay ended - including a replay that read only events the observer's filters exclude and so handled nothing.
     /// Events held back while it replayed are handed to catch-up from the furthest event the replay read.
+    /// A replay that read nothing catches up from the start only when it completed over every event type,
+    /// as proved by non-empty <paramref name="replayedEventTypes"/>.
     /// </remarks>
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
     {
@@ -186,6 +189,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
+        _partitionHoldsVersion++;
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -209,7 +213,10 @@ public partial class Observer
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+
+        // A stopped, failed or selected-type replay has not read the whole partition, so restarting would redeliver handled events.
+        var replayCoveredEveryEventType = replayedEventTypes.Length > 0;
+        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: replayCoveredEveryEventType);
         EvaluateSuspectedSkips();
     }
 
@@ -255,6 +262,7 @@ public partial class Observer
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
         await WriteStateAsync();

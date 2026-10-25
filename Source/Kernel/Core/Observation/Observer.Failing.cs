@@ -563,7 +563,7 @@ public partial class Observer
             return;
         }
 
-        await StartRecoveryJob(request);
+        await StartRecoveryJob(failedPartition, request);
     }
 
     RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
@@ -574,11 +574,32 @@ public partial class Observer
             DeferralId = failedPartition.Deferral?.Id
         };
 
-    Task<JobId> StartRecoveryJob(RetryFailedPartitionRequest request) =>
-        _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
+    async Task<JobId> StartRecoveryJob(FailedPartition failedPartition, RetryFailedPartitionRequest request)
+    {
+        var jobId = await _jobsManager.StartOrResumeObserverJobReportingDrops<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
-            request,
-            requestPredicate: r => r.Key == request.Key && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
+            () => request,
+            requestPredicate: r => r.Key == request.Key && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId,
+            onAlreadyRunningJob: null,
+            onResume: null,
+            onStartNew: null,
+            onResumeRefused: null,
+            concludedJobs: null,
+            maxJobsToDrop: RetryJobDropsAvailable,
+            onJobsDropped: ConsumeRetryJobDrops);
+
+        // The retry reminder was unregistered when it fired. Without a job nothing would retry this partition again.
+        if (jobId == JobId.NotSet)
+        {
+            await RegisterRetryReminderAfterNoJob(failedPartition);
+        }
+        else
+        {
+            _retriesWithoutJob.Remove(failedPartition.Id);
+        }
+
+        return jobId;
+    }
 
     /// <summary>
     /// Check whether the observer's failures have reached a threshold that takes it out of service.

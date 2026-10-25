@@ -49,7 +49,7 @@ public partial class Observer
         var jobId = JobId.NotSet;
         try
         {
-            jobId = await StartRecoveryJob(request);
+            jobId = await StartRecoveryJob(failure, request);
         }
         finally
         {

@@ -39,6 +39,11 @@ internal static class DatabaseSchemaLock
     /// </summary>
     internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// Observes entry to a schema-lock scope in the current asynchronous flow, including SQLite's no-op lock.
+    /// </summary>
+    internal static readonly AsyncLocal<Action?> OnRun = new();
+
     static readonly AsyncLocal<ImmutableHashSet<string>?> _held = new();
 
     /// <summary>
@@ -79,6 +84,7 @@ internal static class DatabaseSchemaLock
     /// <exception cref="DatabaseSchemaLockNotAcquired">Another kernel held the lock for longer than the timeout.</exception>
     internal static async Task Run(DbContext context, Func<Task> change, TimeSpan timeout)
     {
+        OnRun.Value?.Invoke();
         var contextConnection = context.Database.GetDbConnection();
         var schemaLock = For(contextConnection);
         var key = $"{contextConnection.DataSource}|{contextConnection.Database}";

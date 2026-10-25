@@ -18,9 +18,16 @@ public class ReducerDefinitionComparer(IStorage storage) : IReducerDefinitionCom
         ReducerDefinition first,
         ReducerDefinition second)
     {
-        if (!await storage.GetEventStore(reducerKey.EventStore).Reducers.Has(reducerKey.ReducerId))
+        var reducers = storage.GetEventStore(reducerKey.EventStore).Reducers;
+        if (!await reducers.Has(reducerKey.ReducerId))
         {
             return ReducerDefinitionCompareResult.New;
+        }
+
+        if (first.EventTypes is null)
+        {
+            // A grain activated before another namespace stored the shared definition has empty state; load what it would have read.
+            first = await reducers.Get(reducerKey.ReducerId);
         }
 
         var firstEventTypes = first.EventTypes.OrderBy(_ => _.EventType.Id).ToArray();
