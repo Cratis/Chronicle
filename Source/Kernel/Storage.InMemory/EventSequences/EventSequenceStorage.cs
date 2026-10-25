@@ -272,7 +272,7 @@ public partial class EventSequenceStorage(
             {
                 Context = original.Context with { EventType = eventType, Hash = hash },
                 Content = content,
-                OriginalContent = original.IsRevised ? original.OriginalContent : Serialize(original.Content),
+                OriginalContent = original.IsRevised ? original.OriginalContent : original.GenerationalContent.GetValueOrDefault((int)EventTypeGeneration.First.Value, Serialize(original.Content)),
                 Revisions = [.. original.Revisions, revision]
             };
         }

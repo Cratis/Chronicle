@@ -67,7 +67,8 @@ public class and_a_pinned_generation_has_protected_personal_data : given.an_obse
     [Fact] void should_deliver_the_pinned_generation() => _delivered.Context.EventType.ShouldEqual(_pin);
     [Fact] void should_deliver_the_pinned_hash() => _delivered.Context.Hash.ShouldEqual((EventHash)"pinned-hash");
     [Fact] void should_preserve_the_appended_generation() => _delivered.Context.AppendedGeneration!.Value.ShouldEqual(1U);
-    [Fact] void should_leave_stored_generations_protected() => _delivered.GenerationalContent[2].ShouldEqual("{\"fullName\":\"ciphertext\"}");
+    [Fact] void should_release_delivered_generations() => _delivered.GenerationalContent[2].ShouldEqual("{\"fullName\":\"Ada Lovelace\"}");
+    [Fact] void should_leave_stored_generations_protected() => _appended.GenerationalContent[2].ShouldEqual("{\"fullName\":\"ciphertext\"}");
 
     static JsonSchema CreateSchema(string property)
     {

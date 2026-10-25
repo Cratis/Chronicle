@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -37,8 +38,10 @@ public class EventGenerationRelease(
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
+            using var scope = ReleaseKeys.BeginScope();
             if (@event.Context.EventType.Id == GlobalEventTypes.Redaction || !pinsById.TryGetValue(@event.Context.EventType.Id, out var pin))
             {
+                await eventTypes.EnsureSchemasFor(schemas, [@event]);
                 releasedEvents.AddRange(await eventCompliance.Release([@event], schemas));
                 continue;
             }
@@ -54,6 +57,7 @@ public class EventGenerationRelease(
                 throw new PinnedEventTypeGenerationUnavailable(pin);
             }
 
+            await eventTypes.EnsureSchemasFor(schemas, [@event]);
             var revisionGeneration = @event.RevisedGeneration ?? @event.Revisions.LastOrDefault()?.EventTypeGeneration;
             var deliverySource = @event;
             if (revisionGeneration is not null && revisionGeneration != @event.Context.EventType.Generation)
@@ -77,7 +81,8 @@ public class EventGenerationRelease(
 
             if (deliverySource.Context.EventType.Generation == pin.Generation)
             {
-                releasedEvents.Add(await eventCompliance.Release(deliverySource with { Context = deliverySource.Context with { EventType = pin } }, schema.Schema));
+                var released = await eventCompliance.Release(deliverySource with { Context = deliverySource.Context with { EventType = pin } }, schema.Schema);
+                releasedEvents.Add(await eventCompliance.ReleaseHistory(released, schemas));
                 continue;
             }
 
@@ -86,7 +91,8 @@ public class EventGenerationRelease(
                 var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), schema.Schema);
                 var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
                 var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
-                releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
+                var released = await eventCompliance.Release(selected, schema.Schema);
+                releasedEvents.Add(await eventCompliance.ReleaseHistory(released, schemas));
                 continue;
             }
 
@@ -117,7 +123,8 @@ public class EventGenerationRelease(
             }
 
             var migrated = await protectedMigrations.ReleaseAndMigrateTo(eventStore, @event.Context.Namespace, definition, source, protectedContent, @event.Context.Subject.Value, pin.Generation);
-            releasedEvents.Add(@event with { Content = migrated, Context = @event.Context with { EventType = pin, Hash = EventHash.NotSet } });
+            var migratedEvent = @event with { Content = migrated, Context = @event.Context with { EventType = pin, Hash = EventHash.NotSet } };
+            releasedEvents.Add(await eventCompliance.ReleaseHistory(migratedEvent, schemas));
         }
 
         return releasedEvents.ToArray();

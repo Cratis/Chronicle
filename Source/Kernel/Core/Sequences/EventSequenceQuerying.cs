@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Arc.Queries;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -212,8 +213,8 @@ internal static class EventSequenceQuerying
         IEventCompliance eventCompliance)
     {
         var materialized = events as ICollection<Concepts.Events.AppendedEvent> ?? events.ToList();
-        var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(materialized.Select(e => e.Context.EventType).Distinct());
-        var schemasByEventType = eventTypeSchemas.ToDictionary(schema => schema.Type);
+        var schemasByEventType = new Dictionary<Concepts.Events.EventType, EventTypeSchema>();
+        await storage.GetEventStore(eventStore).EventTypes.EnsureSchemasFor(schemasByEventType, materialized);
         return await eventCompliance.Release(materialized, schemasByEventType);
     }
 }

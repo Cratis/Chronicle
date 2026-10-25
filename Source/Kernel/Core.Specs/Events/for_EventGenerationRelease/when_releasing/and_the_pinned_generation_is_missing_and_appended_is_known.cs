@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events.for_EventGenerationRelease.when_releasing;
 
@@ -26,5 +25,5 @@ public class and_the_pinned_generation_is_missing_and_appended_is_known : given.
     [Fact] void should_not_claim_a_durable_hash() => _result[0].Context.Hash.ShouldEqual(EventHash.NotSet);
     [Fact] async Task should_strictly_release_the_source() => await _metadata.Received(1).ReleaseStrict(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), _firstSchema, "person", Arg.Any<JsonObject>());
     [Fact] void should_never_access_event_sequence_storage() => _storage.GetEventStore(_event.Context.EventStore).DidNotReceive().GetNamespace(Arg.Any<EventStoreNamespaceName>());
-    [Fact] async Task should_not_release_migrated_plaintext_again() => await _metadata.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>());
+    [Fact] async Task should_not_release_migrated_plaintext_again() => await _metadata.DidNotReceive().Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), _schema, Arg.Any<string>(), Arg.Any<JsonObject>());
 }

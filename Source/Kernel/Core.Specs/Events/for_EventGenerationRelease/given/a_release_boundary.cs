@@ -42,6 +42,10 @@ public class a_release_boundary : Specification
         _schema = CreateSchema("fullName");
         _definition = new(_pin.Id, EventTypeOwner.Client, false, [new(1, _firstSchema), new(2, _schema)], []);
         _eventTypes.GetDefinition(_pin.Id).Returns(_ => _definition);
+        _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call =>
+            _definition.Generations
+                .Where(generation => ((IEnumerable<EventType>)call[0]).Contains(new EventType(_pin.Id, generation.Generation)))
+                .Select(generation => new EventTypeSchema(new(_pin.Id, generation.Generation), EventTypeOwner.Client, EventTypeSource.Code, generation.Schema)));
         _metadata.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(call => ReleaseContent((JsonObject)call[4]));
         _metadata.ReleaseStrict(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
