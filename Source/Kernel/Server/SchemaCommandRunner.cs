@@ -2,10 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Arc;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Server;
 
@@ -42,7 +47,12 @@ internal static class SchemaCommandRunner
             services.AddLogging(builder => builder.AddConsole());
             ConfigureServices(options, services);
             await using var provider = services.BuildServiceProvider();
-            if (!IsSql(options.Storage.Type))
+            if (string.Equals(options.Storage.Type, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
+            {
+                var provisioner = provider.GetRequiredService<IMongoDBIndexProvisioner>();
+                exit = await RunMongoAction(provisioner, command, action);
+            }
+            else if (!IsSql(options.Storage.Type))
             {
                 SchemaProvisionerLogging.NoVersionedSchema(logger, options.Storage.Type);
             }
@@ -72,7 +82,22 @@ internal static class SchemaCommandRunner
     /// <param name="action">The schema action.</param>
     /// <returns>The process exit code.</returns>
     internal static int ExitCode(Exception exception, SchemaAction action) =>
-        SchemaExitCode.For(exception, action == SchemaAction.VerifyAndExit);
+        exception is MongoDBIndexesNotProvisioned ? 2 : SchemaExitCode.For(exception, action == SchemaAction.VerifyAndExit);
+
+    /// <summary>
+    /// Dispatches a MongoDB schema action and maps an incomplete index report to exit two.
+    /// </summary>
+    /// <param name="provisioner">The index provisioner.</param>
+    /// <param name="command">The parsed command and scopes.</param>
+    /// <param name="action">The configured action.</param>
+    /// <returns>The process exit code.</returns>
+    internal static async Task<int> RunMongoAction(IMongoDBIndexProvisioner provisioner, SchemaCommand command, SchemaAction action)
+    {
+        var report = action == SchemaAction.VerifyAndExit
+            ? await provisioner.Verify(command.Scope.EventStores, command.Scope.Namespaces)
+            : await provisioner.Migrate(command.Scope.EventStores, command.Scope.Namespaces);
+        return report.IsCurrent ? 0 : 2;
+    }
 
     static void ConfigureServices(ChronicleOptions options, IServiceCollection services)
     {
@@ -80,6 +105,13 @@ internal static class SchemaCommandRunner
         if (IsSql(options.Storage.Type))
         {
             SqlSchemaServices.Add(services, options);
+        }
+        else if (string.Equals(options.Storage.Type, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddCratisArcCore();
+            services.AddCratisMongoDB(configureMongoDB: mongo => mongo.WithCamelCaseNamingPolicy());
+            BsonSerializer.RegisterSerializationProvider(new ConstraintDefinitionSerializationProvider());
+            MongoDBSchemaServices.Add(services, options);
         }
     }
 }

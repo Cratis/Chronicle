@@ -14,7 +14,7 @@ Nothing changes until you configure it. For how this fits with selecting tenants
 | Field | Values |
 | --- | --- |
 | `storage` | `SqlServer`, `PostgreSql`, `Sqlite` or `MongoDB` |
-| `purpose` | `Runtime` for reading and writing data, `Schema` for creating databases and schemas, migrating and renaming tables |
+| `purpose` | `Runtime` for reading and writing data, `Schema` for creating databases and schemas, migrating and renaming tables, and offline MongoDB index provisioning or verification |
 | `scope.kind` | `cluster`, `eventStore`, `namespace` (its events) or `readModels` (its projected read models) |
 | `scope.eventStore` | The event store, empty for the cluster |
 | `scope.namespace` | The namespace, empty for the cluster and an event store |
