@@ -45,6 +45,21 @@ internal sealed class StalledObserverJobs
         return stalled;
     }
 
+    /// <summary>
+    /// Makes a tracked job due on the next <see cref="Find"/>, because its resume attempt did not reach the job.
+    /// </summary>
+    /// <param name="id">The job to retry.</param>
+    /// <remarks>
+    /// A job that is not tracked is ignored. A progress change still resets the mark, so a job that moved is not retried.
+    /// </remarks>
+    internal void RetryOnNextTick(JobId id)
+    {
+        if (_marks.TryGetValue(id, out var mark))
+        {
+            _marks[id] = mark with { Since = DateTimeOffset.MinValue };
+        }
+    }
+
     void TrackProgress(JobState job, DateTimeOffset now)
     {
         var progress = job.Progress;

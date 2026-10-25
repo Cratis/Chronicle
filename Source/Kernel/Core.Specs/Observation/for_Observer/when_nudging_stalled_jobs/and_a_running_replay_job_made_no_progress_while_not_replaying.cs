@@ -22,5 +22,5 @@ public class and_a_running_replay_job_made_no_progress_while_not_replaying : giv
         await _observer.NudgeStalledJobs();
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

@@ -13,5 +13,5 @@ public class and_a_running_job_makes_progress : for_Observer.given.an_observer_w
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

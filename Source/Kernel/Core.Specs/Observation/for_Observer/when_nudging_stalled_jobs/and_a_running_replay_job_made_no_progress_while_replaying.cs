@@ -16,5 +16,5 @@ public class and_a_running_replay_job_made_no_progress_while_replaying : given.a
         await _observer.NudgeStalledJobs();
     }
 
-    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).Resume(_job.Id);
+    [Fact] async Task should_resume_the_job_once() => await _jobsManager.Received(1).ResumeIfRunning(_job.Id);
 }

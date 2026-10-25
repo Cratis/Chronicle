@@ -40,10 +40,14 @@ public partial class Observer
                 return;
             }
 
-            var owned = jobs.Where(IsResumableObserverJob);
-            foreach (var id in _stalledJobs.Find(owned, StalledJobsTimeProvider.GetUtcNow()))
+            var now = StalledJobsTimeProvider.GetUtcNow();
+            var owned = jobs.Where(_ => IsResumableObserverJob(_, now));
+            foreach (var id in _stalledJobs.Find(owned, now))
             {
                 logger.ResumingStalledObserverJob(id);
+
+                // The replay resume hook calls back into this observer (GetState/Replay), so awaiting it here would
+                // deadlock the non-reentrant grain. The continuation runs on the activation scheduler.
                 _ = ResumeStalledJob(id);
             }
         }
@@ -53,23 +57,40 @@ public partial class Observer
         }
     }
 
-    bool IsResumableObserverJob(JobState job) =>
+    bool IsResumableObserverJob(JobState job, DateTimeOffset now) =>
         job.Request is IObserverJobRequest request && request.ObserverKey == _observerKey &&
         !_concludedCatchUpJobs.Contains(job.Id) &&
+        !JobLiveness.HasConcludedAllStepsLongAgo(job, now) &&
         (job.Request is not ReplayObserverRequest || State.RunningState == ObserverRunningState.Replaying);
 
     async Task ResumeStalledJob(JobId id)
     {
         try
         {
-            if (!await _jobsManager.Resume(id))
+            var result = await _jobsManager.ResumeIfRunning(id);
+            if (result.TryGetResult(out var success))
             {
-                logger.StalledObserverJobNotResumed(id);
+                if (success == ResumeJobSuccess.JobIsNotRunning)
+                {
+                    logger.StalledObserverJobNoLongerRunning(id);
+                }
+
+                return;
             }
+
+            if (result.TryGetError(out var error) && error.Value is CannotResumeJobError.Unknown)
+            {
+                logger.ResumingStalledObserverJobWillRetry(id);
+                _stalledJobs.RetryOnNextTick(id);
+                return;
+            }
+
+            logger.StalledObserverJobNotResumed(id, error?.Value.ToString() ?? "unknown");
         }
         catch (Exception exception)
         {
             logger.ResumingStalledObserverJobFailed(id, exception);
+            _stalledJobs.RetryOnNextTick(id);
         }
     }
 }

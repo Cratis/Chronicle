@@ -16,5 +16,5 @@ public class and_a_stalled_job_belongs_to_another_observer : for_Observer.given.
         await _observer.RunWatchdogAsync();
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

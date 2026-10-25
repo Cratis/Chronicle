@@ -23,5 +23,5 @@ public class and_quarantine_begins_while_listing_jobs : given.an_observer_with_a
         await nudge;
     }
 
-    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_job.Id);
+    [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().ResumeIfRunning(_job.Id);
 }

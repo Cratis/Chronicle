@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
@@ -30,11 +31,14 @@ public class an_observer_with_a_stalled_job : when_watchdog_runs.given.an_observ
             Progress = new() { TotalSteps = 10 }
         };
         _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(_job)));
-        _jobsManager.Resume(_job.Id).Returns(Task.FromResult(true));
+        ResumeAnswers(ResumeJobSuccess.Success);
         _jobsManager.ClearReceivedCalls();
     }
 
     protected void AdvanceClock() => _now += JobLiveness.ResumeStalledAfter + TimeSpan.FromMinutes(1);
+
+    protected void ResumeAnswers(Result<ResumeJobSuccess, ResumeJobError> result) =>
+        _jobsManager.ResumeIfRunning(_job.Id).Returns(Task.FromResult(result));
 
     sealed class StalledJobClock(Func<DateTimeOffset> now) : TimeProvider
     {
