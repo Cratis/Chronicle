@@ -64,16 +64,7 @@ public partial class EventSequenceStorage(
         {
             lock (_lock)
             {
-                return _events.Select(@event => @event with
-                {
-                    Context = @event.Context with
-                    {
-                        AppendedGeneration = _appendedGenerations.TryGetValue(@event.Context.SequenceNumber, out var generation) ? new EventTypeGeneration(generation) : null
-                    },
-                    GenerationalHashes = _generationHashes.TryGetValue(@event.Context.SequenceNumber, out var hashes)
-                        ? hashes.ToImmutableDictionary(_ => (int)_.Key.Value, _ => _.Value)
-                        : new Dictionary<int, EventHash>()
-                }).ToImmutableList();
+                return _events.Select(WithGenerationMetadata).ToImmutableList();
             }
         }
     }

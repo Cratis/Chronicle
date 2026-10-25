@@ -525,6 +525,44 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<EventSequencePage> GetPage(EventSequencePageRequest request, CancellationToken cancellationToken = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetPage));
+        cancellationToken.ThrowIfCancellationRequested();
+        if (request.Count is < 1 or > 1000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), request.Count, "The page count must be between 1 and 1000.");
+        }
+
+        var filter = request.Filter;
+        var pageRequest = new Contracts.Sequences.PageRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            From = request.From?.Value,
+            Count = request.Count,
+            Backward = request.Direction == EventSequenceReadDirection.Backward,
+            Until = request.Until?.Value,
+            EventSourceId = filter?.EventSourceId?.Value,
+            EventSourceType = filter?.EventSourceType?.Value,
+            EventStreamType = filter?.EventStreamType?.Value,
+            EventStreamId = filter?.EventStreamId?.Value,
+            EventTypeIds = JoinEventTypeIds(filter?.EventTypes),
+            Tags = filter?.Tags is null ? null : string.Join(',', filter.Tags.Select(tag => tag.Value))
+        };
+        var result = await (await _servicesAccessor.GetServices(cancellationToken)).Sequences.Page(pageRequest, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+
+        return new(
+            result.Events.ToClient(eventStoreName, @namespace, eventTypes, jsonSerializerOptions),
+            result.Next is { } next ? (EventSequenceNumber)next : null);
+    }
+
+    /// <inheritdoc/>
+    public Task<EventSequencePage> GetLatest(int count, EventSequenceFilter? filter = default, CancellationToken cancellationToken = default) =>
+        GetPage(EventSequencePageRequest.Backward(null, count, filter), cancellationToken);
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(
         EventSequenceNumber sequenceNumber,
         EventSourceId? eventSourceId = default,
