@@ -249,25 +249,7 @@ public class Projections(
         RegisterExplicit<TReadModel>(new ModelBoundExplicitProjection(typeof(TReadModel)));
 
     /// <inheritdoc/>
-    public async Task Register()
-    {
-        await _servicesAccessor.Services.Projections.Register(new()
-        {
-            EventStore = eventStore.Name,
-            Owner = ProjectionOwner.Client,
-            Projections = [.. Definitions],
-
-            // The registration only claims to be the client's full set when discovery has run and every discovered
-            // artifact produced a definition. An artifact whose definition could not be built is excluded from the
-            // batch, and claiming a full set then would make the kernel retire a projection that still exists in
-            // the client.
-            Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
-            Version = SoftwareVersion,
-            ConnectionId = CurrentConnectionId,
-            FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
-        });
-        Registered?.Invoke();
-    }
+    public async Task Register() => await RegisterPrepared(PrepareRegistration());
 
     /// <inheritdoc/>
     public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
@@ -298,6 +280,37 @@ public class Projections(
     /// <inheritdoc/>
     string? IKnowReadModelContainerNames.GetContainerNameOverride(Type readModelType) =>
         _containerNames.GetValueOrDefault(readModelType);
+
+    /// <summary>
+    /// Builds the complete projection registration payload before any effects.
+    /// </summary>
+    /// <returns>The prepared registration payload.</returns>
+    internal RegisterRequest PrepareRegistration() => new()
+    {
+        EventStore = eventStore.Name,
+        Owner = ProjectionOwner.Client,
+        Projections = [.. Definitions],
+
+        // The registration only claims to be the client's full set when discovery has run and every discovered
+        // artifact produced a definition. An artifact whose definition could not be built is excluded from the
+        // batch, and claiming a full set then would make the kernel retire a projection that still exists in
+        // the client.
+        Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+        Version = SoftwareVersion,
+        ConnectionId = CurrentConnectionId,
+        FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
+    };
+
+    /// <summary>
+    /// Sends a prepared projection payload and notifies registration listeners.
+    /// </summary>
+    /// <param name="request">The prepared payload.</param>
+    /// <returns>The registration operation.</returns>
+    internal async Task RegisterPrepared(RegisterRequest request)
+    {
+        await _servicesAccessor.Services.Projections.Register(request);
+        Registered?.Invoke();
+    }
 
     /// <summary>
     /// Add an explicit projection that is built by the next <see cref="Discover"/> rather than immediately.
