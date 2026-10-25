@@ -111,11 +111,11 @@ public class ReadModelMigrator(
         }
 
         var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
-        await DatabaseSchemaLock.Run(context, async () =>
-        {
-            await ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System);
-            await InitializedMarkerIndex.Ensure(context, execution, timeProvider ?? TimeProvider.System);
-        });
+        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+
+        // Outside the database-wide lock: the marker build takes only its own table's lock. When another kernel is
+        // still building it, leave the table uncached so a later activation ensures the index again.
+        if (!await InitializedMarkerIndex.Ensure(context, execution, timeProvider ?? TimeProvider.System)) return;
         _columnMigrations.TryAdd(cacheKey, true);
     }
 

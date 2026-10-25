@@ -21,31 +21,71 @@ internal static class InitializedMarkerIndex
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new();
 
     /// <summary>
-    /// Ensures an index on the initialized marker under a per-table gate and DDL deadline.
+    /// Ensures an index on the initialized marker under a per-table gate, a per-table database lock and a DDL deadline.
     /// </summary>
     /// <param name="context">The read-model context.</param>
     /// <param name="execution">The online DDL settings, timeout and caller token.</param>
     /// <param name="timeProvider">The clock used for the reconciliation deadline.</param>
-    /// <returns>An awaitable task.</returns>
-    internal static async Task Ensure(ReadModelDbContext context, ReadModelIndexOperations.Execution execution, TimeProvider timeProvider)
+    /// <returns>Whether the index is in place; false when another kernel held the table's marker lock past the deadline.</returns>
+    /// <remarks>
+    /// The lock covers only this table, never the database-wide schema lock, so a long build on one large table
+    /// does not hold up schema changes on other tables.
+    /// </remarks>
+    internal static async Task<bool> Ensure(ReadModelDbContext context, ReadModelIndexOperations.Execution execution, TimeProvider timeProvider)
     {
-        if (!context.Columns.Any(column => column.Name == WellKnownProperties.ReadModelInstanceInitialized)) return;
+        if (!context.Columns.Any(column => column.Name == WellKnownProperties.ReadModelInstanceInitialized)) return true;
 
         var timeout = execution.CommandTimeout.GetValueOrDefault();
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeout);
         using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeout), timeProvider);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(execution.CancellationToken, timeoutSource.Token);
+        var callerToken = execution.CancellationToken;
         execution = execution with { CancellationToken = deadline.Token };
         var key = $"{context.Database.GetConnectionString()}:{context.TableName}";
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(deadline.Token);
         try
         {
-            await EnsureIndex(context, execution);
+            return await EnsureUnderTableLock(context, execution, (TimeSpan.FromSeconds(timeout), callerToken));
         }
         finally
         {
             gate.Release();
+        }
+    }
+
+    static async Task<bool> EnsureUnderTableLock(ReadModelDbContext context, ReadModelIndexOperations.Execution execution, (TimeSpan Wait, CancellationToken CallerToken) acquisition)
+    {
+        var (wait, callerToken) = acquisition;
+        await context.Database.OpenConnectionAsync(execution.CancellationToken);
+        try
+        {
+            var connection = context.Database.GetDbConnection();
+            var schemaLock = DatabaseSchemaLock.For(connection);
+            var resource = $"chronicle:read-model-marker-index:{context.TableName}";
+            try
+            {
+                if (schemaLock is not null) await schemaLock.Acquire(connection, resource, wait, execution.CancellationToken);
+            }
+            catch (Exception exception) when (exception is DatabaseSchemaLockNotAcquired || (exception is OperationCanceledException && !callerToken.IsCancellationRequested))
+            {
+                // The wait and the DDL deadline share one budget; either expiring while another kernel holds the lock defers the build.
+                execution.Logger?.InitializedMarkerIndexDeferred(context.TableName);
+                return false;
+            }
+            try
+            {
+                await EnsureIndex(context, execution);
+                return true;
+            }
+            finally
+            {
+                if (schemaLock is not null) await schemaLock.Release(connection, resource);
+            }
+        }
+        finally
+        {
+            await context.Database.CloseConnectionAsync();
         }
     }
 
