@@ -514,7 +514,7 @@ public partial class Reducers : IReducers
         var messages = new SerializedMessages<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        #pragma warning disable CA2000 // Dispose objects before losing scope
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);

@@ -6,9 +6,7 @@
 import os
 
 # Remove the entry when the rolling-upgrade spec is re-enabled; no runner waiver is needed.
-EXCLUDED_LANES = {
-    "RollingUpgrade": "Reactors miss acknowledged events after a one-node-at-a-time upgrade; re-enable after https://github.com/Cratis/Chronicle/issues/5300 and https://github.com/Cratis/Chronicle/issues/5350 are fixed.",
-}
+EXCLUDED_LANES = {}
 
 
 def exclusion_summary():
