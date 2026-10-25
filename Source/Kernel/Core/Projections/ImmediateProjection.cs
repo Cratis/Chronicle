@@ -110,12 +110,18 @@ public class ImmediateProjection(
 
         try
         {
+            // The Projection grain is the single, authoritative holder of the definition. The snapshot taken at activation
+            // and the change notifications after it can both miss a registration, so every read resolves the current one.
+            var current = await _projection!.GetDefinition();
+            if (current?.ReadModel is not null)
+            {
+                State = current;
+            }
+
             if (State.ReadModel is null)
             {
-                // A passive projection's definition is set lazily, from the first event of its kind observed
-                // anywhere in the store, rather than eagerly at startup. Before that has happened, this is
-                // indistinguishable from "no matching event for this key yet" - the documented null contract
-                // for a read model that was never created - so it resolves the same way instead of throwing.
+                // Neither this activation nor the Projection grain has a definition: the projection is not registered.
+                // Preserve the documented null contract for a read model that was never created instead of throwing.
                 logger.NoDefinitionSetYet();
                 return ProjectionResult.Empty;
             }
