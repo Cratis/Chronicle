@@ -31,10 +31,21 @@ internal class UniqueConstraintComponentsBuilder(IExpandoObjectConverter convert
         foreach (var segment in path.Split('.'))
         {
             value = (value as JsonObject)?.FirstOrDefault(property => property.Key.Equals(segment, StringComparison.OrdinalIgnoreCase)).Value;
-            currentSchema = EffectiveSchema(currentSchema)?.GetFlattenedProperties()
+            currentSchema = ObjectProperties(currentSchema)
                 .FirstOrDefault(property => property.Name.Equals(segment, StringComparison.OrdinalIgnoreCase));
         }
         return (value, currentSchema);
+    }
+
+    static IEnumerable<JsonSchemaProperty> ObjectProperties(JsonSchema? schema)
+    {
+        if (schema is null) return [];
+        if (schema.Reference is { } reference) return ObjectProperties(reference);
+        var nonNull = schema.OneOf.Concat(schema.AnyOf).FirstOrDefault(option =>
+            option.Type != JsonObjectType.Null && option.Reference?.Type != JsonObjectType.Null);
+
+        // Flatten the complete object composition, not ActualTypeSchema's single allOf branch.
+        return nonNull is not null ? ObjectProperties(nonNull) : schema.GetFlattenedProperties();
     }
 
     static JsonSchema? EffectiveSchema(JsonSchema? schema)
