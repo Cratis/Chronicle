@@ -2,7 +2,6 @@
 title: Event source ids in telemetry
 description: Choose Raw, Hashed, or Omitted event source ids in traces, and understand which identifiers Chronicle excludes from metric dimensions.
 ---
-# Event source ids in telemetry
 
 Event source ids can contain personal data. Chronicle includes them unchanged in traces by default. Choose `Hashed` to correlate an id without sending its original value, or `Omitted` to keep the id out of spans entirely. Configure the kernel and each client separately; neither inherits the other's choice.
 
