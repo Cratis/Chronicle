@@ -27,7 +27,7 @@ public class when_a_host_registers_its_own_json_serializer_options : given.a_hos
     {
         _provider = BuildProvider();
         _resolved = _provider.GetRequiredService<JsonSerializerOptions>();
-        using var scope = _provider.CreateScope();
+        await using var scope = _provider.CreateAsyncScope();
         var serializer = scope.ServiceProvider.GetRequiredService<IEventSerializer>();
         _serialized = (await serializer.Serialize(new SomeEvent("Jane"))).ToJsonString();
     }

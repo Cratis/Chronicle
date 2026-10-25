@@ -19,7 +19,7 @@ public class when_serializing_an_event_with_chronicle_json_serializer_options : 
     async Task Because()
     {
         _provider = BuildProvider();
-        using var scope = _provider.CreateScope();
+        await using var scope = _provider.CreateAsyncScope();
         var serializer = scope.ServiceProvider.GetRequiredService<IEventSerializer>();
         _serialized = (await serializer.Serialize(new SomeEvent("Jane"))).ToJsonString();
     }

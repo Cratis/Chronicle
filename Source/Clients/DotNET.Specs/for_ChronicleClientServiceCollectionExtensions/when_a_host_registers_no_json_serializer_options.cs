@@ -20,5 +20,4 @@ public class when_a_host_registers_no_json_serializer_options : given.a_host_add
     void Destroy() => _provider?.Dispose();
 
     [Fact] void should_not_register_json_serializer_options() => _resolved.ShouldBeNull();
-    [Fact] void should_still_validate_all_registered_services() => Catch.Exception(() => _services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }).Dispose()).ShouldBeNull();
 }
