@@ -4,7 +4,7 @@
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 
-namespace Cratis.Chronicle.Integration.SqlClustering.ObserverStorageRoundtrip;
+namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStorageRoundtrip;
 
 /// <summary>
 /// Uses Testcontainers infrastructure readiness to await the old kernel's persisted, specifically subscribed observer.

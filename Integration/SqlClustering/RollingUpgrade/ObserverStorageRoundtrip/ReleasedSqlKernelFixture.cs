@@ -5,7 +5,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 
-namespace Cratis.Chronicle.Integration.SqlClustering.ObserverStorageRoundtrip;
+namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStorageRoundtrip;
 
 /// <summary>
 /// Runs the released writer against an isolated PostgreSQL store without connecting a current client.

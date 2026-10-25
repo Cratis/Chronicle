@@ -3,7 +3,7 @@
 
 using Npgsql;
 
-namespace Cratis.Chronicle.Integration.SqlClustering.ObserverStorageRoundtrip;
+namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStorageRoundtrip;
 
 /// <summary>
 /// Discovers an old kernel's real namespace row and witnesses its subsequent updates.

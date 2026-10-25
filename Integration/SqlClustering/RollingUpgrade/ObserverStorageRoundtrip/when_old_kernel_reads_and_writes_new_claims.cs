@@ -14,7 +14,7 @@ using KernelConceptTypes = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelObserverState = Cratis.Chronicle.Storage.Observation.ObserverState;
 using SqlObserverState = Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers.ObserverState;
 
-namespace Cratis.Chronicle.Integration.SqlClustering.ObserverStorageRoundtrip;
+namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStorageRoundtrip;
 
 /// <summary>
 /// Proves the pinned released writer can load and save a new nullable-claims schema without erasing shadow data.
