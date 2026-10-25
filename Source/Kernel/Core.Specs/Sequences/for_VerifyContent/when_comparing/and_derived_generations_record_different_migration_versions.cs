@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Sequences.for_VerifyContent.when_comparing;
@@ -28,7 +29,7 @@ public class and_derived_generations_record_different_migration_versions : given
             GenerationalContent = new Dictionary<int, string>(_stored.GenerationalContent) { [3] = """{"value":42,"detail":"third"}""" }
         };
         _storage.GetEventStore("store").EventTypes.HasFor("event", 3).Returns(true);
-        _storage.GetEventStore("store").EventTypes.GetFor("event", 3).Returns(new EventTypeRegistration(new("event", 3), schema));
+        _storage.GetEventStore("store").EventTypes.GetFor("event", 3).Returns(new EventTypeSchema(new("event", 3), EventTypeOwner.Client, EventTypeSource.Code, schema));
         ChangeMigrations();
     }
 

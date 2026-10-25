@@ -14,12 +14,13 @@ public class and_sql_generation_history_is_read : given.a_sql_event
 
     async Task Establish()
     {
-        var observed = (await _sequence.GetStoredGenerations(EventSequenceNumber.First))!;
-        var content = _converter.ToExpandoObject(JsonNode.Parse("""{"value":42}""")!.AsObject(), _schema);
-        (await _sequence.TryAddGenerations(observed, [new(3, content, EventHash.NotSet, _provenance)])).ShouldBeTrue();
+        var observed = (await _sql.GetStoredGenerations(EventSequenceNumber.First))!;
+        var schema = (await _storage.GetEventStore("store").EventTypes.GetFor("event", 1U)).Schema;
+        var content = _converter.ToExpandoObject(JsonNode.Parse("""{"value":42}""")!.AsObject(), schema);
+        (await _sql.TryAddGenerations(observed, [new(3, content, EventHash.NotSet, _provenance)])).ShouldBeTrue();
     }
 
-    async Task Because() => _history = (await _sequence.GetStoredGenerations(EventSequenceNumber.First))!;
+    async Task Because() => _history = (await _sql.GetStoredGenerations(EventSequenceNumber.First))!;
 
     [Fact] void should_expose_the_recorded_provenance() => _history.DerivedGenerations[new(3)].ShouldEqual(_provenance);
 }
