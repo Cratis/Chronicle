@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle;
@@ -18,5 +19,6 @@ public class ChronicleTelemetryOptions
     /// <summary>
     /// Gets or sets the deployment key for Hashed tracing. Supply at least 32 characters from a secret store.
     /// </summary>
+    [JsonIgnore]
     public string? EventSourceIdHashKey { get; set; }
 }

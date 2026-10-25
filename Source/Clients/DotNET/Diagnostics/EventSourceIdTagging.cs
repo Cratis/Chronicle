@@ -15,12 +15,18 @@ internal sealed class EventSourceIdTagging
     /// Initializes a new instance of the <see cref="EventSourceIdTagging"/> class.
     /// </summary>
     /// <param name="options">The client telemetry configuration.</param>
+    /// <exception cref="InvalidIdentifierHashKey">Hashed tracing requires a key of at least 32 characters.</exception>
     public EventSourceIdTagging(ChronicleTelemetryOptions options)
     {
         _tracing = options.EventSourceIdTracing;
         if (_tracing == EventSourceIdTracing.Hashed)
         {
-            _hasher = new IdentifierHasher(options.EventSourceIdHashKey ?? string.Empty);
+            if (string.IsNullOrEmpty(options.EventSourceIdHashKey) || options.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength)
+            {
+                throw new InvalidIdentifierHashKey();
+            }
+
+            _hasher = new IdentifierHasher(options.EventSourceIdHashKey);
         }
     }
 

@@ -22,7 +22,7 @@ Supply `Telemetry__EventSourceIdHashKey` from your deployment's secret store. `H
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `Telemetry:EventSourceIdTracing` | `Raw` | `Raw` includes the id, `Hashed` includes its keyed hash, and `Omitted` leaves out `cratis.eventsource.id`. |
+| `Telemetry:EventSourceIdTracing` | `Raw` | `Raw` includes the id, `Hashed` includes its keyed hash, and `Omitted` leaves out `cratis.eventsource.id` on kernel spans (`event_source_id` on client spans). |
 | `Telemetry:EventSourceIdHashKey` | none | Required only for `Hashed`; at least 32 characters. |
 
 The modes are mutually exclusive: `Hashed` and `Omitted` are both opt-ins. Choose `Raw` explicitly when you deliberately want the original id, including for local development. Raw ids leave the process and may identify people; protect your tracing backend accordingly.
@@ -31,7 +31,7 @@ Kernel spans always omit `orleans.rpc.target_id` and `orleans.rpc.source_id`, re
 
 ## Configure clients
 
-Use `WithTelemetry` when configuring your client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage.
+Use `WithTelemetry` when configuring your client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage. Client spans use `event_source_id`; kernel spans use `cratis.eventsource.id`.
 
 ## Correlate hashes across processes
 

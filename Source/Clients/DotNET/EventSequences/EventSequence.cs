@@ -930,7 +930,7 @@ public class EventSequence(
             resolvedEventSourceType.Value);
         if (_eventSourceIdTagging.ForSpan(eventSourceId.Value) is { } tracedEventSourceId)
         {
-            span?.Activity?.SetTag("cratis.eventsource.id", tracedEventSourceId);
+            span?.Activity?.SetTag("event_source_id", tracedEventSourceId);
         }
 
         try

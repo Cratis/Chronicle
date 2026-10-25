@@ -11,7 +11,7 @@ public class with_omitted_event_source_id_tracing : given.an_event_sequence_with
 
     async Task Because() => await Append();
 
-    [Fact] void should_omit_the_id() => _append.GetTagItem("cratis.eventsource.id").ShouldBeNull();
+    [Fact] void should_omit_the_id() => _append.GetTagItem("event_source_id").ShouldBeNull();
     [Fact] void should_not_include_the_raw_id_in_any_tag() => _append.TagObjects.Any(_ => Equals(_.Value, SourceId)).ShouldBeFalse();
     [Fact] void should_send_the_original_id_to_the_kernel() => _request.EventSourceId.ShouldEqual(SourceId);
     [Fact] void should_never_generate_the_raw_id_tag() => _startedTags.Any(_ => _.Key == "event_source_id").ShouldBeFalse();

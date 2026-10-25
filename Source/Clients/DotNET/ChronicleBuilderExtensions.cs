@@ -68,6 +68,7 @@ public static class ChronicleBuilderExtensions
     /// <returns>The same builder for continuation.</returns>
     public static IChronicleBuilder WithTelemetry(this IChronicleBuilder builder, Action<ChronicleTelemetryOptions> configure)
     {
+        builder.Services.AddSingleton(new ChronicleTelemetryConfiguration(configure));
         builder.Services.Configure<ChronicleClientOptions>(options => configure(options.Telemetry));
         builder.Services.Configure<ChronicleOptions>(options => configure(options.Telemetry));
         return builder;

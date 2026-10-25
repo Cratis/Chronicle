@@ -34,6 +34,14 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddReactorSideEffectHandlers();
         services.AddChronicleOccurrenceLifecycle();
         services.AddHttpContextAccessor();
+        services.AddOptions<ChronicleAspNetCoreOptions>()
+            .Configure<IEnumerable<ChronicleTelemetryConfiguration>>((options, configurations) =>
+            {
+                foreach (var configuration in configurations)
+                {
+                    configuration.Configure(options.Telemetry);
+                }
+            });
 
         services.AddSingleton(sp =>
         {
