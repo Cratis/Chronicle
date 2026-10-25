@@ -14,4 +14,6 @@ public class and_storage_revise_fails : a_revisable_sequence
     [Fact] void should_report_the_failure() => _error.ShouldBeOfExactType<for_EventSequence.given.SimulatedStateWriteError>();
     [Fact] void should_keep_the_lowered_watermark() => _stateStorage.State.ConstraintIndexWatermark.ShouldEqual(EventSequenceNumber.First);
     [Fact] void should_have_persisted_the_lowered_watermark() => _snapshots.Written!.ConstraintIndexWatermark.ShouldEqual(EventSequenceNumber.First);
+    [Fact] void should_settle_on_an_even_epoch_after_the_failure() => _stateStorage.State.MutationEpoch.IsMutating.ShouldBeFalse();
+    [Fact] void should_advance_the_epoch_past_the_one_before() => _stateStorage.State.MutationEpoch.Value.ShouldEqual(2UL);
 }

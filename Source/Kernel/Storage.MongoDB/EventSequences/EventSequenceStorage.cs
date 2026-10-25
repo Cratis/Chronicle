@@ -82,7 +82,8 @@ public partial class EventSequenceStorage(
             .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType)
             .Set(_ => _.ConstraintIndexWatermark, stateForStorage.ConstraintIndexWatermark)
             .Set(_ => _.ConstraintIndexCatchUpBelow, stateForStorage.ConstraintIndexCatchUpBelow)
-            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing);
+            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing)
+            .Set(_ => _.MutationEpoch, stateForStorage.MutationEpoch);
 
         await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }

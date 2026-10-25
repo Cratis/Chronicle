@@ -22,6 +22,7 @@ public class and_the_event_sequences_table_has_rows : given.a_migrated_namespace
             await context.Database.ExecuteSqlRawAsync(command.CommandText);
         }
         await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-EventSequences-v19_79_1"));
+        await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-EventSequences-v19_111_0"));
         await context.Database.ExecuteSqlRawAsync("INSERT INTO EventSequences (EventSequenceId, SequenceNumber, TailSequenceNumberPerEventType) VALUES ('event-log', 42, '{{}}')");
     }
 
@@ -40,5 +41,6 @@ public class and_the_event_sequences_table_has_rows : given.a_migrated_namespace
     [Fact] void should_leave_the_watermark_null() => _row.ConstraintIndexWatermark.ShouldBeNull();
     [Fact] void should_leave_the_boundary_null() => _row.ConstraintIndexCatchUpBelow.ShouldBeNull();
     [Fact] void should_leave_the_refusal_null() => _row.ConstraintIndexCatchUpRefusing.ShouldBeNull();
+    [Fact] void should_leave_the_mutation_epoch_null() => _row.MutationEpoch.ShouldBeNull();
     [Fact] void should_add_three_nullable_columns() => _nullableColumns.ShouldEqual(3L);
 }

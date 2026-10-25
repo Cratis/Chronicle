@@ -2516,6 +2516,12 @@ public class EventSequenceTailResponse
     /// </summary>
     [ProtoMember(1)]
     public global::System.UInt64 SequenceNumber { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the MutationEpoch.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64? MutationEpoch { get; set; }
 }
 
 /// <summary>
@@ -2571,6 +2577,12 @@ public class TailSequenceNumberRequest
     /// </summary>
     [ProtoMember(8)]
     public string? EventStreamType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the includeMutationEpoch.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool IncludeMutationEpoch { get; set; }
 }
 
 /// <summary>

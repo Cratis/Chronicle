@@ -107,7 +107,7 @@ public partial class EventSequence(
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
     IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
-    ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage, concurrencyValidatorLogger);
+    ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage, concurrencyValidatorLogger, State.MutationEpoch);
     IConstraints ConstraintsGrain => GrainFactory.GetGrain<IConstraints>(new ConstraintsKey(_eventSequenceKey.EventStore));
     ProtectedEventTypeMigrations ProtectedMigrations => new(EventTypesStorage, eventTypeMigrations, jsonComplianceManagerProvider, expandoObjectConverter);
 
@@ -147,6 +147,7 @@ public partial class EventSequence(
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
+        await SettleInterruptedMutation();
         await InitializeConstraintIndexes();
 
         if (_eventSequenceId == EventSequenceId.Log)
@@ -386,15 +387,16 @@ public partial class EventSequence(
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await PrepareConstraintIndexesForRevision(@event);
-        await EventSequenceStorage.Revise(
+        var revisedBy = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
+        await Mutating(() => EventSequenceStorage.Revise(
             sequenceNumber,
             eventType,
             correlationId,
             CausationForStorage(causation),
-            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
+            revisedBy,
             DateTimeOffset.UtcNow,
             contentAsExpandoObject,
-            hash);
+            hash));
 
         await ReplayForContentMutation(@event.Context.EventSourceId, [@event.Context.EventType]);
     }
@@ -413,13 +415,14 @@ public partial class EventSequence(
             _eventSequenceId,
             sequenceNumber);
 
-        var affectedEvent = await EventSequenceStorage.Redact(
+        var redactedBy = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
+        var affectedEvent = await Mutating(() => EventSequenceStorage.Redact(
             sequenceNumber,
             reason,
             correlationId,
             CausationForStorage(causation),
-            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
-            DateTimeOffset.UtcNow);
+            redactedBy,
+            DateTimeOffset.UtcNow));
 
         // Storage returns the event with EventType.Id == Redaction (i.e. "EventRedacted") when
         // it short-circuits the mutation because the event was already redacted. Rewinding for
@@ -452,14 +455,15 @@ public partial class EventSequence(
             eventSourceId,
             eventTypes);
 
-        var affectedEventTypes = await EventSequenceStorage.Redact(
+        var redactedBy = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
+        var affectedEventTypes = await Mutating(() => EventSequenceStorage.Redact(
             eventSourceId,
             reason,
             eventTypes,
             correlationId,
             CausationForStorage(causation),
-            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
-            DateTimeOffset.UtcNow);
+            redactedBy,
+            DateTimeOffset.UtcNow));
         await ReplayForContentMutation(eventSourceId, affectedEventTypes);
     }
 

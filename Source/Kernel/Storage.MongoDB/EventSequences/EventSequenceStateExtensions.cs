@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -21,7 +22,8 @@ public static class EventSequenceStateExtensions
             state.TailSequenceNumberPerEventType?.ToDictionary(_ => _.Key.Value, _ => _.Value) ?? [],
             state.ConstraintIndexWatermark,
             state.ConstraintIndexCatchUpBelow,
-            state.ConstraintIndexCatchUpRefusing?.Any() == true ? state.ConstraintIndexCatchUpRefusing.Select(_ => _.Value).ToArray() : null);
+            state.ConstraintIndexCatchUpRefusing?.Any() == true ? state.ConstraintIndexCatchUpRefusing.Select(_ => _.Value).ToArray() : null,
+            state.MutationEpoch.Value);
 
     /// <summary>
     /// Convert to <see cref="Chronicle.Storage.EventSequences.EventSequenceState"/>.
@@ -37,6 +39,7 @@ public static class EventSequenceStateExtensions
             ConstraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow,
             ConstraintIndexCatchUpRefusing = state.ConstraintIndexCatchUpRefusing?.Any() == true
                 ? state.ConstraintIndexCatchUpRefusing.Select(_ => new Concepts.Events.Constraints.ConstraintName(_)).ToArray()
-                : null
+                : null,
+            MutationEpoch = state.MutationEpoch is { } epoch ? new EventSequenceMutationEpoch(epoch) : EventSequenceMutationEpoch.Initial
         };
 }
