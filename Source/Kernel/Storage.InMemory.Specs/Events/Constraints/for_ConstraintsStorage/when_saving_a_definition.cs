@@ -22,5 +22,5 @@ public class when_saving_a_definition : given.a_constraints_storage
         _definitions = await _storage.GetDefinitions();
     }
 
-    [Fact] void should_return_the_saved_definition() => _definitions.ShouldContain(_definition);
+    [Fact] void should_return_the_saved_definition() => _definitions.Any(_ => ReferenceEquals(_, _definition)).ShouldBeTrue();
 }
