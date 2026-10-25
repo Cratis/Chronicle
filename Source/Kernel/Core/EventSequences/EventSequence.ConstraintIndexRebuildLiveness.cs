@@ -40,11 +40,22 @@ public partial class EventSequence
     static (RebuildStepLiveness Verdict, string Step) ClassifyStoredRebuildStep(ConstraintIndexRebuildRunId runId, JobStepState? step)
     {
         if (step is null) return (RebuildStepLiveness.Ended, "gone");
-        var stale = runId.Started != default && step.StatusChanges.LastOrDefault()?.Occurred < runId.Started;
+        return IsTerminalConstraintRebuildStep(step.Status)
+            ? ClassifyTerminalRebuildStep(runId, step)
+            : (RebuildStepLiveness.Alive, step.Status.ToString());
+    }
+
+    static (RebuildStepLiveness Verdict, string Step) ClassifyTerminalRebuildStep(ConstraintIndexRebuildRunId runId, JobStepState step)
+    {
+        var terminalChange = step.StatusChanges.LastOrDefault();
+        if (terminalChange is null || terminalChange.Status != step.Status)
+        {
+            return (RebuildStepLiveness.Undetermined, $"{step.Status}; missing or inconsistent status history");
+        }
+        var stale = runId.Started != default && terminalChange.Occurred < runId.Started;
 
         // Orleans 1.27.4 persists terminal status after work and cancellation handoff drain.
-        // A failed Running write can leave an earlier attempt's terminal status behind.
-        return (IsTerminalConstraintRebuildStep(step.Status) && !stale ? RebuildStepLiveness.Ended : RebuildStepLiveness.Alive, step.Status.ToString());
+        return (stale ? RebuildStepLiveness.Alive : RebuildStepLiveness.Ended, step.Status.ToString());
     }
 
     void RecordConstraintIndexRebuildHeld(ConstraintIndexRebuildRunId runId)
