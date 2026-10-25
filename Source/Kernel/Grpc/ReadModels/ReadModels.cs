@@ -526,25 +526,6 @@ internal sealed class ReadModels(
         }
     }
 
-    static EventSequenceNumber GetLastHandledEventSequenceNumber(ExpandoObject instance)
-    {
-        var values = (IDictionary<string, object?>)instance;
-        if (!values.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var value) || value is null)
-        {
-            return EventSequenceNumber.Unavailable;
-        }
-
-        try
-        {
-            return (EventSequenceNumber)Convert.ToUInt64(value);
-        }
-        catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
-        {
-            // The stored value is not a sequence number; report it as unavailable rather than failing the read.
-            return EventSequenceNumber.Unavailable;
-        }
-    }
-
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)
     {
         var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
@@ -570,7 +551,7 @@ internal sealed class ReadModels(
         {
             ReadModel = jsonObject.ToJsonString(jsonSerializerOptions),
             ProjectedEventsCount = 0,
-            LastHandledEventSequenceNumber = GetLastHandledEventSequenceNumber(instance)
+            LastHandledEventSequenceNumber = instance.GetLastHandledEventSequenceNumber()
         };
     }
 
@@ -592,7 +573,7 @@ internal sealed class ReadModels(
 
         // ToJsonObject drops the last handled event sequence number when the schema does not describe it, so
         // put it back — clients mirror it onto the instance to tell how far it has been brought up to date.
-        var lastHandled = GetLastHandledEventSequenceNumber(instance);
+        var lastHandled = instance.GetLastHandledEventSequenceNumber();
         if (lastHandled != EventSequenceNumber.Unavailable)
         {
             jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastHandled.Value);

@@ -13,7 +13,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -68,11 +67,16 @@ public partial class ProjectionsManager(
     /// </summary>
     readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _subscribed = new();
     readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
+    readonly HashSet<EventStoreNamespaceName> _namespaceReruns = [];
     readonly HashSet<Task> _subscriptionPasses = [];
     readonly HashSet<ProjectionId> _removingProjections = [];
     readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
+    readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
+    bool _resubscribeRunning;
+    bool _resubscribeRequested;
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
+    bool _skippedWhileRegistering;
 
     EventStoreName _eventStoreName = EventStoreName.NotSet;
     IGrainTimer? _subscribeTimer;
@@ -108,23 +112,81 @@ public partial class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
+        try
+        {
+            await RegisterDefinitions(definitions, fullSetOwner, registrant, version);
+        }
+        finally
+        {
+            EndAnnouncement();
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
+    {
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        return State.Projections
+            .Select(definition =>
+            {
+                var readModel = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModel is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                    return null;
+                }
+
+                return new ProjectionWithDeclaration(
+                    definition.Identifier,
+                    readModel.ContainerName,
+                    languageService.Generate(definition, readModel));
+            })
+            .Where(_ => _ is not null)
+            .Select(_ => _!)
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
+    {
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_eventStoreName != eventStore) return Task.CompletedTask;
+
+        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
+        return Task.CompletedTask;
+    }
+
+    List<ProjectionDefinition> FilterUnsupportedKernelDefinitions(List<ProjectionDefinition> definitions)
+    {
+        var unsupported = definitions.Where(definition => definition.Owner == ProjectionOwner.Kernel && definition.Scope == ProjectionScope.Global).ToArray();
+        foreach (var definition in unsupported)
+        {
+            logger.IgnoringGlobalKernelRegistration(_eventStoreName, definition.Identifier, definition.Scope);
+        }
+
+        // Retirement must use the filtered set too: an old silo still includes the global definition in its full set.
+        return definitions.Except(unsupported).ToList();
+    }
+
+    async Task RegisterDefinitions(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
+
+        Announce(definitionList);
 
         // A client that reconnects or retries during a rolling deploy can still be the old version. What it registers
         // must neither replace what a newer version registered, nor retire what a newer version added.
         var olderThanStored = definitionList.Where(definition => IsOlderThanStored(definition, version)).ToList();
         if (olderThanStored.Count > 0)
         {
-            foreach (var definition in olderThanStored)
-            {
-                var stored = State.Projections.First(projection => projection.Identifier == definition.Identifier);
-                logger.IgnoringOlderRegistration(definition.Identifier, version!, stored.Version!);
-                await AddIgnoredRegistrationRecommendation(definition.Identifier, version!, stored.Version!);
-            }
-
+            await IgnoreOlderRegistrations(olderThanStored);
             definitionList = definitionList.Except(olderThanStored).ToList();
+            Withdraw(olderThanStored);
         }
 
         if (fullSetOwner is not null && IsOlderThanAnyRetirableBy(fullSetOwner.Value, registrant, version))
@@ -143,6 +205,9 @@ public partial class ProjectionsManager(
         var changedDefinitions = (await GetChangedDefinitions(definitionList)).ToList();
         var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
         changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
+
+        KeepAnnounced(changedDefinitions);
+
         var failures = new Dictionary<ProjectionId, Exception>();
 
         if (changedDefinitions.Count == 0)
@@ -195,119 +260,6 @@ public partial class ProjectionsManager(
         }
 
         _registrationNamespaces = namespaces.ToHashSet();
-    }
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
-    {
-        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
-        return State.Projections
-            .Select(definition =>
-            {
-                var readModel = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
-                if (readModel is null)
-                {
-                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
-                    return null;
-                }
-
-                return new ProjectionWithDeclaration(
-                    definition.Identifier,
-                    readModel.ContainerName,
-                    languageService.Generate(definition, readModel));
-            })
-            .Where(_ => _ is not null)
-            .Select(_ => _!)
-            .ToArray();
-    }
-
-    /// <inheritdoc/>
-    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
-    {
-        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
-        if (_eventStoreName != eventStore) return Task.CompletedTask;
-
-        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
-        return Task.CompletedTask;
-    }
-
-    static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
-        [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
-
-    List<ProjectionDefinition> FilterUnsupportedKernelDefinitions(List<ProjectionDefinition> definitions)
-    {
-        var unsupported = definitions.Where(definition => definition.Owner == ProjectionOwner.Kernel && definition.Scope == ProjectionScope.Global).ToArray();
-        foreach (var definition in unsupported)
-        {
-            logger.IgnoringGlobalKernelRegistration(_eventStoreName, definition.Identifier, definition.Scope);
-        }
-
-        // Retirement must use the filtered set too: an old silo still includes the global definition in its full set.
-        return definitions.Except(unsupported).ToList();
-    }
-
-    bool IsOlderThanStored(ProjectionDefinition definition, string? version) =>
-        State.Projections.Any(stored => stored.Identifier == definition.Identifier && ProjectionVersions.IsOlder(version, stored.Version));
-
-    /// <summary>
-    /// Checks whether a full set is older than any stored projection it could retire. Another application sharing the
-    /// event store registers its own versions, and those must not stop this application from retiring what it no
-    /// longer registers.
-    /// </summary>
-    /// <param name="owner">The owner of the full set.</param>
-    /// <param name="registrant">The registrant of the full set, if any.</param>
-    /// <param name="version">The version of the full set, if any.</param>
-    /// <returns>True if the full set is older than a projection it could retire.</returns>
-    bool IsOlderThanAnyRetirableBy(ProjectionOwner owner, string? registrant, string? version) =>
-        State.Projections.Any(stored =>
-            stored.Owner == owner &&
-            IsRegisteredBy(stored.Identifier, registrant) &&
-            ProjectionVersions.IsOlder(version, stored.Version));
-
-    async Task AddIgnoredRegistrationRecommendation(ProjectionId identifier, string incomingVersion, string storedVersion)
-    {
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        foreach (var @namespace in namespaces)
-        {
-            var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(_eventStoreName, @namespace));
-
-            // The manager deduplicates on the request, so the same projection and version pair is only ever listed once.
-            await recommendationsManager.Add<IIgnoredProjectionRegistrationRecommendation, IgnoredProjectionRegistrationRequest>(
-                $"Projection registration ignored: projection '{identifier}' was registered by an older client version {incomingVersion} than the stored {storedVersion}. Deploy the newer version, or set Cratis:Chronicle:SoftwareVersion (environment variable Cratis__Chronicle__SoftwareVersion) on the client to a version higher than the stored {storedVersion} to roll back deliberately.",
-                new()
-                {
-                    ProjectionId = identifier,
-                    IncomingVersion = incomingVersion,
-                    StoredVersion = storedVersion
-                });
-        }
-    }
-
-    /// <summary>
-    /// Records which registrant last registered each of the definitions, so a full set can later retire only what
-    /// the same registrant registered. Several applications share one event store, each registering its own full set.
-    /// </summary>
-    /// <param name="definitions">The definitions in the registration.</param>
-    /// <param name="registrant">The registrant, if the client identified itself.</param>
-    /// <returns><see langword="true"/> if the recorded registrants changed and state needs writing.</returns>
-    bool RecordRegistrant(IEnumerable<ProjectionDefinition> definitions, string? registrant)
-    {
-        if (string.IsNullOrEmpty(registrant)) return false;
-
-        var changed = false;
-        var registrants = new Dictionary<string, string>(State.Registrants);
-        foreach (var definition in definitions)
-        {
-            if (registrants.TryGetValue(definition.Identifier.Value, out var current) && current == registrant) continue;
-            registrants[definition.Identifier.Value] = registrant;
-            changed = true;
-        }
-
-        if (changed) State.Registrants = registrants;
-        return changed;
     }
 
     /// <summary>
@@ -373,31 +325,6 @@ public partial class ProjectionsManager(
         await Task.WhenAll(namespaces.Select(namespaceName => SubscribeInNamespace(namespaceName, reconcile: false)));
     }
 
-    /// <summary>
-    /// Repairs registration subscriptions using the activation-local cache. Only namespace-local
-    /// triggers check real observer state, so idle tenants do not cause a whole-store observer sweep.
-    /// </summary>
-    /// <returns>A task representing the subscription repair.</returns>
-    async Task ResubscribeProjectionsThatAreNotSubscribed()
-    {
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
-        var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
-        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
-            activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
-        await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
-        {
-            try
-            {
-                await EnsureSubscribedIn(namespaceName);
-            }
-            catch (Exception exception)
-            {
-                // The namespace pass logs individual failures; this scheduled repair has no caller to fail.
-                logger.FailedEnsuringSubscriptionsInNamespace(exception, namespaceName);
-            }
-        }));
-    }
-
     async Task<IReadOnlyDictionary<ProjectionId, Exception>> SetDefinitionAndSubscribeForProjections(IEnumerable<ProjectionDefinition> definitions, bool reactivateRetired)
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
@@ -422,7 +349,7 @@ public partial class ProjectionsManager(
                 if (!reactivateRetired)
                 {
                     var current = State.Projections.FirstOrDefault(projection => projection.Identifier == definition.Identifier);
-                    if (current is null) return;
+                    if (current is null || IsBeingReplaced(current)) return;
                     definition = current;
                 }
 
@@ -586,6 +513,15 @@ public partial class ProjectionsManager(
 
     void ScheduleResubscribeProjectionsThatAreNotSubscribed()
     {
+        // Mark pending namespace passes immediately, before a timer can join their stale snapshots.
+        // Sets and flags coalesce requests; completion drains at most one pending rerun at a time.
+        _namespaceReruns.UnionWith(_namespaceSubscriptions.Keys);
+        if (_resubscribeRunning)
+        {
+            _resubscribeRequested = true;
+            return;
+        }
+
         _resubscribeTimer?.Dispose();
         _resubscribeTimer = this.RegisterGrainTimer(
             async _ =>
