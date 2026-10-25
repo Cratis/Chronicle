@@ -9,11 +9,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_paging_instances;
 
 public class and_filtering_visible_instances : given.a_sink_with_indexes
 {
-    readonly BsonDocument _expected = new("$or", new BsonArray
-    {
-        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false)),
-        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$type", "array"))
-    });
+    readonly BsonDocument _expected = new(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
 
     BsonDocument _pageFilter;
     BsonDocument _countFilter;
@@ -36,7 +32,7 @@ public class and_filtering_visible_instances : given.a_sink_with_indexes
 
     Task Because() => _sink.GetInstances();
 
-    [Fact] void should_use_the_indexable_or_filter_for_paging() => _pageFilter.ShouldEqual(_expected);
+    [Fact] void should_use_the_covered_not_false_filter_for_paging() => _pageFilter.ShouldEqual(_expected);
     [Fact] void should_use_the_same_filter_for_counting() => _countFilter.ShouldEqual(_expected);
     [Fact] void should_not_use_an_expression() => _pageFilter.ToJson().Contains("$expr", StringComparison.Ordinal).ShouldBeFalse();
 }

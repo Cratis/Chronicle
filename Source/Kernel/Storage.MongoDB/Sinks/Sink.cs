@@ -1293,11 +1293,10 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
-    static FilterDefinition<BsonDocument> VisibleInstancesFilter() => new BsonDocument("$or", new BsonArray
-    {
-        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false)),
-        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$type", "array"))
-    });
+    // Answered from the marker index alone: missing, null and every non-Boolean scalar stay visible. Only Boolean false, or an
+    // array containing it (which kernel writers never store), is hidden.
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
