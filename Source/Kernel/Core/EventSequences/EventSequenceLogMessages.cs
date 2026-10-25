@@ -102,4 +102,7 @@ internal static partial class EventSequenceLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Refused appending event type '{EventType}' to event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}: {Reason}")]
     internal static partial void EventTypeVisibilityRefused(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Failed persisting mutation epoch {Epoch} for event sequence {EventSequenceId} after a failed mutation. The odd epoch is settled on the next activation")]
+    internal static partial void FailedPersistingMutationEpoch(this ILogger<EventSequence> logger, Exception exception, EventSequenceId eventSequenceId, ulong epoch);
 }

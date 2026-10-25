@@ -18,16 +18,48 @@ public partial class EventSequence
     /// <returns>The result of the mutation.</returns>
     async Task<T> Mutating<T>(Func<Task<T>> mutation)
     {
-        State.MutationEpoch = State.MutationEpoch.Begin();
-        await WriteStateAsync();
+        var settledEpoch = State.MutationEpoch;
+        State.MutationEpoch = settledEpoch.Begin();
         try
         {
-            return await mutation();
-        }
-        finally
-        {
-            State.MutationEpoch = State.MutationEpoch.End();
             await WriteStateAsync();
+        }
+        catch
+        {
+            State.MutationEpoch = settledEpoch;
+            throw;
+        }
+
+        T result;
+        try
+        {
+            result = await mutation();
+        }
+        catch
+        {
+            await TryCloseMutationAfterFailure();
+            throw;
+        }
+
+        State.MutationEpoch = State.MutationEpoch.End();
+        await WriteStateAsync();
+        return result;
+    }
+
+    /// <summary>
+    /// Closes the in-memory epoch after a failed mutation and attempts to persist it, without letting a failed write mask the mutation failure.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task TryCloseMutationAfterFailure()
+    {
+        State.MutationEpoch = State.MutationEpoch.End();
+        try
+        {
+            await WriteStateAsync();
+        }
+        catch (Exception writeError)
+        {
+            logger.FailedPersistingMutationEpoch(writeError, _eventSequenceId, State.MutationEpoch.Value);
         }
     }
 
