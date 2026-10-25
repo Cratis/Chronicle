@@ -183,12 +183,12 @@ public class ImmediateProjection(
     /// <returns>The observer reference for this grain.</returns>
     protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
 
-    static bool HasInitializedModel(SingleReadModelProjectionState state) => state.Exists && state.IsInitialized;
-
     /// <summary>
     /// Requests deactivation of this session after its current work completes.
     /// </summary>
     protected virtual void DeactivateSession() => DeactivateOnIdle();
+
+    static bool HasInitializedModel(SingleReadModelProjectionState state) => state.Exists && state.IsInitialized;
 
     SingleReadModelProjectionState GetInitialState()
     {
