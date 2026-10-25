@@ -50,16 +50,25 @@ internal static class DynamicTableShape
         return differences;
     }
 
-    static bool Compatible(string expected, string actual) =>
-        string.Equals(Normalize(expected), Normalize(actual), StringComparison.Ordinal);
-
-    static string Normalize(string value) => value.ToLowerInvariant().Replace("character varying", "varchar", StringComparison.Ordinal)
+    /// <summary>
+    /// Canonicalizes provider type aliases without discarding length, precision, or scale.
+    /// </summary>
+    /// <param name="value">The migration or catalog store type.</param>
+    /// <returns>The comparable store type.</returns>
+    internal static string Normalize(string value) => value.ToLowerInvariant().Replace("character varying", "varchar", StringComparison.Ordinal)
+        .Replace("character(", "char(", StringComparison.Ordinal)
         .Replace("timestamp with time zone", "timestamptz", StringComparison.Ordinal)
-        .Replace("timestamp without time zone", "timestamp", StringComparison.Ordinal)
-        .Replace("time without time zone", "time", StringComparison.Ordinal)
+        .Replace(" without time zone", string.Empty, StringComparison.Ordinal)
         .Replace(" ", string.Empty, StringComparison.Ordinal) switch
     {
-        "int" => "integer",
+        "int" or "int4" => "integer",
+        "int2" => "smallint",
+        "int8" => "bigint",
+        "bool" => "boolean",
+        "float4" => "real",
+        "float8" => "doubleprecision",
+        "decimal" => "numeric",
+        var type when type.StartsWith("decimal(", StringComparison.Ordinal) => "numeric" + type[7..],
         var type => type
     };
 
@@ -68,7 +77,7 @@ internal static class DynamicTableShape
         var type = context.Database.GetDatabaseType();
         if (type == DatabaseType.Sqlite)
         {
-            var rows = await context.Database.SqlQuery<SqliteColumn>($"SELECT name AS Name, type AS Type, \"notnull\" AS Notnull, pk AS Pk FROM pragma_table_info({table})").ToListAsync();
+            var rows = await context.Database.SqlQuery<SqliteColumn>($"SELECT name AS Name, type AS Type, \"notnull\" AS \"Notnull\", pk AS Pk FROM pragma_table_info({table})").ToListAsync();
             return rows.ConvertAll(row => new Column { Name = row.Name, StoreType = row.Type, Nullable = row.Notnull == 0 && row.Pk == 0, KeyOrdinal = row.Pk });
         }
         var sql = type == DatabaseType.PostgreSql
@@ -87,6 +96,9 @@ internal static class DynamicTableShape
               "WHERE c.object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({0}))";
         return await context.Database.SqlQueryRaw<Column>(sql, table).ToListAsync();
     }
+
+    static bool Compatible(string expected, string actual) =>
+        string.Equals(Normalize(expected), Normalize(actual), StringComparison.Ordinal);
 
     private sealed class Column
     {

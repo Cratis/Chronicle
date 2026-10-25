@@ -22,7 +22,7 @@ The operation visits:
 - The System event store and its Default namespace.
 - Every registered event store and namespace, plus Default for each store.
 - Additional stores supplied with repeatable `--event-store` flags. Repeatable `--namespace` flags apply to each explicitly supplied store.
-- Namespace and jobs migrations, the event-log, system, outbox and shared named-tag tables, and existing sequence tables, including inboxes.
+- Namespace and jobs migrations, the event-log, system, outbox and shared named-tag tables, namespace-registered sequences, inbox sequences derived from stored subscriptions, and existing sequence tables.
 - Registered read-model tables and their projected columns, shadow and initialized-marker indexes, replay-promotion metadata, and declared indexes. Declared index builds finish before the command succeeds, using the configured DDL timeout.
 - Unscoped unique-constraint tables from registered definitions, plus upgrades of existing scoped claim and values tables. Scope keys first encountered after provisioning still need runtime DDL.
 - Existing replay and backup read-model tables. SQL read-model generations remain unsupported.
@@ -44,7 +44,7 @@ Or set `Cratis__Chronicle__Storage__SchemaAction=VerifyAndExit`. Verification re
 
 Initialized-marker and shadow index readiness uses the same catalog checks as runtime reconciliation, not their generated names. These checks do not establish a full index-shape match on every provider. Declared read-model indexes are checked by generated name only: expression SQL, ordered keys, direction, uniqueness, method, collation, filters and included columns are not compared. A same-named but incompatible declared index can therefore pass verification. Keep declared indexes under Chronicle's control; this probe is not a complete schema-drift audit.
 
-Sequence discovery uses built-in sequences, namespace registrations and existing sequence tables. Subscription definitions are not yet used to discover additional sequence names; provision those sequences through namespace registration before relying on this probe.
+Sequence discovery uses the event-log, system and outbox, namespace registrations, stored subscriptions and existing sequence tables. For each subscription, Chronicle derives the target inbox name as `inbox-<source event store>`, using the same convention as runtime delivery, and visits it in every namespace of the subscribing store. Subscriptions registered after provisioning still need another provisioning run or runtime DDL.
 
 After a successful migration job, configure normal replicas with:
 

@@ -63,6 +63,7 @@ public partial class Database
                     if (plan is null) continue;
                     if (verify)
                     {
+                        // Declared indexes are checked by generated name only, not keys, ordering, filters, or expression SQL.
                         if (!await DynamicIndexShape.Exists(table, name, plan.Name(type, name))) DynamicSchemaVerification.Report($"declared index '{name}.{plan.Name(type, name)}' is missing");
                         continue;
                     }

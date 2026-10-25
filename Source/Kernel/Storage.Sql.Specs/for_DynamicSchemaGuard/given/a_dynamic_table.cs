@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.for_DynamicSchemaGuard.given;
 
-public class a_dynamic_table : Specification
+public class a_dynamic_table : for_Database.given.a_sqlite_database
 {
     ILogger<DynamicSchemaGuard> _logger;
     protected DbContext _context;
@@ -24,7 +24,7 @@ public class a_dynamic_table : Specification
         _logger = Substitute.For<ILogger<DynamicSchemaGuard>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         var guard = new DynamicSchemaGuard(_logger);
-        var options = new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:");
+        var options = new DbContextOptionsBuilder().UseSqlite(_connectionString);
         ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new SchemaModeOptionsExtension(SchemaMode.Verify, guard));
         _context = new DbContext(options.Options);
         await _context.Database.OpenConnectionAsync();

@@ -74,7 +74,11 @@ public class SchemaProvisioner(Database database, ILogger<SchemaProvisioner> log
     {
         var tables = await SchemaTables.Read(context);
         var registered = await context.EventSequences.Select(sequence => sequence.EventSequenceId).ToListAsync();
-        var sequences = _sequences.Concat(registered).Concat(tables.Where(table => SchemaTables.IsSequence(table.Value)).Select(table => table.Key)).Distinct(StringComparer.Ordinal).ToArray();
+        var sources = await registry.EventStoreSubscriptions.Select(subscription => subscription.SourceEventStore).Distinct().ToListAsync();
+
+        // Match EventStoreSubscriptionObserverSubscriber: the target inbox is named for its source store.
+        var inboxes = sources.Select(source => $"{EventSequenceId.InboxPrefix}{source}");
+        var sequences = _sequences.Concat(registered).Concat(inboxes).Concat(tables.Where(table => SchemaTables.IsSequence(table.Value)).Select(table => table.Key)).Distinct(StringComparer.Ordinal).ToArray();
         var name = context.Database.GetDbConnection().Database;
         foreach (var sequence in sequences)
         {

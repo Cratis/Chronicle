@@ -19,6 +19,7 @@ internal sealed partial class DynamicSchemaGuard(ILogger<DynamicSchemaGuard> log
     static readonly AsyncLocal<DynamicSchemaPolicy?> _override = new();
     static readonly DynamicSchemaGuard _default = new(NullLogger<DynamicSchemaGuard>.Instance);
     readonly ConcurrentDictionary<(string Connection, string Kind, string Name), byte> _reported = new();
+    readonly AsyncLocal<int> _batchDepth = new();
     int _pending;
 
     /// <summary>
@@ -79,7 +80,16 @@ internal sealed partial class DynamicSchemaGuard(ILogger<DynamicSchemaGuard> log
     /// Flushes newly reported objects as one warning when the DDL batch finishes.
     /// </summary>
     /// <returns>A scope flushing on success or failure.</returns>
-    internal IDisposable FlushOnDispose() => new Scope(Flush);
+    internal IDisposable FlushOnDispose()
+    {
+        var previous = _batchDepth.Value;
+        _batchDepth.Value = previous + 1;
+        return new Scope(() =>
+        {
+            _batchDepth.Value = previous;
+            if (previous == 0) Flush();
+        });
+    }
 
     /// <summary>
     /// Emits a summary only when this process has encountered new dynamic objects.

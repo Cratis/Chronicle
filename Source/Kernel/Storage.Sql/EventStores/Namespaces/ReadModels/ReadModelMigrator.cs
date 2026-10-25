@@ -51,6 +51,7 @@ public class ReadModelMigrator(
             }
             return;
         }
+        using var reporting = DynamicSchemaGuard.For(context)?.FlushOnDispose();
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }
