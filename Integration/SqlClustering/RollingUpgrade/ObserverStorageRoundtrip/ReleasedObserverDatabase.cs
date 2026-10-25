@@ -25,7 +25,8 @@ public static class ReleasedObserverDatabase
             await database.OpenAsync();
             foreach (var schema in await Schemas(database, "ObserverDefinitions"))
             {
-                await using var command = new NpgsqlCommand($"SELECT \"Id\", \"EventSequenceId\" FROM {Quote(schema)}.\"ObserverDefinitions\" WHERE \"Owner\" = 2 AND \"EventTypes\"::text NOT IN ('[]', '{{}}', 'null')", database);
+                await SetSearchPath(database, schema);
+                await using var command = new NpgsqlCommand("SELECT \"Id\", \"EventSequenceId\" FROM \"ObserverDefinitions\" WHERE \"Owner\" = 2 AND \"EventTypes\"::text NOT IN ('[]', '{}', 'null')", database);
                 await using var rows = await command.ExecuteReaderAsync();
                 while (await rows.ReadAsync()) definitions[rows.GetString(0)] = rows.GetString(1);
             }
@@ -36,7 +37,8 @@ public static class ReleasedObserverDatabase
             await database.OpenAsync();
             foreach (var schema in await Schemas(database, "Observers"))
             {
-                await using var command = new NpgsqlCommand($"SELECT \"Id\" FROM {Quote(schema)}.\"Observers\"", database);
+                await SetSearchPath(database, schema);
+                await using var command = new NpgsqlCommand("SELECT \"Id\" FROM \"Observers\"", database);
                 await using var rows = await command.ExecuteReaderAsync();
                 while (await rows.ReadAsync())
                 {
@@ -71,7 +73,8 @@ public static class ReleasedObserverDatabase
             $$;
             CREATE TRIGGER "__ClaimsRoundtripWitness" AFTER UPDATE ON "Observers"
                 FOR EACH ROW EXECUTE FUNCTION "__ClaimsRoundtripWitness"();
-            """, connection);
+            """,
+            connection);
         await command.ExecuteNonQueryAsync();
     }
 
@@ -122,12 +125,17 @@ public static class ReleasedObserverDatabase
     static async Task<string[]> Schemas(NpgsqlConnection connection, string table)
     {
         await using var command = new NpgsqlCommand("SELECT table_schema FROM information_schema.tables WHERE table_name = @table", connection);
-        command.Parameters.AddWithValue("table", table);
+        command.Parameters.AddWithValue(nameof(table), table);
         await using var rows = await command.ExecuteReaderAsync();
         var schemas = new List<string>();
         while (await rows.ReadAsync()) schemas.Add(rows.GetString(0));
         return schemas.ToArray();
     }
 
-    static string Quote(string identifier) => $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    static async Task SetSearchPath(NpgsqlConnection connection, string schema)
+    {
+        await using var command = new NpgsqlCommand("SELECT pg_catalog.set_config('search_path', pg_catalog.quote_ident(@schema), false)", connection);
+        command.Parameters.AddWithValue(nameof(schema), schema);
+        await command.ExecuteScalarAsync();
+    }
 }
