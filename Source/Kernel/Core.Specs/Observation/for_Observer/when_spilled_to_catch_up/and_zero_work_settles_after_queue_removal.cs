@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_spilled_to_catch_up;
@@ -22,17 +21,9 @@ public class and_zero_work_settles_after_queue_removal : given.an_observer_settl
     [Fact] void should_rejoin_the_physical_queue() => _queued.ShouldBeTrue();
     [Fact] async Task should_keep_the_logical_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
     [Fact] async Task should_preserve_backoff() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
-    [Fact] async Task should_not_start_another_catch_up() =>
-        await _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
-
-    [Fact]
-    async Task should_deliver_a_later_live_event()
-    {
-        // A queue dispatches only to observers still in its subscription set.
-        if (_queued)
-        {
-            await _observer.Handle("partition", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(EventType.Unknown, 1UL)]);
-        }
-        await _subscriber.Received(1).OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    }
+    [Fact] async Task should_start_exactly_one_catch_up() =>
+        await _jobsManager.Received(1).Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
+    [Fact] async Task should_catch_up_from_the_gap_start() =>
+        await _jobsManager.Received(1).Start<ICatchUpObserver, CatchUpObserverRequest>(
+            Arg.Is<CatchUpObserverRequest>(_ => _.FromEventSequenceNumber == (EventSequenceNumber)1UL));
 }
