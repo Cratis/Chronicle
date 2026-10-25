@@ -80,6 +80,13 @@ public class ImmediateProjection(
     {
         _sessionExpiry?.Dispose();
         _sessionExpiry = null;
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+        {
+            // The projection grain is deactivating with the silo too, so the call could not complete.
+            logger.SkippingDefinitionUnsubscribeDuringShutdown();
+            return;
+        }
+
         if (_projection is not null)
         {
             await _projection.UnsubscribeDefinitionsChanged(GetSelfGrainReference());
