@@ -37,7 +37,7 @@ public class and_creating_the_initialized_marker_index : given.a_read_model_migr
 
     [Fact] void should_create_one_marker_index() => _firstIndexes.Length.ShouldEqual(1);
     [Fact] void should_reuse_the_same_index_on_a_second_run() => _secondIndexes.ShouldEqual(_firstIndexes);
-    [Fact] void should_index_only_the_initialized_marker() => _indexedColumns.ShouldEqual(new[] { WellKnownProperties.ReadModelInstanceInitialized });
+    [Fact] void should_index_only_the_initialized_marker() => _indexedColumns.Single().ShouldEqual(WellKnownProperties.ReadModelInstanceInitialized);
     [Fact] void should_be_non_unique() => _unique.ShouldEqual(0L);
     [Fact] void should_be_ascending() => _descending.ShouldEqual(0L);
 }
