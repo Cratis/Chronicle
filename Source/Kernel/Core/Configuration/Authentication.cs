@@ -27,6 +27,12 @@ public class Authentication
     public bool Enabled { get; init; } = true;
 
     /// <summary>
+    /// Gets whether to enforce administrator authorization for System-store operational recovery.
+    /// Defaults to audit-only; administrator management is always enforced.
+    /// </summary>
+    public bool EnforceAdministratorPolicyForOperations { get; init; }
+
+    /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>
     public string? Authority { get; init; }

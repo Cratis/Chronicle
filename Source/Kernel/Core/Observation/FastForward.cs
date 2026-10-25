@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Observation;
 /// backlog, or events that can never be handled, when the read side does not need to be rebuilt.
 /// </remarks>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record FastForward(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {

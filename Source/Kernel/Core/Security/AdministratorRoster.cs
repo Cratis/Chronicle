@@ -50,6 +50,7 @@ public class AdministratorRoster(
     readonly HashSet<string> _usedNonces = new(StringComparer.Ordinal);
     EventSequenceNumber _rosterTail = EventSequenceNumber.BeforeFirst;
     bool _migrated;
+    EventSequenceNumber? _loadedTail;
 
     IEventSequenceStorage Events => storage.GetEventStore(EventStoreName.System)
         .GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.Log);
@@ -79,6 +80,18 @@ public class AdministratorRoster(
     {
         await Reload();
         return _granted.Contains(userId) && (await storage.System.Users.GetById(userId))?.IsActive is true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<UserId>> GetActiveAdministrators()
+    {
+        await Reload();
+        var active = new List<UserId>();
+        foreach (var userId in _granted)
+        {
+            if ((await storage.System.Users.GetById(userId))?.IsActive is true) active.Add(userId);
+        }
+        return active;
     }
 
     /// <inheritdoc/>
@@ -189,9 +202,10 @@ public class AdministratorRoster(
     {
         for (var attempt = 0; attempt < 8; attempt++)
         {
-            await Reload();
+            await Reload(force: true);
             var decision = await decide();
             if (!decision.Accepted || decision.Events.Length == 0) return decision.Accepted;
+            _loadedTail = null;
             var result = await grainFactory.GetEventLog().AppendMany(
                 decision.Events, CorrelationId.New(), [], Identity.System, Scopes(decision.Events, migration));
             if (result.HasConcurrencyViolations) continue;
@@ -226,8 +240,17 @@ public class AdministratorRoster(
         return new(scopes);
     }
 
-    async Task Reload()
+    bool IsLoadedAt(EventSequenceNumber tail) => _loadedTail is not null && _loadedTail == tail;
+
+    async Task Reload(bool force = false)
     {
+        // The non-reentrant System EventSequence grain serializes all appends, advancing its next
+        // sequence number only after a durable append. Batch storage commits atomically. Thus an
+        // observed storage tail cannot conceal a lower-numbered change that commits later. Every
+        // check reads this tail (including UserRemoved), never a TTL or the eventual projection.
+        var tail = await Events.GetTailSequenceNumber(_stateTypes);
+        if (!force && IsLoadedAt(tail)) return;
+        _loadedTail = null;
         _granted.Clear();
         _everGranted.Clear();
         _bootstrapGranted.Clear();
@@ -236,13 +259,15 @@ public class AdministratorRoster(
         _usedNonces.Clear();
         _migrated = false;
         _rosterTail = EventSequenceNumber.BeforeFirst;
-        var tail = await Events.GetTailSequenceNumber(_stateTypes);
-        if (!tail.IsActualValue) return;
-        using var cursor = await Events.GetRange(EventSequenceNumber.First, tail, eventTypes: _stateTypes);
-        while (await cursor.MoveNext())
+        if (tail.IsActualValue)
         {
-            foreach (var @event in cursor.Current) Apply(@event);
+            using var cursor = await Events.GetRange(EventSequenceNumber.First, tail, eventTypes: _stateTypes);
+            while (await cursor.MoveNext())
+            {
+                foreach (var @event in cursor.Current) Apply(@event);
+            }
         }
+        _loadedTail = tail;
     }
 
     void Apply(AppendedEvent @event)

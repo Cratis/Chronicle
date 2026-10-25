@@ -8,8 +8,8 @@ using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Security;
 using Roster = Cratis.Chronicle.Concepts.Security.AdministratorRoster;
+using StoredAdministrator = Cratis.Chronicle.Storage.Security.Administrator;
 
 namespace Cratis.Chronicle.Security;
 
@@ -29,8 +29,8 @@ internal class AdministratorProjectionState(IStorage storage, IEventSerializer s
     /// Computes the administrator state for a user from the authoritative roster events in the System event store.
     /// </summary>
     /// <param name="userId">The <see cref="UserId"/> to compute the state for.</param>
-    /// <returns>The <see cref="Administrator"/> if the user holds the privilege; otherwise null.</returns>
-    internal async Task<Administrator?> Get(UserId userId)
+    /// <returns>The <see cref="StoredAdministrator"/> if the user holds the privilege; otherwise null.</returns>
+    internal async Task<StoredAdministrator?> Get(UserId userId)
     {
         var tail = await Events.GetTailSequenceNumber(_rosterTypes, Roster.EventSourceId);
         if (!tail.IsActualValue) return null;
@@ -39,16 +39,16 @@ internal class AdministratorProjectionState(IStorage storage, IEventSerializer s
         return await HasBeenRemoved(userId) ? null : administrator;
     }
 
-    static Administrator? Apply(Administrator? current, UserId userId, object content) => content switch
+    static StoredAdministrator? Apply(StoredAdministrator? current, UserId userId, object content) => content switch
     {
-        UserGrantedAdministrator grant when grant.UserId == userId => new Administrator(userId, grant.Reason, grant.Evidence),
+        UserGrantedAdministrator grant when grant.UserId == userId => new StoredAdministrator(userId, grant.Reason, grant.Evidence),
         UserRevokedAdministrator revoke when revoke.UserId == userId => null,
         _ => current
     };
 
-    async Task<Administrator?> Replay(UserId userId, EventSequenceNumber tail)
+    async Task<StoredAdministrator?> Replay(UserId userId, EventSequenceNumber tail)
     {
-        Administrator? administrator = null;
+        StoredAdministrator? administrator = null;
         using var cursor = await Events.GetRange(EventSequenceNumber.First, tail, Roster.EventSourceId, _rosterTypes);
         while (await cursor.MoveNext())
         {

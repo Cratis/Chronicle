@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Security;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
 /// Serializes mutations of the system administrator roster.
 /// </summary>
+[Version(1)]
 public interface IAdministratorRoster : IGrainWithStringKey
 {
     /// <summary>
@@ -40,6 +42,12 @@ public interface IAdministratorRoster : IGrainWithStringKey
     /// <param name="userId">The user to check.</param>
     /// <returns>Whether the user is an active administrator.</returns>
     Task<bool> IsActiveAdministrator(UserId userId);
+
+    /// <summary>
+    /// Lists the active users holding authoritative administrator grants.
+    /// </summary>
+    /// <returns>The active administrator user identifiers.</returns>
+    Task<IEnumerable<UserId>> GetActiveAdministrators();
 
     /// <summary>
     /// Runs the once-only upgrade migration and server-configured recovery at startup.

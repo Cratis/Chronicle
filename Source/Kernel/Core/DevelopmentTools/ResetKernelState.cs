@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// Represents the command for resetting the kernel back to a freshly bootstrapped state.
 /// </summary>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 public record ResetKernelState
 {
     /// <summary>

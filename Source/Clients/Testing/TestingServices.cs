@@ -35,6 +35,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security.Applications;
@@ -170,7 +171,9 @@ internal sealed class TestingServices : IServices
         _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
+            new InProcessAuthorizationService(),
+            new HttpContextAccessor())));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 

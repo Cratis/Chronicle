@@ -25,7 +25,54 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | authority | string | null | External OAuth authority URL |
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
+| enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+
+## Administrator authorization
+
+Administrator privilege is separate from a user account. The `Administrators` service lets an existing
+administrator grant or revoke that privilege and list active administrators. The last active administrator
+cannot be revoked or removed. These management operations always enforce the `Chronicle.Administrator`
+policy when authentication is enabled; the audit-mode setting below does not weaken them.
+
+Only authenticated users issued by Chronicle's internal authority can pass that policy. Their principal
+must carry `chronicle_principal=user`, and the authoritative System roster must still grant the privilege
+to an active user. An application or client-credentials token never receives this marker and cannot become
+an administrator, even if its subject happens to match an administrator's user identifier. External-authority
+principals are denied; there is no external role or claim mapping for administrator privilege.
+
+User tokens issued before this marker was introduced must be refreshed or obtained again. Existing cookie
+or Identity bearer sessions without the marker must sign in again. Privilege is checked against the roster
+on each call, not cached in the token or inferred from the administrator read-model projection.
+
+### Audit mode for existing operations
+
+Existing user/application management commands, job stop/resume/delete operations, observer recovery
+operations, and development-only kernel reset use `Chronicle.Administrator.Operations`. By default,
+`EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
+log a warning and continue under their existing authentication requirements. Each would-deny warning names
+the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
+contents. Audit mode does not grant administrator privilege.
+
+Review those warnings before switching on enforcement. Set `EnforceAdministratorPolicyForOperations=true`
+through the authentication configuration:
+
+```json
+{
+  "authentication": {
+    "enabled": true,
+    "enforceAdministratorPolicyForOperations": true
+  }
+}
+```
+
+With enforcement enabled, these operations require administrator privilege only when targeting `System`
+(case-insensitive). Security management and kernel reset have no event-store property and always count as
+System operations. Operations on application stores remain available without administrator privilege.
+Self-service password changes and anonymous bootstrap endpoints keep their existing behavior.
+
+When authentication is disabled, administrator checks allow all callers and the server logs a startup
+warning. Do not use authentication-off mode on a reachable server.
 
 ## Authentication behind an HTTPS reverse proxy
 
