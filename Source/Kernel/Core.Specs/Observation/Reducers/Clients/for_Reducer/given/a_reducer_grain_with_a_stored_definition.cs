@@ -73,6 +73,13 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         _grain = await _silo.CreateGrainAsync<Reducer>(key.ToString());
     }
 
+    protected Task WasSubscribed(ReducerDefinition definition) => _observer.Received(1).Subscribe<IReducerObserverSubscriber>(
+        ObserverType.Reducer,
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Any<SiloAddress>(),
+        _client,
+        filters: definition.Filters);
+
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReducerObserverSubscriber>(
         ObserverType.Reducer,
         Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),

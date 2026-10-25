@@ -74,6 +74,14 @@ public class a_reactor_grain_with_a_stored_definition : Specification
         _grain = await _silo.CreateGrainAsync<Reactor>(key.ToString());
     }
 
+    protected Task WasSubscribed(ReactorDefinition definition) => _observer.Received(1).Subscribe<IReactorObserverSubscriber>(
+        ObserverType.Reactor,
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Any<SiloAddress>(),
+        _client,
+        definition.IsReplayable,
+        definition.Filters);
+
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReactorObserverSubscriber>(
         ObserverType.Reactor,
         Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),

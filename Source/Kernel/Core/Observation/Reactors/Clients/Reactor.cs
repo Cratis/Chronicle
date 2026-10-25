@@ -35,6 +35,7 @@ public class Reactor(
     IConnectedClients? _connectedClients;
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
+    ReactorDefinition? _deferredDefinition;
     bool _subscribed;
 
     /// <inheritdoc/>
@@ -53,7 +54,7 @@ public class Reactor(
         logger.Starting(_observerKey!.EventStore, _observerKey.ObserverId!, _observerKey!.EventSequenceId, _observerKey!.Namespace);
         var key = new ReactorKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         _observer = GrainFactory.GetGrain<IObserver>(key);
-        if (await WaitIfServedByWebhook())
+        if (await DeferRegistrationIfServedByWebhook(definition))
         {
             return;
         }
@@ -114,6 +115,11 @@ public class Reactor(
     /// <inheritdoc/>
     public async Task KeepSubscription(ReactorDefinition definition)
     {
+        if (await CompleteDeferredRegistration())
+        {
+            return;
+        }
+
         var key = new ReactorKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         _observer ??= GrainFactory.GetGrain<IObserver>(key);
         if (await WaitIfServedByWebhook())
@@ -149,6 +155,24 @@ public class Reactor(
         }
 
         _subscribed = true;
+    }
+
+    async Task<bool> DeferRegistrationIfServedByWebhook(ReactorDefinition definition)
+    {
+        var waiting = await WaitIfServedByWebhook();
+        _deferredDefinition = waiting ? definition : null;
+        return waiting;
+    }
+
+    async Task<bool> CompleteDeferredRegistration()
+    {
+        if (_deferredDefinition is not { } definition)
+        {
+            return false;
+        }
+
+        await SetDefinitionAndSubscribe(definition);
+        return true;
     }
 
     async Task<bool> WaitIfServedByWebhook()

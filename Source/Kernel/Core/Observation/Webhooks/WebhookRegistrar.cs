@@ -270,18 +270,29 @@ public sealed class WebhookRegistrar(
     async Task ValidateTransportOwnership(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
         var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
-        foreach (var webhook in webhooks)
+        foreach (var webhook in webhooks.Where(_ => _.IsActive && !_.IsInactive))
         {
             foreach (var @namespace in namespaces)
             {
                 var key = new ObserverKey(webhook.Identifier, eventStore, @namespace, webhook.EventSequenceId);
-                var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
-                if (subscription.IsServedByConnectedClient)
+                if (await IsServedByConnectedClient(key))
                 {
                     throw new ObserverServedByAnotherTransport(key);
                 }
             }
         }
+    }
+
+    async Task<bool> IsServedByConnectedClient(ObserverKey key)
+    {
+        var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
+        if (subscription.IsServedByConnectedClient)
+        {
+            return true;
+        }
+
+        var owningSubscription = await ObserverTransportSubscriptions.OnOtherSequence(storage, grainFactory, key);
+        return owningSubscription?.IsServedByConnectedClient == true;
     }
 
     async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)

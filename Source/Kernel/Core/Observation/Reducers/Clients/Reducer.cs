@@ -40,6 +40,7 @@ public class Reducer(
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
 {
     IObserver? _observer;
+    ReducerDefinition? _deferredDefinition;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
@@ -58,7 +59,7 @@ public class Reducer(
     {
         var key = ReducerKey.Parse(this.GetPrimaryKeyString());
         _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
-        if (await WaitIfServedByWebhook())
+        if (await DeferRegistrationIfServedByWebhook(definition))
         {
             return;
         }
@@ -126,6 +127,11 @@ public class Reducer(
     /// <inheritdoc/>
     public async Task KeepSubscription(ReducerDefinition definition)
     {
+        if (await CompleteDeferredRegistration())
+        {
+            return;
+        }
+
         if (!definition.IsActive)
         {
             return;
@@ -165,6 +171,24 @@ public class Reducer(
         }
 
         _subscribed = true;
+    }
+
+    async Task<bool> DeferRegistrationIfServedByWebhook(ReducerDefinition definition)
+    {
+        var waiting = await WaitIfServedByWebhook();
+        _deferredDefinition = waiting ? definition : null;
+        return waiting;
+    }
+
+    async Task<bool> CompleteDeferredRegistration()
+    {
+        if (_deferredDefinition is not { } definition)
+        {
+            return false;
+        }
+
+        await SetDefinitionAndSubscribe(definition);
+        return true;
     }
 
     async Task<bool> WaitIfServedByWebhook()
