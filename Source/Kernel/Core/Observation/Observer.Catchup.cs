@@ -176,12 +176,12 @@ public partial class Observer
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var partitions = State.CatchingUpPartitions.ToArray();
-            var version = _partitionHoldsVersion;
+            var version = CurrentPartitionHoldsVersion();
             try
             {
                 var result = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs.GetOutstandingJobs();
                 if (!result.TryGetResult(out var jobs)) return new HashSet<Key>();
-                if (version != _partitionHoldsVersion) continue;
+                if (version != CurrentPartitionHoldsVersion()) continue;
 
                 var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow);
                 return partitions.Where(partition => !owned.Contains(partition)).ToHashSet();

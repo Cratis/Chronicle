@@ -43,7 +43,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
-| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
+| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely during catch-up and replay; live waits remain bounded by the Orleans response timeout) |
+| Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
