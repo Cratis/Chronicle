@@ -121,7 +121,7 @@ public partial class Observer
         _catchUpHandoversInFlight++;
         _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
-        EndCatchUpOwnership(jobId);
+        _catchUpLease.Conclude(jobId);
         try
         {
             await HandOverCaughtUpJob(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
@@ -316,6 +316,8 @@ public partial class Observer
 
     async Task<JobId> AcquireCatchUpJob()
     {
+        if (_catchUpLease.IsStopping) return JobId.NotSet;
+        var stopRevision = _catchUpLease.StopRevision;
         await ForgetFinishedConcludedCatchUpJobs();
         var subscription = await GetSubscription();
         var foundRunningJob = false;
@@ -339,7 +341,7 @@ public partial class Observer
             () =>
             {
                 logger.StartCatchUpJob(State.NextEventSequenceNumber);
-                InvalidateCatchUpOwnership();
+                _catchUpLease.Release();
                 return Task.CompletedTask;
             },
 
@@ -353,14 +355,21 @@ public partial class Observer
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
                 NotePreparationEnded();
-                InvalidateCatchUpOwnership();
+                _catchUpLease.Release();
                 return Task.CompletedTask;
             },
             concludedJobs: _concludedCatchUpJobs);
 
+        if (_catchUpLease.IsStopping || stopRevision != _catchUpLease.StopRevision) return JobId.NotSet;
+
         if (foundRunningJob && jobId != JobId.NotSet)
         {
-            AskRunningCatchUpJobToRegisterItsPartitions(jobId, MintCatchUpOwnership(jobId));
+            var generation = _catchUpLease.Acquire(jobId);
+            if (generation != Guid.Empty)
+            {
+                _catchUpOwnershipEpoch++;
+                AskRunningCatchUpJobToRegisterItsPartitions(jobId, generation);
+            }
         }
 
         return jobId;

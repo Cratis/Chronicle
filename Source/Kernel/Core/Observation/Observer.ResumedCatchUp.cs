@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    CatchUpOwnership? _catchUpOwner;
+    readonly CatchUpOwnershipLease _catchUpLease = new();
 
     /// <inheritdoc/>
     /// <remarks>
@@ -20,10 +20,14 @@ public partial class Observer
     {
         if (IsRetired || _removed || _concludedCatchUpJobs.Contains(jobId)) return Task.FromResult(Guid.Empty);
 
+        var generation = _catchUpLease.Readmit(jobId);
+        if (generation == Guid.Empty) return Task.FromResult(generation);
+        _catchUpOwnershipEpoch++;
+
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
         logger.CatchUpJobIsResuming(jobId);
         _isPreparingCatchup = true;
-        return Task.FromResult(MintCatchUpOwnership(jobId));
+        return Task.FromResult(generation);
     }
 
     /// <inheritdoc/>
@@ -34,7 +38,7 @@ public partial class Observer
     /// </remarks>
     public async Task RegisterResumedCatchingUpPartitions(JobId jobId, Guid ownershipGeneration, IEnumerable<Key> partitions)
     {
-        if (IsRetired || _removed || !IsCurrentCatchUpOwner(jobId, ownershipGeneration))
+        if (IsRetired || _removed || !_catchUpLease.Accepts(jobId, ownershipGeneration))
         {
             logger.IgnoringStaleCatchUpRegistration(jobId);
             return;
@@ -62,7 +66,7 @@ public partial class Observer
         await WriteStateAsync();
 
         // Conclusion, a stop or a successor owns the flag from here on.
-        if (!IsCurrentCatchUpOwner(jobId, ownershipGeneration))
+        if (!_catchUpLease.Accepts(jobId, ownershipGeneration))
         {
             logger.CatchUpOwnershipLostDuringRegistration(jobId);
             return;
@@ -77,27 +81,4 @@ public partial class Observer
 
         _isPreparingCatchup = false;
     }
-
-    Guid MintCatchUpOwnership(JobId jobId)
-    {
-        var generation = Guid.NewGuid();
-        _catchUpOwner = new(jobId, generation);
-        _catchUpOwnershipEpoch++;
-        return generation;
-    }
-
-    void EndCatchUpOwnership(JobId jobId)
-    {
-        if (jobId == JobId.NotSet || _catchUpOwner?.JobId == jobId)
-        {
-            _catchUpOwner = null;
-        }
-    }
-
-    void InvalidateCatchUpOwnership() => _catchUpOwner = null;
-
-    bool IsCurrentCatchUpOwner(JobId jobId, Guid generation) =>
-        generation != Guid.Empty && _catchUpOwner is { } owner && owner.JobId == jobId && owner.Generation == generation;
-
-    sealed record CatchUpOwnership(JobId JobId, Guid Generation);
 }

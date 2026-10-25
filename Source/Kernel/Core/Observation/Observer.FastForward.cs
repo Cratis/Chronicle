@@ -19,6 +19,19 @@ public partial class Observer
     /// </remarks>
     public async Task<FastForwardResult> FastForward()
     {
+        _catchUpLease.BeginStop();
+        try
+        {
+            return await FastForwardWhileStopping();
+        }
+        finally
+        {
+            _catchUpLease.EndStop();
+        }
+    }
+
+    async Task<FastForwardResult> FastForwardWhileStopping()
+    {
         ThrowIfSealed();
         await ThrowIfKeyDoesNotOwnDefinition();
         var previous = State.NextEventSequenceNumber;
@@ -66,18 +79,26 @@ public partial class Observer
 
     async Task DropJobsSkippedByFastForward()
     {
-        InvalidateCatchUpOwnership();
-        var jobs = await _jobsManager.GetUnfinishedJobs();
-        var skipped = jobs
-            .Where(job => job is { Request: IObserverJobRequest request } &&
-                          request is not ReplayObserverRequest &&
-                          request.ObserverKey == _observerKey)
-            .ToArray();
-
-        await Task.WhenAll(skipped.Select(job => _jobsManager.Stop(job.Id)));
-        foreach (var job in skipped)
+        _catchUpLease.BeginStop();
+        try
         {
-            await _jobsManager.Delete(job.Id);
+            var jobs = await _jobsManager.GetUnfinishedJobs();
+            var skipped = jobs
+                .Where(job => job is { Request: IObserverJobRequest request } &&
+                              request is not ReplayObserverRequest &&
+                              request.ObserverKey == _observerKey)
+                .ToArray();
+            _catchUpLease.MarkStopped(skipped.Select(job => job.Id));
+
+            await Task.WhenAll(skipped.Select(job => _jobsManager.Stop(job.Id)));
+            foreach (var job in skipped)
+            {
+                await _jobsManager.Delete(job.Id);
+            }
+        }
+        finally
+        {
+            _catchUpLease.EndStop();
         }
     }
 }

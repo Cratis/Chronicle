@@ -222,6 +222,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        _catchUpLease.BeginStop();
         try
         {
             if (_removed || !_observerExists)
@@ -246,6 +247,7 @@ public partial class Observer(
         }
         finally
         {
+            _catchUpLease.EndStop();
             Dispose();
         }
     }
@@ -327,64 +329,73 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Remove()
     {
-        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        logger.RemovingObserver();
-
-        ThrowIfSealed();
-        await ThrowIfKeyDoesNotOwnDefinition();
-
-        // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
-        // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
-        if (_subscription.IsSubscribed || State.RunningState == ObserverRunningState.Active)
-        {
-            throw new ObserverRemovalNotAllowed(_observerKey);
-        }
-
-        if (_observerExists)
-        {
-            await CommitRetired();
-            await RequireAlertReconciliation();
-        }
-
-        // Jobs may call interleaved recovery methods while stopping. Do not hold their mutation lock here.
-        var jobs = await _jobsManager.GetAllJobs();
-        foreach (var job in jobs.Where(job => job.Request is IObserverJobRequest request && request.ObserverKey.ObserverId == _observerId))
-        {
-            await _jobsManager.Delete(job.Id);
-        }
-
-        await _alertMutationLock.WaitAsync();
-        await _stateWriteLock.WaitAsync();
+        _catchUpLease.BeginStop();
         try
         {
-            await RemoveFailedPartitionReminders();
-            var namespaceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace);
-            await namespaceStorage.FailedPartitions.RemoveAllFor(_observerId);
-            await namespaceStorage.ObserverHandledCounts.RemoveAllFor(_observerId);
-            foreach (var inFlight in await namespaceStorage.InFlightEvents.GetFor(_observerId))
+            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+            logger.RemovingObserver();
+
+            ThrowIfSealed();
+            await ThrowIfKeyDoesNotOwnDefinition();
+
+            // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
+            // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
+            if (_subscription.IsSubscribed || State.RunningState == ObserverRunningState.Active)
             {
-                await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
+                throw new ObserverRemovalNotAllowed(_observerKey);
             }
 
-            // The deletion can commit and then throw. Seal this activation before attempting it so neither
-            // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
-            _removed = true;
-            _stateWritingSuspended = true;
+            if (_observerExists)
+            {
+                await CommitRetired();
+                await RequireAlertReconciliation();
+            }
+
+            // Jobs may call interleaved recovery methods while stopping. Do not hold their mutation lock here.
+            var jobs = await _jobsManager.GetAllJobs();
+            foreach (var job in jobs.Where(job => job.Request is IObserverJobRequest request && request.ObserverKey.ObserverId == _observerId))
+            {
+                _catchUpLease.MarkStopped([job.Id]);
+                await _jobsManager.Delete(job.Id);
+            }
+
+            await _alertMutationLock.WaitAsync();
+            await _stateWriteLock.WaitAsync();
             try
             {
-                await namespaceStorage.Observers.Delete(_observerId);
-                _observerExists = false;
-                await UnregisterReminderNamed(AlertReminderName);
+                await RemoveFailedPartitionReminders();
+                var namespaceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace);
+                await namespaceStorage.FailedPartitions.RemoveAllFor(_observerId);
+                await namespaceStorage.ObserverHandledCounts.RemoveAllFor(_observerId);
+                foreach (var inFlight in await namespaceStorage.InFlightEvents.GetFor(_observerId))
+                {
+                    await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
+                }
+
+                // The deletion can commit and then throw. Seal this activation before attempting it so neither
+                // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
+                _removed = true;
+                _stateWritingSuspended = true;
+                try
+                {
+                    await namespaceStorage.Observers.Delete(_observerId);
+                    _observerExists = false;
+                    await UnregisterReminderNamed(AlertReminderName);
+                }
+                finally
+                {
+                    DeactivateOnIdle();
+                }
             }
             finally
             {
-                DeactivateOnIdle();
+                _stateWriteLock.Release();
+                _alertMutationLock.Release();
             }
         }
         finally
         {
-            _stateWriteLock.Release();
-            _alertMutationLock.Release();
+            _catchUpLease.EndStop();
         }
     }
 
@@ -514,12 +525,21 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        await CancelWebhookProbe();
-        SupersedeRecoveryAfterQuarantine();
-        _subscription = ObserverSubscription.Unsubscribed;
-        ForgetSupersededRegistrations();
-        await PauseJobs();
-        await TransitionTo<Disconnected>();
+        // The lease is Stopping from before the first await until after the last, so no generation is issued in between.
+        _catchUpLease.BeginStop();
+        try
+        {
+            await CancelWebhookProbe();
+            SupersedeRecoveryAfterQuarantine();
+            _subscription = ObserverSubscription.Unsubscribed;
+            ForgetSupersededRegistrations();
+            await PauseJobs();
+            await TransitionTo<Disconnected>();
+        }
+        finally
+        {
+            _catchUpLease.EndStop();
+        }
     }
 
     /// <inheritdoc/>
@@ -1224,17 +1244,26 @@ public partial class Observer(
     /// </summary>
     async Task PauseJobs()
     {
-        InvalidateCatchUpOwnership();
-        var allJobs = await _jobsManager.GetUnfinishedJobs();
+        _catchUpLease.BeginStop();
+        try
+        {
+            var allJobs = await _jobsManager.GetUnfinishedJobs();
 
-        // Explicitly do not pause replay jobs.
-        var pauseTasks = allJobs
-            .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
-                          observerJobRequest is not ReplayObserverRequest &&
-                          ShouldPauseJob(job.Status) &&
-                          observerJobRequest.ObserverKey == _observerKey)
-            .Select(job => _jobsManager.Stop(job.Id));
-        await Task.WhenAll(pauseTasks);
+            // Explicitly do not pause replay jobs.
+            var jobsToPause = allJobs
+                .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
+                              observerJobRequest is not ReplayObserverRequest &&
+                              ShouldPauseJob(job.Status) &&
+                              observerJobRequest.ObserverKey == _observerKey)
+                .ToArray();
+            _catchUpLease.MarkStopped(jobsToPause.Select(job => job.Id));
+            await Task.WhenAll(jobsToPause.Select(job => _jobsManager.Stop(job.Id)));
+        }
+        finally
+        {
+            _catchUpLease.EndStop();
+        }
+
         return;
 
         static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;

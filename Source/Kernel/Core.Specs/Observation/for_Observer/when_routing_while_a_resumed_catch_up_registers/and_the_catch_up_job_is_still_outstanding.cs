@@ -33,14 +33,12 @@ public class and_the_catch_up_job_is_still_outstanding : given.an_observer_with_
         var generation = await _observer.ResumingCatchUp(_jobId);
         _gatedStateStorage.SuspendNextWrite = true;
         var registration = _observer.RegisterResumedCatchingUpPartitions(_jobId, generation, [(Key)"P"]);
-        await _gatedStateStorage.WriteStarted.Task;
-        var jobListings = _jobStorage.ReceivedCalls().Count();
+        await given.bounded_barrier.Finishes(_gatedStateStorage.WriteStarted.Task);
         var routing = _observer.TransitionTo<Routing>();
-        for (var wait = 0; wait < 300 && _jobStorage.ReceivedCalls().Count() == jobListings; wait++) await Task.Delay(10);
-        await Task.Delay(100);
+        await _routingLogger.WaitUntilReconciled();
         _gatedStateStorage.ReleaseWrite.SetResult();
-        await registration;
-        await routing;
+        await given.bounded_barrier.Finishes(registration);
+        await given.bounded_barrier.Finishes(routing);
         _isPreparingCatchup = await _observer.IsPreparingCatchup();
         await _observer.Handle("P", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 43UL)]);
     }

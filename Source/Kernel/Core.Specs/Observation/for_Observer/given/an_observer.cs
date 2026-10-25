@@ -189,7 +189,7 @@ public class an_observer : Specification
 
         _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();
-        _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
+        _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(call => CreateStateLogger(call.Arg<string>()));
 
         _meter = CreateMeter();
         AddServices(_silo);
@@ -248,6 +248,8 @@ public class an_observer : Specification
         // specs block, and it reports success: a failed listing is distinguishable from an empty one.
         _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList<JobState>.Empty)));
     }
+
+    protected virtual ILogger CreateStateLogger(string category) => _logger;
 
     /// <summary>
     /// Makes both the jobs manager and the job storage list the given jobs, whatever the query.

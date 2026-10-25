@@ -17,6 +17,7 @@ public class write_gated_observer_state_storage : IStorage<ObserverState>, IStor
     public string Etag => string.Empty;
     public bool RecordExists { get; private set; }
     public bool SuspendNextWrite { get; set; }
+    public bounded_barrier? NextWriteBarrier { get; set; }
 
     public Task ReadStateAsync()
     {
@@ -28,6 +29,9 @@ public class write_gated_observer_state_storage : IStorage<ObserverState>, IStor
     public async Task WriteStateAsync()
     {
         var snapshot = State;
+        var barrier = NextWriteBarrier;
+        NextWriteBarrier = null;
+        if (barrier is not null) await barrier.Arrive();
         Stats.Writes++;
         if (SuspendNextWrite)
         {
