@@ -73,6 +73,8 @@ Each reactor and reducer resolves to one delivery, `Stream` or `Http`:
 | Serverless, resolves to `Stream` | `Stream` | Skipped, and listed in the startup log |
 | Serverless, resolves to `Http` | `Http` | Fails at startup with `HttpDeliveryNotAvailable` |
 
+HTTP delivery fails closed until the kernel delivery envelope (#5116) and signing (#5117) ship. This includes fluent reactors registered through `ExplicitArtifacts.RegisterReactor`: an HTTP override fails at startup, even when `ReceiverUrl` is configured. The client does not silently fall back to a stream.
+
 `DefaultDelivery` is `Http` by default, so set it to `Stream` if the host also contains observers you want skipped rather than refused. Observer identifiers that contain a colon cannot be used as configuration keys. A configured key that matches no observer is logged as a warning.
 
 ## Startup validation
@@ -91,9 +93,18 @@ An injected connection must also skip keep-alive.
 
 With `Deploy`, another process registered the artifacts when the application was deployed, and the function registers nothing. Set `DeploymentGeneration` to the generation that deployment used; see [explicit artifact registration](./explicit-artifacts.md). With `OnColdStart` the client registers the artifacts itself when it starts cold, which is meant for Development.
 
-## What it gives up
+## Unsupported APIs and limitations
 
-The startup log lists the downgrades: stream reactors and reducers are skipped, read model watch and observable streams are unavailable, connection lifecycle events are inert, observer state queries are unary only, live queries run in snapshot or polling mode, and the hosted lifecycle occurrences are not started.
+Serverless mode opens no keep-alive stream or watchdog. It skips client-hosted stream delivery for reactors and reducers, read model reactor registration, and occurrence lifecycle registration.
+
+The following APIs are unsupported in serverless mode. The client does not disable them or provide a fallback:
+
+- Read model watch and observable APIs, including `IReadModels.Watch<TReadModel>()` and `GetWatcherFor<TReadModel>()`. Calling `ReadModelWatcher.Start` still opens a stream; serverless mode does not turn it into a snapshot or polling operation.
+- Connection lifecycle APIs as a representation of function invocation or durable connection lifetime. Callbacks are not inert: the connection still calls `Lifecycle.Connected()` when keep-alive is skipped.
+- Observer state streams. Use unary observer state queries instead; serverless mode does not convert streaming calls into unary queries.
+- Arc live queries. Serverless mode does not convert them to snapshot or polling mode. Use non-streaming queries instead.
+
+The startup log lists skipped work and unsupported APIs, including the stream-delivered observers it skipped. These messages describe limitations; they do not enforce restrictions on unsupported APIs.
 
 When serverless mode is off and the process looks like a function host (for example `AWS_LAMBDA_FUNCTION_NAME`, `FUNCTIONS_WORKER_RUNTIME`, `K_SERVICE` or `CONTAINER_APP_NAME` is set) and observers would open streams, the client logs a warning suggesting the mode.
 
