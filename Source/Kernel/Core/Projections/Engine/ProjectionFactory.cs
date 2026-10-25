@@ -96,7 +96,16 @@ public class ProjectionFactory(
             throw new EventGenerationDeliveryNotSupported();
         }
 
+        // The fingerprint identifies the stored definition; ProjectionsManager compares it against the stored definition.
         var fingerprint = DefinitionFingerprintFor(definition);
+        var schemas = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? [.. eventTypeSchemas];
+        var rewrittenEventTypes = new List<EventType>();
+        definition = LegacyEventSourceIdKeys.Normalize(definition, schemas, rewrittenEventTypes);
+        foreach (var eventType in rewrittenEventTypes.Distinct())
+        {
+            LegacyEventSourceIdKeys.LogRewritten(logger, definition.Identifier.Value, eventType.Id.Value);
+        }
+
         var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
         foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
         {
@@ -110,7 +119,7 @@ public class ProjectionFactory(
         var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
         var projection = (Projection)await CreateProjectionFrom(
             eventStore,
-            new(eventSequenceStorage, eventTypesStorage, eventTypeSchemas, readModelDefinition),
+            new(eventSequenceStorage, eventTypesStorage, schemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
