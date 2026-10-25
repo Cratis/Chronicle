@@ -111,7 +111,11 @@ public class ReadModelMigrator(
         }
 
         var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
-        await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+        await DatabaseSchemaLock.Run(context, async () =>
+        {
+            await ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System);
+            await InitializedMarkerIndex.Ensure(context, execution, timeProvider ?? TimeProvider.System);
+        });
         _columnMigrations.TryAdd(cacheKey, true);
     }
 

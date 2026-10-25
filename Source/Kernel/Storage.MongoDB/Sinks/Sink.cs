@@ -1137,7 +1137,11 @@ public partial class Sink(
         var existingIndexes = await cursor.ToListAsync();
         var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-        foreach (var indexDefinition in readModel.Indexes)
+        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+            ? readModel.Indexes
+            : readModel.Indexes.Append(initializedIndex);
+        foreach (var indexDefinition in indexes)
         {
             ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
             var indexName = ReadModelIndexKeys.Name(indexDefinition);
@@ -1266,11 +1270,11 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
-    static FilterDefinition<BsonDocument> VisibleInstancesFilter() => new BsonDocument("$expr", new BsonDocument("$ne", new BsonArray
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter() => new BsonDocument("$or", new BsonArray
     {
-        new BsonDocument("$ifNull", new BsonArray { $"${WellKnownProperties.ReadModelInstanceInitialized}", true }),
-        false
-    }));
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false)),
+        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$type", "array"))
+    });
 
     async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
     {
