@@ -162,25 +162,10 @@ public static partial class JobsManagerExtensions
         }
 
         var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped).ToList();
-        if (dropJobsThatCanNeverResume)
+        if (dropJobsThatCanNeverResume && !await jobsManager.TryDropJobsThatCanNeverResume(logger, pausedJobs))
         {
-            var unresumableJobs = pausedJobs.Where(job => !job.WasEverPrepared()).ToList();
-            foreach (var unresumableJob in unresumableJobs)
-            {
-                try
-                {
-                    logger.DroppingJobThatCanNeverResume(unresumableJob.Id);
-                    await jobsManager.Delete(unresumableJob.Id);
-                }
-                catch (Exception ex)
-                {
-                    // The job still blocks the work, so nothing is started. The caller re-arms its own retry.
-                    logger.CouldNotDropJob(unresumableJob.Id, ex);
-                    return JobId.NotSet;
-                }
-            }
-
-            pausedJobs.RemoveAll(unresumableJobs.Contains);
+            // A job that can never resume still blocks the work, so nothing is started. The caller re-arms its own retry.
+            return JobId.NotSet;
         }
 
         var pausedJob = pausedJobs.FirstOrDefault();
@@ -266,6 +251,34 @@ public static partial class JobsManagerExtensions
             !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
             .Select(job => ((TRequest)job.Request).Key)
             .ToHashSet();
+
+    /// <summary>
+    /// Deletes the stopped jobs that were never prepared and removes them from the given list.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="pausedJobs">The stopped jobs. The dropped ones are removed from it.</param>
+    /// <returns>True if every job that can never resume was dropped; false if one could not be deleted.</returns>
+    static async Task<bool> TryDropJobsThatCanNeverResume(this IJobsManager jobsManager, ILogger logger, List<JobState> pausedJobs)
+    {
+        var unresumableJobs = pausedJobs.Where(job => !job.WasEverPrepared()).ToList();
+        foreach (var unresumableJob in unresumableJobs)
+        {
+            try
+            {
+                logger.DroppingJobThatCanNeverResume(unresumableJob.Id);
+                await jobsManager.Delete(unresumableJob.Id);
+            }
+            catch (Exception ex)
+            {
+                logger.CouldNotDropJob(unresumableJob.Id, ex);
+                return false;
+            }
+        }
+
+        pausedJobs.RemoveAll(unresumableJobs.Contains);
+        return true;
+    }
 
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);
