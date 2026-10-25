@@ -13,10 +13,11 @@ namespace Cratis.Chronicle.Integration.SqlClustering;
 
 /// <summary>
 /// Appends a steady stream of events to a cluster while its membership changes, and verifies none was lost or doubled.
+/// Uncertain appends to a departed incarnation are exempt from the attempt budget for 90 seconds after departure.
 /// </summary>
 /// <param name="transitions">
-/// How many nodes the scenario takes down. Appends forwarded to a node that is going away fail until the cluster
-/// notices, so the failure budget grows with each one rather than being shared by them all.
+/// How many nodes the scenario takes down. The attempt budget grows with each transition. Returned failures and
+/// other uncertain appends count immediately; departed-incarnation appends count only after the departure window.
 /// </param>
 public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
 {
@@ -26,7 +27,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
     readonly ConcurrentQueue<(Guid Id, EventSequenceNumber Sequence)> _acknowledged = new();
     readonly ConcurrentQueue<Guid> _unknown = new();
     readonly ConcurrentQueue<Task> _outstanding = new();
-    readonly ConcurrentDictionary<(string Address, int Generation), bool> _departedSilos = new();
+    readonly ConcurrentDictionary<(string Address, int Generation), long> _departedSilos = new();
     readonly CancellationTokenSource _stop = new();
     readonly string _source = Guid.NewGuid().ToString();
     ChronicleClient _client = null!;
@@ -42,7 +43,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
     /// while the cluster has not yet noticed can be told apart from any other connection failure.
     /// </summary>
     /// <param name="silo">The membership entry of the silo incarnation that is going away.</param>
-    public void SiloDeparting(MembershipEntry silo) => _departedSilos[(silo.Address, silo.Generation)] = true;
+    public void SiloDeparting(MembershipEntry silo) => _departedSilos[(silo.Address, silo.Generation)] = TimeProvider.System.GetTimestamp();
 
     public async Task Start(SqlCluster cluster)
     {
@@ -138,6 +139,22 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         observedEvents.All(storedEvents.Contains).ShouldBeTrue();
     }
 
+    internal static readonly TimeSpan DepartureWindow = TimeSpan.FromSeconds(90);
+    internal static bool CountsAgainstBudget(bool departedSiloAppend, TimeSpan sinceDeparture) =>
+        !departedSiloAppend || sinceDeparture > DepartureWindow;
+
+    bool CountsAgainstBudget(Exception exception)
+    {
+        foreach (var departure in _departedSilos)
+        {
+            if (IsAppendToDepartedSilo(exception.GetType().FullName, exception.Message, [departure.Key]))
+            {
+                return CountsAgainstBudget(true, TimeProvider.System.GetElapsedTime(departure.Value));
+            }
+        }
+        return CountsAgainstBudget(false, TimeSpan.Zero);
+    }
+
     void RecordFailedAppend(Guid id, AppendResult result)
     {
         if (IsUncertainAppend(result))
@@ -212,7 +229,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
                 // An in-flight append to a dead silo has the same uncertain outcome:
                 // https://github.com/Cratis/Chronicle/issues/5231.
                 _unknown.Enqueue(id);
-                Failed($"{id}: {exception.GetType().Name}: {exception.Message}");
+                Failed($"{id}: {exception.GetType().Name}: {exception.Message}", CountsAgainstBudget(exception));
             }
 
             if (!_stop.IsCancellationRequested)
@@ -238,10 +255,12 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         }
     }
 
-    void Failed(string reason)
+    void Failed(string reason, bool countsAgainstBudget = true)
     {
         Console.WriteLine($"Failed append: {reason}");
-        if (++_failures > FailureBudgetPerTransition * transitions)
+
+        // Departed-incarnation backoff is bounded by elapsed time, not the number of paced attempts.
+        if (countsAgainstBudget && ++_failures > FailureBudgetPerTransition * transitions)
         {
             throw new InvalidOperationException($"More than {FailureBudgetPerTransition * transitions} append attempts failed during {transitions} membership transition(s).");
         }
