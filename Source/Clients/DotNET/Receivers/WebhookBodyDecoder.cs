@@ -26,7 +26,7 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
     {
         if (request.Target is null)
         {
-            throw new MalformedDelivery("A delivery target is required.");
+            throw new InvalidDataException("A delivery target is required.");
         }
 
         await using var body = await ReadBody(request.Body, cancellationToken);
@@ -35,7 +35,7 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
             var webhook = await JsonSerializer.DeserializeAsync<WebhookBody>(body, _options, cancellationToken);
             if (webhook is null || string.IsNullOrWhiteSpace(webhook.Partition) || webhook.Events is null)
             {
-                throw new MalformedDelivery("Invalid webhook body.");
+                throw new InvalidDataException("Invalid webhook body.");
             }
 
             var events = webhook.Events.Select(ToContract).ToArray();
@@ -43,7 +43,7 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
         }
         catch (JsonException)
         {
-            throw new MalformedDelivery("Invalid webhook JSON.");
+            throw new InvalidDataException("Invalid webhook JSON.");
         }
     }
 
@@ -52,13 +52,13 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
     /// </summary>
     /// <param name="item">The wire event.</param>
     /// <returns>The event for the existing dispatcher.</returns>
-    /// <exception cref="MalformedDelivery">The event is missing required context or content.</exception>
+    /// <exception cref="InvalidDataException">The event is missing required context or content.</exception>
     static ContractEvent ToContract(WebhookBodyEvent item)
     {
         if (item is null || item.Context is null || item.Content is null ||
             item.Context.EventType is null || item.Context.Causation is null || item.Context.CausedBy is null || item.Context.Tags is null)
         {
-            throw new MalformedDelivery("Invalid webhook event.");
+            throw new InvalidDataException("Invalid webhook event.");
         }
 
         return new()
@@ -95,7 +95,7 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
     /// <param name="source">The transport-owned body stream.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>The buffered body, owned by the caller.</returns>
-    /// <exception cref="DeliveryTooLarge">The body exceeds the configured size limit.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The body exceeds the configured size limit.</exception>
     async Task<MemoryStream> ReadBody(Stream source, CancellationToken cancellationToken)
     {
         var body = new MemoryStream();
@@ -115,7 +115,7 @@ internal sealed class WebhookBodyDecoder(ServerlessDeliveryLimits limits) : IDel
 
                 if (count > remaining)
                 {
-                    throw new DeliveryTooLarge(limits.MaximumBodySize);
+                    throw new ArgumentOutOfRangeException(nameof(source), $"Delivery body exceeds the local limit of {limits.MaximumBodySize} bytes.");
                 }
 
                 await body.WriteAsync(buffer.AsMemory(0, count), cancellationToken);

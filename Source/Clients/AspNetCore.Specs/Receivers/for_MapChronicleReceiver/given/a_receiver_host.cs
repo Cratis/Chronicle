@@ -28,13 +28,15 @@ public class a_receiver_host : Specification
     protected virtual string? CustomPath => null;
     protected virtual string Path => "/chronicle/deliveries/store/tenant-a/reactor/my-reactor";
     protected virtual bool HoldDelivery => false;
+    protected virtual bool VerifiedDelivery => true;
+    protected virtual string Namespace => "tenant-a";
     private protected virtual DeliveryStatus OutcomeStatus => DeliveryStatus.Succeeded;
     protected static byte[] CreateRequestBody() => Encoding.UTF8.GetBytes("{\"partition\":\"order-42\",\"events\":[]}\n");
 
     async Task Establish()
     {
         var client = Substitute.For<IChronicleClient>();
-        client.Options.Returns(new ChronicleClientOptions());
+        client.Options.Returns(new ChronicleClientOptions { EventStore = "store" });
         client.CausationManager.Returns(Substitute.For<ICausationManager>());
         var store = Substitute.For<IEventStore>();
         store.Name.Returns((EventStoreName)"store");
@@ -69,12 +71,22 @@ public class a_receiver_host : Specification
         builder.WebHost.UseTestServer();
         builder.AddCratisChronicle(options => options.EventStore = "store");
         builder.Services.AddSingleton(client);
+        var namespaceResolver = Substitute.For<IEventStoreNamespaceResolver>();
+        namespaceResolver.Resolve().Returns((EventStoreNamespaceName)Namespace);
+        builder.Services.AddSingleton(namespaceResolver);
         var artifacts = Substitute.For<IClientArtifactsProvider>();
         artifacts.OccurrenceHandlers.Returns<IEnumerable<Type>>([]);
         builder.Services.AddSingleton(artifacts);
         builder.Services.AddSingleton(_receiver);
         _application = builder.Build();
-        _application.MapChronicleReceiver(CustomPath);
+        if (VerifiedDelivery)
+        {
+            _application.MapPost(ChronicleReceiverRoute.Pattern(CustomPath ?? "/chronicle/deliveries"), ChronicleReceiverEndpointRouteBuilderExtensions.HandleVerifiedDelivery);
+        }
+        else
+        {
+            _application.MapChronicleReceiver(CustomPath);
+        }
         await _application.StartAsync();
         _http = _application.GetTestClient();
     }

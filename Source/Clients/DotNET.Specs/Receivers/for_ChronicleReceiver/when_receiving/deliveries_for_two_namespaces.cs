@@ -37,9 +37,10 @@ public class deliveries_for_two_namespaces : given.a_receiver
 
     async Task Because()
     {
-        var first = _receiver.Receive(new(_body, _target), CancellationToken.None);
+        var first = _receiver.Receive(new(_body, _target) { SignatureVerified = true }, CancellationToken.None);
         await _entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        var second = _receiver.Receive(new(_body, _target with { Namespace = "other", ObserverId = "other-handler" }), CancellationToken.None);
+        _namespaceResolver.Resolve().Returns((EventStoreNamespaceName)"other");
+        var second = _receiver.Receive(new(_body, _target with { Namespace = "other", ObserverId = "other-handler" }) { SignatureVerified = true }, CancellationToken.None);
         _outcomes = await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
     }
 

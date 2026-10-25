@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Serverless;
 /// <summary>
 /// Represents the local limits applied when receiving deliveries.
 /// </summary>
-public class ServerlessDeliveryLimits
+internal class ServerlessDeliveryLimits
 {
     /// <summary>
     /// Gets or sets the maximum request body size in bytes that the receiver reads. Larger deliveries are refused before any handler runs.
@@ -14,5 +14,5 @@ public class ServerlessDeliveryLimits
     /// <remarks>
     /// ASP.NET Core's own server limit applies first; Kestrel defaults to approximately 30 MB.
     /// </remarks>
-    public long MaximumBodySize { get; set; } = 16 * 1024 * 1024;
+    internal long MaximumBodySize { get; set; } = 16 * 1024 * 1024;
 }

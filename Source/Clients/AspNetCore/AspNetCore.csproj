@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore.Specs" />
     </ItemGroup>
 
     <ItemGroup>

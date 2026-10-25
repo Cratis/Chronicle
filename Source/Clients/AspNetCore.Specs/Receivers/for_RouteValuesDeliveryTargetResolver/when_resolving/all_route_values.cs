@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.AspNetCore.Receivers.for_RouteValuesDeliveryTargetRes
 
 public class all_route_values : for_MapChronicleReceiver.given.a_receiver_host
 {
+    protected override string Namespace => "tenant";
+
     async Task Because()
     {
         var context = new DefaultHttpContext();

@@ -10,7 +10,12 @@ namespace Cratis.Chronicle.AspNetCore.Receivers;
 /// <summary>
 /// Resolves the target from the provisional receiver route, never from query values.
 /// </summary>
-internal sealed class RouteValuesDeliveryTargetResolver : IDeliveryTargetResolver
+/// <param name="targets">The configured store and namespace validation.</param>
+/// <remarks>
+/// Only the configured store and the namespace produced by the configured namespace resolver are accepted.
+/// The client exposes no non-creating namespace lookup, so route values cannot select another namespace.
+/// </remarks>
+internal sealed class RouteValuesDeliveryTargetResolver(DeliveryTargetValidation targets) : IDeliveryTargetResolver
 {
     /// <inheritdoc/>
     public DeliveryTarget? Resolve(HttpContext context)
@@ -30,6 +35,6 @@ internal sealed class RouteValuesDeliveryTargetResolver : IDeliveryTargetResolve
             return null;
         }
 
-        return new(type.Value, id, store, tenant);
+        return targets.Validate(new(type.Value, id, store, tenant));
     }
 }

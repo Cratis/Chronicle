@@ -145,7 +145,7 @@ Settings for running the .NET client in a function or another scaled-to-zero hos
 
 Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. See [Serverless mode](../clients/dotnet/serverless-mode.md).
 
-`Delivery.MaximumBodySize`, bound from `Cratis:Chronicle:Serverless:Delivery:MaximumBodySize`, limits the preview webhook receiver's body reads to 16 MiB by default. ASP.NET Core's server body limit applies first. See [Receiving deliveries](../clients/dotnet/serverless-mode.md#receiving-deliveries-preview) for the provisional endpoint and its security limitations.
+The delivery receiver and its body-limit settings are internal and unavailable to applications. HTTP delivery fails closed until the kernel delivery envelope (#5116) and signing (#5117) ship. See [Receiving deliveries](../clients/dotnet/serverless-mode.md#receiving-deliveries).
 
 ### DefaultSinkTypeId
 

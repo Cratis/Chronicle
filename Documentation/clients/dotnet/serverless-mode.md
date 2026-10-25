@@ -101,24 +101,12 @@ When serverless mode is off and the process looks like a function host (for exam
 
 Prefer an API key in the connection string. The OAuth token cache lives on the local file system, which is ephemeral in a function, so every cold start would fetch a new token. A kernel on a private network must be reachable from the function, for example through a VPC and NAT.
 
-## Receiving deliveries (preview)
+## Receiving deliveries
 
-In an ASP.NET Core host configured with `AddCratisChronicle`, map the receiver before starting the application:
+The delivery receiver is internal and is not available to applications. HTTP delivery fails closed until the kernel delivery envelope (#5116) and signing (#5117) ship. An observer that resolves to HTTP delivery fails at startup with `HttpDeliveryNotAvailable`.
 
-```csharp
-app.MapChronicleReceiver().RequireAuthorization();
-```
+There is no public endpoint mapping or receiver configuration. The internal mapped endpoint refuses every request with 503 without reading the body or dispatching events, because no signature verifier exists yet. Host authorization is not a substitute for delivery-signature verification.
 
-The receiver accepts today's kernel webhook body, containing `partition` and `events`, and dispatches it to the discovered reactor or active reducer through the same dispatcher as stream delivery. It is available regardless of `Serverless:Mode`.
+Internal dispatch is restricted to the client's configured event store and the namespace selected by its configured namespace resolver. The client has no non-creating namespace lookup, so a delivery cannot select another namespace.
 
-The provisional POST route is `{ReceiverPath}/{eventStore}/{namespace}/{reactor|reducer}/{observerId}`. With the default path, a reactor delivery uses a URL such as `/chronicle/deliveries/orders/production/reactor/order-handler`. The store and namespace come from that URL, not the event context. Pass a base path to `app.MapChronicleReceiver("/hooks")` to replace `ReceiverPath`.
-
-Set `Cratis:Chronicle:Serverless:Delivery:MaximumBodySize` to limit how many bytes the receiver reads. The default is 16 MiB. ASP.NET Core's server limit applies first; Kestrel defaults to approximately 30 MB. Oversized bodies are refused before any handler runs.
-
-:::caution
-The preview receiver does not verify who sent a delivery or check a delivery signature. Configure host authentication and authorization before using `.RequireAuthorization()`, and protect the endpoint with network rules. The route and status codes can change when the HTTP delivery contract is settled.
-:::
-
-Successful batches return 200, failed batches 500, and cancelled batches 503. Unknown observers return 404, malformed bodies 400, and oversized bodies 413. The response has no acknowledgment body or reducer state. Reducers over HTTP therefore are not usable end to end yet.
-
-This receiver does not register HTTP observers: an observer that resolves to HTTP delivery still fails at startup with `HttpDeliveryNotAvailable`. It is a preview entry point for existing webhooks and hosts whose handlers are discovered without opening observer streams. Avoid receiving the same events over both streams and webhooks.
+A cancelled request returns 503, and the kernel retries the whole batch. Cancellation is advisory: handlers may already have completed side effects before cancellation, so delivery handlers must tolerate whole-batch retries. The internal dispatch status mapping is provisional; 400 and 404 currently pause the observer through the kernel webhook mediator.

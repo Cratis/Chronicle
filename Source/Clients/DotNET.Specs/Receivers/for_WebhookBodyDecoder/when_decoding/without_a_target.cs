@@ -7,6 +7,6 @@ public class without_a_target : given.a_kernel_webhook_body
 {
     private protected override DeliveryTarget? Target => null;
     Task Because() => Decode();
-    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<MalformedDelivery>();
+    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<InvalidDataException>();
     [Fact] void should_not_read_the_body() => _body.Position.ShouldEqual(0L);
 }

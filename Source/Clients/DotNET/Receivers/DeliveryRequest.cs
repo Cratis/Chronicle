@@ -8,4 +8,10 @@ namespace Cratis.Chronicle.Receivers;
 /// </summary>
 /// <param name="Body">The request body, owned by the caller.</param>
 /// <param name="Target">The transport target, or null when the transport could not resolve it.</param>
-internal record DeliveryRequest(Stream Body, DeliveryTarget? Target);
+internal record DeliveryRequest(Stream Body, DeliveryTarget? Target)
+{
+    /// <summary>
+    /// Gets a value indicating whether an internal transport verified the delivery signature.
+    /// </summary>
+    internal bool SignatureVerified { get; init; }
+}

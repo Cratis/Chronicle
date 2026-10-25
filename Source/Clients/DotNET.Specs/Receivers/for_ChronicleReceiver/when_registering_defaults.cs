@@ -14,6 +14,7 @@ public class when_registering_defaults : Specification
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(Substitute.For<IChronicleClient>());
+        services.AddSingleton<IEventStoreNamespaceResolver, DefaultEventStoreNamespaceResolver>();
         services.AddChronicleReceiver(_ => new ChronicleOptions());
         _provider = services.BuildServiceProvider();
     }

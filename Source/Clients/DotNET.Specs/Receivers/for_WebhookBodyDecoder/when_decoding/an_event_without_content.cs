@@ -17,5 +17,5 @@ public class an_event_without_content : given.a_kernel_webhook_body
         }
     }
     Task Because() => Decode();
-    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<MalformedDelivery>();
+    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<InvalidDataException>();
 }

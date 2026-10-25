@@ -15,6 +15,7 @@ public class a_receiver : Specification
 {
     protected IChronicleClient _client;
     protected IEventStore _store;
+    protected IEventStoreNamespaceResolver _namespaceResolver;
     private protected IDeliveryDecoder _decoder;
     private protected IReceiveReactorDeliveries _reactors;
     private protected IReceiveReducerDeliveries _reducers;
@@ -28,6 +29,9 @@ public class a_receiver : Specification
     {
         _body = new();
         _client = Substitute.For<IChronicleClient>();
+        _client.Options.Returns(new ChronicleClientOptions { EventStore = "store" });
+        _namespaceResolver = Substitute.For<IEventStoreNamespaceResolver>();
+        _namespaceResolver.Resolve().Returns((EventStoreNamespaceName)"tenant");
         _store = Substitute.For<IEventStore>();
         _decoder = Substitute.For<IDeliveryDecoder>();
         _delivery = new(
@@ -55,11 +59,11 @@ public class a_receiver : Specification
         {
             Partition = "order-42", State = Contracts.Observation.ObservationState.Success, LastSuccessfulObservation = 12, ExceptionStackTrace = string.Empty, ReadModelState = "{\"count\":4}"
         });
-        _receiver = new(_client, _decoder, NullLogger<ChronicleReceiver>.Instance);
+        _receiver = new(_client, _decoder, NullLogger<ChronicleReceiver>.Instance, new(_client, _namespaceResolver));
     }
 
     private protected async Task Receive(CancellationToken cancellationToken = default) =>
-        _outcome = await _receiver.Receive(new(_body, _delivery.Target), cancellationToken);
+        _outcome = await _receiver.Receive(new(_body, _delivery.Target) { SignatureVerified = true }, cancellationToken);
 
     void Destroy() => _body?.Dispose();
 }

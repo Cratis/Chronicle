@@ -17,5 +17,5 @@ public class when_binding_delivery_limits : Specification
         using var lifetime = configuration as IDisposable;
         _options = configuration.GetSection("Cratis:Chronicle:Serverless").Get<ChronicleServerlessOptions>();
     }
-    [Fact] void should_bind_the_nested_delivery_limit() => _options.Delivery.MaximumBodySize.ShouldEqual(1024L);
+    [Fact] void should_not_bind_the_internal_delivery_limit() => _options.Delivery.MaximumBodySize.ShouldEqual(16L * 1024 * 1024);
 }

@@ -7,5 +7,5 @@ public class a_body_without_events : given.a_kernel_webhook_body
 {
     protected override string Body => "{\"partition\":\"order-42\"}";
     Task Because() => Decode();
-    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<MalformedDelivery>();
+    [Fact] void should_refuse_the_delivery() => _error.ShouldBeOfExactType<InvalidDataException>();
 }

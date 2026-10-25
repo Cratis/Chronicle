@@ -17,41 +17,38 @@ namespace Cratis.Chronicle.Receivers;
 /// <param name="client">The Chronicle client.</param>
 /// <param name="decoder">The delivery decoder.</param>
 /// <param name="logger">The receiver logger.</param>
-internal sealed class ChronicleReceiver(IChronicleClient client, IDeliveryDecoder decoder, ILogger<ChronicleReceiver> logger) : IChronicleReceiver
+/// <param name="targets">The configured target validation.</param>
+/// <remarks>
+/// There is no non-creating namespace lookup. Only the configured namespace resolver's current namespace is
+/// accepted, before leaving the request execution context. Unverified deliveries are always refused.
+/// </remarks>
+internal sealed class ChronicleReceiver(IChronicleClient client, IDeliveryDecoder decoder, ILogger<ChronicleReceiver> logger, DeliveryTargetValidation targets) : IChronicleReceiver
 {
     /// <inheritdoc/>
     public async Task<DeliveryOutcome> Receive(DeliveryRequest request, CancellationToken cancellationToken)
     {
+        if (!request.SignatureVerified)
+        {
+            return DeliveryOutcome.Cancelled(string.Empty);
+        }
+
         Delivery? delivery = null;
         try
         {
-            delivery = await decoder.Decode(request, cancellationToken);
+            delivery = await DecodeVerifiedDelivery(request, cancellationToken);
             if (cancellationToken.IsCancellationRequested)
             {
                 return DeliveryOutcome.Cancelled(delivery.Partition);
             }
 
-            var parent = Activity.Current;
-            Task<DeliveryOutcome> task;
-            using (ExecutionContext.SuppressFlow())
-            {
-                task = Task.Run(
-                    () =>
-                    {
-                        Activity.Current = parent;
-                        return Dispatch(delivery, cancellationToken);
-                    },
-                    CancellationToken.None);
-            }
-
-            return await task;
+            return await DispatchOutsideRequest(delivery, cancellationToken);
         }
-        catch (MalformedDelivery exception)
+        catch (InvalidDataException exception)
         {
             logger.Rejected(DeliveryStatus.Malformed);
             return DeliveryOutcome.Rejected(DeliveryStatus.Malformed, exception.Message);
         }
-        catch (DeliveryTooLarge exception)
+        catch (ArgumentOutOfRangeException exception) when (IsBodyLimit(exception, delivery))
         {
             logger.Rejected(DeliveryStatus.TooLarge);
             return DeliveryOutcome.Rejected(DeliveryStatus.TooLarge, exception.Message);
@@ -61,7 +58,7 @@ internal sealed class ChronicleReceiver(IChronicleClient client, IDeliveryDecode
             logger.Rejected(DeliveryStatus.Cancelled);
             return DeliveryOutcome.Cancelled(delivery?.Partition ?? string.Empty);
         }
-        catch (Exception exception) when (exception is UnknownReactorId or ReducerDoesNotExist)
+        catch (Exception exception) when (IsUnknownObserver(exception))
         {
             logger.Rejected(DeliveryStatus.UnknownObserver);
             return DeliveryOutcome.Rejected(DeliveryStatus.UnknownObserver, "Unknown observer.");
@@ -72,6 +69,10 @@ internal sealed class ChronicleReceiver(IChronicleClient client, IDeliveryDecode
             return new(DeliveryStatus.Failed, delivery?.Partition ?? string.Empty, EventSequenceNumber.Unavailable, [.. exception.GetAllMessages()], exception.StackTrace ?? string.Empty, null);
         }
     }
+
+    static bool IsBodyLimit(ArgumentOutOfRangeException exception, Delivery? delivery) => delivery is null && exception.ParamName == "source";
+
+    static bool IsUnknownObserver(Exception exception) => exception is UnknownReactorId or ReducerDoesNotExist;
 
     /// <summary>
     /// Dispatches a reactor batch without opening a stream.
@@ -108,6 +109,36 @@ internal sealed class ChronicleReceiver(IChronicleClient client, IDeliveryDecode
             InitialState = delivery.InitialState
         });
         return result is null ? DeliveryOutcome.Cancelled(delivery.Partition) : DeliveryOutcome.From(result);
+    }
+
+    async Task<Delivery> DecodeVerifiedDelivery(DeliveryRequest request, CancellationToken cancellationToken)
+    {
+        var target = targets.Validate(request.Target) ?? throw new InvalidDataException("Unknown delivery target.");
+        var delivery = await decoder.Decode(request, cancellationToken);
+        if (delivery.Target != target)
+        {
+            throw new InvalidDataException("Delivery target does not match the request.");
+        }
+
+        return delivery with { Target = target };
+    }
+
+    Task<DeliveryOutcome> DispatchOutsideRequest(Delivery delivery, CancellationToken cancellationToken)
+    {
+        var parent = Activity.Current;
+        Task<DeliveryOutcome> task;
+        using (ExecutionContext.SuppressFlow())
+        {
+            task = Task.Run(
+                () =>
+                {
+                    Activity.Current = parent;
+                    return Dispatch(delivery, cancellationToken);
+                },
+                CancellationToken.None);
+        }
+
+        return task;
     }
 
     /// <summary>
