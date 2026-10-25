@@ -80,6 +80,10 @@ public class when_provisioning_with_runtime_serialization(MongoDBFixture fixture
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Source/Kernel/Server/Server.csproj"))) directory = directory.Parent;
         if (directory is null) throw new InvalidOperationException("Cannot locate the server project for the isolated schema command spec.");
         var server = Path.Combine(directory.FullName, "Source/Kernel/Server/bin", configuration, framework, "Cratis.Chronicle.Server.dll");
+        if (!File.Exists(server)) throw new InvalidOperationException($"The Server output '{server}' is missing; build Source/Kernel/Server for the same configuration before running this spec.");
+        var storageAssembly = typeof(MongoDBIndexProvisioner).Assembly.Location;
+        var serverStorageAssembly = Path.Combine(Path.GetDirectoryName(server)!, Path.GetFileName(storageAssembly));
+        if (!File.Exists(serverStorageAssembly) || File.GetLastWriteTimeUtc(serverStorageAssembly) < File.GetLastWriteTimeUtc(storageAssembly)) throw new InvalidOperationException($"The Server output '{server}' carries an older '{Path.GetFileName(storageAssembly)}' than the spec loads; rebuild Source/Kernel/Server so the isolated schema command runs the code under test.");
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = directory.FullName };
         foreach (var argument in new[] { server, action, "--event-store", Store, "--Cratis:Chronicle:Storage:Type=MongoDB", $"--Cratis:Chronicle:Storage:ConnectionDetails={ConnectionString}", $"--Cratis:Chronicle:Storage:DatabaseNamePrefix={_prefix}" }) start.ArgumentList.Add(argument);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start the isolated schema command.");
@@ -97,7 +101,7 @@ public class when_provisioning_with_runtime_serialization(MongoDBFixture fixture
         }
 
         await Task.WhenAll(output, error);
-        var logs = Path.Combine(directory.FullName, ".ai-work/5284/e2e", _prefix);
+        var logs = Path.Combine(Path.GetTempPath(), "chronicle-schema-specs", _prefix, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(logs);
         await File.WriteAllTextAsync(Path.Combine(logs, $"{action.TrimStart('-')}.log"), $"{await output}\n{await error}");
         return process.ExitCode;

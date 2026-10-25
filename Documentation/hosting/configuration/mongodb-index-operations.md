@@ -57,7 +57,7 @@ Set `storage.schemaMode` to `Verify` to add a read-only startup inspection limit
 }
 ```
 
-For MongoDB, startup verification **only warns** about missing or obsolete indexes. Connection and authorization failures during this inspection also produce warnings, not startup exceptions. Unlike SQL verification, this is not a fail-startup policy. Runtime lazy index creation remains unchanged in both modes; a missing index encountered later by a runtime store can still require DDL privileges. Use `--verify-schema` when a deployment gate needs a nonzero exit code.
+For MongoDB, startup verification **only warns** about missing or obsolete indexes. Connection and authorization failures during this inspection also produce warnings, not startup exceptions. Unlike SQL verification, this is not a fail-startup policy. Runtime lazy index creation remains unchanged in both modes; a missing index encountered later by a runtime store can still require DDL privileges. Use `--verify-schema` when a deployment gate needs a nonzero exit code. On a fresh deployment, `Verify` warns about every missing index until the kernel or `--migrate-only` has created them.
 
 ## Scope and permissions
 
@@ -112,8 +112,4 @@ For example, run this `createRole` command on the `admin` database for one names
 
 Apply equivalent data/discovery privileges to each targeted event-store, namespace, global encryption, and cluster database. This example deliberately grants neither `createIndex` nor `dropIndex`; it is not a complete role for every deployment.
 
-For a restricted kernel runtime identity, start with data read/write and discovery permissions without `createIndex` or `dropIndex` on the kernel databases. The Orleans MongoDB provider still creates indexes unconditionally on the prefix-derived reminders collection (`chronicle.OrleansReminderV2`) and, with MongoDB clustering, the membership collection (`OrleansMembershipV3`). Grant the required index privileges on those collection resources. MongoDB read-model databases also retain their existing index-creation requirements; this catalog does not pre-provision their application-defined indexes.
-
-## Acceptance coverage
-
-Container-backed specifications migrate through the real server's one-shot command in an isolated process, compare the resulting index keys and options with runtime-created indexes, and exercise every runtime ensure path while counting index DDL commands. A separate authenticated-container specification verifies and writes with an identity denied index DDL, and checks that a newly introduced unscoped constraint fails with an actionable error. These specifications require container infrastructure and run in CI.
+For a restricted kernel runtime identity, start with data read/write and discovery permissions without `createIndex` or `dropIndex` on the kernel databases. The Orleans MongoDB provider still creates indexes unconditionally on the prefix-derived reminders collection (`chronicle.OrleansReminderV2`) and, with MongoDB clustering, the membership collection (`OrleansMembershipV3`). Grant the required index privileges on those collection resources. MongoDB read-model databases also retain their existing index-creation requirements. Fence and binding indexes in read-model databases are created by Chronicle at runtime and are outside this catalog, which does not pre-provision them.

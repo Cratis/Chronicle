@@ -361,9 +361,13 @@ public class UniqueConstraintsStorage(
             await EnsureOwnerIndexes(collection, cancellationToken);
             _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
         }
-        catch (MongoCommandException exception) when (exception.Code == 13)
+        catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
         {
-            logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
+            {
+                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            }
+
             throw;
         }
     }
@@ -388,9 +392,13 @@ public class UniqueConstraintsStorage(
             await EnsureValueIndexes(collection, logger, cancellationToken);
             _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
         }
-        catch (MongoCommandException exception) when (exception.Code == 13)
+        catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
         {
-            logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
+            {
+                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+            }
+
             throw;
         }
     }

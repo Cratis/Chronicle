@@ -33,8 +33,9 @@ internal static class SchemaCommandRunner
     /// <param name="command">The parsed command.</param>
     /// <param name="options">The Chronicle options.</param>
     /// <param name="action">The configured action.</param>
+    /// <param name="configuration">The host configuration, which the MongoDB client setup binds its options from.</param>
     /// <returns>The process exit code.</returns>
-    internal static async Task<int> Run(SchemaCommand command, ChronicleOptions options, SchemaAction action)
+    internal static async Task<int> Run(SchemaCommand command, ChronicleOptions options, SchemaAction action, IConfiguration configuration)
     {
         using var logging = LoggerFactory.Create(builder => builder.AddConsole());
         var logger = logging.CreateLogger("Chronicle.Schema");
@@ -43,10 +44,7 @@ internal static class SchemaCommandRunner
         var exit = 0;
         try
         {
-            var services = new ServiceCollection();
-            services.AddLogging(builder => builder.AddConsole());
-            ConfigureServices(options, services);
-            await using var provider = services.BuildServiceProvider();
+            await using var provider = BuildServices(options, configuration, builder => builder.AddConsole());
             if (string.Equals(options.Storage.Type, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
             {
                 var provisioner = provider.GetRequiredService<IMongoDBIndexProvisioner>();
@@ -82,7 +80,7 @@ internal static class SchemaCommandRunner
     /// <param name="action">The schema action.</param>
     /// <returns>The process exit code.</returns>
     internal static int ExitCode(Exception exception, SchemaAction action) =>
-        exception is MongoDBIndexesNotProvisioned ? 2 : SchemaExitCode.For(exception, action == SchemaAction.VerifyAndExit);
+        SchemaExitCode.For(exception, action == SchemaAction.VerifyAndExit);
 
     /// <summary>
     /// Dispatches a MongoDB schema action and maps an incomplete index report to exit two.
@@ -99,8 +97,24 @@ internal static class SchemaCommandRunner
         return report.IsCurrent ? 0 : 2;
     }
 
-    static void ConfigureServices(ChronicleOptions options, IServiceCollection services)
+    /// <summary>
+    /// Builds the services a schema action resolves, without a web host.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    /// <param name="configuration">The host configuration.</param>
+    /// <param name="configureLogging">Configures the logging providers.</param>
+    /// <returns>The service provider.</returns>
+    internal static ServiceProvider BuildServices(ChronicleOptions options, IConfiguration configuration, Action<ILoggingBuilder> configureLogging)
     {
+        var services = new ServiceCollection();
+        services.AddLogging(configureLogging);
+        ConfigureServices(options, configuration, services);
+        return services.BuildServiceProvider();
+    }
+
+    static void ConfigureServices(ChronicleOptions options, IConfiguration configuration, IServiceCollection services)
+    {
+        services.AddSingleton(configuration);
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(options));
         if (IsSql(options.Storage.Type))
         {

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,10 +21,10 @@ public class VerifyMongoDBIndexes : IStartupTask
     /// Initializes a new instance of the <see cref="VerifyMongoDBIndexes"/> class.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
-    /// <param name="provisioner">The index provisioner.</param>
+    /// <param name="serviceProvider">The service provider used to resolve the index provisioner only when verifying.</param>
     /// <param name="logger">The logger.</param>
-    public VerifyMongoDBIndexes(IOptions<ChronicleOptions> options, MongoDBIndexProvisioner provisioner, ILogger<VerifyMongoDBIndexes> logger)
-        : this(options, provisioner.VerifyStartup, logger)
+    public VerifyMongoDBIndexes(IOptions<ChronicleOptions> options, IServiceProvider serviceProvider, ILogger<VerifyMongoDBIndexes> logger)
+        : this(options, cancellationToken => serviceProvider.GetRequiredService<MongoDBIndexProvisioner>().VerifyStartup(cancellationToken), logger)
     {
     }
 

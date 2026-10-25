@@ -107,7 +107,7 @@ catch (Exception exception) when (exception is ArgumentException or InvalidOpera
 
 if (schemaAction != SchemaAction.None)
 {
-    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction);
+    return await SchemaCommandRunner.Run(schemaCommand, chronicleOptions, schemaAction, builder.Configuration);
 }
 
 if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase))

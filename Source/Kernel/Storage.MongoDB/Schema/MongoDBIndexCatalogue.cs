@@ -76,8 +76,8 @@ internal static class MongoDBIndexCatalogue
             definitions.Add(MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(collection), ObserverDefinitionChangeRows<BsonDocument>.Indexes));
         }
 
-        using var sequences = await database.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences).FindAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
-        var ids = (await sequences.ToListAsync(cancellationToken)).Select(row => row["_id"].AsString)
+        using var sequences = await database.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences).DistinctAsync<string>("_id", FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
+        var ids = (await sequences.ToListAsync(cancellationToken))
             .Concat([WellKnownCollectionNames.EventLog, WellKnownCollectionNames.System, WellKnownCollectionNames.Outbox]).Distinct(StringComparer.Ordinal).ToArray();
         foreach (var id in ids)
         {
