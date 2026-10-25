@@ -15,6 +15,8 @@ public partial class Observer
         if (await _appendedEventsQueues.IsSubscribed(_observerKey)) return;
 
         // Observing ignores a transition to itself; routing re-enters it and restores the queue subscription.
+        // Clear backoff so Observing checks for events appended before the restored subscription.
+        _catchUpBackoffUntil = default;
         await TransitionTo<Routing>();
     }
 }

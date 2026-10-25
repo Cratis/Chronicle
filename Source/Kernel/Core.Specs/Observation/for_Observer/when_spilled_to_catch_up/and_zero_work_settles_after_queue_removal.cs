@@ -20,7 +20,7 @@ public class and_zero_work_settles_after_queue_removal : given.an_observer_settl
 
     [Fact] void should_rejoin_the_physical_queue() => _queued.ShouldBeTrue();
     [Fact] async Task should_keep_the_logical_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
-    [Fact] async Task should_preserve_backoff() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
+    [Fact] async Task should_clear_backoff_for_the_rejoin() => (await _observer.IsCatchUpBackedOff()).ShouldBeFalse();
     [Fact] async Task should_start_exactly_one_catch_up() =>
         await _jobsManager.Received(1).Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
     [Fact] async Task should_catch_up_from_the_gap_start() =>
