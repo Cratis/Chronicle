@@ -314,6 +314,14 @@ public interface IEventSequenceStorage
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the latest instance of any supplied type for each source in the whole event sequence, without an upper sequence bound.
+    /// </summary>
+    /// <param name="eventSourceIds">The sources to look up. Duplicate sources are read once.</param>
+    /// <param name="eventTypes">The event types to match. An empty collection matches no events.</param>
+    /// <returns>One entry per distinct source, including <see cref="Option{T}"/> values for missing sources.</returns>
+    Task<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>> GetLastInstancesOfAny(IEnumerable<EventSourceId> eventSourceIds, IEnumerable<EventTypeId> eventTypes);
+
+    /// <summary>
     /// Get events using a specific sequence number as starting point within the event sequence.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> to get from.</param>
