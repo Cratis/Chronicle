@@ -64,16 +64,7 @@ public partial class EventSequenceStorage(
         {
             lock (_lock)
             {
-                return _events.Select(@event => @event with
-                {
-                    Context = @event.Context with
-                    {
-                        AppendedGeneration = _appendedGenerations.TryGetValue(@event.Context.SequenceNumber, out var generation) ? new EventTypeGeneration(generation) : null
-                    },
-                    GenerationalHashes = _generationHashes.TryGetValue(@event.Context.SequenceNumber, out var hashes)
-                        ? hashes.ToImmutableDictionary(_ => (int)_.Key.Value, _ => _.Value)
-                        : new Dictionary<int, EventHash>()
-                }).ToImmutableList();
+                return _events.Select(WithGenerationMetadata).ToImmutableList();
             }
         }
     }
@@ -170,38 +161,6 @@ public partial class EventSequenceStorage(
         };
 
         return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Skip(skip).Take(take)]));
-    }
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetWindow(
-        EventSequenceNumber from,
-        EventSequenceNumber until,
-        int limit,
-        bool descending,
-        EventSourceId? eventSourceId = default,
-        EventSourceType? eventSourceType = default,
-        EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default,
-        IEnumerable<Tag>? tags = default,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var criteria = new EventSequenceQueryCriteria(
-            eventSourceId,
-            eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
-            eventStreamType,
-            EventTypes: eventTypes,
-            Tags: tags);
-        var matching = Matching(Events, criteria)
-            .Where(_ => _.Context.SequenceNumber >= from && _.Context.SequenceNumber <= until);
-        if (eventStreamId is { Value.Length: > 0, IsDefault: false })
-        {
-            matching = matching.Where(_ => _.Context.EventStreamId == eventStreamId);
-        }
-
-        var ordered = OrderBy(matching, _ => _.Context.SequenceNumber.Value, descending);
-        return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Take(limit)]));
     }
 
     /// <inheritdoc/>

@@ -883,6 +883,11 @@ public partial class EventSequenceStorage(
         IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
+        if (limit < 1)
+        {
+            throw new InvalidEventSequenceWindowLimit(limit);
+        }
+
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         var criteria = new EventSequenceQueryCriteria(
             eventSourceId,
@@ -906,7 +911,9 @@ public partial class EventSequenceStorage(
 
         query = descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber);
         var schemas = new EventSchemaResolver(eventTypesStorage);
-        return new EventWindowCursor(query.Take(limit), scope,
+        return new EventWindowCursor(
+            query.Take(limit),
+            scope,
             (entry, namedTags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, namedTags, schemas.GetFor, converter),
             cancellationToken);
     }

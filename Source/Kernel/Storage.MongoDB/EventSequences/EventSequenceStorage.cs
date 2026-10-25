@@ -165,6 +165,11 @@ public partial class EventSequenceStorage(
         IEnumerable<Concepts.Events.Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
+        if (limit < 1)
+        {
+            throw new InvalidEventSequenceWindowLimit(limit);
+        }
+
         var criteria = new EventSequenceQueryCriteria(
             eventSourceId,
             eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
