@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints.for_UniqueConstraintsStorage.when_saving;
 
+[PerFactSpecificationLifecycle] // One fact saves the released value for another owner while the others inspect its availability.
 public class and_the_owner_moves_to_a_free_value : given.a_claimed_value
 {
     async Task Because() => await _storage.Save(_owner, _definition, 43UL, "new-value");

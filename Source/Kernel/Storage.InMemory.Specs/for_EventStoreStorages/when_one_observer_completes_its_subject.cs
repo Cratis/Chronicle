@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.InMemory.for_EventStoreStorages;
 /// <see cref="Reactive.ObservableExtensions.CompletedBy{TResult}"/>. Handing out a shared subject therefore let the
 /// first caller to disconnect end event-store observation for every other caller in the process.
 /// </summary>
+[PerFactSpecificationLifecycle] // One fact subscribes another observer to the shared storage subject.
 public class when_one_observer_completes_its_subject : given.an_empty_registry
 {
     static readonly EventStoreName _first = "FirstEventStore";
