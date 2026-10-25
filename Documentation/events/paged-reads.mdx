@@ -17,25 +17,7 @@ offsets or count the entire sequence.
 This function accepts an existing event sequence and a cancellation token. Keep the
 request's direction, stop bound, and filters when advancing to `Next`:
 
-```csharp
-using Cratis.Chronicle.EventSequences;
-
-static async Task ReadHistory(IEventSequence sequence, CancellationToken cancellationToken)
-{
-    var request = EventSequencePageRequest.Forward(null, 100);
-    while (true)
-    {
-        var page = await sequence.GetPage(request, cancellationToken);
-        foreach (var appended in page.Events)
-        {
-            Console.WriteLine(appended.Context.SequenceNumber);
-        }
-
-        if (!page.HasMore) break;
-        request = request with { From = page.Next };
-    }
-}
-```
+<ChronicleClientTabs snippet="events/getting-events/paged-forward" variants="csharp" />
 
 `From` is inclusive. A null start means the beginning for forward reads and the tail for
 backward reads. Do not pass `EventSequenceNumber.Unavailable` to mean the tail.
@@ -45,10 +27,7 @@ backward reads. Do not pass `EventSequenceNumber.Unavailable` to mean the tail.
 For an existing `IEventSequence sequence`, this reads at most 50 matching events, newest
 first:
 
-```csharp
-var filter = new EventSequenceFilter(Tags: ["billing", "priority"]);
-var latest = await sequence.GetLatest(50, filter, cancellationToken);
-```
+<ChronicleClientTabs snippet="events/getting-events/paged-latest" variants="csharp" />
 
 `GetLatest` is shorthand for `GetPage(EventSequencePageRequest.Backward(null, 50, filter),
 cancellationToken)`. To read older matching events, call `GetPage` with
