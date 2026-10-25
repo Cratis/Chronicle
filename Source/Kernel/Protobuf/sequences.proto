@@ -374,6 +374,7 @@ message ConcurrencyScope {
    string EventSourceType = 5;
    repeated EventType EventTypes = 6;
    bool ExpectsNoMatchingEvent = 7;
+   uint64 MutationEpoch = 8;
 }
 message ConcurrencyViolation {
    string EventSourceId = 1;
@@ -515,6 +516,7 @@ message EventSequencePageResponse {
 }
 message EventSequenceTailResponse {
    uint64 SequenceNumber = 1;
+   uint64 MutationEpoch = 2;
 }
 message EventSourceConcurrencyScope {
    string EventSourceId = 1;
@@ -911,6 +913,7 @@ message TailSequenceNumberRequest {
    string EventSourceType = 6;
    string EventStreamId = 7;
    string EventStreamType = 8;
+   bool IncludeMutationEpoch = 9;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error

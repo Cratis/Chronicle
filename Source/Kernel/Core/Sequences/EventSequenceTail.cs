@@ -14,13 +14,14 @@ namespace Cratis.Chronicle.Sequences;
 /// Represents the sequence number of the tail event in an event sequence.
 /// </summary>
 /// <param name="SequenceNumber">The sequence number of the tail event.</param>
+/// <param name="MutationEpoch">The mutation epoch of the event sequence, when requested.</param>
 /// <remarks>
 /// Declared as a read model for the same reason as <see cref="EventSourceEvents"/>: a query returns its own read
 /// model, and the value travels on the wire as the unwrapped primitive either way.
 /// </remarks>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
-public record EventSequenceTail(EventSequenceNumber SequenceNumber)
+public record EventSequenceTail(EventSequenceNumber SequenceNumber, ulong? MutationEpoch = default)
 {
     /// <summary>
     /// Gets the sequence number of the tail event in an event sequence, optionally narrowed.
@@ -34,6 +35,7 @@ public record EventSequenceTail(EventSequenceNumber SequenceNumber)
     /// <param name="eventSourceType">Optional event source type to narrow to.</param>
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
+    /// <param name="includeMutationEpoch">Whether to also return the mutation epoch of the event sequence.</param>
     /// <returns>The tail sequence number.</returns>
     public static async Task<EventSequenceTail> TailSequenceNumber(
         IStorage storage,
@@ -44,7 +46,8 @@ public record EventSequenceTail(EventSequenceNumber SequenceNumber)
         string? eventSourceId = default,
         string? eventSourceType = default,
         string? eventStreamId = default,
-        string? eventStreamType = default)
+        string? eventStreamType = default,
+        bool includeMutationEpoch = default)
     {
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
@@ -79,6 +82,12 @@ public record EventSequenceTail(EventSequenceNumber SequenceNumber)
             resolvedEventStreamId,
             resolvedEventStreamType);
 
-        return new(tail);
+        if (!includeMutationEpoch)
+        {
+            return new(tail);
+        }
+
+        var state = await eventSequence.GetState();
+        return new(tail, state.MutationEpoch.Value);
     }
 }

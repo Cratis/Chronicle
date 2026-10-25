@@ -232,7 +232,7 @@ internal sealed class EventSequences(
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Sequences.EventSequenceTail.TailSequenceNumber(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventTypeIds, request.EventSourceId, request.EventSourceType, request.EventStreamId, request.EventStreamType);
+                var result = await global::Cratis.Chronicle.Sequences.EventSequenceTail.TailSequenceNumber(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventTypeIds, request.EventSourceId, request.EventSourceType, request.EventStreamId, request.EventStreamType, request.IncludeMutationEpoch);
                 return ToEventSequenceTailResponse(result);
             },
             exception => logger.QueryFailed(exception, "EventSequences", "TailSequenceNumber"));
@@ -457,7 +457,8 @@ internal sealed class EventSequences(
     static global::Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse ToEventSequenceTailResponse(global::Cratis.Chronicle.Sequences.EventSequenceTail source) =>
         new()
         {
-            SequenceNumber = (ulong)source.SequenceNumber
+            SequenceNumber = (ulong)source.SequenceNumber,
+            MutationEpoch = source.MutationEpoch
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse ToEventSourceEventsResponse(global::Cratis.Chronicle.Sequences.EventSourceEvents source) =>

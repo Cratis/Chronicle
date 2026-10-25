@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Events.Constraints;
@@ -30,6 +31,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
     protected AppendResult _result;
     protected virtual EventSequenceNumber? Watermark => EventSequenceNumber.First;
     protected virtual EventSequenceNumber InitialNext => EventSequenceNumber.First;
+    protected virtual EventSequenceMutationEpoch InitialMutationEpoch => EventSequenceMutationEpoch.Initial;
     protected virtual bool Closing => false;
     protected virtual bool IncludeUniqueWithClosing => false;
     protected virtual ClosedStreamDimensions ClosingDimensions => ClosedStreamDimensions.EventSourceId;
@@ -45,6 +47,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
         _stateStorage.State.ConstraintIndexWatermark = Watermark;
         _stateStorage.State.SequenceNumber = InitialNext;
+        _stateStorage.State.MutationEpoch = InitialMutationEpoch;
         _claims = new();
         _closures = new();
         _log = new(EventStore, EventStoreNamespace, SequenceId, _identityStorage);

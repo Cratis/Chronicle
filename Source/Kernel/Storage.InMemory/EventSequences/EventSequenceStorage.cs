@@ -42,6 +42,7 @@ public partial class EventSequenceStorage(
     EventSequenceNumber? _constraintIndexWatermark;
     EventSequenceNumber? _constraintIndexCatchUpBelow;
     Concepts.Events.Constraints.ConstraintName[]? _constraintIndexCatchUpRefusing;
+    EventSequenceMutationEpoch _mutationEpoch = EventSequenceMutationEpoch.Initial;
 
     /// <summary>
     /// Initializes storage with its original constructor contract and a private receipt scope.
@@ -103,7 +104,8 @@ public partial class EventSequenceStorage(
                     : _events.Max(_ => _.Context.SequenceNumber.Value) + 1,
                 ConstraintIndexWatermark = _constraintIndexWatermark,
                 ConstraintIndexCatchUpBelow = _constraintIndexCatchUpBelow,
-                ConstraintIndexCatchUpRefusing = _constraintIndexCatchUpRefusing?.ToArray()
+                ConstraintIndexCatchUpRefusing = _constraintIndexCatchUpRefusing?.ToArray(),
+                MutationEpoch = _mutationEpoch
             });
         }
     }
@@ -117,6 +119,7 @@ public partial class EventSequenceStorage(
             _constraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow;
             var refusing = state.ConstraintIndexCatchUpRefusing?.ToArray();
             _constraintIndexCatchUpRefusing = refusing?.Length > 0 ? refusing : null;
+            _mutationEpoch = state.MutationEpoch;
         }
 
         return Task.CompletedTask;
