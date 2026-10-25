@@ -28,4 +28,14 @@ public interface IGenerationWriterGrants
     /// <exception cref="MaterializationBindingsNotSupported">This provider cannot admit generation writers.</exception>
     Task<GenerationWriterGrant?> TryAcquire(EventStoreName store, GenerationObserverBinding binding, GenerationBuildOperationId attempt, long expectedEpoch) =>
         throw new MaterializationBindingsNotSupported();
+
+    /// <summary>
+    /// Reads the fixed grant the durable owner admitted, without acquiring, revoking or advancing anything.
+    /// </summary>
+    /// <param name="store">The event store.</param>
+    /// <param name="binding">The explicitly resolved immutable binding.</param>
+    /// <returns>The admitted grant, or null when none was issued, it was revoked or the execution is no longer admissible.</returns>
+    /// <exception cref="MaterializationBindingsNotSupported">This provider cannot admit generation writers.</exception>
+    Task<GenerationWriterGrant?> GetAdmitted(EventStoreName store, GenerationObserverBinding binding) =>
+        throw new MaterializationBindingsNotSupported();
 }

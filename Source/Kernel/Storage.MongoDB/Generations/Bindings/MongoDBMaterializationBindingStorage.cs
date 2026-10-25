@@ -41,9 +41,9 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
                 if ((current?[GenerationGateCollections.Epoch].AsInt64 ?? 0) != expectedEpoch) return null;
                 var epoch = checked(expectedEpoch + 1);
                 if (current is null)
-                    await collection.InsertOneAsync(session, new BsonDocument { { "_id", gate.Value }, { GenerationGateCollections.Epoch, epoch }, { GenerationGateCollections.Admitted, 0L }, { "attempt", attempt.Value.ToString("N") } });
+                    await collection.InsertOneAsync(session, new BsonDocument { { "_id", gate.Value }, { GenerationGateCollections.Epoch, epoch }, { GenerationGateCollections.Admitted, 0L }, { GenerationGateCollections.Granted, epoch }, { "attempt", attempt.Value.ToString("N") } });
                 else
-                    await collection.UpdateOneAsync(session, _filter.Eq("_id", gate.Value) & _filter.Eq(GenerationGateCollections.Epoch, expectedEpoch), _update.Set(GenerationGateCollections.Epoch, epoch).Set("attempt", attempt.Value.ToString("N")));
+                    await collection.UpdateOneAsync(session, _filter.Eq("_id", gate.Value) & _filter.Eq(GenerationGateCollections.Epoch, expectedEpoch), _update.Set(GenerationGateCollections.Epoch, epoch).Set(GenerationGateCollections.Granted, epoch).Set("attempt", attempt.Value.ToString("N")));
                 return new GenerationWriterGrant(store, binding, attempt, epoch);
             });
         }
@@ -51,6 +51,25 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         {
             return null;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<GenerationWriterGrant?> GetAdmitted(EventStoreName store, GenerationObserverBinding binding)
+    {
+        var db = await PreparedBuilds(store, binding.Key);
+        return await BuildTransaction<GenerationWriterGrant?>(db, async session =>
+        {
+            var gate = new GenerationGateId(binding.Key, binding.Identity.Generation);
+            var current = await db.GetCollection<BsonDocument>(GenerationGateCollections.Gates).Find(session, _filter.Eq("_id", gate.Value)).FirstOrDefaultAsync();
+            if (current is null) return null;
+            if (!current.TryGetValue(GenerationGateCollections.Granted, out var granted) || !granted.IsInt64) return null;
+            if (!current.TryGetValue("attempt", out var stored) || !stored.IsString) return null;
+            var epoch = current[GenerationGateCollections.Epoch].AsInt64;
+            if (epoch <= 0 || granted.AsInt64 != epoch) return null;
+            if (!Guid.TryParseExact(stored.AsString, "N", out var attempt) || attempt == Guid.Empty) return null;
+            if (!await HasAdmissibleExecution(db, session, binding)) return null;
+            return new GenerationWriterGrant(store, binding, new GenerationBuildOperationId(attempt), epoch);
+        });
     }
 
     /// <inheritdoc/>

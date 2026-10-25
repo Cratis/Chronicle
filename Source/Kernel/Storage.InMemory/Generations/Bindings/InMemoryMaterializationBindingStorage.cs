@@ -22,6 +22,7 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
     readonly Dictionary<(EventStoreName Store, string Key), MaterializationBinding> _bindings = [];
     readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, PublicationReceiptId Receipt), (MaterializationPublicationRequest Request, MaterializationPublication Outcome)> _receipts = [];
     readonly Dictionary<(EventStoreName Store, string Gate), long> _gates = [];
+    readonly Dictionary<(EventStoreName Store, string Gate), (GenerationBuildOperationId Attempt, long Epoch)> _granted = [];
     readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), MaterializationExecutionSpecification> _executions = [];
     readonly Dictionary<(EventStoreName Store, string Scope, GenerationBuildOperationId Operation), (GenerationBuildRequest Request, GenerationReservation Reservation)> _operations = [];
     readonly Dictionary<(EventStoreName Store, string Key, MaterializationGeneration Generation), GenerationObserverBinding> _observers = [];
@@ -42,7 +43,23 @@ public sealed class InMemoryMaterializationBindingStorage(TimeProvider? timeProv
             if (record.State == MaterializationGenerationState.Abandoned) return Task.FromResult<GenerationWriterGrant?>(null);
             if (_gates.GetValueOrDefault((store, gate.Value)) != expectedEpoch) return Task.FromResult<GenerationWriterGrant?>(null);
             var epoch = Revoke(store, gate);
+            _granted[(store, gate.Value)] = (attempt, epoch);
             return Task.FromResult<GenerationWriterGrant?>(new(store, binding, attempt, epoch));
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<GenerationWriterGrant?> GetAdmitted(EventStoreName store, GenerationObserverBinding binding)
+    {
+        lock (_lock)
+        {
+            var gate = new GenerationGateId(binding.Key, binding.Identity.Generation);
+            if (!_granted.TryGetValue((store, gate.Value), out var grant)) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (grant.Epoch <= 0 || _gates.GetValueOrDefault((store, gate.Value)) != grant.Epoch) return Task.FromResult<GenerationWriterGrant?>(null);
+            if (!_observers.TryGetValue((store, binding.Key.Value, binding.Identity.Generation), out var recorded) || recorded != binding) return Task.FromResult<GenerationWriterGrant?>(null);
+            var record = _bindings[(store, binding.Key.Value)].Generations.Single(_ => _.Identity == binding.Identity);
+            if (record.State == MaterializationGenerationState.Abandoned) return Task.FromResult<GenerationWriterGrant?>(null);
+            return Task.FromResult<GenerationWriterGrant?>(new(store, binding, grant.Attempt, grant.Epoch));
         }
     }
 

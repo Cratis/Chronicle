@@ -22,4 +22,9 @@ internal static class GenerationGateCollections
     /// The writer admission counter.
     /// </summary>
     internal const string Admitted = "admitted";
+
+    /// <summary>
+    /// The epoch most recently issued by an owner grant; revocation leaves it behind.
+    /// </summary>
+    internal const string Granted = "granted";
 }

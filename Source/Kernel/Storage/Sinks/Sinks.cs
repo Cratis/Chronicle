@@ -35,7 +35,9 @@ public class Sinks(
         var pending = _generationSinks.GetOrAdd(context, static (key, state) => new Lazy<Task<ISink>>(() => state.Owner.CreateGenerationSink(key, state.Model)), (Owner: this, Model: model));
         try
         {
-            return await pending.Value;
+            var sink = await pending.Value;
+            EvictSuperseded(context);
+            return sink;
         }
         catch
         {
@@ -86,6 +88,13 @@ public class Sinks(
         first.Schemas.Count == second.Schemas.Count &&
         first.Schemas.All(pair => second.Schemas.TryGetValue(pair.Key, out var schema) && pair.Value.ToJson() == schema.ToJson()) &&
         first.Indexes.SequenceEqual(second.Indexes);
+
+    void EvictSuperseded(GenerationSinkContext context)
+    {
+        // Cache entries only: a superseded sink is never disposed or cleared here.
+        foreach (var other in _generationSinks.Keys.Where(_ => _.Grant.Store == context.Grant.Store && _.Binding.Key == context.Binding.Key && _.Binding.Identity == context.Binding.Identity && _.Grant.Epoch < context.Grant.Epoch))
+            _generationSinks.TryRemove(other, out _);
+    }
 
     async Task<ISink> CreateGenerationSink(GenerationSinkContext context, ReadModelDefinition readModel)
     {
