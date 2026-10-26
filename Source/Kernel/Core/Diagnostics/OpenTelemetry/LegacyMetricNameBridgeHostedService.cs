@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 /// <summary>
 /// Keeps the legacy metric names published for as long as the host runs.
 /// </summary>
-internal sealed class LegacyMetricNameBridgeHostedService : IHostedService
+internal sealed class LegacyMetricNameBridgeHostedService : IHostedService, IDisposable
 {
     IDisposable? _lease;
 
@@ -22,8 +22,10 @@ internal sealed class LegacyMetricNameBridgeHostedService : IHostedService
     /// <inheritdoc/>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _lease?.Dispose();
-        _lease = null;
+        Dispose();
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => Interlocked.Exchange(ref _lease, null)?.Dispose();
 }

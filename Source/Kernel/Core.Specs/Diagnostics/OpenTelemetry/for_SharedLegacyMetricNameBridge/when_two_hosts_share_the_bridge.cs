@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.for_SharedLegacyMetricNameBridge;
 
+[Collection("Shared legacy metric bridge")]
 public class when_two_hosts_share_the_bridge : Specification
 {
     const string LegacyName = "chronicle-connected-clients";
