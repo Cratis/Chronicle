@@ -4,6 +4,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using ReadModelInstanceVisibility = Cratis.Chronicle.Storage.Sinks.ReadModelInstanceVisibility;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_paging_instances;
 
@@ -30,7 +31,7 @@ public class and_the_projection_is_child_only : given.a_sink_with_indexes
         _indexCursor.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(false);
     }
 
-    Task Because() => _sink.GetInstances(null, 0, 50, Storage.Sinks.ReadModelInstanceVisibility.IncludeUninitialized);
+    Task Because() => _sink.GetInstances(null, 0, 50, ReadModelInstanceVisibility.IncludeUninitialized);
 
     [Fact] void should_apply_no_marker_filter_for_paging() => _pageFilter.ShouldEqual(_expected);
     [Fact] void should_use_the_same_filter_for_counting() => _countFilter.ShouldEqual(_expected);
