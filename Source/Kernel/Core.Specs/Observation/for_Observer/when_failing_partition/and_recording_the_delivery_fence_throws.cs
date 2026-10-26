@@ -17,7 +17,11 @@ public class and_recording_the_delivery_fence_throws : given.an_observer_with_me
     }
 
     async Task Because() => _error = await Catch.Exception(() => _observer.PartitionFailedWithDeliveryFence(
-        "partition", 42UL, ["timeout"], string.Empty, FailureKind.Timeout,
+        "partition",
+        42UL,
+        ["timeout"],
+        string.Empty,
+        FailureKind.Timeout,
         context: new(DeliveryFence: new(DateTimeOffset.UtcNow.AddMinutes(5), []))));
 
     [Fact] void should_propagate_the_fence_failure() => _error.ShouldBeSame(_failure);
