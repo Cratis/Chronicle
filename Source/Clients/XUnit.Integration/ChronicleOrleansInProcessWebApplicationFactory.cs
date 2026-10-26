@@ -204,6 +204,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // transactional scope deadlocks start-up by resolving the event store that is waiting on the very
                     // kernel command it wraps. The application's own commands keep every extension point.
                     services.AddKernelSideCommandExtensionPointsForKernelCommands();
+                    KernelAuthorizationPolicies.Apply(services);
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();

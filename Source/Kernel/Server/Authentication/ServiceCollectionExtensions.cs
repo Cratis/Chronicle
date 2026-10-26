@@ -190,11 +190,8 @@ public static class ServiceCollectionExtensions
 
     static void AddAdministratorAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddHttpContextAccessor();
+        services.AddChronicleAdministratorAuthorization();
         services.AddHostedService<AdministratorPolicyStartupWarning>();
-        services.AddScoped<IAdministratorAuthorization, AdministratorAuthorization>();
-        services.AddScoped<IAuthorizationHandler, AdministratorAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
