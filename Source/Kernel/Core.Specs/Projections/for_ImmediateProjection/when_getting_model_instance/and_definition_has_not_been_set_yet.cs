@@ -51,6 +51,7 @@ public class and_definition_has_not_been_set_yet : Specification
 
         _silo.AddService(storage);
         _silo.AddService(Substitute.For<IExpandoObjectConverter>());
+        _silo.AddService(Substitute.For<Cratis.Chronicle.ReadModels.IReadModelInstanceVisibilities>());
         _silo.AddService(logger);
         _silo.AddProbe(_ => projection);
 

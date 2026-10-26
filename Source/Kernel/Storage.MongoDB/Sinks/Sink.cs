@@ -1201,14 +1201,23 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
-        var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
-        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter());
-        var instances = await ReadPage(collection, skip, take, CancellationToken.None);
+        string containerName = occurrence ?? readModel.ContainerName;
+        var collection = collections.GetCollection(containerName);
+        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter(visibility));
+        var instances = await ReadPage(new(collection, containerName, occurrence is null, skip, take, visibility), CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
 
     /// <inheritdoc/>
     /// <remarks>
@@ -1240,7 +1249,7 @@ public partial class Sink(
     /// a crash left the primary collection absent as well, the next write recreates it and observation resumes.
     /// </para>
     /// </remarks>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         string containerName = occurrence ?? readModel.ContainerName;
         var collection = collections.GetCollection(containerName);
@@ -1249,17 +1258,18 @@ public partial class Sink(
             .Observe(
                 collection.Database,
                 containerName,
-                cancellationToken => ReadObservedPage(new(collection, containerName, isPrimary, skip, take), cancellationToken))
+                cancellationToken => ReadObservedPage(new(collection, containerName, isPrimary, skip, take, visibility), cancellationToken))
             .Where(page => page is not null)
             .Select(page => page!);
     }
 
     async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(PageRequest request, CancellationToken cancellationToken)
     {
-        var (collection, containerName, isPrimary, skip, take) = request;
-        if (!isPrimary)
+        var collection = request.Collection;
+        var containerName = request.ContainerName;
+        if (!request.IsPrimary)
         {
-            return await ReadPage(collection, skip, take, cancellationToken);
+            return await ReadPage(request, cancellationToken);
         }
 
         var before = await GetCollectionState(collection.Database, containerName, cancellationToken);
@@ -1268,7 +1278,7 @@ public partial class Sink(
             return null;
         }
 
-        var page = await ReadPage(collection, skip, take, cancellationToken);
+        var page = await ReadPage(request, cancellationToken);
         if (page.Any())
         {
             return page;
@@ -1297,17 +1307,20 @@ public partial class Sink(
     /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
     /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
     /// </summary>
+    /// <param name="visibility">The <see cref="ReadModelInstanceVisibility"/>; <see cref="ReadModelInstanceVisibility.IncludeUninitialized"/> applies no marker filter.</param>
     /// <returns>The visible-root filter.</returns>
-    static FilterDefinition<BsonDocument> VisibleInstancesFilter() =>
-        new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter(ReadModelInstanceVisibility visibility) =>
+        visibility == ReadModelInstanceVisibility.IncludeUninitialized
+            ? FilterDefinition<BsonDocument>.Empty
+            : new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
 
-    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
+    async Task<IEnumerable<ExpandoObject>> ReadPage(PageRequest request, CancellationToken cancellationToken)
     {
-        var documents = await collection
-            .Find(VisibleInstancesFilter())
+        var documents = await request.Collection
+            .Find(VisibleInstancesFilter(request.Visibility))
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
-            .Skip(skip)
-            .Limit(take)
+            .Skip(request.Skip)
+            .Limit(request.Take)
             .ToListAsync(cancellationToken);
 
         var schema = readModel.GetSchemaForLatestGeneration();
@@ -2010,7 +2023,7 @@ public partial class Sink(
         FilterDefinition<BsonDocument> Filter,
         bool IsUpsert);
 
-    sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take);
+    sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take, ReadModelInstanceVisibility Visibility);
 
     sealed record BulkBatch(
         List<WriteModel<BsonDocument>> Operations,

@@ -146,6 +146,7 @@ public class a_projection_for_first_creation : Specification
         var silo = new TestKitSilo();
         silo.AddService(storage);
         silo.AddService<IExpandoObjectConverter>(_converter);
+        silo.AddService(Substitute.For<IReadModelInstanceVisibilities>());
         silo.AddService<ILogger<ImmediateProjection>>(NullLogger<ImmediateProjection>.Instance);
         silo.AddProbe(_ => projection);
         silo.AddProbe(_ => readModel);
