@@ -104,6 +104,9 @@ public sealed class EventStoreStorage(
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage();
 
     /// <inheritdoc/>
+    public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new UniqueConstraintEncodingStorage();
+
+    /// <inheritdoc/>
     public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage();
 
     /// <inheritdoc/>

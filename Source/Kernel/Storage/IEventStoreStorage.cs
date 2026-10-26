@@ -83,6 +83,12 @@ public interface IEventStoreStorage
     IConstraintsStorage Constraints { get; }
 
     /// <summary>
+    /// Gets the event-store-level unique-constraint encoding key storage, shared by all namespaces.
+    /// </summary>
+    /// <exception cref="UniqueConstraintEncodingStorageNotSupported">The provider has not implemented encoding-key storage.</exception>
+    IUniqueConstraintEncodingStorage UniqueConstraintEncoding => throw new UniqueConstraintEncodingStorageNotSupported();
+
+    /// <summary>
     /// Gets the <see cref="IObserverDefinitionsStorage"/> for the event store.
     /// </summary>
     IObserverDefinitionsStorage Observers { get; }
