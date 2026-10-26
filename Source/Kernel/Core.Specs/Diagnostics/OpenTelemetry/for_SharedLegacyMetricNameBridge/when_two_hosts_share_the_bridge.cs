@@ -46,8 +46,8 @@ public class when_two_hosts_share_the_bridge : Specification
 
     void Because()
     {
-        var first = _firstHost.CreateGauge<int>(WellKnownTelemetryNames.Metrics.ConnectedClientCount);
-        var second = _secondHost.CreateGauge<int>(WellKnownTelemetryNames.Metrics.ConnectedClientCount);
+        var first = _firstHost.CreateGauge<int>(WellKnownMetricNames.ConnectedClientCount);
+        var second = _secondHost.CreateGauge<int>(WellKnownMetricNames.ConnectedClientCount);
         var tag = new KeyValuePair<string, object?>("marker", _marker);
 
         _firstLease = SharedLegacyMetricNameBridge.Acquire();

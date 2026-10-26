@@ -14,37 +14,37 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class EventSequenceMetrics
 {
-    [Counter<int>(WellKnownTelemetryNames.Metrics.EventSequenceAppendedEvents, "Number of events appended to the event sequence", WellKnownTelemetryNames.Metrics.EventSequenceAppendedEventsUnit)]
-    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryNames.Attributes.EventTypeId)] string eventName);
+    [Counter<int>(WellKnownMetricNames.EventSequenceAppendedEvents, "Number of events appended to the event sequence", WellKnownMetricNames.EventSequenceAppendedEventsUnit)]
+    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryAttributes.EventTypeId)] string eventName);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.EventSequenceDuplicateSequenceNumbers, "Number of duplicate event sequence numbers", WellKnownTelemetryNames.Metrics.EventSequenceDuplicateSequenceNumbersUnit)]
-    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryNames.Attributes.EventTypeId)] string eventName);
+    [Counter<int>(WellKnownMetricNames.EventSequenceDuplicateSequenceNumbers, "Number of duplicate event sequence numbers", WellKnownMetricNames.EventSequenceDuplicateSequenceNumbersUnit)]
+    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryAttributes.EventTypeId)] string eventName);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.EventSequenceAppendFailures, "Number of events that failed to be appended to the event sequence", WellKnownTelemetryNames.Metrics.EventSequenceAppendFailuresUnit)]
-    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryNames.Attributes.EventTypeId)] string eventName);
+    [Counter<int>(WellKnownMetricNames.EventSequenceAppendFailures, "Number of events that failed to be appended to the event sequence", WellKnownMetricNames.EventSequenceAppendFailuresUnit)]
+    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryAttributes.EventTypeId)] string eventName);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.EventSequenceConstraintViolations, "Number of constraint violations", WellKnownTelemetryNames.Metrics.EventSequenceConstraintViolationsUnit)]
-    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryNames.Attributes.EventTypeId)] string eventName);
+    [Counter<int>(WellKnownMetricNames.EventSequenceConstraintViolations, "Number of constraint violations", WellKnownMetricNames.EventSequenceConstraintViolationsUnit)]
+    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, [Tag(WellKnownTelemetryAttributes.EventTypeId)] string eventName);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ConstraintIndexUpdateFailures, "Number of failed constraint index attempts", WellKnownTelemetryNames.Metrics.ConstraintIndexUpdateFailuresUnit)]
+    [Counter<int>(WellKnownMetricNames.ConstraintIndexUpdateFailures, "Number of failed constraint index attempts", WellKnownMetricNames.ConstraintIndexUpdateFailuresUnit)]
     internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ConstraintIndexSettledErrors, "Number of constraint index events settled with a deterministic error", WellKnownTelemetryNames.Metrics.ConstraintIndexSettledErrorsUnit)]
+    [Counter<int>(WellKnownMetricNames.ConstraintIndexSettledErrors, "Number of constraint index events settled with a deterministic error", WellKnownMetricNames.ConstraintIndexSettledErrorsUnit)]
     internal static partial void ConstraintIndexSettledWithError(this IMeterScope<EventSequence> scope);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ConstraintIndexPoisonEvents, "Number of constraint event effects settled after five identical non-transient failures", WellKnownTelemetryNames.Metrics.ConstraintIndexPoisonEventsUnit)]
+    [Counter<int>(WellKnownMetricNames.ConstraintIndexPoisonEvents, "Number of constraint event effects settled after five identical non-transient failures", WellKnownMetricNames.ConstraintIndexPoisonEventsUnit)]
     internal static partial void ConstraintIndexPoisonEvent(this IMeterScope<EventSequence> scope);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ConstraintIndexRepairs, "Number of completed constraint index repairs", WellKnownTelemetryNames.Metrics.ConstraintIndexRepairsUnit)]
+    [Counter<int>(WellKnownMetricNames.ConstraintIndexRepairs, "Number of completed constraint index repairs", WellKnownMetricNames.ConstraintIndexRepairsUnit)]
     internal static partial void ConstraintIndexRepaired(this IMeterScope<EventSequence> scope);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ConstraintIndexRefusals, "Number of appends refused for pending constraint indexes", WellKnownTelemetryNames.Metrics.ConstraintIndexRefusalsUnit)]
+    [Counter<int>(WellKnownMetricNames.ConstraintIndexRefusals, "Number of appends refused for pending constraint indexes", WellKnownMetricNames.ConstraintIndexRefusalsUnit)]
     internal static partial void ConstraintIndexRefused(this IMeterScope<EventSequence> scope);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.EventSequenceUnknownAppendOutcomes, "Number of appends whose storage outcome could not be settled", WellKnownTelemetryNames.Metrics.EventSequenceUnknownAppendOutcomesUnit)]
+    [Counter<int>(WellKnownMetricNames.EventSequenceUnknownAppendOutcomes, "Number of appends whose storage outcome could not be settled", WellKnownMetricNames.EventSequenceUnknownAppendOutcomesUnit)]
     internal static partial void AppendOutcomeUnknown(this IMeterScope<EventSequence> scope);
 
-    [Gauge<long>(WellKnownTelemetryNames.Metrics.ConstraintIndexLag, "Events not yet covered by confirmed constraint updates", WellKnownTelemetryNames.Metrics.ConstraintIndexLagUnit)]
+    [Gauge<long>(WellKnownMetricNames.ConstraintIndexLag, "Events not yet covered by confirmed constraint updates", WellKnownMetricNames.ConstraintIndexLagUnit)]
     internal static partial void ConstraintIndexLag(this IMeterScope<EventSequence> scope, long lag);
 }
 
@@ -53,7 +53,7 @@ internal static class EventSequenceMetricsScopes
     internal static IMeterScope<EventSequence> BeginEventSequenceScope(this IMeter<EventSequence> meter, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            [WellKnownTelemetryNames.Attributes.EventStoreName] = eventStore,
-            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = @namespace
+            [WellKnownTelemetryAttributes.EventStoreName] = eventStore,
+            [WellKnownTelemetryAttributes.EventStoreNamespace] = @namespace
         });
 }

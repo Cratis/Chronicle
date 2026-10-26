@@ -172,10 +172,10 @@ public class ObserverAlerts(
     {
         using var scope = meter.BeginScope(new Dictionary<string, object>
         {
-            [WellKnownTelemetryNames.Attributes.ObserverId] = Key.ObserverId,
-            [WellKnownTelemetryNames.Attributes.EventStoreName] = Key.EventStore,
-            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = Key.Namespace,
-            [WellKnownTelemetryNames.Attributes.EventSequenceId] = Key.EventSequenceId
+            [WellKnownTelemetryAttributes.ObserverId] = Key.ObserverId,
+            [WellKnownTelemetryAttributes.EventStoreName] = Key.EventStore,
+            [WellKnownTelemetryAttributes.EventStoreNamespace] = Key.Namespace,
+            [WellKnownTelemetryAttributes.EventSequenceId] = Key.EventSequenceId
         });
         scope.TransitionFailed();
     }

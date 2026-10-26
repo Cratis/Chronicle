@@ -30,7 +30,7 @@ public class a_started_service : Specification
             if (tags.ToArray().Contains(_marker)) _measurements.Add(value);
         });
         _listener.Start();
-        _counter = _meter.CreateGauge<int>(WellKnownTelemetryNames.Metrics.ConnectedClientCount);
+        _counter = _meter.CreateGauge<int>(WellKnownMetricNames.ConnectedClientCount);
         _service = new();
         await _service.StartAsync(CancellationToken.None);
     }

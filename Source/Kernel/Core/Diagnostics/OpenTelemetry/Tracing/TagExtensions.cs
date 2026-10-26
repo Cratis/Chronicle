@@ -35,7 +35,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, EventSourceType eventSourceType)
     {
         activity.SetTag(EventSourceType, eventSourceType.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.EventSourceType, eventSourceType.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.EventSourceType, eventSourceType.Value);
         return activity;
     }
 
@@ -51,7 +51,7 @@ public static class TagExtensions
         if (identifiers.ForSpan(eventSourceId.Value) is { } value)
         {
             activity.SetTag(EventSourceId, value);
-            activity.SetTag(WellKnownTelemetryNames.Attributes.EventSourceId, value);
+            activity.SetTag(WellKnownTelemetryAttributes.EventSourceId, value);
         }
         return activity;
     }
@@ -65,7 +65,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, EventStoreName eventStoreName)
     {
         activity.SetTag(EventStoreName, eventStoreName.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.EventStoreName, eventStoreName.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.EventStoreName, eventStoreName.Value);
         return activity;
     }
 
@@ -78,7 +78,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, EventStoreNamespaceName eventStoreNamespace)
     {
         activity.SetTag(EventStoreNamespace, eventStoreNamespace.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.EventStoreNamespace, eventStoreNamespace.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.EventStoreNamespace, eventStoreNamespace.Value);
         return activity;
     }
 
@@ -91,7 +91,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, EventSequenceId eventSequenceId)
     {
         activity.SetTag(EventSequenceId, eventSequenceId.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.EventSequenceId, eventSequenceId.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.EventSequenceId, eventSequenceId.Value);
         return activity;
     }
 
@@ -116,7 +116,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, ConnectionId connectionId)
     {
         activity.SetTag(ConnectionId, connectionId.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.ConnectionId, connectionId.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.ConnectionId, connectionId.Value);
         return activity;
     }
 
@@ -186,7 +186,7 @@ public static class TagExtensions
     public static Activity Tag(this Activity activity, EventType eventType)
     {
         activity.SetTag(EventTypeId, eventType.Id.Value);
-        activity.SetTag(WellKnownTelemetryNames.Attributes.EventTypeId, eventType.Id.Value);
+        activity.SetTag(WellKnownTelemetryAttributes.EventTypeId, eventType.Id.Value);
         return activity;
     }
 }

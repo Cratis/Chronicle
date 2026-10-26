@@ -17,6 +17,6 @@ internal static class ReactorTraces
     /// <param name="names">The naming convention.</param>
     /// <returns>The activity scope.</returns>
     internal static IActivityScope<Reactors> Handle(this IActivitySource<Reactors> source, ObserverSpanContext context, ClientSpanNames names = ClientSpanNames.Legacy) =>
-        ClientSpanCompatibility.Start(source, new("client.reactor.handle", WellKnownTelemetryNames.ClientSpans.ReactorHandle, ActivityKind.Consumer), names,
+        ClientSpanCompatibility.Start(source, new("client.reactor.handle", WellKnownClientSpanNames.ReactorHandle, ActivityKind.Consumer), names,
             new("event_store_name", context.EventStoreName), new("namespace_name", context.NamespaceName), new("event_sequence_id", context.EventSequenceId), new("reactor_id", context.ObserverId));
 }

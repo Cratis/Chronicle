@@ -9,7 +9,7 @@ public class when_listing_the_metric_map : Specification
 {
     IEnumerable<string> _conventionMetricNames = [];
 
-    void Establish() => _conventionMetricNames = typeof(WellKnownTelemetryNames.Metrics)
+    void Establish() => _conventionMetricNames = typeof(WellKnownMetricNames)
         .GetFields(BindingFlags.Public | BindingFlags.Static)
         .Where(_ => _.IsLiteral && !_.Name.EndsWith("Unit"))
         .Select(_ => (string)_.GetRawConstantValue()!)

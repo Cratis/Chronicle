@@ -40,14 +40,14 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
 
         // Register both naming schemes explicitly so they share the same snapshot and ownership.
         meter.ActualMeter?.CreateObservableGauge(
-            WellKnownTelemetryNames.Metrics.AlertOpenIncidents,
+            WellKnownMetricNames.AlertOpenIncidents,
             Observe,
-            unit: WellKnownTelemetryNames.Metrics.AlertOpenIncidentsUnit,
+            unit: WellKnownMetricNames.AlertOpenIncidentsUnit,
             description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
         meter.ActualMeter?.CreateObservableGauge(
-            WellKnownTelemetryNames.Metrics.AlertOpenIncidentsAvailable,
+            WellKnownMetricNames.AlertOpenIncidentsAvailable,
             ObserveAvailable,
-            unit: WellKnownTelemetryNames.Metrics.AlertOpenIncidentsAvailableUnit,
+            unit: WellKnownMetricNames.AlertOpenIncidentsAvailableUnit,
             description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
 
         // Observable gauges cannot be bridged, so the legacy names are registered next to the convention names for one

@@ -13,14 +13,14 @@ internal static class ClientSpanCompatibility
 {
     static readonly IReadOnlyDictionary<string, string> _attributes = new Dictionary<string, string>
     {
-        ["event_store_name"] = WellKnownTelemetryNames.Attributes.EventStoreName,
-        ["namespace_name"] = WellKnownTelemetryNames.Attributes.EventStoreNamespace,
-        ["event_sequence_id"] = WellKnownTelemetryNames.Attributes.EventSequenceId,
-        ["event_source_type"] = WellKnownTelemetryNames.Attributes.EventSourceType,
-        ["event_source_id"] = WellKnownTelemetryNames.Attributes.EventSourceId,
-        ["correlation_id"] = WellKnownTelemetryNames.Attributes.CorrelationId,
-        ["reactor_id"] = WellKnownTelemetryNames.Attributes.ObserverId,
-        ["reducer_id"] = WellKnownTelemetryNames.Attributes.ObserverId
+        ["event_store_name"] = WellKnownTelemetryAttributes.EventStoreName,
+        ["namespace_name"] = WellKnownTelemetryAttributes.EventStoreNamespace,
+        ["event_sequence_id"] = WellKnownTelemetryAttributes.EventSequenceId,
+        ["event_source_type"] = WellKnownTelemetryAttributes.EventSourceType,
+        ["event_source_id"] = WellKnownTelemetryAttributes.EventSourceId,
+        ["correlation_id"] = WellKnownTelemetryAttributes.CorrelationId,
+        ["reactor_id"] = WellKnownTelemetryAttributes.ObserverId,
+        ["reducer_id"] = WellKnownTelemetryAttributes.ObserverId
     };
 
     /// <summary>
@@ -39,8 +39,8 @@ internal static class ClientSpanCompatibility
         {
             if (value is null) continue;
             if (_attributes.TryGetValue(key, out var shared)) attributes[shared] = value;
-            if (key == "reactor_id") attributes[WellKnownTelemetryNames.Attributes.ObserverType] = "reactor";
-            if (key == "reducer_id") attributes[WellKnownTelemetryNames.Attributes.ObserverType] = "reducer";
+            if (key == "reactor_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reactor";
+            if (key == "reducer_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reducer";
         }
 
         var name = names == ClientSpanNames.Convention ? definition.ConventionName : definition.LegacyName;

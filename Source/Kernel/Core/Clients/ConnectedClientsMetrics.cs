@@ -13,6 +13,6 @@ namespace Cratis.Chronicle.Clients;
 
 internal static partial class ConnectedClientsMetrics
 {
-    [Gauge<int>(WellKnownTelemetryNames.Metrics.ConnectedClientCount, "Number of connected clients", WellKnownTelemetryNames.Metrics.ConnectedClientCountUnit)]
+    [Gauge<int>(WellKnownMetricNames.ConnectedClientCount, "Number of connected clients", WellKnownMetricNames.ConnectedClientCountUnit)]
     internal static partial void ConnectedClients(this IMeter<ConnectedClients> meter, int count);
 }

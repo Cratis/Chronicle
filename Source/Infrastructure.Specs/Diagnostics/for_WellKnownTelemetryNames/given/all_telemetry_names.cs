@@ -9,7 +9,11 @@ public class all_telemetry_names : Specification
 {
     protected IDictionary<string, string> _names = new Dictionary<string, string>();
 
-    void Establish() => _names = Collect(typeof(WellKnownTelemetryNames), string.Empty);
+    void Establish() => _names = Collect(typeof(WellKnownTelemetryAttributes), "Attributes.")
+        .Concat(Collect(typeof(WellKnownMetricNames), "Metrics."))
+        .Concat(Collect(typeof(WellKnownSpanNames), "Spans."))
+        .Concat(Collect(typeof(WellKnownClientSpanNames), "ClientSpans."))
+        .ToDictionary(_ => _.Key, _ => _.Value);
 
     protected static bool IsUnit(string path) => path.StartsWith("Metrics.") && path.EndsWith("Unit");
 
@@ -22,14 +26,6 @@ public class all_telemetry_names : Specification
         foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly).Where(_ => _.IsLiteral))
         {
             result[$"{prefix}{field.Name}"] = (string)field.GetRawConstantValue()!;
-        }
-
-        foreach (var nested in type.GetNestedTypes(BindingFlags.Public))
-        {
-            foreach (var pair in Collect(nested, $"{prefix}{nested.Name}."))
-            {
-                result[pair.Key] = pair.Value;
-            }
         }
 
         return result;

@@ -25,19 +25,19 @@ internal static partial class AppendedEventsQueueMetrics
     static Counter<int>? _suspectedUndelivered;
     static Counter<int>? _observersSpilled;
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueEnqueuedEvents, "Number of events enqueued", WellKnownTelemetryNames.Metrics.AppendedEventsQueueEnqueuedEventsUnit)]
+    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueEnqueuedEvents, "Number of events enqueued", WellKnownMetricNames.AppendedEventsQueueEnqueuedEventsUnit)]
     internal static partial void EventsEnqueued(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandledEvents, "Number of events processed", WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandledEventsUnit)]
+    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandledEvents, "Number of events processed", WellKnownMetricNames.AppendedEventsQueueHandledEventsUnit)]
     internal static partial void EventsHandled(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandlingFailures, "Number of events that has handling failures", WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandlingFailuresUnit)]
+    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandlingFailures, "Number of events that has handling failures", WellKnownMetricNames.AppendedEventsQueueHandlingFailuresUnit)]
     internal static partial void EventsHandlingFailures(this IMeterScope<AppendedEventsQueue> meter);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueSpilledEvents, "Number of events spilled to observer catch-up when the queue was full", WellKnownTelemetryNames.Metrics.AppendedEventsQueueSpilledEventsUnit)]
+    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueSpilledEvents, "Number of events spilled to observer catch-up when the queue was full", WellKnownMetricNames.AppendedEventsQueueSpilledEventsUnit)]
     internal static partial void EventsSpilledToCatchup(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueCatchUpTriggerBudgetExceeded, "Number of spilled observer catch-up triggers still failing after the warning budget", WellKnownTelemetryNames.Metrics.AppendedEventsQueueCatchUpTriggerBudgetExceededUnit)]
+    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceeded, "Number of spilled observer catch-up triggers still failing after the warning budget", WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceededUnit)]
     internal static partial void CatchupTriggerBudgetExceeded(this IMeterScope<AppendedEventsQueue> meter);
 
     /// <summary>
@@ -63,7 +63,7 @@ internal static partial class AppendedEventsQueueMetrics
 
             lock (_suspectedUndeliveredLock)
             {
-                counter = _suspectedUndelivered ??= meter.Meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueSuspectedUndeliveredEvents, unit: WellKnownTelemetryNames.Metrics.AppendedEventsQueueSuspectedUndeliveredEventsUnit, description: SuspectedUndeliveredDescription);
+                counter = _suspectedUndelivered ??= meter.Meter.CreateCounter<int>(WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEvents, unit: WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEventsUnit, description: SuspectedUndeliveredDescription);
             }
         }
 
@@ -73,7 +73,7 @@ internal static partial class AppendedEventsQueueMetrics
             tags.Add(key, tag);
         }
 
-        tags.Add(WellKnownTelemetryNames.Attributes.ObserverId, observerId);
+        tags.Add(WellKnownTelemetryAttributes.ObserverId, observerId);
         counter.Add(numberOfEvents, tags);
     }
 
@@ -98,7 +98,7 @@ internal static partial class AppendedEventsQueueMetrics
 
             lock (_observersSpilledLock)
             {
-                counter = _observersSpilled ??= meter.Meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueObserverSpills, unit: WellKnownTelemetryNames.Metrics.AppendedEventsQueueObserverSpillsUnit, description: ObserversSpilledDescription);
+                counter = _observersSpilled ??= meter.Meter.CreateCounter<int>(WellKnownMetricNames.AppendedEventsQueueObserverSpills, unit: WellKnownMetricNames.AppendedEventsQueueObserverSpillsUnit, description: ObserversSpilledDescription);
             }
         }
 
@@ -108,8 +108,8 @@ internal static partial class AppendedEventsQueueMetrics
             tags.Add(key, tag);
         }
 
-        tags.Add(WellKnownTelemetryNames.Attributes.ObserverId, observerId);
-        tags.Add(WellKnownTelemetryNames.Attributes.ObserverSpillReason, reason);
+        tags.Add(WellKnownTelemetryAttributes.ObserverId, observerId);
+        tags.Add(WellKnownTelemetryAttributes.ObserverSpillReason, reason);
         counter.Add(1, tags);
     }
 }
@@ -137,9 +137,9 @@ internal static class AppendedEventsQueueMetricsScopes
         AppendedEventsQueueId queueId) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            [WellKnownTelemetryNames.Attributes.EventStoreName] = eventSequenceKey.EventStore,
-            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = eventSequenceKey.Namespace,
-            [WellKnownTelemetryNames.Attributes.EventSequenceId] = eventSequenceKey.EventSequenceId,
-            [WellKnownTelemetryNames.Attributes.AppendedEventsQueueId] = queueId
+            [WellKnownTelemetryAttributes.EventStoreName] = eventSequenceKey.EventStore,
+            [WellKnownTelemetryAttributes.EventStoreNamespace] = eventSequenceKey.Namespace,
+            [WellKnownTelemetryAttributes.EventSequenceId] = eventSequenceKey.EventSequenceId,
+            [WellKnownTelemetryAttributes.AppendedEventsQueueId] = queueId
         });
 }

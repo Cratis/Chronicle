@@ -34,8 +34,8 @@ internal static class ObserverAlertsMetrics
         lock (_counterLock)
         {
             counter = _failedTransitions ??= meter.Meter.CreateCounter<int>(
-                WellKnownTelemetryNames.Metrics.AlertFailedTransitions,
-                unit: WellKnownTelemetryNames.Metrics.AlertFailedTransitionsUnit,
+                WellKnownMetricNames.AlertFailedTransitions,
+                unit: WellKnownMetricNames.AlertFailedTransitionsUnit,
                 description: "Number of failed attempts to record observer alert transitions");
         }
 

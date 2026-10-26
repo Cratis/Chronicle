@@ -3,8 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 
-using Names = Cratis.Chronicle.Diagnostics.WellKnownTelemetryNames;
-
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 /// <summary>
@@ -16,7 +14,7 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 internal record LegacyMetric(string Name, string? Unit, string? Description);
 
 /// <summary>
-/// The legacy telemetry names that are still published for one minor release next to the names in <see cref="WellKnownTelemetryNames"/>.
+/// The legacy telemetry names that are still published for one minor release next to the names in <see cref="WellKnownMetricNames"/>.
 /// All of this is removed in the next major version.
 /// </summary>
 internal static class LegacyTelemetryNames
@@ -51,52 +49,52 @@ internal static class LegacyTelemetryNames
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, LegacyMetric[]> Metrics = new Dictionary<string, LegacyMetric[]>
     {
-        [Names.Metrics.ObserverSuccessfulObservations] = [new("chronicle-observer-successful-observations", null, "Number of successful observations per observer in a given event store and namespace")],
-        [Names.Metrics.ObserverPartitionFailures] = [new("chronicle-observer-partitions-failed", null, "Number of failed handling attempts for partitions per observer in a given event store and namespace. Every failure is counted, including failures of retries, so the same partition counts once per failed attempt")],
-        [Names.Metrics.ObserverPartitionsQuarantined] = [new("chronicle-observer-partitions-quarantined", null, "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see chronicle-observer-quarantined")],
-        [Names.Metrics.ObserverPartitionQuarantinesCleared] = [new("chronicle-observer-partition-quarantines-cleared", null, "Number of times an operator cleared the quarantine of a partition per observer, which also resets the retry budget of the partition")],
-        [Names.Metrics.ObserverQuarantines] = [new("chronicle-observer-quarantined", null, "Number of times an observer was quarantined")],
-        [Names.Metrics.ObserverSuspectedSkippedEvents] = [new("chronicle-observer-events-suspected-skipped", null, "Number of live events an observer's position moved past without the observer seeing any delivery path cover them. A suspicion, not proof")],
-        [Names.Metrics.ObserverZeroWorkCatchUps] = [new("chronicle-observer-zero-work-catch-ups", null, "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position")],
-        [Names.Metrics.ObserverClaimDivergences] = [new("chronicle-observer-claim-divergences", null, "Shadow partition-claim divergences from replaying/catching-up sets")],
-        [Names.Metrics.WebhookProbesScheduled] = [new("chronicle-webhook-probe-scheduled", null, null)],
-        [Names.Metrics.WebhookProbeAttempts] = [new("chronicle-webhook-probe-attempts", null, null)],
-        [Names.Metrics.WebhookProbeFailures] = [new("chronicle-webhook-probe-failures", null, null)],
-        [Names.Metrics.WebhookProbeSuccesses] = [new("chronicle-webhook-probe-successes", null, null)],
-        [Names.Metrics.WebhookProbeResumes] = [new("chronicle-webhook-probe-resumes", null, null)],
-        [Names.Metrics.WebhookProbesDeferred] = [new("chronicle-webhook-probe-deferred", null, null)],
-        [Names.Metrics.WebhookProbesSkipped] = [new("chronicle-webhook-probe-skipped", null, null)],
-        [Names.Metrics.WebhookProbesCancelled] = [new("chronicle-webhook-probe-cancelled", null, null)],
-        [Names.Metrics.WebhookCircuitOpenings] = [new("chronicle-webhook-circuit-opened", null, "Number of webhook circuit openings per target authority")],
-        [Names.Metrics.WebhookCircuitRejections] = [new("chronicle-webhook-circuit-rejected", null, "Number of webhook deliveries deferred because the target circuit is open")],
-        [Names.Metrics.EventSequenceAppendedEvents] = [new("chronicle-event-sequences-appended-events", null, "Number of events appended to the event sequence")],
-        [Names.Metrics.EventSequenceDuplicateSequenceNumbers] = [new("chronicle-event-sequences-duplicate-event-sequence-numbers", null, "Number of duplicate event sequence numbers")],
-        [Names.Metrics.EventSequenceAppendFailures] = [new("chronicle-event-sequences-failed-appended-events", null, "Number of events that failed to be appended to the event sequence")],
-        [Names.Metrics.EventSequenceConstraintViolations] = [new("chronicle-event-sequences-constraint-violations", null, "Number of constraint violations")],
-        [Names.Metrics.EventSequenceUnknownAppendOutcomes] = [new("chronicle-event-sequences-append-outcomes-unknown", null, "Number of appends whose storage outcome could not be settled")],
-        [Names.Metrics.ConstraintIndexUpdateFailures] = [new("chronicle-event-sequences-constraint-index-update-failures", null, "Number of failed constraint index attempts")],
-        [Names.Metrics.ConstraintIndexSettledErrors] = [new("chronicle-event-sequences-constraint-index-settled-errors", null, "Number of constraint index events settled with a deterministic error")],
-        [Names.Metrics.ConstraintIndexPoisonEvents] = [new("chronicle-event-sequences-constraint-index-poison-events", null, "Number of constraint event effects settled after five identical non-transient failures")],
-        [Names.Metrics.ConstraintIndexRepairs] = [new("chronicle-event-sequences-constraint-index-repairs", null, "Number of completed constraint index repairs")],
-        [Names.Metrics.ConstraintIndexRefusals] = [new("chronicle-event-sequences-constraint-index-refusals", null, "Number of appends refused for pending constraint indexes")],
-        [Names.Metrics.ConstraintIndexLag] = [new("chronicle-event-sequences-constraint-index-lag", null, "Events not yet covered by confirmed constraint updates")],
-        [Names.Metrics.AppendedEventsQueueEnqueuedEvents] = [new("chronicle-appended-events-queue-events-enqueued", null, "Number of events enqueued")],
-        [Names.Metrics.AppendedEventsQueueHandledEvents] = [new("chronicle-appended-events-queue-events-handled", null, "Number of events processed")],
-        [Names.Metrics.AppendedEventsQueueHandlingFailures] = [new("chronicle-appended-events-queue-events-handling-failures", null, "Number of events that has handling failures")],
-        [Names.Metrics.AppendedEventsQueueSpilledEvents] = [new("chronicle-appended-events-queue-events-spilled-to-catchup", null, "Number of events spilled to observer catch-up when the queue was full")],
-        [Names.Metrics.AppendedEventsQueueCatchUpTriggerBudgetExceeded] = [new("chronicle-appended-events-queue-catchup-trigger-budget-exceeded", null, "Number of spilled observer catch-up triggers still failing after the warning budget")],
-        [Names.Metrics.AppendedEventsQueueSuspectedUndeliveredEvents] = [new("chronicle-appended-events-queue-suspected-undelivered-events", null, "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer")],
-        [Names.Metrics.AppendedEventsQueueObserverSpills] = [new("chronicle-appended-events-queue-observers-spilled-to-catchup", null, "Number of times an observer was moved from live delivery to catch-up, by reason")],
-        [Names.Metrics.AlertFailedTransitions] = [new("chronicle-alert-transitions-failed", null, "Number of failed attempts to record observer alert transitions")],
-        [Names.Metrics.AbandonedDeliveryLateResults] = [new("abandoned-delivery-late-results", null, "Client results received after the delivery deadline")],
-        [Names.Metrics.AbandonedDeliveryHoldExpirations] = [new("abandoned-delivery-hold-expirations", null, "Client deliveries released by the maximum hold")],
-        [Names.Metrics.AbandonedDeliveryFenceDuration] = [new("abandoned-delivery-fence-duration", "s", "Time an abandoned client delivery remained held")],
-        [Names.Metrics.ConnectedClientCount] = [new("chronicle-connected-clients", null, "Number of connected clients")],
-        [Names.Metrics.SqlSchemaLockWaitDuration] = [new("chronicle-sql-schema-lock-wait", "s", "Time spent waiting for a database schema lock")],
-        [Names.Metrics.SqlLiveQueryPollFailures] = [new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried")],
-        [Names.Metrics.SqlUpsertRecoveredCollisions] = [new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage")],
-        [Names.Metrics.SqlCompositeKeyStampFailures] = [new("chronicle.sql.composite_key.stamp_failures", null, null)],
-        [Names.Metrics.SqlCompositeKeyCollisions] = [new("chronicle.sql.composite_key.collisions", null, null)],
+        [WellKnownMetricNames.ObserverSuccessfulObservations] = [new("chronicle-observer-successful-observations", null, "Number of successful observations per observer in a given event store and namespace")],
+        [WellKnownMetricNames.ObserverPartitionFailures] = [new("chronicle-observer-partitions-failed", null, "Number of failed handling attempts for partitions per observer in a given event store and namespace. Every failure is counted, including failures of retries, so the same partition counts once per failed attempt")],
+        [WellKnownMetricNames.ObserverPartitionsQuarantined] = [new("chronicle-observer-partitions-quarantined", null, "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see chronicle-observer-quarantined")],
+        [WellKnownMetricNames.ObserverPartitionQuarantinesCleared] = [new("chronicle-observer-partition-quarantines-cleared", null, "Number of times an operator cleared the quarantine of a partition per observer, which also resets the retry budget of the partition")],
+        [WellKnownMetricNames.ObserverQuarantines] = [new("chronicle-observer-quarantined", null, "Number of times an observer was quarantined")],
+        [WellKnownMetricNames.ObserverSuspectedSkippedEvents] = [new("chronicle-observer-events-suspected-skipped", null, "Number of live events an observer's position moved past without the observer seeing any delivery path cover them. A suspicion, not proof")],
+        [WellKnownMetricNames.ObserverZeroWorkCatchUps] = [new("chronicle-observer-zero-work-catch-ups", null, "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position")],
+        [WellKnownMetricNames.ObserverClaimDivergences] = [new("chronicle-observer-claim-divergences", null, "Shadow partition-claim divergences from replaying/catching-up sets")],
+        [WellKnownMetricNames.WebhookProbesScheduled] = [new("chronicle-webhook-probe-scheduled", null, null)],
+        [WellKnownMetricNames.WebhookProbeAttempts] = [new("chronicle-webhook-probe-attempts", null, null)],
+        [WellKnownMetricNames.WebhookProbeFailures] = [new("chronicle-webhook-probe-failures", null, null)],
+        [WellKnownMetricNames.WebhookProbeSuccesses] = [new("chronicle-webhook-probe-successes", null, null)],
+        [WellKnownMetricNames.WebhookProbeResumes] = [new("chronicle-webhook-probe-resumes", null, null)],
+        [WellKnownMetricNames.WebhookProbesDeferred] = [new("chronicle-webhook-probe-deferred", null, null)],
+        [WellKnownMetricNames.WebhookProbesSkipped] = [new("chronicle-webhook-probe-skipped", null, null)],
+        [WellKnownMetricNames.WebhookProbesCancelled] = [new("chronicle-webhook-probe-cancelled", null, null)],
+        [WellKnownMetricNames.WebhookCircuitOpenings] = [new("chronicle-webhook-circuit-opened", null, "Number of webhook circuit openings per target authority")],
+        [WellKnownMetricNames.WebhookCircuitRejections] = [new("chronicle-webhook-circuit-rejected", null, "Number of webhook deliveries deferred because the target circuit is open")],
+        [WellKnownMetricNames.EventSequenceAppendedEvents] = [new("chronicle-event-sequences-appended-events", null, "Number of events appended to the event sequence")],
+        [WellKnownMetricNames.EventSequenceDuplicateSequenceNumbers] = [new("chronicle-event-sequences-duplicate-event-sequence-numbers", null, "Number of duplicate event sequence numbers")],
+        [WellKnownMetricNames.EventSequenceAppendFailures] = [new("chronicle-event-sequences-failed-appended-events", null, "Number of events that failed to be appended to the event sequence")],
+        [WellKnownMetricNames.EventSequenceConstraintViolations] = [new("chronicle-event-sequences-constraint-violations", null, "Number of constraint violations")],
+        [WellKnownMetricNames.EventSequenceUnknownAppendOutcomes] = [new("chronicle-event-sequences-append-outcomes-unknown", null, "Number of appends whose storage outcome could not be settled")],
+        [WellKnownMetricNames.ConstraintIndexUpdateFailures] = [new("chronicle-event-sequences-constraint-index-update-failures", null, "Number of failed constraint index attempts")],
+        [WellKnownMetricNames.ConstraintIndexSettledErrors] = [new("chronicle-event-sequences-constraint-index-settled-errors", null, "Number of constraint index events settled with a deterministic error")],
+        [WellKnownMetricNames.ConstraintIndexPoisonEvents] = [new("chronicle-event-sequences-constraint-index-poison-events", null, "Number of constraint event effects settled after five identical non-transient failures")],
+        [WellKnownMetricNames.ConstraintIndexRepairs] = [new("chronicle-event-sequences-constraint-index-repairs", null, "Number of completed constraint index repairs")],
+        [WellKnownMetricNames.ConstraintIndexRefusals] = [new("chronicle-event-sequences-constraint-index-refusals", null, "Number of appends refused for pending constraint indexes")],
+        [WellKnownMetricNames.ConstraintIndexLag] = [new("chronicle-event-sequences-constraint-index-lag", null, "Events not yet covered by confirmed constraint updates")],
+        [WellKnownMetricNames.AppendedEventsQueueEnqueuedEvents] = [new("chronicle-appended-events-queue-events-enqueued", null, "Number of events enqueued")],
+        [WellKnownMetricNames.AppendedEventsQueueHandledEvents] = [new("chronicle-appended-events-queue-events-handled", null, "Number of events processed")],
+        [WellKnownMetricNames.AppendedEventsQueueHandlingFailures] = [new("chronicle-appended-events-queue-events-handling-failures", null, "Number of events that has handling failures")],
+        [WellKnownMetricNames.AppendedEventsQueueSpilledEvents] = [new("chronicle-appended-events-queue-events-spilled-to-catchup", null, "Number of events spilled to observer catch-up when the queue was full")],
+        [WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceeded] = [new("chronicle-appended-events-queue-catchup-trigger-budget-exceeded", null, "Number of spilled observer catch-up triggers still failing after the warning budget")],
+        [WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEvents] = [new("chronicle-appended-events-queue-suspected-undelivered-events", null, "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer")],
+        [WellKnownMetricNames.AppendedEventsQueueObserverSpills] = [new("chronicle-appended-events-queue-observers-spilled-to-catchup", null, "Number of times an observer was moved from live delivery to catch-up, by reason")],
+        [WellKnownMetricNames.AlertFailedTransitions] = [new("chronicle-alert-transitions-failed", null, "Number of failed attempts to record observer alert transitions")],
+        [WellKnownMetricNames.AbandonedDeliveryLateResults] = [new("abandoned-delivery-late-results", null, "Client results received after the delivery deadline")],
+        [WellKnownMetricNames.AbandonedDeliveryHoldExpirations] = [new("abandoned-delivery-hold-expirations", null, "Client deliveries released by the maximum hold")],
+        [WellKnownMetricNames.AbandonedDeliveryFenceDuration] = [new("abandoned-delivery-fence-duration", "s", "Time an abandoned client delivery remained held")],
+        [WellKnownMetricNames.ConnectedClientCount] = [new("chronicle-connected-clients", null, "Number of connected clients")],
+        [WellKnownMetricNames.SqlSchemaLockWaitDuration] = [new("chronicle-sql-schema-lock-wait", "s", "Time spent waiting for a database schema lock")],
+        [WellKnownMetricNames.SqlLiveQueryPollFailures] = [new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried")],
+        [WellKnownMetricNames.SqlUpsertRecoveredCollisions] = [new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage")],
+        [WellKnownMetricNames.SqlCompositeKeyStampFailures] = [new("chronicle.sql.composite_key.stamp_failures", null, null)],
+        [WellKnownMetricNames.SqlCompositeKeyCollisions] = [new("chronicle.sql.composite_key.collisions", null, null)],
     };
 
     /// <summary>
@@ -105,8 +103,8 @@ internal static class LegacyTelemetryNames
     /// </summary>
     internal static readonly IReadOnlySet<string> MetricsWithoutBridge = new HashSet<string>
     {
-        Names.Metrics.AlertOpenIncidents,
-        Names.Metrics.AlertOpenIncidentsAvailable
+        WellKnownMetricNames.AlertOpenIncidents,
+        WellKnownMetricNames.AlertOpenIncidentsAvailable
     };
 
     /// <summary>
@@ -114,23 +112,23 @@ internal static class LegacyTelemetryNames
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> MetricAttributeKeys = new Dictionary<string, string>
     {
-        [Names.Attributes.EventStoreName] = "EventStore",
-        [Names.Attributes.EventStoreNamespace] = "Namespace",
-        [Names.Attributes.ObserverId] = "ObserverId",
-        [Names.Attributes.EventSequenceId] = "EventSequenceId",
-        [Names.Attributes.EventTypeId] = "eventName",
-        [Names.Attributes.AppendedEventsQueueId] = "QueueId",
-        [Names.Attributes.ObserverSpillReason] = "Reason",
-        [Names.Attributes.AlertCondition] = "Condition",
-        [Names.Attributes.AlertSeverity] = "Severity",
-        [Names.Attributes.AbandonedDeliveryResultState] = "state",
-        [Names.Attributes.ObserverClaimDivergence] = "divergence",
-        [Names.Attributes.WebhookAuthority] = "authority",
-        [Names.Attributes.SqlProvider] = "provider",
-        [Names.Attributes.SqlSchemaLockOutcome] = "outcome",
-        [Names.Attributes.SqlLiveQueryName] = "query",
-        [Names.Attributes.SqlLiveQueryFailureKind] = "kind",
-        [Names.Attributes.SqlUpsertOperation] = "operation",
+        [WellKnownTelemetryAttributes.EventStoreName] = "EventStore",
+        [WellKnownTelemetryAttributes.EventStoreNamespace] = "Namespace",
+        [WellKnownTelemetryAttributes.ObserverId] = "ObserverId",
+        [WellKnownTelemetryAttributes.EventSequenceId] = "EventSequenceId",
+        [WellKnownTelemetryAttributes.EventTypeId] = "eventName",
+        [WellKnownTelemetryAttributes.AppendedEventsQueueId] = "QueueId",
+        [WellKnownTelemetryAttributes.ObserverSpillReason] = "Reason",
+        [WellKnownTelemetryAttributes.AlertCondition] = "Condition",
+        [WellKnownTelemetryAttributes.AlertSeverity] = "Severity",
+        [WellKnownTelemetryAttributes.AbandonedDeliveryResultState] = "state",
+        [WellKnownTelemetryAttributes.ObserverClaimDivergence] = "divergence",
+        [WellKnownTelemetryAttributes.WebhookAuthority] = "authority",
+        [WellKnownTelemetryAttributes.SqlProvider] = "provider",
+        [WellKnownTelemetryAttributes.SqlSchemaLockOutcome] = "outcome",
+        [WellKnownTelemetryAttributes.SqlLiveQueryName] = "query",
+        [WellKnownTelemetryAttributes.SqlLiveQueryFailureKind] = "kind",
+        [WellKnownTelemetryAttributes.SqlUpsertOperation] = "operation",
     };
 
     /// <summary>
@@ -138,13 +136,13 @@ internal static class LegacyTelemetryNames
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> SpanAttributeKeys = new Dictionary<string, string>
     {
-        [Names.Attributes.EventSourceType] = "cratis.eventsource.type",
-        [Names.Attributes.EventSourceId] = "cratis.eventsource.id",
-        [Names.Attributes.EventStoreName] = "cratis.eventstore.name",
-        [Names.Attributes.EventStoreNamespace] = "cratis.eventstore.namespace",
-        [Names.Attributes.EventSequenceId] = "cratis.eventsequence.id",
-        [Names.Attributes.ConnectionId] = "cratis.connection.id",
-        [Names.Attributes.EventTypeId] = "cratis.eventtype.id",
+        [WellKnownTelemetryAttributes.EventSourceType] = "cratis.eventsource.type",
+        [WellKnownTelemetryAttributes.EventSourceId] = "cratis.eventsource.id",
+        [WellKnownTelemetryAttributes.EventStoreName] = "cratis.eventstore.name",
+        [WellKnownTelemetryAttributes.EventStoreNamespace] = "cratis.eventstore.namespace",
+        [WellKnownTelemetryAttributes.EventSequenceId] = "cratis.eventsequence.id",
+        [WellKnownTelemetryAttributes.ConnectionId] = "cratis.connection.id",
+        [WellKnownTelemetryAttributes.EventTypeId] = "cratis.eventtype.id",
     };
 
     /// <summary>

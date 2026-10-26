@@ -25,8 +25,8 @@ internal static partial class SqlCompositeKeyShadow
     internal const string ColumnName = "__compositeKey";
     const int MaximumLength = 850;
     static readonly Meter _meter = new("Cratis.Chronicle.Storage.Sql.CompositeKeyShadow");
-    static readonly Counter<long> _failures = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.SqlCompositeKeyStampFailures, unit: WellKnownTelemetryNames.Metrics.SqlCompositeKeyStampFailuresUnit);
-    static readonly Counter<long> _collisions = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.SqlCompositeKeyCollisions, unit: WellKnownTelemetryNames.Metrics.SqlCompositeKeyCollisionsUnit);
+    static readonly Counter<long> _failures = _meter.CreateCounter<long>(WellKnownMetricNames.SqlCompositeKeyStampFailures, unit: WellKnownMetricNames.SqlCompositeKeyStampFailuresUnit);
+    static readonly Counter<long> _collisions = _meter.CreateCounter<long>(WellKnownMetricNames.SqlCompositeKeyCollisions, unit: WellKnownMetricNames.SqlCompositeKeyCollisionsUnit);
 
     /// <summary>
     /// Stamps a committed row if no kernel has stamped it yet. Never fails the original write.

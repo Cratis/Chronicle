@@ -13,13 +13,13 @@ namespace Cratis.Chronicle.Observation;
 internal static class ClientObserverSubscriberMetrics
 {
     static readonly Meter _meter = new(WellKnown.MeterName);
-    static readonly Counter<long> _lateResults = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.AbandonedDeliveryLateResults, unit: WellKnownTelemetryNames.Metrics.AbandonedDeliveryLateResultsUnit, description: "Client results received after the delivery deadline");
-    static readonly Counter<long> _holdExpirations = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.AbandonedDeliveryHoldExpirations, unit: WellKnownTelemetryNames.Metrics.AbandonedDeliveryHoldExpirationsUnit, description: "Client deliveries released by the maximum hold");
-    static readonly Histogram<double> _fenceDuration = _meter.CreateHistogram<double>(WellKnownTelemetryNames.Metrics.AbandonedDeliveryFenceDuration, unit: WellKnownTelemetryNames.Metrics.AbandonedDeliveryFenceDurationUnit, description: "Time an abandoned client delivery remained held");
+    static readonly Counter<long> _lateResults = _meter.CreateCounter<long>(WellKnownMetricNames.AbandonedDeliveryLateResults, unit: WellKnownMetricNames.AbandonedDeliveryLateResultsUnit, description: "Client results received after the delivery deadline");
+    static readonly Counter<long> _holdExpirations = _meter.CreateCounter<long>(WellKnownMetricNames.AbandonedDeliveryHoldExpirations, unit: WellKnownMetricNames.AbandonedDeliveryHoldExpirationsUnit, description: "Client deliveries released by the maximum hold");
+    static readonly Histogram<double> _fenceDuration = _meter.CreateHistogram<double>(WellKnownMetricNames.AbandonedDeliveryFenceDuration, unit: WellKnownMetricNames.AbandonedDeliveryFenceDurationUnit, description: "Time an abandoned client delivery remained held");
 
     /// <summary>Counts a late result by state.</summary>
     /// <param name="state">The result state.</param>
-    internal static void LateResult(ObserverSubscriberState state) => _lateResults.Add(1, new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.AbandonedDeliveryResultState, state.ToString()));
+    internal static void LateResult(ObserverSubscriberState state) => _lateResults.Add(1, new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.AbandonedDeliveryResultState, state.ToString()));
 
     /// <summary>Counts a maximum-hold expiration.</summary>
     internal static void HoldExpired() => _holdExpirations.Add(1);

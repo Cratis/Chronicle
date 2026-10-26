@@ -22,10 +22,10 @@ public sealed record AlertIncidentsGaugeSnapshot(DateTimeOffset TakenAt, IReadOn
     internal static AlertIncidentsGaugeSnapshot From(DateTimeOffset takenAt, IEnumerable<(AlertIncidentGaugeBucket Bucket, long Value)> values) =>
         new(takenAt, values.Select(_ => new Measurement<long>(
             _.Value,
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventStoreName, _.Bucket.EventStore.Value),
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventStoreNamespace, _.Bucket.Namespace.Value),
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.ObserverId, _.Bucket.ObserverId.Value),
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventSequenceId, _.Bucket.EventSequenceId.Value),
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.AlertCondition, _.Bucket.Condition.Value),
-            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.AlertSeverity, _.Bucket.Severity.ToString()))).ToArray());
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreName, _.Bucket.EventStore.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventStoreNamespace, _.Bucket.Namespace.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.ObserverId, _.Bucket.ObserverId.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventSequenceId, _.Bucket.EventSequenceId.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.AlertCondition, _.Bucket.Condition.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.AlertSeverity, _.Bucket.Severity.ToString()))).ToArray());
 }

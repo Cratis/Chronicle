@@ -19,7 +19,7 @@ internal static class UnitOfWorkTraces
     /// <param name="names">The naming convention.</param>
     /// <returns>The activity scope.</returns>
     internal static IActivityScope<UnitOfWork> Commit(this IActivitySource<UnitOfWork> source, string correlationId, ClientSpanNames names = ClientSpanNames.Legacy) =>
-        ClientSpanCompatibility.Start(source, new("client.unit_of_work.commit", WellKnownTelemetryNames.ClientSpans.UnitOfWorkCommit, ActivityKind.Client), names, new KeyValuePair<string, object?>("correlation_id", correlationId));
+        ClientSpanCompatibility.Start(source, new("client.unit_of_work.commit", WellKnownClientSpanNames.UnitOfWorkCommit, ActivityKind.Client), names, new KeyValuePair<string, object?>("correlation_id", correlationId));
 
     /// <summary>Starts a rollback span.</summary>
     /// <param name="source">The activity source.</param>
@@ -27,5 +27,5 @@ internal static class UnitOfWorkTraces
     /// <param name="names">The naming convention.</param>
     /// <returns>The activity scope.</returns>
     internal static IActivityScope<UnitOfWork> Rollback(this IActivitySource<UnitOfWork> source, string correlationId, ClientSpanNames names = ClientSpanNames.Legacy) =>
-        ClientSpanCompatibility.Start(source, new("client.unit_of_work.rollback", WellKnownTelemetryNames.ClientSpans.UnitOfWorkRollback, ActivityKind.Client), names, new KeyValuePair<string, object?>("correlation_id", correlationId));
+        ClientSpanCompatibility.Start(source, new("client.unit_of_work.rollback", WellKnownClientSpanNames.UnitOfWorkRollback, ActivityKind.Client), names, new KeyValuePair<string, object?>("correlation_id", correlationId));
 }

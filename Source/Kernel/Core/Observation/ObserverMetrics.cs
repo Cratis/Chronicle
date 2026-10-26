@@ -27,7 +27,7 @@ internal static partial class ObserverMetrics
     static readonly Lock _failureCountersLock = new();
     static FailureCounters? _failureCounters;
 
-    [Counter<int>(WellKnownTelemetryNames.Metrics.ObserverSuccessfulObservations, "Number of successful observations per observer in a given event store and namespace", WellKnownTelemetryNames.Metrics.ObserverSuccessfulObservationsUnit)]
+    [Counter<int>(WellKnownMetricNames.ObserverSuccessfulObservations, "Number of successful observations per observer in a given event store and namespace", WellKnownMetricNames.ObserverSuccessfulObservationsUnit)]
     internal static partial void SuccessfulObservation(this IMeterScope<Observer> meter);
 
     // These counters are hand-written so their failure-path initialization and tagging stay unchanged.
@@ -120,7 +120,7 @@ internal static partial class ObserverMetrics
         var tags = MetricTags(meter);
         if (divergence is not null)
         {
-            tags.Add(WellKnownTelemetryNames.Attributes.ObserverClaimDivergence, divergence.Value.ToString());
+            tags.Add(WellKnownTelemetryAttributes.ObserverClaimDivergence, divergence.Value.ToString());
         }
 
         counter(counters).Add(count, tags);
@@ -129,7 +129,7 @@ internal static partial class ObserverMetrics
     static TagList MetricTags(IMeterScope<Observer> meter, bool legacy = false)
     {
         var tags = default(TagList);
-        string[] excluded = ["Partition", "EventSourceId", "cratis.eventsource.id", WellKnownTelemetryNames.Attributes.EventSourceId];
+        string[] excluded = ["Partition", "EventSourceId", "cratis.eventsource.id", WellKnownTelemetryAttributes.EventSourceId];
         foreach (var (key, value) in meter.Tags)
         {
             if (!excluded.Contains(key, StringComparer.OrdinalIgnoreCase))
@@ -163,39 +163,39 @@ internal static partial class ObserverMetrics
     sealed class FailureCounters(Meter meter)
     {
         public Counter<int> ClaimDivergence { get; } = meter.CreateCounter<int>(
-            WellKnownTelemetryNames.Metrics.ObserverClaimDivergences,
-            unit: WellKnownTelemetryNames.Metrics.ObserverClaimDivergencesUnit,
+            WellKnownMetricNames.ObserverClaimDivergences,
+            unit: WellKnownMetricNames.ObserverClaimDivergencesUnit,
             description: "Shadow partition-claim divergences from replaying/catching-up sets");
 
-        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesDeferred, unit: WellKnownTelemetryNames.Metrics.WebhookProbesDeferredUnit);
+        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbesDeferred, unit: WellKnownMetricNames.WebhookProbesDeferredUnit);
 
-        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesSkipped, unit: WellKnownTelemetryNames.Metrics.WebhookProbesSkippedUnit);
+        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbesSkipped, unit: WellKnownMetricNames.WebhookProbesSkippedUnit);
 
-        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesCancelled, unit: WellKnownTelemetryNames.Metrics.WebhookProbesCancelledUnit);
+        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbesCancelled, unit: WellKnownMetricNames.WebhookProbesCancelledUnit);
 
-        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesScheduled, unit: WellKnownTelemetryNames.Metrics.WebhookProbesScheduledUnit);
+        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbesScheduled, unit: WellKnownMetricNames.WebhookProbesScheduledUnit);
 
-        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeAttempts, unit: WellKnownTelemetryNames.Metrics.WebhookProbeAttemptsUnit);
+        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbeAttempts, unit: WellKnownMetricNames.WebhookProbeAttemptsUnit);
 
-        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeFailures, unit: WellKnownTelemetryNames.Metrics.WebhookProbeFailuresUnit);
+        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbeFailures, unit: WellKnownMetricNames.WebhookProbeFailuresUnit);
 
-        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeSuccesses, unit: WellKnownTelemetryNames.Metrics.WebhookProbeSuccessesUnit);
+        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbeSuccesses, unit: WellKnownMetricNames.WebhookProbeSuccessesUnit);
 
-        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeResumes, unit: WellKnownTelemetryNames.Metrics.WebhookProbeResumesUnit);
+        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>(WellKnownMetricNames.WebhookProbeResumes, unit: WellKnownMetricNames.WebhookProbeResumesUnit);
 
-        public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionFailures, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionFailuresUnit, description: PartitionFailedDescription);
+        public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverPartitionFailures, unit: WellKnownMetricNames.ObserverPartitionFailuresUnit, description: PartitionFailedDescription);
 
         public Counter<int> LegacyPartitionRetryAttempt { get; } = meter.CreateCounter<int>(LegacyTelemetryNames.PartitionRetryAttempts, unit: null, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
 
-        public Counter<int> PartitionQuarantined { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionsQuarantined, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionsQuarantinedUnit, description: PartitionQuarantinedDescription);
+        public Counter<int> PartitionQuarantined { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverPartitionsQuarantined, unit: WellKnownMetricNames.ObserverPartitionsQuarantinedUnit, description: PartitionQuarantinedDescription);
 
-        public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionQuarantinesCleared, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionQuarantinesClearedUnit, description: PartitionQuarantineClearedDescription);
+        public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverPartitionQuarantinesCleared, unit: WellKnownMetricNames.ObserverPartitionQuarantinesClearedUnit, description: PartitionQuarantineClearedDescription);
 
-        public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverQuarantines, unit: WellKnownTelemetryNames.Metrics.ObserverQuarantinesUnit, description: ObserverQuarantinedDescription);
+        public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverQuarantines, unit: WellKnownMetricNames.ObserverQuarantinesUnit, description: ObserverQuarantinedDescription);
 
-        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverZeroWorkCatchUps, unit: WellKnownTelemetryNames.Metrics.ObserverZeroWorkCatchUpsUnit, description: ZeroWorkCatchUpDescription);
+        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverZeroWorkCatchUps, unit: WellKnownMetricNames.ObserverZeroWorkCatchUpsUnit, description: ZeroWorkCatchUpDescription);
 
-        public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverSuspectedSkippedEvents, unit: WellKnownTelemetryNames.Metrics.ObserverSuspectedSkippedEventsUnit, description: EventsSuspectedSkippedDescription);
+        public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(WellKnownMetricNames.ObserverSuspectedSkippedEvents, unit: WellKnownMetricNames.ObserverSuspectedSkippedEventsUnit, description: EventsSuspectedSkippedDescription);
     }
 }
 
@@ -204,9 +204,9 @@ internal static class ObserverMetricsScopes
     internal static IMeterScope<Observer> BeginObserverScope(this IMeter<Observer> meter, ObserverId observerId, ObserverKey observerKey) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            [WellKnownTelemetryNames.Attributes.ObserverId] = observerId,
-            [WellKnownTelemetryNames.Attributes.EventStoreName] = observerKey.EventStore,
-            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = observerKey.Namespace,
-            [WellKnownTelemetryNames.Attributes.EventSequenceId] = observerKey.EventSequenceId
+            [WellKnownTelemetryAttributes.ObserverId] = observerId,
+            [WellKnownTelemetryAttributes.EventStoreName] = observerKey.EventStore,
+            [WellKnownTelemetryAttributes.EventStoreNamespace] = observerKey.Namespace,
+            [WellKnownTelemetryAttributes.EventSequenceId] = observerKey.EventSequenceId
         });
 }
