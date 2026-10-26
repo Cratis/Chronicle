@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
@@ -28,7 +27,7 @@ public class when_starting_client_spans : Specification
         _listener = new()
         {
             ShouldListenTo = source => ReferenceEquals(source, _source),
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            Sample = (ref _) => ActivitySamplingResult.AllData,
             ActivityStarted = activity => _started.Add(activity.TagObjects.ToArray()),
             ActivityStopped = activity => _spans.Add(activity)
         };
@@ -65,7 +64,7 @@ public class when_starting_client_spans : Specification
         return source;
     }
 
-    [Fact] void should_have_shared_attributes_when_spans_start() => _started.All(tags => tags.Any(tag => tag.Key.StartsWith("cratis.", StringComparison.Ordinal))).ShouldBeTrue();
+    [Fact] void should_have_shared_attributes_when_spans_start() => _started.TrueForAll(tags => tags.Any(tag => tag.Key.StartsWith("cratis.", StringComparison.Ordinal))).ShouldBeTrue();
     [Fact] void should_default_to_legacy_names() => _spans.Take(6).Select(_ => _.OperationName).ShouldEqual(_legacyNames);
     [Fact] void should_default_to_legacy_display_names() => _spans.Take(6).Select(_ => _.DisplayName).ShouldEqual(_legacyNames);
     [Fact] void should_opt_in_to_convention_operation_names() => _spans.Skip(6).Select(_ => _.OperationName).ShouldEqual(_conventionNames);
