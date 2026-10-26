@@ -90,7 +90,23 @@ If the owner completes the unit directly instead of through the claim, `Commit()
 
 ### Report a failed commit before the response starts
 
-By default the middleware commits after the response and a failed commit cannot change it; the failure is logged. Set `ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts` to `true` to have the middleware return problem details when nobody claimed the unit and the response has not started yet: 409 for conflicts, 400 for constraint violations and 500 otherwise. It is off by default so existing endpoints keep their current responses.
+By default the middleware commits after the response and a failed commit cannot change it; the failure is logged. Failure reporting is off by default so existing endpoints keep their current responses.
+
+For MVC controllers, set `ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts` to `true`. `AddUnitOfWork` (also called by `AddCratisChronicle`) registers a global result filter that commits an unclaimed unit before MVC executes the action result. A refused commit replaces the action result with problem details. Authorization, resource, and action-filter short-circuits, and results produced after a handled exception, roll back instead; their results are left unchanged.
+
+The global `UnitOfWorkResultFilter` uses `CompletionOrder = int.MaxValue`. Result filters with any lower order run before it. A result filter registered on a controller or action with the same order (`int.MaxValue`) runs after it. Do not stage more events in those later filters: completion has already happened.
+
+For minimal APIs, call `.WithUnitOfWork()` on the endpoint builder returned by `MapPost`, `MapGet`, or another route mapping. This explicitly opts the endpoint into pre-result completion regardless of `ReportFailuresBeforeResponseStarts`. The filter claims the request unit, lets the endpoint run, then commits before returning its result. On failure it returns problem details instead. If the endpoint throws, it rolls back and rethrows the exception.
+
+Both adapters leave existing completion claims, including a command pipeline's claim, alone. They also leave already completed units alone. The request unit-of-work middleware must be registered; the adapters do nothing when its completion feature is absent. They do not buffer responses: an endpoint that writes the response itself can start it before completion.
+
+The failure mapping is shared by both adapters and the middleware:
+
+- Concurrency violations or decision conflicts return **409** problem details.
+- Constraint violations without conflicts return **400** validation problem details, with errors keyed by constraint name and containing the violation messages.
+- Append errors without violations return **500** problem details. The adapters also return **500** for a technically unknown commit outcome; they do not report it as a rollback.
+
+These problem-details responses include the unit's `correlationId`. Outside the adapters, enabling the option still lets the middleware report failures when nobody claimed the unit and the response has not started yet.
 
 ### Nested units of work
 
