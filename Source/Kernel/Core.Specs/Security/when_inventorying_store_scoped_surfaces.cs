@@ -19,7 +19,7 @@ public class when_inventorying_store_scoped_surfaces : Specification
     string[] _commands;
     string[] _queries;
 
-    void Establish()
+    void Because()
     {
         _commands = public_store_write_commands.AllTypes
             .Where(type => StoreProperty(type) is not null)
@@ -36,16 +36,16 @@ public class when_inventorying_store_scoped_surfaces : Specification
     [Fact] void should_inspect_a_nonempty_query_surface() => _queries.ShouldNotBeEmpty();
 
     [Fact] void should_list_every_store_scoped_command() =>
-        string.Join(", ", _commands.Where(name => !given.store_scoped_surfaces.Commands.Contains(name)).Order()).ShouldEqual(string.Empty);
+        string.Join(", ", given.store_scoped_grpc_inventory.Unlisted(_commands, given.store_scoped_surfaces.Commands).Order()).ShouldEqual(string.Empty);
 
     [Fact] void should_list_every_store_scoped_query() =>
-        string.Join(", ", _queries.Where(name => !given.store_scoped_surfaces.Queries.Contains(name)).Order()).ShouldEqual(string.Empty);
+        string.Join(", ", given.store_scoped_grpc_inventory.Unlisted(_queries, given.store_scoped_surfaces.Queries).Order()).ShouldEqual(string.Empty);
 
     [Fact] void should_not_list_a_command_that_is_no_longer_store_scoped() =>
-        string.Join(", ", given.store_scoped_surfaces.Commands.Where(name => !_commands.Contains(name)).Order()).ShouldEqual(string.Empty);
+        string.Join(", ", given.store_scoped_surfaces.Commands.Keys.Where(name => !_commands.Contains(name)).Order()).ShouldEqual(string.Empty);
 
     [Fact] void should_not_list_a_query_that_is_no_longer_store_scoped() =>
-        string.Join(", ", given.store_scoped_surfaces.Queries.Where(name => !_queries.Contains(name)).Order()).ShouldEqual(string.Empty);
+        string.Join(", ", given.store_scoped_surfaces.Queries.Keys.Where(name => !_queries.Contains(name)).Order()).ShouldEqual(string.Empty);
 
     static PropertyInfo? StoreProperty(Type type) =>
         type == typeof(EventStores.EnsureEventStore) ? type.GetProperty(nameof(EventStores.EnsureEventStore.Name)) : type.GetProperty("EventStore");
