@@ -79,6 +79,7 @@ public class EventSequence(
         new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
 
     readonly EventSourceIdTagging _eventSourceIdTagging = new(telemetry ?? new());
+    readonly ClientSpanNames _spanNames = telemetry?.SpanNames ?? ClientSpanNames.Legacy;
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
@@ -962,14 +963,9 @@ public class EventSequence(
         var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
         var resolvedEventSourceType = ResolveEventSourceType(eventSourceType);
         using var span = _activitySource.Append(
-            eventStoreName.Value,
-            @namespace.Value,
-            eventSequenceId.Value,
-            resolvedEventSourceType.Value);
-        if (_eventSourceIdTagging.ForSpan(eventSourceId.Value) is { } tracedEventSourceId)
-        {
-            span?.Activity?.SetTag("event_source_id", tracedEventSourceId);
-        }
+            new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value, resolvedEventSourceType.Value),
+            _spanNames,
+            _eventSourceIdTagging.ForSpan(eventSourceId.Value));
 
         try
         {
@@ -1160,7 +1156,7 @@ public class EventSequence(
         IdempotencyKey? idempotencyKey = default)
     {
         ExplicitConcurrencyScope.ValidateRoute(concurrencyScope, routing, ConcurrencyOptions);
-        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+        using var span = _activitySource.AppendMany(new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value), _spanNames);
 
         try
         {
@@ -1303,7 +1299,7 @@ public class EventSequence(
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>? concurrencyScopes = default,
         ReadProtectionCommit? readProtectionCommit = null)
     {
-        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+        using var span = _activitySource.AppendMany(new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value), _spanNames);
 
         try
         {

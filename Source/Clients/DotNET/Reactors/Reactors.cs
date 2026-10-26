@@ -79,6 +79,28 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         IReactorMethodArgumentsResolver argumentsResolver,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
+        : this(eventStore, eventTypes, clientArtifactsProvider, serviceProvider, artifactActivator, middlewaresActivator, eventSerializer, causationManager, identityProvider, activitySource, sideEffectHandlers, reactorContextValuesBuilder, argumentsResolver, logger, loggerFactory, ClientSpanNames.Legacy)
+    {
+    }
+
+    /// <inheritdoc/>
+    internal Reactors(
+        IEventStore eventStore,
+        IEventTypes eventTypes,
+        IClientArtifactsProvider clientArtifactsProvider,
+        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
+        IActivateReactorMiddlewares middlewaresActivator,
+        IEventSerializer eventSerializer,
+        ICausationManager causationManager,
+        IIdentityProvider identityProvider,
+        IActivitySource<Reactors> activitySource,
+        IReactorSideEffectHandlers sideEffectHandlers,
+        IReactorContextValuesBuilder reactorContextValuesBuilder,
+        IReactorMethodArgumentsResolver argumentsResolver,
+        ILogger<Reactors> logger,
+        ILoggerFactory loggerFactory,
+        ClientSpanNames spanNames)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -101,7 +123,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             reactorContextValuesBuilder,
             argumentsResolver,
             logger,
-            loggerFactory);
+            loggerFactory)
+        {
+            SpanNames = spanNames
+        };
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             lock (_registerLock)

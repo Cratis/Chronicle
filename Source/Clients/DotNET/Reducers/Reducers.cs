@@ -74,6 +74,25 @@ public partial class Reducers : IReducers
         IReducerObservers reducerObservers,
         IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
+        : this(eventStore, clientArtifacts, serviceProvider, artifactActivator, reducerValidator, eventTypes, namingPolicy, jsonSerializerOptions, identityProvider, reducerObservers, activitySource, logger, ClientSpanNames.Legacy)
+    {
+    }
+
+    /// <inheritdoc/>
+    internal Reducers(
+        IEventStore eventStore,
+        IClientArtifactsProvider clientArtifacts,
+        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
+        IReducerValidator reducerValidator,
+        IEventTypes eventTypes,
+        INamingPolicy namingPolicy,
+        JsonSerializerOptions jsonSerializerOptions,
+        IIdentityProvider identityProvider,
+        IReducerObservers reducerObservers,
+        IActivitySource<Reducers> activitySource,
+        ILogger<Reducers> logger,
+        ClientSpanNames spanNames)
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
@@ -104,7 +123,10 @@ public partial class Reducers : IReducers
             jsonSerializerOptions,
             identityProvider,
             activitySource,
-            logger);
+            logger)
+        {
+            SpanNames = spanNames
+        };
     }
 
     /// <summary>

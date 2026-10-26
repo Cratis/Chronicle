@@ -36,6 +36,13 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     {
     }
 
+    /// <inheritdoc/>
+    internal UnitOfWorkManager(IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource, UnitOfWorkLifecyclePolicy lifecyclePolicy, ILogger<UnitOfWork>? logger, ClientSpanNames spanNames)
+        : this(() => eventStore, activitySource, lifecyclePolicy, logger)
+    {
+        SpanNames = spanNames;
+    }
+
     /// <summary>
     /// Initializes a manager with compatibility staging behavior.
     /// </summary>
@@ -71,6 +78,9 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <inheritdoc/>
     public bool HasCurrent => OpenFrame() is not null;
 
+    /// <summary>Gets the span naming convention supplied by the event store.</summary>
+    internal ClientSpanNames SpanNames { get; }
+
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
         _unitsOfWork.TryGetValue(correlationId, out unitOfWork);
@@ -84,7 +94,10 @@ public class UnitOfWorkManager : IUnitOfWorkManager
             _eventStore,
             _activitySource,
             _lifecyclePolicy,
-            _logger);
+            _logger)
+        {
+            SpanNames = SpanNames
+        };
         ImmediateAppendGuard.RequireUnit(unitOfWork);
         ReadProtectionGuard.RequireUnit(unitOfWork);
         _current.Value = new CurrentFrame(unitOfWork, OpenFrame());

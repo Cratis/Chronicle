@@ -36,6 +36,9 @@ internal sealed class ReducerDispatcher(
     IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger)
 {
+    /// <summary>Gets or sets the client span naming convention.</summary>
+    internal ClientSpanNames SpanNames { get; set; }
+
     /// <summary>
     /// Dispatches a batch of events, or a replay notification, to a reducer.
     /// </summary>
@@ -57,10 +60,8 @@ internal sealed class ReducerDispatcher(
         }
 
         using var span = activitySource.Handle(
-            eventStore.Name,
-            @namespace,
-            handler.EventSequenceId,
-            handler.Id);
+            new(eventStore.Name, @namespace, handler.EventSequenceId, handler.Id),
+            SpanNames);
 
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();

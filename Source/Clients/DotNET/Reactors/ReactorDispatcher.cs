@@ -44,6 +44,9 @@ internal sealed class ReactorDispatcher(
     ILogger<Reactors> logger,
     ILoggerFactory loggerFactory)
 {
+    /// <summary>Gets or sets the client span naming convention.</summary>
+    internal ClientSpanNames SpanNames { get; set; }
+
     /// <summary>
     /// Dispatches a batch of events, or a replay notification, to a reactor.
     /// </summary>
@@ -72,10 +75,8 @@ internal sealed class ReactorDispatcher(
         }
 
         using var span = activitySource.Handle(
-            eventStore.Name,
-            @namespace,
-            handler.EventSequenceId,
-            handler.Id);
+            new(eventStore.Name, @namespace, handler.EventSequenceId, handler.Id),
+            SpanNames);
 
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
