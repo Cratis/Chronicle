@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1792911816166,
+  "lastUpdate": 1792999322689,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -7916,6 +7916,262 @@
             "value": 500120531,
             "unit": "ns",
             "range": "± 26276388.91705975"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "github-actions[bot]",
+            "username": "github-actions[bot]",
+            "email": "github-actions[bot]@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "github-actions[bot]",
+            "username": "github-actions[bot]",
+            "email": "github-actions[bot]@users.noreply.github.com"
+          },
+          "id": "2abc538832059a0536a823a17a1c132220329b80",
+          "message": "Update coverage statistics for release 19.111.0 [skip ci]",
+          "timestamp": "2026-10-25T13:52:58Z",
+          "url": "https://github.com/Cratis/Chronicle/commit/2abc538832059a0536a823a17a1c132220329b80"
+        },
+        "date": 1792999322687,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 18013605.165625,
+            "unit": "ns",
+            "range": "± 1464195.2311274118"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 18207359.253472224,
+            "unit": "ns",
+            "range": "± 1155403.9188164626"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 62516422.020833336,
+            "unit": "ns",
+            "range": "± 7540708.969847736"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 453093906.2,
+            "unit": "ns",
+            "range": "± 114714141.03711694"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 10)",
+            "value": 5628159.555555556,
+            "unit": "ns",
+            "range": "± 864816.3596264399"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 10)",
+            "value": 10310018.666666666,
+            "unit": "ns",
+            "range": "± 990174.8147791884"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetMaterializedInstance(EventCount: 100)",
+            "value": 3370295.722222222,
+            "unit": "ns",
+            "range": "± 294428.15758847597"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.PassiveVersusMaterializedReadModelBenchmark.GetPassiveInstance(EventCount: 100)",
+            "value": 15532992.444444444,
+            "unit": "ns",
+            "range": "± 1467086.3177005053"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 1000)",
+            "value": 471722161.9,
+            "unit": "ns",
+            "range": "± 30402535.161788896"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionReplayBenchmark.ReplayProjection(EventCount: 10000)",
+            "value": 2343289112,
+            "unit": "ns",
+            "range": "± 68454888.46746269"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 10)",
+            "value": 85708791,
+            "unit": "ns",
+            "range": "± 1738483.5592521431"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 100)",
+            "value": 341594720.7777778,
+            "unit": "ns",
+            "range": "± 5791005.734935313"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ProjectionThroughputBenchmark.ProjectEvents(EventCount: 1000)",
+            "value": 1923479916.1,
+            "unit": "ns",
+            "range": "± 290911677.5044833"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 10)",
+            "value": 88095106.05555555,
+            "unit": "ns",
+            "range": "± 4816274.643588265"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 100)",
+            "value": 320288880.2,
+            "unit": "ns",
+            "range": "± 41553869.3628405"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReactorThroughputBenchmark.ReactToEvents(EventCount: 1000)",
+            "value": 1718261629.2,
+            "unit": "ns",
+            "range": "± 145623501.09952128"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 10)",
+            "value": 90410140.1,
+            "unit": "ns",
+            "range": "± 6303198.734883339"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 100)",
+            "value": 405378668.75,
+            "unit": "ns",
+            "range": "± 30083821.147884797"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.ReducerThroughputBenchmark.ReduceEvents(EventCount: 1000)",
+            "value": 1712537999.8888888,
+            "unit": "ns",
+            "range": "± 144919233.59759444"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionCold(StreamLength: 10)",
+            "value": 12902795.75,
+            "unit": "ns",
+            "range": "± 469026.1784764791"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarm(StreamLength: 10)",
+            "value": 10007551.3,
+            "unit": "ns",
+            "range": "± 299448.3678394324"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOwnAppend(StreamLength: 10)",
+            "value": 11133795.75,
+            "unit": "ns",
+            "range": "± 1234130.8949657313"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOtherAppend(StreamLength: 10)",
+            "value": 9504408.75,
+            "unit": "ns",
+            "range": "± 462415.00404605886"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ReducerRead(StreamLength: 10)",
+            "value": 7771700.75,
+            "unit": "ns",
+            "range": "± 74469.17642163546"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionCold(StreamLength: 100)",
+            "value": 36808167,
+            "unit": "ns",
+            "range": "± 1415455.9701854028"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarm(StreamLength: 100)",
+            "value": 34136696.75,
+            "unit": "ns",
+            "range": "± 964276.8765250553"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOwnAppend(StreamLength: 100)",
+            "value": 36479929.75,
+            "unit": "ns",
+            "range": "± 875789.1113635271"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOtherAppend(StreamLength: 100)",
+            "value": 35256337.75,
+            "unit": "ns",
+            "range": "± 1408428.6694872351"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ReducerRead(StreamLength: 100)",
+            "value": 31319288,
+            "unit": "ns",
+            "range": "± 2526632.0346466163"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionCold(StreamLength: 1000)",
+            "value": 198206120.3,
+            "unit": "ns",
+            "range": "± 48453246.59079894"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarm(StreamLength: 1000)",
+            "value": 170197245.3,
+            "unit": "ns",
+            "range": "± 34071836.4531426"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOwnAppend(StreamLength: 1000)",
+            "value": 158067678.25,
+            "unit": "ns",
+            "range": "± 10697893.24613332"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOtherAppend(StreamLength: 1000)",
+            "value": 237857670,
+            "unit": "ns",
+            "range": "± 48059464.936639324"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ReducerRead(StreamLength: 1000)",
+            "value": 243844560.5,
+            "unit": "ns",
+            "range": "± 26996250.534032047"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionCold(StreamLength: 10000)",
+            "value": 740285392.75,
+            "unit": "ns",
+            "range": "± 1994257.2256128136"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarm(StreamLength: 10000)",
+            "value": 727184247.4,
+            "unit": "ns",
+            "range": "± 20093579.494776666"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOwnAppend(StreamLength: 10000)",
+            "value": 740047569.2,
+            "unit": "ns",
+            "range": "± 23010327.288916964"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ProjectionWarmAfterOtherAppend(StreamLength: 10000)",
+            "value": 729396780.75,
+            "unit": "ns",
+            "range": "± 14659791.349324686"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.StronglyConsistentPerKeyReadBenchmark.ReducerRead(StreamLength: 10000)",
+            "value": 780190951.4,
+            "unit": "ns",
+            "range": "± 54532163.332361415"
           }
         ]
       }
