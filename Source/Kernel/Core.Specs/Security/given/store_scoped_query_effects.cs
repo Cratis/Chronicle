@@ -8,7 +8,9 @@ namespace Cratis.Chronicle.Security.given;
 
 public static class store_scoped_query_effects
 {
-    // Overload-aware identities remain the dictionary keys. These effects apply to every listed overload.
+    /// <summary>
+    /// Overload-aware identities remain the dictionary keys. These effects apply to every listed overload.
+    /// </summary>
     public static store_scoped_surface Classify(string id) => id[..id.IndexOf('(')] switch
     {
         "Cratis.Chronicle.Captures.CaptureDetails.ObserveCaptures" or
@@ -20,7 +22,7 @@ public static class store_scoped_query_effects
         "Cratis.Chronicle.Observation.ObserverInformation.ObserveObservers" or
         "Cratis.Chronicle.Observation.ObserverInformationForEventType.ObserveObserversForEventType" or
         "Cratis.Chronicle.Observation.Webhooks.WebhookDetails.ObserveWebhooks" or
-        "Cratis.Chronicle.Occurrences.OccurrenceSnapshot.ObserveOccurrences" => Read(id, Stream, Enumerates),
+        "Cratis.Chronicle.Occurrences.OccurrenceSnapshot.ObserveOccurrences" => Read(id, store_effect.Stream, Enumerates),
         "Cratis.Chronicle.Sequences.ExportedEvent.ExportEvents" => Read(id, Exports, Enumerates),
         "Cratis.Chronicle.Alerts.AlertIncidentLookup.GetOpenIncident" or
         "Cratis.Chronicle.Alerts.AlertIncidentSummary.GetOpenIncidentCounts" or

@@ -16,6 +16,7 @@ public static class store_scoped_commands
         Manage("Cratis.Chronicle.Captures.StopCapture", Configures),
         Read("Cratis.Chronicle.Captures.ValidateCaptureDeclaration"),
         Append("Cratis.Chronicle.EventSources.RegisterEventSources", Configures),
+
         // Idempotent SDK bootstrap on an existing store is Append, not Manage.
         Append("Cratis.Chronicle.EventStores.EnsureEventStore", Configures),
         Append("Cratis.Chronicle.EventStores.RegisterDeployment", Configures),

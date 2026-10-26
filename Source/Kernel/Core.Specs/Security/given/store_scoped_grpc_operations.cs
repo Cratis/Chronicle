@@ -8,9 +8,11 @@ namespace Cratis.Chronicle.Security.given;
 
 public static class store_scoped_grpc_operations
 {
-    // Matches the hand-written service contracts registered in Server/GrpcServiceRegistrations.cs.
-    public static IReadOnlyList<Type> Contracts { get; } = new Type[]
-    {
+    /// <summary>
+    /// Matches the hand-written service contracts registered in Server/GrpcServiceRegistrations.cs.
+    /// </summary>
+    public static IReadOnlyList<Type> Contracts { get; } =
+    [
         typeof(Chronicle.Contracts.Compliance.ICompliance),
         typeof(Chronicle.Contracts.Events.Constraints.IConstraints),
         typeof(Chronicle.Contracts.Clients.IConnectionService),
@@ -23,7 +25,7 @@ public static class store_scoped_grpc_operations
         typeof(Chronicle.Contracts.ReadModels.IReadModels),
         typeof(Chronicle.Contracts.ReadModels.IMaterializedReadModels),
         typeof(Chronicle.Contracts.Host.IServer)
-    };
+    ];
 
     public static IReadOnlyDictionary<string, store_scoped_surface> All { get; } = new store_scoped_surface[]
     {
@@ -43,14 +45,15 @@ public static class store_scoped_grpc_operations
         Read("Cratis.Chronicle.Contracts.Observation.IObservers.GetObserverInformation"),
         Read("Cratis.Chronicle.Contracts.Observation.IObservers.GetConnectedClientsForObserver", Enumerates),
         Read("Cratis.Chronicle.Contracts.Observation.IObservers.GetObservers", Enumerates),
-        Read("Cratis.Chronicle.Contracts.Observation.IObservers.ObserveObservers", Stream, Enumerates),
+        Read("Cratis.Chronicle.Contracts.Observation.IObservers.ObserveObservers", store_effect.Stream, Enumerates),
         Read("Cratis.Chronicle.Contracts.Observation.IObservers.WaitForCompletion"),
         Read("Cratis.Chronicle.Contracts.Observation.IObservers.GetReplayableObserversForEventTypes", Enumerates),
         Read("Cratis.Chronicle.Contracts.Observation.IFailedPartitions.GetFailedPartitions", Enumerates),
-        Read("Cratis.Chronicle.Contracts.Observation.IFailedPartitions.ObserveFailedPartitions", Stream, Enumerates),
+        Read("Cratis.Chronicle.Contracts.Observation.IFailedPartitions.ObserveFailedPartitions", store_effect.Stream, Enumerates),
         Observe("Cratis.Chronicle.Contracts.Observation.Reactors.IReactors.Observe"),
         Read("Cratis.Chronicle.Contracts.Observation.Reactors.IReactors.HasReactor"),
         Observe("Cratis.Chronicle.Contracts.Observation.Reducers.IReducers.Observe"),
+
         // All three requests use TargetEventStore; Add also carries subscriptions' SourceEventStore selectors.
         new("Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions.Add",
             new HashSet<store_access> { store_access.Manage, store_access.Read },
@@ -70,9 +73,9 @@ public static class store_scoped_grpc_operations
         Read("Cratis.Chronicle.Contracts.ReadModels.IReadModels.GetInstances", Enumerates),
         Read("Cratis.Chronicle.Contracts.ReadModels.IReadModels.GetInstanceByKey"),
         Read("Cratis.Chronicle.Contracts.ReadModels.IReadModels.GetAllInstances", Enumerates),
-        Read("Cratis.Chronicle.Contracts.ReadModels.IReadModels.Watch", Stream),
+        Read("Cratis.Chronicle.Contracts.ReadModels.IReadModels.Watch", store_effect.Stream),
         Manage("Cratis.Chronicle.Contracts.ReadModels.IReadModels.DehydrateSession", Configures),
         Read("Cratis.Chronicle.Contracts.ReadModels.IMaterializedReadModels.GetInstances", Enumerates),
-        Read("Cratis.Chronicle.Contracts.ReadModels.IMaterializedReadModels.ObserveInstances", Stream, Enumerates),
+        Read("Cratis.Chronicle.Contracts.ReadModels.IMaterializedReadModels.ObserveInstances", store_effect.Stream, Enumerates),
     }.ToDictionary(surface => surface.SurfaceId, StringComparer.Ordinal);
 }

@@ -8,7 +8,9 @@ namespace Cratis.Chronicle.Security.given;
 
 public static class store_scoped_grpc_inventory
 {
-    // Subscription requests call the selector TargetEventStore, not EventStore.
+    /// <summary>
+    /// Subscription requests call the selector TargetEventStore, not EventStore.
+    /// </summary>
     static readonly IReadOnlySet<string> _explicitSelectors = new HashSet<string>(StringComparer.Ordinal)
     {
         "Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions.Add",
