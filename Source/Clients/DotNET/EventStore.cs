@@ -74,6 +74,7 @@ public partial class EventStore : IEventStore
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     readonly bool _autoDiscoverAndRegister;
     readonly StoreClientArtifactsProvider? _storeArtifacts;
+    readonly ReadModelWatcherManager? _readModelWatchers;
     SingleFlightRegistration? _registerAllFlight;
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
     int _backgroundRegistrationRetryActive;
@@ -274,7 +275,7 @@ public partial class EventStore : IEventStore
         FailedPartitions = new FailedPartitions(this);
         Observers = new Observers(this);
 
-        var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
+        var readModelsWatcherManager = _readModelWatchers = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
         var materializedReadModels = new MaterializedReadModels(
             this,
             projections,

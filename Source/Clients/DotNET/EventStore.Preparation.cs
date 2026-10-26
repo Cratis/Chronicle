@@ -42,6 +42,21 @@ public partial class EventStore
     }
 
     /// <summary>
+    /// Releases everything a store whose creation failed holds on the shared connection: its lifecycle
+    /// subscriptions, the server streams it opened, and the watchers it started. Only for a store that was never
+    /// handed to a caller. Registration that is still in flight becomes a no-op, because the reactors, reducers,
+    /// read-model reactors and watcher manager each refuse new work once released.
+    /// </summary>
+    internal void ReleaseAfterFailedCreation()
+    {
+        DetachAutomaticRegistration();
+        (Reactors as Reactors.Reactors)?.Release();
+        (Reducers as Reducers.Reducers)?.Release();
+        (ReadModelReactors as ReadModels.ReadModelReactors)?.Release();
+        _readModelWatchers?.Release();
+    }
+
+    /// <summary>
     /// Stops the background registration retry, now and for any loop started later. Used when the store is detached
     /// and when the owning client is disposed, which does not raise a disconnect that would end the loop.
     /// </summary>

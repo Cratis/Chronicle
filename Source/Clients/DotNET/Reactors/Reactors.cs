@@ -51,6 +51,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
     bool _registered;
+    bool _released;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
@@ -103,16 +104,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         _argumentsResolver = argumentsResolver;
         _logger = logger;
         _loggerFactory = loggerFactory;
-        _eventStore.Connection.Lifecycle.OnDisconnected += () =>
-        {
-            lock (_registerLock)
-            {
-                _registered = false;
-                RecreateHandlersForReconnect();
-            }
-
-            return Task.CompletedTask;
-        };
+        _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
     /// <summary>
@@ -180,7 +172,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
         lock (_registerLock)
         {
-            if (_registered)
+            if (_registered || _released)
             {
                 return Task.CompletedTask;
             }
@@ -406,6 +398,20 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    /// <summary>
+    /// Releases the reactors of an event store whose creation failed and that no caller holds: stops reacting to the
+    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// </summary>
+    internal void Release()
+    {
+        lock (_registerLock)
+        {
+            _released = true;
+            _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
+            DisconnectHandlers();
+        }
+    }
+
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
@@ -524,6 +530,22 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             registration.Handler.Dispose();
             throw;
         }
+    }
+
+    Task ConnectionDisconnected()
+    {
+        lock (_registerLock)
+        {
+            if (_released)
+            {
+                return Task.CompletedTask;
+            }
+
+            _registered = false;
+            RecreateHandlersForReconnect();
+        }
+
+        return Task.CompletedTask;
     }
 
     void DisconnectHandlers()
