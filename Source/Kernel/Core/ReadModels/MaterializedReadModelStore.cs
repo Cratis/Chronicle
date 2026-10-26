@@ -41,7 +41,12 @@ public class MaterializedReadModelStore(
     {
         var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
         var instance = await binding.Sink.FindInPrimaryOrDefault(key);
-        if (instance is null || ReadModelInitialization.IsUninitialized(instance))
+        if (instance is null)
+        {
+            return null;
+        }
+
+        if (binding.Visibility == ReadModelInstanceVisibility.InitializedOnly && ReadModelInitialization.IsUninitialized(instance))
         {
             return null;
         }
@@ -82,7 +87,7 @@ public class MaterializedReadModelStore(
 
         while (true)
         {
-            var page = await binding.Sink.GetInstances(binding.Occurrence, skip: skip, take: PageSize);
+            var page = await binding.GetInstances(skip, PageSize);
             var pageInstances = page.Instances.ToList();
             if (pageInstances.Count == 0)
             {
