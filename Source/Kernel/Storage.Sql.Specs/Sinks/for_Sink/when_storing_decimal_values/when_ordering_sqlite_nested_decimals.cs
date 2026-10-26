@@ -20,7 +20,8 @@ public class when_ordering_sqlite_nested_decimals : Specification
     {
         _harness = new SqlSinkHarness();
         await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
-        await context.Database.ExecuteSqlRawAsync("CREATE TABLE nested(id TEXT PRIMARY KEY, details TEXT); INSERT INTO nested VALUES('a','{\"total\":100}'),('b','{\"total\":10}'),('c','{\"total\":2}'),('d','{\"total\":-10}'),('e','{\"total\":193.58}')");
+        await context.Database.ExecuteSqlRawAsync("CREATE TABLE nested(id TEXT PRIMARY KEY, details TEXT)");
+        await context.Database.ExecuteSqlRawAsync("INSERT INTO nested VALUES('a', {0}),('b', {1}),('c', {2}),('d', {3}),('e', {4})", "{\"total\":100}", "{\"total\":10}", "{\"total\":2}", "{\"total\":-10}", "{\"total\":193.58}");
         _ordered = await context.Database.SqlQueryRaw<string>("SELECT id AS Value FROM nested ORDER BY json_extract(details, '$.total') DESC").ToArrayAsync();
         await context.Database.ExecuteSqlRawAsync("CREATE INDEX nested_total ON nested(json_extract(details, '$.total') DESC)");
         _indexed = await context.Database.SqlQueryRaw<string>("SELECT id AS Value FROM nested INDEXED BY nested_total ORDER BY json_extract(details, '$.total') DESC").ToArrayAsync();

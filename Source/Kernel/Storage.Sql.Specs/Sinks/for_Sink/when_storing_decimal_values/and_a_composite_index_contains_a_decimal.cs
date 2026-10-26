@@ -31,14 +31,14 @@ public class and_a_composite_index_contains_a_decimal : given.a_sqlite_ordered_d
         await using var context = OpenContext();
         _newName = _indexPlan.Name(DatabaseType.Sqlite, Table);
         _oldName = _indexPlan.PreviousName(DatabaseType.Sqlite, Table);
-        await context.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{_oldName}\" ON {Table}(name ASC, amount DESC); CREATE INDEX manual_composite ON {Table}(name, amount); CREATE UNIQUE INDEX chronicle_idx_unique_name ON {Table}(id)");
+        await context.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{_oldName}\" ON {Table}(name ASC, amount DESC); CREATE INDEX manual_composite ON {Table}(name, amount); CREATE UNIQUE INDEX \"chronicle_idx_unique_name\" ON {Table}(id)");
         await _sink.EnsureIndexes();
         await _sink.EnsureIndexes();
         _indexes = await Indexes(context, Table);
         _sql = await context.Database.SqlQuery<string>($"SELECT sql AS Value FROM sqlite_master WHERE name = {_newName}").SingleAsync();
         _amounts = await Amounts(context, "name = 'a'", "__order_amount DESC");
         _range = await Amounts(context, $"name = 'a' AND __order_amount >= '{SqliteDecimalSortKey.For(0m)}'", "__order_amount DESC");
-        var plan = await context.Database.SqlQuery<QueryPlan>($"EXPLAIN QUERY PLAN SELECT id FROM {Table} WHERE name = 'a' ORDER BY __order_amount DESC").ToArrayAsync();
+        var plan = await context.Database.SqlQueryRaw<QueryPlan>($"EXPLAIN QUERY PLAN SELECT id FROM {Table} WHERE name = 'a' ORDER BY __order_amount DESC").ToArrayAsync();
         _plan = string.Join(' ', plan.Select(row => row.Detail));
         var replay = new ReplayContext(new ReadModelType("ordered-decimals", ReadModelGeneration.First), Table, $"{Table}_revert", DateTimeOffset.UtcNow);
         await _sink.BeginReplay(replay);

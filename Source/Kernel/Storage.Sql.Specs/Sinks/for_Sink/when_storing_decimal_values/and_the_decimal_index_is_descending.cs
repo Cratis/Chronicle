@@ -31,7 +31,7 @@ public class and_the_decimal_index_is_descending : given.a_sqlite_ordered_decima
         _indexes = await Indexes(context, Table);
         _shadowIndex = _indexes.Single(name => name.StartsWith(ShadowColumnIndexes.Prefix, StringComparison.Ordinal));
         _amounts = await Amounts(context, "__order_amount IS NOT NULL", "__order_amount DESC");
-        var plan = await context.Database.SqlQuery<QueryPlan>($"EXPLAIN QUERY PLAN SELECT id FROM {Table} ORDER BY __order_amount DESC").ToArrayAsync();
+        var plan = await context.Database.SqlQueryRaw<QueryPlan>($"EXPLAIN QUERY PLAN SELECT id FROM {Table} ORDER BY __order_amount DESC").ToArrayAsync();
         _plan = string.Join(' ', plan.Select(row => row.Detail));
     }
 
