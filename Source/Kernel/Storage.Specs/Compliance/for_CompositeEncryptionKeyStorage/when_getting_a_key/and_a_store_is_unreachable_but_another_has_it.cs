@@ -20,6 +20,6 @@ public class and_a_store_is_unreachable_but_another_has_it : given.two_key_store
 
     async Task Because() => _error = await Catch.Exception(async () => _result = await _composite.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier));
 
-    [Fact] void should_not_release_a_key_without_every_fence() => _result.ShouldBeNull();
-    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
+    [Fact] void should_return_the_key_from_the_reachable_store() => _result.ShouldEqual(_key);
+    [Fact] void should_not_fail() => _error.ShouldBeNull();
 }

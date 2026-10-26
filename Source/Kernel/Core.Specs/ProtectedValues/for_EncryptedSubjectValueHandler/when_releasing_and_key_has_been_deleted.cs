@@ -24,7 +24,7 @@ public class when_releasing_and_key_has_been_deleted : given.a_property_handler
         var stored = Encoding.UTF8.GetBytes("encrypted");
         _input = JsonValue.Create(Convert.ToBase64String(stored));
         _encryption.IsEncrypted(Arg.Any<byte[]>()).Returns(true);
-        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier).Returns(Task.FromResult<EncryptionKeyAtRevision?>(null));
+        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier).Returns(Task.FromResult<EncryptionKey?>(null));
     }
 
     async Task Because() => _result = await _handler.Release(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _input);

@@ -20,12 +20,13 @@ public class and_the_secondary_store_is_unreachable : given.two_key_stores
 
     async Task Because()
     {
-        // An unreachable mirror may hold an erasure fence, so provisioning must not mint a key elsewhere.
+        // A protected value must still be writable while a store being mirrored to is down - the read path
+        // heals that store the next time the key is asked for.
         _error = await Catch.Exception(async () => _result = await _composite.GetOrAddFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, _candidate));
         _inPrimary = await KeyIn(_primary);
     }
 
-    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
-    [Fact] void should_not_return_a_key() => _result.ShouldBeNull();
-    [Fact] void should_not_provision_it_on_the_primary_store() => _inPrimary.ShouldBeNull();
+    [Fact] void should_not_fail() => _error.ShouldBeNull();
+    [Fact] void should_return_the_provisioned_key() => _result.ShouldEqual(_candidate);
+    [Fact] void should_provision_it_on_the_primary_store() => _inPrimary.ShouldEqual(_candidate);
 }

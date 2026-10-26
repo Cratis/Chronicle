@@ -13,7 +13,7 @@ public class with_an_erased_target_subject : given.a_pinned_subscriber
     void Establish()
     {
         _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.GetErasureForRelease("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyErasure(EncryptionKeyRevision.Initial, ["fingerprint"], NewKeyAllowed: false));
+        _encryptionKeyStorage.GetErasureFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyErasure(EncryptionKeyRevision.Initial, ["fingerprint"], NewKeyAllowed: false));
     }
     async Task Because() => _result = await Forward();
     [Fact] Task should_not_reinstate_the_erased_key() => _encryptionKeyStorage.DidNotReceive().GetOrAddFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>());

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.EventSequences.Migrations.for_MigrateExistingEventsForTypeStep.when_performing;
@@ -15,8 +14,8 @@ public class and_the_current_private_key_is_malformed : given.protected_events
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();
         await _keys.RecordErasureFor(Store, Namespace, "erased-owner");
-        var validKey = new Encryption().GenerateKey();
-        _keyAccess.TryGetLatestFor(Store, Namespace, "erased-owner").Returns(new EncryptionKeyAtRevision(new(validKey.Public, [1, 2, 3]), 2));
+        var validKey = (await _keys.TryGetFor(Store, Namespace, "erased-owner"))!;
+        _keyAccess.TryGetFor(Store, Namespace, "erased-owner").Returns(new EncryptionKey(validKey.Public, [1, 2, 3]));
     }
 
     async Task Because() => await Perform();

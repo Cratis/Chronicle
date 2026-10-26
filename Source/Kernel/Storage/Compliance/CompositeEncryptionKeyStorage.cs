@@ -80,11 +80,6 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     /// <inheritdoc/>
     public async Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        if (IsLatest(revision))
-        {
-            return (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier))?.Key;
-        }
-
         List<Exception>? failures = null;
         var missing = new List<IEncryptionKeyStorage>();
 
@@ -109,7 +104,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 continue;
             }
 
-            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, new(key, revision)))
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, key))
             {
                 _logger.ErasedKeySurvivedInAnotherStore(identifier);
                 return null;
@@ -119,7 +114,12 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             return key;
         }
 
-        return MissingKeyOrFailure(identifier, failures);
+        if (failures is not null)
+        {
+            throw new EncryptionKeyStorageUnavailable(identifier, failures);
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>
@@ -147,7 +147,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 continue;
             }
 
-            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair))
+            if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair.Key))
             {
                 _logger.ErasedKeySurvivedInAnotherStore(identifier);
                 return null;
@@ -168,7 +168,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        (await GetErasureForRelease(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
         var provisioned = await _inner[0].GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
         foreach (var store in _inner.Skip(1))
         {
@@ -199,7 +199,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         // A fence recorded in any store refuses provisioning for all of them. Checking only the primary would let
         // a store that the erasure did not reach - or one that was added to the composition afterwards - become
         // the single place the subject gets a key again, which is the resurrection with extra steps.
-        (await GetErasureForRelease(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
+        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanProvision(identifier, key);
 
         // The primary is authoritative for provisioning. Provisioning on another store when it is unreachable
         // would let two silos mint different keys for the same subject, and every value encrypted under the
@@ -319,35 +319,6 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        var erasures = new List<EncryptionKeyErasure>();
-        var failures = new List<Exception>();
-        foreach (var store in _inner)
-        {
-            try
-            {
-                if (await store.GetErasureForRelease(eventStore, eventStoreNamespace, identifier) is { } erasure)
-                {
-                    erasures.Add(erasure);
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add(error);
-                _logger.ReadingFromInnerStoreFailed(identifier, error);
-            }
-        }
-
-        if (failures.Count > 0)
-        {
-            throw new EncryptionKeyFenceUnavailable(new AggregateException(failures));
-        }
-
-        return erasures.Count == 0 ? null : Strictest(erasures);
-    }
-
-    /// <inheritdoc/>
     public async Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         var failures = await ForEachStore(store => store.RecordErasureFor(eventStore, eventStoreNamespace, identifier));
@@ -390,18 +361,6 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             erasures.TrueForAll(_ => _.NewKeyAllowed));
     }
 
-    static bool IsLatest([System.Diagnostics.CodeAnalysis.NotNullWhen(false)] EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
-
-    static EncryptionKey? MissingKeyOrFailure(EncryptionKeyIdentifier identifier, List<Exception>? failures)
-    {
-        if (failures is not null)
-        {
-            throw new EncryptionKeyStorageUnavailable(identifier, failures);
-        }
-
-        return null;
-    }
-
     async Task<List<Exception>> ForEachStore(Func<IEncryptionKeyStorage, Task> operation)
     {
         List<Exception> failures = [];
@@ -421,8 +380,36 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         return failures;
     }
 
-    async Task<bool> AnyStoreDestroyed(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyAtRevision pair) =>
-        (await GetErasureForRelease(eventStore, eventStoreNamespace, identifier)).Refuses(pair);
+    async Task<bool> AnyStoreDestroyed(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        // Every store is asked, not only the ones read past on the way here: which member happens to still hold a
+        // survivor and which one recorded the erasure is an accident of ordering, and a guarantee that depends on
+        // that ordering is not a guarantee. The question is about this key's material rather than about the
+        // identifier, so it stays true after a later lifecycle - a successor key was never destroyed, and is
+        // served, while the material an erasure destroyed is refused however it found its way back.
+        foreach (var store in _inner)
+        {
+            try
+            {
+                if (await store.GetErasureFor(eventStore, eventStoreNamespace, identifier) is { } erasure &&
+                    erasure.ErasedKeyFingerprints.Contains(key.Fingerprint, StringComparer.Ordinal))
+                {
+                    return true;
+                }
+            }
+            catch (Exception error)
+            {
+                // A store that cannot be reached is logged and skipped, exactly as it is when the key itself is
+                // being read. Refusing the key because one member is down would turn a secondary outage into every
+                // protected value reading back empty, which is the outcome an untrue absence causes and the one
+                // this class exists to avoid. A fence only that member holds is missed until it is back, and its
+                // erasure was reported incomplete when it was recorded.
+                _logger.ReadingFromInnerStoreFailed(identifier, error);
+            }
+        }
+
+        return false;
+    }
 
     async Task Heal(List<IEncryptionKeyStorage> stores, EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision)
     {

@@ -40,7 +40,7 @@ public class and_multiple_events_share_subject : Specification
 
         _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
         _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.TryGetLatestFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(new([], []), EncryptionKeyRevision.Initial));
+        _encryptionKeyStorage.TryGetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKey([], []));
         _silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();

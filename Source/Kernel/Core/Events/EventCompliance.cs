@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events;
@@ -21,7 +20,6 @@ public class EventCompliance(
     /// <inheritdoc/>
     public async Task<AppendedEvent> Release(AppendedEvent @event, JsonSchema schema)
     {
-        using var scope = ReleaseKeys.BeginScope();
         var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema);
         var released = await complianceManager.Release(
             @event.Context.EventStore,
@@ -39,7 +37,6 @@ public class EventCompliance(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
-        using var scope = ReleaseKeys.BeginScope();
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {

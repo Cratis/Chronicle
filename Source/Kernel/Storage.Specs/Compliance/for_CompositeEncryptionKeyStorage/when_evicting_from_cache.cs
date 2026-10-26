@@ -25,8 +25,6 @@ public class when_evicting_from_cache : given.two_key_stores
         await _composite.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 
         // A peer silo performed the crypto-shred, so the backing stores no longer hold the key.
-        await _primary.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
-        await _secondary.RecordErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         await _primary.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         await _secondary.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         _beforeEviction = await _composite.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
@@ -35,6 +33,6 @@ public class when_evicting_from_cache : given.two_key_stores
         _afterEviction = await _composite.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
     }
 
-    [Fact] void should_refuse_the_erased_key_before_the_eviction_arrives() => _beforeEviction.ShouldBeNull();
+    [Fact] void should_serve_the_stale_key_until_the_eviction_arrives() => _beforeEviction.ShouldNotBeNull();
     [Fact] void should_carry_the_eviction_into_every_inner_cache() => _afterEviction.ShouldBeNull();
 }
