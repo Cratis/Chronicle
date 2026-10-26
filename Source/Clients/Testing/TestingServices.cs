@@ -299,10 +299,7 @@ internal sealed class TestingServices : IServices
         _eventStores = new(() =>
             new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, NullLogger<KernelEventStoresService>.Instance));
 
-        var readBindings = new KernelReadModelReadBindings(
-            storage,
-            new KernelReadModelInstanceVisibilities(
-                new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(storage), storage, grainFactory)));
+        var readBindings = CreateReadBindings(storage, grainFactory);
         _readModels = new(() =>
             new KernelReadModelsService(
                 grainFactory,
@@ -412,6 +409,12 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static KernelReadModelReadBindings CreateReadBindings(IStorage storage, IGrainFactory grainFactory) =>
+        new(
+            storage,
+            new KernelReadModelInstanceVisibilities(
+                new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(storage), storage, grainFactory)));
 
     static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
         new(
