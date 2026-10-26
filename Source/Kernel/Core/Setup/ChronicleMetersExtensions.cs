@@ -3,8 +3,11 @@
 
 using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Orleans.Hosting;
 
@@ -22,6 +25,9 @@ public static class ChronicleMetersExtensions
     {
         services.AddNamedMeter(WellKnown.MeterName);
         services.AddNamedActivitySource(WellKnown.MeterName);
+
+        // Publishes the legacy metric names next to the convention names for one minor release.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, LegacyMetricNameBridgeHostedService>());
 
         for (var index = services.Count - 1; index >= 0; index--)
         {
