@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 /// </summary>
 internal static class ClientSpanCompatibility
 {
-    static readonly Dictionary<string, string> _attributes = new Dictionary<string, string>
+    static readonly Dictionary<string, string> _attributes = new()
     {
         ["event_store_name"] = WellKnownTelemetryAttributes.EventStoreName,
         ["namespace_name"] = WellKnownTelemetryAttributes.EventStoreNamespace,

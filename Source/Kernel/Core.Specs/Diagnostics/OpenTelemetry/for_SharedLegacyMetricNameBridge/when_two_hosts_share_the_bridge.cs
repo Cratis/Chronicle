@@ -76,7 +76,7 @@ public class when_two_hosts_share_the_bridge : Specification
         _secondHost.Dispose();
     }
 
-    [Fact] void should_mirror_each_measurement_of_each_host_exactly_once() => _afterBothRunning.Select(_ => _.Value).OrderBy(_ => _).ShouldEqual([1d, 2d]);
+    [Fact] void should_mirror_each_measurement_of_each_host_exactly_once() => _afterBothRunning.Select(_ => _.Value).Order().ShouldEqual([1d, 2d]);
     [Fact] void should_keep_mirroring_when_one_host_stops() => _afterFirstStopped.Select(_ => _.Value).ShouldEqual([3d]);
     [Fact] void should_stop_mirroring_when_the_last_host_stops() => _afterBothStopped.ShouldBeEmpty();
 }

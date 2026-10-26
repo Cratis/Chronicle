@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Diagnostics.Identifiers;
 
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing.for_TagExtensions;
@@ -15,15 +17,15 @@ public class when_adding_compatibility_keys : Specification
 
     void Because()
     {
-        _activity.WithEventStore("store").WithEventStoreNamespace("namespace").WithEventSequenceId("log")
-            .WithEventSourceType("customer").WithEventSourceId("customer-42", new IdentifierTelemetry(new()))
-            .WithEventType(new("type", EventTypeGeneration.First));
-        _hashed.WithEventSourceId("customer-42", new IdentifierTelemetry(new()
+        _activity.Tag((EventStoreName)"store").Tag((EventStoreNamespaceName)"namespace").Tag((EventSequenceId)"log")
+            .Tag((EventSourceType)"customer").Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new()))
+            .Tag(new EventType("type", EventTypeGeneration.First));
+        _hashed.Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new()
         {
             EventSourceIdTracing = EventSourceIdTracing.Hashed,
             EventSourceIdHashKey = "chronicle-identifier-hash-key-for-specs-0001"
         }));
-        _omitted.WithEventSourceId("customer-42", new IdentifierTelemetry(new() { EventSourceIdTracing = EventSourceIdTracing.Omitted }));
+        _omitted.Tag((EventSourceId)"customer-42", new IdentifierTelemetry(new() { EventSourceIdTracing = EventSourceIdTracing.Omitted }));
     }
 
     void Destroy()

@@ -15,11 +15,12 @@ public class a_bridge_on_a_private_meter : Specification
 
     protected Meter _meter = null!;
     protected Meter _otherMeter = null!;
-    protected LegacyMetricNameBridge _bridge = null!;
+    private protected LegacyMetricNameBridge _bridge = null!;
     protected List<Mirrored> _mirrored = [];
+    readonly Lock _lock = new();
     MeterListener _listener = null!;
 
-    protected record Mirrored(string Name, string? Unit, string? Description, double Value, KeyValuePair<string, object?>[] Tags);
+    protected record Mirrored(string Name, string? Unit, string? Description, double Value, IReadOnlyList<KeyValuePair<string, object?>> Tags);
 
     void Establish()
     {
@@ -64,7 +65,7 @@ public class a_bridge_on_a_private_meter : Specification
     void Capture<T>(Instrument instrument, T value, ReadOnlySpan<KeyValuePair<string, object?>> tags)
         where T : struct
     {
-        lock (_mirrored)
+        lock (_lock)
         {
             _mirrored.Add(new(instrument.Name, instrument.Unit, instrument.Description, Convert.ToDouble(value), tags.ToArray()));
         }
