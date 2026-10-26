@@ -5,11 +5,8 @@ using System.Text.RegularExpressions;
 
 namespace Cratis.Chronicle.Diagnostics.for_WellKnownTelemetryNames;
 
-public class when_listing_all_names : given.all_telemetry_names
+public partial class when_listing_all_names : given.all_telemetry_names
 {
-    static readonly Regex _nameFormat = new(@"^cratis\.chronicle(\.[a-z][a-z0-9_]*)+$", RegexOptions.Compiled);
-    static readonly Regex _attributeFormat = new(@"^cratis(\.[a-z][a-z0-9_]*)+$", RegexOptions.Compiled);
-
     static readonly Dictionary<string, string> _expected = new()
     {
         ["Attributes.CorrelationId"] = "cratis.correlation_id",
@@ -154,7 +151,7 @@ public class when_listing_all_names : given.all_telemetry_names
     };
 
     static string Render(IEnumerable<KeyValuePair<string, string>> names) =>
-        string.Join("\n", names.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => $"{_.Key}={_.Value}"));
+        string.Join('\n', names.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => $"{_.Key}={_.Value}"));
 
     [Fact] void should_publish_exactly_the_pinned_names() =>
         Render(_names.Where(_ => !IsUnit(_.Key))).ShouldEqual(Render(_expected));
@@ -163,10 +160,10 @@ public class when_listing_all_names : given.all_telemetry_names
         Render(_names.Where(_ => IsUnit(_.Key))).ShouldEqual(Render(_expectedUnits));
 
     [Fact] void should_name_metrics_and_spans_in_the_convention_format() =>
-        _names.Where(_ => !IsUnit(_.Key) && !_.Key.StartsWith("Attributes.")).All(_ => _nameFormat.IsMatch(_.Value)).ShouldBeTrue();
+        _names.Where(_ => !IsUnit(_.Key) && !_.Key.StartsWith("Attributes.")).All(_ => NameFormat.IsMatch(_.Value)).ShouldBeTrue();
 
     [Fact] void should_name_attribute_keys_in_the_convention_format() =>
-        In("Attributes").All(_ => _attributeFormat.IsMatch(_.Value)).ShouldBeTrue();
+        In("Attributes").All(_ => AttributeFormat.IsMatch(_.Value)).ShouldBeTrue();
 
     [Fact] void should_have_unique_metric_names() =>
         In("Metrics").Select(_ => _.Value).Distinct().Count().ShouldEqual(In("Metrics").Count());
@@ -188,4 +185,10 @@ public class when_listing_all_names : given.all_telemetry_names
 
     [Fact] void should_not_end_metric_names_with_total() =>
         In("Metrics").Any(_ => _.Value.EndsWith("_total")).ShouldBeFalse();
+
+    [GeneratedRegex(@"^cratis\.chronicle(\.[a-z][a-z0-9_]*)+$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex NameFormat { get; }
+
+    [GeneratedRegex(@"^cratis(\.[a-z][a-z0-9_]*)+$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex AttributeFormat { get; }
 }
