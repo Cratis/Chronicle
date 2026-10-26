@@ -92,7 +92,9 @@ If the owner completes the unit directly instead of through the claim, `Commit()
 
 By default the middleware commits after the response and a failed commit cannot change it; the failure is logged. Failure reporting is off by default so existing endpoints keep their current responses.
 
-For MVC controllers, set `ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts` to `true`. `AddUnitOfWork` (also called by `AddCratisChronicle`) registers a global result filter that commits an unclaimed unit before MVC executes the action result. A refused commit replaces the action result with problem details. Authorization, resource, and action-filter short-circuits, and results produced after a handled exception, roll back instead; their results are left unchanged.
+For MVC controllers and Razor Pages, set `ChronicleAspNetCoreOptions.UnitOfWork.ReportFailuresBeforeResponseStarts` to `true`. `AddUnitOfWork` (also called by `AddCratisChronicle`) registers global action and page-handler filters that record whether the handler pipeline completed normally. When that signal is present, a global result filter commits an unclaimed unit before MVC executes the result. A refused commit replaces the result with problem details. Action-filter or page-handler-filter short-circuits, and handled exceptions observed by those filters, roll back instead; their results are left unchanged.
+
+If no action or page-handler filter ran, there is no completion signal. The result filter neither claims nor completes the unit, leaving today's middleware behavior intact. This includes authorization or resource-filter short-circuits that happen before the handler filters run.
 
 The global `UnitOfWorkResultFilter` uses `CompletionOrder = int.MaxValue`. Result filters with any lower order run before it. A result filter registered on a controller or action with the same order (`int.MaxValue`) runs after it. Do not stage more events in those later filters: completion has already happened.
 

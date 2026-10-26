@@ -10,6 +10,7 @@ public class when_authorization_or_resource_filters_short_circuit : Specificatio
     async Task Because() => await _harness.Run();
 
     [Fact] void should_leave_the_result_unchanged() => _harness.Result.ShouldEqual(_harness.Original);
-    [Fact] void should_roll_back_before_the_result_runs() => _harness.CompletedBeforeResult.ShouldBeTrue();
-    [Fact] void should_not_append() => _harness.Request.AppendCalls.ShouldEqual(0);
+    [Fact] void should_leave_the_unit_open_before_the_result_runs() => _harness.CompletedBeforeResult.ShouldBeFalse();
+    [Fact] void should_not_claim_completion() => _harness.ClaimedBeforeResult.ShouldBeFalse();
+    [Fact] void should_leave_the_commit_to_middleware() => _harness.Request.AppendCalls.ShouldEqual(1);
 }

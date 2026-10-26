@@ -16,7 +16,8 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// <remarks>
 /// Registered globally by <c language="csharp">AddUnitOfWork</c>. Result filters with a lower order run before this filter.
 /// A controller or action result filter with the same order (<see cref="CompletionOrder"/>) runs after this filter.
-/// Short-circuited actions and handled exceptions roll back instead of committing.
+/// Short-circuited controller actions or page handlers and handled exceptions roll back instead of committing.
+/// When no action or page handler filter ran, completion is left to the request middleware.
 /// </remarks>
 public sealed class UnitOfWorkResultFilter(IOptions<ChronicleAspNetCoreOptions> options) : IAsyncAlwaysRunResultFilter, IOrderedFilter
 {
@@ -32,22 +33,23 @@ public sealed class UnitOfWorkResultFilter(IOptions<ChronicleAspNetCoreOptions> 
     /// <inheritdoc/>
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
-        if (options.Value.UnitOfWork.ReportFailuresBeforeResponseStarts)
+        if (options.Value.UnitOfWork.ReportFailuresBeforeResponseStarts &&
+            UnitOfWorkActionFilter.CompletedNormally(context.HttpContext) is { } completedNormally)
         {
             var ownership = context.HttpContext.Features.Get<IUnitOfWorkCompletionOwnershipFeature>();
             if (ownership is not null && ownership.TryClaim(out var claim))
             {
-                await Complete(context, claim);
+                await Complete(context, claim, completedNormally);
             }
         }
 
         await next();
     }
 
-    static async Task Complete(ResultExecutingContext context, IUnitOfWorkCompletionClaim claim)
+    static async Task Complete(ResultExecutingContext context, IUnitOfWorkCompletionClaim claim, bool completedNormally)
     {
         if (claim.UnitOfWork.IsCompleted) return;
-        if (!UnitOfWorkActionFilter.CompletedNormally(context.HttpContext))
+        if (!completedNormally)
         {
             await claim.Rollback();
             return;

@@ -15,7 +15,8 @@ public class ChronicleUnitOfWorkOptions
     /// </summary>
     /// <remarks>
     /// Only applies to requests that did not claim completion through <c language="csharp">IUnitOfWorkCompletionOwnershipFeature</c>.
-    /// MVC rolls back short-circuited actions and handled exceptions. Minimal APIs opt in separately with <c language="csharp">WithUnitOfWork()</c>.
+    /// MVC covers controller actions and Razor Page handlers, rolling back their short-circuits and handled exceptions.
+    /// When no handler filter ran, completion is left to middleware. Minimal APIs opt in separately with <c language="csharp">WithUnitOfWork()</c>.
     /// </remarks>
     public bool ReportFailuresBeforeResponseStarts { get; set; }
 }

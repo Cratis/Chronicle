@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
 /// <summary>
-/// Registers the action signal and pre-result completion filters globally.
+/// Registers the controller action and page handler signals and pre-result completion filter globally.
 /// </summary>
 /// <param name="chronicleOptions">The Chronicle ASP.NET Core options.</param>
 internal sealed class UnitOfWorkMvcOptions(IOptions<ChronicleAspNetCoreOptions> chronicleOptions) : IConfigureOptions<MvcOptions>

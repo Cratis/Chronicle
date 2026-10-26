@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 
 internal sealed class UnitOfWorkMvcHarness
 {
+    readonly FilterCollection _filters;
     readonly IAsyncActionFilter _action;
     readonly UnitOfWorkResultFilter _filter;
 
@@ -26,6 +28,8 @@ internal sealed class UnitOfWorkMvcHarness
     internal bool Canceled { get; set; }
     internal Exception? Exception { get; set; }
     internal bool ActionRan { get; set; } = true;
+    internal bool PageRan { get; set; }
+    internal bool ClaimedBeforeResult { get; set; }
     internal bool ClaimFirst { get; set; }
     internal bool CompleteFirst { get; set; }
     internal bool RemoveOwnership { get; set; }
@@ -38,9 +42,9 @@ internal sealed class UnitOfWorkMvcHarness
         using var services = new ServiceCollection().AddUnitOfWork()
             .AddSingleton<IOptions<ChronicleAspNetCoreOptions>>(Microsoft.Extensions.Options.Options.Create(Options))
             .BuildServiceProvider();
-        var filters = services.GetRequiredService<IOptions<MvcOptions>>().Value.Filters;
-        _action = filters.OfType<IAsyncActionFilter>().Single();
-        _filter = filters.OfType<UnitOfWorkResultFilter>().Single();
+        _filters = services.GetRequiredService<IOptions<MvcOptions>>().Value.Filters;
+        _action = _filters.OfType<IAsyncActionFilter>().Single();
+        _filter = _filters.OfType<UnitOfWorkResultFilter>().Single();
     }
 
     internal Task Run() => Request.Run(Invoke);
@@ -54,6 +58,7 @@ internal sealed class UnitOfWorkMvcHarness
         var context = new ActionContext(http, new RouteData(), new ActionDescriptor());
         var controller = new object();
         if (ActionRan) await ExecuteAction(context, controller);
+        if (PageRan) await ExecutePage(context, controller);
         await ExecuteResult(context, controller);
         if (ExistingClaim is not null) await ExistingClaim.Rollback();
     }
@@ -68,6 +73,25 @@ internal sealed class UnitOfWorkMvcHarness
             ExceptionHandled = Exception is not null
         }));
 
+    Task ExecutePage(ActionContext context, object handler)
+    {
+        var page = new PageContext
+        {
+            HttpContext = context.HttpContext,
+            RouteData = context.RouteData,
+            ActionDescriptor = new CompiledPageActionDescriptor()
+        };
+        return _filters.OfType<IAsyncPageFilter>().Single().OnPageHandlerExecutionAsync(
+            new PageHandlerExecutingContext(page, [], null, new Dictionary<string, object?>(), handler),
+            () => Task.FromResult(new PageHandlerExecutedContext(page, [], null, handler)
+            {
+                Result = Original,
+                Canceled = Canceled,
+                Exception = Exception,
+                ExceptionHandled = Exception is not null
+            }));
+    }
+
     async Task ExecuteResult(ActionContext context, object controller)
     {
         var executing = new ResultExecutingContext(context, [], Original, controller);
@@ -75,6 +99,7 @@ internal sealed class UnitOfWorkMvcHarness
         {
             Result = executing.Result;
             CompletedBeforeResult = Request.Unit.IsCompleted;
+            ClaimedBeforeResult = context.HttpContext.Features.Get<IUnitOfWorkCompletionOwnershipFeature>()?.IsClaimed == true;
             return Task.FromResult(new ResultExecutedContext(context, [], executing.Result, controller));
         });
     }
