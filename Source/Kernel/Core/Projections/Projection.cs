@@ -415,7 +415,9 @@ public class Projection(
         var model = InMemoryChanges.Apply(context.Key, changeset.Changes, state.Model);
         ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
         ReadModelSubjects.TrackChanges(model, changeset.Changes, context.Event);
-        return new(model, true, state.IsInitialized || CreatesInstance(projection, context));
+        var isInitialized = state.IsInitialized || CreatesInstance(projection, context) ||
+            ProjectionInitialization.CanInitializeFromChildren(projection, context);
+        return new(model, true, isInitialized);
     }
 
     async Task<IEnumerable<ExpandoObject>> Project(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
