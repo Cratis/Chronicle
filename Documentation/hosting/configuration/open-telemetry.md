@@ -78,11 +78,11 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
 OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 ```
 
-## Generated instrument names
+## Instrument names and migration
 
-Chronicle consumes `Cratis.Metrics.Roslyn` 7.25.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation exposes `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name.
+Kernel metrics use `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter normally exposes it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name.
 
-The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+Legacy instruments remain published for one minor release with their original metadata and dimensions. The tables below describe those compatibility series. Use the [telemetry name reference](telemetry-names.md) to migrate instrument names and dimensions together; never sum legacy and convention series. Legacy names and keys are deprecated for removal in the next major version. Failure counters remain lazy and retain their existing recording points.
 
 ## Metrics instrumented
 

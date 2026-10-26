@@ -23,7 +23,9 @@ If your host does not reference `Cratis.Chronicle.AspNetCore`, such as a worker 
 
 ## What you will see
 
-Every span name starts with `client.`. The tags below hold identifiers, not event content.
+By default, span operation and display names start with `client.` exactly as before. Set `ChronicleTelemetryOptions.SpanNames` to `ClientSpanNames.Convention` through `WithTelemetry`, or configure `Telemetry:SpanNames` as `Convention`, to opt in to `cratis.chronicle.client.*` names. Each operation still emits one span. The [telemetry name reference](/chronicle/hosting/configuration/telemetry-names/) lists all mappings and the legacy keys deprecated for removal in the next major version.
+
+The tags below hold identifiers, not event content. Both naming modes also carry shared keys such as `cratis.event_store.name`, `cratis.event_sequence.id`, and `cratis.correlation_id` alongside these legacy keys. Both copies of an event source id follow the same identifier exposure setting.
 
 | Span | Kind | Tags |
 | --- | --- | --- |

@@ -38,6 +38,8 @@
   href: environment-variables.md
 - name: Open Telemetry
   href: open-telemetry.md
+- name: Telemetry Names
+  href: telemetry-names.md
 - name: Event Source Ids in Telemetry
   href: telemetry-identifiers.md
 - name: Docker Configuration

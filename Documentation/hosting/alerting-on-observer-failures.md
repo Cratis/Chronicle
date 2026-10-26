@@ -33,6 +33,8 @@ Current recorded incidents are available through [scoped incident queries](/chro
 
 ## Alert from metrics
 
+The examples below use the legacy series, which remain published for one minor release. Migrate names and dimensions together using the [telemetry name reference](/chronicle/hosting/configuration/telemetry-names/). Convention series use keys such as `cratis.event_store.name` and `cratis.observer.id`; do not add their values to the equivalent legacy series. Legacy names and keys are deprecated for removal in the next major version.
+
 Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`. An observer has a series on them from its first failure, not before:
 
 | Instrument | Counts |

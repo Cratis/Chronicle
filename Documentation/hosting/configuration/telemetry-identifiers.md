@@ -30,7 +30,7 @@ Kernel spans always omit `orleans.rpc.target_id` and `orleans.rpc.source_id`, re
 
 ## Configure clients
 
-Use `WithTelemetry` when configuring your client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage. Client spans use `event_source_id`; kernel spans use `cratis.eventsource.id`.
+Use `WithTelemetry` when configuring your client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage. Client spans retain `event_source_id`; kernel spans retain `cratis.eventsource.id`. Both also carry `cratis.event_source.id`. The exposure policy applies equally to both copies: hashed values match, and omitted values appear under neither key.
 
 ## Correlate hashes across processes
 
@@ -42,7 +42,7 @@ Use the same key in the kernel and clients when you need the same id to have the
 
 Chronicle's append counters retain event name, store, and namespace dimensions, but never add `EventSourceId`. Observer failure counters exclude partition and event source id dimensions while retaining observer scope dimensions.
 
-Hashes do not fix metric cardinality: one hash per id still creates one series per id. These exclusions apply in every tracing mode, including `Raw`; changing trace configuration cannot add these metric dimensions back. Instrument names are unchanged. The [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459) is separate.
+Hashes do not fix metric cardinality: one hash per id still creates one series per id. These exclusions apply in every tracing mode, including `Raw`; changing trace configuration cannot add these metric dimensions back. [Convention metric names](telemetry-names.md) are published alongside the legacy names for one minor release. Migrate names and dimension keys together; do not sum the two series.
 
 ## Log levels during observer failures
 

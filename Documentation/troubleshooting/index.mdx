@@ -71,7 +71,7 @@ Every refusal has its own outcome, so nothing reports success when it changed no
 
 ## An observer may have skipped events
 
-Chronicle counts and logs a **suspected** skip when an observer's position moves past a live event and no delivery path the observer saw covers it. It is a warning to investigate, not proof that the event was lost: a catch-up job may have delivered it without reporting it. The counters `chronicle-observer-events-suspected-skipped` and `chronicle-appended-events-queue-suspected-undelivered-events` are described in [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/#suspected-skipped-events).
+Chronicle counts and logs a **suspected** skip when an observer's position moves past a live event and no delivery path the observer saw covers it. It is a warning to investigate, not proof that the event was lost: a catch-up job may have delivered it without reporting it. The counters `cratis.chronicle.observer.suspected_skipped_events` and `cratis.chronicle.appended_events_queue.suspected_undelivered_events` (also published under legacy names for one minor release; see [telemetry names](/chronicle/hosting/configuration/telemetry-names/)) are described in [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/#suspected-skipped-events).
 
 The observer writes this warning, inside the scope of the observer it concerns:
 
