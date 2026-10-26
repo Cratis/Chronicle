@@ -15,24 +15,35 @@ public class and_overlapping_the_start_of_a_watcher : given.a_store_whose_seedin
     readonly ManualResetEventSlim _creating = new();
     readonly ManualResetEventSlim _released = new();
     Task _starting;
+    bool _streamCreated;
 
     void Establish() =>
         _readModelsService.Watch(Arg.Any<WatchRequest>(), Arg.Any<CallContext>()).Returns(_ =>
         {
             _creating.Set();
-            _released.Wait(TimeSpan.FromSeconds(30));
+            _released.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue();
+            _streamCreated = true;
             return _serverStream;
         });
 
     async Task Because()
     {
         _starting = Task.Run(_eventStore.ReadModelReactors.Start);
-        _creating.Wait(TimeSpan.FromSeconds(30));
-        _eventStore.ReleaseAfterFailedCreation();
-        _released.Set();
-        await Catch.Exception(() => _starting);
+        try
+        {
+            _creating.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue();
+            _eventStore.ReleaseAfterFailedCreation();
+        }
+        finally
+        {
+            _released.Set();
+            await Catch.Exception(() => _starting).WaitAsync(TimeSpan.FromSeconds(30));
+        }
+
+        _streamCreated.ShouldBeTrue();
     }
 
+    [Fact] void should_have_created_the_watch_stream() => _streamCreated.ShouldBeTrue();
     [Fact] void should_not_leave_the_watch_stream_open() => _serverStream.HasObservers.ShouldBeFalse();
     [Fact] void should_not_leave_a_connection_subscription() => (_lifecycle.ConnectedCount, _lifecycle.DisconnectedCount).ShouldEqual((_baselineConnected, _baselineDisconnected));
 }

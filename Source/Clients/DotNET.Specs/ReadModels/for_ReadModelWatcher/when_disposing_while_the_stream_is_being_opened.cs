@@ -16,23 +16,32 @@ public class when_disposing_while_the_stream_is_being_opened : given.a_watcher
     readonly ManualResetEventSlim _creating = new();
     readonly ManualResetEventSlim _disposed = new();
     Task _starting;
+    bool _streamCreated;
 
     void Establish() =>
         _readModelsService.Watch(Arg.Any<WatchRequest>()).Returns(_ =>
         {
             _creating.Set();
-            _disposed.Wait(TimeSpan.FromSeconds(30));
+            _disposed.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue();
+            _streamCreated = true;
             return _serverStream;
         });
 
     async Task Because()
     {
         _starting = Task.Run(_watcher.Start);
-        _creating.Wait(TimeSpan.FromSeconds(30));
-        _watcher.Dispose();
-        _disposed.Set();
-        await _starting;
+        try
+        {
+            _creating.Wait(TimeSpan.FromSeconds(30)).ShouldBeTrue();
+            _watcher.Dispose();
+        }
+        finally
+        {
+            _disposed.Set();
+            await _starting.WaitAsync(TimeSpan.FromSeconds(30));
+        }
     }
 
+    [Fact] void should_have_created_the_stream() => _streamCreated.ShouldBeTrue();
     [Fact] void should_not_leave_the_stream_open() => _serverStream.HasObservers.ShouldBeFalse();
 }
