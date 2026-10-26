@@ -41,14 +41,14 @@ public class a_live_query : Specification
     {
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Name == "chronicle-sql-live-query-poll-failures")
+            if (instrument.Name == "cratis.chronicle.sql.live_query.poll_failures")
             {
                 listener.EnableMeasurementEvents(instrument);
             }
         };
         _listener.SetMeasurementEventCallback<int>((_, value, tags, _) =>
         {
-            if (tags.ToArray().Any(tag => tag.Key == "query" && Equals(tag.Value, QueryName)))
+            if (tags.ToArray().Any(tag => tag.Key == "cratis.chronicle.sql.live_query.name" && Equals(tag.Value, QueryName)))
             {
                 Interlocked.Add(ref _failures, value);
             }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Alerts;
 
@@ -21,10 +22,10 @@ public sealed record AlertIncidentsGaugeSnapshot(DateTimeOffset TakenAt, IReadOn
     internal static AlertIncidentsGaugeSnapshot From(DateTimeOffset takenAt, IEnumerable<(AlertIncidentGaugeBucket Bucket, long Value)> values) =>
         new(takenAt, values.Select(_ => new Measurement<long>(
             _.Value,
-            new KeyValuePair<string, object?>("EventStore", _.Bucket.EventStore.Value),
-            new KeyValuePair<string, object?>("Namespace", _.Bucket.Namespace.Value),
-            new KeyValuePair<string, object?>("ObserverId", _.Bucket.ObserverId.Value),
-            new KeyValuePair<string, object?>("EventSequenceId", _.Bucket.EventSequenceId.Value),
-            new KeyValuePair<string, object?>("Condition", _.Bucket.Condition.Value),
-            new KeyValuePair<string, object?>("Severity", _.Bucket.Severity.ToString()))).ToArray());
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventStoreName, _.Bucket.EventStore.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventStoreNamespace, _.Bucket.Namespace.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.ObserverId, _.Bucket.ObserverId.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.EventSequenceId, _.Bucket.EventSequenceId.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.AlertCondition, _.Bucket.Condition.Value),
+            new KeyValuePair<string, object?>(WellKnownTelemetryNames.Attributes.AlertSeverity, _.Bucket.Severity.ToString()))).ToArray());
 }

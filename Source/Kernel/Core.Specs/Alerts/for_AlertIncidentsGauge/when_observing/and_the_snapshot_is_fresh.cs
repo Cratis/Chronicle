@@ -14,6 +14,6 @@ public class and_the_snapshot_is_fresh : given.a_gauge
 
     [Fact] void should_publish_the_measurement() => _gauge.Observe().Single().Value.ShouldEqual(4L);
     [Fact] void should_tag_with_exactly_the_six_keys() => _gauge.Observe().Single().Tags.ToArray().Select(_ => _.Key)
-        .ShouldContainOnly("EventStore", "Namespace", "ObserverId", "EventSequenceId", "Condition", "Severity");
+        .ShouldContainOnly("cratis.event_store.name", "cratis.event_store.namespace", "cratis.observer.id", "cratis.event_sequence.id", "cratis.chronicle.alert.condition", "cratis.chronicle.alert.severity");
     [Fact] void should_be_available() => _gauge.ObserveAvailable().Single().Value.ShouldEqual(1);
 }

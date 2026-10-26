@@ -19,14 +19,14 @@ public class when_waiting_for_a_schema_lock : Specification
     {
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Name == "chronicle-sql-schema-lock-wait") listener.EnableMeasurementEvents(instrument);
+            if (instrument.Name == "cratis.chronicle.sql.schema_lock.wait_duration") listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
         {
             var labels = tags.ToArray().ToDictionary(tag => tag.Key, tag => tag.Value);
-            if (!Equals(labels["provider"], _provider)) return;
+            if (!Equals(labels["cratis.chronicle.sql.provider"], _provider)) return;
             _unit = instrument.Unit;
-            _outcome = (string?)labels["outcome"];
+            _outcome = (string?)labels["cratis.chronicle.sql.schema_lock.outcome"];
             _values.Add(value);
         });
         _listener.Start();

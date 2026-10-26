@@ -37,9 +37,9 @@ public class when_recording_generated_instruments : Specification
         _meter.Dispose();
     }
 
-    [Fact] void should_publish_the_observation_description_as_help_metadata() => _instruments["chronicle-observer-successful-observations"].Description.ShouldEqual("Number of successful observations per observer in a given event store and namespace");
-    [Fact] void should_publish_the_event_sequence_description_as_help_metadata() => _instruments["chronicle-event-sequences-appended-events"].Description.ShouldEqual("Number of events appended to the event sequence");
-    [Fact] void should_publish_the_queue_description_as_help_metadata() => _instruments["chronicle-appended-events-queue-events-enqueued"].Description.ShouldEqual("Number of events enqueued");
-    [Fact] void should_publish_the_clients_description_as_help_metadata() => _instruments["chronicle-connected-clients"].Description.ShouldEqual("Number of connected clients");
-    [Fact] void should_not_embed_descriptions_in_units() => _instruments.Values.Select(instrument => instrument.Unit).ShouldEqual([null, null, null, null]);
+    [Fact] void should_publish_the_observation_description_as_help_metadata() => _instruments["cratis.chronicle.observer.successful_observations"].Description.ShouldEqual("Number of successful observations per observer in a given event store and namespace");
+    [Fact] void should_publish_the_event_sequence_description_as_help_metadata() => _instruments["cratis.chronicle.event_sequence.appended_events"].Description.ShouldEqual("Number of events appended to the event sequence");
+    [Fact] void should_publish_the_queue_description_as_help_metadata() => _instruments["cratis.chronicle.appended_events_queue.enqueued_events"].Description.ShouldEqual("Number of events enqueued");
+    [Fact] void should_publish_the_clients_description_as_help_metadata() => _instruments["cratis.chronicle.connected_client.count"].Description.ShouldEqual("Number of connected clients");
+    [Fact] void should_not_embed_descriptions_in_units() => _instruments.Values.Select(instrument => instrument.Unit).ShouldEqual(["{observation}", "{event}", "{event}", "{client}"]);
 }

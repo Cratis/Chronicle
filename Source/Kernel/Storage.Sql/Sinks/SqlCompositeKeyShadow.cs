@@ -4,6 +4,7 @@
 using System.Diagnostics.Metrics;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
@@ -24,8 +25,8 @@ internal static partial class SqlCompositeKeyShadow
     internal const string ColumnName = "__compositeKey";
     const int MaximumLength = 850;
     static readonly Meter _meter = new("Cratis.Chronicle.Storage.Sql.CompositeKeyShadow");
-    static readonly Counter<long> _failures = _meter.CreateCounter<long>("chronicle.sql.composite_key.stamp_failures");
-    static readonly Counter<long> _collisions = _meter.CreateCounter<long>("chronicle.sql.composite_key.collisions");
+    static readonly Counter<long> _failures = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.SqlCompositeKeyStampFailures, unit: WellKnownTelemetryNames.Metrics.SqlCompositeKeyStampFailuresUnit);
+    static readonly Counter<long> _collisions = _meter.CreateCounter<long>(WellKnownTelemetryNames.Metrics.SqlCompositeKeyCollisions, unit: WellKnownTelemetryNames.Metrics.SqlCompositeKeyCollisionsUnit);
 
     /// <summary>
     /// Stamps a committed row if no kernel has stamped it yet. Never fails the original write.

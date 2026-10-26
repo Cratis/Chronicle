@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.for_Observer.given;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Observation.for_ObserverMetrics;
@@ -13,10 +15,13 @@ public class when_recording_without_identifier_dimensions : Specification
     readonly List<(string Name, KeyValuePair<string, object?>[] Tags)> _measurements = [];
     System.Diagnostics.Metrics.Meter _meter;
     MeterListener _listener;
+    LegacyMetricNameBridge _bridge;
+    readonly ObserverMetricsRecorder _observerMetrics = new();
 
     void Establish()
     {
         _meter = new("identifier-dimension-specs");
+        _bridge = new(meter => ReferenceEquals(meter, _meter), LegacyTelemetryNames.Metrics);
         _listener = new()
         {
             InstrumentPublished = (instrument, listener) => listener.EnableMeasurementEvents(instrument)
@@ -52,7 +57,7 @@ public class when_recording_without_identifier_dimensions : Specification
             ["EventSourceId"] = "customer-42"
         });
         observer.PartitionFailed();
-        observer.PartitionRetryAttempt();
+        observer.LegacyPartitionRetryAttempt();
         observer.PartitionQuarantined();
     }
 
@@ -66,6 +71,8 @@ public class when_recording_without_identifier_dimensions : Specification
     void Destroy()
     {
         _listener.Dispose();
+        _bridge.Dispose();
+        _observerMetrics.Dispose();
         _meter.Dispose();
     }
 }

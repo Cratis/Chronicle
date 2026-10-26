@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Observation.Alerts;
@@ -33,8 +34,8 @@ internal static class ObserverAlertsMetrics
         lock (_counterLock)
         {
             counter = _failedTransitions ??= meter.Meter.CreateCounter<int>(
-                "chronicle-alert-transitions-failed",
-                unit: null,
+                WellKnownTelemetryNames.Metrics.AlertFailedTransitions,
+                unit: WellKnownTelemetryNames.Metrics.AlertFailedTransitionsUnit,
                 description: "Number of failed attempts to record observer alert transitions");
         }
 

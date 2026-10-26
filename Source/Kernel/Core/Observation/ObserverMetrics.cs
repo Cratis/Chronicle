@@ -4,6 +4,8 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Observation.Claims;
 using Cratis.Metrics;
 
@@ -15,33 +17,20 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverMetrics
 {
-    const string PartitionFailedName = "chronicle-observer-partitions-failed";
-    const string PartitionFailedDescription = "Number of failed handling attempts for partitions per observer in a given event store and namespace. Every failure is counted, including failures of retries, so the same partition counts once per failed attempt";
-    const string PartitionRetryAttemptName = "chronicle-observer-partition-retry-attempts";
-    const string PartitionRetryAttemptDescription = "Number of times a failed partition was evaluated for retry per observer. Incremented on every partition failure, whether or not a retry ends up being scheduled, so it does not count retries that actually ran";
-    const string PartitionQuarantineClearedName = "chronicle-observer-partition-quarantines-cleared";
+    const string PartitionFailedDescription = "Number of failed handling attempts for partitions per observer in a given event store and namespace. Every failure is counted, including failures of retries, so the same partition counts once per failed attempt. Replaces the legacy partition retry attempts counter, which repeated it exactly";
     const string PartitionQuarantineClearedDescription = "Number of times an operator cleared the quarantine of a partition per observer, which also resets the retry budget of the partition";
-    const string PartitionQuarantinedName = "chronicle-observer-partitions-quarantined";
-    const string PartitionQuarantinedDescription = "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see chronicle-observer-quarantined";
-    const string ObserverQuarantinedName = "chronicle-observer-quarantined";
+    const string PartitionQuarantinedDescription = "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see cratis.chronicle.observer.quarantines";
     const string ObserverQuarantinedDescription = "Number of times an observer was quarantined";
-    const string EventsSuspectedSkippedName = "chronicle-observer-events-suspected-skipped";
     const string EventsSuspectedSkippedDescription = "Number of live events an observer's position moved past without the observer seeing any delivery path cover them. A suspicion, not proof";
-
-    const string ZeroWorkCatchUpName = "chronicle-observer-zero-work-catch-ups";
     const string ZeroWorkCatchUpDescription = "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position";
 
     static readonly Lock _failureCountersLock = new();
     static FailureCounters? _failureCounters;
 
-    [Counter<int>("chronicle-observer-successful-observations", "Number of successful observations per observer in a given event store and namespace")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.ObserverSuccessfulObservations, "Number of successful observations per observer in a given event store and namespace", WellKnownTelemetryNames.Metrics.ObserverSuccessfulObservationsUnit)]
     internal static partial void SuccessfulObservation(this IMeterScope<Observer> meter);
 
-    // Cratis.Metrics.Roslyn 7.25.0 includes the instrument-name fix from Cratis/Fundamentals#1138.
-    // Keep these counters hand-written for now so their failure-path initialization and tagging remain unchanged.
-    // Revisit the implementation with the convention-name migration in Cratis/Chronicle#4459, rather than
-    // combining that migration with this generator fix. Hand-written counters are no longer needed for clean names.
-    //
+    // These counters are hand-written so their failure-path initialization and tagging stay unchanged.
     // A counter is only recorded when something happens, so an observer has a series on these instruments from its
     // first failure, and never before. Recording a zero when the observer activates would give every observer
     // instance a series on each of the four, whether it ever fails or not, which spends the cardinality limit on
@@ -57,7 +46,13 @@ internal static partial class ObserverMetrics
     /// Records that a failed partition of the observer was evaluated for retry.
     /// </summary>
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
-    internal static void PartitionRetryAttempt(this IMeterScope<Observer> meter) => meter.Increment(_ => _.PartitionRetryAttempt);
+    /// <remarks>
+    /// Only the legacy retry attempt series is written. It is not part of the convention names because it repeated the
+    /// partition failures exactly, and is written here, at its original point, only so it keeps its values for one minor
+    /// release. Removed in the next major version.
+    /// </remarks>
+    internal static void LegacyPartitionRetryAttempt(this IMeterScope<Observer> meter) =>
+        GetFailureCounters(meter)?.LegacyPartitionRetryAttempt.Add(1, MetricTags(meter, legacy: true));
 
     /// <summary>
     /// Records that a partition of the observer ran out of retry attempts and was quarantined.
@@ -122,25 +117,28 @@ internal static partial class ObserverMetrics
             return;
         }
 
-        var tags = default(TagList);
-        foreach (var (key, tag) in meter.Tags)
-        {
-            if (key.Equals("Partition", StringComparison.OrdinalIgnoreCase) ||
-                key.Equals("EventSourceId", StringComparison.OrdinalIgnoreCase) ||
-                key.Equals("cratis.eventsource.id", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            tags.Add(key, tag);
-        }
-
+        var tags = MetricTags(meter);
         if (divergence is not null)
         {
-            tags.Add("divergence", divergence.Value.ToString());
+            tags.Add(WellKnownTelemetryNames.Attributes.ObserverClaimDivergence, divergence.Value.ToString());
         }
 
         counter(counters).Add(count, tags);
+    }
+
+    static TagList MetricTags(IMeterScope<Observer> meter, bool legacy = false)
+    {
+        var tags = default(TagList);
+        string[] excluded = ["Partition", "EventSourceId", "cratis.eventsource.id", WellKnownTelemetryNames.Attributes.EventSourceId];
+        foreach (var (key, value) in meter.Tags)
+        {
+            if (!excluded.Contains(key, StringComparer.OrdinalIgnoreCase))
+            {
+                tags.Add(legacy ? LegacyTelemetryNames.ToLegacyMetricKey(key) : key, value);
+            }
+        }
+
+        return tags;
     }
 
     /// <summary>
@@ -165,37 +163,39 @@ internal static partial class ObserverMetrics
     sealed class FailureCounters(Meter meter)
     {
         public Counter<int> ClaimDivergence { get; } = meter.CreateCounter<int>(
-            "chronicle-observer-claim-divergences", unit: null, description: "Shadow partition-claim divergences from replaying/catching-up sets");
+            WellKnownTelemetryNames.Metrics.ObserverClaimDivergences,
+            unit: WellKnownTelemetryNames.Metrics.ObserverClaimDivergencesUnit,
+            description: "Shadow partition-claim divergences from replaying/catching-up sets");
 
-        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-deferred");
+        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesDeferred, unit: WellKnownTelemetryNames.Metrics.WebhookProbesDeferredUnit);
 
-        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-skipped");
+        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesSkipped, unit: WellKnownTelemetryNames.Metrics.WebhookProbesSkippedUnit);
 
-        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-cancelled");
+        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesCancelled, unit: WellKnownTelemetryNames.Metrics.WebhookProbesCancelledUnit);
 
-        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-scheduled");
+        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbesScheduled, unit: WellKnownTelemetryNames.Metrics.WebhookProbesScheduledUnit);
 
-        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-attempts");
+        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeAttempts, unit: WellKnownTelemetryNames.Metrics.WebhookProbeAttemptsUnit);
 
-        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-failures");
+        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeFailures, unit: WellKnownTelemetryNames.Metrics.WebhookProbeFailuresUnit);
 
-        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-successes");
+        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeSuccesses, unit: WellKnownTelemetryNames.Metrics.WebhookProbeSuccessesUnit);
 
-        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-resumes");
+        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.WebhookProbeResumes, unit: WellKnownTelemetryNames.Metrics.WebhookProbeResumesUnit);
 
-        public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(PartitionFailedName, unit: null, description: PartitionFailedDescription);
+        public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionFailures, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionFailuresUnit, description: PartitionFailedDescription);
 
-        public Counter<int> PartitionRetryAttempt { get; } = meter.CreateCounter<int>(PartitionRetryAttemptName, unit: null, description: PartitionRetryAttemptDescription);
+        public Counter<int> LegacyPartitionRetryAttempt { get; } = meter.CreateCounter<int>(LegacyTelemetryNames.PartitionRetryAttempts, unit: null, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
 
-        public Counter<int> PartitionQuarantined { get; } = meter.CreateCounter<int>(PartitionQuarantinedName, unit: null, description: PartitionQuarantinedDescription);
+        public Counter<int> PartitionQuarantined { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionsQuarantined, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionsQuarantinedUnit, description: PartitionQuarantinedDescription);
 
-        public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(PartitionQuarantineClearedName, unit: null, description: PartitionQuarantineClearedDescription);
+        public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverPartitionQuarantinesCleared, unit: WellKnownTelemetryNames.Metrics.ObserverPartitionQuarantinesClearedUnit, description: PartitionQuarantineClearedDescription);
 
-        public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(ObserverQuarantinedName, unit: null, description: ObserverQuarantinedDescription);
+        public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverQuarantines, unit: WellKnownTelemetryNames.Metrics.ObserverQuarantinesUnit, description: ObserverQuarantinedDescription);
 
-        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(ZeroWorkCatchUpName, unit: null, description: ZeroWorkCatchUpDescription);
+        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverZeroWorkCatchUps, unit: WellKnownTelemetryNames.Metrics.ObserverZeroWorkCatchUpsUnit, description: ZeroWorkCatchUpDescription);
 
-        public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(EventsSuspectedSkippedName, unit: null, description: EventsSuspectedSkippedDescription);
+        public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.ObserverSuspectedSkippedEvents, unit: WellKnownTelemetryNames.Metrics.ObserverSuspectedSkippedEventsUnit, description: EventsSuspectedSkippedDescription);
     }
 }
 
@@ -204,9 +204,9 @@ internal static class ObserverMetricsScopes
     internal static IMeterScope<Observer> BeginObserverScope(this IMeter<Observer> meter, ObserverId observerId, ObserverKey observerKey) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            ["ObserverId"] = observerId,
-            ["EventStore"] = observerKey.EventStore,
-            ["Namespace"] = observerKey.Namespace,
-            ["EventSequenceId"] = observerKey.EventSequenceId
+            [WellKnownTelemetryNames.Attributes.ObserverId] = observerId,
+            [WellKnownTelemetryNames.Attributes.EventStoreName] = observerKey.EventStore,
+            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = observerKey.Namespace,
+            [WellKnownTelemetryNames.Attributes.EventSequenceId] = observerKey.EventSequenceId
         });
 }

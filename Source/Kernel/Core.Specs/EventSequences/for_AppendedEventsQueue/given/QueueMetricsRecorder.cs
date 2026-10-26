@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
@@ -30,6 +31,8 @@ public sealed class QueueMetricsRecorder : IDisposable
     /// </summary>
     public static readonly Meter SharedMeter = new("Cratis.Chronicle.Core.Specs.AppendedEventsQueue");
 
+    static readonly LegacyMetricNameBridge _bridge = new(meter => ReferenceEquals(meter, SharedMeter), LegacyTelemetryNames.Metrics);
+
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<int> _measurements = new();
     readonly ConcurrentQueue<string> _reasons = new();
@@ -49,10 +52,11 @@ public sealed class QueueMetricsRecorder : IDisposable
     /// <param name="observerId">Optional id of the observer to record for; a new one when not given.</param>
     public QueueMetricsRecorder(string instrumentName, string? observerId = null)
     {
+        GC.KeepAlive(_bridge);
         ObserverId = observerId ?? Guid.NewGuid().ToString();
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (ReferenceEquals(instrument.Meter, SharedMeter) && instrument.Name == instrumentName)
+            if (instrument.Meter.Name == SharedMeter.Name && instrument.Name == instrumentName)
             {
                 listener.EnableMeasurementEvents(instrument);
             }

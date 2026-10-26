@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Clients;
@@ -12,6 +13,6 @@ namespace Cratis.Chronicle.Clients;
 
 internal static partial class ConnectedClientsMetrics
 {
-    [Gauge<int>("chronicle-connected-clients", "Number of connected clients")]
+    [Gauge<int>(WellKnownTelemetryNames.Metrics.ConnectedClientCount, "Number of connected clients", WellKnownTelemetryNames.Metrics.ConnectedClientCountUnit)]
     internal static partial void ConnectedClients(this IMeter<ConnectedClients> meter, int count);
 }

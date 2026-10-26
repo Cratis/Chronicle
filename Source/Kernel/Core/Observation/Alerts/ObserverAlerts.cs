@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
@@ -171,10 +172,10 @@ public class ObserverAlerts(
     {
         using var scope = meter.BeginScope(new Dictionary<string, object>
         {
-            ["ObserverId"] = Key.ObserverId,
-            ["EventStore"] = Key.EventStore,
-            ["Namespace"] = Key.Namespace,
-            ["EventSequenceId"] = Key.EventSequenceId
+            [WellKnownTelemetryNames.Attributes.ObserverId] = Key.ObserverId,
+            [WellKnownTelemetryNames.Attributes.EventStoreName] = Key.EventStore,
+            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = Key.Namespace,
+            [WellKnownTelemetryNames.Attributes.EventSequenceId] = Key.EventSequenceId
         });
         scope.TransitionFailed();
     }

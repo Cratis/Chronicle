@@ -4,6 +4,8 @@
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.DependencyInjection;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,14 +38,27 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
             return;
         }
 
-        // Hand-written until Cratis/Fundamentals#1138 is consumed: the metrics generator passes description as unit.
+        // Register both naming schemes explicitly so they share the same snapshot and ownership.
         meter.ActualMeter?.CreateObservableGauge(
-            "chronicle-alerts-open-incidents",
+            WellKnownTelemetryNames.Metrics.AlertOpenIncidents,
             Observe,
+            unit: WellKnownTelemetryNames.Metrics.AlertOpenIncidentsUnit,
+            description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
+        meter.ActualMeter?.CreateObservableGauge(
+            WellKnownTelemetryNames.Metrics.AlertOpenIncidentsAvailable,
+            ObserveAvailable,
+            unit: WellKnownTelemetryNames.Metrics.AlertOpenIncidentsAvailableUnit,
+            description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
+
+        // Observable gauges cannot be bridged, so the legacy names are registered next to the convention names for one
+        // minor release, with the legacy attribute keys. Removed in the next major version.
+        meter.ActualMeter?.CreateObservableGauge(
+            LegacyTelemetryNames.OpenIncidents,
+            ObserveLegacy,
             unit: null,
             description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
         meter.ActualMeter?.CreateObservableGauge(
-            "chronicle-alerts-open-incidents-available",
+            LegacyTelemetryNames.OpenIncidentsAvailable,
             ObserveAvailable,
             unit: null,
             description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
@@ -71,6 +86,14 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     /// </summary>
     /// <returns>The measurements.</returns>
     internal IEnumerable<Measurement<long>> Observe() => _enabled ? Fresh(_state)?.Measurements ?? [] : [];
+
+    /// <summary>
+    /// Gets the current measurements with the legacy attribute keys; empty when there is no fresh snapshot.
+    /// </summary>
+    /// <returns>The measurements.</returns>
+    internal IEnumerable<Measurement<long>> ObserveLegacy() => Observe().Select(measurement => new Measurement<long>(
+        measurement.Value,
+        measurement.Tags.ToArray().Select(tag => new KeyValuePair<string, object?>(LegacyTelemetryNames.ToLegacyMetricKey(tag.Key), tag.Value)).ToArray()));
 
     /// <summary>
     /// Gets the availability measurement; empty when this process has no owner.

@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
@@ -23,6 +24,8 @@ public sealed class ObserverMetricsRecorder : IDisposable
     /// </summary>
     public static readonly Meter SharedMeter = new("Cratis.Chronicle.Core.Specs.Observer");
 
+    static readonly LegacyMetricNameBridge _bridge = new(meter => ReferenceEquals(meter, SharedMeter), LegacyTelemetryNames.Metrics);
+
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<RecordedMeasurement> _measurements = new();
     readonly ConcurrentDictionary<string, Instrument> _instruments = new();
@@ -32,11 +35,12 @@ public sealed class ObserverMetricsRecorder : IDisposable
     /// </summary>
     public ObserverMetricsRecorder()
     {
+        GC.KeepAlive(_bridge);
         ObserverId = Guid.NewGuid().ToString();
 
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (ReferenceEquals(instrument.Meter, SharedMeter))
+            if (instrument.Meter.Name == SharedMeter.Name && !instrument.Name.StartsWith("cratis.chronicle.", StringComparison.Ordinal))
             {
                 _instruments[instrument.Name] = instrument;
                 listener.EnableMeasurementEvents(instrument);

@@ -16,6 +16,8 @@ public class should_publish_the_observable_gauges : given.a_gauge
         listener.Start();
     }
 
+    [Fact] void should_have_the_convention_incident_gauge_with_its_unit() => _instruments.Single(_ => _.Name == "cratis.chronicle.alert.open_incidents").Unit.ShouldEqual("{incident}");
+    [Fact] void should_have_the_convention_availability_gauge_with_its_unit() => _instruments.Single(_ => _.Name == "cratis.chronicle.alert.open_incidents_available").Unit.ShouldEqual("1");
     [Fact] void should_have_the_incident_gauge() => _instruments.Single(_ => _.Name == "chronicle-alerts-open-incidents").Unit.ShouldBeNull();
     [Fact] void should_have_the_availability_gauge() => _instruments.Exists(_ => _.Name == "chronicle-alerts-open-incidents-available").ShouldBeTrue();
     [Fact] void should_describe_the_incident_gauge() => _instruments.Single(_ => _.Name == "chronicle-alerts-open-incidents").Description.ShouldContain("open alert incidents");

@@ -320,7 +320,7 @@ public partial class Observer
                 State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
             }
 
-            _metrics?.PartitionRetryAttempt();
+            _metrics?.LegacyPartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
             if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
 

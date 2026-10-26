@@ -17,7 +17,7 @@ public class on_sqlite : given.a_sqlite_database
     {
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Name == "chronicle-sql-upsert-collisions-recovered") listener.EnableMeasurementEvents(instrument);
+            if (instrument.Name == "cratis.chronicle.sql.upsert.recovered_collisions") listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<int>((_, value, tags, _) =>
         {

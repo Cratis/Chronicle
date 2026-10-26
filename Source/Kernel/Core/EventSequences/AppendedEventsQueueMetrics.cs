@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Metrics;
 
@@ -15,10 +16,8 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class AppendedEventsQueueMetrics
 {
-    const string SuspectedUndeliveredName = "chronicle-appended-events-queue-suspected-undelivered-events";
     const string SuspectedUndeliveredDescription = "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer";
 
-    const string ObserversSpilledName = "chronicle-appended-events-queue-observers-spilled-to-catchup";
     const string ObserversSpilledDescription = "Number of times an observer was moved from live delivery to catch-up, by reason";
 
     static readonly Lock _suspectedUndeliveredLock = new();
@@ -26,19 +25,19 @@ internal static partial class AppendedEventsQueueMetrics
     static Counter<int>? _suspectedUndelivered;
     static Counter<int>? _observersSpilled;
 
-    [Counter<int>("chronicle-appended-events-queue-events-enqueued", "Number of events enqueued")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueEnqueuedEvents, "Number of events enqueued", WellKnownTelemetryNames.Metrics.AppendedEventsQueueEnqueuedEventsUnit)]
     internal static partial void EventsEnqueued(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>("chronicle-appended-events-queue-events-handled", "Number of events processed")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandledEvents, "Number of events processed", WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandledEventsUnit)]
     internal static partial void EventsHandled(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>("chronicle-appended-events-queue-events-handling-failures", "Number of events that has handling failures")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandlingFailures, "Number of events that has handling failures", WellKnownTelemetryNames.Metrics.AppendedEventsQueueHandlingFailuresUnit)]
     internal static partial void EventsHandlingFailures(this IMeterScope<AppendedEventsQueue> meter);
 
-    [Counter<int>("chronicle-appended-events-queue-events-spilled-to-catchup", "Number of events spilled to observer catch-up when the queue was full")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueSpilledEvents, "Number of events spilled to observer catch-up when the queue was full", WellKnownTelemetryNames.Metrics.AppendedEventsQueueSpilledEventsUnit)]
     internal static partial void EventsSpilledToCatchup(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
 
-    [Counter<int>("chronicle-appended-events-queue-catchup-trigger-budget-exceeded", "Number of spilled observer catch-up triggers still failing after the warning budget")]
+    [Counter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueCatchUpTriggerBudgetExceeded, "Number of spilled observer catch-up triggers still failing after the warning budget", WellKnownTelemetryNames.Metrics.AppendedEventsQueueCatchUpTriggerBudgetExceededUnit)]
     internal static partial void CatchupTriggerBudgetExceeded(this IMeterScope<AppendedEventsQueue> meter);
 
     /// <summary>
@@ -64,7 +63,7 @@ internal static partial class AppendedEventsQueueMetrics
 
             lock (_suspectedUndeliveredLock)
             {
-                counter = _suspectedUndelivered ??= meter.Meter.CreateCounter<int>(SuspectedUndeliveredName, unit: null, description: SuspectedUndeliveredDescription);
+                counter = _suspectedUndelivered ??= meter.Meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueSuspectedUndeliveredEvents, unit: WellKnownTelemetryNames.Metrics.AppendedEventsQueueSuspectedUndeliveredEventsUnit, description: SuspectedUndeliveredDescription);
             }
         }
 
@@ -74,7 +73,7 @@ internal static partial class AppendedEventsQueueMetrics
             tags.Add(key, tag);
         }
 
-        tags.Add("ObserverId", observerId);
+        tags.Add(WellKnownTelemetryNames.Attributes.ObserverId, observerId);
         counter.Add(numberOfEvents, tags);
     }
 
@@ -99,7 +98,7 @@ internal static partial class AppendedEventsQueueMetrics
 
             lock (_observersSpilledLock)
             {
-                counter = _observersSpilled ??= meter.Meter.CreateCounter<int>(ObserversSpilledName, unit: null, description: ObserversSpilledDescription);
+                counter = _observersSpilled ??= meter.Meter.CreateCounter<int>(WellKnownTelemetryNames.Metrics.AppendedEventsQueueObserverSpills, unit: WellKnownTelemetryNames.Metrics.AppendedEventsQueueObserverSpillsUnit, description: ObserversSpilledDescription);
             }
         }
 
@@ -109,8 +108,8 @@ internal static partial class AppendedEventsQueueMetrics
             tags.Add(key, tag);
         }
 
-        tags.Add("ObserverId", observerId);
-        tags.Add("Reason", reason);
+        tags.Add(WellKnownTelemetryNames.Attributes.ObserverId, observerId);
+        tags.Add(WellKnownTelemetryNames.Attributes.ObserverSpillReason, reason);
         counter.Add(1, tags);
     }
 }
@@ -138,9 +137,9 @@ internal static class AppendedEventsQueueMetricsScopes
         AppendedEventsQueueId queueId) =>
         meter.BeginScope(new Dictionary<string, object>
         {
-            ["EventStore"] = eventSequenceKey.EventStore,
-            ["Namespace"] = eventSequenceKey.Namespace,
-            ["EventSequenceId"] = eventSequenceKey.EventSequenceId,
-            ["QueueId"] = queueId
+            [WellKnownTelemetryNames.Attributes.EventStoreName] = eventSequenceKey.EventStore,
+            [WellKnownTelemetryNames.Attributes.EventStoreNamespace] = eventSequenceKey.Namespace,
+            [WellKnownTelemetryNames.Attributes.EventSequenceId] = eventSequenceKey.EventSequenceId,
+            [WellKnownTelemetryNames.Attributes.AppendedEventsQueueId] = queueId
         });
 }

@@ -24,7 +24,7 @@ public class and_the_same_source_wins_an_insert_race : given.a_unique_constraint
         _interceptors.Add(new InsertWinner(() => _storage.Save("owner", _definition, 42UL, "old")));
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Name == "chronicle-sql-upsert-collisions-recovered") listener.EnableMeasurementEvents(instrument);
+            if (instrument.Name == "cratis.chronicle.sql.upsert.recovered_collisions") listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<int>((_, value, tags, _) =>
         {
