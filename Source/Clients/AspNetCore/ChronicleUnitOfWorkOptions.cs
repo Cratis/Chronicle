@@ -9,9 +9,13 @@ namespace Microsoft.AspNetCore.Builder;
 public class ChronicleUnitOfWorkOptions
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the middleware reports a failed commit as problem details (409 for
-    /// conflicts, 400 for constraint violations, 500 otherwise) when the response has not started yet. Defaults to <see langword="false"/>.
+    /// Gets or sets a value indicating whether MVC completes the request unit before executing the result and
+    /// reports a failed commit as problem details (409 for conflicts, 400 for constraint violations, 500 otherwise).
+    /// The middleware also reports failures when the response has not started yet. Defaults to <see langword="false"/>.
     /// </summary>
-    /// <remarks>Only applies to requests that did not claim completion through <c language="csharp">IUnitOfWorkCompletionOwnershipFeature</c>.</remarks>
+    /// <remarks>
+    /// Only applies to requests that did not claim completion through <c language="csharp">IUnitOfWorkCompletionOwnershipFeature</c>.
+    /// MVC rolls back short-circuited actions and handled exceptions. Minimal APIs opt in separately with <c language="csharp">WithUnitOfWork()</c>.
+    /// </remarks>
     public bool ReportFailuresBeforeResponseStarts { get; set; }
 }
