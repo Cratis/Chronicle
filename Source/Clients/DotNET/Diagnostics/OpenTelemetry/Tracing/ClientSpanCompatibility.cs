@@ -24,6 +24,12 @@ internal static class ClientSpanCompatibility
     };
 
     /// <summary>
+    /// Attributes that are only set after the span has started, so samplers never see them. The event source id
+    /// can be a raw identifier.
+    /// </summary>
+    static readonly HashSet<string> _afterStart = ["event_source_id"];
+
+    /// <summary>
     /// Selects the operation name before sampling so legacy mode preserves both the operation and display names.
     /// </summary>
     /// <typeparam name="T">The owner of the span.</typeparam>
@@ -37,7 +43,7 @@ internal static class ClientSpanCompatibility
         var attributes = new ActivityTagsCollection();
         foreach (var (key, value) in tags)
         {
-            if (value is null) continue;
+            if (value is null || _afterStart.Contains(key)) continue;
             if (_attributes.TryGetValue(key, out var shared)) attributes[shared] = value;
             if (key == "reactor_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reactor";
             if (key == "reducer_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reducer";
@@ -45,7 +51,12 @@ internal static class ClientSpanCompatibility
 
         var name = names == ClientSpanNames.Convention ? definition.ConventionName : definition.LegacyName;
         var activity = source?.ActualSource?.StartActivity(name, definition.Kind, parentContext: default, tags: attributes);
-        foreach (var (key, value) in tags) activity?.SetTag(key, value);
+        foreach (var (key, value) in tags)
+        {
+            activity?.SetTag(key, value);
+            if (value is not null && _afterStart.Contains(key)) activity?.SetTag(_attributes[key], value);
+        }
+
         return new ActivityScope<T>(activity);
     }
 }
