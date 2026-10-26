@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Security.for_AdministratorAuthorizationServiceCollectionExtensions;

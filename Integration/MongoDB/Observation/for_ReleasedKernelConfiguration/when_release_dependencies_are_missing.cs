@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans;
-
 namespace Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration;
 
 public class when_release_dependencies_are_missing : Cratis.Specifications.Specification

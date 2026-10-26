@@ -145,7 +145,6 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         internal static DockerClient Client() => TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
 
-        // A container that was built but never started has no id yet; reading it throws.
         static string CreatedId(IContainer container)
         {
             try
