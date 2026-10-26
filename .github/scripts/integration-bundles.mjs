@@ -58,7 +58,7 @@ function validCase(item) {
     return [item.Class, item.Method].every(value => typeof value === 'string' && value.length > 0);
 }
 export async function discover(root, dll, execute = runProcess) {
-    const result = await command(execute, root, 'dotnet', [dll, '-nologo', '-list', 'full/json']);
+    const result = await command(execute, root, 'dotnet', [dll, '-nologo', '-noColor', '-list', 'full/json']);
     // The runner emits one complete JSON array after discovery. Any diagnostic outside
     // it, a truncated document, or a discovery error object invalidates the entire list.
     if (result.stderr.trim()) fail('Discovery wrote diagnostics');

@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chmod, cp, link, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pack, verify } from './integration-bundles.mjs';
+import { discover, pack, verify } from './integration-bundles.mjs';
 import { runProcess } from './mixed-specs-process.mjs';
 
 const sha = 'test-sha';
@@ -54,7 +54,7 @@ async function fixture(t) {
             const evaluationRoot = outputOverride ? path.resolve(outputOverride.slice('-p:BaseOutputPath='.length), '../../..') : options.cwd;
             return listedEvaluation(evaluationRoot === root && state.alias ? alias : evaluationRoot, libraries, state.absolute);
         }
-        assert.deepEqual(args.slice(1), ['-nologo', '-list', 'full/json']);
+        assert.deepEqual(args.slice(1), ['-nologo', '-noColor', '-list', 'full/json']);
         state.discovery.push({ dll: args[0], cwd: options.cwd });
         if (state.result instanceof Error) throw state.result;
         return state.result;
@@ -108,11 +108,26 @@ test('pack canonicalizes an evaluated executable reached through a symlinked che
     assert.equal((await f.pack()).dll, dll);
     await f.verify();
 });
+test('discovery disables the terminal reset emitted after the complete xunit JSON list', async () => {
+    // Retained Client output: a complete 1906-case array, newline, then ESC[0m.
+    const json = `${JSON.stringify(cases)}\n`;
+    const observed = `${json}\u001b[0m`;
+    assert.throws(() => JSON.parse(observed), SyntaxError);
+    const execute = async (command, args) => {
+        assert.equal(command, 'dotnet');
+        assert.equal(args[0], dll);
+        return { code: 0, stdout: args.includes('-noColor') ? json : observed, stderr: '' };
+    };
+    assert.deepEqual(await discover('.', dll, execute), cases.map(item => `${item.Class}.${item.Method}`).sort());
+});
 const invalidListings = {
     'positive partial output with failed exit': { ...listed(cases), code: 1 },
     'truncated JSON': { code: 0, stdout: JSON.stringify(cases).slice(0, -1), stderr: '' },
     'discovery error on stdout': { code: 0, stdout: `Discovery exception\n${JSON.stringify(cases)}`, stderr: '' },
     'discovery error on stderr': { ...listed(cases), stderr: 'Exception discovering test cases' },
+    'trailing discovery diagnostic': { code: 0, stdout: `${JSON.stringify(cases)}\nDiscovery exception`, stderr: '' },
+    'unexpected terminal reset': { code: 0, stdout: `${JSON.stringify(cases)}\n\u001b[0m`, stderr: '' },
+    'malformed JSON': { code: 0, stdout: '[{"Class": invalid}]\n', stderr: '' },
     'error object inside list': listed([...cases, { error: 'Discovery failed' }]),
     'timeout': Object.assign(new Error('Deadline exceeded'), { exitCode: 124 }),
     'signal': { ...listed(cases), signal: 'SIGTERM' },
