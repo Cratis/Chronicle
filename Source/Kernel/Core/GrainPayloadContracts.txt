@@ -1371,6 +1371,7 @@ oneof Cratis.Orleans.Jobs.ResumeJobError
 enum Cratis.Orleans.Jobs.ResumeJobSuccess : int
   JobAlreadyRunning = 2
   JobIsCompleted = 1
+  JobIsNotRunning = 3
   Success = 0
 enum Cratis.Orleans.Jobs.RetryFailedStepsError : int
   CouldNotPersist = 3
