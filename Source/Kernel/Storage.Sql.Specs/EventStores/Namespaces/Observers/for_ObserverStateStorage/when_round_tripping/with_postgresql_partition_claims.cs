@@ -16,6 +16,7 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
     KernelObserverState _state;
     KernelObserverState _saved;
     KernelObserverState _legacy;
+    string _connectionString;
 
     void Establish() => _state = KernelObserverState.Empty with
     {
@@ -31,11 +32,11 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
 
     async Task Because()
     {
+        // A database of its own: migrating the shared database would leave a later EnsureCreatedAsync there a no-op.
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(fixture.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
         var options = builder.Options;
-        await using var context = new NamespaceDbContext(options);
-        await context.Database.MigrateAsync();
         var database = Substitute.For<IDatabase>();
         database.Namespace(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>())
             .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(new NamespaceDbContext(options), static () => { })));
@@ -54,4 +55,12 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
     [Fact] void should_keep_legacy_claims_null() => _legacy.PartitionClaims.ShouldBeNull();
     [Fact] void should_keep_legacy_wide_claim_null() => _legacy.ObserverWideClaim.ShouldBeNull();
     [Fact] void should_keep_legacy_revision_null() => _legacy.OwnershipRevision.ShouldBeNull();
+
+    async Task Destroy()
+    {
+        if (_connectionString is not null)
+        {
+            await fixture.DropDatabase(_connectionString);
+        }
+    }
 }
