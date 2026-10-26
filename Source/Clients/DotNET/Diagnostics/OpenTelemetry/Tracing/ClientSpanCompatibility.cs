@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 /// </summary>
 internal static class ClientSpanCompatibility
 {
-    static readonly IReadOnlyDictionary<string, string> _attributes = new Dictionary<string, string>
+    static readonly Dictionary<string, string> _attributes = new Dictionary<string, string>
     {
         ["event_store_name"] = WellKnownTelemetryAttributes.EventStoreName,
         ["namespace_name"] = WellKnownTelemetryAttributes.EventStoreNamespace,
@@ -44,7 +44,7 @@ internal static class ClientSpanCompatibility
         }
 
         var name = names == ClientSpanNames.Convention ? definition.ConventionName : definition.LegacyName;
-        var activity = source?.ActualSource?.StartActivity(name, definition.Kind, parentContext: default(ActivityContext), tags: attributes);
+        var activity = source?.ActualSource?.StartActivity(name, definition.Kind, parentContext: default, tags: attributes);
         foreach (var (key, value) in tags) activity?.SetTag(key, value);
         return new ActivityScope<T>(activity);
     }

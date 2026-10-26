@@ -9,8 +9,8 @@ namespace Cratis.Chronicle;
 public enum ClientSpanNames
 {
     /// <summary>Keep the existing client.* operation and display names.</summary>
-    Legacy,
+    Legacy = 0,
 
     /// <summary>Use the shared cratis.chronicle.client.* convention names.</summary>
-    Convention
+    Convention = 1
 }

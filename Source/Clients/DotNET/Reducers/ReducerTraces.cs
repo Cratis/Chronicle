@@ -17,6 +17,12 @@ internal static class ReducerTraces
     /// <param name="names">The naming convention.</param>
     /// <returns>The activity scope.</returns>
     internal static IActivityScope<Reducers> Handle(this IActivitySource<Reducers> source, ObserverSpanContext context, ClientSpanNames names = ClientSpanNames.Legacy) =>
-        ClientSpanCompatibility.Start(source, new("client.reducer.handle", WellKnownClientSpanNames.ReducerHandle, ActivityKind.Consumer), names,
-            new("event_store_name", context.EventStoreName), new("namespace_name", context.NamespaceName), new("event_sequence_id", context.EventSequenceId), new("reducer_id", context.ObserverId));
+        ClientSpanCompatibility.Start(
+            source,
+            new("client.reducer.handle", WellKnownClientSpanNames.ReducerHandle, ActivityKind.Consumer),
+            names,
+            new("event_store_name", context.EventStoreName),
+            new("namespace_name", context.NamespaceName),
+            new("event_sequence_id", context.EventSequenceId),
+            new("reducer_id", context.ObserverId));
 }

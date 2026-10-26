@@ -4,8 +4,8 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences;

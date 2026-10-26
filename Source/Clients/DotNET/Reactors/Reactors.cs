@@ -83,7 +83,25 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Reactors"/> class with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the reactors belong to.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
+    /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/>.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
+    /// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/>.</param>
+    /// <param name="middlewaresActivator">The <see cref="IActivateReactorMiddlewares"/>.</param>
+    /// <param name="eventSerializer">The <see cref="IEventSerializer"/>.</param>
+    /// <param name="causationManager">The <see cref="ICausationManager"/>.</param>
+    /// <param name="identityProvider">The <see cref="IIdentityProvider"/>.</param>
+    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+    /// <param name="sideEffectHandlers">The <see cref="IReactorSideEffectHandlers"/>.</param>
+    /// <param name="reactorContextValuesBuilder">The <see cref="IReactorContextValuesBuilder"/>.</param>
+    /// <param name="argumentsResolver">The <see cref="IReactorMethodArgumentsResolver"/>.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
     internal Reactors(
         IEventStore eventStore,
         IEventTypes eventTypes,

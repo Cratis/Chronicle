@@ -36,13 +36,6 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     {
     }
 
-    /// <inheritdoc/>
-    internal UnitOfWorkManager(IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource, UnitOfWorkLifecyclePolicy lifecyclePolicy, ILogger<UnitOfWork>? logger, ClientSpanNames spanNames)
-        : this(() => eventStore, activitySource, lifecyclePolicy, logger)
-    {
-        SpanNames = spanNames;
-    }
-
     /// <summary>
     /// Initializes a manager with compatibility staging behavior.
     /// </summary>
@@ -70,6 +63,20 @@ public class UnitOfWorkManager : IUnitOfWorkManager
         _activitySource = activitySource;
         _lifecyclePolicy = lifecyclePolicy;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Initializes a manager with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
+    internal UnitOfWorkManager(IEventStore eventStore, IActivitySource<UnitOfWork>? activitySource, UnitOfWorkLifecyclePolicy lifecyclePolicy, ILogger<UnitOfWork>? logger, ClientSpanNames spanNames)
+        : this(() => eventStore, activitySource, lifecyclePolicy, logger)
+    {
+        SpanNames = spanNames;
     }
 
     /// <inheritdoc/>

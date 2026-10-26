@@ -78,7 +78,22 @@ public partial class Reducers : IReducers
     {
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Reducers"/> class with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the reducers belong to.</param>
+    /// <param name="clientArtifacts">The <see cref="IClientArtifactsProvider"/>.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
+    /// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/>.</param>
+    /// <param name="reducerValidator">The <see cref="IReducerValidator"/>.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
+    /// <param name="namingPolicy">The <see cref="INamingPolicy"/>.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
+    /// <param name="identityProvider">The <see cref="IIdentityProvider"/>.</param>
+    /// <param name="reducerObservers">The <see cref="IReducerObservers"/>.</param>
+    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
     internal Reducers(
         IEventStore eventStore,
         IClientArtifactsProvider clientArtifacts,

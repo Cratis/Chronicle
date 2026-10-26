@@ -6,14 +6,6 @@ using Cratis.Chronicle.Concepts;
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 /// <summary>
-/// Describes a legacy metric, published next to its convention counterpart for one minor release.
-/// </summary>
-/// <param name="Name">The legacy instrument name.</param>
-/// <param name="Unit">The legacy unit, or null.</param>
-/// <param name="Description">The legacy description, or null.</param>
-internal record LegacyMetric(string Name, string? Unit, string? Description);
-
-/// <summary>
 /// The legacy telemetry names that are still published for one minor release next to the names in <see cref="WellKnownMetricNames"/>.
 /// All of this is removed in the next major version.
 /// </summary>

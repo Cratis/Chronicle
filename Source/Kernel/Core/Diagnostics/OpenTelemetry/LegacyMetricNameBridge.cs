@@ -74,7 +74,7 @@ internal sealed class LegacyMetricNameBridge : IDisposable
         _ => null
     };
 
-    static void Record<T>(Instrument legacy, T measurement, in TagList tags)
+    static void Record<T>(Instrument legacy, T measurement, TagList tags)
         where T : struct
     {
         switch (legacy)
