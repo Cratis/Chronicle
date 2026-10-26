@@ -129,8 +129,9 @@
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
-    <PackageVersion Include="Castle.Core" Version="5.2.1" />
+    <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies.
+         Keep this at 5.1.1; automated package updates must not raise it (https://github.com/Cratis/Chronicle/issues/5414). -->
+    <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
