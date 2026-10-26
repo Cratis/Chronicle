@@ -109,7 +109,7 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         internal async Task AssertGoneAsync()
         {
-            var ids = _createdIds.Concat(_containers.Select(container => container.Id)).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
+            var ids = _createdIds.Concat(_containers.Select(CreatedId)).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
             ids.Length.ShouldBeGreaterThan(0);
             foreach (var id in ids) await AssertGone(id);
         }
@@ -145,6 +145,19 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         internal static DockerClient Client() => TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
 
+        // A container that was built but never started has no id yet; reading it throws.
+        static string CreatedId(IContainer container)
+        {
+            try
+            {
+                return container.Id;
+            }
+            catch (InvalidOperationException)
+            {
+                return string.Empty;
+            }
+        }
+
         static async Task AssertGone(string id)
         {
             using var client = Client();
@@ -155,8 +168,12 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         async ValueTask DisposeObserved(IContainer container, Func<ValueTask> realDispose)
         {
-            foreach (var owned in _containers.Where(owned => !string.IsNullOrEmpty(owned.Id))) _createdIds.Add(owned.Id);
-            var id = container.Id;
+            foreach (var owned in _containers)
+            {
+                var ownedId = CreatedId(owned);
+                if (!string.IsNullOrEmpty(ownedId)) _createdIds.Add(ownedId);
+            }
+            var id = CreatedId(container);
             if (Dispose is { } injected)
             {
                 await injected(container, realDispose);
