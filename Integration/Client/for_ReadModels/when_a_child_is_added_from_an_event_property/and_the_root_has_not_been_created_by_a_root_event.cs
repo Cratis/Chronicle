@@ -102,9 +102,7 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
         };
     }
 
-    [Fact] void should_read_the_placeholder_on_every_backend() => Context.AfterTheChildOnlyEvent.ShouldNotBeNull();
-    [Fact] void should_not_read_initial_values_before_the_root_event_on_any_backend() => Context.AfterTheChildOnlyEvent.Status.ShouldBeNull();
-    [Fact] void should_read_the_child_before_the_root_event_on_every_backend() => Context.AfterTheChildOnlyEvent.Books.Single().Isbn.ShouldEqual("978-1");
+    [Fact] void should_not_expose_the_placeholder_before_the_root_event_on_any_backend() => Context.AfterTheChildOnlyEvent.ShouldBeNull();
     [Fact] void should_read_the_root_property_on_every_backend() => Context.Result.Name.ShouldEqual("Fiction");
     [Fact] void should_read_the_initial_values_after_the_root_event_on_every_backend() => Context.Result.Status.ShouldEqual("open");
     [Fact] void should_read_the_numeric_initial_value_on_every_backend() => Context.Result.Capacity.ShouldEqual(42);
