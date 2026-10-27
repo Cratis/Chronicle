@@ -12,11 +12,23 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_observing_instances;
 [Collection(PostgreSqlCollection.Name)]
 public class and_a_projection_updates_a_paged_instance_on_postgresql(PostgreSqlFixture fixture) : a_sql_read_model
 {
+    string _connectionString;
+
     async Task Because() => await ObservePagedWrite();
 
     [Fact] void should_emit_the_initial_page() => NameOf(_firstPage).ShouldEqual("before");
     [Fact] void should_emit_a_fresh_page_after_the_write() => NameOf(_secondPage).ShouldEqual("after");
 
-    protected override DbConnection CreateConnection() => new NpgsqlConnection(fixture.ConnectionString);
-    protected override void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection) => options.UseNpgsql(fixture.ConnectionString);
+    // EnsureCreated adds no table to a database that already has tables, so the shared database is not used.
+    protected override async Task PrepareDatabase() => _connectionString = await fixture.CreateDatabase();
+    protected override async Task RemoveDatabase()
+    {
+        if (_connectionString is not null)
+        {
+            await fixture.DropDatabase(_connectionString);
+        }
+    }
+
+    protected override DbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
+    protected override void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection) => options.UseNpgsql(_connectionString);
 }

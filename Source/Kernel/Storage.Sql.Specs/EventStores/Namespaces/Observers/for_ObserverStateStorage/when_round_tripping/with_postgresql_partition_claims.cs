@@ -16,6 +16,7 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
     KernelObserverState _state;
     KernelObserverState _saved;
     KernelObserverState _legacy;
+    string _connectionString;
 
     void Establish() => _state = KernelObserverState.Empty with
     {
@@ -31,8 +32,10 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
 
     async Task Because()
     {
+        // A database of its own: tables migrated into the shared database make EnsureCreated skip creating tables in other specs of the collection.
+        _connectionString = await fixture.CreateDatabase();
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(fixture.ConnectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
+        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
         var options = builder.Options;
         await using var context = new NamespaceDbContext(options);
         await context.Database.MigrateAsync();
@@ -44,6 +47,14 @@ public class with_postgresql_partition_claims(PostgreSqlFixture fixture) : Speci
         _saved = await storage.Get("observer");
         await storage.Save(KernelObserverState.Empty with { Identifier = "legacy" }, Concepts.EventSequences.EventSequenceId.Log);
         _legacy = await storage.Get("legacy");
+    }
+
+    async Task Destroy()
+    {
+        if (_connectionString is not null)
+        {
+            await fixture.DropDatabase(_connectionString);
+        }
     }
 
     [Fact] void should_keep_partitions() => _saved.PartitionClaims.Select(claim => claim.Partition).ShouldEqual(_state.PartitionClaims.Select(claim => claim.Partition));

@@ -53,8 +53,21 @@ public abstract class a_sql_read_model : Specification
     protected abstract DbConnection CreateConnection();
     protected abstract void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection);
 
+    /// <summary>
+    /// Prepares the database the specification runs against, before the connection is created.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task PrepareDatabase() => Task.CompletedTask;
+
+    /// <summary>
+    /// Removes the database the specification ran against, after the connection is closed.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task RemoveDatabase() => Task.CompletedTask;
+
     async Task Establish()
     {
+        await PrepareDatabase();
         var schema = await JsonSchema.FromJsonAsync(SchemaJson);
         _columns = ProjectedColumns.ForSchema(schema);
         _connection = CreateConnection();
@@ -129,10 +142,11 @@ public abstract class a_sql_read_model : Specification
     protected static string NameOf(IEnumerable<ExpandoObject> instances) =>
         (string)((IDictionary<string, object?>)instances.Single())["name"]!;
 
-    void Destroy()
+    async Task Destroy()
     {
         _subscription?.Dispose();
         _connection?.Dispose();
+        await RemoveDatabase();
     }
 
     ReadModelDbContext CreateContext()
