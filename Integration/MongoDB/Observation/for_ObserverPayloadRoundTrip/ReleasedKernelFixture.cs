@@ -30,6 +30,10 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
         _mongoDB = new ContainerBuilder("mongo:8.0")
             .WithEnvironment("MONGO_INITDB_ROOT_USERNAME", "chronicle-test")
             .WithEnvironment("MONGO_INITDB_ROOT_PASSWORD", "chronicle-test")
+
+            // Reverts to the pre-8.0.5 behavior where glibc, not TCMalloc, owns rseq registration - the documented
+            // fix for MongoDB's Linux kernel 6.19+ incompatibility (https://jira.mongodb.org/browse/SERVER-121912).
+            .WithEnvironment("GLIBC_TUNABLES", "glibc.pthread.rseq=1")
             .WithNetwork(_network)
             .WithNetworkAliases("mongodb")
             .WithPortBinding(27017, assignRandomHostPort: true)
