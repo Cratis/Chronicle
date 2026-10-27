@@ -24,6 +24,11 @@ public static class WellKnownServices
     public const string Users = "Users";
 
     /// <summary>
+    /// The name of the administrator management service.
+    /// </summary>
+    public const string Administrators = "Administrators";
+
+    /// <summary>
     /// The name of the Applications security service.
     /// </summary>
     public const string Applications = "Applications";

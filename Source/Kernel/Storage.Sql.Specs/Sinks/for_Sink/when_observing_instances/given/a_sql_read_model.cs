@@ -50,6 +50,18 @@ public abstract class a_sql_read_model : Specification
     IReadOnlyList<ProjectedColumn> _columns;
     int _emissions;
 
+    /// <summary>
+    /// Prepares the database the specification runs against, before any connection is opened.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task PrepareDatabase() => Task.CompletedTask;
+
+    /// <summary>
+    /// Releases the database prepared for the specification, after its connection is closed.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task ReleaseDatabase() => Task.CompletedTask;
+
     protected abstract DbConnection CreateConnection();
     protected abstract void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection);
 
@@ -57,6 +69,7 @@ public abstract class a_sql_read_model : Specification
     {
         var schema = await JsonSchema.FromJsonAsync(SchemaJson);
         _columns = ProjectedColumns.ForSchema(schema);
+        await PrepareDatabase();
         _connection = CreateConnection();
         await _connection.OpenAsync();
         await using (var context = CreateContext())
@@ -129,16 +142,25 @@ public abstract class a_sql_read_model : Specification
     protected static string NameOf(IEnumerable<ExpandoObject> instances) =>
         (string)((IDictionary<string, object?>)instances.Single())["name"]!;
 
-    void Destroy()
+    async Task Destroy()
     {
         _subscription?.Dispose();
         _connection?.Dispose();
+        await ReleaseDatabase();
     }
 
     ReadModelDbContext CreateContext()
     {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>();
+        var postgreSql = _connection is Npgsql.NpgsqlConnection;
+        var options = postgreSql
+            ? new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(_connection.ConnectionString))
+            : new DbContextOptionsBuilder<ReadModelDbContext>();
         Configure(options, _connection);
-        return new ReadModelDbContext(options.AddConceptAsSupport().WithoutServiceProviderCaching().Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
+        options.AddConceptAsSupport();
+        if (!postgreSql)
+        {
+            options.WithoutServiceProviderCaching();
+        }
+        return new ReadModelDbContext(options.Options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
     }
 }

@@ -33,7 +33,7 @@
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.143.0" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="22.143.0" />
     <PackageVersion Include="Cratis.Arc.Testing" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.249.2" />
+    <PackageVersion Include="Cratis.Screenplay" Version="4.149.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
@@ -113,7 +113,7 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="Cratis.Specifications" Version="5.0.0" />
+    <PackageVersion Include="Cratis.Specifications" Version="5.1.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="5.1.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.1.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
@@ -129,8 +129,9 @@
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies. -->
-    <PackageVersion Include="Castle.Core" Version="5.2.1" />
+    <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies.
+         Keep this at 5.1.1; automated package updates must not raise it (https://github.com/Cratis/Chronicle/issues/5414). -->
+    <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />

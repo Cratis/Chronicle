@@ -234,4 +234,31 @@ public interface ISink
     /// <returns>An observable stream of instance collections ordered by key within the sink.</returns>
     /// <remarks>Insertions or deletions can shift the boundaries of an observed offset page.</remarks>
     IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50);
+
+    /// <summary>
+    /// Get instances from the sink, controlling whether roots stored as uninitialized are returned.
+    /// </summary>
+    /// <param name="occurrence">Optional <see cref="ReadModelContainerName"/> of the occurrence to get instances from.</param>
+    /// <param name="skip">Number of instances to skip.</param>
+    /// <param name="take">Number of instances to take.</param>
+    /// <param name="visibility">The <see cref="ReadModelInstanceVisibility"/> to apply.</param>
+    /// <returns>Instances ordered by their key within the sink, and the total count.</returns>
+    /// <remarks>
+    /// The overload without a visibility is the <see cref="ReadModelInstanceVisibility.InitializedOnly"/> contract. The default
+    /// implementation ignores the visibility so that a sink written against the previous contract keeps compiling.
+    /// </remarks>
+    Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility) =>
+        GetInstances(occurrence, skip, take);
+
+    /// <summary>
+    /// Observe changes to instances in the sink, controlling whether roots stored as uninitialized are returned.
+    /// </summary>
+    /// <param name="occurrence">Optional <see cref="ReadModelContainerName"/> of the occurrence to observe.</param>
+    /// <param name="skip">Number of instances to skip.</param>
+    /// <param name="take">Number of instances to observe.</param>
+    /// <param name="visibility">The <see cref="ReadModelInstanceVisibility"/> to apply.</param>
+    /// <returns>An observable stream of instance collections ordered by key within the sink.</returns>
+    /// <remarks>The default implementation ignores the visibility, like <see cref="GetInstances(ReadModelContainerName?, int, int, ReadModelInstanceVisibility)"/>.</remarks>
+    IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility) =>
+        ObserveInstances(occurrence, skip, take);
 }

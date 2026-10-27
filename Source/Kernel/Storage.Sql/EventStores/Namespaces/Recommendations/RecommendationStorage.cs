@@ -55,7 +55,7 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations() => LiveQuery.Observe(GetAllInternal, database.LiveQueryPollingInterval);
+    public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations() => LiveQuery.Observe(GetAllInternal, database, "recommendations");
 
     async Task<IEnumerable<RecommendationState>> GetAllInternal()
     {

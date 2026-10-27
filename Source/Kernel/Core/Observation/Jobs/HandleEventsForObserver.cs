@@ -80,6 +80,19 @@ public class HandleEventsForObserver(
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
 
+    /// <summary>
+    /// Gets or sets the most events one subscriber call may carry. Exposed for testing.
+    /// </summary>
+    internal int MaxEventsPerBatch { get; set; } = BoundedEventCursor.DefaultMaximumEventsPerBatch;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A collapsing projection writes to documents shared by several partitions that the read model watermark cannot
+    /// guard, so a redelivered slice may be applied twice. Checkpointing after every slice keeps that window to the
+    /// slice in flight. Partitioned subscribers keep the configured checkpoint interval.
+    /// </remarks>
+    protected override bool CheckpointAfterEveryBatch => _subscription.IsCollapsingProjection;
+
     bool DeliversPages { get; set; }
 
     /// <inheritdoc/>
@@ -235,13 +248,21 @@ public class HandleEventsForObserver(
                 return ClosedResult();
             }
 
-            using var events = await eventSequenceStorage.GetRange(
+            var storageEvents = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
                     ? currentState.StartEventSequenceNumber
                     : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
                 currentState.EndEventSequenceNumber,
                 eventTypes: eventTypesToRead,
                 cancellationToken: cancellationToken);
+
+            // Replay pages are sized by the read model batch size and keep the storage batches whole. Every other
+            // delivery is sliced, so one subscriber call never carries a whole storage batch.
+            var maximumEventsPerCall = _subscription.SubscriberType.IsAssignableTo(typeof(IUnpartitionedObserverSubscriber))
+                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
+                : MaxEventsPerBatch;
+            var deliversPages = DeliversPages && _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
+            using var events = new BoundedEventCursor(storageEvents, deliversPages ? int.MaxValue : maximumEventsPerCall);
 
             // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
             // keeps this step from asking the observer per batch; a partition that starts failing while the walk
@@ -455,7 +476,7 @@ public class HandleEventsForObserver(
         }
     }
 
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
+    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, BoundedEventCursor events)
     {
         if (eventObservationState != EventObservationState.None)
         {

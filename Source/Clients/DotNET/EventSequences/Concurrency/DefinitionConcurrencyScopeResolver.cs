@@ -64,7 +64,11 @@ internal static class DefinitionConcurrencyScopeResolver
             }
             else
             {
-                distinct[index] = distinct[index] with { SequenceNumber = ReadProtectionPredicate.Earliest(distinct[index].SequenceNumber, guard.SequenceNumber) };
+                distinct[index] = distinct[index] with
+                {
+                    SequenceNumber = ReadProtectionPredicate.Earliest(distinct[index].SequenceNumber, guard.SequenceNumber),
+                    MutationEpoch = ReadProtectionPredicate.EarliestEpoch(distinct[index].MutationEpoch, guard.MutationEpoch)
+                };
             }
         });
 

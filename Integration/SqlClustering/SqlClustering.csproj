@@ -6,9 +6,20 @@
         <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:latest-development</LocalImageName>
     </PropertyGroup>
     <ItemGroup>
+        <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj">
+            <Aliases>KernelConcepts</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <!-- Storage.Sql brings in the kernel's Core, whose types (for example AppendResult) clash with the client's. -->
+        <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
+            <Aliases>KernelCore</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <PackageReference Include="Testcontainers.PostgreSql" />
         <PackageReference Include="Microsoft.Data.SqlClient" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+        <PackageReference Include="NSubstitute" />
         <Compile Include="../Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
     </ItemGroup>
     <PropertyGroup Condition="'$(DisableDockerBuild)' != 'true'">

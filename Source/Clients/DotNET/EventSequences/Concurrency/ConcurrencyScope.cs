@@ -63,6 +63,14 @@ public record ConcurrencyScope(
     internal bool IssuedByStrategy { get; init; }
 
     /// <summary>
+    /// Gets the mutation epoch of the event sequence observed by a decision read, outside value equality.
+    /// </summary>
+    /// <remarks>
+    /// When set, the kernel refuses the append if a revision or redaction changed the history after the read.
+    /// </remarks>
+    internal ulong? MutationEpoch { get; init; }
+
+    /// <summary>
     /// Gets the definition linked by the builder, outside value equality.
     /// </summary>
     internal Type? DefinitionType { get; init; }

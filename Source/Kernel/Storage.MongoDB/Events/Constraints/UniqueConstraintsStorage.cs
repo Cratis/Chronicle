@@ -179,6 +179,29 @@ public class UniqueConstraintsStorage(
         await GetValuesCollectionFor(definition.Name, scopeKey).DeleteOneAsync(_ => _.Value == value && _.EventSourceId == eventSourceId, cancellationToken);
 
     /// <inheritdoc/>
+    public async Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
+    {
+        var database = eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+constraint").Database;
+        var collections = new BsonDocument("name", new BsonRegularExpression($"^{Regex.Escape(eventSequenceId.Value)}\\+.+\\+constraint$"));
+        using var names = await database.ListCollectionNamesAsync(new ListCollectionNamesOptions { Filter = collections }, cancellationToken);
+        var hash = new BsonRegularExpression("\\A[0-9a-f]{64}\\z");
+
+        // Collection names cannot tell the claim modes apart (a constraint or scope may be named "values"),
+        // so each delete only matches documents of its own shape: per-event-source rows store the value in a
+        // field and the owner in _id, retained per-value rows store the owner in a field and the value in _id.
+        var sourceFilter = Builders<UniqueConstraintIndex>.Filter.Exists(row => row.Value) & !Builders<UniqueConstraintIndex>.Filter.Regex(row => row.Value, hash);
+        var valueFilter = Builders<UniqueConstraintValueIndex>.Filter.Exists(row => row.EventSourceId) & !Builders<UniqueConstraintValueIndex>.Filter.Regex(row => row.Value, hash);
+        long sources = 0;
+        long values = 0;
+        foreach (var name in await names.ToListAsync(cancellationToken))
+        {
+            sources += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(name).DeleteManyAsync(sourceFilter, cancellationToken)).DeletedCount;
+            values += (await eventStoreNamespaceDatabase.GetCollection<UniqueConstraintValueIndex>(name).DeleteManyAsync(valueFilter, cancellationToken)).DeletedCount;
+        }
+        return (sources, values);
+    }
+
+    /// <inheritdoc/>
     public async Task RemoveForSubject(Subject subject, CancellationToken cancellationToken = default)
     {
         // Both claim shapes store the subject under the same element, so one typed filter serves every collection.

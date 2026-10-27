@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -35,14 +33,14 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
             new("reactor-subscriber", ObserverFilters.None),
             new Dictionary<EventTypeId, ObserverTypeSetMember> { [_type] = new(new(5), new(42)) },
             []);
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
     {
         var barrier = new given.ControlWriteBarrier();
         var delayedStorage = CreateStorage(barrier);
-        var oldSave = delayedStorage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(6) } });
+        var oldSave = delayedStorage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(6) } }, Concepts.EventSequences.EventSequenceId.Log);
         try
         {
             await barrier.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -51,7 +49,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
                 Revision = new(7),
                 Members = new Dictionary<EventTypeId, ObserverTypeSetMember> { [_type] = new(new(7), new(123)) }
             };
-            await _storage.Save(new() { Identifier = "observer", TypeSetControl = current });
+            await _storage.Save(new() { Identifier = "observer", TypeSetControl = current }, Concepts.EventSequences.EventSequenceId.Log);
         }
         finally
         {
@@ -59,7 +57,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
         }
 
         _error = await Catch.Exception(() => oldSave);
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control, NextEventSequenceNumber = new(456) });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control, NextEventSequenceNumber = new(456) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 
@@ -80,8 +78,7 @@ public class with_postgresql_stale_control(PostgreSqlFixture fixture) : Specific
 
     NamespaceDbContext CreateContext(given.ControlWriteBarrier? barrier = null)
     {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
+        var builder = new DbContextOptionsBuilder<NamespaceDbContext>(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
         if (barrier is not null)
         {
             builder.AddInterceptors(barrier);

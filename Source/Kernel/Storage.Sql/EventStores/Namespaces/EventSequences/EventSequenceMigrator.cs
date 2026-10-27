@@ -3,8 +3,10 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Concepts.Events;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -57,6 +59,19 @@ public partial class EventSequenceMigrator(
         SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase),
         _ => false
     };
+
+    /// <summary>
+    /// A node running a version from before revision tracking redacts without knowing the Revisions column, which leaves
+    /// the revised content - possibly personal data - stored on the redacted row. Reads never expose it; this removes it.
+    /// </summary>
+    /// <param name="context">The context for the event sequence table.</param>
+    static async Task ClearRevisionsOfRedactedEvents(EventSequenceDbContext context)
+    {
+        var redaction = GlobalEventTypes.Redaction;
+        await context.Events
+            .Where(e => e.Type == redaction && e.Revisions != null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.Revisions, (string?)null));
+    }
 
     static void AddPublicationIndex(EventSequenceDbContext context, MigrationBuilder migration, string tableName)
     {
@@ -142,6 +157,7 @@ public partial class EventSequenceMigrator(
                 Content = table.StringColumn(migrationBuilder),
                 ContentHashes = table.StringColumn(migrationBuilder),
                 DerivedGenerations = table.StringColumn(migrationBuilder, nullable: true),
+                Revisions = table.StringColumn(migrationBuilder, nullable: true),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
                 EventSource = table.StringColumn(migrationBuilder, nullable: true),
@@ -196,6 +212,17 @@ public partial class EventSequenceMigrator(
             var provenanceMigration = new MigrationBuilder(context.Database.ProviderName);
             provenanceMigration.AddColumn<string>(nameof(EventEntry.DerivedGenerations), tableName, nullable: true);
             await tableMigrator.ExecuteMigrationOperations(context, provenanceMigration);
+        }
+
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.Revisions)))
+        {
+            var revisionsMigration = new MigrationBuilder(context.Database.ProviderName);
+            revisionsMigration.AddColumn<string>(nameof(EventEntry.Revisions), tableName, nullable: true);
+            await tableMigrator.ExecuteMigrationOperations(context, revisionsMigration);
+        }
+        else
+        {
+            await ClearRevisionsOfRedactedEvents(context);
         }
 
         if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.AppendedGeneration)))

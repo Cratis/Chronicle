@@ -14,6 +14,7 @@ public class the_provider : Specification
     protected IEventStoreStorage eventStoreStorage;
     protected IEventStoreNamespaceStorage eventStoreNamespaceStorage;
     protected IFailedPartitionsStorage _failedPartitionsStorage;
+    protected IObserverDefinitionsStorage _observerDefinitionsStorage;
 
     void Establish()
     {
@@ -21,6 +22,9 @@ public class the_provider : Specification
         eventStoreStorage = Substitute.For<IEventStoreStorage>();
         eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
+        _observerDefinitionsStorage = Substitute.For<IObserverDefinitionsStorage>();
+        _observerDefinitionsStorage.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty);
+        eventStoreStorage.Observers.Returns(_observerDefinitionsStorage);
         provider = new(storage);
 
         eventStoreNamespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);

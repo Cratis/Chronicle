@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Schemas;
 /// <summary>
 /// Represents a JSON Schema document, backed by a <see cref="JsonObject"/>.
 /// </summary>
-public class JsonSchema
+public partial class JsonSchema
 {
     static readonly string[] _knownSchemaKeys =
     [
@@ -922,8 +922,13 @@ public class JsonSchema
     JsonSchema? ResolveRef()
     {
         var refValue = Node["$ref"]?.GetValue<string>();
-        if (refValue?.StartsWith('#') != true) return null;
+        if (refValue is null) return null;
+        return ResolveRootRef(refValue) ?? ResolveResourceRef(refValue);
+    }
 
+    JsonSchema? ResolveRootRef(string refValue)
+    {
+        if (!refValue.StartsWith('#')) return null;
         var root = Root;
         var fragment = refValue[1..];
 
@@ -933,10 +938,7 @@ public class JsonSchema
             return root;
         }
 
-        // Resolve the fragment as a JSON Pointer (RFC 6901) into the root document. This covers both
-        // definition references (#/$defs/<name>, #/definitions/<name>) and the in-document pointers that
-        // System.Text.Json emits for recurring and self-referential types (e.g. #/properties/Features/items),
-        // which would otherwise fail to resolve and leave the referenced schema empty.
+        // Keep the existing root pointer lookup, including slash-less pointers, ahead of resource lookup.
         JsonNode? current = root.Node;
         foreach (var rawSegment in fragment.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {

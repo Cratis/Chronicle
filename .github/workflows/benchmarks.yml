@@ -23,8 +23,34 @@ permissions:
   pull-requests: write
 
 jobs:
+  already-ran:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 50
+      # The nightly pushes its own "Update benchmark results [skip ci]" commit, so HEAD moves every night.
+      # Key on the last commit that changed anything other than the results file.
+      - name: Resolve the last non-results commit
+        id: commit
+        run: echo "sha=$(git log -1 --format=%H -- . ':(exclude)Documentation/benchmarks/benchmark-data.json')" >> "$GITHUB_OUTPUT"
+      - name: Check for a prior successful run
+        id: gate
+        uses: Cratis/Workflows/.github/actions/skip-if-already-ran@main
+        with:
+          sha: ${{ steps.commit.outputs.sha }}
+
   benchmarks:
     name: Benchmarks
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 

@@ -16,8 +16,8 @@ public class when_renaming_observers_onto_an_existing_observer : given.a_cold_st
     async Task Establish()
     {
         _storage = new(Store, Namespace, _database);
-        await _storage.Save(new() { Identifier = "original", NextEventSequenceNumber = new(42) });
-        await _storage.Save(new() { Identifier = "target", NextEventSequenceNumber = new(7) });
+        await _storage.Save(new() { Identifier = "original", NextEventSequenceNumber = new(42) }, Concepts.EventSequences.EventSequenceId.Log);
+        await _storage.Save(new() { Identifier = "target", NextEventSequenceNumber = new(7) }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()

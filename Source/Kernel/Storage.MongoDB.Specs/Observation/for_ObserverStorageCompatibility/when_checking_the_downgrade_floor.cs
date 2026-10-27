@@ -44,5 +44,15 @@ public class when_checking_the_downgrade_floor(ReplicaSetMongoDBFixture fixture)
 
     protected override IObserverStateStorage OpenObservers() => new ObserverStateStorage(_namespaceDatabase);
 
+    [Fact] public async Task should_accept_and_stamp_a_legacy_record_without_an_owner()
+    {
+        var collection = _client.GetDatabase(_databaseName).GetCollection<BsonDocument>(WellKnownCollectionNames.Observers);
+        await collection.InsertOneAsync(new BsonDocument { ["_id"] = "legacy" });
+        (await OpenObservers().Save(new() { Identifier = "legacy", LastHandledEventSequenceNumber = 42 }, Concepts.EventSequences.EventSequenceId.Inbox)).ShouldBeTrue();
+        var stored = await OpenObservers().Get("legacy");
+        stored.Owner.ShouldEqual(Concepts.EventSequences.EventSequenceId.Inbox);
+        stored.LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)42);
+    }
+
     Task Destroy() => _client.DropDatabaseAsync(_databaseName);
 }

@@ -17,7 +17,8 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
     protected ChronicleAuthenticationServices BuildServices(
         SharedDataProtectionKeys? sharedKeys = null,
         bool authenticationEnabled = false,
-        bool useInternalAuthority = false)
+        bool useInternalAuthority = false,
+        Action<IServiceCollection>? configureServices = null)
     {
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
@@ -47,6 +48,7 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
             }
         });
 
+        configureServices?.Invoke(services);
         var serviceProvider = services.BuildServiceProvider();
 
         return new(
@@ -57,7 +59,8 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
             serviceProvider.GetRequiredService<GrainBasedXmlRepository>(),
             serviceProvider.GetRequiredService<IXmlRepository>(),
             serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
-            serviceProvider.GetRequiredService<IDataProtectionProvider>());
+            serviceProvider.GetRequiredService<IDataProtectionProvider>(),
+            services);
     }
 
     protected sealed record ChronicleAuthenticationServices(
@@ -68,7 +71,8 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
         GrainBasedXmlRepository ConcreteRepository,
         IXmlRepository XmlRepository,
         IOptions<KeyManagementOptions> KeyManagementOptions,
-        IDataProtectionProvider DataProtectionProvider);
+        IDataProtectionProvider DataProtectionProvider,
+        IServiceCollection Services);
 
     protected sealed class SharedDataProtectionKeys
     {

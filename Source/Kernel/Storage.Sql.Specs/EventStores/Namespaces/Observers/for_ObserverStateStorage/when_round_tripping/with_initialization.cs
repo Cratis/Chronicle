@@ -16,17 +16,17 @@ public class with_initialization : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "legacy" });
+        await _storage.Save(new() { Identifier = "legacy" }, Concepts.EventSequences.EventSequenceId.Log);
         _legacy = await _storage.Get("legacy");
         var restored = new List<ObserverInitializationState>();
         foreach (var state in Enum.GetValues<ObserverInitializationState>())
         {
-            await _storage.Save(new() { Identifier = "observer", Initialization = new(state, ["unfinished job", "unsettled handover"]), RunningState = ObserverRunningState.Initializing });
+            await _storage.Save(new() { Identifier = "observer", Initialization = new(state, ["unfinished job", "unsettled handover"]), RunningState = ObserverRunningState.Initializing }, Concepts.EventSequences.EventSequenceId.Log);
             restored.Add((await _storage.Get("observer")).Initialization.State);
         }
 
         _states = restored.ToArray();
-        await _storage.Save(new() { Identifier = "observer", RunningState = ObserverRunningState.ChangingDefinition });
+        await _storage.Save(new() { Identifier = "observer", RunningState = ObserverRunningState.ChangingDefinition }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
         await _storage.Rename("observer", "renamed");
         _renamed = await _storage.Get("renamed");
