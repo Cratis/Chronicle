@@ -78,6 +78,11 @@ jobs:
     needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # The repository's default token is read-only. Pushing the development image to GHCR needs packages: write;
+    # checkout needs contents: read. Caches and artifacts use the runner's own token, not these scopes.
+    permissions:
+      contents: read
+      packages: write
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
 
