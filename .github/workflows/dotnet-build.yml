@@ -710,7 +710,7 @@ jobs:
           import { nodes, parseXml } from './.github/scripts/mixed-specs-results.mjs';
           const root = parseXml(await readFile('./Integration/MongoDB/released-binding-results/results.trx', 'utf8'));
           const results = nodes(root, 'UnitTestResult');
-          assert.equal(results.length, 8, 'All eight released binding facts must run');
+          assert.equal(results.length, 12, 'All twelve released binding facts must run');
           assert.ok(results.every(result => result.attrs.outcome === 'Passed'), 'Released binding facts must pass, never skip');
           const passed = new Set(results.map(result => result.attrs.testId));
           const methods = nodes(root, 'UnitTest').filter(test => passed.has(test.attrs.id))
@@ -722,6 +722,15 @@ jobs:
           for (const [type, facts] of Object.entries(classes)) {
             const expected = [...facts, 'should_use_released_options_not_head', 'should_use_released_storage_not_head'];
             for (const name of expected) {
+              assert.ok(methods.some(method => method.className === `Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration.${type}` && method.name === name), `Missing released binding fact: ${type}.${name}`);
+            }
+          }
+          const additionalClasses = {
+            when_loading_configuration_binder: ['should_share_the_default_binder_identity', 'should_load_binder_in_the_default_context'],
+            when_release_dependencies_are_missing: ['should_not_fall_back_to_head_cratis', 'should_not_fall_back_to_host_orleans']
+          };
+          for (const [type, facts] of Object.entries(additionalClasses)) {
+            for (const name of facts) {
               assert.ok(methods.some(method => method.className === `Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration.${type}` && method.name === name), `Missing released binding fact: ${type}.${name}`);
             }
           }
