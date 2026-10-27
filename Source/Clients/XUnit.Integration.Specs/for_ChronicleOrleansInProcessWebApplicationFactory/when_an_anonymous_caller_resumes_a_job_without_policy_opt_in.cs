@@ -11,7 +11,7 @@ public class when_an_anonymous_caller_resumes_a_job_without_policy_opt_in : give
     [Fact] void should_use_the_aspnet_policy_runtime() => ShouldUseTheAspNetPolicyRuntime();
     [Fact] void should_keep_authentication_enabled() => ShouldKeepAuthenticationEnabled();
     [Fact] void should_deny_the_command() => _result.IsAuthorized.ShouldBeFalse();
-    [Fact] void should_report_the_denial() => _result.AuthorizationFailureReason.ShouldNotBeEmpty();
+    [Fact] void should_report_an_authorization_refusal_rather_than_a_validation_failure() => _result.ValidationResults.ShouldBeEmpty();
     [Fact] void should_not_report_an_execution_exception() => _result.ExceptionMessages.ShouldBeEmpty();
     [Fact] void should_not_succeed() => _result.IsSuccess.ShouldBeFalse();
     [Fact] async Task should_not_resume_the_job() => await _jobsManager.DidNotReceive().Resume(_jobId);
