@@ -100,12 +100,9 @@ public class and_observation_stream_completes : given.all_dependencies
     [Fact]
     void should_retain_the_registration_metadata()
     {
-        if (_second is null)
-        {
-            return;
-        }
+        _second.ShouldNotBeNull();
         var first = _first!;
-        var second = _second;
+        var second = _second!;
         second.ConnectionId.ShouldEqual(first.ConnectionId);
         second.Reducer.ReducerId.ShouldEqual(first.Reducer.ReducerId);
         second.Reducer.EventSequenceId.ShouldEqual(first.Reducer.EventSequenceId);
