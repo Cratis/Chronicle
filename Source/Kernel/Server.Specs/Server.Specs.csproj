@@ -9,7 +9,12 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <ProjectReference Include="../Server/Server.csproj" />
+        <ProjectReference Include="../Contracts/Contracts.csproj" />
         <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="for_PublicApiBaseline/KernelContracts.public-api.txt" LogicalName="KernelContracts.public-api.txt" />
     </ItemGroup>
 </Project>
