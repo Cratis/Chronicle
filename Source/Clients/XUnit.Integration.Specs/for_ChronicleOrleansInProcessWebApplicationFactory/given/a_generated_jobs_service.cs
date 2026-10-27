@@ -69,7 +69,8 @@ public class a_generated_jobs_service : Specification
         _systemEnforced = _host.Services.GetRequiredService<IOptions<KernelChronicleOptions>>()
             .Value.Authentication.EnforceAdministratorPolicyForOperations;
         var serviceType = typeof(KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
-            .GetType("Cratis.Chronicle.Services.Jobs.Jobs", throwOnError: true)!;
+            .GetTypes()
+            .Single(type => type is { IsClass: true, IsAbstract: false } && typeof(global::Cratis.Chronicle.Contracts.Jobs.IJobs).IsAssignableFrom(type));
         var jobs = (global::Cratis.Chronicle.Contracts.Jobs.IJobs)ActivatorUtilities.CreateInstance(_host.Services, serviceType);
         using var principal = _host.Services.GetRequiredService<ICurrentPrincipalOverride>()
             .BeginScope(new ClaimsPrincipal(new ClaimsIdentity()));

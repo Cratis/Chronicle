@@ -29,7 +29,7 @@ public class and_the_root_has_not_been_created_by_a_root_event(context context) 
         public EventSourceId ShelfId { get; } = "child-only-shelf-1";
         public BsonDocument? DocumentAfterTheChildOnlyEvent { get; private set; }
         public BsonDocument? DocumentAfterTheRootEvent { get; private set; }
-        public ChildOnlyShelf AfterTheChildOnlyEvent { get; private set; }
+        public ChildOnlyShelf? AfterTheChildOnlyEvent { get; private set; }
         public ChildOnlyShelf Result { get; private set; }
         public ChildOnlyShelf Replayed { get; private set; }
 
