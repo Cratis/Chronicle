@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Integration.for_KernelTlsLifecycle;
 
 public class when_startup_fails : Cratis.Specifications.Specification
 {
-    [Fact] public async Task should_clean_owned_resources_when_the_pfx_is_missing()
+    [Fact] public async Task should_clean_owned_resources_when_the_pfx_cannot_be_loaded()
     {
         Exception? nativeFailure = null;
         var logs = string.Empty;
@@ -15,8 +15,11 @@ public class when_startup_fails : Cratis.Specifications.Specification
         {
             MaterialFactory = () =>
             {
+                // A missing file would make Docker refuse the bind mount before the kernel runs, and the kernel
+                // itself falls back to a development certificate when the configured path does not exist.
+                // Unreadable PKCS#12 content makes the kernel start and then fail to load its certificate.
                 var material = KernelFixtureCertificate.Create();
-                File.Delete(material.Path);
+                File.WriteAllBytes(material.Path, "not a pkcs12 certificate"u8.ToArray());
                 return material;
             },
             Start = async (container, start) =>
@@ -28,19 +31,32 @@ public class when_startup_fails : Cratis.Specifications.Specification
                 catch (Exception failure)
                 {
                     nativeFailure = failure;
-                    var (stdout, stderr) = await container.GetLogsAsync();
-                    logs = stdout + stderr;
+                    try
+                    {
+                        var (stdout, stderr) = await container.GetLogsAsync();
+                        logs = stdout + stderr;
+                    }
+                    catch (Exception logFailure)
+                    {
+                        // Reading logs is evidence only; it must never replace the terminal startup failure.
+                        logs = $"<container logs unavailable: {logFailure.GetType().FullName}>";
+                    }
 
-                    // Terminal wrapper avoids an unrelated auxiliary-ownership retry redesign.
-                    throw new IOException("Owned kernel could not load its missing PFX", failure);
+                    // The fixture retries when the thrown exception or its direct inner exception is a
+                    // DockerApiException. Nesting the native failure one level deeper keeps this wrapper terminal.
+                    throw new IOException("Owned kernel could not load its PFX", new AggregateException(failure));
                 }
             }
         };
         var failure = Catch.Exception(owner.Construct);
-        Assert.True(failure is IOException, $"Expected the terminal PFX startup failure; exception types: {when_tls_is_refused.ExceptionTypes(failure)}. Native exception types: {when_tls_is_refused.ExceptionTypes(nativeFailure)}. Wrapper preserved native: {ReferenceEquals(failure?.InnerException, nativeFailure)}. Kernel stopped: {owner.KernelStopConfirmed}");
+        Assert.True(failure is IOException, $"Expected the terminal PFX startup failure; exception types: {when_tls_is_refused.ExceptionTypes(failure)}. Native exception types: {when_tls_is_refused.ExceptionTypes(nativeFailure)}. Wrapper preserved native: {ReferenceEquals(failure?.InnerException?.InnerException, nativeFailure)}. Kernel stopped: {owner.KernelStopConfirmed}");
         Assert.IsType<IOException>(failure);
         nativeFailure.ShouldNotBeNull();
-        logs.ShouldContain("kernel.pfx");
+        failure!.InnerException!.InnerException.ShouldEqual(nativeFailure);
+
+        // CertificateLoader.LoadFromTls reads the configured file with X509CertificateLoader.LoadPkcs12FromFile, which
+        // throws CryptographicException for content that is not PKCS#12 (Source/Kernel/Server/CertificateLoader.cs:22,44).
+        logs.ShouldContain("System.Security.Cryptography.CryptographicException");
         owner.KernelStopConfirmed.ShouldBeTrue();
         await owner.AssertGoneAsync();
         Directory.Exists(owner.MaterialDirectory).ShouldBeFalse();
