@@ -11,6 +11,8 @@ public static class store_scoped_query_effects
     /// <summary>
     /// Overload-aware identities remain the dictionary keys. These effects apply to every listed overload.
     /// </summary>
+    /// <param name="id">The overload-aware query identity.</param>
+    /// <returns>The access rights and effects of the query.</returns>
     public static store_scoped_surface Classify(string id) => id[..id.IndexOf('(')] switch
     {
         "Cratis.Chronicle.Captures.CaptureDetails.ObserveCaptures" or
