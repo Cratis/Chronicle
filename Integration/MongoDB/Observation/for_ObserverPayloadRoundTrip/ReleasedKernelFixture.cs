@@ -27,7 +27,9 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
     /// </summary>
     public ReleasedKernelFixture()
     {
-        _mongoDB = new ContainerBuilder("mongo:8.0")
+        // Share the suite's MongoDB image (and its CHRONICLE_MONGODB_IMAGE override) so this fixture cannot drift to a
+        // version a newer host kernel refuses to run; the released kernel's MongoDB.Driver 3.12 supports MongoDB 8.2.
+        _mongoDB = new ContainerBuilder(ChronicleInProcessFixture.ImageName)
             .WithEnvironment("MONGO_INITDB_ROOT_USERNAME", "chronicle-test")
             .WithEnvironment("MONGO_INITDB_ROOT_PASSWORD", "chronicle-test")
             .WithNetwork(_network)
