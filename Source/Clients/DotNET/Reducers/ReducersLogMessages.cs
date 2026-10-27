@@ -46,6 +46,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Error, "Reducer observation stream for '{ReducerId}' failed — reconnecting")]
     internal static partial void ReducerStreamFailed(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Reducer observation stream for '{ReducerId}' completed without error — re-subscribing so the reducer keeps observing")]
+    internal static partial void ReducerStreamCompleted(this ILogger<Reducers> logger, ReducerId reducerId);
+
     [LoggerMessage(LogLevel.Error, "Failed to activate Reducer '{ReducerId}' for replay notification '{ReplayState}'")]
     internal static partial void FailedActivatingReducerForReplayNotification(this ILogger<Reducers> logger, Exception ex, ReducerId reducerId, ReplayState replayState);
 }

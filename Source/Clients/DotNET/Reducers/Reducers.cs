@@ -519,6 +519,30 @@ public partial class Reducers : IReducers
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
 
+        // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
+        // an error; without re-subscribing then, the reducer silently stops observing until the whole client
+        // reconnects. Only the reducer's own cancellation stops it, and the 2s delay avoids a hot loop.
+        void ScheduleReconnect()
+        {
+            if (handler.CancellationToken.IsCancellationRequested)
+            {
+                _ = scheduler.DrainAndDispose();
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await scheduler.DrainAndDispose();
+                    await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                    _logger.ReconnectingReducer(handler.Id);
+                    RegisterReducerWhenHostable(handler);
+                }
+                catch (OperationCanceledException) { }
+            });
+        }
+
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve
             .Select(events =>
@@ -570,17 +594,14 @@ public partial class Reducers : IReducers
                             break;
                     }
 
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await scheduler.DrainAndDispose();
-                            await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                            _logger.ReconnectingReducer(handler.Id);
-                            RegisterReducerWhenHostable(handler);
-                        }
-                        catch (OperationCanceledException) { }
-                    });
+                    ScheduleReconnect();
+                },
+                () =>
+                {
+                    scheduler.Stop();
+                    messages.Dispose();
+                    _logger.ReducerStreamCompleted(handler.Id);
+                    ScheduleReconnect();
                 });
     }
 
