@@ -17,7 +17,27 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
     /// </summary>
     public static readonly string CurrentImage = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
 
+    /// <summary>
+    /// The directory CI sets so the mixed-version kernel logs are written where the job can print them (#5417).
+    /// </summary>
+    public const string DiagnosticLogDirectoryVariable = "CRATIS_CHRONICLE_DIAGNOSTIC_LOG_DIRECTORY";
+
+    static readonly string[] _mixedVersionDiagnosticCategories =
+    [
+        "Orleans.Runtime.Messaging",
+        "Orleans.Serialization",
+        "Orleans.Runtime.Placement",
+        "Orleans.Runtime.GrainDirectory",
+        "Orleans.Runtime.Versions",
+        "Orleans.Runtime.InsideRuntimeClient",
+        "Orleans.Runtime.Catalog",
+        "Orleans.Runtime.ActivationData",
+        "Orleans.Runtime.ActivationMigration",
+        "Orleans.Runtime.Placement.Repartitioning"
+    ];
+
     readonly string _image = image ?? CurrentImage;
+    readonly bool _mixedVersions = image is not null;
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly List<IContainer> _nodes = [];
     readonly List<int> _ports = [];
@@ -85,6 +105,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
 
     public async ValueTask DisposeAsync()
     {
+        await WriteDiagnosticLogs();
         foreach (var node in _nodes)
         {
             await node.DisposeAsync();
@@ -98,7 +119,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         await _network.DisposeAsync();
     }
 
-    IContainer BuildNode(int index, string nodeImage) => new ContainerBuilder(nodeImage)
+    IContainer BuildNode(int index, string nodeImage) => WithDiagnostics(new ContainerBuilder(nodeImage))
         .WithHostname($"sql-node-{index}")
         .WithCreateParameterModifier(parameters => parameters.StopTimeout = TimeSpan.FromSeconds(90))
         .WithNetwork(_network)
@@ -123,6 +144,24 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(
             new HttpsHealthWait(35000), options => options.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1))))
         .Build();
+
+    async Task WriteDiagnosticLogs()
+    {
+        var directory = Environment.GetEnvironmentVariable(DiagnosticLogDirectoryVariable);
+        if (!_mixedVersions || string.IsNullOrEmpty(directory))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(directory);
+        await using var writer = new StreamWriter(Path.Combine(directory, "kernel-logs.txt"));
+        await _logs.Dump(_nodes, writer);
+    }
+
+    ContainerBuilder WithDiagnostics(ContainerBuilder builder) =>
+        _mixedVersions
+            ? _mixedVersionDiagnosticCategories.Aggregate(builder, (current, category) => current.WithEnvironment($"Logging__LogLevel__{category}", "Debug"))
+            : builder;
 
     static int FreePort()
     {

@@ -450,10 +450,24 @@ jobs:
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           TESTCONTAINERS_RYUK_DISABLED: true
+          CRATIS_CHRONICLE_DIAGNOSTIC_LOG_DIRECTORY: ${{ matrix.provider == 'RollingUpgrade' && format('{0}/coverage-results/kernel-logs', github.workspace) || '' }}
         run: >-
           node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
           --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
           --results-directory coverage-results
+
+      # Diagnostic for #5417: print the Orleans Debug logs of the old and new kernels into the job log.
+      - name: Print kernel logs (RollingUpgrade)
+        if: always() && matrix.provider == 'RollingUpgrade'
+        shell: bash
+        run: |
+          if [ -f coverage-results/kernel-logs/kernel-logs.txt ]; then
+            echo "::group::kernel logs"
+            cat coverage-results/kernel-logs/kernel-logs.txt
+            echo "::endgroup::"
+          else
+            echo "No kernel logs were written."
+          fi
 
       - name: Assert SQL clustering specifications ran
         uses: ./.github/actions/assert-tests-ran
