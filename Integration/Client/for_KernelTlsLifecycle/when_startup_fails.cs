@@ -37,6 +37,7 @@ public class when_startup_fails : Cratis.Specifications.Specification
             }
         };
         var failure = Catch.Exception(owner.Construct);
+        Assert.True(failure is IOException, $"Expected the terminal PFX startup failure; exception types: {when_tls_is_refused.ExceptionTypes(failure)}. Native exception types: {when_tls_is_refused.ExceptionTypes(nativeFailure)}. Wrapper preserved native: {ReferenceEquals(failure?.InnerException, nativeFailure)}. Kernel stopped: {owner.KernelStopConfirmed}");
         Assert.IsType<IOException>(failure);
         nativeFailure.ShouldNotBeNull();
         logs.ShouldContain("kernel.pfx");

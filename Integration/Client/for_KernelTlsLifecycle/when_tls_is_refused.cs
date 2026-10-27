@@ -44,8 +44,9 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
         {
             var native = await owner.Issued.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var refusal = await Catch.Exception(async () => await native.WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.True(refusal is RpcException, $"Expected an RPC refusal; exception types: {ExceptionTypes(refusal)}");
             var rpc = Assert.IsType<RpcException>(refusal);
-            rpc.StatusCode.ShouldEqual(StatusCode.Unavailable);
+            Assert.True(rpc.StatusCode == StatusCode.Unavailable, $"Expected TLS refusal status Unavailable; received {rpc.StatusCode}. Exception types: {ExceptionTypes(rpc.Status.DebugException)}");
             var cause = rpc.Status.DebugException;
             while (cause is not (null or AuthenticationException)) cause = cause.InnerException;
             cause.ShouldNotBeNull();
@@ -60,6 +61,17 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
         await owner.DisposeFixtureAsync();
         await owner.AssertGoneAsync();
         Directory.Exists(owner.MaterialDirectory).ShouldBeFalse();
+    }
+
+    internal static string ExceptionTypes(Exception? exception)
+    {
+        var types = new List<string>();
+        while (exception is not null && types.Count < 8)
+        {
+            types.Add(exception.GetType().FullName ?? exception.GetType().Name);
+            exception = exception.InnerException;
+        }
+        return string.Join(" -> ", types);
     }
 
     /// <summary>
