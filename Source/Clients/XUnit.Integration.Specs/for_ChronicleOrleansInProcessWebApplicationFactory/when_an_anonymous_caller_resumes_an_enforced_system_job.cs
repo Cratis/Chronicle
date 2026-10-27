@@ -12,7 +12,7 @@ public class when_an_anonymous_caller_resumes_an_enforced_system_job : given.a_g
     [Fact] void should_keep_authentication_enabled() => ShouldKeepAuthenticationEnabled();
     [Fact] void should_enforce_system_operations() => _systemEnforced.ShouldBeTrue();
 
-    // Arc 22.143.0 reports policy denials without an AuthorizationFailureReason; assert the reason once Arc supplies one.
+    /// <summary>Arc 22.143.0 reports policy denials without an AuthorizationFailureReason; assert the reason once Arc supplies one.</summary>
     [Fact] void should_deny_the_command() => _result.IsAuthorized.ShouldBeFalse();
     [Fact] void should_not_report_validation_failures() => _result.ValidationResults.ShouldBeEmpty();
     [Fact] void should_not_report_an_execution_exception() => _result.ExceptionMessages.ShouldBeEmpty();
