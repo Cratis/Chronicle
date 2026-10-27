@@ -77,7 +77,7 @@ internal sealed class ChronicleServerStartupTask(
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
 
-    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromMilliseconds(500);
+    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -114,6 +114,7 @@ internal sealed class ChronicleServerStartupTask(
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
         await Step(nameof(IPatchManager.ApplyPatches), async () =>
         {
+            var delay = _patchManagerRelocationDelay;
             for (var attempt = 0; attempt < MaxAttempts; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -123,10 +124,12 @@ internal sealed class ChronicleServerStartupTask(
                 }
 
                 // The older activation deactivates once idle; give it time to go before asking again, so the next
-                // call activates the patch manager on a kernel at least as new as this one.
+                // call activates the patch manager on a kernel at least as new as this one. Back off exponentially -
+                // under load the older silo's deactivation can take longer than a short fixed wait allows.
                 if (attempt < MaxAttempts - 1)
                 {
-                    await Task.Delay(_patchManagerRelocationDelay, _timeProvider, cancellationToken);
+                    await Task.Delay(delay, _timeProvider, cancellationToken);
+                    delay += delay;
                 }
             }
             throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
