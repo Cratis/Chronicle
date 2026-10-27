@@ -13,12 +13,20 @@ there are no assembly versions, metadata tokens, paths, or timestamps. Reference
 nullability uses `?` (nullable), `!` (not null), and `~` (unknown) where reflection
 provides it. Generic parameters include their position and declaring scope.
 
-The renderer includes declared public members, constructors, record-generated
-methods/operators, inheritance, generic constraints, accessor visibility, init
-modifiers, optional defaults, constants, enum values, and selected contract,
-wire, obsolete, required, and nullability attributes. Nonpublic accessors of a
-public property/event are included. It reads CustomAttributeData without
-constructing attributes. Unsupported member kinds, function pointers, constructed
+The renderer includes declared public members and the protected/protected internal
+members of unsealed, externally visible types, including record copy constructors,
+EqualityContract, and PrintMembers. Private, internal, and private protected members
+and accessors are excluded. Accessibility is explicit. Constructors, record-generated
+methods/operators, inheritance, generic constraints, optional defaults, constants,
+enum values, and selected contract, wire, obsolete, required, and code-analysis
+attributes are covered. Compiler NullableAttribute/NullableContextAttribute metadata
+is excluded: the `?`/`!`/`~` signature markers carry reference nullability.
+
+Property accessors use `accessor <Owner>::<PropertyName> <get|set|init> <accessibility>`
+with only additional flags, calling convention, modifiers, and selected accessor
+attributes, not another copy of the property signature. Event accessor keys likewise
+use the event name and `add`/`remove`/`raise`. Init-only setters are identified by `init`.
+It reads CustomAttributeData without constructing attributes. Unsupported member kinds, function pointers, constructed
 generic declaration inputs, empty inventories, and duplicate lines fail loudly.
 Extend the renderer and its planted specs before approving a novel signature.
 

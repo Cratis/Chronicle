@@ -25,8 +25,12 @@ public class when_rendering_public_contracts : Specification
     [Fact] void should_preserve_optional_defaults() => _snapshot.ShouldContain("System.Int32 limit optional=7");
     [Fact] void should_preserve_nullable_generic_arguments() => _snapshot.ShouldContain("System.Collections.Generic.List<System.String?>?");
     [Fact] void should_preserve_nullable_parameters() => _snapshot.ShouldContain("System.String? filter optional=null");
-    [Fact] void should_preserve_init_accessors() => _snapshot.ShouldContain("modreq(System.Runtime.CompilerServices.IsExternalInit)");
-    [Fact] void should_preserve_private_setters() => _snapshot.ShouldContain("private System.Void");
+    [Fact] void should_preserve_init_accessors() => _snapshot.ShouldContain("a_sample_message::Names init public calling=");
+    [Fact] void should_exclude_private_setters() => _snapshot.ShouldNotContain("a_sample_message::Value set");
+    [Fact] void should_not_repeat_property_signatures_in_accessor_keys() => _snapshot.ShouldNotContain("accessor property");
+    [Fact] void should_preserve_nonnullable_properties() => _snapshot.ShouldContain("::Value() public System.String!");
+    [Fact] void should_preserve_unknown_nullability() => _snapshot.ShouldContain("ApiBaselineSamples.Message::Names() public System.String~");
+    [Fact] void should_ignore_compiler_nullability_attributes() => _snapshot.ShouldNotContain("System.Runtime.CompilerServices.Nullable");
     [Fact] void should_preserve_indexers() => _snapshot.ShouldContain("::Item(System.Int32 index)");
     [Fact] void should_preserve_generic_constraints() => _snapshot.ShouldContain("ReferenceTypeConstraint, DefaultConstructorConstraint");
     [Fact] void should_preserve_in_parameters() => _snapshot.ShouldContain("in System.Int32& count");

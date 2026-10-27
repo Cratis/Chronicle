@@ -26,8 +26,8 @@ public class when_rendering_supporting_types : Specification
     [Fact] void should_include_enum_underlying_types() => _snapshot.ShouldContain("base=System.UInt64");
     [Fact] void should_include_unsigned_enum_values() => _snapshot.ShouldContain(" = 9223372036854775808");
     [Fact] void should_include_flags_semantics() => _snapshot.ShouldContain("System.FlagsAttribute");
-    [Fact] void should_include_events() => _snapshot.ShouldContain("::Changed System.Action");
-    [Fact] void should_include_event_accessors() => _snapshot.ShouldContain("::add_Changed(");
+    [Fact] void should_include_events() => _snapshot.ShouldContain("::Changed public System.Action");
+    [Fact] void should_include_event_accessors() => _snapshot.ShouldContain("::Changed add public calling=");
     [Fact] void should_include_array_rank_and_nullability() => _matrixName.ShouldEqual("System.String?[,]?");
     [Fact] void should_disambiguate_nested_generic_parameters() => _nestedName.ShouldContain("a_sample_shapes<!0:T>+a_nested_shape<!1:TItem>");
 }

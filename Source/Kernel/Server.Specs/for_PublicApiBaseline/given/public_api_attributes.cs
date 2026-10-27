@@ -26,8 +26,6 @@ internal static class public_api_attributes
         "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute",
         "System.Runtime.CompilerServices.DecimalConstantAttribute",
         "System.Runtime.CompilerServices.DateTimeConstantAttribute",
-        "System.Runtime.CompilerServices.NullableAttribute",
-        "System.Runtime.CompilerServices.NullableContextAttribute",
         "System.Runtime.CompilerServices.IsReadOnlyAttribute",
         "System.Runtime.CompilerServices.IsByRefLikeAttribute",
         "System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute"

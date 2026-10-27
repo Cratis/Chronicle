@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Server.for_PublicApiBaseline.given;
 
 internal static class public_api_snapshot
 {
-    const BindingFlags Declared = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+    const BindingFlags Declared = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
 
     internal static string Render(IEnumerable<Type> types)
     {
@@ -45,7 +45,7 @@ internal static class public_api_snapshot
     {
         var accessors = type.GetProperties(Declared).SelectMany(property => property.GetAccessors(true))
             .Concat(type.GetEvents(Declared).SelectMany(Accessors)).ToHashSet();
-        return type.GetMembers(Declared).Where(member => IsDeclaredMember(member, accessors));
+        return type.GetMembers(Declared).Where(member => IsDeclaredMember(member, accessors) && IsVisibleMember(member));
     }
 
     static bool IsDeclaredMember(MemberInfo member, HashSet<MethodInfo> accessors) => member switch
@@ -55,18 +55,27 @@ internal static class public_api_snapshot
         _ => true
     };
 
+    static bool IsVisibleMember(MemberInfo member) => member switch
+    {
+        MethodBase method => public_api_visibility.Included(method),
+        FieldInfo field => public_api_visibility.Included(field),
+        PropertyInfo property => property.GetAccessors(true).Any(public_api_visibility.Included),
+        EventInfo @event => Accessors(@event).Any(public_api_visibility.Included),
+        _ => true
+    };
+
     static IEnumerable<string> MemberDeclarations(MemberInfo member)
     {
         var declaration = Member(member);
         return new[] { declaration }
             .Concat(public_api_attributes.Render(declaration, member.CustomAttributes))
             .Concat(MethodDetails(declaration, member))
-            .Concat(MemberAccessors(member).SelectMany(accessor => AccessorDeclarations(declaration, accessor)));
+            .Concat(MemberAccessors(member).Where(public_api_visibility.Included).SelectMany(accessor => AccessorDeclarations(member, accessor)));
     }
 
-    static IEnumerable<string> AccessorDeclarations(string declaration, MethodInfo accessor)
+    static IEnumerable<string> AccessorDeclarations(MemberInfo member, MethodInfo accessor)
     {
-        var key = $"accessor {declaration} {public_api_signature.Method(accessor)}";
+        var key = public_api_accessor.Render(member, accessor);
         return new[] { key }
             .Concat(public_api_attributes.Render(key, accessor.CustomAttributes))
             .Concat(MethodDetails(key, accessor));
@@ -85,15 +94,15 @@ internal static class public_api_snapshot
     {
         MethodBase method => $"method {public_api_signature.Method(method)}",
         PropertyInfo property => Property(property),
-        FieldInfo field => $"field {Owner(field)} public{(field.IsStatic ? " static" : string.Empty)}{(field.IsInitOnly ? " readonly" : string.Empty)}{(field.IsLiteral ? " const" : string.Empty)} {public_api_type_name.Render(field.FieldType, new NullabilityInfoContext().Create(field))}{public_api_signature.Modifiers(field.GetRequiredCustomModifiers(), field.GetOptionalCustomModifiers())}{(field.IsLiteral ? $" = {public_api_attributes.Value(field.GetRawConstantValue())}" : string.Empty)}",
-        EventInfo @event => $"event {Owner(@event)} {RenderType(@event.EventHandlerType!)}",
+        FieldInfo field => $"field {Owner(field)} {public_api_visibility.Visibility(field)}{(field.IsStatic ? " static" : string.Empty)}{(field.IsInitOnly ? " readonly" : string.Empty)}{(field.IsLiteral ? " const" : string.Empty)} {public_api_type_name.Render(field.FieldType, new NullabilityInfoContext().Create(field))}{public_api_signature.Modifiers(field.GetRequiredCustomModifiers(), field.GetOptionalCustomModifiers())}{(field.IsLiteral ? $" = {public_api_attributes.Value(field.GetRawConstantValue())}" : string.Empty)}",
+        EventInfo @event => $"event {Owner(@event)} {public_api_visibility.Visibility(Accessors(@event))} {RenderType(@event.EventHandlerType!)}",
         _ => throw new NotSupportedException($"Unsupported public member {member.DeclaringType?.FullName}::{member.Name}: {member.MemberType}")
     };
 
     static string Property(PropertyInfo property)
     {
         var nullable = new NullabilityInfoContext().Create(property);
-        return $"property {Owner(property)}({string.Join(',', property.GetIndexParameters().Select(public_api_signature.Parameter))}) {public_api_type_name.Render(property.PropertyType, nullable)} write={nullable.WriteState}{public_api_signature.Modifiers(property.GetRequiredCustomModifiers(), property.GetOptionalCustomModifiers())}";
+        return $"property {Owner(property)}({string.Join(',', property.GetIndexParameters().Select(public_api_signature.Parameter))}) {public_api_visibility.Visibility(property.GetAccessors(true))} {public_api_type_name.Render(property.PropertyType, nullable)} write={nullable.WriteState}{public_api_signature.Modifiers(property.GetRequiredCustomModifiers(), property.GetOptionalCustomModifiers())}";
     }
 
     static IEnumerable<string> MethodDetails(string owner, MemberInfo member) => member switch

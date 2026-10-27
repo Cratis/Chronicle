@@ -22,9 +22,14 @@ internal static class public_api_signature
             ? public_api_type_name.Render(info.ReturnType, new NullabilityInfoContext().Create(info.ReturnParameter)) + Modifiers(info.ReturnParameter.GetRequiredCustomModifiers(), info.ReturnParameter.GetOptionalCustomModifiers())
             : "constructor";
         var generic = method.IsGenericMethod ? $"<{string.Join(',', method.GetGenericArguments().Select(RenderType))}>" : string.Empty;
+        return $"{Flags(method)} {result} {public_api_type_name.Render(method.DeclaringType!)}::{method.Name}{generic}({string.Join(',', method.GetParameters().Select(Parameter))}) calling={method.CallingConvention}";
+    }
+
+    internal static string Flags(MethodBase method)
+    {
         var flags = $"{Visibility(method)}{(method.IsStatic ? " static" : string.Empty)}{(method.IsAbstract ? " abstract" : string.Empty)}{(method.IsVirtual ? " virtual" : string.Empty)}{(method.IsFinal ? " final" : string.Empty)}";
         var overridden = method is MethodInfo candidate && candidate.GetBaseDefinition() != candidate ? " override" : string.Empty;
-        return $"{flags}{overridden} {result} {public_api_type_name.Render(method.DeclaringType!)}::{method.Name}{generic}({string.Join(',', method.GetParameters().Select(Parameter))}) calling={method.CallingConvention}";
+        return flags + overridden;
     }
 
     internal static string Visibility(MethodBase method) => method switch
