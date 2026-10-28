@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_seeding_a_read_model_for_a_composite_key.given;
@@ -26,9 +25,3 @@ public class a_composite_projection : Specification
     void Destroy() => _scenario.Dispose();
 }
 
-public record CompositeSeedKey(string TenantId, decimal Amount, string? Unmapped = null);
-
-public record CompositeSeedModel(CompositeSeedKey Id, string Name, string Untouched, int Count);
-
-[EventType]
-public record CompositeSeedRenamed(string TenantId, decimal Amount, string Caption);
