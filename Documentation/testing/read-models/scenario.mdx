@@ -143,6 +143,37 @@ instances, with collected events applied before each lookup. Models without a pr
 lookup-only seeds and do not appear in `Instances`. The rest of the surface delegates to the production
 implementation and needs a running Chronicle: enumerate scenario output through `Instances`, not `GetInstances`.
 
+### Named composite keys
+
+In .NET, use `Given.ForKey(parts).ReadModel(instance)` when the selected projection uses a root
+`UsingCompositeKey`. Supply exactly its mapped target names, as serialized by the projection naming
+policy; do not assume CLR spelling, invent aliases, or supply an encoded key string. For example, the
+current policy maps `TenantId` to `tenantId` but preserves `URLId`. Unmapped identifier properties are
+not key parts.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-composite-keys" />
+
+The seed participates in the same native sink identity as event-built instances. Events for that key
+update the seed; other keys start normally. Parts are detached when supplied, so later dictionary
+changes do not retarget the seed. Equivalent normalized keys, including reordered parts, throw
+`ReadModelAlreadySeeded` without replacing the original seed. `CollectReadModelFor(parts, instance)`
+registers the same starting state synchronously.
+
+Use `InstanceForKey(parts)` for a **registered named seed's** current state, including before any events.
+It returns `null` for unregistered keys or a removed instance; it is not a general composite-key query
+for event-built instances. `Instances` still exposes the native encoded identities. The seed's identifier
+is preserved as supplied, just as with scalar seeds.
+
+Part values must be non-null scalars compatible with the identifier schema, including supported
+concepts and defined enum values. Missing, extra, differently cased or invalid parts throw
+`InvalidReadModelSeedKey` before registration. Nested key parts, missing or ambiguous schema paths,
+incompatible root mappings, scalar-key projections, child-only composite mappings and reducers are
+refused rather than guessed.
+
+Select `WithProjection` before registering named seeds if you need to override discovery. Once a named
+seed is registered, changing the projection throws `ReadModelSeedProjectionCannotChange`, even after
+processing. There is no reset operation. Existing scalar-key and reducer seeding APIs are unchanged.
+
 ### Limitation
 
 A seeded parent without its originating events cannot resolve children whose parent key comes from those events.
