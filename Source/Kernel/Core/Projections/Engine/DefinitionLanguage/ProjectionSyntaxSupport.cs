@@ -44,7 +44,9 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         [typeof(EnvironmentExpressionSyntax)] = "Environment values are not stored event data",
         [typeof(StringsExpressionSyntax)] = "Localized strings are not stored event data",
         [typeof(SourceItemExpressionSyntax)] = "Source items belong to captures, not stored event projections",
-        [typeof(IdentityExpressionSyntax)] = "Identity values belong to the acting user, not stored event data"
+        [typeof(IdentityExpressionSyntax)] = "Identity values belong to the acting user, not stored event data",
+        [typeof(ClockOffsetExpressionSyntax)] = "Clock offsets are not stored event data",
+        [typeof(DateOfExpressionSyntax)] = "No projection definition lowering is available yet for this expression"
     };
 
     /// <inheritdoc/>
