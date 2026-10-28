@@ -24,4 +24,3 @@ public class a_composite_projection : Specification
 
     void Destroy() => _scenario.Dispose();
 }
-

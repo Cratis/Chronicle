@@ -3,4 +3,4 @@
 
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_seeding_a_read_model_for_a_composite_key.given;
 
-public record NativeSeedKey(Guid Identifier, int Number, long Large, bool Enabled, DateOnly Day, DateTimeOffset Occurred);
+public record NativeSeedKey(Guid Identifier, int Number, long Large, bool Enabled, DateOnly Day, DateTimeOffset Occurred, SeedStatus Status, SeedCode Code);
