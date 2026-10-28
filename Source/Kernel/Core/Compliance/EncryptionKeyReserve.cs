@@ -24,8 +24,10 @@ namespace Cratis.Chronicle.Compliance;
 /// </remarks>
 /// <param name="generate">Generates one key pair.</param>
 /// <param name="capacity">The number of keys to keep in reserve.</param>
-internal sealed class EncryptionKeyReserve(Func<EncryptionKey> generate, int capacity)
+/// <param name="schedule">Runs one refill in the background; defaults to the thread pool.</param>
+internal sealed class EncryptionKeyReserve(Func<EncryptionKey> generate, int capacity, Action<Action>? schedule = null)
 {
+    readonly Action<Action> _schedule = schedule ?? (work => _ = Task.Run(work));
     readonly ConcurrentQueue<EncryptionKey> _reserve = new();
     int _reservedOrPending;
 
@@ -56,7 +58,7 @@ internal sealed class EncryptionKeyReserve(Func<EncryptionKey> generate, int cap
                 continue;
             }
 
-            _ = Task.Run(Generate);
+            _schedule(Generate);
         }
     }
 
