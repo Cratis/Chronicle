@@ -1,17 +1,4 @@
-projection SiteMetrics => SiteMetricsReadModel
-  from UserRegistered
-    key literal "metrics"
-    count TotalUsers
-
-  from UserLoggedIn
-    key literal "metrics"
-    increment ActiveSessions
-
-  from UserLoggedOut
-    key literal "metrics"
-    decrement ActiveSessions
-
+projection Doc => DocReadModel
   from OrderPlaced
-    key literal "metrics"
+    key literal "global"
     count TotalOrders
-    add TotalRevenue by amount

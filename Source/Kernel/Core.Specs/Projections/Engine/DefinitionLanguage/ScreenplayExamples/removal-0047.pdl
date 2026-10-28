@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  remove with PaymentRemoved
+    key
+      invoiceId = invoiceId
+      method = method
