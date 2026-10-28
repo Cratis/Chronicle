@@ -989,6 +989,46 @@ public partial class EventSequence(
         ConstraintBatchClaims? batchClaims = default,
         List<ProtectedValueUse>? keyUses = null)
     {
+        var prepared = await PrepareCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject, batchClaims, keyUses);
+        if (prepared.TryGetError(out var error))
+        {
+            return error;
+        }
+
+        return await ValidateConstraints(prepared.AsT0, eventSourceType, eventSourceId, eventStreamId, eventType, correlationId);
+    }
+
+    /// <summary>
+    /// Validates an event against its schema, makes it compliant and establishes its constraint context - everything
+    /// short of validating the constraints.
+    /// </summary>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/>.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/>.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/>.</param>
+    /// <param name="eventType">The <see cref="EventType"/>.</param>
+    /// <param name="content">The content as given.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/>.</param>
+    /// <param name="subject">The optional <see cref="Subject"/>.</param>
+    /// <param name="batchClaims">The <see cref="ConstraintBatchClaims"/> of the batch, if any.</param>
+    /// <param name="keyUses">Collects the protected value keys used, if requested.</param>
+    /// <returns>The compliant event and its constraint context, or the failed <see cref="AppendResult"/>.</returns>
+    /// <remarks>
+    /// Kept apart from <see cref="ValidateConstraints"/> so a batch can prepare every event, read the constraint
+    /// indexes for all of them at once, and only then validate each in order.
+    /// </remarks>
+    async Task<Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> PrepareCompliantEvent(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        Subject? subject = null,
+        ConstraintBatchClaims? batchClaims = default,
+        List<ProtectedValueUse>? keyUses = null)
+    {
         try
         {
             var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
@@ -1015,13 +1055,48 @@ public partial class EventSequence(
             var personalData = new ConstraintPersonalDataOfEvent(
                 subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
                 ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
-            if (checkConstraintViolation.TryGetError(out var error))
+            var constraintContext = await EstablishConstraintContext(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
+            if (constraintContext.TryGetError(out var error))
             {
                 return error;
             }
 
-            return (compliantEventAsExpandoObject, compliantContent, (ConstraintValidationContext)checkConstraintViolation);
+            return (compliantEventAsExpandoObject, compliantContent, constraintContext.AsT0);
+        }
+        catch (Exception ex)
+        {
+            return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
+        }
+    }
+
+    /// <summary>
+    /// Validates the constraints of a prepared event.
+    /// </summary>
+    /// <param name="prepared">The prepared event, from <see cref="PrepareCompliantEvent"/>.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/>.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/>.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/>.</param>
+    /// <param name="eventType">The <see cref="EventType"/>.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/>.</param>
+    /// <returns>The prepared event when every constraint holds, or the failed <see cref="AppendResult"/>.</returns>
+    async Task<Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> ValidateConstraints(
+        (ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext) prepared,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId)
+    {
+        try
+        {
+            var constraintValidationResult = await prepared.ConstraintValidationContext.Validate();
+            if (constraintValidationResult.IsValid)
+            {
+                return prepared;
+            }
+
+            _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
+            return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
         }
         catch (Exception ex)
         {
@@ -1070,7 +1145,7 @@ public partial class EventSequence(
         return (expandoObject, compliantEvent);
     }
 
-    async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(
+    async Task<Result<ConstraintValidationContext, AppendResult>> EstablishConstraintContext(
         EventSourceId eventSourceId,
         EventType eventType,
         CorrelationId correlationId,
@@ -1093,14 +1168,7 @@ public partial class EventSequence(
             return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
         }
 
-        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData?.Subject, personalData?.Properties);
-        var constraintValidationResult = await constraintContext.Validate();
-        if (constraintValidationResult.IsValid)
-        {
-            return constraintContext;
-        }
-        _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
-        return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
+        return _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData?.Subject, personalData?.Properties);
     }
 
     Result<bool, AppendResult> ValidateAgainstSchema(
