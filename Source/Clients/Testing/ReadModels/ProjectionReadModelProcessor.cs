@@ -123,7 +123,7 @@ internal static partial class ProjectionReadModelProcessor
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
         IReadOnlyList<ReadModelEvent>? seededEvents = null,
-        IReadOnlyDictionary<EventSourceId, TReadModel>? seededInstances = null)
+        IEnumerable<(object Key, TReadModel Instance)>? seededInstances = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -181,9 +181,9 @@ internal static partial class ProjectionReadModelProcessor
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
         var seededKeys = new HashSet<object>();
-        foreach (var (key, instance) in seededInstances ?? new Dictionary<EventSourceId, TReadModel>())
+        foreach (var (key, instance) in seededInstances ?? [])
         {
-            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key.Value, ArrayIndexers.NoIndexers));
+            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key, ArrayIndexers.NoIndexers));
             statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             seededKeys.Add(stateKey);
@@ -281,6 +281,15 @@ internal static partial class ProjectionReadModelProcessor
     /// <returns>A sink whose key conversion matches the materialized instances.</returns>
     internal static InMemorySink CreateSink(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
         new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
+
+    /// <summary>
+    /// Gets the identifier schema used by native projection folding.
+    /// </summary>
+    /// <param name="readModelType">The model type.</param>
+    /// <param name="schemaGenerator">The fold's schema generator.</param>
+    /// <returns>The native schema.</returns>
+    internal static JsonSchema GetReadModelSchema(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
+        BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)).GetSchemaForLatestGeneration();
 
     static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
     {

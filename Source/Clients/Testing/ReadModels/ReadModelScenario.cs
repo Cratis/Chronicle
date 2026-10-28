@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
 /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
-public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
+public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
     where TReadModel : class
 {
     readonly TReadModel? _initialState = initialState;
@@ -220,9 +220,11 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <param name="define">Configures the projection for <typeparamref name="TReadModel"/>.</param>
     /// <returns>This scenario for chaining.</returns>
+    /// <exception cref="ReadModelSeedProjectionCannotChange">A named seed has already been registered.</exception>
     public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
     {
         ArgumentNullException.ThrowIfNull(define);
+        if (_namedReadModelSeeds.Count > 0) throw new ReadModelSeedProjectionCannotChange(typeof(TReadModel));
 
         var builder = new ProjectionBuilderFor<TReadModel>(
             Guid.NewGuid().ToString(), typeof(TReadModel), _namingPolicy, _eventTypes, _jsonSerializerOptions);
@@ -412,7 +414,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
             ((ReadModelsForTesting)_eventStore.ReadModels).BeforeInstanceRead = () =>
             {
-                if (_readModelSeeds.Count > 0) EnsureProcessed();
+                if (_readModelSeeds.Count > 0 || _namedReadModelSeeds.Count > 0) EnsureProcessed();
             };
             foreach (var (key, seed) in _readModelSeeds)
             {
@@ -463,15 +465,15 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
         }
 
-        if (_readModelSeeds.Count > 0 && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
+        if (HasSeeds && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
         {
             return;
         }
 
-        if (!_processed && (_collectedEvents.Count > 0 || _readModelSeeds.Count > 0))
+        if (!_processed && (_collectedEvents.Count > 0 || HasSeeds))
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
-            if (_readModelSeeds.Count > 0) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
+            if (HasSeeds) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
             _processed = true;
         }
     }
@@ -489,6 +491,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             ProjectionDefinition = reducerType is null ? ProjectionDefinition() : null,
             InitialState = _initialState,
             SeededInstances = _readModelSeeds,
+            NamedSeededInstances = _namedReadModelSeeds.Values.ToArray(),
             StrictEventSubscription = _strictEventSubscription
         };
         return fold.Process(events);
