@@ -1050,8 +1050,11 @@ public partial class EventSequence(
             // encrypted value would produce a different hash on every append — a [Unique] constraint on a
             // [PII] property would then never detect a collision and silently do nothing. Build a plaintext
             // expando from the original content for constraint purposes, while the encrypted expando is what
-            // actually gets appended and persisted.
-            var plaintextEventAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+            // actually gets appended and persisted. When compliance left the content as it was - the same instance
+            // comes back when the schema carries no metadata - the compliant expando already is the plaintext one.
+            var plaintextEventAsExpandoObject = ReferenceEquals(compliantContent, content)
+                ? compliantEventAsExpandoObject
+                : expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
             var personalData = new ConstraintPersonalDataOfEvent(
                 subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
                 ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
