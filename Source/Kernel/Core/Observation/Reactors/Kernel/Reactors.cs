@@ -3,11 +3,11 @@
 
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Types;

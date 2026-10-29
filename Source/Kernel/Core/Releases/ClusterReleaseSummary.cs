@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.System;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Releases;
 
 /// <summary>
 /// Represents a bounded summary of kernel releases, ordered by release.

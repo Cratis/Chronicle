@@ -6,7 +6,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Sys;
 using Orleans.Metadata;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Releases;
 
 /// <summary>
 /// Reads kernel releases from the Orleans cluster manifest, caching only until its version changes.

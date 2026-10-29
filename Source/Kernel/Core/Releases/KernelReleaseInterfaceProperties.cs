@@ -5,7 +5,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Sys;
 using Orleans.Metadata;
 
-namespace Cratis.Chronicle.Clustering;
+namespace Cratis.Chronicle.Releases;
 
 /// <summary>
 /// Publishes this kernel's release using interface properties understood by older Orleans silos.

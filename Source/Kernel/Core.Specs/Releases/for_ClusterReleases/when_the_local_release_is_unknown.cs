@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Clustering.for_ClusterReleases;
+namespace Cratis.Chronicle.Releases.for_ClusterReleases;
 
 public class when_the_local_release_is_unknown : given.a_cluster_manifest
 {

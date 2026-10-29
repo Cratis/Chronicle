@@ -10,7 +10,7 @@ using Orleans.Metadata;
 using Orleans.Serialization;
 using Orleans.Serialization.TypeSystem;
 
-namespace Cratis.Chronicle.Clustering.for_ClusterReleases.given;
+namespace Cratis.Chronicle.Releases.for_ClusterReleases.given;
 
 public class a_cluster_manifest : Specification
 {

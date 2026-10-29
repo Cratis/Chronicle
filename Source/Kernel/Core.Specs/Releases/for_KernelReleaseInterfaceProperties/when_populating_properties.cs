@@ -5,7 +5,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Sys;
 
-namespace Cratis.Chronicle.Clustering.for_KernelReleaseInterfaceProperties;
+namespace Cratis.Chronicle.Releases.for_KernelReleaseInterfaceProperties;
 
 public class when_populating_properties : Specification
 {
