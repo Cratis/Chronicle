@@ -296,8 +296,14 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
     /// <exception cref="ReadModelAlreadySeeded">Thrown when this key was already seeded.</exception>
+    /// <exception cref="ConflictingReadModelSeeds">Thrown when a named seed already resolves to this identity.</exception>
     public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel)
     {
+        if (_namedReadModelSeeds.ContainsKey(eventSourceId))
+        {
+            throw new ConflictingReadModelSeeds(typeof(TReadModel), eventSourceId);
+        }
+
         if (!_readModelSeeds.TryAdd(eventSourceId, readModel))
         {
             throw new ReadModelAlreadySeeded(typeof(TReadModel), eventSourceId);

@@ -161,7 +161,8 @@ registers the same starting state synchronously.
 
 Use `InstanceForKey(parts)` for a **registered named seed's** current state, including before any events.
 It returns `null` for unregistered keys or a removed instance; it is not a general composite-key query
-for event-built instances. `Instances` still exposes the native encoded identities. The seed's identifier
+for event-built instances. It throws `InvalidReadModelSeedKey` for missing, extra or invalid key parts
+rather than returning `null`. `Instances` still exposes the native encoded identities. The seed's identifier
 is preserved as supplied, just as with scalar seeds.
 
 Part values must be non-null scalars compatible with the identifier schema, including supported
@@ -169,6 +170,9 @@ concepts and defined enum values. Missing, extra, differently cased or invalid p
 `InvalidReadModelSeedKey` before registration. Nested key parts, missing or ambiguous schema paths,
 incompatible root mappings, scalar-key projections, child-only composite mappings and reducers are
 refused rather than guessed.
+
+A scalar seed (`Given.ReadModel` or `CollectReadModelFor(eventSourceId, ...)`) and a named seed that resolve to
+the same storage identity are refused with `ConflictingReadModelSeeds` instead of letting the last one win.
 
 Select `WithProjection` before registering named seeds if you need to override discovery. Once a named
 seed is registered, changing the projection throws `ReadModelSeedProjectionCannotChange`, even after

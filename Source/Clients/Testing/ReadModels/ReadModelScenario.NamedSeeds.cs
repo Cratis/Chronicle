@@ -19,6 +19,7 @@ public partial class ReadModelScenario<TReadModel>
     /// <param name="instance">The starting state for this key.</param>
     /// <exception cref="InvalidReadModelSeedKey">The projection or supplied parts are invalid.</exception>
     /// <exception cref="ReadModelAlreadySeeded">The canonical key was already registered.</exception>
+    /// <exception cref="ConflictingReadModelSeeds">A scalar seed already resolves to the same identity.</exception>
     public void CollectReadModelFor(IReadOnlyDictionary<string, object?> keyParts, TReadModel instance)
     {
         var contract = _seedKey ?? ReadModelSeedKey.Create(
@@ -27,6 +28,7 @@ public partial class ReadModelScenario<TReadModel>
             _jsonSchemaGenerator);
         var (key, identity) = contract.Normalize(keyParts);
         if (_namedReadModelSeeds.ContainsKey(identity)) throw new ReadModelAlreadySeeded(typeof(TReadModel), identity);
+        if (_readModelSeeds.ContainsKey(identity)) throw new ConflictingReadModelSeeds(typeof(TReadModel), identity);
         _namedReadModelSeeds.Add(identity, new(key, identity, instance));
         _seedKey = contract;
         EventStore().RegisterReadModelInstance(identity, instance);
