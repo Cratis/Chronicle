@@ -232,7 +232,7 @@ Chronicle supports horizontal scaling through Orleans clustering:
 
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
-3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
+3. **Orleans Clustering**: Allow the silo port (11111) only between trusted nodes, and the gateway (30000) only for trusted Orleans clients. HTTP/gRPC-only deployments can set `clustering.gatewayEnabled=false`. Do not publish either Orleans port publicly; they do not use Chronicle's HTTP authentication. See [Clustering network boundaries](configuration/clustering.md#listener-and-network-boundaries) for interface binding and a Kubernetes NetworkPolicy example.
 4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]

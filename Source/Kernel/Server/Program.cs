@@ -213,29 +213,17 @@ hostBuilder
             // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
             // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
             _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
-
-            if (clustering.AdvertisedIP is { } advertisedIP)
-            {
-                _.ConfigureEndpoints(System.Net.IPAddress.Parse(advertisedIP), clustering.SiloPort, clustering.GatewayPort);
-            }
-            else
-            {
-                _.ConfigureEndpoints(clustering.SiloPort, clustering.GatewayPort);
-            }
         }
-        else
+        else if (localhostGuard == LocalhostClusteringGuardAction.Lease)
         {
-            if (localhostGuard == LocalhostClusteringGuardAction.Lease)
-            {
-                _.AddSingleWriterLease();
-            }
-            else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
-            {
-                logger.LocalhostClusteringAgainstSharedStorage();
-            }
-
-            _.UseLocalhostClustering(clustering.SiloPort, clustering.GatewayPort, serviceId: clustering.ServiceId, clusterId: clustering.ClusterId);
+            _.AddSingleWriterLease();
         }
+        else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
+        {
+            logger.LocalhostClusteringAgainstSharedStorage();
+        }
+
+        ClusterEndpointConfiguration.Configure(_, clustering);
 
         // Applies to all clustering types, and to calls a silo makes to itself as well as to a
         // sibling. Startup work that fans out across everything the server holds grows with the

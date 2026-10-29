@@ -73,6 +73,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
+| Cratis__Chronicle__Clustering__GatewayEnabled | Enable the Orleans client gateway (default `true`); set `false` when applications use only HTTP/gRPC |
+| Cratis__Chronicle__Clustering__AdvertisedIP | In MongoDB/SQL clustering, advertise and bind the silo and enabled gateway to this local interface address |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
