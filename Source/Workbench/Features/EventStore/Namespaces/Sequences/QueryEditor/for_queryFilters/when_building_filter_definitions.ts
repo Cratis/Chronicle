@@ -50,7 +50,7 @@ describe('when building localized filter definitions', () => {
 
     it('should preserve the event type key', () => eventType.key.should.equal('eventType'));
     it('should use the localized event type label', () => eventType.label.should.equal(labels.eventType));
-    it('should keep the event type facet a string filter', () => eventType.type.should.equal('string'));
+    it('should keep the event type facet a string filter', () => (eventType.type === 'string').should.be.true);
     it('should allow multiple event types', () => (eventType.multi === true).should.be.true);
     it('should use the localized search placeholder', () =>
         eventType.searchPlaceholder!.should.equal(labels.searchEventTypes));

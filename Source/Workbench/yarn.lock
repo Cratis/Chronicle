@@ -261,9 +261,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "@cratis/components@npm:4.1.1"
+"@cratis/components@npm:4.2.0":
+  version: 4.2.0
+  resolution: "@cratis/components@npm:4.2.0"
   dependencies:
     "@internationalized/date": "npm:3.12.3"
     allotment: "npm:1.20.5"
@@ -284,7 +284,7 @@ __metadata:
   peerDependenciesMeta:
     pixi.js:
       optional: true
-  checksum: 10/a7f9ecf0e49a0bc838427532d3e4c0d118abe7105ed6f71ddf16a141b57e36edd720881bb2f414c8fceb43bc25df95b11536c807f9634c46ab1ec1fb31585301
+  checksum: 10/05685e3832f13d1c727f14037d93b11e0faf198e9cfbe38e994946ca784ed41c4ca92343a8121054705eb1460a182d17ccfb1292b17243f99938e714dfcc8436
   languageName: node
   linkType: hard
 
@@ -8432,7 +8432,7 @@ __metadata:
     "@cratis/arc.react": "npm:^22.6.0"
     "@cratis/arc.react.mvvm": "npm:^22.6.0"
     "@cratis/arc.vite": "npm:^22.6.0"
-    "@cratis/components": "npm:^4.1.1"
+    "@cratis/components": "npm:4.2.0"
     "@cratis/fundamentals": "npm:^7.18.1"
     "@cratis/screenplay-language": "npm:^4.14.0"
     "@eslint/eslintrc": "npm:3.3.6"
