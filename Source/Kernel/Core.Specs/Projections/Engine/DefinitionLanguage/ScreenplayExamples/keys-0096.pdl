@@ -1,3 +1,6 @@
 projection Doc => DocReadModel
-  from UserRegistered key $eventSourceId
-    Name = name
+  from PaymentRecorded
+    key
+      invoiceId = invoiceId
+      method = method
+    add total by amount
