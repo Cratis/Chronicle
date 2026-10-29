@@ -43,6 +43,5 @@ public static class ConformanceExceptions
         ["context-not-a-member"] = new(ConformanceDirection.BothReject, "Chronicle rejects an event-context path its own EventContext cannot resolve at runtime (Screenplay only warns, PLAY0295, because its catalog is incomplete); the semantic model rejects it as well (PLAY0273)"),
 
         // The two sides disagree, and it is not known to be intentional.
-        ["joins-event-no-automap"] = new(ConformanceDirection.Disagreement, "Screenplay-side fix pending (reported to the Screenplay lane) - the semantic model ignores 'automap'/'no automap' on a joined event (warning PLAY0380 says Chronicle drops it), but the visitor keeps it on JoinDefinition.AutoMap and ProjectionFactory.GetMergedJoinProperties honors it"),
     };
 }

@@ -36,4 +36,7 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Critical, "Patch manager could not relocate to a kernel at least as new as the caller. Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void PatchManagerCouldNotRelocate(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping an event store registered without a name. Nothing can address it, so it is not started; remove the entry with an empty name from the cluster's event store registry")]
+    internal static partial void SkippingEventStoreWithoutAName(this ILogger<ChronicleServerStartupTask> logger);
 }

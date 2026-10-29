@@ -123,7 +123,7 @@ internal static partial class ProjectionReadModelProcessor
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
         IReadOnlyList<ReadModelEvent>? seededEvents = null,
-        IReadOnlyDictionary<EventSourceId, TReadModel>? seededInstances = null)
+        IEnumerable<(object Key, TReadModel Instance)>? seededInstances = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -181,9 +181,9 @@ internal static partial class ProjectionReadModelProcessor
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
         var seededKeys = new HashSet<object>();
-        foreach (var (key, instance) in seededInstances ?? new Dictionary<EventSourceId, TReadModel>())
+        foreach (var (key, instance) in seededInstances ?? [])
         {
-            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key.Value, ArrayIndexers.NoIndexers));
+            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key, ArrayIndexers.NoIndexers));
             statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             seededKeys.Add(stateKey);
@@ -296,6 +296,15 @@ internal static partial class ProjectionReadModelProcessor
             _keyResolvers,
             storage,
             FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
+
+    /// <summary>
+    /// Gets the identifier schema used by native projection folding.
+    /// </summary>
+    /// <param name="readModelType">The model type.</param>
+    /// <param name="schemaGenerator">The fold's schema generator.</param>
+    /// <returns>The native schema.</returns>
+    internal static JsonSchema GetReadModelSchema(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
+        BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)).GetSchemaForLatestGeneration();
 
     static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
     {
@@ -471,10 +480,10 @@ internal static partial class ProjectionReadModelProcessor
 
         KernelProjectionEngine::KeyResolverResult keyResult;
 
-        // A root-level [Join] source enriches an existing root document; resolve it ourselves so the in-memory
-        // sink doesn't materialize a phantom keyed by the join source's own id (see JoinKeyResolver). A null
+        // A root-level [Join] source enriches an existing root document; use the kernel resolver and skip
+        // unmatched roots so the in-memory sink doesn't materialize a phantom (see JoinKeyResolver). A null
         // root means the row doesn't exist yet — skip; ResolveJoin backfills when the FROM event arrives.
-        var (isRootJoinSource, resolvedRootKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
+        var (isRootJoinSource, resolvedRootKey, joinKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, eventSequenceStorage, sink, @event);
         if (isRootJoinSource)
         {
             if (resolvedRootKey is null)
@@ -482,9 +491,9 @@ internal static partial class ProjectionReadModelProcessor
                 return (null, false);
             }
 
-            // The resolved root key identifies the row, but the join still matches on the source event's id.
+            // The resolved root key identifies the row; the join matches on the value resolved from its key expression.
             // Preserve both, just as ForJoin does in the production ResolveKey step.
-            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, @event.Context.EventSourceId.Value);
+            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, joinKey);
         }
         else
         {
