@@ -140,6 +140,14 @@ internal sealed class ChronicleServerStartupTask(
         var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
         foreach (var eventStore in allEventStores)
         {
+            // A registry entry without a usable name cannot be addressed as a grain; starting it would stop the silo
+            // from starting at all, so it is reported and left for an operator instead.
+            if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
+            {
+                logger.SkippingEventStoreWithoutAName();
+                continue;
+            }
+
             if (eventStore != EventStoreName.System)
             {
                 await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
