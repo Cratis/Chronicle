@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.Placement;
@@ -12,7 +13,12 @@ namespace Cratis.Chronicle.Observation.Placement;
 /// </summary>
 /// <param name="options">Chronicle options containing clustering configuration.</param>
 /// <param name="localSiloDetails">Details about the local silo used to exclude it from candidates when it does not support observers.</param>
-public class ObserverPlacementDirector(IOptions<ChronicleOptions> options, ILocalSiloDetails localSiloDetails) : IPlacementDirector
+/// <param name="clusterReleases">The published kernel releases used to avoid older silos during a rollout.</param>
+/// <remarks>
+/// In a mixed-release cluster observers prefer silos at least as new as this one, so older silos do not
+/// receive subscriber types they cannot load. If no such observer host exists, existing placement is preserved.
+/// </remarks>
+public class ObserverPlacementDirector(IOptions<ChronicleOptions> options, ILocalSiloDetails localSiloDetails, IClusterReleases clusterReleases) : IPlacementDirector
 {
     /// <inheritdoc/>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
@@ -27,6 +33,10 @@ public class ObserverPlacementDirector(IOptions<ChronicleOptions> options, ILoca
             // is never reached and no candidates are lost.
             candidates = candidates.Where(s => s != localSiloDetails.SiloAddress);
         }
+
+        candidates = candidates.ToArray();
+        var preferred = clusterReleases.AtLeastAsNewAsThisSilo(candidates);
+        if (preferred.Count > 0) candidates = preferred;
 
         var selected = candidates.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
             ?? throw new InvalidOperationException(

@@ -6,8 +6,10 @@ using Cratis.Arc;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
@@ -33,6 +35,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Metadata;
 using Orleans.Versions.Compatibility;
 using Orleans.Versions.Selector;
 
@@ -69,6 +72,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
@@ -94,6 +98,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
             });
         });
+        AddClusterReleaseSupport(builder.Services);
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
@@ -217,5 +222,11 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         return builder;
+    }
+
+    static void AddClusterReleaseSupport(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainInterfacePropertiesProvider, KernelReleaseInterfaceProperties>());
+        services.TryAddSingleton<IClusterReleases, ClusterReleases>();
     }
 }
