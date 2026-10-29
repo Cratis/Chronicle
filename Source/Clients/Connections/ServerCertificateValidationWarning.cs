@@ -18,7 +18,7 @@ internal static class ServerCertificateValidationWarning
     /// <param name="connectionString">The configured connection targets.</param>
     /// <returns>Whether skipped validation should be reported.</returns>
     internal static bool AppliesTo(bool skipTlsValidation, ChronicleConnectionString connectionString) =>
-        skipTlsValidation && (connectionString.IsSrv || connectionString.ServerAddresses.Any(server => !IsLoopback(server.Host)));
+        !connectionString.DisableTls && skipTlsValidation && (connectionString.IsSrv || connectionString.ServerAddresses.Any(server => !IsLoopback(server.Host)));
 
     static bool IsLoopback(string host)
     {
