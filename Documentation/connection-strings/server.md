@@ -123,6 +123,7 @@ that enforces authentication, every call fails as unauthenticated.
 | `auth` | string | Set to `none` to connect without presenting credentials | `?auth=none` |
 | `apiKey` | string | API key for API key authentication | `?apiKey=your-api-key` |
 | `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
+| `disableTls` | boolean | Connects without TLS, over cleartext HTTP/2 (h2c), to a server running with `tls.enabled=false`. See [Connecting without TLS](#connecting-without-tls) | `?disableTls=true` |
 | `skipCompatibilityCheck` | boolean | Skips the connect-time wire-compatibility check against the server | `?skipCompatibilityCheck=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
 | `srvNameServer` | string | DNS name server (host[:port], port defaults to 53) for `chronicle+srv` lookups; defaults to the system's name servers | `?srvNameServer=10.0.0.53` |
@@ -132,6 +133,21 @@ that enforces authentication, every call fails as unauthenticated.
 The client always connects over TLS, but by default it does **not** validate the server certificate — any certificate, including a self-signed one, is accepted. The development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, so this default is what lets a development client connect with no certificate setup. The production image (`latest` and the version tags) generates none and stops at startup without a configured certificate — see [Production deployment](../hosting/production.md). Set `skipTlsValidation=false` to require full certificate chain validation against a server whose certificate is verifiable — do this for anything beyond a trusted network, as the default removes protection against man-in-the-middle attacks. In the .NET client this option and `Tls.SkipCertificateValidation` combine so that whichever one asks for validation wins, so either setting alone is enough and an omitted second setting can never silently turn validation back off.
 
 See [TLS configuration (client)](../configuration/tls) for certificate setup.
+
+### Connecting without TLS
+
+A server running with `tls.enabled=false` serves cleartext HTTP/2 (h2c) only. That is the case behind a
+TLS-terminating proxy that forwards h2c, or when you reach the server's port directly with `kubectl port-forward`.
+Set `disableTls=true` to connect to such a server, for example `chronicle://localhost:35001/?disableTls=true&auth=none`.
+
+Chronicle serves its token endpoint (`/connect/token`) over TLS only. With TLS disabled and authentication turned
+on, the server requires an external HTTPS authority. So a client connecting with `disableTls=true` cannot exchange
+client credentials:
+
+- With no credentials, the client connects without authentication, as with `auth=none`. It does not fall back to
+  the development credentials.
+- With explicit client credentials, creating the connection fails with `ClientCredentialsRequireTls`, which names the alternatives.
+- With `apiKey=<token>`, the client presents a token you obtained from the server's external authority.
 
 ## Compatibility check
 

@@ -88,6 +88,12 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
                 }
             }
 
+            // Clients may know different generations; omitted stored schemas must survive registration.
+            foreach (var (generation, storedSchema) in existing.Schemas.Where(_ => !eventType.Schemas.ContainsKey(_.Key)))
+            {
+                eventType.Schemas[generation] = storedSchema;
+            }
+
             if (existing.Owner == eventType.Owner && existing.Source == eventType.Source &&
                 existing.Tombstone == eventType.Tombstone && existing.MigrationsJson == eventType.MigrationsJson &&
                 existing.Schemas.Count == eventType.Schemas.Count &&
