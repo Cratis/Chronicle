@@ -26,9 +26,10 @@ public class Observers
     /// indefinitely.
     /// </summary>
     /// <remarks>
-    /// The default matches the response timeout the transport already imposes, so it bounds nothing new on its own -
-    /// the point of the knob is being able to bound it tighter for a subscriber that should always answer quickly.
-    /// Raising it past the transport's own timeout has no effect, because that one gives up first. Giving up abandons
+    /// The call to a subscriber carries its own Orleans response timeout (see
+    /// <see cref="Observation.ObserverSubscriberResponseTimeout"/>), so this setting is not capped by
+    /// <c language="csharp">clustering.responseTimeout</c>: raising it lets a subscriber that needs longer per batch take longer.
+    /// Zero, and anything above the ceiling, is bounded by that ceiling, and the kernel warns about it at startup. Giving up abandons
     /// the wait, not the work: the subscriber keeps processing the batch, and the events are redelivered when the
     /// partition retries. A timeout is recorded as <c language="csharp">FailureKind.Timeout</c>, which is excluded from the quarantine
     /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.

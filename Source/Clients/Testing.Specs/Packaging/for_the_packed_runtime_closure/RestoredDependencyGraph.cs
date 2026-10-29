@@ -85,6 +85,34 @@ sealed class RestoredDependencyGraph(
     }
 
     /// <summary>
+    /// Finds the declared packages whose version range starts at a prerelease.
+    /// </summary>
+    /// <remarks>
+    /// NuGet refuses to pack a stable package that depends on a prerelease (NU5104), and only the publish workflow
+    /// packs, so a prerelease declaration passes every pull request check and then fails the release.
+    /// </remarks>
+    /// <param name="project">The project file.</param>
+    /// <returns>Each prerelease declaration, as <c language="text">package version-range</c>.</returns>
+    internal static IReadOnlyCollection<string> DeclaredPrereleasePackages(FileInfo project)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(project.DirectoryName!, "obj", "project.assets.json")));
+        var framework = document.RootElement.GetProperty("project").GetProperty("frameworks").EnumerateObject().First().Value;
+        if (!framework.TryGetProperty("dependencies", out var dependencies))
+        {
+            return [];
+        }
+
+        return
+        [
+            .. dependencies.EnumerateObject()
+                .Where(_ => (!_.Value.TryGetProperty("suppressParent", out var suppress) || suppress.GetString() != "All") &&
+                            _.Value.TryGetProperty("version", out var version) && version.GetString()!.Split(',')[0].Contains('-'))
+                .Select(_ => $"{_.Name} {_.Value.GetProperty("version").GetString()}")
+                .Order(StringComparer.OrdinalIgnoreCase)
+        ];
+    }
+
+    /// <summary>
     /// Reads the packed runtime assembly pattern a project declares.
     /// </summary>
     /// <param name="project">The project file.</param>
