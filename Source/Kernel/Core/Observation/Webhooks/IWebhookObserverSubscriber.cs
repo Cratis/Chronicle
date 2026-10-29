@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Orleans;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -26,5 +27,6 @@ public interface IWebhookObserverSubscriber : IObserverSubscriber, IAmOwnedByKer
     /// <param name="context">The subscriber context.</param>
     /// <param name="cancellationToken">Cancellation of the entire delivery.</param>
     /// <returns>The delivery result, after the HTTP operation has completed.</returns>
+    [ResponseTimeout(ObserverSubscriberResponseTimeout.Value)]
     Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context, CancellationToken cancellationToken);
 }

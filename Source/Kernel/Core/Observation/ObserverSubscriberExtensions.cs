@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
@@ -81,21 +82,9 @@ public static class ObserverSubscriberExtensions
         ObserverSubscriberContext context,
         CancellationToken cancellationToken = default)
     {
+        var started = Stopwatch.GetTimestamp();
         var call = subscriber.OnNextPage(events, context);
-        if (timeout <= TimeSpan.Zero)
-        {
-            return await call.WaitAsync(cancellationToken);
-        }
-
-        try
-        {
-            return await call.WaitAsync(timeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
-            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
-            throw new SubscriberCallTimedOut(ObserverSubscriberKey.AllPartitions, timeout);
-        }
+        return await WaitForAnswer(call, timeout, ObserverSubscriberKey.AllPartitions, started, cancellationToken);
     }
 
     /// <summary>
@@ -183,17 +172,44 @@ public static class ObserverSubscriberExtensions
             return await OnNextWebhook(webhook, timeout, partition, events, context, cancellationToken);
         }
 
+        var started = Stopwatch.GetTimestamp();
         var call = subscriber.OnNext(partition, events, context);
-        if (timeout <= TimeSpan.Zero)
-        {
-            return await call.WaitAsync(cancellationToken);
-        }
+        return await WaitForAnswer(call, timeout, partition, started, cancellationToken);
+    }
 
+    /// <summary>
+    /// Waits for a subscriber call to answer, telling the configured subscriber timeout apart from Orleans giving up on the call.
+    /// </summary>
+    /// <param name="call">The grain call in flight.</param>
+    /// <param name="timeout">The configured subscriber timeout; zero or less waits indefinitely.</param>
+    /// <param name="partition">The partition being delivered, for the failure.</param>
+    /// <param name="started">The <see cref="Stopwatch"/> timestamp the call was made at.</param>
+    /// <param name="cancellationToken">Cancellation of the wait.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> the subscriber answered with.</returns>
+    /// <exception cref="SubscriberCallTimedOut">The configured subscriber timeout elapsed.</exception>
+    /// <exception cref="SubscriberResponseTimedOut">Orleans gave up on the call before the subscriber timeout elapsed.</exception>
+    /// <remarks>
+    /// Both surface as a <see cref="TimeoutException"/>. The difference is where it comes from: when the call task
+    /// itself has faulted, it was Orleans' response timeout; when it is still running, the subscriber timeout elapsed.
+    /// </remarks>
+    internal static async Task<ObserverSubscriberResult> WaitForAnswer(
+        Task<ObserverSubscriberResult> call,
+        TimeSpan timeout,
+        Key partition,
+        long started,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            return await call.WaitAsync(timeout, cancellationToken);
+            return timeout <= TimeSpan.Zero
+                ? await call.WaitAsync(cancellationToken)
+                : await call.WaitAsync(timeout, cancellationToken);
         }
-        catch (TimeoutException)
+        catch (TimeoutException timeoutException) when (call.IsFaulted)
+        {
+            throw new SubscriberResponseTimedOut(partition, Stopwatch.GetElapsedTime(started), timeout, timeoutException);
+        }
+        catch (TimeoutException) when (timeout > TimeSpan.Zero)
         {
             // The call is abandoned rather than cancelled, so nothing is awaiting it any more. Observe whatever it
             // eventually does, or a subscriber that times out and then faults raises an unobserved task exception
