@@ -83,7 +83,10 @@
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+        <!-- Embedded rather than declared: the kernel pins a prerelease of it, and NuGet refuses to let a stable
+             package depend on a prerelease (NU5104). It is a leaf instrumentation assembly, so carrying the
+             runtime asset costs a consumer nothing and conflicts with nothing. -->
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" PrivateAssets="all" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="protobuf-net" />
@@ -103,9 +106,10 @@
          available without nuspec dependencies. Core's projection-to-client-code generation needs the Roslyn
          C# syntax model (CSharpSyntaxRewriter/CSharpSyntaxVisitor) at runtime, so any consumer constructing a
          scenario needs it too. Cratis.Screenplay depends on sibling Cratis.Screenplay.* packages (Matching,
-         Contexts); they travel with it, or type discovery fails to load them at the first scenario. -->
+         Contexts); they travel with it, or type discovery fails to load them at the first scenario.
+         OpenTelemetry.Instrumentation.GrpcNetClient is a prerelease, so it travels here instead of as a dependency. -->
     <PropertyGroup>
-        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay(\..+)?|Microsoft\.CodeAnalysis(\.CSharp)?)\.dll$</PrivatePackageRuntimeAssemblyRegex>
+        <PrivatePackageRuntimeAssemblyRegex>^(Orleans\..*|Cratis\.Screenplay(\..+)?|Microsoft\.CodeAnalysis(\.CSharp)?|OpenTelemetry\.Instrumentation\.GrpcNetClient)\.dll$</PrivatePackageRuntimeAssemblyRegex>
     </PropertyGroup>
 
 </Project>
