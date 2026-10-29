@@ -14,7 +14,7 @@ public class and_the_collection_has_default_read_settings : given.a_receipt_look
     [Fact] void should_use_majority_read_concern() => _receipts.Received(1).WithReadConcern(ReadConcern.Majority);
     [Fact] void should_use_primary_read_preference() => _majorityReceipts.Received(1).WithReadPreference(ReadPreference.Primary);
     [Fact] void should_return_no_receipt_for_a_genuine_miss() => _result.ShouldBeNull();
-    [Fact] void should_dispose_the_cursor() => _cursor.Received(1).Dispose();
+    [Fact] void should_dispose_the_cursor() => _cursor.Received().Dispose();
 
     [Fact]
     void should_filter_by_the_receipt_identity()
