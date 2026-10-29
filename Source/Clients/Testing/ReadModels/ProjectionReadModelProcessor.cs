@@ -472,10 +472,10 @@ internal static partial class ProjectionReadModelProcessor
 
         KernelProjectionEngine::KeyResolverResult keyResult;
 
-        // A root-level [Join] source enriches an existing root document; resolve it ourselves so the in-memory
-        // sink doesn't materialize a phantom keyed by the join source's own id (see JoinKeyResolver). A null
+        // A root-level [Join] source enriches an existing root document; use the kernel resolver and skip
+        // unmatched roots so the in-memory sink doesn't materialize a phantom (see JoinKeyResolver). A null
         // root means the row doesn't exist yet — skip; ResolveJoin backfills when the FROM event arrives.
-        var (isRootJoinSource, resolvedRootKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
+        var (isRootJoinSource, resolvedRootKey, joinKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, eventSequenceStorage, sink, @event);
         if (isRootJoinSource)
         {
             if (resolvedRootKey is null)
@@ -483,9 +483,9 @@ internal static partial class ProjectionReadModelProcessor
                 return (null, false);
             }
 
-            // The resolved root key identifies the row, but the join still matches on the source event's id.
+            // The resolved root key identifies the row; the join matches on the value resolved from its key expression.
             // Preserve both, just as ForJoin does in the production ResolveKey step.
-            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, @event.Context.EventSourceId.Value);
+            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, joinKey);
         }
         else
         {
