@@ -542,27 +542,37 @@ public class Projections(
             .Concat(_explicitProjections.Where(pair => discoveredHandlers.TryGetValue(pair.Key, out var handler) && handler.Id == pair.Value.Id)
                 .Select(pair => (pair.Key, pair.Value.Id, false)));
 
-    IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> CurrentOwners() =>
-        DiscoveredOwners(_definitionsByType, _modelBoundHandlers)
-            .Concat(ExplicitOwners(_explicitRegistrations, _discoveredHandlersByModelType));
+    IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> CurrentOwners()
+    {
+        // Pending options recipes also own identifiers, but preflight must not publish their builds.
+        var (registrations, _) = BuildExplicitProjections(_discoveredHandlersByModelType, onlyPending: true);
+        return DiscoveredOwners(_definitionsByType, _modelBoundHandlers)
+            .Concat(ExplicitOwners(registrations, _discoveredHandlersByModelType));
+    }
 
     void ValidateProspectiveOwner(Type readModelType, ExplicitProjectionRegistration registration) =>
         ValidateProjectionOwners(CurrentOwners().Where(owner => owner.IsFluent || owner.Owner != readModelType).Append((readModelType, registration.Handler.Id, false)));
 
     /// <summary>
-    /// Build every explicit projection anew, recording the ones that cannot be built rather than failing discovery.
+    /// Build explicit projections, recording the ones that cannot be built rather than failing discovery.
     /// </summary>
     /// <param name="discoveredHandlers">The discovered projection handlers by read model type.</param>
+    /// <param name="onlyPending">Whether to stage only pending recipes, retaining already built registrations and failures.</param>
     /// <remarks>
     /// Must be called while holding the explicit lock. An explicit projection maintaining a read model that discovery
     /// found is dropped when it is the very same model-bound projection, and reported as a failure otherwise.
     /// </remarks>
-    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers)
+    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers, bool onlyPending = false)
     {
-        var registrations = new Dictionary<Type, ExplicitProjectionRegistration>();
-        var failures = new Dictionary<Type, Exception>();
+        var registrations = onlyPending ? new Dictionary<Type, ExplicitProjectionRegistration>(_explicitRegistrations) : new Dictionary<Type, ExplicitProjectionRegistration>();
+        var failures = onlyPending ? new Dictionary<Type, Exception>(_explicitFailures) : new Dictionary<Type, Exception>();
         foreach (var (readModelType, projection) in _explicitProjections)
         {
+            if (onlyPending && (registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType)))
+            {
+                continue;
+            }
+
             if (discoveredHandlers.TryGetValue(readModelType, out var discovered))
             {
                 if (!(projection.IsModelBound && discovered.Id == projection.Id))
