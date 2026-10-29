@@ -43,9 +43,9 @@ public class and_creation_maps_the_parent_without_the_grandchild : given.a_three
 
     [Fact] void should_preserve_the_root_key() => _result.Value.ShouldEqual(RootKey);
     [Fact] void should_preserve_the_ancestor_indexer() => _result.ArrayIndexers.GetFor("features").Identifier.ToString().ShouldEqual(FeatureKey);
-    [Fact] void should_preserve_the_ancestor_identifier_property() => _result.ArrayIndexers.GetFor("features").IdentifierProperty.ShouldEqual("featureId");
+    [Fact] void should_preserve_the_ancestor_identifier_property() => _result.ArrayIndexers.GetFor("features").IdentifierProperty.ShouldEqual((PropertyPath)"featureId");
     [Fact] void should_add_the_grandchild_indexer() => _result.ArrayIndexers.GetFor("slices").Identifier.ToString().ShouldEqual(SliceKey);
-    [Fact] void should_identify_the_grandchild_by_its_identity() => _result.ArrayIndexers.GetFor("slices").IdentifierProperty.ShouldEqual("sliceId");
+    [Fact] void should_identify_the_grandchild_by_its_identity() => _result.ArrayIndexers.GetFor("slices").IdentifierProperty.ShouldEqual((PropertyPath)"sliceId");
     [Fact] void should_have_exactly_two_indexers() => _result.ArrayIndexers.Count.ShouldEqual(2);
     [Fact] void should_not_modify_the_parent_key() => _parentKey.ArrayIndexers.Count.ShouldEqual(1);
 }

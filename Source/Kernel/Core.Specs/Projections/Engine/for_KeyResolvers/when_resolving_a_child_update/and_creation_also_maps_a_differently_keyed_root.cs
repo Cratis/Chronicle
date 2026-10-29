@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers.when_resolving_a_child_update;
 
@@ -24,7 +25,7 @@ public class and_creation_also_maps_a_differently_keyed_root : given.an_assignme
     [Fact] void should_include_one_indexer_for_ended_update() => _endedKey.ArrayIndexers.Count.ShouldEqual(1);
     [Fact] void should_target_the_withheld_assignment() => _withheldKey.ArrayIndexers.GetFor("assignments").Identifier.ToString().ShouldEqual(AssignmentKey);
     [Fact] void should_target_the_ended_assignment() => _endedKey.ArrayIndexers.GetFor("assignments").Identifier.ToString().ShouldEqual(AssignmentKey);
-    [Fact] void should_identify_assignments_by_their_identity() => _withheldKey.ArrayIndexers.GetFor("assignments").IdentifierProperty.ShouldEqual("assignmentId");
+    [Fact] void should_identify_assignments_by_their_identity() => _withheldKey.ArrayIndexers.GetFor("assignments").IdentifierProperty.ShouldEqual((PropertyPath)"assignmentId");
     [Fact] void should_resolve_the_same_root_on_replay() => _replayedKey.Value.ShouldEqual(_withheldKey.Value);
     [Fact] void should_resolve_the_same_child_location_on_replay() => _replayedKey.ArrayIndexers.ShouldEqual(_withheldKey.ArrayIndexers);
 }
