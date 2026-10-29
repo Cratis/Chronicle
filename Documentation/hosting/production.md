@@ -43,6 +43,8 @@ The encryption certificate is required because the **internal OAuth authority** 
 
 The development images generate a self-signed TLS certificate and fall back to ephemeral OAuth keys instead of throwing, which is exactly why a Compose file that works against `latest-development` fails against `latest`. See [Data Protection Key Encryption](encryption-certificate.md) and [TLS Configuration](configuration/tls.md) for generating and mounting the certificates.
 
+The .NET client validates remote server certificates by default. Install the issuing CA in every client environment, including application containers, or configure a certificate pin. Development connections through a loopback-only, non-SRV endpoint retain an exception when no validation setting is supplied; container service names do not. Never carry a development `skipTlsValidation=true` setting into production. See [client TLS configuration](../configuration/tls) and the [upgrade note](../upgrading/index.md#net-client-server-certificate-validation).
+
 ## Storage requirements
 
 Chronicle opens MongoDB transactions when it appends events, and transactions are only served by a replica set (or a sharded cluster) — a standalone `mongod` rejects them. **Every MongoDB deployment behind Chronicle must be a replica set**, including a single-node one. The Compose recipes below initialize a single-node replica set named `rs0`; a real production deployment uses a multi-member replica set or a managed service such as MongoDB Atlas, which is already one.

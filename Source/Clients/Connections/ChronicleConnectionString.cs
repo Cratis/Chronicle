@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -51,7 +53,7 @@ public class ChronicleConnectionString
     /// The development <see cref="ChronicleConnectionString"/> pointing to localhost configured with the default dev credentials.
     /// </summary>
     /// <remarks>
-    /// TLS certificate validation is skipped by default (see <see cref="ChronicleConnectionStringBuilder.SkipTlsValidation"/>),
+    /// TLS certificate validation is skipped by default for loopback-only targets,
     /// so a development client connects to the self-signed certificate the Chronicle server generates when none is configured.
     /// </remarks>
     public static readonly ChronicleConnectionString Development = new($"chronicle://{DevelopmentClient}:{DevelopmentClientSecret}@localhost:35000");
@@ -127,7 +129,10 @@ public class ChronicleConnectionString
     /// <summary>
     /// Gets whether TLS certificate validation is skipped when connecting.
     /// </summary>
-    public bool SkipTlsValidation => _builder.SkipTlsValidation;
+    /// <remarks>
+    /// An explicit value takes precedence. Otherwise only non-SRV, loopback-only targets skip validation.
+    /// </remarks>
+    public bool SkipTlsValidation => HasExplicitSkipTlsValidation ? _builder.SkipTlsValidation : IsLoopbackOnly;
 
     /// <summary>
     /// Gets whether the client connects without TLS.
@@ -165,6 +170,16 @@ public class ChronicleConnectionString
     /// credential are replaced by <c language="csharp">REDACTED</c>.
     /// </remarks>
     public string Redacted => _builder.BuildRedacted();
+
+    /// <summary>
+    /// Gets whether certificate validation was explicitly configured.
+    /// </summary>
+    internal bool HasExplicitSkipTlsValidation => _builder.HasExplicitSkipTlsValidation;
+
+    /// <summary>
+    /// Gets whether every target is a literal loopback address or localhost, without SRV discovery.
+    /// </summary>
+    internal bool IsLoopbackOnly => !IsSrv && ServerAddresses.All(server => IsLoopback(server.Host));
 
     /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ChronicleConnectionString"/>.
@@ -208,4 +223,13 @@ public class ChronicleConnectionString
     /// use <see cref="Redacted"/> for that.
     /// </remarks>
     public override string ToString() => _builder.Build();
+
+    static bool IsLoopback(string host)
+    {
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!IPAddress.TryParse(host.Trim('[', ']'), out var address)) return false;
+
+        return address.Equals(IPAddress.IPv6Loopback) ||
+            (address.AddressFamily == AddressFamily.InterNetwork && address.GetAddressBytes()[0] == 127);
+    }
 }

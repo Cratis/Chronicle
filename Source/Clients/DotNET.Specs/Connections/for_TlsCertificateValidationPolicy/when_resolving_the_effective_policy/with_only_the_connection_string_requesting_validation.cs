@@ -6,8 +6,7 @@ using Cratis.Chronicle.Connections;
 namespace Cratis.Chronicle.for_TlsCertificateValidationPolicy.when_resolving_the_effective_policy;
 
 /// <summary>
-/// One setting has to be enough. The untouched options value still defaults to skipping, so combining
-/// the two with OR would swallow this request and go on accepting any certificate.
+/// Explicit connection-string validation overrides the loopback development exception.
 /// </summary>
 public class with_only_the_connection_string_requesting_validation : Specification
 {

@@ -265,14 +265,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Gets or sets whether to skip TLS certificate validation when connecting.
     /// </summary>
     /// <remarks>
-    /// The client always connects over TLS but does not validate the server's certificate by default,
-    /// accepting any certificate, including self-signed ones. Set <c language="csharp">skipTlsValidation=false</c> to
-    /// require full certificate chain validation instead — only do so against a server whose
-    /// certificate is verifiable (not a self-signed development certificate).
+    /// Defaults to false. When omitted, loopback-only connections skip validation for local development.
+    /// Set <c language="csharp">skipTlsValidation=false</c> explicitly to validate even loopback certificates,
+    /// or true to accept any server certificate. This option has no effect when TLS is disabled.
     /// </remarks>
     public bool SkipTlsValidation
     {
-        get => !ContainsKey(SkipTlsValidationKey) || Convert.ToBoolean(this[SkipTlsValidationKey]);
+        get => ContainsKey(SkipTlsValidationKey) && Convert.ToBoolean(this[SkipTlsValidationKey]);
         set => this[SkipTlsValidationKey] = value;
     }
 
@@ -402,6 +401,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets whether certificate validation was explicitly configured.
+    /// </summary>
+    internal bool HasExplicitSkipTlsValidation => ContainsKey(SkipTlsValidationKey);
+
+    /// <summary>
     /// Builds a Chronicle connection string from the current settings.
     /// </summary>
     /// <returns>The Chronicle connection string.</returns>
@@ -436,9 +440,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add($"apiKey={Uri.EscapeDataString((string)this[ApiKeyKey])}");
         }
 
-        if (!SkipTlsValidation)
+        if (HasExplicitSkipTlsValidation)
         {
-            queryParams.Add("skipTlsValidation=false");
+            queryParams.Add($"skipTlsValidation={SkipTlsValidation.ToString().ToLowerInvariant()}");
         }
 
         if (DisableTls)

@@ -19,6 +19,8 @@ When you run an Aspire AppHost, `AddCratisChronicle()` selects the Chronicle dev
 
 <ChronicleClientTabs snippet="hosting/aspire/dev-mode" />
 
+The .NET client validates server certificates by default. Local clients connecting through a loopback endpoint (`localhost`, `127.0.0.0/8`, or `::1`, without SRV discovery) retain the development exception when no validation setting is supplied. Container-to-container connections using Aspire resource names are not loopback: trust a configured certificate in the application container, configure a certificate pin, or explicitly use `skipTlsValidation=true` for development only. Publishing does not add an opt-out. See [client TLS configuration](../configuration/tls) and the [upgrade note](../upgrading/index.md#net-client-server-certificate-validation).
+
 The development image is ideal for:
 
 - Getting started quickly without additional infrastructure

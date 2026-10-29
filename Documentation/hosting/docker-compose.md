@@ -34,6 +34,8 @@ Every port is published on this machine only: the development image's Workbench 
 
 With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
 
+The development image generates a self-signed TLS certificate. A .NET client on the host using `chronicle://localhost:35000` accepts it through the loopback-only development exception when no validation setting is supplied. A client in another container connecting to `chronicle://chronicle:35000` validates by default: configure and trust a certificate, configure a matching pin, or explicitly set `skipTlsValidation=true` for development only. Container service names are not loopback, and the opt-out must not be carried into production. See [client TLS configuration](../configuration/tls).
+
 ## Private cluster ports
 
 Keep the Orleans silo (11111) and client gateway (30000) off host `ports` mappings and public load balancers. They do not use Chronicle's HTTP authentication. A container's unpublished ports are still reachable by other containers on the same network, so use a dedicated network containing only trusted cluster nodes.

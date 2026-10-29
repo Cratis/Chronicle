@@ -36,6 +36,30 @@ that anything was broken, and it does not mean every surface changed. Read the g
 the version you are moving to before planning work.
 :::
 
+## .NET client server certificate validation
+
+The .NET client now validates server certificates by default. Existing remote connections to
+self-signed or otherwise untrusted servers can fail during TLS negotiation after upgrading.
+Install the issuing CA in each client environment (including containers), or configure a matching
+certificate pin. A pin does not override a host-name mismatch. Server certificates already trusted
+by the client need no change; there is no wire-contract change.
+
+For local development, an omitted validation setting still skips validation for non-SRV connections
+targeting only `localhost`, literal `127.0.0.0/8` addresses, or literal `::1`. Other hostnames,
+private-network addresses, mixed local/remote lists, and SRV lookups validate by default. This means
+Docker service names and container-to-container Aspire resource names need trust or an explicit
+opt-out, even with a development image.
+
+An explicit `skipTlsValidation=true` or `Tls.SkipCertificateValidation=true` remains available for
+temporary development use; it accepts any certificate and logs a warning for non-loopback targets.
+Remove development opt-outs before production. Set `skipTlsValidation=false` explicitly to validate
+loopback connections too. An explicit connection-string value now overrides the TLS option,
+including conflicting explicit values; previously either `false` won. Builders preserve explicit
+`true` and `false` values when serializing so those choices survive round trips. With
+`disableTls=true`, there is no TLS certificate to validate and these settings have no effect.
+
+See [client TLS configuration](../configuration/tls) for trust, pinning, and development setup.
+
 ## Exact decimals and precise event schemas
 
 Upgrade the kernel before expecting the .NET client to register precise schemas for defaulted

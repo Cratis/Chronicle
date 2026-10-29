@@ -24,7 +24,7 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Error, "Timed out during connecting to Chronicle")]
     internal static partial void TimedOut(this ILogger<ChronicleConnection> logger);
 
-    [LoggerMessage(LogLevel.Warning, "Server certificate validation is disabled for {Servers}; any certificate is accepted. Set skipTlsValidation=false once the server certificate is trusted.")]
+    [LoggerMessage(LogLevel.Warning, "Server certificate validation is explicitly disabled for {Servers}; any certificate is accepted. Set skipTlsValidation=false once the server certificate is trusted.")]
     internal static partial void ServerCertificateValidationDisabled(this ILogger<ChronicleConnection> logger, string servers);
 
     [LoggerMessage(LogLevel.Debug, "Using client certificate from {Path}")]

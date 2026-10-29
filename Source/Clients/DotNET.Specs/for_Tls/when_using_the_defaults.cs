@@ -4,9 +4,7 @@
 namespace Cratis.Chronicle.for_Tls;
 
 /// <summary>
-/// The Chronicle server generates an in-memory self-signed certificate on every start when none is
-/// configured, so a development client has nothing it could validate against. Skipping validation by
-/// default is what lets a development server and client connect without any certificate setup.
+/// Remote connections validate server certificates unless validation is explicitly skipped.
 /// </summary>
 public class when_using_the_defaults : Specification
 {
@@ -14,5 +12,5 @@ public class when_using_the_defaults : Specification
 
     void Because() => _tls = new Tls();
 
-    [Fact] void should_skip_certificate_validation() => _tls.SkipCertificateValidation.ShouldBeTrue();
+    [Fact] void should_require_certificate_validation() => _tls.SkipCertificateValidation.ShouldBeFalse();
 }
