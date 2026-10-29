@@ -53,6 +53,14 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
+| Cratis__Chronicle__Webhooks__Validation | Webhook destination mode: `Warn`, `BlockLocalAddresses`, `BlockPrivateAddresses`, or `Enforce`; default `Warn` in Development builds, `BlockLocalAddresses` otherwise |
+| Cratis__Chronicle__Webhooks__AllowInsecureHttp | Allow webhook HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__Webhooks__AllowedHosts__0 | First globally approved webhook host; use successive indices for more |
+| Cratis__Chronicle__Webhooks__EventStoreAllowedHosts__orders__0 | First approved webhook host for `orders`; replaces the global list |
+| Cratis__Chronicle__ExternalServices__Validation | Independent HTTP capture destination mode, with the same modes and build-dependent defaults as Webhooks |
+| Cratis__Chronicle__ExternalServices__AllowInsecureHttp | Allow capture HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__ExternalServices__AllowedHosts__0 | First globally approved capture host |
+| Cratis__Chronicle__ExternalServices__EventStoreAllowedHosts__orders__0 | First approved capture host for `orders`; replaces the global list |
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |

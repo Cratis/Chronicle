@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ public class when_registering_clients : Specification
     ServiceProvider _provider;
     SocketsHttpHandler _webhook;
     SocketsHttpHandler _oauth;
+    bool _pool_is_inside_resilience;
 
     void Establish()
     {
@@ -31,7 +33,9 @@ public class when_registering_clients : Specification
     void Because()
     {
         var factory = _provider.GetRequiredService<IHttpMessageHandlerFactory>();
-        _webhook = PrimaryHandler(factory.CreateHandler(WebhookHttpClientFactory.HttpClientName));
+        var webhook = factory.CreateHandler(WebhookHttpClientFactory.HttpClientName);
+        _webhook = PrimaryHandler(webhook);
+        _pool_is_inside_resilience = PoolIsInsideResilience(webhook);
         _oauth = PrimaryHandler(factory.CreateHandler(OAuthClient.HttpClientName));
     }
 
@@ -43,6 +47,20 @@ public class when_registering_clients : Specification
     [Fact] void should_validate_oauth_connections() => _oauth.ConnectCallback.ShouldNotBeNull();
     [Fact] void should_not_bypass_webhook_checks_through_a_proxy() => _webhook.UseProxy.ShouldBeFalse();
     [Fact] void should_not_bypass_oauth_checks_through_a_proxy() => _oauth.UseProxy.ShouldBeFalse();
+
+    [Fact] void should_preserve_resilience_for_dedicated_connections() => _pool_is_inside_resilience.ShouldBeTrue();
+
+    static bool PoolIsInsideResilience(HttpMessageHandler handler)
+    {
+        var resilienceSeen = false;
+        while (handler is DelegatingHandler delegating)
+        {
+            resilienceSeen |= handler is Microsoft.Extensions.Http.Resilience.ResilienceHandler;
+            if (handler is WebhookConnectionPoolHandler) return resilienceSeen;
+            handler = delegating.InnerHandler!;
+        }
+        return false;
+    }
 
     static SocketsHttpHandler PrimaryHandler(HttpMessageHandler handler)
     {

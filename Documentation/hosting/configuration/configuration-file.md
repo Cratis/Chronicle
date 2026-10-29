@@ -5,6 +5,24 @@ description: Chronicle Server loads its settings from a chronicle.json file in t
 
 Chronicle Server loads configuration from a `chronicle.json` file in the application root directory. In containers, this file is typically mounted at `/app/chronicle.json`.
 
+## Outbound HTTP destinations
+
+The top-level `webhooks` and `externalServices` sections independently validate webhook receivers and
+HTTP capture sources. Both accept `validation`, `allowInsecureHttp`, `allowedHosts`, and
+`eventStoreAllowedHosts`. `validation` defaults to `Warn` in Development builds and
+`BlockLocalAddresses` otherwise. For example:
+
+```json
+{
+  "webhooks": { "validation": "BlockLocalAddresses", "allowedHosts": ["hooks.example.com"] },
+  "externalServices": { "validation": "BlockLocalAddresses", "allowedHosts": ["api.example.com"] }
+}
+```
+
+For private-network approvals, additional modes, metadata protection, and migration guidance, see
+[Webhook target validation](../../webhooks/index.mdx#target-validation) and
+[HTTP capture destination policy](../../external-services/index.md#http-capture-destination-policy).
+
 ## Example Configuration
 
 ```json

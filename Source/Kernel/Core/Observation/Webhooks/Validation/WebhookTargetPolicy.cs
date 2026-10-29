@@ -14,19 +14,47 @@ namespace Cratis.Chronicle.Observation.Webhooks.Validation;
 /// <summary>
 /// Implements the shared registration, request, and connect-time target policy.
 /// </summary>
-/// <param name="options">The kernel configuration.</param>
-/// <param name="environment">The kernel runtime environment.</param>
-/// <param name="resolver">The host resolver.</param>
-/// <param name="logger">The logger.</param>
 [Singleton]
-public class WebhookTargetPolicy(
-    IOptions<ChronicleOptions> options,
-    IHostEnvironment environment,
-    IWebhookHostResolver resolver,
-    ILogger<WebhookTargetPolicy> logger) : IWebhookTargetPolicy
+public class WebhookTargetPolicy : IWebhookTargetPolicy
 {
-    readonly Configuration.Webhooks _options = options.Value.Webhooks;
-    readonly bool _development = environment.IsDevelopment();
+    readonly IOutboundTargetSettings _options;
+    readonly bool _development;
+    readonly IWebhookHostResolver _resolver;
+    readonly ILogger<WebhookTargetPolicy> _logger;
+    readonly string _targetKind;
+    readonly string _configurationSection;
+    readonly WebhookManagedIdentity _managedIdentity;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WebhookTargetPolicy"/> class.
+    /// </summary>
+    /// <param name="options">The kernel configuration.</param>
+    /// <param name="environment">The kernel runtime environment.</param>
+    /// <param name="resolver">The host resolver.</param>
+    /// <param name="logger">The logger.</param>
+    public WebhookTargetPolicy(IOptions<ChronicleOptions> options, IHostEnvironment environment, IWebhookHostResolver resolver, ILogger<WebhookTargetPolicy> logger)
+        : this(options.Value.Webhooks, ("Webhook", "Webhooks"), resolver, environment, logger)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WebhookTargetPolicy"/> class for an outbound subsystem.
+    /// </summary>
+    /// <param name="settings">The subsystem's destination settings.</param>
+    /// <param name="diagnostics">The target kind and configuration section in diagnostics.</param>
+    /// <param name="resolver">The host resolver.</param>
+    /// <param name="environment">The kernel runtime environment.</param>
+    /// <param name="logger">The logger.</param>
+    protected WebhookTargetPolicy(IOutboundTargetSettings settings, (string Kind, string Section) diagnostics, IWebhookHostResolver resolver, IHostEnvironment environment, ILogger<WebhookTargetPolicy> logger)
+    {
+        _options = settings;
+        _development = environment.IsDevelopment();
+        _resolver = resolver;
+        _logger = logger;
+        _targetKind = diagnostics.Kind;
+        _configurationSection = diagnostics.Section;
+        _managedIdentity = (settings as Configuration.Webhooks)?.ManagedIdentity ?? new();
+    }
 
     /// <inheritdoc/>
     public async Task<WebhookTargetValidation> Evaluate(string url, EventStoreName? eventStore = null, CancellationToken cancellationToken = default)
@@ -35,7 +63,7 @@ public class WebhookTargetPolicy(
         if (result.Reason.Length > 0)
         {
             var host = Uri.TryCreate(url, UriKind.Absolute, out var target) ? target.IdnHost : string.Empty;
-            logger.TargetPolicyViolation(host, result.Reason);
+            _logger.TargetPolicyViolation(host, result.Reason);
         }
 
         return result;
@@ -48,7 +76,7 @@ public class WebhookTargetPolicy(
     /// <inheritdoc/>
     public WebhookTargetValidation CheckManagedIdentity(Concepts.Security.ManagedIdentityAuthorization authorization, string url, EventStoreName? eventStore = null)
     {
-        var identity = _options.ManagedIdentity;
+        var identity = _managedIdentity;
         if (string.IsNullOrWhiteSpace(authorization.Scope.Value) || !identity.AllowedScopes.Contains(authorization.Scope.Value, StringComparer.OrdinalIgnoreCase))
         {
             return new(false, "Managed identity scope is not in Webhooks:ManagedIdentity:AllowedScopes.");
@@ -75,45 +103,43 @@ public class WebhookTargetPolicy(
     {
         if (target.Scheme != Uri.UriSchemeHttp && target.Scheme != Uri.UriSchemeHttps)
         {
-            return new(false, "Webhook target must use HTTP or HTTPS.");
+            return new(false, $"{_targetKind} target must use HTTP or HTTPS.");
         }
 
         if (IPAddress.TryParse(target.DnsSafeHost, out var address) && WebhookAddressRules.IsMetadata(address) && !IsExplicitlyAllowed(target, eventStore))
         {
-            return Decision("Cloud metadata addresses require an explicit host allow-list entry in every validation mode.", alwaysEnforce: true);
+            return Decision("Cloud metadata addresses require an explicit host allow-list entry in every validation mode.", OutboundTargetViolation.Metadata);
         }
 
         var reasons = new List<string>();
         if (target.Scheme != Uri.UriSchemeHttps && !(_development && (_options.AllowInsecureHttp || target.IsLoopback)))
         {
-            reasons.Add("Webhook target must use HTTPS.");
+            reasons.Add($"{_targetKind} target must use HTTPS.");
         }
 
         if (!IsExplicitlyAllowed(target, eventStore) && !IsDevelopmentHost(target))
         {
-            reasons.Add("Webhook target host is not in Webhooks:AllowedHosts for this event store.");
+            reasons.Add($"{_targetKind} target host is not in {_configurationSection}:AllowedHosts for this event store.");
         }
 
         return reasons.Count > 0 ? Decision(string.Join(' ', reasons)) : WebhookTargetValidation.Allowed;
     }
 
     /// <inheritdoc/>
+    public bool RequiresDedicatedConnection(Uri target, EventStoreName? eventStore) => IsExplicitlyAllowed(target, eventStore);
+
+    /// <inheritdoc/>
     public WebhookTargetValidation CheckAddresses(Uri target, IEnumerable<IPAddress> addresses, EventStoreName? eventStore)
     {
         var resolved = addresses.ToArray();
-        if (resolved.Length == 0) return Decision("Webhook target host resolved to no addresses.");
+        if (resolved.Length == 0) return Decision($"{_targetKind} target host resolved to no addresses.");
         var allowed = IsExplicitlyAllowed(target, eventStore);
         if (!allowed && resolved.Any(WebhookAddressRules.IsMetadata))
         {
-            return Decision("Cloud metadata addresses require an explicit host allow-list entry in every validation mode.", alwaysEnforce: true);
+            return Decision("Cloud metadata addresses require an explicit host allow-list entry in every validation mode.", OutboundTargetViolation.Metadata);
         }
 
-        if (!allowed && !IsDevelopmentHost(target) && resolved.Any(WebhookAddressRules.IsSpecial))
-        {
-            return Decision("Webhook target resolves to a private or special address.");
-        }
-
-        return WebhookTargetValidation.Allowed;
+        return allowed || IsDevelopmentHost(target) ? WebhookTargetValidation.Allowed : CheckUnapprovedAddresses(resolved);
     }
 
     static bool Matches(string host, string entry)
@@ -127,7 +153,7 @@ public class WebhookTargetPolicy(
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var target))
         {
-            return new(false, "Webhook target must be an absolute HTTP or HTTPS URL.");
+            return new(false, $"{_targetKind} target must be an absolute HTTP or HTTPS URL.");
         }
 
         var authority = CheckAuthority(target, eventStore);
@@ -136,11 +162,11 @@ public class WebhookTargetPolicy(
         IPAddress[] addresses;
         try
         {
-            addresses = await resolver.Resolve(target.DnsSafeHost, cancellationToken);
+            addresses = await _resolver.Resolve(target.DnsSafeHost, cancellationToken);
         }
         catch (System.Net.Sockets.SocketException)
         {
-            return Decision("Webhook target host could not be resolved.");
+            return Decision($"{_targetKind} target host could not be resolved.");
         }
 
         var resolved = CheckAddresses(target, addresses, eventStore);
@@ -159,8 +185,31 @@ public class WebhookTargetPolicy(
     bool IsDevelopmentHost(Uri target) => _development &&
         (target.IsLoopback || target.IdnHost.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase));
 
-    WebhookTargetValidation Decision(string reason, bool alwaysEnforce = false)
+    WebhookTargetValidation CheckUnapprovedAddresses(IPAddress[] addresses)
     {
-        return new(!alwaysEnforce && _options.Validation == WebhookValidationMode.Warn, reason);
+        if (addresses.Any(WebhookAddressRules.IsLocal))
+        {
+            return Decision($"{_targetKind} target resolves to a private or special address.", OutboundTargetViolation.Local);
+        }
+
+        if (addresses.Any(WebhookAddressRules.IsSpecial))
+        {
+            return Decision($"{_targetKind} target resolves to a private or special address.", OutboundTargetViolation.Private);
+        }
+
+        return WebhookTargetValidation.Allowed;
+    }
+
+    WebhookTargetValidation Decision(string reason, OutboundTargetViolation violation = OutboundTargetViolation.Policy)
+    {
+        var blocked = _options.Validation switch
+        {
+            WebhookValidationMode.Warn => violation == OutboundTargetViolation.Metadata,
+            WebhookValidationMode.BlockLocalAddresses => violation is OutboundTargetViolation.Metadata or OutboundTargetViolation.Local,
+            WebhookValidationMode.BlockPrivateAddresses => violation is not OutboundTargetViolation.Policy,
+            WebhookValidationMode.Enforce => true,
+            _ => true
+        };
+        return new(!blocked, reason);
     }
 }

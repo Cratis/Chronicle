@@ -43,6 +43,49 @@ Secrets (passwords, tokens, client secrets) are write-only from the Workbench â€
 
 External Services can also be registered programmatically â€” see [Registering External Services from code](/chronicle/clients/dotnet/external-services/) in the .NET client docs.
 
+## HTTP capture destination policy
+
+HTTP capture requests use the Kernel's `ExternalServices` destination policy, independently of
+`Webhooks`. Approving a webhook host does not approve a capture source. Configure the section at the
+top level of `chronicle.json`:
+
+```json
+{
+  "externalServices": {
+    "validation": "BlockLocalAddresses",
+    "allowedHosts": ["api.example.com"],
+    "eventStoreAllowedHosts": {
+      "orders": ["orders-api.internal"]
+    }
+  }
+}
+```
+
+`Validation` defaults to `Warn` in Development builds and `BlockLocalAddresses` otherwise. The local
+mode blocks loopback (including mapped IPv4), IPv4 link-local `169.254/16`, IPv4 unspecified `0/8`,
+IPv6 link-local `fe80::/10`, and IPv6 unspecified `::`. It warns about HTTP, missing host approval,
+and other private/special destinations. `BlockPrivateAddresses` also blocks other private/special
+addresses. `Enforce` blocks every violation; it remains reserved as the next-major default.
+`Warn` permits violations with diagnostics, except cloud metadata addresses, which require explicit
+host approval in every mode. Never approve metadata hosts in normal deployments.
+
+`AllowedHosts` supports exact hosts and `*.example.com` subdomains, not the apex domain. An
+`EventStoreAllowedHosts` entry replaces the global list, including an empty entry. Explicit approval
+permits that host's private addresses. `AllowInsecureHttp` defaults to `false` and only applies in the
+Development runtime environment. The corresponding environment variables use
+`Cratis__Chronicle__ExternalServices__`, for example `Cratis__Chronicle__ExternalServices__Validation`.
+
+Every capture request carries its event store. Absolute routes are validated against their final
+host just like relative routes. Redirects and system proxies are disabled. DNS is validated when
+opening each connection. Requests using explicit host allowances close their connections after each
+request so one store's approval cannot be reused by another, even when an approved host currently
+resolves publicly. Unapproved public destinations retain pooling in modes that permit them. This policy covers HTTP
+capture polling, not database endpoints or OAuth token acquisition by external-service authentication.
+
+Before upgrading a deployment with local capture APIs, explicitly approve the trusted hosts or select
+`Warn` as a migration setting. Review other private-network hosts before choosing
+`BlockPrivateAddresses` or `Enforce`. See [Kernel options](../configuration/chronicle-options.mdx#externalservices-kernel).
+
 ## Using External Services from captures
 
 A [capture](../captures/index.mdx) API source references an External Service by name. The capture only declares *what* to poll (the route and interval); *where* and *how to authenticate* come from the External Service:

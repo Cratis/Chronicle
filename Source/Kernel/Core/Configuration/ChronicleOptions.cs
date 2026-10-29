@@ -136,6 +136,11 @@ public class ChronicleOptions : IValidatableObject
     public Webhooks Webhooks { get; init; } = new Webhooks();
 
     /// <summary>
+    /// Gets the HTTP capture source destination validation configuration.
+    /// </summary>
+    public ExternalServices ExternalServices { get; init; } = new();
+
+    /// <summary>
     /// Gets the clustering configuration.
     /// </summary>
     public Clustering Clustering { get; init; } = new Clustering();

@@ -15,6 +15,15 @@ Captures parse and compile everything described here, but as of Chronicle 19.6 t
 A cycle that hits an unsupported construct fails as a whole and is logged; no event is appended for it.
 :::
 
+## HTTP source destinations
+
+API polling uses the Kernel's independent `ExternalServices` destination policy. Development builds
+warn by default; other builds block local destinations unless their host is explicitly approved.
+Redirects and proxies are disabled, and both relative and absolute capture routes are checked with
+the capture's event-store context. Webhook approvals do not apply. See
+[HTTP capture destination policy](../external-services/index.md#http-capture-destination-policy)
+for modes, private-network approvals, metadata protection, configuration, and upgrade guidance.
+
 ## Overview
 
 A capture definition describes:

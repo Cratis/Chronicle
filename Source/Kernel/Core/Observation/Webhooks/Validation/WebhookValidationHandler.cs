@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,17 @@ public class WebhookValidationHandler(IWebhookTargetPolicy policy, ILogger<Webho
 
         var result = policy.CheckAuthority(request.RequestUri!, eventStore);
         if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
+
+        // An approved host can resolve to a store-specific private destination. Set this before the
+        // primary handler selects a connection; doing it inside ConnectCallback is too late for pooling.
+        var dedicated = policy.RequiresDedicatedConnection(request.RequestUri!, eventStore);
+        request.Options.Set(WebhookRequestOptions.DedicatedConnection, dedicated);
+        if (dedicated)
+        {
+            request.Version = HttpVersion.Version11;
+            request.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
+            request.Headers.ConnectionClose = true;
+        }
 
         var response = await base.SendAsync(request, cancellationToken);
         if ((int)response.StatusCode is >= 300 and < 400)
