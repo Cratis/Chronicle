@@ -1255,7 +1255,7 @@ public class ProjectionFactory(
     {
         if (CanResolveKey(key))
         {
-            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), false);
+            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), key.Value == WellKnownExpressions.EventSourceId);
         }
 
         return (keyResolvers.FromEventSourceId, true);

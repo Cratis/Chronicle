@@ -235,6 +235,7 @@ internal sealed class ChronicleServerStartupTask(
         RequestContext.Set(PatchManagerRelocation.CallerSiloKey, localSiloDetails.SiloAddress);
         try
         {
+            var delay = _patchManagerRelocationDelay;
             for (var attempt = 0; attempt < MaxAttempts; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -246,9 +247,12 @@ internal sealed class ChronicleServerStartupTask(
                 {
                     // A v2 placement can arrive before the new silo's manifest has converged.
                 }
+                // The older activation deactivates once idle; back off exponentially, since under load its
+                // deactivation can take longer than a short fixed wait allows.
                 if (attempt < MaxAttempts - 1)
                 {
-                    await Task.Delay(_patchManagerRelocationDelay, _timeProvider, cancellationToken);
+                    await Task.Delay(delay, _timeProvider, cancellationToken);
+                    delay += delay;
                 }
             }
             logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
