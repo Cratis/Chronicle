@@ -141,7 +141,8 @@ internal class ModelBoundProjectionBuilder(
         if (!string.IsNullOrEmpty(attribute.ContextProperty))
         {
             var contextPropertyName = PropertyValidator.ValidateContextPropertyPath<EventContext>(attribute.ContextProperty);
-            definition.Properties[propertyName] = ProjectionPropertyPaths.ContextFrom(contextPropertyName, namingPolicy);
+            var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(contextPropertyName, namingPolicy, ProjectionPathRole.Source);
+            definition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
         }
         else
         {

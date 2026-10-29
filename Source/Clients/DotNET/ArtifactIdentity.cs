@@ -57,7 +57,7 @@ internal static class ArtifactIdentity
     internal static ProjectionId ModelProjectionIdFor(Type type)
     {
         var id = type.GetCustomAttribute<ProjectionAttribute>()?.Id;
-        return id is not null && id.Value.Length > 0 ? id : new(type.FullName!);
+        return id?.Value.Length > 0 ? id : new(type.FullName!);
     }
 
     /// <summary>

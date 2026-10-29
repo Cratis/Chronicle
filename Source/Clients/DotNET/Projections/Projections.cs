@@ -352,6 +352,24 @@ public class Projections(
         }
     }
 
+    static IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> DiscoveredOwners(
+        IDictionary<Type, ProjectionDefinition> definitions,
+        IDictionary<Type, IProjectionHandler> modelBoundHandlers) =>
+        definitions.Select(pair => (pair.Key, (ProjectionId)pair.Value.Identifier, true))
+            .Concat(modelBoundHandlers.Select(pair => (pair.Key, pair.Value.Id, false)));
+
+    static void ValidateProjectionOwners(IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> owners)
+    {
+        foreach (var group in owners.GroupBy(owner => owner.Id))
+        {
+            var declarations = group.Select(owner => (owner.Owner, owner.IsFluent)).Distinct().ToArray();
+            if (declarations.Length > 1)
+            {
+                throw new MultipleProjectionsWithSameIdFound(group.Key, declarations.Select(declaration => declaration.Owner));
+            }
+        }
+    }
+
     /// <summary>
     /// Resolve the <see cref="IProjectionHandler"/> for a type that is either a projection type or a read model type.
     /// </summary>
@@ -514,16 +532,11 @@ public class Projections(
         return registration.Handler;
     }
 
-    static IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> DiscoveredOwners(
-        IDictionary<Type, ProjectionDefinition> definitions,
-        IDictionary<Type, IProjectionHandler> modelBoundHandlers) =>
-        definitions.Select(pair => (pair.Key, (ProjectionId)pair.Value.Identifier, true))
-            .Concat(modelBoundHandlers.Select(pair => (pair.Key, pair.Value.Id, false)));
-
     IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> ExplicitOwners(
         IDictionary<Type, ExplicitProjectionRegistration> registrations,
-        IDictionary<Type, IProjectionHandler> discoveredHandlers) =>
+        Dictionary<Type, IProjectionHandler> discoveredHandlers) =>
         registrations.Select(pair => (pair.Key, pair.Value.Handler.Id, false))
+
             // A matching discovered model-bound declaration is an overlay, not a second owner. A fluent
             // projection on that same read model, however, still owns its own projection identifier.
             .Concat(_explicitProjections.Where(pair => discoveredHandlers.TryGetValue(pair.Key, out var handler) && handler.Id == pair.Value.Id)
@@ -533,29 +546,18 @@ public class Projections(
         DiscoveredOwners(_definitionsByType, _modelBoundHandlers)
             .Concat(ExplicitOwners(_explicitRegistrations, _discoveredHandlersByModelType));
 
-    static void ValidateProjectionOwners(IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> owners)
-    {
-        foreach (var group in owners.GroupBy(owner => owner.Id))
-        {
-            var declarations = group.Select(owner => (owner.Owner, owner.IsFluent)).Distinct().ToArray();
-            if (declarations.Length > 1)
-            {
-                throw new MultipleProjectionsWithSameIdFound(group.Key, declarations.Select(declaration => declaration.Owner));
-            }
-        }
-    }
-
     void ValidateProspectiveOwner(Type readModelType, ExplicitProjectionRegistration registration) =>
         ValidateProjectionOwners(CurrentOwners().Where(owner => owner.IsFluent || owner.Owner != readModelType).Append((readModelType, registration.Handler.Id, false)));
 
     /// <summary>
     /// Build every explicit projection anew, recording the ones that cannot be built rather than failing discovery.
     /// </summary>
+    /// <param name="discoveredHandlers">The discovered projection handlers by read model type.</param>
     /// <remarks>
     /// Must be called while holding the explicit lock. An explicit projection maintaining a read model that discovery
     /// found is dropped when it is the very same model-bound projection, and reported as a failure otherwise.
     /// </remarks>
-    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(IDictionary<Type, IProjectionHandler> discoveredHandlers)
+    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers)
     {
         var registrations = new Dictionary<Type, ExplicitProjectionRegistration>();
         var failures = new Dictionary<Type, Exception>();
