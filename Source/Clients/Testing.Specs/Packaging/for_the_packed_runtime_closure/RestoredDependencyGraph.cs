@@ -105,8 +105,8 @@ sealed class RestoredDependencyGraph(
         return
         [
             .. dependencies.EnumerateObject()
-                .Where(_ => !_.Value.TryGetProperty("suppressParent", out var suppress) || suppress.GetString() != "All")
-                .Where(_ => _.Value.TryGetProperty("version", out var version) && version.GetString()!.Split(',')[0].Contains('-'))
+                .Where(_ => (!_.Value.TryGetProperty("suppressParent", out var suppress) || suppress.GetString() != "All") &&
+                            _.Value.TryGetProperty("version", out var version) && version.GetString()!.Split(',')[0].Contains('-'))
                 .Select(_ => $"{_.Name} {_.Value.GetProperty("version").GetString()}")
                 .Order(StringComparer.OrdinalIgnoreCase)
         ];
