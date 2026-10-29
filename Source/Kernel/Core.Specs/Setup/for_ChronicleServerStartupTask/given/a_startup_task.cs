@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Captures;
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -33,7 +35,6 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Orleans.Jobs;
-using Microsoft.Extensions.Logging.Abstractions;
 using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
@@ -56,6 +57,9 @@ public class a_startup_task : Specification
     protected IReactorDefinitionsStorage _reactorDefinitionsStorage = null!;
     protected IReducerDefinitionsStorage _reducerDefinitionsStorage = null!;
     protected IPatchManager _patchManager = null!;
+    protected IClusterReleases _clusterReleases = null!;
+    protected ILocalSiloDetails _localSiloDetails = null!;
+    readonly List<string> _logMessages = [];
     protected INamespaces _systemNamespaces = null!;
     protected INamespaces _namespaces = null!;
     protected IEventStoreSubscriptionsManager _eventStoreSubscriptionsManager = null!;
@@ -71,6 +75,25 @@ public class a_startup_task : Specification
     protected EventStoreNamespaceName _namespace;
     protected ObserverKey _reducerObserverKey = ObserverKey.NotSet;
     protected ObserverKey _reactorObserverKey = ObserverKey.NotSet;
+
+    protected IEnumerable<string> LogMessages => _logMessages;
+
+    void EstablishStartupTask()
+    {
+        _startupTask = new(
+            _storage,
+            _eventTypes,
+            _reactors,
+            _patternCapture,
+            _projectionsServiceClient,
+            _kernelProjections,
+            _grainFactory,
+            _authenticationService,
+            _localSiloDetails,
+            _clusterReleases,
+            new StartupLogger(_logMessages),
+            new an_immediate_time_provider());
+    }
 
     void Establish()
     {
@@ -90,6 +113,10 @@ public class a_startup_task : Specification
         _reactorDefinitionsStorage = Substitute.For<IReactorDefinitionsStorage>();
         _reducerDefinitionsStorage = Substitute.For<IReducerDefinitionsStorage>();
         _patchManager = Substitute.For<IPatchManager>();
+        _clusterReleases = Substitute.For<IClusterReleases>();
+        _clusterReleases.Summarize().Returns(new ClusterReleaseSummary([], 0, 0));
+        _localSiloDetails = Substitute.For<ILocalSiloDetails>();
+        _localSiloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1));
         _systemNamespaces = Substitute.For<INamespaces>();
         _namespaces = Substitute.For<INamespaces>();
         _eventStoreSubscriptionsManager = Substitute.For<IEventStoreSubscriptionsManager>();
@@ -107,17 +134,7 @@ public class a_startup_task : Specification
         _reducerObserverKey = new ObserverKey("reducer", _eventStore, _namespace, EventSequenceId.Log);
         _reactorObserverKey = new ObserverKey("reactor", _eventStore, _namespace, EventSequenceId.Log);
 
-        _startupTask = new(
-            _storage,
-            _eventTypes,
-            _reactors,
-            _patternCapture,
-            _projectionsServiceClient,
-            _kernelProjections,
-            _grainFactory,
-            _authenticationService,
-            NullLogger<ChronicleServerStartupTask>.Instance,
-            new an_immediate_time_provider());
+        EstablishStartupTask();
 
         _storage.ReadGenerationFloors().Returns(Task.FromResult<IReadOnlyDictionary<EventStoreName, GenerationFloor>>(new Dictionary<EventStoreName, GenerationFloor>()));
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([_eventStore]));
