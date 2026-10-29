@@ -122,6 +122,7 @@ public partial class ConstraintIndexReplay(
     {
         RangeReadFailed = false;
         StorageCallSucceeded = false;
+        BlockedByPendingRepair = false;
         _failed.Clear();
         _abandoned.Clear();
         _operationConstraint = null;
