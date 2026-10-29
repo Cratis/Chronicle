@@ -97,6 +97,7 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions: {contents: read, packages: write}
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
 
