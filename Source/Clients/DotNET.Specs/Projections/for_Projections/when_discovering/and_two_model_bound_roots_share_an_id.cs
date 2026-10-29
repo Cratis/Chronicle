@@ -9,7 +9,7 @@ public class and_two_model_bound_roots_share_an_id : given.projections_with_comp
 
     void Establish() => _clientArtifacts.ModelBoundProjections.Returns([typeof(FirstModel), typeof(SecondModel)]);
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_reject_competing_owners() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_id() => _error.Message.ShouldContain(SharedId);

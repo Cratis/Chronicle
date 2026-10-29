@@ -13,7 +13,7 @@ public class and_an_explicit_recipe_competes_with_a_discovered_owner : given.pro
         _projections.Add(new ModelBoundExplicitProjection(typeof(SecondModel)));
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_reject_the_competing_recipe() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_id() => _error.Message.ShouldContain(SharedId);

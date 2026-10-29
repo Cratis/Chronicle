@@ -13,7 +13,7 @@ public class and_fluent_and_model_bound_owners_share_an_id : given.projections_w
         _clientArtifacts.ModelBoundProjections.Returns([typeof(FirstModel)]);
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_reject_even_when_the_read_model_is_the_same() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_id() => _error.Message.ShouldContain(SharedId);

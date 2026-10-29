@@ -16,7 +16,7 @@ public class and_one_type_declares_both_projection_roles_with_the_same_id : give
         _artifactsActivator.ActivateNonDisposable<IProjectionFor<ModelAndProjection>>(typeof(ModelAndProjection)).Returns(new ModelAndProjection());
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_not_consider_the_fluent_role_a_model_bound_overlay() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_owner() => _error.Message.ShouldContain(typeof(ModelAndProjection).FullName);

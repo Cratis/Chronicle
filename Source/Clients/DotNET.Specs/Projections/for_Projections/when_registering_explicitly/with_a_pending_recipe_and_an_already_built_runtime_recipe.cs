@@ -11,11 +11,13 @@ public class with_a_pending_recipe_and_an_already_built_runtime_recipe : given.p
     async Task Establish()
     {
         _projections.Add(new DeclarativeExplicitProjection<FirstModel>(projection => projection.From<CustomerRegistered>(), SharedId));
-        _existing = await _projections.Register<SecondModel>(projection =>
-        {
-            _runtimeBuilds++;
-            projection.From<CustomerRegistered>();
-        }, "runtime-id");
+        _existing = await _projections.Register<SecondModel>(
+            projection =>
+            {
+                _runtimeBuilds++;
+                projection.From<CustomerRegistered>();
+            },
+            "runtime-id");
     }
 
     async Task Because() => await _projections.Register<Inventory>(projection => projection.From<ItemAdded>(), "inventory-id");

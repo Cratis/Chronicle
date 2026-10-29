@@ -14,7 +14,7 @@ public class a_competing_owner_while_connected : given.projections_with_competin
         _first = await _projections.Register<FirstModel>();
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Register<SecondModel>());
+    async Task Because() => _error = await Catch.Exception(_projections.Register<SecondModel>);
 
     [Fact] void should_reject_the_second_owner() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_id() => _error.Message.ShouldContain(SharedId);

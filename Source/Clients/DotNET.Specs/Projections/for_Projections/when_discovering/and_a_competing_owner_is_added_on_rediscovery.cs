@@ -16,7 +16,7 @@ public class and_a_competing_owner_is_added_on_rediscovery : given.projections_w
         _clientArtifacts.ModelBoundProjections.Returns([typeof(FirstModel), typeof(SecondModel)]);
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_reject_the_competing_owner() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_leave_the_first_handler_unchanged() => _projections.GetAllHandlers().Single().ShouldEqual(_first);

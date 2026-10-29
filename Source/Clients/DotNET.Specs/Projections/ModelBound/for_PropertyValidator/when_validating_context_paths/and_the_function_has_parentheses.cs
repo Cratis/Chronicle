@@ -9,7 +9,7 @@ public class and_the_function_has_parentheses : Specification
 {
     string _result;
 
-    void Because() => _result = PropertyValidator.ValidateContextPropertyPath(typeof(EventContext), "Occurred.Week()");
+    void Because() => _result = PropertyValidator.ValidateContextPropertyPath<EventContext>("Occurred.Week()");
 
     [Fact] void should_preserve_the_canonical_function() => _result.ShouldEqual("Occurred.Week()");
 }

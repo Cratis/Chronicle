@@ -13,7 +13,7 @@ public class and_two_explicit_recipes_share_an_id : given.projections_with_compe
         _projections.Add(new DeclarativeExplicitProjection<SecondModel>(_ => { }, SharedId));
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _projections.Discover());
+    async Task Because() => _error = await Catch.Exception(_projections.Discover);
 
     [Fact] void should_reject_the_competing_recipe() => _error.ShouldBeOfExactType<MultipleProjectionsWithSameIdFound>();
     [Fact] void should_identify_the_id() => _error.Message.ShouldContain(SharedId);
