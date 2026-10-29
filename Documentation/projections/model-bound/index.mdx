@@ -43,7 +43,7 @@ such as fluent dynamic dictionary counters, do not all have attribute equivalent
 - **Convention-based**: FromEvent for automatic property matching
 - **Configuration**: EventSequence, NotRewindable, Passive
 - **Variants**: Mutually exclusive read model shapes for the same logical entity
-- **Fully Recursive**: All attributes work at any nesting level - children, grandchildren, and beyond
+- **Recursive Structure**: Supported mappings can be nested through children and nested objects; see the generation limits below
 
 See the following pages for detailed information on each feature:
 
@@ -61,6 +61,80 @@ See the following pages for detailed information on each feature:
 - [Not Rewindable](./not-rewindable) - Forward-only projections
 - [Passive](./passive) - On-demand projections
 - [Variants](./variants) - Mutually exclusive read model shapes for the same logical entity
+
+## Generated Model-Bound Code: Representability Limits
+
+Generating model-bound C# from a projection declaration does not guarantee that attributes can
+represent every mapping. The generator keeps supported mappings and writes a
+`Not expressible with model-bound attributes` comment where it cannot preserve the declaration's
+meaning. **Generated code can compile without being behaviorally equivalent.** Keep the declaration
+or the generated declarative projection as the authoritative version when one of these comments appears.
+
+| Declaration feature | Model-bound generation limit |
+| --- | --- |
+| Child `every` mapping from a payload property, such as `Quantity = Quantity` | Child every-event expansion supports event-context and event-source-id mappings, not payload mappings. The unsupported mapping is commented rather than turned into a misleading attribute. |
+| Child `every` mapping from a join-only event's context | Context mappings expand over the child's local `from` events. An event subscribed only through a join cannot receive that context mapping through those attributes. The ordinary join payload mapping is retained. |
+| One record type reused in incompatible projection scopes | Attributes live on the record type, not on each use. The generator comments the conflicting record and omits its projection attributes rather than silently choosing the first scope. |
+
+### Child Every-Event Mapping and a Join-Only Event
+
+This declaration excerpt assumes an `Order` read model with a `Lines` collection and the named
+events already registered. The child's audit timestamp must update both for `ItemAddedToOrder`
+and for the join-only `ProductRenamed` event:
+
+```pdl
+projection Order => Proof.Pdl.Order
+  from OrderPlaced
+  children Lines identified by ProductId
+    from ItemAddedToOrder key ProductId
+    every
+      LastUpdated = $eventContext.occurred
+    join Product on ProductId
+      with ProductRenamed
+        ProductName = Name
+```
+
+The generator can retain the `ItemAddedToOrder` context mapping and the `ProductRenamed` name
+join, but the generated child attributes do not preserve the timestamp update for that join-only
+event. It includes this comment in the generated output:
+
+```text
+// Not expressible with model-bound attributes: every-mapping 'LastUpdated' for join event 'ProductRenamed' in children 'Lines'. Use the declarative projection.
+```
+
+Do not remove the comment and assume the remaining attributes are equivalent. Keep this mapping
+in the [projection declaration](../projection-declaration-language/index.md) or use a
+[declarative projection](../declarative/index.mdx). Likewise, keep child every-event payload mappings
+in the declaration rather than moving them to a root `[FromEvery]`: that changes which object owns
+the mapping. See [every-event mappings](./from-every.mdx) and [joins](./joins.mdx).
+
+### A Reused Record With Conflicting Scopes
+
+Suppose both `BillingAddress` and `ShippingAddress` use the same `Address` record with a `Name`
+property. This declaration excerpt requires different subscriptions and mappings for each use:
+
+```pdl
+projection Order => Proof.Pdl.Order
+  from OrderPlaced
+  nested BillingAddress
+    from OrderPlaced
+      Name = CustomerName
+  nested ShippingAddress
+    from ProductRegistered
+      Name = Name
+```
+
+One set of attributes on `Address` cannot describe those two scopes independently. The generator
+omits the conflicting record's projection attributes and emits:
+
+```text
+// Not expressible with model-bound attributes: conflicting projection scopes for record 'Address'. Use the declarative projection.
+```
+
+Keep the scoped mappings in the declaration or declarative projection. If model-bound ownership
+is important, use distinct record types for the distinct roles and define their mappings explicitly.
+Reusing a record type is not inherently unsupported; the limitation is incompatible projection
+requirements on the same type, including incompatible descendant scopes.
 
 ## When to Use
 
