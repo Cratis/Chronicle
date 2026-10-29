@@ -400,6 +400,21 @@ public class ProjectionFactory(
     static bool IsConstantExpression(PropertyExpression? key) =>
         key is not null && key.Value.Length != 0 && new ValueExpressionResolver().CanResolve(key.Value);
 
+    static bool KeyConversionPreservesIdentity(IProjection projection, PropertyPath identifiedByProperty)
+    {
+        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(identifiedByProperty);
+
+        // Missing properties default to string in EventValueKeyExpressionResolver. Only a plain string
+        // without a format or schema composition is guaranteed not to normalize distinct source ids.
+        return schemaProperty is null ||
+            (schemaProperty.Type == JsonObjectType.String &&
+             string.IsNullOrEmpty(schemaProperty.Format) &&
+             !schemaProperty.HasReference &&
+             schemaProperty.AllOf.Count == 0 &&
+             schemaProperty.AnyOf.Count == 0 &&
+             schemaProperty.OneOf.Count == 0);
+    }
+
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
             CreateInitialState(readModelSchema) :
@@ -1255,7 +1270,8 @@ public class ProjectionFactory(
     {
         if (CanResolveKey(key))
         {
-            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), key.Value == WellKnownExpressions.EventSourceId);
+            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty),
+                key.Value == WellKnownExpressions.EventSourceId && KeyConversionPreservesIdentity(projection, actualIdentifiedByProperty));
         }
 
         return (keyResolvers.FromEventSourceId, true);
