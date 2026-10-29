@@ -238,7 +238,7 @@ public class HandleEventsForObserver(
             // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
             // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
             var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, _subscription.SubscriberType);
-            using var events = new BoundedEventCursor(
+            using var events = BoundedEventCursor.Over(
                 await eventSequenceStorage.GetRange(
                     currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
                         ? currentState.StartEventSequenceNumber

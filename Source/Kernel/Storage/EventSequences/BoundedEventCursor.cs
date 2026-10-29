@@ -24,6 +24,15 @@ public sealed class BoundedEventCursor(IEventCursor inner, int maximumEventsPerB
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; private set; } = [];
 
+    /// <summary>
+    /// Bounds a cursor's batches, or leaves it as it is when no bound is given.
+    /// </summary>
+    /// <param name="inner">The <see cref="IEventCursor"/> to read from.</param>
+    /// <param name="maximumEventsPerBatch">The most events presented at a time; zero or less leaves the batches as they are.</param>
+    /// <returns>The bounded <see cref="IEventCursor"/>, or <paramref name="inner"/> itself.</returns>
+    public static IEventCursor Over(IEventCursor inner, int maximumEventsPerBatch) =>
+        maximumEventsPerBatch > 0 ? new BoundedEventCursor(inner, maximumEventsPerBatch) : inner;
+
     /// <inheritdoc/>
     public async Task<bool> MoveNext()
     {
