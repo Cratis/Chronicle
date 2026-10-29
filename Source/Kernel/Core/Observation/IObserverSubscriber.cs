@@ -18,5 +18,10 @@ public interface IObserverSubscriber : IGrainWithStringKey
     /// <param name="events">A collection of <see cref="AppendedEvent"/>.</param>
     /// <param name="context">The <see cref="ObserverSubscriberContext"/>.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Bounded by <see cref="ObserverSubscriberResponseTimeout"/> rather than the silo-wide response timeout, so the
+    /// observer's configured subscriber timeout is what decides how long the caller waits.
+    /// </remarks>
+    [ResponseTimeout(ObserverSubscriberResponseTimeout.Value)]
     Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context);
 }
