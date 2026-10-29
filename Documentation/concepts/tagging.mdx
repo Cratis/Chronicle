@@ -163,15 +163,7 @@ Here are some common patterns for organizing tags:
 
 ## Using Tags
 
-Tags stored in the event store and observer definitions can be used for:
+Tags on events and on observer definitions do different things:
 
-- **Filtering and searching** for specific events or observers
-- **Organizing artifacts** in administrative interfaces
-- **Generating documentation** about your system
-- **Managing deployments** by tag
-- **Monitoring and alerting** based on tag groups
-- **Controlling activation** of observers by tag
-- **Analyzing event patterns** and flows
-- **Creating tag-based subscriptions** or filters
-
-Note: The specific querying and filtering capabilities depend on your Chronicle setup and tooling.
+- **Event tags** are stored with each event. An observer can filter on them so it only receives events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
+- **Observer tags** (on reactors, reducers and projections) describe the artifact and are stored with its definition. Chronicle does not use them to activate, select or group observers.

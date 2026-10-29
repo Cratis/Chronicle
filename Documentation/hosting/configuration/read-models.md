@@ -31,5 +31,7 @@ Set `replayedVersionsToKeep` to:
 
 - `0` to remove all previous replay versions on each new replay.
 - `1` (default) to keep only the most recent replay version.
-- A higher number if you need additional replay history for diagnostics or rollback workflows.
+- A higher number to keep more superseded versions for inspection and manual recovery.
+
+Kept versions stop receiving events once a newer version replaces them. Chronicle has no command to restore one. Kernel-owned read models keep no previous versions, regardless of this setting.
 
