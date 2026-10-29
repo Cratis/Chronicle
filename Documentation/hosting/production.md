@@ -220,7 +220,7 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 - **Connection Encryption**: Use TLS for all connections in production
 - **Client certificate validation**: The clients connect over TLS but accept *any* server certificate unless the connection string sets `skipTlsValidation=false`. Set it for every client that reaches a production kernel. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
 - **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
-- **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
+- **Initial administrator**: The production image creates the administrator without a password. Initial setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect access to that token and remove it from configuration after setup. Supply the initial password from your secret store through `Authentication:AdminUser` to avoid interactive setup, and keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated

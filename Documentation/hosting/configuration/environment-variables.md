@@ -56,6 +56,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
+| Cratis__Chronicle__Authentication__InitialAdminSetupToken | Optional initial administrator setup token; supply through secret management and remove after setup |
 | Cratis__Chronicle__Authentication__AdminUser__Username | Bootstrap admin username (falls back to the default admin username when empty) |
 | Cratis__Chronicle__Authentication__AdminUser__Password | Bootstrap admin password, hashed on first startup |
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |

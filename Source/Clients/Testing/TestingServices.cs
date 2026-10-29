@@ -153,7 +153,7 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));
-                    services.AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
+                    AddInitialAdminSetupServices(services).AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
 
                     // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
                     // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
@@ -404,6 +404,9 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static IServiceCollection AddInitialAdminSetupServices(IServiceCollection services) =>
+        services.AddDataProtection().Services.AddSingleton<KernelCore::Cratis.Chronicle.Security.IInitialAdminSetupTokens, KernelCore::Cratis.Chronicle.Security.InitialAdminSetupTokens>();
 
     static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
         new(

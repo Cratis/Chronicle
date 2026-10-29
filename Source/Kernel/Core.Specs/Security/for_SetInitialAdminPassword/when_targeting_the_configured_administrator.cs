@@ -23,6 +23,7 @@ public class when_targeting_the_configured_administrator : Specification
     IEventSequence _eventLog;
     IEventSerializer _eventSerializer;
     SetInitialAdminPassword _command;
+    IInitialAdminSetupTokens _tokens;
     Exception _exception;
     readonly CorrelationId _correlationId = new(Guid.Parse("1b3b4aa8-a587-447e-bbe1-d6a9814c8e24"));
 
@@ -66,7 +67,9 @@ public class when_targeting_the_configured_administrator : Specification
             Arg.Any<Identity>(),
             Arg.Any<IEnumerable<Tag>>(),
             Arg.Any<ConcurrencyScope>()).Returns(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
-        _command = new(_administratorId, "a-secure-password", "a-secure-password");
+        _tokens = Substitute.For<IInitialAdminSetupTokens>();
+        _tokens.IsValid(_administratorId, "setup-token").Returns(true);
+        _command = new(_administratorId, "a-secure-password", "a-secure-password", "setup-token");
     }
 
     async Task Because() =>
@@ -78,6 +81,7 @@ public class when_targeting_the_configured_administrator : Specification
                 Authentication = new() { AdminUser = new() { Username = "chronicle-root" } }
             }),
             _eventSerializer,
+            _tokens,
             _correlationId));
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
