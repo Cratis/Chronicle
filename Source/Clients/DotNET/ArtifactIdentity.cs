@@ -53,8 +53,12 @@ internal static class ArtifactIdentity
     /// Derives a model-owned projection identifier without the observer fallback.
     /// </summary>
     /// <param name="type">The read model type.</param>
-    /// <returns>The full-name projection identifier.</returns>
-    internal static ProjectionId ModelProjectionIdFor(Type type) => new(type.FullName!);
+    /// <returns>The declared projection identifier, or the full-name default.</returns>
+    internal static ProjectionId ModelProjectionIdFor(Type type)
+    {
+        var id = type.GetCustomAttribute<ProjectionAttribute>()?.Id;
+        return id is not null && id.Value.Length > 0 ? id : new(type.FullName!);
+    }
 
     /// <summary>
     /// Derives an event source name, preserving explicit empty names and suffix rules.
