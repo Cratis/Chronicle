@@ -127,6 +127,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
+        {
+            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+        }
+
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
