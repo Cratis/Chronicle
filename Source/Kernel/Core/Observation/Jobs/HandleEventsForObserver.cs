@@ -235,13 +235,18 @@ public class HandleEventsForObserver(
                 return ClosedResult();
             }
 
-            using var events = await eventSequenceStorage.GetRange(
-                currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                    ? currentState.StartEventSequenceNumber
-                    : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-                currentState.EndEventSequenceNumber,
-                eventTypes: eventTypesToRead,
-                cancellationToken: cancellationToken);
+            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
+            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
+            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, _subscription.SubscriberType);
+            using var events = new BoundedEventCursor(
+                await eventSequenceStorage.GetRange(
+                    currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                        ? currentState.StartEventSequenceNumber
+                        : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
+                    currentState.EndEventSequenceNumber,
+                    eventTypes: eventTypesToRead,
+                    cancellationToken: cancellationToken),
+                maxEventsPerCall);
 
             // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
             // keeps this step from asking the observer per batch; a partition that starts failing while the walk

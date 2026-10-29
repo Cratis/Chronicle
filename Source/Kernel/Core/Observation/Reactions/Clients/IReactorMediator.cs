@@ -44,7 +44,8 @@ public interface IReactorMediator
     /// <param name="partition"><see cref="Key"/> for the partition.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
     /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
-    void OnNext(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource);
+    /// <param name="deliverWithin">How long the kernel waits for the result, or null when it waits without a deadline.</param>
+    void OnNext(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource, TimeSpan? deliverWithin = null);
 
     /// <summary>
     /// Notify that a replay has begun for a specific reactor.

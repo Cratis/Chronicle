@@ -206,14 +206,19 @@ public class HandleEventsForPartition(
             _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
-            using var events = await eventSequenceStorage.GetRange(
-                currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                    ? currentState.StartEventSequenceNumber
-                    : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-                currentState.EndEventSequenceNumber,
-                _eventSourceId,
-                eventTypesToRead,
-                cancellationToken: cancellationToken);
+            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
+            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
+            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, subscription.SubscriberType);
+            using var events = new BoundedEventCursor(
+                await eventSequenceStorage.GetRange(
+                    currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                        ? currentState.StartEventSequenceNumber
+                        : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
+                    currentState.EndEventSequenceNumber,
+                    _eventSourceId,
+                    eventTypesToRead,
+                    cancellationToken: cancellationToken),
+                maxEventsPerCall);
 
             var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);

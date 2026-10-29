@@ -42,6 +42,18 @@ public class Observers
     public int AbandonedDeliveryHold { get; init; } = 300;
 
     /// <summary>
+    /// Gets the most events handed to a client-owned or webhook subscriber in one call during catch-up, replay and
+    /// partition recovery. Zero or less hands over storage batches as they are read.
+    /// </summary>
+    /// <remarks>
+    /// A storage batch can hold thousands of events, and a subscriber that does real work per event can need longer
+    /// for that than any sensible <see cref="SubscriberTimeout"/>. Bounding the call bounds the work behind one answer,
+    /// and every answered call is checkpointed, so a long partition advances call by call instead of needing an
+    /// ever larger timeout. Kernel-owned subscribers, such as projections, are not bounded by this.
+    /// </remarks>
+    public int MaxEventsPerSubscriberCall { get; init; } = 100;
+
+    /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
     /// </summary>
     /// <remarks>
