@@ -9,9 +9,14 @@ namespace Cratis.Chronicle.Configuration;
 public class SignInThrottling
 {
     /// <summary>
-    /// Gets the number of failures allowed before lockout. Zero disables throttling.
+    /// Gets the number of failures per username/address before lockout. Zero disables throttling.
     /// </summary>
     public int MaxFailedAttempts { get; init; } = 5;
+
+    /// <summary>
+    /// Gets the username-wide failure ceiling across addresses. Values at or below the address limit are treated as that limit plus one.
+    /// </summary>
+    public int MaxFailedAttemptsPerUsername { get; init; } = 50;
 
     /// <summary>
     /// Gets the failure window in seconds.

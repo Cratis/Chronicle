@@ -144,7 +144,7 @@ export class LoginViewModel {
             command.password = this.newPassword;
             command.confirmedPassword = this.confirmPassword;
             if (this.isInitialSetup) {
-                this._setInitialAdminPassword.setupToken = this.setupToken;
+                this._setInitialAdminPassword.setupToken = this.setupToken.trim();
             } else {
                 this._changePassword.oldPassword = this.password;
             }

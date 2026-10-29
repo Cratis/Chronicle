@@ -11,7 +11,7 @@ public class when_all_tracked_users_are_locked_out : given.a_sign_in_throttle
         Create();
         for (var user = 0; user < 10; user++)
         {
-            for (var attempt = 0; attempt < 5; attempt++) _throttle.Failed($"user-{user}", "192.0.2.1");
+            for (var address = 1; address <= 10; address++) Fail(5, $"user-{user}", $"192.0.2.{address}");
         }
     }
 

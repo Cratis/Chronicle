@@ -57,6 +57,7 @@ For private-network approvals, additional modes, metadata protection, and migrat
         "defaultAdminUsername": "admin",
         "signInThrottling": {
             "maxFailedAttempts": 5,
+            "maxFailedAttemptsPerUsername": 50,
             "windowSeconds": 300,
             "lockoutSeconds": 300,
             "maxTrackedEntries": 10000

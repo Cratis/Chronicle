@@ -14,7 +14,7 @@ public class when_a_new_user_fails_after_capacity_is_reached : given.a_sign_in_t
 
     void Because()
     {
-        for (var attempt = 0; attempt < 5; attempt++) _throttle.Failed("new-user", $"198.51.100.{attempt}");
+        for (var attempt = 0; attempt < 50; attempt++) _throttle.Failed("new-user", $"198.51.100.{attempt}");
     }
 
     [Fact] void should_track_and_lock_out_the_new_username() => _throttle.IsLockedOut("new-user", "2001:db8::1").ShouldBeTrue();

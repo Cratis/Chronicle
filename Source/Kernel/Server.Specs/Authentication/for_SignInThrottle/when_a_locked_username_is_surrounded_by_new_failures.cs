@@ -9,7 +9,7 @@ public class when_a_locked_username_is_surrounded_by_new_failures : given.a_sign
     {
         _settings = new() { MaxTrackedEntries = 10 };
         Create();
-        Fail(5);
+        for (var address = 1; address <= 50; address++) _throttle.Failed("admin", $"192.0.2.{address}");
     }
 
     void Because()

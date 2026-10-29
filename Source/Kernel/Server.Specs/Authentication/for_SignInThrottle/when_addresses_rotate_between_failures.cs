@@ -5,12 +5,18 @@ namespace Cratis.Chronicle.Server.Authentication.for_SignInThrottle;
 
 public class when_addresses_rotate_between_failures : given.a_sign_in_throttle
 {
-    void Establish() => Create();
+    bool _lockedBeforeCeiling;
 
-    void Because()
+    void Establish()
     {
-        for (var attempt = 1; attempt <= 5; attempt++) _throttle.Failed("ADMIN", $"192.0.2.{attempt}");
+        Create();
+        for (var attempt = 1; attempt < 50; attempt++) _throttle.Failed("ADMIN", $"192.0.2.{attempt}");
+        _lockedBeforeCeiling = _throttle.IsLockedOut("admin", "198.51.100.1");
     }
+
+    void Because() => _throttle.Failed("ADMIN", "192.0.2.50");
+
+    [Fact] void should_allow_sign_in_below_the_default_ceiling() => _lockedBeforeCeiling.ShouldBeFalse();
 
     [Fact] void should_lock_out_the_username_on_a_new_ipv4_address() => _throttle.IsLockedOut("admin", "198.51.100.1").ShouldBeTrue();
     [Fact] void should_lock_out_the_username_on_a_new_ipv6_address() => _throttle.IsLockedOut("admin", "2001:db8:1::1").ShouldBeTrue();

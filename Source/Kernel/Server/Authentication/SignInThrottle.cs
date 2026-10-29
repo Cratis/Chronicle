@@ -50,8 +50,10 @@ public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider tim
         lock (_lock)
         {
             var now = timeProvider.GetUtcNow();
-            Record(_users, Normalize((username, string.Empty)), now);
-            Record(_addresses, Normalize((username, address)), now);
+            var addressKey = Normalize((username, address));
+            if (Locked(_addresses, addressKey, now)) return;
+            Record(_users, Normalize((username, string.Empty)), now, Math.Max((long)_settings.MaxFailedAttempts + 1, _settings.MaxFailedAttemptsPerUsername));
+            Record(_addresses, addressKey, now, _settings.MaxFailedAttempts);
         }
     }
 
@@ -84,7 +86,7 @@ public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider tim
         foreach (var key in entries.Where(pair => pair.Value.Expires <= now).Select(pair => pair.Key).ToArray()) entries.Remove(key);
     }
 
-    void Record(Dictionary<(string Username, string Address), Entry> entries, (string Username, string Address) key, DateTimeOffset now)
+    void Record(Dictionary<(string Username, string Address), Entry> entries, (string Username, string Address) key, DateTimeOffset now, long maxFailedAttempts)
     {
         Prune(entries, now);
         if (!entries.TryGetValue(key, out var entry))
@@ -102,7 +104,7 @@ public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider tim
         entries[key] = entry with
         {
             Failures = failures,
-            LockedUntil = failures >= _settings.MaxFailedAttempts
+            LockedUntil = failures >= maxFailedAttempts
                 ? now.AddSeconds(Math.Max(1, _settings.LockoutSeconds))
                 : DateTimeOffset.MinValue
         };
