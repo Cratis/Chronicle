@@ -165,5 +165,5 @@ Here are some common patterns for organizing tags:
 
 Tags on events and on observer definitions do different things:
 
-- **Event tags** are stored with each event. An observer can filter on them so it only receives events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
+- **Event tags** are stored with each event. A reducer or reactor can filter on them so it only receives events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
 - **Observer tags** (on reactors, reducers and projections) describe the artifact and are stored with its definition. Chronicle does not use them to activate, select or group observers.
