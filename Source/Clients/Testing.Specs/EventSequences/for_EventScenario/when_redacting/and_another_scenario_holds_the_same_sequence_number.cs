@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario.when_redacting;
 

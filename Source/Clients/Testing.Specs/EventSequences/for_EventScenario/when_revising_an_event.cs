@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences.for_EventScenario;
 

@@ -11,12 +11,13 @@ using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelEvents = KernelConcepts::Cratis.Chronicle.Concepts.Events;
 using KernelIdentities = KernelConcepts::Cratis.Chronicle.Concepts.Identities;
 using KernelSequences = KernelCore::Cratis.Chronicle.EventSequences;
+using KernelSystemEvents = KernelCore::Cratis.Chronicle.Events.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
 /// Stands in for the System event sequence in test scenarios: runs the two redaction requests synchronously
-/// through the kernel's <c>EventSequencesReactor</c> and rejects every other operation.
+/// through the kernel's <c language="csharp">EventSequencesReactor</c> and rejects every other operation.
 /// </summary>
 internal class InProcessSystemEventSequence : DispatchProxy
 {
@@ -53,9 +54,9 @@ internal class InProcessSystemEventSequence : DispatchProxy
             var context = ContextFor(eventSourceId, args[2] as CorrelationId, args[3] as IEnumerable<KernelAuditing::Causation>, args[4] as KernelIdentities::Identity);
             switch (args[1])
             {
-                case KernelSequences::EventRedactionRequested request:
+                case KernelSystemEvents::EventRedactionRequested request:
                     return Dispatch(() => _reactor.RedactionRequested(request, context), context);
-                case KernelSequences::EventsRedactedForEventSource request:
+                case KernelSystemEvents::EventsRedactedForEventSource request:
                     return Dispatch(() => _reactor.RedactedForEventSource(request, context), context);
             }
         }
