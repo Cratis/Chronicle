@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Releases;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel.for_Reactors;
 
@@ -13,16 +14,20 @@ public class when_a_single_release_observer_fails : given.registrations
     Exception? _failure;
     int _calls;
 
-    void Establish() => _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false)
-        .Returns(_ =>
-        {
-            _calls++;
-            return Task.FromException(_original);
-        });
+    void Establish()
+    {
+        _releases.Summarize().Returns(new ClusterReleaseSummary([(new(19, 112, 0), 2)], 0, 0));
+        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false)
+            .Returns(_ =>
+            {
+                _calls++;
+                return Task.FromException(_original);
+            });
+    }
 
     async Task Because() => _failure = await Catch.Exception(() => _reactors.DiscoverAndRegister(_eventStore, EventStoreNamespaceName.Default));
 
     [Fact] void should_propagate_the_failure() => _failure.ShouldEqual(_original);
     [Fact] void should_not_retry() => _calls.ShouldEqual(1);
-    [Fact] void should_not_deactivate() => _deactivated.ShouldBeEmpty();
+    [Fact] async Task should_ensure_only_once() => await _observer.Received(1).Ensure();
 }

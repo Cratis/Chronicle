@@ -30,5 +30,5 @@ public class when_subscription_is_cancelled : given.registrations
     void Destroy() => _cancellation.Dispose();
     [Fact] void should_preserve_cancellation() => _failure.ShouldEqual(_original);
     [Fact] void should_not_retry() => _calls.ShouldEqual(1);
-    [Fact] void should_not_deactivate() => _deactivated.ShouldBeEmpty();
+    [Fact] async Task should_not_ensure_again() => await _observer.Received(1).Ensure();
 }

@@ -13,7 +13,6 @@ using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
-using Orleans.Core.Internal;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel;
 
@@ -42,11 +41,6 @@ public class Reactors(
     readonly CancellationTokenSource _shutdown = new();
     readonly object _disposal = new();
     Task? _disposeTask;
-
-    /// <summary>
-    /// Gets the observer handover operation, overridable by in-process specifications.
-    /// </summary>
-    internal Func<IObserver, Task> DeactivateObserver { get; init; } = static observer => observer.AsReference<IGrainManagementExtension>().DeactivateOnIdle().AsTask();
 
     /// <inheritdoc/>
     public Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName) =>
@@ -167,6 +161,7 @@ public class Reactors(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
+                await observer.Ensure();
                 await subscribe();
                 return;
             }
@@ -175,7 +170,6 @@ public class Reactors(
                 original ??= ExceptionDispatchInfo.Capture(exception);
                 if (attempt >= 3) original.Throw();
                 logger.RetryingMixedReleaseSubscription(attempt, clusterReleases.Summarize().ToString());
-                await DeactivateObserver(observer);
                 await Task.Delay(TimeSpan.FromMilliseconds(100), timeProvider ?? TimeProvider.System, cancellationToken);
             }
         }

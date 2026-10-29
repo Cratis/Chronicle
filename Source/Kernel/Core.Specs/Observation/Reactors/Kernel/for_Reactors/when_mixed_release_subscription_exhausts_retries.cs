@@ -23,7 +23,8 @@ public class when_mixed_release_subscription_exhausts_retries : given.registrati
 
     async Task Because() => _failure = await Catch.Exception(() => _reactors.DiscoverAndRegister(_eventStore, EventStoreNamespaceName.Default));
 
-    [Fact] void should_rethrow_the_first_failure() => _failure.ShouldEqual(_original);
+    [Fact] void should_rethrow_the_first_failure() => _failure.ShouldBeSame(_original);
     [Fact] void should_bound_subscriptions() => _calls.ShouldEqual(3);
-    [Fact] void should_deactivate_only_before_retries() => _deactivated.Count.ShouldEqual(2);
+    [Fact] async Task should_ensure_before_each_attempt() => await _observer.Received(3).Ensure();
+    [Fact] void should_log_only_the_two_retries() => _logger.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == "Log").ShouldEqual(2);
 }

@@ -19,7 +19,6 @@ public class registrations : Specification
     protected IObserver _observer;
     protected IClusterReleases _releases;
     protected ILogger<Reactors> _logger;
-    protected List<IObserver> _deactivated = [];
     protected IReactorDefinitionsStorage _definitions;
     protected IReactorDefinitionsStorage _otherDefinitions;
     protected ConcurrentDictionary<ReactorId, ReactorDefinition> _persisted = new();
@@ -47,14 +46,7 @@ public class registrations : Specification
         _releases.Summarize().Returns(new ClusterReleaseSummary([], 0, 0));
         _logger = Substitute.For<ILogger<Reactors>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-        _reactors = new(types, Substitute.For<ILocalSiloDetails>(), storage, grainFactory, _releases, _logger)
-        {
-            DeactivateObserver = observer =>
-            {
-                _deactivated.Add(observer);
-                return Task.CompletedTask;
-            }
-        };
+        _reactors = new(types, Substitute.For<ILocalSiloDetails>(), storage, grainFactory, _releases, _logger);
     }
 
     async Task Destroy() => await _reactors.DisposeAsync();
