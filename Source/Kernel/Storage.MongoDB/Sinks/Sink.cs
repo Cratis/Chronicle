@@ -116,6 +116,7 @@ public partial class Sink(
     readonly ConcurrentDictionary<string, Key> _prefetchedCacheKeys = new();
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
+    readonly BulkStateChildIndex _bulkChildIndex = new();
 
     /// <summary>
     /// Highest event sequence number known to be applied to each document while a bulk window is open.
@@ -198,6 +199,7 @@ public partial class Sink(
         if (!_bulkPendingDeletes.ContainsKey(cacheKey) &&
             _bulkStateCache.TryAdd(cacheKey, expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration())))
         {
+            _bulkChildIndex.MarkDirty(cacheKey);
             _bulkKeysByCacheKey[cacheKey] = key;
             _prefetchedCacheKeys[cacheKey] = key;
             SeedBulkWatermark(key, instance);
@@ -298,6 +300,7 @@ public partial class Sink(
         var cacheKey = converter.ToBsonValue(key).ToString()!;
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
+            _bulkChildIndex.MarkDirty(cacheKey);
             answer = cachedState;
             return true;
         }
@@ -609,6 +612,7 @@ public partial class Sink(
         _pagePrefetch.Forget(cacheKey);
         _prefetchedCacheKeys.TryRemove(cacheKey, out _);
         _bulkStateCache.TryRemove(cacheKey, out _);
+        _bulkChildIndex.Remove(cacheKey);
         _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
         _bulkWatermarks.TryRemove(cacheKey, out _);
     }
@@ -760,6 +764,7 @@ public partial class Sink(
         {
             _prefetchedCacheKeys.TryRemove(cacheKey, out _);
             _bulkStateCache[cacheKey] = changeset.CurrentState;
+            _bulkChildIndex.MarkDirty(cacheKey);
             _bulkKeysByCacheKey[cacheKey] = key;
             _bulkPendingDeletes.TryRemove(cacheKey, out _);
             if (eventSequenceNumber.IsActualValue)
@@ -871,6 +876,7 @@ public partial class Sink(
         ClearPrefetchPage();
         _bulkHasGuardedWrites = false;
         _bulkStateCache.Clear();
+        _bulkChildIndex.Clear();
         _bulkKeysByCacheKey.Clear();
         _bulkWatermarks.Clear();
         _bulkPendingDeletes.Clear();
@@ -1073,11 +1079,9 @@ public partial class Sink(
         await SettleGuardedBulkReads();
         if (_isBulkMode)
         {
-            var pathSegments = childPropertyPath.Segments.ToArray();
-            foreach (var (cacheKey, cachedState) in _bulkStateCache)
+            foreach (var cacheKey in _bulkChildIndex.Find(childPropertyPath, childValue, _bulkStateCache))
             {
-                if (TryFindValueInDocument(cachedState, pathSegments, 0, childValue) &&
-                    _bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
+                if (_bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
                 {
                     return new Option<Key>(rootKey);
                 }
@@ -1811,44 +1815,6 @@ public partial class Sink(
 
         logger.BulkWriteConcernErrorOccurred(collection, readModel.Identifier, writeConcernError.Code, writeConcernError.CodeName, writeConcernError.Message, remainingCount);
         return $"MongoDB write concern error {writeConcernError.Code} ({writeConcernError.CodeName}): {writeConcernError.Message}";
-    }
-
-    bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
-    {
-        if (segmentIndex >= pathSegments.Length)
-        {
-            return false;
-        }
-
-        var currentSegment = pathSegments[segmentIndex];
-        var dict = (IDictionary<string, object?>)document;
-
-        if (!dict.TryGetValue(currentSegment.Value, out var value) || value is null)
-        {
-            return false;
-        }
-
-        return segmentIndex == pathSegments.Length - 1
-            ? ValuesAreEqual(value, targetValue)
-            : TryFindValueInChildren(value, pathSegments, segmentIndex, targetValue);
-    }
-
-    bool TryFindValueInChildren(object value, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue) =>
-        value switch
-        {
-            IEnumerable<object> collection => collection.OfType<ExpandoObject>().Any(item => TryFindValueInDocument(item, pathSegments, segmentIndex + 1, targetValue)),
-            ExpandoObject nestedExpando => TryFindValueInDocument(nestedExpando, pathSegments, segmentIndex + 1, targetValue),
-            _ => false
-        };
-
-    static bool ValuesAreEqual(object value, object targetValue)
-    {
-        if (value.Equals(targetValue))
-        {
-            return true;
-        }
-
-        return value.ToString() == targetValue.ToString();
     }
 
     static int EstimateOperationSize(WriteModel<BsonDocument> operation)
