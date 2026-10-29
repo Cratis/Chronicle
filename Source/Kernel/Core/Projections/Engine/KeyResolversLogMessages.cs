@@ -136,9 +136,6 @@ internal static partial class KeyResolversLogMessages
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: could not resolve child key '{ChildKey}' for projection '{Path}' via a creation event (event type '{EventType}', sequence {SequenceNumber}) — continuing with sink lookup")]
     internal static partial void FromParentHierarchyChildCreationKeyNotResolved(this ILogger<KeyResolvers> logger, string path, object? childKey, string eventType, ulong sequenceNumber);
 
-    [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: child creation resolved for projection '{Path}' but could not build an indexer for collection '{ChildrenPropertyPath}' with child key '{ChildKey}'")]
-    internal static partial void FromParentHierarchyChildCreationKeyMissingIndexer(this ILogger<KeyResolvers> logger, string path, string childrenPropertyPath, object? childKey);
-
     [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: all resolution strategies exhausted for child projection '{Path}' with parent key '{ParentKey}' — event will be skipped (no future created). This typically indicates a badly-defined projection.")]
     internal static partial void FromParentHierarchyKeyUnresolvable(this ILogger<KeyResolvers> logger, string path, string parentKey);
 

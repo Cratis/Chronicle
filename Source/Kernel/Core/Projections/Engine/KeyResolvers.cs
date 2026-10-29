@@ -490,10 +490,6 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             }
 
             var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value));
-            if (!childArrayIndexers.HasFor(projection.ChildrenPropertyPath))
-            {
-                logger.FromParentHierarchyChildCreationKeyMissingIndexer(projection.Path, projection.ChildrenPropertyPath.Path, childKey.Value);
-            }
 
             return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey with { ArrayIndexers = childArrayIndexers }));
         }
