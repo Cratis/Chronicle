@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Runtime.ExceptionServices;
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -10,6 +12,8 @@ using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using Orleans.Core.Internal;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel;
 
@@ -20,18 +24,29 @@ namespace Cratis.Chronicle.Observation.Reactors.Kernel;
 /// <param name="localSiloDetails">The local silo details.</param>
 /// <param name="storage">The <see cref="IStorage"/> to use for working with underlying storage.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to use for creating reactor grains.</param>
+/// <param name="clusterReleases">The published releases for mixed-cluster handover.</param>
+/// <param name="logger">The logger.</param>
+/// <param name="timeProvider">The clock used for subscription retry backoff.</param>
 [Singleton]
 public class Reactors(
     ITypes types,
     ILocalSiloDetails localSiloDetails,
     IStorage storage,
-    IGrainFactory grainFactory) : IReactors, IAsyncDisposable
+    IGrainFactory grainFactory,
+    IClusterReleases clusterReleases,
+    ILogger<Reactors> logger,
+    TimeProvider? timeProvider = null) : IReactors, IAsyncDisposable
 {
     readonly IEnumerable<Type> _reactorTypes = types.FindMultiple<IReactor>().Where(t => t != typeof(Reactor)).ToArray();
     readonly SemaphoreSlim _definitionWrites = new(1, 1);
     readonly CancellationTokenSource _shutdown = new();
     readonly object _disposal = new();
     Task? _disposeTask;
+
+    /// <summary>
+    /// Gets the observer handover operation, overridable by in-process specifications.
+    /// </summary>
+    internal Func<IObserver, Task> DeactivateObserver { get; init; } = static observer => observer.AsReference<IGrainManagementExtension>().DeactivateOnIdle().AsTask();
 
     /// <inheritdoc/>
     public Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName) =>
@@ -133,11 +148,36 @@ public class Reactors(
 
         cancellationToken.ThrowIfCancellationRequested();
         var observer = grainFactory.GetGrain<IObserver>(key);
-        await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
-            ObserverType.Reactor,
-            reactorType.GetEventTypes(),
-            localSiloDetails.SiloAddress,
-            null,
-            false);
+        await SubscribeObserver(
+            observer,
+            () => observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
+                ObserverType.Reactor,
+                reactorType.GetEventTypes(),
+                localSiloDetails.SiloAddress,
+                null,
+                false),
+            cancellationToken);
+    }
+
+    async Task SubscribeObserver(IObserver observer, Func<Task> subscribe, CancellationToken cancellationToken)
+    {
+        ExceptionDispatchInfo? original = null;
+        for (var attempt = 1; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                await subscribe();
+                return;
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested && exception is not OperationCanceledException && clusterReleases.Summarize().IsMixed)
+            {
+                original ??= ExceptionDispatchInfo.Capture(exception);
+                if (attempt >= 3) original.Throw();
+                logger.RetryingMixedReleaseSubscription(attempt, clusterReleases.Summarize().ToString());
+                await DeactivateObserver(observer);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), timeProvider ?? TimeProvider.System, cancellationToken);
+            }
+        }
     }
 }

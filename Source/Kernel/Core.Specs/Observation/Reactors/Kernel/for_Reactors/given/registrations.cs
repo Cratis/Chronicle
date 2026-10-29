@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Clustering;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation.Reactors;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel.for_Reactors.given;
 
@@ -15,6 +17,9 @@ public class registrations : Specification
 {
     protected Reactors _reactors;
     protected IObserver _observer;
+    protected IClusterReleases _releases;
+    protected ILogger<Reactors> _logger;
+    protected List<IObserver> _deactivated = [];
     protected IReactorDefinitionsStorage _definitions;
     protected IReactorDefinitionsStorage _otherDefinitions;
     protected ConcurrentDictionary<ReactorId, ReactorDefinition> _persisted = new();
@@ -38,7 +43,18 @@ public class registrations : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         _observer = Substitute.For<IObserver>();
         grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(_observer);
-        _reactors = new(types, Substitute.For<ILocalSiloDetails>(), storage, grainFactory);
+        _releases = Substitute.For<IClusterReleases>();
+        _releases.Summarize().Returns(new ClusterReleaseSummary([], 0, 0));
+        _logger = Substitute.For<ILogger<Reactors>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _reactors = new(types, Substitute.For<ILocalSiloDetails>(), storage, grainFactory, _releases, _logger)
+        {
+            DeactivateObserver = observer =>
+            {
+                _deactivated.Add(observer);
+                return Task.CompletedTask;
+            }
+        };
     }
 
     async Task Destroy() => await _reactors.DisposeAsync();
