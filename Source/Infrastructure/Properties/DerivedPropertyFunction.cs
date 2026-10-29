@@ -13,4 +13,12 @@ namespace Cratis.Chronicle.Properties;
 /// how it is rendered as the terminal segment of a <see cref="PropertyPath"/> (<c language="csharp">Occurred.ISOWeek()</c>).
 /// </param>
 /// <param name="Evaluate">Computes the derived value from the value the path resolved to immediately before this segment.</param>
-public record DerivedPropertyFunction(string Name, Func<object, object?> Evaluate);
+public record DerivedPropertyFunction(string Name, Func<object, object?> Evaluate)
+{
+    /// <summary>
+    /// Gets the CLR receiver types supported when validating a context property path.
+    /// An empty collection means the function is not classified for CLR context validation.
+    /// Nullable receivers are validated against their underlying type.
+    /// </summary>
+    public IReadOnlyCollection<Type> SupportedReceiverTypes { get; init; } = [];
+}

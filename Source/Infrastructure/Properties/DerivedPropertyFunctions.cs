@@ -28,7 +28,8 @@ namespace Cratis.Chronicle.Properties;
 /// there (compiler error CS9296).</description></item>
 /// <item><description>Register a <see cref="DerivedPropertyFunction"/> under that same name in <see cref="All"/>,
 /// with <see cref="DerivedPropertyFunction.Evaluate"/> delegating to the computation so the two can
-/// never drift apart.</description></item>
+/// never drift apart. Set <see cref="DerivedPropertyFunction.SupportedReceiverTypes"/> to the CLR types
+/// accepted by context-path validation; unclassified functions are not accepted there.</description></item>
 /// </list>
 /// <para>
 /// Such a call appears as a <see cref="System.Linq.Expressions.MethodCallExpression"/> in an expression
@@ -45,6 +46,9 @@ public static class DerivedPropertyFunctions
         ["Week"] = new(
             "Week",
             value => System.Globalization.ISOWeek.GetWeekOfYear(ToDateTimeOffset(value).DateTime))
+        {
+            SupportedReceiverTypes = [typeof(DateTimeOffset), typeof(DateTime), typeof(DateOnly)]
+        }
     };
 
     /// <summary>

@@ -140,9 +140,8 @@ internal class ModelBoundProjectionBuilder(
     {
         if (!string.IsNullOrEmpty(attribute.ContextProperty))
         {
-            PropertyValidator.ValidatePropertyExists<EventContext>(attribute.ContextProperty);
-            var contextPropertyName = ProjectionPropertyPaths.Resolve(attribute.ContextProperty, namingPolicy, ProjectionPathRole.Source);
-            definition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({contextPropertyName})";
+            var contextPropertyName = PropertyValidator.ValidateContextPropertyPath<EventContext>(attribute.ContextProperty);
+            definition.Properties[propertyName] = ProjectionPropertyPaths.ContextFrom(contextPropertyName, namingPolicy);
         }
         else
         {
@@ -458,8 +457,8 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? parameter.Name!;
-            PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
-            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+            var contextPath = PropertyValidator.ValidateContextPropertyPath<EventContext>(propertyToValidate);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath);
         }
 
         var parameterIsNested = parameter.IsDefined(typeof(NestedAttribute), inherit: false);
@@ -635,8 +634,8 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyNameProperty = attr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? property.Name;
-            PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
-            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+            var contextPath = PropertyValidator.ValidateContextPropertyPath<EventContext>(propertyToValidate);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath);
         }
 
         var memberIsNested = Attribute.IsDefined(property, typeof(NestedAttribute));
