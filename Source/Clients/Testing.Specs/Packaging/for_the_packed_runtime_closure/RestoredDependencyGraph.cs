@@ -12,7 +12,13 @@ namespace Cratis.Chronicle.Testing.Packaging.for_the_packed_runtime_closure;
 /// </summary>
 /// <param name="libraries">The resolved libraries of one target, keyed by name.</param>
 /// <param name="received">The names of the libraries a consumer of the package receives as dependencies.</param>
-sealed class RestoredDependencyGraph(IReadOnlyDictionary<string, JsonElement> libraries, IReadOnlySet<string> received)
+/// <param name="declared">The names of the packages the project declares directly.</param>
+/// <param name="embedded">The names of the project libraries embedded into the package, directly or through other embedded projects.</param>
+sealed class RestoredDependencyGraph(
+    IReadOnlyDictionary<string, JsonElement> libraries,
+    IReadOnlySet<string> received,
+    IReadOnlySet<string> declared,
+    IReadOnlySet<string> embedded)
 {
     /// <summary>
     /// Reads the graph restore produced for a project.
@@ -29,9 +35,32 @@ sealed class RestoredDependencyGraph(IReadOnlyDictionary<string, JsonElement> li
         var libraries = target.Value.EnumerateObject()
             .ToDictionary(_ => NameOf(_.Name), _ => _.Value, StringComparer.OrdinalIgnoreCase);
 
-        var roots = DeclaredPackages(root, target.Name).Concat(FlowingProjects(root, project));
-        return new(libraries, ClosureOf(roots, libraries));
+        var declared = DeclaredPackages(root, target.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var roots = declared.Concat(ReferencedProjects(root, project, embedded: false));
+        var projects = libraries.Where(_ => !IsPackage(_.Value)).ToDictionary(_ => _.Key, _ => _.Value, StringComparer.OrdinalIgnoreCase);
+        var embedded = ClosureOf(ReferencedProjects(root, project, embedded: true), projects);
+        return new(libraries, ClosureOf(roots, libraries), declared, embedded);
     }
+
+    /// <summary>
+    /// Finds the packages embedded projects were compiled against that the package neither packs nor declares itself.
+    /// </summary>
+    /// <remarks>
+    /// Reaching such a package transitively is not enough: another dependency can pull in a lower version, and the
+    /// embedded assembly then fails to load against it. Only a direct declaration pins the version it needs.
+    /// </remarks>
+    /// <param name="packed">Matches the file names of the runtime assemblies packed into the package.</param>
+    /// <returns>Each undeclared package, as <c language="text">project -> package</c>.</returns>
+    internal IReadOnlyCollection<string> UndeclaredPackagesOfEmbeddedProjects(Regex packed) =>
+    [
+        .. embedded
+            .SelectMany(project => DependenciesOf(libraries[project]).Select(dependency => (project, dependency)))
+            .Where(_ => libraries.TryGetValue(_.dependency, out var library) && IsPackage(library) &&
+                        RuntimeAssemblies(library).Any() && !RuntimeAssemblies(library).Any(packed.IsMatch) &&
+                        !declared.Contains(_.dependency))
+            .Select(_ => $"{_.project} -> {_.dependency}")
+            .Order(StringComparer.OrdinalIgnoreCase)
+    ];
 
     /// <summary>
     /// Finds the dependencies of packed packages that a consumer would have no way of getting.
@@ -106,12 +135,12 @@ sealed class RestoredDependencyGraph(IReadOnlyDictionary<string, JsonElement> li
                 .Select(_ => _.Name)
             : [];
 
-    static IEnumerable<string> FlowingProjects(JsonElement root, FileInfo project)
+    static IEnumerable<string> ReferencedProjects(JsonElement root, FileInfo project, bool embedded)
     {
         // A project reference that is not embedded ships as its own package and brings its dependencies with it.
         var flowing = root.GetProperty("project").GetProperty("restore").GetProperty("frameworks").EnumerateObject().First().Value
             .GetProperty("projectReferences").EnumerateObject()
-            .Where(_ => !_.Value.TryGetProperty("privateAssets", out var assets) || assets.GetString() != "all")
+            .Where(_ => (_.Value.TryGetProperty("privateAssets", out var assets) && assets.GetString() == "all") == embedded)
             .Select(_ => Path.GetFullPath(_.Name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -133,7 +162,7 @@ sealed class RestoredDependencyGraph(IReadOnlyDictionary<string, JsonElement> li
                 continue;
             }
 
-            foreach (var dependency in DependenciesOf(library))
+            foreach (var dependency in DependenciesOf(library).Where(libraries.ContainsKey))
             {
                 pending.Push(dependency);
             }
