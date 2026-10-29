@@ -28,6 +28,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string AuthKey = "auth";
     const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
+    const string DisableTlsKey = "disableTls";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
@@ -194,6 +195,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 throw new AmbiguousAuthenticationMode();
             }
 
+            // Without TLS the development credentials have nowhere to go: Chronicle serves its token endpoint over
+            // TLS only. A cleartext connection with no credentials therefore authenticates with nothing.
+            if (hasNoAuthentication && DisableTls)
+            {
+                return AuthenticationMode.None;
+            }
+
             if (hasClientCredentials || hasNoAuthentication)
             {
                 return AuthenticationMode.ClientCredentials;
@@ -266,6 +274,34 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     {
         get => !ContainsKey(SkipTlsValidationKey) || Convert.ToBoolean(this[SkipTlsValidationKey]);
         set => this[SkipTlsValidationKey] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets whether the client connects without TLS, expressed as <c language="csharp">disableTls=true</c> in the
+    /// connection string.
+    /// </summary>
+    /// <remarks>
+    /// For a Chronicle server running with <c language="csharp">tls.enabled=false</c>, typically reached through a
+    /// port-forward or behind a proxy that forwards cleartext HTTP/2 (h2c). The client then speaks HTTP/2 without TLS.
+    /// Chronicle never serves its token endpoint without TLS, so client credentials cannot be exchanged on such a
+    /// connection: use <c language="csharp">auth=none</c> against a server with authentication turned off, or
+    /// <c language="csharp">apiKey=</c> with a token from the server's external authority. A connection string with no
+    /// credentials at all connects without authentication.
+    /// </remarks>
+    public bool DisableTls
+    {
+        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        set
+        {
+            if (value)
+            {
+                this[DisableTlsKey] = true;
+            }
+            else
+            {
+                Remove(DisableTlsKey);
+            }
+        }
     }
 
     /// <summary>
@@ -405,6 +441,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipTlsValidation=false");
         }
 
+        if (DisableTls)
+        {
+            queryParams.Add("disableTls=true");
+        }
+
         if (SkipCompatibilityCheck)
         {
             queryParams.Add("skipCompatibilityCheck=true");
@@ -443,6 +484,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 keyStr != SchemeKey &&
                 keyStr != ApiKeyKey &&
                 keyStr != SkipTlsValidationKey &&
+                keyStr != DisableTlsKey &&
                 keyStr != SkipCompatibilityCheckKey &&
                 keyStr != LoadBalancerKey &&
                 keyStr != SrvNameServerKey &&
