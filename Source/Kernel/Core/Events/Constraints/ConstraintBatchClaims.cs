@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 public sealed class ConstraintBatchClaims
 {
     readonly Dictionary<ClaimKey, EventSourceId> _claims = [];
+    readonly Dictionary<(ClaimKey Key, EventSourceId EventSourceId), (bool IsAllowed, EventSequenceNumber SequenceNumber)> _persistedAnswers = [];
     readonly Dictionary<EventTypeCycleKey, EventTypeCycleState> _eventTypeCycles = [];
     readonly Dictionary<(ClosedStreamOwner Owner, ClosedStreamScope Scope), ClosedStream?> _closureChanges = [];
 
@@ -47,6 +48,29 @@ public sealed class ConstraintBatchClaims
         _claims[key] = eventSourceId;
         return true;
     }
+
+    /// <summary>
+    /// Records what the persisted index answered for a claim, read for the whole batch before any event is validated.
+    /// </summary>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> the value belongs to.</param>
+    /// <param name="scopeKey">The scope key the value is constrained within.</param>
+    /// <param name="value">The <see cref="UniqueConstraintValue"/> being claimed.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> claiming the value.</param>
+    /// <param name="answer">Whether the persisted index allows the claim, and the sequence number of the event holding the value.</param>
+    internal void RecordPersistedAnswer(ConstraintName constraintName, string scopeKey, UniqueConstraintValue value, EventSourceId eventSourceId, (bool IsAllowed, EventSequenceNumber SequenceNumber) answer) =>
+        _persistedAnswers[(new ClaimKey(constraintName, scopeKey, value), eventSourceId)] = answer;
+
+    /// <summary>
+    /// Gets what the persisted index answered for a claim, when it was read for the whole batch.
+    /// </summary>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> the value belongs to.</param>
+    /// <param name="scopeKey">The scope key the value is constrained within.</param>
+    /// <param name="value">The <see cref="UniqueConstraintValue"/> being claimed.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> claiming the value.</param>
+    /// <param name="answer">The recorded answer.</param>
+    /// <returns>True when an answer was recorded, false when the index has to be read.</returns>
+    internal bool TryGetPersistedAnswer(ConstraintName constraintName, string scopeKey, UniqueConstraintValue value, EventSourceId eventSourceId, out (bool IsAllowed, EventSequenceNumber SequenceNumber) answer) =>
+        _persistedAnswers.TryGetValue((new ClaimKey(constraintName, scopeKey, value), eventSourceId), out answer);
 
     /// <summary>
     /// Attempt to claim a unique event type constraint cycle for an event source within the batch.
