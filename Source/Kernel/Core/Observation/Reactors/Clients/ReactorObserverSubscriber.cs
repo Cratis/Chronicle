@@ -68,7 +68,7 @@ public class ReactorObserverSubscriber(
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
-            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
+            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs, context.RemainingDeliveryTime(_clock));
             return await deliveryWait.For(tcs.Task, result => result, context);
         }
         catch (AbandonedDeliveryDiscarded)

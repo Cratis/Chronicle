@@ -20,6 +20,18 @@ public record ObserverSubscriberContext(object? Metadata)
     public DateTimeOffset? AbandonAt { get; init; }
 
     /// <summary>
+    /// Gets how long is left before the caller stops accepting a result.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
+    /// <returns>The time left, zero when the deadline has passed, or null when the delivery has no deadline.</returns>
+    public TimeSpan? RemainingDeliveryTime(TimeProvider clock)
+    {
+        if (DeliverBy is not { } deliverBy) return null;
+        var remaining = deliverBy - clock.GetUtcNow();
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    /// <summary>
     /// Adds fresh deadlines for this dispatch, leaving disabled deliveries unbounded.
     /// </summary>
     /// <param name="timeout">The caller's timeout.</param>

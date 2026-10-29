@@ -18,5 +18,6 @@ public interface IObserverPageSubscriber : IObserverSubscriber
     /// <param name="events">The ordered events to handle.</param>
     /// <param name="context">The subscriber context.</param>
     /// <returns>The handled position and, on failure, the failing partition and sequence number.</returns>
+    [ResponseTimeout(ObserverSubscriberResponseTimeout.Value)]
     Task<ObserverSubscriberResult> OnNextPage(IEnumerable<AppendedEvent> events, ObserverSubscriberContext context);
 }

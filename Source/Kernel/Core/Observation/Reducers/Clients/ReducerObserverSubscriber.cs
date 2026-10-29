@@ -161,7 +161,7 @@ public class ReducerObserverSubscriber(
                 client.ConnectionId,
                 _key.EventStore,
                 _key.Namespace,
-                new(reduction.Key, events, initialState),
+                new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock) },
                 reducerSubscriberResultTCS);
 
             var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);

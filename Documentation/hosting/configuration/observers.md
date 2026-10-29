@@ -12,6 +12,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
   "observers": {
     "subscriberTimeout": 30,
     "abandonedDeliveryHold": 300,
+    "maxEventsPerSubscriberCall": 100,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -28,9 +29,10 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
+| subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. Not capped by `clustering.responseTimeout`; bounded at 1 hour. `0` waits indefinitely (up to that bound). See [Subscriber timeout](#subscriber-timeout) |
 | abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
-| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again |
+| maxEventsPerSubscriberCall | number | 100 | The most events handed to a gRPC client (reactor or reducer) or webhook subscriber in one call during catch-up, replay and partition recovery. `0` or less hands over storage batches as read. See [Bounded subscriber calls](#bounded-subscriber-calls) |
+| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again. An attempt that fails at a later event than the previous one made progress and also starts a new budget, so only a partition that keeps failing at the same event is quarantined |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
 | backoffDelay | number | 1 | Initial backoff delay in seconds |
@@ -66,10 +68,29 @@ Every path that hands events to an observer's subscriber — live delivery, catc
 `Timeout` and the partition retries with the usual backoff.
 
 Giving up abandons the wait, not the work. For gRPC reactors and reducers, Chronicle holds the subscriber turn
-open after the timeout and fences that partition before recovery can send another batch. Raising the setting past
-the transport's own response timeout does not extend the transport's wait.
+open after the timeout and fences that partition before recovery can send another batch.
 
-Set it to `0` to wait indefinitely. This also disables abandoned-delivery fencing.
+The setting is independent of `clustering.responseTimeout`. Subscriber calls carry their own Orleans response
+timeout of **1 hour**, so a `subscriberTimeout` of, for example, `600` waits the full 10 minutes without raising
+the response timeout for every other call in the cluster. When a subscriber call does hit that 1-hour ceiling, the
+failure says so (`The Orleans response timeout fired after ...`) instead of naming the configured subscriber
+timeout.
+
+Set it to `0` to wait indefinitely. This also disables abandoned-delivery fencing. Both `0` and values above one
+hour are bounded by the 1-hour ceiling, and Chronicle logs a warning at startup when that applies.
+
+## Bounded subscriber calls
+
+Catch-up, replay and partition recovery read events from storage in batches whose size the storage decides, and a
+MongoDB cursor batch can hold thousands of events. A gRPC client or webhook subscriber gets them at most
+`maxEventsPerSubscriberCall` at a time. Each answered call is checkpointed before the next is sent, so a long
+partition advances call by call, and `subscriberTimeout` only has to cover the work behind one bounded call.
+
+Kernel-owned subscribers, such as projections, keep the storage batches they are tuned for.
+
+Every batch sent to a gRPC client also says how long the kernel waits for its result (`DeliverWithinMilliseconds`,
+counted from when the client receives it). A client that only gets to the batch after that time can answer it as
+failed right away instead of doing work the kernel has already given up on.
 
 ## Abandoned client deliveries
 
