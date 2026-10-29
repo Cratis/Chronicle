@@ -72,6 +72,11 @@ public class Authentication
     /// </summary>
     public string? InitialAdminSetupToken { get; init; }
 
+    /// <summary>
+    /// Gets the per-node password sign-in throttling settings.
+    /// </summary>
+    public SignInThrottling SignInThrottling { get; init; } = new();
+
 #if DEVELOPMENT
     /// <summary>
     /// Gets the default admin password for development. When set, the admin user is created with this password pre-configured,

@@ -55,6 +55,12 @@ For private-network approvals, additional modes, metadata protection, and migrat
     "authentication": {
         "authority": null,
         "defaultAdminUsername": "admin",
+        "signInThrottling": {
+            "maxFailedAttempts": 5,
+            "windowSeconds": 300,
+            "lockoutSeconds": 300,
+            "maxTrackedEntries": 10000
+        },
         "adminUser": {
             "username": "admin",
             "password": "your-secure-password",

@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Setup.Authentication;
 #pragma warning disable MA0182 // Unused internal type. This is used during DEVELOPMENT builds only.
 internal static partial class AuthenticationServiceLogging
 {
+    [LoggerMessage(LogLevel.Warning, "The configured administrator password is shorter than the recommended minimum of {MinimumLength} characters")]
+    internal static partial void ConfiguredAdminPasswordIsShort(this ILogger<AuthenticationService> logger, int minimumLength);
+
     [LoggerMessage(LogLevel.Debug, "Checking for existing default admin user")]
     internal static partial void CheckingForDefaultAdminUser(this ILogger<AuthenticationService> logger);
 

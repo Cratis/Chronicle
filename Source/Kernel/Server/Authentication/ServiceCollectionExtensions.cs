@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Validation.AspNetCore;
 
 namespace Cratis.Chronicle.Server.Authentication;
@@ -93,17 +94,17 @@ public static class ServiceCollectionExtensions
         });
 
         // Add ASP.NET Identity
-        services.AddIdentityCore<User>(options =>
+        services.AddPasswordSignInThrottling().AddIdentityCore<User>(options =>
             {
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 4;
+                options.Password.RequiredLength = Cratis.Chronicle.Security.PasswordPolicy.MinimumLength;
                 options.User.RequireUniqueEmail = false;
             })
             .AddUserStore<UserStore>()
-            .AddSignInManager()
+            .AddSignInManager<ChronicleSignInManager>()
             .AddDefaultTokenProviders()
             .AddApiEndpoints();
 
@@ -176,5 +177,11 @@ public static class ServiceCollectionExtensions
                 .Build());
 
         return services;
+    }
+
+    static IServiceCollection AddPasswordSignInThrottling(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        return services.AddSingleton<ISignInThrottle, SignInThrottle>();
     }
 }

@@ -28,6 +28,23 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
 
+## Password sign-ins
+
+New passwords must contain at least eight characters, whether chosen through Chronicle commands or the Identity API. Existing configured administrator passwords remain accepted; a shorter bootstrap password produces a warning without logging the password.
+
+Failed password sign-ins are throttled per node by normalized username and remote IP address. The password grant, `/api/security/login` and `/identity/login` share the same throttle. A successful check clears failures for that pair. Configure these values under `Cratis:Chronicle:Authentication:SignInThrottling`:
+
+| Property | Default | Description |
+| --- | --- | --- |
+| MaxFailedAttempts | 5 | Failures before lockout; set to 0 to disable throttling |
+| WindowSeconds | 300 | Window for counting failures |
+| LockoutSeconds | 300 | Duration before password checks can resume |
+| MaxTrackedEntries | 10000 | Maximum tracked username/address pairs per node |
+
+Expired entries are reclaimed on access. When the tracking limit is reached, new pairs are deferred until capacity becomes available; active lockouts are not evicted. Positive windows, durations and capacity are required; values below one are treated as one. Throttling is in memory, so restarting clears it and multiple nodes each have their own allowance. Client-credentials grants are validated separately by OpenIddict and are not covered by password sign-in throttling.
+
+Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxies or networks before relying on distinct client IPs. Without trusted forwarded headers, callers sharing a proxy also share its address and therefore the same per-username allowance. Do not trust forwarded addresses from arbitrary callers.
+
 ## Authentication behind an HTTPS reverse proxy
 
 With `tls.enabled=false`, the Chronicle backend listens using cleartext HTTP/2 only. Authentication in this topology requires an explicit HTTPS **external** `authentication.authority`; startup fails if it is missing or not HTTPS. The internal OpenIddict authority cannot safely derive a public issuer from a cleartext backend, so Chronicle does **not** serve `/connect/token` in h2c mode. OpenIddict never waives its HTTPS requirement based on certificate settings.

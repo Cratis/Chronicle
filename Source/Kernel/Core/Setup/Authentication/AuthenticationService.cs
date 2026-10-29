@@ -77,6 +77,8 @@ internal sealed class AuthenticationService(
         }
 #endif
 
+        WarnIfConfiguredPasswordIsShort(bootstrapPassword);
+
         var eventSequence = grainFactory.GetEventLog();
         var existingAdmin = (await userStorage.GetAll()).FirstOrDefault(user =>
             string.Equals(user.Username, effectiveUsername, StringComparison.OrdinalIgnoreCase));
@@ -221,6 +223,14 @@ internal sealed class AuthenticationService(
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
 #endif
+
+    void WarnIfConfiguredPasswordIsShort(string password)
+    {
+        if (password.Length is > 0 and < Security.PasswordPolicy.MinimumLength)
+        {
+            logger.ConfiguredAdminPasswordIsShort(Security.PasswordPolicy.MinimumLength);
+        }
+    }
 
     async Task EnsureConfiguredPassword(
         IEventSequence eventSequence,

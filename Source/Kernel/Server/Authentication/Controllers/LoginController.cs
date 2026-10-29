@@ -62,6 +62,14 @@ public class LoginController(
         }
 
         var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
+        if (result.IsLockedOut)
+        {
+            return new LoginResponse
+            {
+                Success = false,
+                ErrorMessage = "Too many failed sign-in attempts. Try again later."
+            };
+        }
         if (!result.Succeeded)
         {
             return new LoginResponse
