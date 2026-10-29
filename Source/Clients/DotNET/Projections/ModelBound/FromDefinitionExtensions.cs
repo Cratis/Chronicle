@@ -152,7 +152,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        var convertedContextPropertyName = ProjectionPropertyPaths.Resolve(contextPropertyName, namingPolicy, ProjectionPathRole.Source);
+        var convertedContextPropertyName = ProjectionPropertyPaths.RenderContextPath(contextPropertyName, namingPolicy);
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
     }
 
