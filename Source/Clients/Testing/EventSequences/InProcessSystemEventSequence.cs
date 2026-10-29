@@ -49,9 +49,9 @@ internal class InProcessSystemEventSequence : DispatchProxy
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
         var method = targetMethod!;
-        if (method.Name == nameof(KernelSequences::IEventSequence.Append) && args is { Length: 9 } && args[0] is KernelEvents::EventSourceId eventSourceId)
+        if (IsAppend(method, args, out var eventSourceId))
         {
-            var context = ContextFor(eventSourceId, args[2] as CorrelationId, args[3] as IEnumerable<KernelAuditing::Causation>, args[4] as KernelIdentities::Identity);
+            var context = ContextFor(eventSourceId, args![2] as CorrelationId, args[3] as IEnumerable<KernelAuditing::Causation>, args[4] as KernelIdentities::Identity);
             switch (args[1])
             {
                 case KernelSystemEvents::EventRedactionRequested request:
@@ -63,6 +63,23 @@ internal class InProcessSystemEventSequence : DispatchProxy
 
         var payload = args?.Length > 1 && args[1] is { } value ? $" for '{value.GetType().Name}'" : string.Empty;
         throw new GrainNotAvailableInTestScenario($"System event sequence operation '{method.Name}'{payload}");
+    }
+
+    static bool IsAppend(MethodInfo method, object?[]? args, out KernelEvents::EventSourceId eventSourceId)
+    {
+        eventSourceId = null!;
+        if (method.Name != nameof(KernelSequences::IEventSequence.Append) || args is not { Length: 9 })
+        {
+            return false;
+        }
+
+        if (args[0] is not KernelEvents::EventSourceId id)
+        {
+            return false;
+        }
+
+        eventSourceId = id;
+        return true;
     }
 
     static async Task<KernelSequences::AppendResult> Dispatch(Func<Task> handling, KernelEvents::EventContext context)
