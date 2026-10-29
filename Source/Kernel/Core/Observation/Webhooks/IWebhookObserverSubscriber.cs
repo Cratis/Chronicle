@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Orleans;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
