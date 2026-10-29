@@ -456,6 +456,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return childCreationResult;
         }
 
+        logger.FromParentHierarchyChildCreationKeyNotResolved(projection.Path, childKey.Value, @event.Context.EventType.Id.ToString(), @event.Context.SequenceNumber.Value);
         logger.FromParentHierarchyFallingBackToSink();
 
         return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, childKey);
@@ -480,9 +481,21 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             sink,
             returnParentEvent: false);
 
-        if (childCreationResult is not null)
+        if (childCreationResult?.KeyResolverResult is ResolvedKey resolvedCreationKey)
         {
-            return childCreationResult;
+            var resolvedKey = resolvedCreationKey.Key;
+            if (resolvedKey.ArrayIndexers.HasFor(projection.ChildrenPropertyPath))
+            {
+                return childCreationResult;
+            }
+
+            var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value));
+            if (!childArrayIndexers.HasFor(projection.ChildrenPropertyPath))
+            {
+                logger.FromParentHierarchyChildCreationKeyMissingIndexer(projection.Path, projection.ChildrenPropertyPath.Path, childKey.Value);
+            }
+
+            return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey with { ArrayIndexers = childArrayIndexers }));
         }
 
         if (Equals(parentKey.Value, childKey.Value))

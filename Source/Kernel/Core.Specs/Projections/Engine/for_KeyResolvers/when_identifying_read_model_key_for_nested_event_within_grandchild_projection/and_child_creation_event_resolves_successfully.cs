@@ -43,4 +43,5 @@ public class and_child_creation_event_resolves_successfully : given.a_three_leve
     [Fact] void should_return_root_document_key() => _result.Value.ShouldEqual(RootKey);
     [Fact] void should_have_feature_array_indexer() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "features").Identifier.ToString().ShouldEqual(FeatureKey);
     [Fact] void should_have_slice_array_indexer() => _result.ArrayIndexers.All.Single(_ => _.ArrayProperty == "slices").Identifier.ToString().ShouldEqual(SliceKey);
+    [Fact] void should_not_duplicate_the_child_indexer() => _result.ArrayIndexers.Count.ShouldEqual(2);
 }
