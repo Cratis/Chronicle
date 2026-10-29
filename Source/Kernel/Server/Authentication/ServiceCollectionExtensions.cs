@@ -94,19 +94,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Add ASP.NET Identity
-        services.AddPasswordSignInThrottling().AddIdentityCore<User>(options =>
-            {
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = Cratis.Chronicle.Security.PasswordPolicy.MinimumLength;
-                options.User.RequireUniqueEmail = false;
-            })
-            .AddUserStore<UserStore>()
-            .AddSignInManager<ChronicleSignInManager>()
-            .AddDefaultTokenProviders()
-            .AddApiEndpoints();
+        services.AddChronicleIdentity();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
@@ -178,6 +166,22 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    static void AddChronicleIdentity(this IServiceCollection services) =>
+        services.AddPasswordSignInThrottling().AddIdentityCore<User>(options =>
+            {
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequiredLength = Cratis.Chronicle.Security.PasswordPolicy.MinimumLength;
+                options.User.RequireUniqueEmail = false;
+            })
+            .AddUserStore<UserStore>()
+            .AddClaimsPrincipalFactory<ChronicleUserClaimsPrincipalFactory>()
+            .AddSignInManager<ChronicleSignInManager>()
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
 
     static IServiceCollection AddPasswordSignInThrottling(this IServiceCollection services)
     {

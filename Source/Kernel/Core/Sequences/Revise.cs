@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventType">The type of the event being revised.</param>
 /// <param name="Content">The revised content, as serialized JSON.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <remarks>
 /// A revision does not rewrite history - the original content is kept alongside the revision, so what the event
 /// said before stays answerable.
@@ -89,6 +89,6 @@ public record Revise(
                 protectedContent.ToJsonString()),
             correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
+            causedBy: principalAccessor.Current.ResolveCausedBy(CausedBy));
     }
 }

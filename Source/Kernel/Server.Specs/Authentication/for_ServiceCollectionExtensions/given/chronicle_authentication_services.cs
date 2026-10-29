@@ -33,6 +33,7 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(grainFactory);
+        services.AddSingleton(Substitute.For<Cratis.Chronicle.Storage.ISystemStorage>());
         services.AddChronicleAuthentication(new Cratis.Chronicle.Configuration.ChronicleOptions
         {
             Storage = new() { Type = Cratis.Chronicle.Storage.StorageType.InMemory },
