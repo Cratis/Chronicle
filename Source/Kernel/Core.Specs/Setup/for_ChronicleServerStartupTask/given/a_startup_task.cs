@@ -57,6 +57,7 @@ public class a_startup_task : Specification
     protected IReactorDefinitionsStorage _reactorDefinitionsStorage = null!;
     protected IReducerDefinitionsStorage _reducerDefinitionsStorage = null!;
     protected IPatchManager _patchManager = null!;
+    readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
     protected ILocalSiloDetails _localSiloDetails = null!;
     readonly List<string> _logMessages = [];
@@ -78,6 +79,8 @@ public class a_startup_task : Specification
 
     protected IEnumerable<string> LogMessages => _logMessages;
 
+    protected IReadOnlyList<TimeSpan> RequestedDelays => _timeProvider.Delays;
+
     void EstablishStartupTask()
     {
         _startupTask = new(
@@ -92,7 +95,7 @@ public class a_startup_task : Specification
             _localSiloDetails,
             _clusterReleases,
             new StartupLogger(_logMessages),
-            new an_immediate_time_provider());
+            _timeProvider);
     }
 
     void Establish()

@@ -87,7 +87,7 @@ internal sealed class ChronicleServerStartupTask(
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
 
-    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromMilliseconds(500);
+    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -247,6 +247,7 @@ internal sealed class ChronicleServerStartupTask(
                 {
                     // A v2 placement can arrive before the new silo's manifest has converged.
                 }
+
                 // The older activation deactivates once idle; back off exponentially, since under load its
                 // deactivation can take longer than a short fixed wait allows.
                 if (attempt < MaxAttempts - 1)
