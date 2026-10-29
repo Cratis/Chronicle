@@ -23,6 +23,8 @@ public sealed class ControllableClusterStorage : IClusterStorage, IDisposable
 
     public IEnumerable<IEventStoreStorage> CreatedStorages => _createdStorages;
 
+    public IEnumerable<EventStoreName> SavedEventStores => _saved.Keys;
+
     public void Provide(IEventStoreStorage storage) => _available.Enqueue(storage);
 
     public bool WaitForFirstCaller() => _firstCallerArrived.Wait(_timeout);
