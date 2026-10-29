@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Id">The unique identifier of the application.</param>
 /// <param name="ClientSecret">The new plain-text client secret to be hashed and stored.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Applications)]
 public record ChangeApplicationSecret(Concepts.Security.ApplicationId Id, ClientSecret ClientSecret)
 {

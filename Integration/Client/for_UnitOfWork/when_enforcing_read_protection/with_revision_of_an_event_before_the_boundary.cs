@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Transactions;
-
 using context = Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_protection.with_revision_of_an_event_before_the_boundary.context;
 
 namespace Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_protection;
@@ -13,27 +10,26 @@ public class with_revision_of_an_event_before_the_boundary(context context) : Gi
 {
     public class context(ChronicleFixture fixture) : given.a_read_protection_scenario(fixture)
     {
-        public EventSequenceNumber TailAfterRevision;
+        public int Count;
 
         async Task Because()
         {
             var first = await EventStore.EventLog.Append(Source, new given.StockSet(1));
             CreateUnit();
-            using var frame = Unit.EnforceReadProtection();
-            await Acquire();
-
-            // #4900 is deliberately excluded: a revision changes history without advancing the append tail.
-            await Independent(() => EventStore.EventLog.Revise(first.SequenceNumber, new given.StockSet(0)));
-            using (var reads = Unit.AllowReads(ReadAllowance.Advisory, "document the history-mutation exclusion"))
+            using (var frame = Unit.EnforceReadProtection())
             {
-                TailAfterRevision = await EventStore.EventLog.GetTailSequenceNumber();
+                await Acquire();
+                await Independent(() => EventStore.EventLog.Revise(first.SequenceNumber, new given.StockSet(0)));
+                await WaitForHistoryMutation();
+                Stage();
+                await Commit();
             }
-            Stage();
-            await Commit();
+            Count = await StoredCount();
         }
     }
 
-    [Fact] void should_preserve_the_original_read_value() => Context.Read.Instance!.Quantity.ShouldEqual(1);
-    [Fact] void should_not_advance_the_append_tail_for_a_revision() => Context.TailAfterRevision.ShouldEqual(EventSequenceNumber.First);
-    [Fact] void should_document_that_read_protection_does_not_detect_history_mutations() => Context.Unit.IsSuccess.ShouldBeTrue();
+    [Fact] void should_start_from_the_original_value() => Context.Read.Instance!.Quantity.ShouldEqual(1);
+    [Fact] void should_refuse_the_commit_after_a_history_mutation() => Context.Unit.IsSuccess.ShouldBeFalse();
+    [Fact] void should_report_a_decision_conflict() => Context.Unit.GetDecisionConflicts().ShouldNotBeEmpty();
+    [Fact] void should_not_append_the_staged_event() => Context.Count.ShouldEqual(1);
 }

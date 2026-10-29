@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <ProjectReference Include="../GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>

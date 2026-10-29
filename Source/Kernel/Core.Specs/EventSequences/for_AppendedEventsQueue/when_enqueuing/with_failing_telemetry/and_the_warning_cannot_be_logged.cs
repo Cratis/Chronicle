@@ -52,8 +52,9 @@ public class and_the_warning_cannot_be_logged : given.a_single_subscriber_with_q
         }
     };
 
-    [Fact] void should_still_deliver_the_healthy_partition() => _handledEventsPerPartition.ContainsKey(_healthyPartition).ShouldBeTrue();
-    [Fact] void should_keep_draining_the_queue() => _handledEventsPerPartition[_healthyPartition].Count.ShouldEqual(2);
+    [Fact] void should_not_deliver_later_partitions_past_the_hole() => _handledEventsPerPartition.ContainsKey(_healthyPartition).ShouldBeFalse();
+    [Fact] async Task should_keep_draining_the_queue() => (await _queue.GetSubscriptions()).ShouldBeEmpty();
+    [Fact] void should_trigger_catch_up_despite_the_telemetry_failure() => _observer.Received(1).CatchUp();
     [Fact] void should_log_the_original_failure_and_not_the_telemetry_failure() => _recordedLogs.Exceptions.ShouldContain(_handlingFailure);
     [Fact] void should_not_log_the_telemetry_failure() => _recordedLogs.Exceptions.Count(_ => _.Message == "The logger failed" || _.Message == "The measurement listener failed").ShouldEqual(0);
     [Fact] void should_still_count_the_suspected_undelivered_events() => _suspectedUndelivered.ShouldEqual(1);

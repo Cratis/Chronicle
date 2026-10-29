@@ -19,6 +19,7 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
     protected Reducer _grain;
     protected TestKitSilo _silo;
     protected ReducerDefinition _definition;
+    protected IObserver _observer;
 
     async Task Establish()
     {
@@ -44,6 +45,9 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
         namespacesGrain.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespacesGrain);
         _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
+        _observer = Substitute.For<IObserver>();
+        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
+        _silo.AddProbe(_ => _observer);
 
         // IsActive is false so that SetDefinitionAndSubscribe stops after scheduling replay, which is
         // the only part this specification is about.

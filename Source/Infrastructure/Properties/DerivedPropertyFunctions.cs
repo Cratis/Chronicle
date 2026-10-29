@@ -45,7 +45,13 @@ public static class DerivedPropertyFunctions
     {
         ["Week"] = new(
             "Week",
-            value => System.Globalization.ISOWeek.GetWeekOfYear(ToDateTimeOffset(value).DateTime))
+            value => ToDateTimeOffset(value).Week())
+        {
+            SupportedReceiverTypes = [typeof(DateTimeOffset), typeof(DateTime), typeof(DateOnly)]
+        },
+        ["WeekYear"] = new(
+            "WeekYear",
+            value => ToDateTimeOffset(value).WeekYear())
         {
             SupportedReceiverTypes = [typeof(DateTimeOffset), typeof(DateTime), typeof(DateOnly)]
         }

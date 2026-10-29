@@ -38,6 +38,11 @@ public class EventSequenceState
     public string? ConstraintIndexCatchUpRefusing { get; set; }
 
     /// <summary>
+    /// Gets or sets the mutation epoch advanced by every revision and redaction, or null before one was recorded.
+    /// </summary>
+    public ulong? MutationEpoch { get; set; }
+
+    /// <summary>
     /// Gets or sets the tail sequence numbers per event type.
     /// </summary>
     [Json]

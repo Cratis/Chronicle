@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +14,7 @@ public class on_postgresql(PostgreSqlFixture fixture) : given.a_postgresql_provi
     async Task Because()
     {
         await Admit();
-        await using var context = new Cluster.ClusterDbContext(new DbContextOptionsBuilder<Cluster.ClusterDbContext>().UseNpgsql(OptionsForProvider.Value.Storage.ConnectionDetails).AddConceptAsSupport().Options);
+        await using var context = new Cluster.ClusterDbContext(SpecDbContextOptions.Kernel<Cluster.ClusterDbContext>(OptionsForProvider.Value.Storage.ConnectionDetails));
         _migrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

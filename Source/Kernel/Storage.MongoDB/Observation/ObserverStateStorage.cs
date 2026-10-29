@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Reactive;
@@ -76,10 +77,14 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// fields the observer state does not own — such as legacy per-partition counts that are still awaiting
     /// migration on the next load — are left untouched instead of being wiped by a full replace.
     /// </remarks>
-    public async Task Save(Chronicle.Storage.Observation.ObserverState state)
+    public async Task<bool> Save(Chronicle.Storage.Observation.ObserverState state, EventSequenceId owner)
     {
         var document = state.ToMongoDB();
         var update = Builders<ObserverState>.Update
+            .Set(_ => _.Owner, owner)
+            .Set(_ => _.PartitionClaims, document.PartitionClaims)
+            .Set(_ => _.ObserverWideClaim, document.ObserverWideClaim)
+            .Set(_ => _.OwnershipRevision, document.OwnershipRevision)
             .Set(_ => _.AlertLifecycleId, document.AlertLifecycleId)
             .Set(_ => _.AlertRevision, document.AlertRevision)
             .Set(_ => _.DeliveryFences, document.DeliveryFences)
@@ -109,11 +114,25 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             update = ObserverTypeSetControlUpdate.Guard(update, document.TypeSetControl);
         }
 
-        await _collection.UpdateOneAsync(
-            os => os.Id == state.Identifier,
-            update,
-            new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Id, state.Identifier) &
+            (Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) | Builders<ObserverState>.Filter.Eq(_ => _.Owner, null));
+        try
+        {
+            var result = await _collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
+            return result.MatchedCount > 0 || result.UpsertedId is not null;
+        }
+        catch (MongoWriteException error) when (error.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // A matching owner may have won the first insert. Retry the guarded update without
+            // upserting so a different owner's row remains untouched.
+            var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            return result.MatchedCount > 0;
+        }
     }
+
+    /// <inheritdoc/>
+    public async Task ClaimOwnership(ObserverId observerId, EventSequenceId owner) =>
+        await _collection.UpdateOneAsync(_ => _.Id == observerId, Builders<ObserverState>.Update.Set(_ => _.Owner, owner)).ConfigureAwait(false);
 
     /// <inheritdoc/>
     public async Task Delete(ObserverId observerId) =>

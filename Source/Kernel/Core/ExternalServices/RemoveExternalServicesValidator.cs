@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Concepts.ExternalServices;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.ExternalServices;
@@ -18,6 +19,7 @@ internal class RemoveExternalServicesValidator : CommandValidator<RemoveExternal
     public RemoveExternalServicesValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.ExternalServices).NotEmpty().WithMessage("At least one external service is required.");
 
         // RuleForEach's own NotEmpty() checks the element reference against null/default, not the wrapped

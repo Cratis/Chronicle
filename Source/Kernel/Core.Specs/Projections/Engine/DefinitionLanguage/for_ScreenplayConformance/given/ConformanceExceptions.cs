@@ -43,6 +43,5 @@ public static class ConformanceExceptions
         ["context-not-a-member"] = new(ConformanceDirection.BothReject, "Chronicle rejects an event-context path its own EventContext cannot resolve at runtime (Screenplay only warns, PLAY0295, because its catalog is incomplete); the semantic model rejects it as well (PLAY0273)"),
 
         // The two sides disagree, and it is not known to be intentional.
-        ["children-every"] = new(ConformanceDirection.Disagreement, "Cratis/Chronicle#4701 - the semantic model keeps include-children on an 'every' below the projection level, while the visitor merges a child level's 'every' into a FromEveryDefinition whose IncludeChildren stays false"),
     };
 }

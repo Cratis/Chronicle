@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
+    /// Gets the server-local, single-use administrator recovery request.
+    /// </summary>
+    public AdministratorRecoveryOptions AdministratorRecovery { get; init; } = new();
+
+    /// <summary>
     /// Gets whether authentication is enforced. Defaults to <see langword="true"/>.
     /// </summary>
     /// <remarks>
@@ -20,6 +25,12 @@ public class Authentication
     /// server, leaving this off publishes the whole event store to anyone who can open a socket.
     /// </remarks>
     public bool Enabled { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether to enforce administrator authorization for System-store operational recovery.
+    /// Defaults to audit-only; administrator management is always enforced.
+    /// </summary>
+    public bool EnforceAdministratorPolicyForOperations { get; init; }
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.

@@ -88,6 +88,11 @@ public class ProjectionFactory(
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
+        if (readModelDefinition?.Sink is null)
+        {
+            throw new ReadModels.ReadModelNotFound(definition.ReadModel);
+        }
+
         readModelDefinition.Sink.EnsureReadModelSupported();
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
@@ -96,7 +101,16 @@ public class ProjectionFactory(
             throw new EventGenerationDeliveryNotSupported();
         }
 
+        // The fingerprint identifies the stored definition; ProjectionsManager compares it against the stored definition.
         var fingerprint = DefinitionFingerprintFor(definition);
+        var schemas = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? [.. eventTypeSchemas];
+        var rewrittenEventTypes = new List<EventType>();
+        definition = LegacyEventSourceIdKeys.Normalize(definition, schemas, rewrittenEventTypes);
+        foreach (var eventType in rewrittenEventTypes.Distinct())
+        {
+            LegacyEventSourceIdKeys.LogRewritten(logger, definition.Identifier.Value, eventType.Id.Value);
+        }
+
         var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
         foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
         {
@@ -110,7 +124,7 @@ public class ProjectionFactory(
         var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
         var projection = (Projection)await CreateProjectionFrom(
             eventStore,
-            new(eventSequenceStorage, eventTypesStorage, eventTypeSchemas, readModelDefinition),
+            new(eventSequenceStorage, eventTypesStorage, schemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
@@ -385,6 +399,21 @@ public class ProjectionFactory(
     /// </remarks>
     static bool IsConstantExpression(PropertyExpression? key) =>
         key is not null && key.Value.Length != 0 && new ValueExpressionResolver().CanResolve(key.Value);
+
+    static bool KeyConversionPreservesIdentity(IProjection projection, PropertyPath identifiedByProperty)
+    {
+        var schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(identifiedByProperty);
+
+        // Missing properties default to string in EventValueKeyExpressionResolver. Only a plain string
+        // without a format or schema composition is guaranteed not to normalize distinct source ids.
+        return schemaProperty is null ||
+            (schemaProperty.Type == JsonObjectType.String &&
+             string.IsNullOrEmpty(schemaProperty.Format) &&
+             !schemaProperty.HasReference &&
+             schemaProperty.AllOf.Count == 0 &&
+             schemaProperty.AnyOf.Count == 0 &&
+             schemaProperty.OneOf.Count == 0);
+    }
 
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
         projectionDefinition.InitialModelState.Count == 0 ?
@@ -1241,7 +1270,8 @@ public class ProjectionFactory(
     {
         if (CanResolveKey(key))
         {
-            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty), false);
+            return (keyExpressionResolvers.Resolve(projection, key, actualIdentifiedByProperty),
+                key.Value == WellKnownExpressions.EventSourceId && KeyConversionPreservesIdentity(projection, actualIdentifiedByProperty));
         }
 
         return (keyResolvers.FromEventSourceId, true);

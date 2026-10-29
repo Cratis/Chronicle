@@ -40,6 +40,7 @@ public class Reducer(
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
 {
     IObserver? _observer;
+    ReducerDefinition? _deferredDefinition;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
@@ -57,6 +58,11 @@ public class Reducer(
     public async Task SetDefinitionAndSubscribe(ReducerDefinition definition)
     {
         var key = ReducerKey.Parse(this.GetPrimaryKeyString());
+        _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
+        if (await DeferRegistrationIfServedByWebhook(definition))
+        {
+            return;
+        }
         var previousDefinition = State;
         var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
@@ -67,7 +73,7 @@ public class Reducer(
         {
             if (_subscribed)
             {
-                await _observer!.Unsubscribe();
+                await _observer.Unsubscribe();
                 _subscribed = false;
             }
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
@@ -77,35 +83,11 @@ public class Reducer(
 
         if (!_subscribed && definition.IsActive)
         {
-            _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
-
-            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
-
-            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
-            {
-                await _observer.SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(
-                    ObserverType.Reducer,
-                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
-                    localSiloDetails.SiloAddress,
-                    definition.GenerationDelivery,
-                    connectedClient,
-                    filters: definition.Filters);
-            }
-            else
-            {
-                await _observer.Subscribe<IReducerObserverSubscriber>(
-                    ObserverType.Reducer,
-                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
-                    localSiloDetails.SiloAddress,
-                    connectedClient,
-                    filters: definition.Filters);
-            }
-
-            _subscribed = true;
+            await SubscribeToObserver(key, definition);
         }
         else if (_subscribed && !definition.IsActive)
         {
-            await _observer!.Unsubscribe();
+            await _observer.Unsubscribe();
             _subscribed = false;
         }
     }
@@ -145,6 +127,11 @@ public class Reducer(
     /// <inheritdoc/>
     public async Task KeepSubscription(ReducerDefinition definition)
     {
+        if (await CompleteDeferredRegistration())
+        {
+            return;
+        }
+
         if (!definition.IsActive)
         {
             return;
@@ -152,6 +139,10 @@ public class Reducer(
 
         var key = new ObserverKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         _observer ??= GrainFactory.GetGrain<IObserver>(key);
+        if (await WaitIfServedByWebhook())
+        {
+            return;
+        }
 
         if (!await _observer.KnowsClient(_observerKey.ConnectionId))
         {
@@ -162,16 +153,94 @@ public class Reducer(
 
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
-            await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
-                ObserverType.Reducer,
-                definition.EventTypes.Select(_ => _.EventType).ToArray(),
-                localSiloDetails.SiloAddress,
-                connectedClient,
-                filters: definition.Filters,
-                generationDelivery: definition.GenerationDelivery);
+            try
+            {
+                await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    filters: definition.Filters,
+                    generationDelivery: definition.GenerationDelivery);
+            }
+            catch (ObserverServedByAnotherTransport)
+            {
+                WaitForWebhook();
+                return;
+            }
         }
 
         _subscribed = true;
+    }
+
+    async Task<bool> DeferRegistrationIfServedByWebhook(ReducerDefinition definition)
+    {
+        var waiting = await WaitIfServedByWebhook();
+        _deferredDefinition = waiting ? definition : null;
+        return waiting;
+    }
+
+    async Task<bool> CompleteDeferredRegistration()
+    {
+        if (_deferredDefinition is not { } definition)
+        {
+            return false;
+        }
+
+        await SetDefinitionAndSubscribe(definition);
+        return true;
+    }
+
+    async Task<bool> WaitIfServedByWebhook()
+    {
+        if (!(await _observer!.GetSubscription()).IsServedByWebhook)
+        {
+            return false;
+        }
+
+        WaitForWebhook();
+        return true;
+    }
+
+    void WaitForWebhook()
+    {
+        _subscribed = false;
+        logger.WaitingForWebhook(_observerKey!.ObserverId);
+    }
+
+    async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition)
+    {
+        _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
+        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
+
+        try
+        {
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
+            else
+            {
+                await _observer.Subscribe<IReducerObserverSubscriber>(
+                    ObserverType.Reducer,
+                    definition.EventTypes.Select(_ => _.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    filters: definition.Filters);
+            }
+
+            _subscribed = true;
+        }
+        catch (ObserverServedByAnotherTransport)
+        {
+            WaitForWebhook();
+        }
     }
 
     async Task EvolveForAllNamespaces(

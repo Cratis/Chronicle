@@ -374,6 +374,7 @@ message ConcurrencyScope {
    string EventSourceType = 5;
    repeated EventType EventTypes = 6;
    bool ExpectsNoMatchingEvent = 7;
+   uint64 MutationEpoch = 8;
 }
 message ConcurrencyViolation {
    string EventSourceId = 1;
@@ -509,8 +510,13 @@ message EventSequenceNamesResponse {
    string Id = 1;
    string Name = 2;
 }
+message EventSequencePageResponse {
+   repeated AppendedEventResponse Events = 1;
+   uint64 Next = 2;
+}
 message EventSequenceTailResponse {
    uint64 SequenceNumber = 1;
+   uint64 MutationEpoch = 2;
 }
 message EventSourceConcurrencyScope {
    string EventSourceId = 1;
@@ -659,6 +665,21 @@ message NamedTagQueryCriterion {
    repeated string Values = 2;
    bool AnyValue = 3;
 }
+message PageRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   uint64 From = 4;
+   int32 Count = 5;
+   bool Backward = 6;
+   uint64 Until = 7;
+   string EventSourceId = 8;
+   string EventSourceType = 9;
+   string EventStreamType = 10;
+   string EventStreamId = 11;
+   string EventTypeIds = 12;
+   string Tags = 13;
+}
 message ParseResolutionRequest {
    string Resolution = 1;
 }
@@ -688,6 +709,14 @@ message QueryEventsWithNamedTagsRequest {
    string Tags = 10;
    SerializableDateTimeOffset OccurredFrom = 11;
    SerializableDateTimeOffset OccurredTo = 12;
+}
+message QueryResult_EventSequencePageResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   EventSequencePageResponse Data = 6;
 }
 message QueryResult_EventSequenceTailResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -884,6 +913,7 @@ message TailSequenceNumberRequest {
    string EventSourceType = 6;
    string EventStreamId = 7;
    string EventStreamType = 8;
+   bool IncludeMutationEpoch = 9;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -931,6 +961,7 @@ service EventSequences {
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
    rpc IsStreamScopeCompleted (IsStreamScopeCompletedRequest) returns (QueryResult_StreamScopeCompletionResponse);
    rpc MetadataAt (MetadataAtRequest) returns (QueryResult_IEnumerable_EventMetadataResponse);
+   rpc Page (PageRequest) returns (QueryResult_EventSequencePageResponse);
    rpc ParseResolution (ParseResolutionRequest) returns (QueryResult_HistogramResolution);
    rpc QueryEvents (QueryEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc QueryEventsWithNamedTags (QueryEventsWithNamedTagsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);

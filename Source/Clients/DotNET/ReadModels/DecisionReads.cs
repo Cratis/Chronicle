@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.ReadModels;
 public sealed partial class DecisionReads : IDecisionReads
 {
     static readonly ConditionalWeakTable<IEventStore, IDecisionReads> _instances = new();
+    static readonly TimeSpan _dehydrateTimeout = TimeSpan.FromSeconds(10);
     readonly IEventStore _eventStore;
     readonly Projections.Projections _projections;
     readonly IJsonSchemaGenerator _schemas;
@@ -194,20 +195,25 @@ public sealed partial class DecisionReads : IDecisionReads
             // Capture both tails before starting the fold. The narrow tail is only a diagnostic;
             // the unfiltered tail is the boundary of the concurrency scope.
             var boundaryTask = services.Sequences.TailSequenceNumber(
-                new() { EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log },
+                new() { EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log, IncludeMutationEpoch = true },
                 callContext);
             var probeTask = services.Sequences.TailSequenceNumber(
                 new()
                 {
-                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log,
-                    EventSourceId = source.Value, EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
+                    EventStore = _eventStore.Name,
+                    Namespace = _eventStore.Namespace,
+                    EventSequenceId = EventSequenceId.Log,
+                    EventSourceId = source.Value,
+                    EventTypeIds = string.Join(',', types.Select(_ => _.Id.Value)),
                     EventSourceType = streamScope?.EventSourceType?.Value ?? string.Empty,
                     EventStreamType = streamScope?.EventStreamType.Value ?? string.Empty,
                     EventStreamId = streamScope?.EventStreamId.Value ?? string.Empty
                 },
                 callContext);
             await Task.WhenAll(boundaryTask, probeTask);
-            var boundary = (EventSequenceNumber)(await boundaryTask).EnsureSuccess().SequenceNumber;
+            var boundaryTail = (await boundaryTask).EnsureSuccess();
+            var boundary = (EventSequenceNumber)boundaryTail.SequenceNumber;
+            var mutationEpoch = boundaryTail.MutationEpoch;
             var probe = (EventSequenceNumber)(await probeTask).EnsureSuccess().SequenceNumber;
             var session = Guid.NewGuid();
             GetInstanceByKeyResponse result;
@@ -233,7 +239,7 @@ public sealed partial class DecisionReads : IDecisionReads
             {
                 // Cleanup is advisory and must not mask the read result. Observe errors even when
                 // the server has already deactivated the session.
-                _ = Dehydrate(session, type, key, streamScope, cancellationToken);
+                _ = Dehydrate(session, type, key, streamScope);
             }
             if (streamScoped && !result.StreamScoped)
             {
@@ -251,8 +257,8 @@ public sealed partial class DecisionReads : IDecisionReads
                 : JsonSerializer.Deserialize<T>(result.ReadModel, _jsonOptions);
             var scopeBoundary = boundary.IsUnavailable ? EventSequenceNumber.BeforeFirst : boundary;
             return streamScope is null
-                ? new DecisionRead<T>(key, instance, _eventStore.Name, _eventStore.Namespace, scopeBoundary, types)
-                : new DecisionRead<T>(key, instance, _eventStore.Name, _eventStore.Namespace, scopeBoundary, types, streamScope);
+                ? new DecisionRead<T>(key, instance, _eventStore.Name, _eventStore.Namespace, scopeBoundary, mutationEpoch, types)
+                : new DecisionRead<T>(key, instance, _eventStore.Name, _eventStore.Namespace, scopeBoundary, types, streamScope, mutationEpoch);
         }
         throw new InvalidOperationException("Unreachable decision read retry state.");
     }
@@ -326,8 +332,10 @@ public sealed partial class DecisionReads : IDecisionReads
 
     bool IsReducer(Type model) => _eventStore.Reducers.HasFor(model);
 
-    async Task Dehydrate(Guid session, Type type, ReadModelKey key, DecisionReadStreamScope? streamScope, CancellationToken cancellationToken)
+    async Task Dehydrate(Guid session, Type type, ReadModelKey key, DecisionReadStreamScope? streamScope)
     {
+        using var cancellation = new CancellationTokenSource(_dehydrateTimeout);
+        var cancellationToken = cancellation.Token;
         try
         {
             var services = await ((IChronicleServicesAccessor)_eventStore.Connection).GetServices(cancellationToken);

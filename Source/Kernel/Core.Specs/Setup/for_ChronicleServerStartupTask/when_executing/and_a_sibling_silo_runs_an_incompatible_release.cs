@@ -17,6 +17,8 @@ public class and_a_sibling_silo_runs_an_incompatible_release : given.a_startup_t
 
     async Task Because() => _error = await Catch.Exception(Execute);
 
+    [Fact] void should_log_the_release_mix() => LogMessages.Any(_ => _.Contains("unpublished: 0", StringComparison.Ordinal) && _.Contains(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_request_the_release_summary() => _clusterReleases.Received(1).Summarize();
     [Fact] void should_fail() => _error.ShouldBeOfExactType<TypeLoadException>();
     [Fact] async Task should_not_have_tried_again() => await _jobsManager.Received(1).Rehydrate();
 }

@@ -283,6 +283,21 @@ internal static partial class ProjectionReadModelProcessor
         new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
 
     /// <summary>
+    /// Creates a projection factory that uses the same resolvers as projection folding.
+    /// </summary>
+    /// <param name="storage">The storage the factory reads from.</param>
+    /// <returns>The <see cref="KernelProjectionEngine::ProjectionFactory"/>.</returns>
+    internal static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>
+        new(
+            _readModelPropertyExpressionResolvers,
+            _eventValueProviderExpressionResolvers,
+            _keyExpressionResolvers,
+            _expandoObjectConverter,
+            _keyResolvers,
+            storage,
+            FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
+
+    /// <summary>
     /// Gets the identifier schema used by native projection folding.
     /// </summary>
     /// <param name="readModelType">The model type.</param>
@@ -335,7 +350,10 @@ internal static partial class ProjectionReadModelProcessor
                 continue;
             }
 
-            instances[new EventSourceId(keyValue.ToString()!)] = instance;
+            var key = keyValue is IComparable comparable
+                ? EventSourceId<IComparable>.ConvertToString(comparable)
+                : keyValue.ToString()!;
+            instances[new EventSourceId(key)] = instance;
         }
 
         return instances;
@@ -429,16 +447,6 @@ internal static partial class ProjectionReadModelProcessor
 
         return initialState;
     }
-
-    static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>
-        new(
-            _readModelPropertyExpressionResolvers,
-            _eventValueProviderExpressionResolvers,
-            _keyExpressionResolvers,
-            _expandoObjectConverter,
-            _keyResolvers,
-            storage,
-            FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
 
     static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,

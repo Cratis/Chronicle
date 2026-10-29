@@ -110,10 +110,19 @@ public class ReadModelMigrator(
             await DatabaseSchemaLock.Run(context, () => AddMissingColumns(tableName, context, missingColumns));
         }
 
+        var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
         if (await ShadowColumnIndexes.NeedsReconciliation(context))
         {
-            var execution = new Sinks.ReadModelIndexOperations.Execution(Online: true, CommandTimeout: (options?.Value.Sql ?? new()).ShadowIndexDdlTimeoutSeconds, Logger: logger);
             await DatabaseSchemaLock.Run(context, () => ShadowColumnIndexes.Ensure(context, execution, timeProvider ?? TimeProvider.System));
+        }
+
+        // Outside the database-wide lock and only when the marker index is missing: the build takes only its own
+        // table's lock. When another kernel is still building it, leave the table uncached so a later activation
+        // ensures the index again.
+        if (await InitializedMarkerIndex.NeedsIndex(context) &&
+            !await InitializedMarkerIndex.Ensure(context, execution, timeProvider ?? TimeProvider.System))
+        {
+            return;
         }
         _columnMigrations.TryAdd(cacheKey, true);
     }

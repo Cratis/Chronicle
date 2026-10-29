@@ -38,6 +38,7 @@ public class the_job_step : Specification
         _observer = Substitute.For<IObserver>();
         _storage = Substitute.For<Storage.IStorage>();
         _silo.AddService(_storage);
+        _silo.AddService(Substitute.For<IObserverServiceClient>());
         _observerSubscriber = Substitute.For<ISomeObserverType>();
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);

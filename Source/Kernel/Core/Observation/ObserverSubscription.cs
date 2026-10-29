@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Observation;
@@ -51,6 +52,16 @@ public record ObserverSubscription(
     /// Check whether the subscription is subscribed.
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
+
+    /// <summary>
+    /// Gets a value indicating whether a webhook serves this subscription.
+    /// </summary>
+    public bool IsServedByWebhook => IsSubscribed && SubscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber));
+
+    /// <summary>
+    /// Gets a value indicating whether a connected client serves this subscription.
+    /// </summary>
+    public bool IsServedByConnectedClient => IsSubscribed && Targets.Any(target => target.ConnectedClient is not null);
 
     /// <summary>
     /// Gets a value indicating whether the subscriber is a projection that collapses several event sources onto
