@@ -46,6 +46,14 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         return (e) => Convert(targetSchemaProperty, resolver!.Resolve(expression)(e));
     }
 
+    static bool TryGetWrappedScalarValue(IDictionary<string, object> input, JsonSchemaProperty schemaProperty, ITypeFormats typeFormats, out object? value)
+    {
+        value = null;
+        return input.Count == 1 &&
+            input.TryGetValue("value", out value) &&
+            schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) is not null;
+    }
+
     void ThrowIfUnsupportedEventValueExpression(JsonSchemaProperty targetSchemaProperty, string expression, IEventValueProviderExpressionResolver? resolver)
     {
         if (resolver == default)
@@ -113,8 +121,7 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         if (input is ExpandoObject)
         {
             var expandoObject = (input as IDictionary<string, object>)!;
-            if (expandoObject.Count == 1 &&
-                expandoObject.TryGetValue("value", out var conceptValue))
+            if (TryGetWrappedScalarValue(expandoObject, schemaProperty, typeFormats, out var conceptValue))
             {
                 return Convert(schemaProperty, conceptValue!);
             }
