@@ -56,6 +56,21 @@ internal sealed class ConstraintIndexCatchUpSlots
     }
 
     /// <summary>
+    /// Releases retained memory and execution admission of a fold that cannot progress, unless writes are under refusal.
+    /// </summary>
+    /// <param name="owner">The sequence activation.</param>
+    /// <param name="refusing">Whether the durable refusal marker is set.</param>
+    internal void Yield(object owner, bool refusing)
+    {
+        lock (_gate)
+        {
+            if (refusing) return;
+            _turnOwners.Remove(owner);
+            _memoryOwners.Remove(owner);
+        }
+    }
+
+    /// <summary>
     /// Releases both retained memory and execution admission.
     /// </summary>
     /// <param name="owner">The completed or deactivating sequence.</param>
