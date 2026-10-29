@@ -54,6 +54,33 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats) is not null;
     }
 
+    static JsonSchemaProperty GetItemSchemaProperty(JsonSchemaProperty schemaProperty)
+    {
+        if (schemaProperty.Item is not { } item)
+        {
+            return schemaProperty;
+        }
+
+        if (item is JsonSchemaProperty property)
+        {
+            return property;
+        }
+
+        var actualItem = item.ActualSchema;
+        var itemSchemaProperty = new JsonSchemaProperty
+        {
+            Type = actualItem.Type,
+            Format = actualItem.Format,
+            Item = actualItem.Item
+        };
+        foreach (var itemProperty in actualItem.GetFlattenedProperties())
+        {
+            itemSchemaProperty.Properties[itemProperty.Name] = itemProperty;
+        }
+
+        return itemSchemaProperty;
+    }
+
     void ThrowIfUnsupportedEventValueExpression(JsonSchemaProperty targetSchemaProperty, string expression, IEventValueProviderExpressionResolver? resolver)
     {
         if (resolver == default)
@@ -156,10 +183,11 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             inputType.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>));
         if (!isDictionary && inputType.IsEnumerable())
         {
+            var itemSchemaProperty = GetItemSchemaProperty(schemaProperty);
             var children = new List<object>();
             foreach (var child in (input as IEnumerable)!)
             {
-                children.Add(Convert(schemaProperty, child));
+                children.Add(Convert(itemSchemaProperty, child));
             }
 
             return children;
