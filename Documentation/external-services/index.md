@@ -80,7 +80,9 @@ host just like relative routes. Redirects and system proxies are disabled. DNS i
 opening each connection. Requests using explicit host allowances close their connections after each
 request so one store's approval cannot be reused by another, even when an approved host currently
 resolves publicly. Unapproved public destinations retain pooling in modes that permit them. This policy covers HTTP
-capture polling, not database endpoints or OAuth token acquisition by external-service authentication.
+capture polling and its OAuth discovery and token requests, not database endpoints. Approve OAuth
+identity and token hosts in `ExternalServices` as well as the capture source host; webhook approvals
+do not apply to capture authentication.
 
 Before upgrading a deployment with local capture APIs, explicitly approve the trusted hosts or select
 `Warn` as a migration setting. Review other private-network hosts before choosing

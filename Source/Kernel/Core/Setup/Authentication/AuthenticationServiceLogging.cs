@@ -56,6 +56,9 @@ internal static partial class AuthenticationServiceLogging
     [LoggerMessage(LogLevel.Warning, "Initial administrator setup token: {SetupToken}. Use this token in the Workbench to set the initial password. Remove it from configuration after setup.")]
     internal static partial void InitialAdministratorSetupToken(this ILogger<AuthenticationService> logger, string setupToken);
 
+    [LoggerMessage(LogLevel.Warning, "Initial administrator setup requires the configured Authentication:InitialAdminSetupToken. Remove it from configuration after setup.")]
+    internal static partial void ConfiguredInitialAdministratorSetupTokenRequired(this ILogger<AuthenticationService> logger);
+
     [LoggerMessage(LogLevel.Debug, "Checking for existing default client credentials with ClientId: {ClientId}")]
     internal static partial void CheckingForDefaultClientCredentials(this ILogger<AuthenticationService> logger, string clientId);
 

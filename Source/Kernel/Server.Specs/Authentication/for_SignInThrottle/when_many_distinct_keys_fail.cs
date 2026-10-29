@@ -11,6 +11,6 @@ public class when_many_distinct_keys_fail : given.a_sign_in_throttle
         Create();
     }
     void Because() => Parallel.For(0, 1000, index => Fail(5, $"user-{index}"));
-    [Fact] void should_bound_memory() => _throttle.TrackedEntries.ShouldEqual(10);
-    [Fact] void should_defer_new_pairs_until_capacity_is_available() => _throttle.IsLockedOut("new-user", "192.0.2.1").ShouldBeTrue();
+    [Fact] void should_bound_memory() => _throttle.TrackedEntries.ShouldEqual(20);
+    [Fact] void should_allow_an_untracked_user() => _throttle.IsLockedOut("new-user", "192.0.2.1").ShouldBeFalse();
 }

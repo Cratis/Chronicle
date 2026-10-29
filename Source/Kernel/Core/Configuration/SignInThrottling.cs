@@ -24,7 +24,7 @@ public class SignInThrottling
     public int LockoutSeconds { get; init; } = 300;
 
     /// <summary>
-    /// Gets the maximum number of tracked username and address pairs.
+    /// Gets the maximum counters in each of the username and username/address tables.
     /// </summary>
     public int MaxTrackedEntries { get; init; } = 10000;
 }

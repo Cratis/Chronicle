@@ -1,27 +1,34 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
+using System.Net;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
 /// <summary>
-/// Tracks a bounded set of failed sign-ins on this node.
+/// Tracks bounded username and username/address failure counters on this node.
 /// </summary>
 /// <param name="options">The Chronicle options.</param>
 /// <param name="timeProvider">The clock.</param>
 public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider timeProvider) : ISignInThrottle
 {
     readonly SignInThrottling _settings = options.Value.Authentication.SignInThrottling;
-    readonly ConcurrentDictionary<(string Username, string Address), Entry> _entries = new();
+    readonly Dictionary<(string Username, string Address), Entry> _users = new();
+    readonly Dictionary<(string Username, string Address), Entry> _addresses = new();
     readonly Lock _lock = new();
 
     /// <summary>
-    /// Gets the number of currently tracked pairs.
+    /// Gets the number of currently tracked counters.
     /// </summary>
-    internal int TrackedEntries => _entries.Count;
+    internal int TrackedEntries
+    {
+        get
+        {
+            lock (_lock) return _users.Count + _addresses.Count;
+        }
+    }
 
     /// <inheritdoc/>
     public bool IsLockedOut(string username, string address)
@@ -30,11 +37,9 @@ public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider tim
         lock (_lock)
         {
             var now = timeProvider.GetUtcNow();
-            Prune(now);
-            if (_entries.TryGetValue(Key(username, address), out var entry)) return entry.LockedUntil > now;
-
-            // Keep active entries rather than evicting another caller's lockout when capacity is reached.
-            return _entries.Count >= Math.Max(1, _settings.MaxTrackedEntries);
+            Prune(_users, now);
+            Prune(_addresses, now);
+            return Locked(_users, Normalize((username, string.Empty)), now) || Locked(_addresses, Normalize((username, address)), now);
         }
     }
 
@@ -45,41 +50,66 @@ public class SignInThrottle(IOptions<ChronicleOptions> options, TimeProvider tim
         lock (_lock)
         {
             var now = timeProvider.GetUtcNow();
-            Prune(now);
-            var key = Key(username, address);
-            if (!_entries.TryGetValue(key, out var entry))
-            {
-                if (_entries.Count >= Math.Max(1, _settings.MaxTrackedEntries)) return;
-                entry = new(0, now.AddSeconds(Math.Max(1, _settings.WindowSeconds)), DateTimeOffset.MinValue);
-            }
-            if (entry.LockedUntil > now) return;
-            var failures = entry.Failures + 1;
-            _entries[key] = entry with
-            {
-                Failures = failures,
-                LockedUntil = failures >= _settings.MaxFailedAttempts
-                    ? now.AddSeconds(Math.Max(1, _settings.LockoutSeconds))
-                    : DateTimeOffset.MinValue
-            };
+            Record(_users, Normalize((username, string.Empty)), now);
+            Record(_addresses, Normalize((username, address)), now);
         }
     }
 
     /// <inheritdoc/>
     public void Succeeded(string username, string address)
     {
-        lock (_lock) _entries.TryRemove(Key(username, address), out _);
-    }
-
-    static (string Username, string Address) Key(string username, string address) => (username.ToUpperInvariant(), address);
-
-    void Prune(DateTimeOffset now)
-    {
-        foreach (var (key, entry) in _entries)
+        lock (_lock)
         {
-            var expires = entry.LockedUntil == DateTimeOffset.MinValue ? entry.WindowEnd : entry.LockedUntil;
-            if (expires <= now) _entries.TryRemove(key, out _);
+            _users.Remove(Normalize((username, string.Empty)));
+            _addresses.Remove(Normalize((username, address)));
         }
     }
 
-    sealed record Entry(int Failures, DateTimeOffset WindowEnd, DateTimeOffset LockedUntil);
+    static (string Username, string Address) Normalize((string Username, string Address) key) => (key.Username.ToUpperInvariant(), Bucket(key.Address));
+
+    static string Bucket(string address)
+    {
+        if (!IPAddress.TryParse(address, out var ip)) return address;
+        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+        var bytes = ip.GetAddressBytes();
+        if (bytes.Length == 16) Array.Clear(bytes, 8, 8);
+        return new IPAddress(bytes).ToString();
+    }
+
+    static bool Locked(Dictionary<(string Username, string Address), Entry> entries, (string Username, string Address) key, DateTimeOffset now) =>
+        entries.TryGetValue(key, out var entry) && entry.LockedUntil > now;
+
+    static void Prune(Dictionary<(string Username, string Address), Entry> entries, DateTimeOffset now)
+    {
+        foreach (var key in entries.Where(pair => pair.Value.Expires <= now).Select(pair => pair.Key).ToArray()) entries.Remove(key);
+    }
+
+    void Record(Dictionary<(string Username, string Address), Entry> entries, (string Username, string Address) key, DateTimeOffset now)
+    {
+        Prune(entries, now);
+        if (!entries.TryGetValue(key, out var entry))
+        {
+            if (entries.Count >= Math.Max(1, _settings.MaxTrackedEntries))
+            {
+                // Prefer an unlocked counter, then the oldest counter. Admission never locks out an untracked caller.
+                var oldest = entries.OrderBy(pair => pair.Value.LockedUntil > now).ThenBy(pair => pair.Value.Created).First().Key;
+                entries.Remove(oldest);
+            }
+            entry = new(0, now, now.AddSeconds(Math.Max(1, _settings.WindowSeconds)), DateTimeOffset.MinValue);
+        }
+        if (entry.LockedUntil > now) return;
+        var failures = entry.Failures + 1;
+        entries[key] = entry with
+        {
+            Failures = failures,
+            LockedUntil = failures >= _settings.MaxFailedAttempts
+                ? now.AddSeconds(Math.Max(1, _settings.LockoutSeconds))
+                : DateTimeOffset.MinValue
+        };
+    }
+
+    sealed record Entry(int Failures, DateTimeOffset Created, DateTimeOffset WindowEnd, DateTimeOffset LockedUntil)
+    {
+        public DateTimeOffset Expires => LockedUntil == DateTimeOffset.MinValue ? WindowEnd : LockedUntil;
+    }
 }

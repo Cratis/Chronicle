@@ -32,16 +32,16 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 
 New passwords must contain at least eight characters, whether chosen through Chronicle commands or the Identity API. Existing configured administrator passwords remain accepted; a shorter bootstrap password produces a warning without logging the password.
 
-Failed password sign-ins are throttled per node by normalized username and remote IP address. The password grant, `/api/security/login` and `/identity/login` share the same throttle. A successful check clears failures for that pair. Configure these values under `Cratis:Chronicle:Authentication:SignInThrottling`:
+Failed password sign-ins are throttled per node by normalized username, with additional username/address counters. Username counters apply across addresses; IPv6 addresses share a /64 bucket, and IPv4-mapped IPv6 addresses use their IPv4 address. The password grant, `/api/security/login` and `/identity/login` share the same throttle. A successful check clears the username counter and its current address bucket. Configure these values under `Cratis:Chronicle:Authentication:SignInThrottling`:
 
 | Property | Default | Description |
 | --- | --- | --- |
 | MaxFailedAttempts | 5 | Failures before lockout; set to 0 to disable throttling |
 | WindowSeconds | 300 | Window for counting failures |
 | LockoutSeconds | 300 | Duration before password checks can resume |
-| MaxTrackedEntries | 10000 | Maximum tracked username/address pairs per node |
+| MaxTrackedEntries | 10000 | Maximum counters in each of the username and username/address tables per node |
 
-Expired entries are reclaimed on access. When the tracking limit is reached, new pairs are deferred until capacity becomes available; active lockouts are not evicted. Positive windows, durations and capacity are required; values below one are treated as one. Throttling is in memory, so restarting clears it and multiple nodes each have their own allowance. Client-credentials grants are validated separately by OpenIddict and are not covered by password sign-in throttling.
+Expired entries are reclaimed on access. Each table admits new counters at capacity by replacing the oldest unlocked counter, or the oldest locked counter if all are locked. Capacity alone never locks out an untracked user. This bounds storage to twice `MaxTrackedEntries` counters; capacity pressure can shorten a counter's retention, including a lockout when all retained counters are locked. Positive windows, durations and capacity are required; values below one are treated as one. Throttling is in memory, so restarting clears it and multiple nodes each have their own allowance. Client-credentials grants are validated separately by OpenIddict and are not covered by password sign-in throttling.
 
 Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxies or networks before relying on distinct client IPs. Without trusted forwarded headers, callers sharing a proxy also share its address and therefore the same per-username allowance. Do not trust forwarded addresses from arbitrary callers.
 
@@ -94,9 +94,9 @@ Keep administrator configuration consistent across silos. Changing the bootstrap
 
 ### Interactive initial setup
 
-If no administrator password is configured, Chronicle logs an initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
+If no administrator password or setup token is configured, Chronicle logs a generated initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
 
-For automated deployments, supply `authentication.initialAdminSetupToken` through your secret mechanism (`Cratis__Chronicle__Authentication__InitialAdminSetupToken`), or configure `adminUser.password` to avoid interactive setup entirely. Keep the token consistent across silos. Generated tokens use the shared data-protection key ring and remain usable across restarts while the administrator is unconfigured. Remove configured setup tokens after successful setup; they cannot replace credentials once a password exists. No setup token is logged when a password has been configured or the administrator has logged in.
+For automated deployments, supply `authentication.initialAdminSetupToken` through your secret mechanism (`Cratis__Chronicle__Authentication__InitialAdminSetupToken`), or configure `adminUser.password` to avoid interactive setup entirely. Keep the token consistent across silos. Configured tokens are never logged; startup instead indicates that the configured token is required. Generated tokens use the shared data-protection key ring and remain usable across restarts while the administrator is unconfigured. Remove configured setup tokens after successful setup; they cannot replace credentials once a password exists. No setup token is logged when a password has been configured or the administrator has logged in.
 
 ### Configuration file
 

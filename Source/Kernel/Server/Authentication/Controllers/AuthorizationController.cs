@@ -227,6 +227,7 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
+            identity.SetClaim(ChronicleClaims.PrincipalKind, ChronicleClaims.User);
             identity.SetScopes(request.GetScopes());
             identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);

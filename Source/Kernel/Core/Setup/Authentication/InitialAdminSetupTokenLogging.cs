@@ -38,7 +38,11 @@ internal class InitialAdminSetupTokenLogging(IInitialAdminSetupTokens tokens, IO
         }
 
         var configured = options.Value.Authentication.InitialAdminSetupToken;
-        var token = string.IsNullOrWhiteSpace(configured) ? tokens.Issue(user.Id).Value : configured;
-        logger.InitialAdministratorSetupToken(token);
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            logger.ConfiguredInitialAdministratorSetupTokenRequired();
+            return;
+        }
+        logger.InitialAdministratorSetupToken(tokens.Issue(user.Id).Value);
     }
 }
