@@ -13,6 +13,10 @@ This guide shows an operator how to replace the nodes of a Chronicle kernel clus
 - A way to replace nodes one at a time, such as a Kubernetes `Deployment` or an Azure Container Apps revision with controlled overlap.
 - A backup of the database taken before the rollout. Chronicle can apply schema migrations when a new node starts, and it has no command to roll them back.
 
+## Supported source releases
+
+Rolling upgrades are supported from 19.111 onward. Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
+
 ## Check that the two versions can share a cluster
 
 While nodes are being replaced, nodes of the old version and of the new one form one Orleans cluster and call each other's grains. That only works when the new version still serves every grain call the old version makes. When it does not, the first new node stops during startup, and the rollout stalls with the old nodes still running.
@@ -21,8 +25,8 @@ Use this table to decide how to upgrade:
 
 | Upgrading | Within one major | How to upgrade |
 | --- | --- | --- |
-| From 19.106 or later | Yes | Replace nodes one at a time. Every release from 19.107.0 is checked in CI against the release before it. |
-| From a 19.x release before 19.106 | Yes | Stop every node, then start the new version. Grain calls changed between some of those releases. |
+| From 19.111 or later | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
+| From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
 
 To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
