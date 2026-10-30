@@ -20,10 +20,12 @@ public partial class Observer
 
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && _clock.GetUtcNow() < _catchUpBackoffUntil;
 
+    bool CannotStartCatchUp => IsRetired || _removed;
+
     /// <inheritdoc/>
     public async Task CatchUp()
     {
-        if (IsRetired || _removed) return;
+        if (CannotStartCatchUp || await RestoreSubscriptionDuringBackoff()) return;
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
@@ -176,7 +178,8 @@ public partial class Observer
         // interleaving with this call already sees it.
         RememberConcludedCatchUpJob(jobId);
 
-        var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+        CompleteSubscriptionGap(lastScannedEventSequenceNumber);
+        var madeProgress = CatchUpMadeContiguousProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.Clear();
         if (lastScannedEventSequenceNumber.IsActualValue &&

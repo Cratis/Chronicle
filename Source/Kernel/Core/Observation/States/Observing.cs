@@ -59,33 +59,14 @@ public class Observing(
         using var scope = logger.BeginObservingScope(state, eventStore, @namespace, eventSequenceId);
         logger.Entering();
 
-        logger.SubscribingToStream(state.NextEventSequenceNumber);
-
-        var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
-        var subscription = await Observer.GetSubscription();
-
-        // An observer subscribed to all events has no event types in its definition - it covers types that do not
-        // exist yet - so subscribing it by that empty list would deliver it nothing at all while it is observing.
-        _subscription = state.SubscribesToAllEvents
-            ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
-            : await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
-
-        // Only check for missed events when there is no active catch-up in progress and no failed partitions.
-        // When partitions are being caught up, the catch-up job handles historical events
-        // while the queue subscription handles new events arriving in real time.
-        // When there are failed partitions, the retry-failed-partition job handles recovery.
-        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.IsCatchUpBackedOff() && !await Observer.HasFailedPartitions())
+        await Subscribe(state);
+        if (Observer is ILiveSubscriptionRecovery { HasSubscriptionGap: true } recovery)
         {
-            var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
-            if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
-            {
-                var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
-                if (nextUnhandled.Match(n => n.IsActualValue, _ => false))
-                {
-                    logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
-                    await StateMachine.TransitionTo<Routing>();
-                }
-            }
+            await recovery.RecoverSubscriptionGap();
+        }
+        else if (!await Observer.IsCatchUpBackedOff() && await HasMissedEvents(state))
+        {
+            await StateMachine.TransitionTo<Routing>();
         }
 
         return state;
@@ -96,8 +77,65 @@ public class Observing(
     {
         if (_subscription is not null)
         {
+            if (Observer is ILiveSubscriptionRecovery recovery && !await appendedEventsQueues.IsSubscribed(_subscription.ObserverKey))
+            {
+                recovery.SubscriptionLost(state.NextEventSequenceNumber);
+            }
             await appendedEventsQueues.Unsubscribe(_subscription);
         }
         return state;
+    }
+
+    /// <summary>
+    /// Restores live delivery before recovering an unresolved subscription gap.
+    /// </summary>
+    /// <param name="state">The position to recover from.</param>
+    /// <returns>Awaitable task.</returns>
+    internal async Task RestoreSubscription(ObserverState state)
+    {
+        await OnLeave(state);
+        await Subscribe(state);
+        if (Observer is ILiveSubscriptionRecovery recovery)
+        {
+            await recovery.RecoverSubscriptionGap();
+        }
+    }
+
+    async Task Subscribe(ObserverState state)
+    {
+        logger.SubscribingToStream(state.NextEventSequenceNumber);
+
+        var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
+        var subscription = await Observer.GetSubscription();
+
+        // An observer subscribed to all events has no event types in its definition - it covers types that do not
+        // exist yet - so subscribing it by that empty list would deliver it nothing at all while it is observing.
+        _subscription = state.SubscribesToAllEvents
+            ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
+            : await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
+    }
+
+    async Task<bool> HasMissedEvents(ObserverState state)
+    {
+        // Only check for missed events when there is no active catch-up in progress and no failed partitions.
+        // When partitions are being caught up, the catch-up job handles historical events
+        // while the queue subscription handles new events arriving in real time.
+        // When there are failed partitions, the retry-failed-partition job handles recovery.
+        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.HasFailedPartitions())
+        {
+            var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
+            if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
+            {
+                var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
+                var missedEvents = nextUnhandled.Match(n => n.IsActualValue, _ => false);
+                if (missedEvents)
+                {
+                    logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
+                }
+                return missedEvents;
+            }
+        }
+
+        return false;
     }
 }

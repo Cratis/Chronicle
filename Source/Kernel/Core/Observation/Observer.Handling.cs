@@ -403,7 +403,7 @@ public partial class Observer
         {
             State = State with
             {
-                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                NextEventSequenceNumber = NextLivePosition(observedTailEventSequenceNumber.Next()),
                 TailEventSequenceNumber = observedTailEventSequenceNumber
             };
             RecordedHandlingState();
@@ -419,7 +419,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = NextLivePosition(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 RecordedHandlingState();
@@ -433,7 +433,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = NextLivePosition(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 RecordedHandlingState();
@@ -446,7 +446,7 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    NextEventSequenceNumber = NextLivePosition(observedTailEventSequenceNumber.Next()),
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 RecordedHandlingState();
@@ -554,7 +554,7 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
+                            NextEventSequenceNumber = NextLivePosition(result.LastSuccessfulObservation.Next()),
                             TailEventSequenceNumber = observedTailEventSequenceNumber
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -702,7 +702,7 @@ public partial class Observer
         State = State with
         {
             LastHandledEventSequenceNumber = newLastHandledEvent,
-            NextEventSequenceNumber = nextEventSequenceNumber
+            NextEventSequenceNumber = NextLivePosition(nextEventSequenceNumber)
         };
         RecordedHandlingState();
     }

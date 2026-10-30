@@ -36,6 +36,8 @@ public class an_observer_with_zero_key_catch_up_jobs : an_observer_behind_on_a_r
 
     protected int NoStepsWarnings => _recordedLogs.Warnings.Count(_ => _.Contains("NoJobStepsToStart", StringComparison.Ordinal));
 
+    protected bool HasPendingCompletion => _pendingJobs.Count > 0 || _completions.Count > 0;
+
     protected async Task SettleAfterZeroKeyJobs()
     {
         // Seed a stranded preparation so the watchdog's rescue, not a direct catch-up call, starts the real jobs.

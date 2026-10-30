@@ -79,8 +79,12 @@ public class and_the_queue_is_lost_while_zero_key_catch_up_settles : given.an_ob
         _queued = false;
         await _observer.RunWatchdogAsync();
 
-        // Recovery restores the queue before the job finishes; lose it again before CaughtUp settles.
-        _queued = false;
+        // Lose it again before CaughtUp settles only when a completion can restore it.
+        // Without pending work, the watchdog above already exercises standalone queue loss.
+        if (HasPendingCompletion)
+        {
+            _queued = false;
+        }
         await CompletePendingJobs();
         _jobsAtLostSettle.Add(_preparedJobs.Count);
         _warningsAtLostSettle.Add(NoStepsWarnings);

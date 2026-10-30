@@ -156,6 +156,18 @@ public class Routing(
             return state;
         }
 
+        return await ObserveOrCatchUp(state);
+    }
+
+    async Task<ObserverState> ObserveOrCatchUp(ObserverState state)
+    {
+        // A lost subscription is rejoined before checking its gap or spending its recovery attempt.
+        if (Observer is ILiveSubscriptionRecovery { HasSubscriptionGap: true })
+        {
+            await StateMachine.TransitionTo<Observing>();
+            return state;
+        }
+
         if (CanFastForward(state))
         {
             logger.FastForwarding();
