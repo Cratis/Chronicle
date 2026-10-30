@@ -60,7 +60,7 @@ Without AuthProxy nothing changes: the signature is required everywhere, and `Al
 
 - **Ed25519 (`v1a`): one key pair per event store.** One key signs the envelopes for every HTTP target of that store. Receivers hold the public key only, so sharing it across targets of a store does not let one receiver forge deliveries to another.
 - **HMAC-SHA256 (`v1`): one secret per target**, as Standard Webhooks requires for symmetric keys. A shared secret would let one receiver sign for another.
-- Every key has a key id. The kernel sends it in `Cratis-Key-Id`. A receiver selects the key by that id and rejects an unknown id.
+- Every key has a key id. `Cratis-Key-Id` lists the id of every key that signed the request, comma-separated, in the same order as the signatures in `webhook-signature`. A receiver verifies with the listed keys it trusts and accepts the request when one of them verifies. It rejects the request when it trusts none of the listed ids or when no trusted key verifies.
 
 ### Storage
 
@@ -71,7 +71,7 @@ Without AuthProxy nothing changes: the signature is required everywhere, and `Al
 ### Rotation
 
 - Rotation is an explicit command through the CLI and the kernel API. The kernel does not rotate on a timer.
-- On rotation the kernel creates a new key, signs with it, and keeps the previous key as verifiable for an overlap. During the overlap each delivery carries both signatures in `webhook-signature`, and `Cratis-Key-Id` names the new key.
+- On rotation the kernel creates a new key, signs with it, and keeps the previous key as verifiable for an overlap. During the overlap each delivery carries both signatures in `webhook-signature`, and `Cratis-Key-Id` lists both key ids, new first. A receiver that still holds only the previous key verifies with it until it has fetched the new one.
 - The overlap defaults to 24 hours and is configurable. The previous key is then retired: no longer used to sign, and removed from the `GET` after a further retention period.
 - Receivers load public keys from configuration. They fetch the new key before the overlap ends; the kernel never pushes a key to a receiver.
 - A suspected compromise is a rotation with zero overlap. The receiver then rejects deliveries signed with the old key as soon as it has the new one.
@@ -110,7 +110,7 @@ Without this record, #5117 cannot choose a library or a key scope, and the signi
 **Done when:**
 
 - A specification signs and verifies `v1a` against RFC 8032 vectors and against an independent implementation, and verifies `v1` against the Standard Webhooks reference vectors.
-- A specification shows a delivery signed with two keys during an overlap verifies with either, and that an unknown `Cratis-Key-Id` is rejected.
+- A specification shows a delivery signed with two keys during an overlap verifies at a receiver that trusts only the previous key, at one that trusts only the new key and at one that trusts both, and that a delivery whose listed ids are all unknown to the receiver is rejected.
 - A specification shows the private key and HMAC secrets are stored encrypted, and absent from logs and API responses.
 - The library check runs on the Azure Functions isolated worker and on Lambda with SnapStart, and the result is recorded in this record.
 
