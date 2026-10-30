@@ -34,7 +34,7 @@ public abstract class a_sqlite_ordered_decimal_index_sink : Specification
         var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"},"amount":{"type":"number","format":"decimal"},"name":{"type":"string"}}}""");
         _definition = new ReadModelDefinition("ordered-decimals", Table, "Ordered decimals", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "ordered-decimals", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [Index]);
         _sink = (Sink)_harness.CreateSink(_definition);
-        _indexPlan = ReadModelIndexPlan.Resolve(Index, schema, ProjectedColumns.ForSchema(schema, [Index]), DatabaseType.Sqlite)!;
+        _indexPlan = ReadModelIndexPlan.Resolve(Index, schema, ProjectedColumns.ForSchema(schema, [Index]), DatabaseType.Sqlite);
     }
 
     protected async Task Write(string id, string name, decimal? amount)
