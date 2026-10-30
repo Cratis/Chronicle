@@ -23,7 +23,7 @@ public class and_a_pinned_projection_reads_a_protected_revision : given.a_projec
         _projection.GetDefinition().Returns(definition with { GenerationDelivery = EventGenerationDelivery.Pinned });
         dynamic content = new ExpandoObject();
         content.name = "protected-content";
-        var context = Concepts.Events.EventContext.EmptyWithEventSourceId("my-instance") with
+        var context = EventContext.EmptyWithEventSourceId("my-instance") with
         {
             EventType = new("my-event", 1),
             SequenceNumber = 1,
@@ -60,10 +60,12 @@ public class and_a_pinned_projection_reads_a_protected_revision : given.a_projec
     async Task Because() => _result = await AllSnapshots();
 
     [Fact] void should_pass_the_protected_revision_to_the_projection() => _projected.ShouldBeSame(_stored);
-    [Fact] void should_not_feed_decrypted_display_content_back_to_generation_release() =>
+    [Fact]
+    void should_not_feed_decrypted_display_content_back_to_generation_release() =>
         ((IDictionary<string, object?>)_projected.Content)["name"].ShouldEqual("protected-content");
     [Fact] void should_release_the_original_stored_event_for_display() => _displayInputs.Single().ShouldBeSame(_stored);
-    [Fact] void should_release_the_display_once() => _eventCompliance.Received(1)
+    [Fact]
+    void should_release_the_display_once() => _eventCompliance.Received(1)
         .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>());
     [Fact] void should_display_decrypted_stored_content() => _result.Single().Events.Single().Content.ShouldEqual("{\"name\":\"released-for-display\"}");
 }

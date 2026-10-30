@@ -39,9 +39,11 @@ public class and_a_wildcard_projection_uses_compatibility_release : given.a_proj
 
     async Task Because() => await AllSnapshots();
 
-    [Fact] void should_decrypt_before_the_compatibility_projection() =>
+    [Fact]
+    void should_decrypt_before_the_compatibility_projection() =>
         _projected.TrueForAll(@event => Equals(((IDictionary<string, object?>)@event.Content)["name"], "released-for-compatibility")).ShouldBeTrue();
     [Fact] void should_project_all_events() => _projected.Count.ShouldEqual(4);
-    [Fact] void should_release_compliance_once_for_the_history() => _eventCompliance.Received(1)
+    [Fact]
+    void should_release_compliance_once_for_the_history() => _eventCompliance.Received(1)
         .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>());
 }

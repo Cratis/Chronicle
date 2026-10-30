@@ -13,7 +13,7 @@ public class and_only_the_revision_marker_changed : given.a_storage_with_stored_
     async Task Establish()
     {
         await Revise();
-        _observed = (await _storage.GetStoredGenerations(0))!;
+        _observed = await _storage.GetStoredGenerations(0);
         _before = await Fingerprint();
         await MoveRevisionMarkerTo(2);
         _afterRevision = await Fingerprint();

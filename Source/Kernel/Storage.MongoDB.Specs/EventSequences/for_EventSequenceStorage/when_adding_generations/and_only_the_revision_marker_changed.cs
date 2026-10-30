@@ -18,7 +18,7 @@ public class and_only_the_revision_marker_changed(ReplicaSetMongoDBFixture fixtu
     async Task Establish()
     {
         await Revise();
-        _observed = (await _storage.GetStoredGenerations(0))!;
+        _observed = await _storage.GetStoredGenerations(0);
         _payloadBefore = await PayloadFingerprint();
         await Revise();
         _payloadAfterRevision = await PayloadFingerprint();
