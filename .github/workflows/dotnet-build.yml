@@ -214,6 +214,13 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+      # The same pack command publish.yml runs, with a stable placeholder version, so pack-only failures
+      # (NU5104 stable-depends-on-prerelease, missing packed assets, nuspec errors) fail the pull request
+      # instead of surfacing after the release and tag exist. Runs after the build output is archived above.
+      - name: Verify NuGet packages can be created
+        if: github.event_name == 'pull_request'
+        run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
+
       - name: Export image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         id: export-image
