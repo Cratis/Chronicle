@@ -32,7 +32,8 @@ public class when_verifying_fixed_startup_scopes(MongoDBFixture fixture) : given
         _cli = await _provisioner.Verify();
     }
 
-    [Fact] void should_check_only_the_fixed_startup_scopes() => _startup.Scopes.Select(scope => scope.Scope).Order(StringComparer.Ordinal).ToArray().ShouldEqual(
+    [Fact]
+    void should_check_only_the_fixed_startup_scopes() => _startup.Scopes.Select(scope => scope.Scope).Order(StringComparer.Ordinal).ToArray().ShouldEqual(
         new[] { "event-store:System", "namespace:System/Default", "jobs:System/Default", "global-encryption" }.Order(StringComparer.Ordinal).ToArray());
     [Fact] void should_not_discover_event_stores_or_namespaces() => _startupQueries.Any(query => IsAnyOf(query.Collection, WellKnownCollectionNames.EventStores, WellKnownCollectionNames.Namespaces)).ShouldBeFalse();
     [Fact] void should_not_query_another_store() => _startupQueries.Any(query => query.Database == DatabaseNames.ForEventStore(Store, _prefix) || query.Database == DatabaseNames.ForEventStoreNamespace(Store, Namespace, _prefix)).ShouldBeFalse();

@@ -53,5 +53,5 @@ public class when_classifying_existing_constraints(MongoDBFixture fixture) : giv
     [Fact] void should_keep_unclassified_collections_advisory_during_verify() => _verified.IsCurrent.ShouldBeTrue();
     [Fact] void should_keep_unclassified_names_in_the_report() => _verified.Scopes.Single(scope => scope.Scope == $"namespace:{Store}/{Namespace}").Unclassified.Contains(Ambiguous).ShouldBeTrue();
     [Fact] void should_warn_about_unclassified_collections() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && (LogLevel)call.GetArguments()[0]! == LogLevel.Warning && call.GetArguments()[2]!.ToString()!.Contains("unclassified", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_explain_runtime_index_creation_in_the_migration_warning() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && call.GetArguments()[2]!.ToString()!.Contains("Runtime will create their indexes on first access", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_explain_runtime_index_creation_in_the_migration_warning() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && call.GetArguments()[2].ToString().Contains("Runtime will create their indexes on first access", StringComparison.Ordinal)).ShouldBeTrue();
 }

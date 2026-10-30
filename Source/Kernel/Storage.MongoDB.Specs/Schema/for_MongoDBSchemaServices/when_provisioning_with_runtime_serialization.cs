@@ -51,7 +51,8 @@ public class when_provisioning_with_runtime_serialization(MongoDBFixture fixture
                 [],
                 new Dictionary<string, BsonDocument>(),
                 new Dictionary<string, string>(),
-                []) { PublicationId = "publication" });
+                [])
+            { PublicationId = "publication" });
         _stored = await _namespace.GetCollection<BsonDocument>(WellKnownCollectionNames.EventLog).Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var runtimePrefix = $"{_prefix}r_";
         var runtimeDatabase = new Database(_clients, _mongoOptions, Substitute.For<ICustomSerializers>(), Options.Create(new MongoDBStorageOptions { DatabaseNamePrefix = runtimePrefix }));
@@ -76,13 +77,13 @@ public class when_provisioning_with_runtime_serialization(MongoDBFixture fixture
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         var framework = directory.Name;
-        var configuration = directory.Parent!.Name;
+        var configuration = directory.Parent.Name;
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Source/Kernel/Server/Server.csproj"))) directory = directory.Parent;
         if (directory is null) throw new InvalidOperationException("Cannot locate the server project for the isolated schema command spec.");
         var server = Path.Combine(directory.FullName, "Source/Kernel/Server/bin", configuration, framework, "Cratis.Chronicle.Server.dll");
         if (!File.Exists(server)) throw new InvalidOperationException($"The Server output '{server}' is missing; build Source/Kernel/Server for the same configuration before running this spec.");
         var storageAssembly = typeof(MongoDBIndexProvisioner).Assembly.Location;
-        var serverStorageAssembly = Path.Combine(Path.GetDirectoryName(server)!, Path.GetFileName(storageAssembly));
+        var serverStorageAssembly = Path.Combine(Path.GetDirectoryName(server), Path.GetFileName(storageAssembly));
         if (!File.Exists(serverStorageAssembly) || File.GetLastWriteTimeUtc(serverStorageAssembly) < File.GetLastWriteTimeUtc(storageAssembly)) throw new InvalidOperationException($"The Server output '{server}' carries an older '{Path.GetFileName(storageAssembly)}' than the spec loads; rebuild Source/Kernel/Server so the isolated schema command runs the code under test.");
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = directory.FullName };
         foreach (var argument in new[] { server, action, "--event-store", Store, "--Cratis:Chronicle:Storage:Type=MongoDB", $"--Cratis:Chronicle:Storage:ConnectionDetails={ConnectionString}", $"--Cratis:Chronicle:Storage:DatabaseNamePrefix={_prefix}" }) start.ArgumentList.Add(argument);

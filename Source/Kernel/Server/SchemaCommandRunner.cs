@@ -115,7 +115,7 @@ internal static class SchemaCommandRunner
     static void ConfigureServices(ChronicleOptions options, IConfiguration configuration, IServiceCollection services)
     {
         services.AddSingleton(configuration);
-        services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(options));
+        services.AddSingleton(Options.Create(options));
         if (IsSql(options.Storage.Type))
         {
             SqlSchemaServices.Add(services, options);
