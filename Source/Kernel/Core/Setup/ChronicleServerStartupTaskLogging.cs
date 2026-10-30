@@ -33,4 +33,7 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' failed because a silo in this cluster most likely runs a Chronicle release this one cannot exchange grain calls with. Retrying cannot help while both releases share the cluster. Upgrade by stopping every silo and then starting this release, rather than replacing silos one at a time. See https://cratis.io/chronicle/hosting/rolling-deploy/")]
     internal static partial void StartupStepReachedIncompatibleSilo(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping an event store registered without a name. Nothing can address it, so it is not started; remove the entry with an empty name from the cluster's event store registry")]
+    internal static partial void SkippingEventStoreWithoutAName(this ILogger<ChronicleServerStartupTask> logger);
 }
