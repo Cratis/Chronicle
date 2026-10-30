@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -e
 
-./Cratis.Chronicle.Server
+exec ./Cratis.Chronicle.Server
