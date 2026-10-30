@@ -44,7 +44,9 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         new EnvironmentExpressionSyntax("NAME", _location),
         new StringsExpressionSyntax("name", _location),
         new SourceItemExpressionSyntax("name", _location),
-        new IdentityExpressionSyntax("name", _location)
+        new IdentityExpressionSyntax("name", _location),
+        new ClockOffsetExpressionSyntax("now", 1, "days", _location),
+        new DateOfExpressionSyntax(new PathExpressionSyntax("name", _location), _location)
     ];
 
     [Fact]

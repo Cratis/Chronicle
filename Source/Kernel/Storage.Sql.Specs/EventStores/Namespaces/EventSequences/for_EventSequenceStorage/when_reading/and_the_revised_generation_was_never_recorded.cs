@@ -15,6 +15,7 @@ public class and_the_revised_generation_was_never_recorded : given.a_storage_wit
         await using var context = CreateContext();
         var entry = context.Events.Single(_ => _.SequenceNumber == 0);
         entry.RevisedGeneration = null;
+        entry.Revisions = null;
         await context.SaveChangesAsync();
         _read = await _storage.GetEventAt(0);
     }

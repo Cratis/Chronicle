@@ -70,21 +70,38 @@ public partial class EventStore
 
     Task ValidateManualPreparation() => EventTypes is EventTypes native ? native.ValidatePreparation() : Task.CompletedTask;
 
+    Task DiscoverInlineOnlyArtifacts()
+    {
+        if (_registrationMode != RegistrationMode.Inline)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Task.WhenAll(
+            Reactors.Discover(),
+            Seeding.Discover(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+    }
+
     async Task DiscoverAllLocal()
     {
         _logger.DiscoverAllArtifacts();
         _storeArtifacts?.Prepare();
 
         // Finalize identities before schema, migration, source, constraint or observer construction.
+        if (_nominatesClientObservers && !ClientObserverHosting.IsAvailable(Connection))
+        {
+            throw new ClientObserversRequireKeepAlive(_nominatedObserverKind ?? "Reactor", _nominatedObserverId ?? "(nominated)");
+        }
+
+        // Reads and constraint violation messages depend on local discovery of everything except client-hosted observers.
         await EventTypes.Discover();
         await EventSources.Discover();
         await Task.WhenAll(
             Constraints.Discover(),
-            Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover(),
-            Seeding.Discover(),
-            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+            DiscoverInlineOnlyArtifacts());
         var report = BuildDiscoveryReport();
         if (report is not null)
         {

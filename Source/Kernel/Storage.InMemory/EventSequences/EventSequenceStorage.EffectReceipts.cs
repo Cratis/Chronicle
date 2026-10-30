@@ -75,7 +75,7 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
                 for (var index = 0; index < batch.Length; index++)
                 {
                     var item = batch[index];
-                    _events.Add(appended[index]);
+                    AddEvent(appended[index]);
                     _originalCausedByChains[item.SequenceNumber] = item.CausedByChain.ToArray();
                     TrackMetadata(appended[index], _originalCausedByChains[item.SequenceNumber]);
                     _appendedGenerations[item.SequenceNumber] = item.EventType.Generation.Value;

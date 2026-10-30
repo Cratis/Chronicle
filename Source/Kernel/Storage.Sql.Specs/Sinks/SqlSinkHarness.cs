@@ -140,10 +140,16 @@ public class SqlSinkHarness : ISqlSinkHarness
     async Task<ReadModelDbContext> CreateContext(string containerName)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching()
-            .AddInterceptors(Interceptors)
-            .Options;
+        if (ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql)
+        {
+            builder = new(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString));
+        }
+        else
+        {
+            builder.UseDatabaseFromConnectionString(ConnectionString);
+            builder.AddConceptAsSupport().WithoutServiceProviderCaching();
+        }
+        var options = builder.AddInterceptors(Interceptors).Options;
 
         if (IntegrationTimings.Enabled && _commandTimings is null)
         {

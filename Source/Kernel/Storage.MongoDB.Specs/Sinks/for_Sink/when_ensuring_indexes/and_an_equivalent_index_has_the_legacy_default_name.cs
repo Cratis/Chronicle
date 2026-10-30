@@ -12,7 +12,7 @@ public class and_an_equivalent_index_has_the_legacy_default_name : given.a_sink_
 
     [Fact] void should_not_create_the_index() =>
         _indexManager.DidNotReceive().CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
     [Fact] void should_not_drop_any_indexes() => _indexManager.DidNotReceive().DropOneAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());

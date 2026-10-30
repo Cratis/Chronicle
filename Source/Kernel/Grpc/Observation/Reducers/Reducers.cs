@@ -184,6 +184,7 @@ internal sealed class Reducers(
                             {
                                 Partition = reduceOperation.Partition.Value.ToString()!,
                                 DeliveryId = deliveryId,
+                                DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(reduceOperation.DeliverWithin),
                                 InitialState = initialState,
                                 Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
                             };

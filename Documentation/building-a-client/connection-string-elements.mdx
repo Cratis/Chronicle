@@ -26,6 +26,7 @@ exposes:
 | `AuthenticationMode` | **computed**, not stored — derived from which credentials are present |
 | `ApiKey` | the `apiKey` parameter |
 | `SkipTlsValidation` | the `skipTlsValidation` parameter |
+| `DisableTls` | the `disableTls` parameter: cleartext HTTP/2 (h2c), and no development-credential fallback |
 | `CertificatePath` / `CertificatePassword` | client certificate options |
 
 `AuthenticationMode` being computed rather than stored is worth copying deliberately: it means

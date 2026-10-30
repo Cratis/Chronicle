@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Net.Sockets;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
@@ -123,6 +124,9 @@ public class WebhookTargetPolicy(
         return host.Length > suffix.Length && host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
     }
 
+    static bool IsTransientDnsFailure(SocketError error) => error is
+        SocketError.TryAgain or SocketError.TimedOut or SocketError.NoRecovery or SocketError.NetworkDown or SocketError.NetworkUnreachable;
+
     async Task<WebhookTargetValidation> EvaluateTarget(string url, EventStoreName? eventStore, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var target))
@@ -138,9 +142,11 @@ public class WebhookTargetPolicy(
         {
             addresses = await resolver.Resolve(target.DnsSafeHost, cancellationToken);
         }
-        catch (System.Net.Sockets.SocketException)
+        catch (SocketException exception)
         {
-            return Decision("Webhook target host could not be resolved.");
+            return IsTransientDnsFailure(exception.SocketErrorCode)
+                ? Decision("Webhook target host resolution is temporarily unavailable. Please retry.") with { IsIndeterminate = true }
+                : Decision("Webhook target host could not be resolved.");
         }
 
         var resolved = CheckAddresses(target, addresses, eventStore);

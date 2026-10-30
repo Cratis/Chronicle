@@ -27,6 +27,7 @@ internal static class ConcurrencyScopeConverters
     {
         SequenceNumber = scope.ExpectsNoMatchingEvent ? EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value,
         ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent,
+        MutationEpoch = scope.MutationEpoch,
         EventSourceId = scope.EventSourceId is not null,
         EventStreamType = scope.EventStreamType?.Value,
         EventStreamId = scope.EventStreamId?.Value,

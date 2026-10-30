@@ -17,6 +17,7 @@ internal class ReviseValidator : CommandValidator<Revise>
     public ReviseValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
         RuleFor(_ => _.EventType).NotNull().WithMessage("Event type is required.");

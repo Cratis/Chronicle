@@ -25,7 +25,54 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | authority | string | null | External OAuth authority URL |
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
+| enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+
+## Administrator authorization
+
+Administrator privilege is separate from a user account. The `Administrators` service lets an existing
+administrator grant or revoke that privilege and list active administrators. The last active administrator
+cannot be revoked or removed. These management operations always enforce the `Chronicle.Administrator`
+policy when authentication is enabled; the audit-mode setting below does not weaken them.
+
+Only authenticated users issued by Chronicle's internal authority can pass that policy. Their principal
+must carry `chronicle_principal=user`, and the authoritative System roster must still grant the privilege
+to an active user. An application or client-credentials token never receives this marker and cannot become
+an administrator, even if its subject happens to match an administrator's user identifier. External-authority
+principals are denied; there is no external role or claim mapping for administrator privilege.
+
+User tokens issued before this marker was introduced must be refreshed or obtained again. Existing cookie
+or Identity bearer sessions without the marker must sign in again. Privilege is checked against the roster
+on each call, not cached in the token or inferred from the administrator read-model projection.
+
+### Audit mode for existing operations
+
+Existing user/application management commands, job stop/resume/delete operations, observer recovery
+operations, and development-only kernel reset use `Chronicle.Administrator.Operations`. By default,
+`EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
+log a warning and continue under their existing authentication requirements. Each would-deny warning names
+the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
+contents. Audit mode does not grant administrator privilege.
+
+Review those warnings before switching on enforcement. Set `EnforceAdministratorPolicyForOperations=true`
+through the authentication configuration:
+
+```json
+{
+  "authentication": {
+    "enabled": true,
+    "enforceAdministratorPolicyForOperations": true
+  }
+}
+```
+
+With enforcement enabled, these operations require administrator privilege only when targeting `System`
+(case-insensitive). Security management and kernel reset have no event-store property and always count as
+System operations. Operations on application stores remain available without administrator privilege.
+Self-service password changes and anonymous bootstrap endpoints keep their existing behavior.
+
+When authentication is disabled, administrator checks allow all callers and the server logs a startup
+warning. Do not use authentication-off mode on a reachable server.
 
 ## Authentication behind an HTTPS reverse proxy
 
@@ -73,6 +120,49 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 5. Creation and password operations wait for the persisted user state. Append failures or a projection that does not complete are reported instead of returning successful setup. A completion timeout does not undo an accepted event; inspect the user state before retrying.
 
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
+
+### Administrator privileges and recovery
+
+Administrator privilege is stored separately from user documents. Creating or logging in as a user named `admin` does not confer it. New bootstrap grants privilege to the deterministic initial administrator. User replay and stale user-document updates do not overwrite privileges.
+
+On upgrade, Chronicle runs a one-time provenance migration. It reads the lowest-sequence `InitialAdminUserAdded` in the system event log, checks that event's username against the configured administrator username case-insensitively, requires an existing active user for its event source, and rejects provenance if that source has a later `UserRemoved`. This preserves proven legacy administrators with random identifiers. It does not choose a later matching bootstrap event or infer privilege from a username, deterministic identifier, or successful login alone.
+
+The migration records either a proven outcome (granting `UpgradeProvenance` only if no grant history exists), or an unproven outcome with no grant and a warning. An unproven outcome is not retried automatically. Existing grants and revocations remain authoritative across restarts.
+
+If the guarded roster append fails, startup stops rather than running without a durable administrator decision. Concurrency conflicts trigger retries, with at most eight append attempts; exhausting those attempts also stops startup. The `AdministratorInitializationFailed` error records the cause and recovery action. Check the System event-log storage connection, availability, and write permissions. If the roster keeps changing, stop competing roster writers before restarting the servers. Do not bypass the concurrency guard or edit the administrator projection directly. After storage is healthy, restart with the same configuration; persisted migration outcomes and consumed recovery nonces remain authoritative. If there is still no active administrator, follow the server-local recovery procedure below with a new nonce.
+
+To recover an unproven deployment or one without an active administrator:
+
+1. Identify an existing active user. Recovery does not create or reactivate users.
+2. Configure `authentication.administratorRecovery` consistently on all silos, using a new nonce for this request:
+
+   ```json
+   {
+     "authentication": {
+       "administratorRecovery": {
+         "username": "operator",
+         "nonce": "recovery-2026-10-28-unique-request",
+         "force": false
+       }
+     }
+   }
+   ```
+
+3. Restart the servers. Recovery runs through the roster coordinator, not through a login or HTTP request. By default it refuses to grant when any active administrator already exists. Set `force` to `true` only when deliberately granting despite an existing active administrator.
+4. Confirm the `OperatorRecovery` grant in the system event log. Its evidence includes the nonce, executing host, configuration source, and force flag. Recovery also logs a warning.
+5. Remove the recovery configuration from every silo. A consumed nonce never grants again, including after revocation; a later recovery requires a new nonce.
+
+Environment variables use the same configuration path:
+
+```shell
+Cratis__Chronicle__Authentication__AdministratorRecovery__Username=operator
+Cratis__Chronicle__Authentication__AdministratorRecovery__Nonce=recovery-2026-10-28-unique-request
+Cratis__Chronicle__Authentication__AdministratorRecovery__Force=false
+```
+
+Updated nodes serialize administrator removals and revocations through one guarded roster. Removing the last active administrator fails the command with the error "The last active administrator cannot be removed." Removing another administrator appends its privilege revocation and user removal in one guarded batch. A legacy `UserRemoved` is also interpreted as revocation, but older nodes do not enforce the last-administrator guard: upgrade every writer before relying on it. If an older node removed the only active user, add a user first, then use administrator recovery to grant it the privilege.
+
+This roster does not itself add administrator-only HTTP or gRPC authorization policies. Continue to restrict management access at the deployment boundary; authentication alone is not an administrator permission check.
 
 ### Configuration file
 
