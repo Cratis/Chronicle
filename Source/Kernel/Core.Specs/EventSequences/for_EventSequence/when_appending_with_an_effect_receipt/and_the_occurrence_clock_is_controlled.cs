@@ -10,5 +10,5 @@ public class and_the_occurrence_clock_is_controlled : given.an_event_sequence_wi
     async Task Because() => _result = await AppendEffect();
 
     [Fact] void should_use_the_clock_for_the_event() => _durableStorage.Events.Single().Context.Occurred.ShouldEqual(given.EventClock.Now);
-    [Fact] async Task should_use_the_clock_for_the_receipt() => (await _receiptStorage.GetEffectReceipt(ReceiptId))!.RecordedAt.ShouldEqual(given.EventClock.Now);
+    [Fact] async Task should_use_the_clock_for_the_receipt() => (await _receiptStorage.GetEffectReceipt(ReceiptId)).RecordedAt.ShouldEqual(given.EventClock.Now);
 }
