@@ -34,6 +34,7 @@ public partial class EventSequence
         _constraintIndexRepairTimerRunning = true;
         try
         {
+            await CheckHeldConstraintIndexRebuilds(cancellationToken);
             PrepareConstraintIndexRepair();
             if (ConstraintIndexTimeProvider.GetUtcNow() < _nextConstraintRepairAttempt) return;
             if (_pendingConstraintIndexes.Count > 0)
