@@ -20,7 +20,7 @@ public class when_the_occurrence_clock_is_advanced : Specification
     async Task Because()
     {
         await _scenario.EventLog.Append(EventSourceId.New(), new TestEvent("first"));
-        _scenario.Time.AdvanceBy(TimeSpan.FromMinutes(5));
+        _scenario.Time.AdvanceTo(_first.AddMinutes(5));
         await _scenario.EventLog.Append(EventSourceId.New(), new TestEvent("second"));
         _occurred = (await _scenario.EventSequence.GetFromSequenceNumber(EventSequenceNumber.First)).Select(@event => @event.Context.Occurred).ToArray();
     }
