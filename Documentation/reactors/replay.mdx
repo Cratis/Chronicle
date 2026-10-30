@@ -20,6 +20,13 @@ The rules are:
 - An event type handled **only** by a `Replay` handler is still subscribed to, so the replay it exists for
   delivers it.
 
+## Adding event types
+
+Adding event types to an existing subscription recommends replay only when an added type has events before
+that observer's next unread position. Added types with no history, or whose first event is at or after that
+position, can be handled normally without replay. Removing event types or changing their generation retains
+the existing replay recommendation behavior.
+
 To be told when a replay starts and ends, rather than to change what a handler does during it, see [Replay notifications](replay-notifications).
 
 Reach for [OnceOnly](once-only) instead when the side effect should simply not happen again. Use `Replay` when
