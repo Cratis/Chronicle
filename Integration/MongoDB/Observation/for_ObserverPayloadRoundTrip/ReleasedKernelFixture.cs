@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -51,6 +52,7 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
 
             // The released kernel predates the dedicated health port: it serves /health over HTTPS on 35000 only.
             // Every wait is bounded so a readiness mismatch fails the spec instead of hanging the test host.
+            .WithCreateParameterModifier(ReserveKernelPorts)
             .WithPortBinding(35000, true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .AddCustomWaitStrategy(new HttpsHealthWait(35000), options => options.WithTimeout(_readinessTimeout))
@@ -82,6 +84,16 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
         await _network.CreateAsync();
         await _mongoDB.StartAsync();
         await _kernel.StartAsync();
+    }
+
+    internal static void ReserveKernelPorts(CreateContainerParameters parameters)
+    {
+        // The released kernel connects to MongoDB before binding HTTPS; exclude its listeners from outbound allocation.
+        var hostConfig = parameters.HostConfig ?? new HostConfig();
+        var sysctls = hostConfig.Sysctls ?? new Dictionary<string, string>();
+        sysctls["net.ipv4.ip_local_reserved_ports"] = "11111,30000,35000";
+        hostConfig.Sysctls = sysctls;
+        parameters.HostConfig = hostConfig;
     }
 
     /// <summary>
