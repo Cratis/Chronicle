@@ -9,6 +9,7 @@ Unsupported layouts fail closed rather than silently skipping a policy check.
 """
 
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -53,7 +54,62 @@ def step_field(step, key):
     return section(step, key, 8)
 
 
+def plain_entry(line, indent):
+    content = line[indent:]
+    if content.startswith("- "):
+        content = content[2:]
+    entry = re.fullmatch(r"([A-Za-z_][\w-]*):(?: (.*))?", content)
+    if entry:
+        key, value = entry.groups()
+        return key, (value or "").split(" #", 1)[0].strip()
+    require(line[indent:].startswith("- "), "Expected a plain YAML key or scalar list item")
+    return None, content
+
+
+def check_scalar(value):
+    if not value or value == "{}":
+        return
+    if value.startswith("'"):
+        require(re.fullmatch(r"'(?:[^']|'')*'", value), "Unsupported quoted scalar or key")
+    elif value.startswith('"'):
+        require(re.fullmatch(r'"(?:[^"\\]|\\.)*"', value), "Unsupported quoted scalar or key")
+    elif value.startswith("${{"):
+        require(value.endswith("}}"), "Unsupported multiline expression")
+    elif value.startswith("["):
+        require(re.fullmatch(r'\[[A-Za-z0-9" .,\-_]+\]', value), "Unsupported flow collection")
+    else:
+        require(value[0] not in "&*!>|{[", "Unsupported YAML scalar")
+        require(not value.startswith(("---", "...")), "Unsupported YAML document")
+        require(": " not in value, "Unsupported inline YAML mapping")
+
+
+def check_block_grammar(text):
+    """Fail closed on YAML syntax the block reader cannot interpret.
+
+    Only run: | may introduce literal content; shell lines inside that block
+    are data, not YAML. Elsewhere require plain keys and simple scalar values.
+    This intentionally excludes quoted keys, flow mappings, tags and aliases.
+    """
+    literal_indent = None
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        if literal_indent is not None and indent > literal_indent:
+            continue
+        literal_indent = None
+        require("\t" not in line[:indent + 1] and indent % 2 == 0, "Unsupported YAML indentation")
+        key, value = plain_entry(line, indent)
+        require(key != "defaults", "Shell defaults are not supported")
+        if value == "|":
+            require(key == "run", "Only run literal blocks are supported")
+            literal_indent = indent + (2 if line[indent:].startswith("- ") else 0)
+            continue
+        check_scalar(value)
+
+
 def check_common(text, expected_jobs):
+    check_block_grammar(text)
     require(section(text, "permissions", 0) == "{}", "Top-level permissions must be empty")
     jobs = section(text, "jobs", 0)
     require(mapping_keys("\n" + jobs, 2) == expected_jobs, "Unexpected or missing jobs")
@@ -88,18 +144,45 @@ def check_publish(text):
     for step, action in zip(publish_steps, ["actions/download-artifact", "pypa/gh-action-pypi-publish"]):
         require(set(mapping_keys(step, 8)) <= {"name", "uses", "with"}, "Executable publish step")
         require(step_field(step, "uses").split("@", 1)[0] == action, "Unexpected publish action")
+    require("continue-on-error" not in mapping_keys(build, 4), "Build failure must be fatal")
     build_steps = steps(build)
+    require(set(mapping_keys(build_steps[0], 8)) == {"name", "env", "run"}, "Validation must be unconditional and fatal")
     require(step_field(build_steps[0], "name") == "Validate version format", "Validate version before checkout")
     require(step_field(build_steps[0], "env").strip() == "VERSION: ${{ inputs.version }}", "Version must come from env")
     require(any("actions/checkout@" in step for step in build_steps[1:]), "Missing checkout after validation")
     for step in build_steps + publish_steps:
         if "run" in mapping_keys(step, 8):
             script = step_field(step, "run")
-            require(not re.search(r"\$\{\{\s*(inputs\.|github\.event\.inputs\.)", script), "Input interpolated into shell")
+            for expression in re.findall(r"\$\{\{(.*?)\}\}", script, re.DOTALL):
+                # The event context can expose inputs through computed indexing.
+                # Keep both contexts out of shell source; use env for their data.
+                require(not re.search(r"\b(inputs|github)\b", expression, re.IGNORECASE), "Input context interpolated into shell")
     script = step_field(build_steps[0], "run")
     matches = re.findall(r'if ! \[\[ "\$VERSION" =~ (\S+) \]\]; then', script)
-    require(len(matches) == 1 and "exit 1" in script, "Missing rejecting version validation")
-    return matches[0]
+    require(len(matches) == 1, "Missing rejecting version validation")
+    pattern = matches[0]
+    require(pattern.startswith("^") and pattern.endswith("$"), "Version regex must be anchored")
+    expected = (
+        "|\n"
+        f'          if ! [[ "$VERSION" =~ {pattern} ]]; then\n'
+        '            echo "::error::Version \'$VERSION\' is not a valid release version"\n'
+        "            exit 1\n"
+        "          fi"
+    )
+    require(script == expected, "Validation must unconditionally reject invalid versions")
+    return pattern
+
+
+def bash_matches(pattern, value):
+    """Pass both operands as data, never interpolate them into Bash source."""
+    result = subprocess.run(
+        ["bash", "--noprofile", "--norc", "-c", '[[ "$1" =~ $2 ]]', "version-check", value, pattern],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    require(result.returncode in (0, 1), "Bash regex evaluation failed")
+    return result.returncode == 0
 
 
 class WorkflowSecurity(unittest.TestCase):
@@ -117,10 +200,10 @@ class WorkflowSecurity(unittest.TestCase):
         pattern = check_publish(self.publish)
         for value in ("19.7.1", "9.8.0-beta.3", "1.0.0rc1"):
             with self.subTest(value=value):
-                self.assertIsNotNone(re.fullmatch(pattern, value))
+                self.assertTrue(bash_matches(pattern, value))
         for value in ("v19.7.1", "1.0", "1.0.0; rm -rf /", "$(id)", "1.0.0\n1.0.1", ""):
             with self.subTest(value=value):
-                self.assertIsNone(re.fullmatch(pattern, value))
+                self.assertFalse(bash_matches(pattern, value))
 
     def test_mutated_workflows_are_rejected(self):
         mutations = [
@@ -151,6 +234,9 @@ class WorkflowSecurity(unittest.TestCase):
             checkout = re.search(rf"actions/checkout@{SHA}", original)
             self.assertIsNotNone(checkout)
             mutations.append((check, original, checkout[0], "actions/checkout@v7"))
+        self.assert_mutations_rejected(mutations)
+
+    def assert_mutations_rejected(self, mutations):
         for check, original, before, after in mutations:
             with self.subTest(before=before, after=after):
                 self.assertIn(before, original)
@@ -158,6 +244,64 @@ class WorkflowSecurity(unittest.TestCase):
                 self.assertNotEqual(mutated, original)
                 with self.assertRaises(AssertionError):
                     check(mutated)
+        print(f"Rejected {len(mutations)} in-memory mutations")
+
+    def test_unsupported_yaml_is_rejected(self):
+        mutations = [
+            ("pull_request:", '\"pull_request_target\":'),
+            ("pull_request:", "'workflow_run':"),
+            ("    steps:", '    steps:\n      - "uses": actions/checkout@v7'),
+            ("    steps:", "    steps:\n      - 'uses': actions/checkout@v7"),
+            ("    steps:", "    steps:\n      - {uses: actions/checkout@v7}"),
+            ("    steps:", "    steps: &steps"),
+            ("    steps:", "    steps: *steps"),
+            ("    steps:", "    steps: !tag"),
+            ("    steps:", "    steps: >"),
+        ]
+        self.assert_mutations_rejected([(check_verify, self.verify, a, b) for a, b in mutations])
+
+    def test_input_expression_variants_are_rejected(self):
+        expressions = [
+            "inputs['version']",
+            "github.event.inputs['version']",
+            "github['event']['inputs']['version']",
+            "github.event['inputs'].version",
+            "format('{0}', inputs.version)",
+            "false || inputs.version",
+            "INPUTS.version",
+            "github.event[format('in{0}', 'puts')].version",
+        ]
+        self.assert_mutations_rejected([
+            (check_publish, self.publish, "run: python build_package.py", f"run: echo ${{{{ {expression} }}}}")
+            for expression in expressions
+        ])
+
+    def test_validation_cannot_be_disabled(self):
+        mutations = [
+            ("name: Validate version format", "name: Validate version format\n        if: false"),
+            ("name: Validate version format", "name: Validate version format\n        continue-on-error: true"),
+            ("name: Validate version format", "name: Validate version format\n        shell: sh"),
+            ("            exit 1", "            echo ignored"),
+            ("            exit 1", "            # exit 1"),
+            ("            exit 1", "            exit 0"),
+            ("            exit 1", "            if false; then exit 1; fi"),
+            ("=~ ^[0-9]", "=~ [0-9]"),
+            ("[0-9]+)?$ ]];", "[0-9]+)? ]];"),
+            ("    steps:", "    continue-on-error: true\n    steps:"),
+            ("jobs:", "defaults:\n  run:\n    shell: sh\n\njobs:"),
+        ]
+        self.assert_mutations_rejected([(check_publish, self.publish, a, b) for a, b in mutations])
+
+    def test_shell_content_is_not_parsed_as_yaml(self):
+        script = self.verify.replace(
+            '          python -m pip install --upgrade pip',
+            '          echo \'"uses": actions/checkout@v7\'\n'
+            '          echo \'&anchor {key: value} > text\'\n'
+            '          python -m pip install --upgrade pip',
+            1,
+        )
+        self.assertNotEqual(script, self.verify)
+        check_verify(script)
 
 
 if __name__ == "__main__":
