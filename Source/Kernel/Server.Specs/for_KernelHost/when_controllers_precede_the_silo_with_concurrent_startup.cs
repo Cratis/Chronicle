@@ -4,7 +4,9 @@
 using System.Net;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Security;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Cratis.Chronicle.Server.for_KernelHost;
 
@@ -12,8 +14,10 @@ public class when_controllers_precede_the_silo_with_concurrent_startup : given.a
 {
     HttpStatusCode _live;
     bool _valid;
+    bool _warmedUp;
     protected override bool ControllersBeforeSilo => true;
     protected override bool ConcurrentStartup => true;
+    protected override bool DiscoverConventions => true;
 
     async Task Because()
     {
@@ -22,6 +26,7 @@ public class when_controllers_precede_the_silo_with_concurrent_startup : given.a
         _live = live.StatusCode;
         _hold.Release.TrySetResult();
         await _start.WaitAsync(TimeSpan.FromSeconds(10));
+        _warmedUp = _app.Services.GetRequiredService<IKeyManager>().GetAllKeys().Count > 0;
         var tokens = _app.Services.GetRequiredService<IInitialAdminSetupTokens>();
         var user = new UserId(Guid.NewGuid());
         _valid = tokens.IsValid(user, tokens.Issue(user));
@@ -29,4 +34,6 @@ public class when_controllers_precede_the_silo_with_concurrent_startup : given.a
 
     [Fact] void should_bind_listeners_before_the_silo_can_route() => _live.ShouldEqual(HttpStatusCode.OK);
     [Fact] void should_complete_startup_with_a_functioning_shared_provider() => _valid.ShouldBeTrue();
+    [Fact] void should_warm_up_the_key_ring_after_the_silo_starts() => _warmedUp.ShouldBeTrue();
+    [Fact] void should_share_the_single_warmup_with_the_host() => _app.Services.GetServices<IHostedService>().OfType<DataProtectionKeyRingWarmup>().Single().ShouldBeSame(_app.Services.GetRequiredService<DataProtectionKeyRingWarmup>());
 }

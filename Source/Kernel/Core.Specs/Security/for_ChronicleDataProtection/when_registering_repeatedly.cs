@@ -6,6 +6,7 @@ using Cratis.Chronicle.Configuration;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Security.for_ChronicleDataProtection;
@@ -33,6 +34,7 @@ public class when_registering_repeatedly : Specification
         services.AddSingleton(factory);
         services.AddSingleton(Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = false } }));
         services.AddChronicleDataProtection();
+        services.AddDataProtection();
         services.AddChronicleDataProtection();
         _services = services.BuildServiceProvider();
     }
@@ -49,5 +51,6 @@ public class when_registering_repeatedly : Specification
 
     [Fact] void should_issue_a_valid_token_with_authentication_disabled() => _valid.ShouldBeTrue();
     [Fact] void should_use_the_grain_repository() => _repository.ShouldBeSame(_services.GetRequiredService<GrainBasedXmlRepository>());
+    [Fact] void should_share_one_warmup_with_the_host() => _services.GetServices<IHostedService>().Single().ShouldBeSame(_services.GetRequiredService<DataProtectionKeyRingWarmup>());
     [Fact] void should_have_one_repository() => _services.GetServices<IXmlRepository>().Count().ShouldEqual(1);
 }

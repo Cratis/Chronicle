@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Cratis.Chronicle.Security;
@@ -9,6 +10,7 @@ namespace Cratis.Chronicle.Security;
 /// Defers the framework key-ring warmup until the silo can route grain calls.
 /// </summary>
 /// <param name="warmup">The framework hosted service.</param>
+[IgnoreConvention]
 public sealed class DataProtectionKeyRingWarmup(IHostedService warmup) : IHostedLifecycleService
 {
     bool _deferredToSilo;
