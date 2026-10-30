@@ -21,6 +21,16 @@ internal static class JobLiveness
     internal static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(2);
 
     /// <summary>
+    /// How long unchanged step progress is observed before resuming a running job.
+    /// </summary>
+    /// <remarks>
+    /// A step taking longer receives a harmless Resume each period. Keep this well above
+    /// <see cref="StaleAfter"/>, the observer watchdog interval and the job engine's step-checkpoint flush interval,
+    /// since progress that is persisted late only looks stalled.
+    /// </remarks>
+    internal static readonly TimeSpan ResumeStalledAfter = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// Gets whether every step of the job has concluded and the job has not moved on since <see cref="StaleAfter"/>.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
